@@ -1,4 +1,5 @@
 import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, type StarSystem } from '../galaxy/generate';
+import { stationName } from '../galaxy/stationNames';
 import { isRetro } from '../render/renderer';
 
 // The galactic and local charts. Systems are plotted at (x, y/2): the
@@ -199,6 +200,7 @@ function renderInfo() {
   const here = s === opts.current;
   const rows: [string, string][] = [
     ['Distance', here ? 'You are here' : `${d.toFixed(1)} light years${d <= opts.range ? '' : ' (out of range)'}`],
+    ['Station', stationName(s).name],
     ['Economy', ECONOMIES[s.economy]],
     ['Government', GOVERNMENTS[s.government]],
     ['Tech level', String(s.techLevel)],
