@@ -36,7 +36,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at the project maintainers, privately, via a direct message to any maintainer listed on the [witchspace GitHub organisation](https://github.com/witchspace-game) (a dedicated conduct email address will be added before the project is announced publicly). All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at **[conduct@witchspace.org.uk](mailto:conduct@witchspace.org.uk)**. All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
