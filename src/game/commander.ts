@@ -13,7 +13,7 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; blurb: string }> =
   },
 };
 
-export type EquipmentId = 'docking-computer' | 'escape-pod' | 'gimbal-mount';
+export type EquipmentId = 'docking-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops';
 
 export type LegalStatus = 'clean' | 'offender' | 'fugitive';
 
@@ -26,6 +26,8 @@ export interface Equipment {
   classicOnly?: boolean;
   /** Only offered under Modern rules (not part of the 1984 game). */
   modernOnly?: boolean;
+  /** Only sold at stations with at least this tech level. */
+  minTech: number;
 }
 
 export const EQUIPMENT: Equipment[] = [
@@ -34,6 +36,14 @@ export const EQUIPMENT: Equipment[] = [
     name: 'Docking Computer',
     price: 1500,
     blurb: 'Press C near a station and enjoy the waltz.',
+    minTech: 5,
+  },
+  {
+    id: 'fuel-scoops',
+    name: 'Fuel Scoops',
+    price: 600,
+    blurb: 'Skim a star for free fuel, if you can stand the heat. Fly slowly over cargo canisters to scoop them into the hold.',
+    minTech: 5,
   },
   {
     id: 'gimbal-mount',
@@ -41,6 +51,7 @@ export const EQUIPMENT: Equipment[] = [
     price: 450,
     blurb: "Lasers swivel to hit what's under the aiming ring. A little less punch than fixed lasers.",
     modernOnly: true,
+    minTech: 7,
   },
   {
     id: 'escape-pod',
@@ -48,8 +59,12 @@ export const EQUIPMENT: Equipment[] = [
     price: 1000,
     blurb: 'Ejects you if the ship is destroyed. Single use.',
     classicOnly: true,
+    minTech: 5,
   },
 ];
+
+import { cargoTonnage } from '../economy/commodities';
+import type { MarketState } from '../economy/market';
 
 export interface Commander {
   name: string;
@@ -58,35 +73,59 @@ export interface Commander {
   equipment: EquipmentId[];
   /** Tonnes carried, by commodity name. Filled by trading in the next milestone. */
   cargo: Record<string, number>;
-  legal: LegalStatus;
+  /** Your record in each system you've broken the law in ("galaxy:index"). */
+  records: Record<string, { status: LegalStatus; jumps: number }>;
+  /** A Co-operative Marshals warrant for a serious crime: wanted everywhere with a government (Modern). */
+  warrant: boolean;
+  /** Equipment held at a station until a fine is paid. */
+  impound: { at: string; items: EquipmentId[]; owed: number } | null;
   /** Fitted equipment knocked offline in combat (Modern rules); repaired at a station. */
   damaged: EquipmentId[];
   /** Where you are: galaxy 0..7 and system index 0..255. */
   location: { galaxy: number; system: number };
   /** Chosen hyperspace destination (system index in the current galaxy), if any. */
   target: number | null;
+  /** Market state per system ("galaxy:index") you've traded at. */
+  markets: Record<string, MarketState>;
+  /** Number of times you've docked; Classic prices change with each visit. */
+  visits: number;
+  /** Witchspace fuel, in light years. */
+  fuel: number;
+  /** Ships destroyed, for the combat rating. */
+  kills: number;
 }
 
 const KEY = 'witchspace.commander.v1';
 
-// Trading arrives in the next milestone. Until then the Galactic Co-operative
-// fronts every new commander enough to try the docking computer.
+// Every commander starts as in 1984: a Cobra, Lave and 100 credits.
 export const newCommander = (difficulty: Difficulty): Commander => ({
   name: 'Jameson',
   difficulty,
-  credits: 2000,
+  credits: 100,
   equipment: [],
   cargo: {},
-  legal: 'clean',
+  records: {},
+  warrant: false,
+  impound: null,
   damaged: [],
   location: { galaxy: 0, system: 7 }, // Lave, as in 1984
   target: null,
+  markets: {},
+  visits: 0,
+  fuel: 7,
+  kills: 0,
 });
+
+export const FUEL_CAPACITY = 7; // light years
+export const FUEL_PRICE = 2; // credits per light year
 
 export function loadCommander(): Commander | null {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...newCommander('modern'), ...JSON.parse(raw) };
+    if (raw) {
+      const { legal: _old, ...saved } = JSON.parse(raw); // pre-records saves had one global status
+      return { ...newCommander('modern'), ...saved };
+    }
   } catch {
     // Private mode or blocked storage: play without saving.
   }
@@ -109,7 +148,8 @@ export function deleteCommander() {
   }
 }
 
-export const cargoTonnes = (c: Commander) => Object.values(c.cargo).reduce((a, b) => a + b, 0);
+/** Tonnes used in the hold (gold counts by the kilogram, gems by the gram). */
+export const cargoTonnes = (c: Commander) => cargoTonnage(c.cargo);
 
 export const hasEquipment = (c: Commander, id: EquipmentId) => c.equipment.includes(id);
 

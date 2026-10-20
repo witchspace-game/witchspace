@@ -73,6 +73,7 @@ const DOCS: { file: string; slug: string; blurb: string }[] = [
   { file: 'docs/design/law-and-travel.md', slug: 'law-and-travel', blurb: 'Transponders, the law, surrender, getting caught, disabling and capture, fuel and rescue, insurance, loans and loan sharks, the Co-operative Marshals, and travel pacing.' },
   { file: 'docs/design/economy-and-exchanges.md', slug: 'economy-and-exchanges', blurb: 'Living markets, news that travels, station exchanges, local currencies, contracts and futures, station shares, and fair play. All in-game, no crypto.' },
   { file: 'docs/design/stations-and-worlds.md', slug: 'stations-and-worlds', blurb: 'Physical limits: station classes, ship sizes, docking capacity, how many stations a world can support, supply and decline, rivals and allies.' },
+  { file: 'docs/design/ship-condition.md', slug: 'ship-condition', blurb: 'Ships wear with use: condition, readable symptoms and breakdowns, servicing at stations, second-hand ships with a history, and engineering. Modern rules only.' },
   { file: 'docs/design/player-stations.md', slug: 'player-stations', blurb: 'Stations run by players, guilds, the community and AI agents, earned by contributing and funded by trading profits.' },
   { file: 'docs/ideas.md', slug: 'ideas', blurb: 'Ideas that aren\'t designed yet, from multicrew ships to a streamer mode. The community votes on what comes next.' },
 ];

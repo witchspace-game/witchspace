@@ -59,6 +59,7 @@ Busy stations run an **exchange with an order book** instead of a single posted 
 
 - **Delivery contracts:** agree today to deliver 50 tonnes of computers to Lave within a week at a fixed price. Buyers lock in supply; haulers lock in income.
 - **Collateral** is held by the exchange. **Fail to deliver** and you lose the collateral and the counterparty is compensated. Unpaid shortfalls become **debt** (see [law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks)), with everything that follows.
+- **Hiring commanders:** a trader who wants more volume than one ship can carry doesn't need a bot. They post haulage jobs, such as "carry 20 tonnes of furs from Zaonce to Lave, 400 Cr on delivery", and other commanders take them on. The cargo and the fee are held in escrow until delivery (section 9). This turns a big trader into an employer and gives newer commanders paid work from their first flight. Haulers build a public delivery record, so reliable ones can charge more, while anyone who runs off with a cargo loses the escrowed value and gets a record of their own. Escort jobs follow naturally: hire another commander to fly alongside a valuable run.
 - **Futures** on commodity prices let speculators bet on where prices are heading.
 - **Piracy meets finance.** A contract hauler's cargo is a target, and someone who has bet against the delivery has a reason to hire pirates. Cargo insurance becomes a product of its own.
 
@@ -83,17 +84,47 @@ Real markets have rules against manipulation, and ours need them too:
 
 - **Position and order limits** so no single commander or guild can corner a market instantly.
 - **Wash-trading detection:** trading with yourself, or with your own other accounts, to fake volume or prices.
-- **Bot and multi-account rules**, with detection on the server.
+- **Bot and multi-account rules**, with detection on the server. **Proposed:** in single-player, automate whatever you like; it's your game. In the shared galaxy, unattended automation (a script or browser agent trading while nobody is at the keyboard) isn't allowed, because it would flood shared markets and drown out people who are playing. Assistive tools with a human present (price lookups, route planners, the community's own trading tools) are welcome. Unattended automation could have a sanctioned home later, such as NPC trading companies a commander owns and pays to run, so it costs in-game resources instead of just running free. Meanwhile the social version already scales: pay other commanders to do the runs (section 5).
 - **Real-money trading is banned and enforced.** Selling credits, scrip or items for real money breaks the rules and leads to account action. The economy only works if everything in it was earned in play.
 - **Public data:** exchange history and station finances are visible, so manipulation leaves a trail.
 
-## 9. Phasing
+## 9. Banking and the Bankers' Guild
+
+### Who looks after your money
+
+**The Bankers' Guild** is a neutral, galaxy-wide institution, like the [Co-operative Marshals](law-and-travel.md#9-power-and-protection) but for money. Your credits sit in a Guild account, **safe whatever happens to your ship**: as in the original, losing a ship never costs you your bank balance (cargo and equipment are another matter).
+
+The Guild:
+
+- **holds accounts** for every commander;
+- **lends** (the lawful lender in [law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks); the working name *Merrow & Daughters* could become a Guild bank, or the Guild itself), keeps **credit ratings** and underwrites **insurance**;
+- **holds escrow** for delivery contracts and settles them, so traders can deal safely with strangers (section 5);
+- **transfers credits between players**, for a small fee, with limits that make laundering and real-money trading hard;
+- **clears station scrip** against the Co-operative credit (section 4).
+
+**Its reach has limits.** The Guild has no branches in anarchies, which is exactly where the loan sharks thrive. Commanders who live outside the law may prefer to keep their wealth where the Guild can't freeze it, and accept the risks that come with that.
+
+### Player banking
+
+Players lending to players is fun but a classic route to scams and pyramid schemes. If allowed, it goes **through Guild-backed contracts**: escrowed collateral, public records and fixed terms. A player banker can go bust, but can't simply disappear with everyone's money.
+
+### The ledger (multiplayer)
+
+In single-player, your commander, credits included, is saved in your own browser. In multiplayer, **the server holds the ledger** and never trusts a player's browser with money. It is built like a real bank's books:
+
+- **Double-entry:** every transfer is recorded as matching debit and credit entries, so money moves but is never created or destroyed by accident.
+- **An append-only transaction history** for every account, which can't be edited after the fact.
+- **Invariant checks:** the total credits in the economy change only through defined sources (trading income, bounties, missions) and sinks (fees, fines, repairs, purchases), and are reconciled regularly.
+- **Atomic transactions:** a trade or transfer completes entirely or not at all, so duplication bugs and crashes can't mint money.
+- **Audit and anomaly detection** for unusual flows (possible exploits, bots or real-money trading).
+
+## 10. Phasing
 
 | Phase | What |
 |---|---|
 | **Trading and galaxy milestone** | Living markets with supply and demand, finite stock, aged price reports, news spreading with NPC traffic; Classic-style markets for Classic rules |
 | **Multiplayer** | Order-book exchanges, market makers, player-to-player trading, delivery contracts |
-| **Later** | Station scrip and currency exchange, futures, station shares, player-driven market events |
+| **Later** | Station scrip and currency exchange, futures, station shares, player-driven market events, the Bankers' Guild's full services and player banking |
 
 ## Open questions
 
@@ -102,3 +133,4 @@ Real markets have rules against manipulation, and ours need them too:
 - Should station scrip exist at all, or is one galaxy-wide credit enough?
 - How should contract disputes be handled, and by whom?
 - What limits stop a large guild dominating an exchange without stifling ambitious traders?
+- Should the Bankers' Guild be one institution, or several competing banks under Guild rules?
