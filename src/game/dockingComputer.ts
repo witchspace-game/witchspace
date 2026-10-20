@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { PlayerShip } from './playerShip';
 import { SLOT, type Station } from './station';
 
-const MAX_TURN_RATE = 1.2; // rad/s
+const MAX_TURN_RATE = 0.9; // rad/s, close to what a pilot can manage
 const TURN_ACCEL = 2.2; // rad/s², so turns ease in and out instead of snapping
 const TURN_GAIN = 2.4; // how hard to turn per radian of error
 const FINAL_SPEED = 70; // m/s

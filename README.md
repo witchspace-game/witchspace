@@ -36,9 +36,10 @@ Then open http://localhost:5173.
 | Space / Shift | Speed up / slow down |
 | C | Docking computer (once you've bought one) |
 | M | Toggle neo-vector / 1984 mode |
+| I | Invert pitch, so W climbs (remembered) |
 | N | Sound on / off (in flight) |
 
-**Mouse:** click the game while flying to capture the mouse. It then works as a joystick: move it forwards and back to pitch, left and right to roll, and scroll to change speed. Esc releases it.
+**Mouse:** click the game while flying to capture the mouse. Move it to turn (forwards and back to pitch, left and right to roll); stop moving and the ship stops turning. Scroll to change speed. Esc releases it.
 
 **Gamepad:** left stick to fly, right/left triggers for speed, A for launch and the docking computer, Y for 1984 mode.
 

@@ -31,11 +31,37 @@ function keyRamp(now: number, ...codes: string[]): number {
 }
 const keyHeld = (...codes: string[]) => codes.some((c) => held.has(c));
 
-// --- Mouse (pointer lock) ------------------------------------------------------
-// While captured, the mouse is a virtual joystick: move it to deflect the
-// stick, and it stays where you leave it, like a real one. Scroll for speed.
+// --- Pitch direction ----------------------------------------------------------
+// Default is flight-stick style (W / push forward = dive). Many players expect
+// the opposite, so it can be flipped with I, and the choice is remembered.
 
-const MOUSE_RANGE = 220; // pixels of travel for full deflection
+const INVERT_KEY = 'witchspace.invertPitch';
+let invertPitch = (() => {
+  try {
+    return localStorage.getItem(INVERT_KEY) === '1';
+  } catch {
+    return false;
+  }
+})();
+
+export const isPitchInverted = () => invertPitch;
+
+export function toggleInvertPitch(): boolean {
+  invertPitch = !invertPitch;
+  try {
+    localStorage.setItem(INVERT_KEY, invertPitch ? '1' : '0');
+  } catch {
+    // Not saved; the setting still applies for this session.
+  }
+  return invertPitch;
+}
+
+// --- Mouse (pointer lock) ------------------------------------------------------
+// While captured, the mouse is a joystick that springs back to centre: move
+// it to turn, stop moving and the ship stops turning. Scroll for speed.
+
+const MOUSE_RANGE = 160; // pixels of travel for full deflection
+const MOUSE_RECENTRE = 3; // per second; how quickly the stick springs back
 const stick = { x: 0, y: 0, moved: false };
 let wheel = 0;
 let mouseEnabled = false;
@@ -138,8 +164,12 @@ export interface FlightInput {
 
 const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
 
+let lastPoll = performance.now();
+
 export function flightInput(): FlightInput {
   const now = performance.now();
+  const dt = Math.min(0.1, (now - lastPoll) / 1000);
+  lastPoll = now;
 
   // Flight-stick convention: push forward (W / ↑) to dive. X is the BBC's "climb" key.
   const kbPitch = keyRamp(now, 'KeyS', 'ArrowDown', 'KeyX') - keyRamp(now, 'KeyW', 'ArrowUp');
@@ -159,9 +189,15 @@ export function flightInput(): FlightInput {
   const mouseMoved = stick.moved;
   wheel = 0;
   stick.moved = false;
+  if (!mouseMoved) {
+    const k = Math.exp(-dt * MOUSE_RECENTRE);
+    stick.x *= k;
+    stick.y *= k;
+  }
 
+  const pitchSign = invertPitch ? -1 : 1;
   const input: FlightInput = {
-    pitch: clamp1(kbPitch + mouse.pitch + padPitch),
+    pitch: pitchSign * clamp1(kbPitch + mouse.pitch + padPitch),
     roll: clamp1(kbRoll + mouse.roll + padRoll),
     throttle: clamp1(kbThrottle + padThrottle),
     speedStep,

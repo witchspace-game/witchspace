@@ -15,7 +15,7 @@ import {
   type Difficulty,
 } from './game/commander';
 import { DockingComputer } from './game/dockingComputer';
-import { centreMouseStick, flightInput, gamepadPresses, isMouseFlying, mouseStick, setMouseFlightAvailable } from './game/input';
+import { centreMouseStick, flightInput, gamepadPresses, isMouseFlying, mouseStick, setMouseFlightAvailable, toggleInvertPitch } from './game/input';
 import { PlayerShip } from './game/playerShip';
 import { Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun } from './render/bodies';
@@ -555,7 +555,9 @@ function handleKey(code: string) {
       if (code === 'KeyL' || code === 'Enter') void launch();
       break;
     case 'flying':
-      if (code === 'KeyC') {
+      if (code === 'KeyI') {
+        flash(toggleInvertPitch() ? 'Pitch inverted · W climbs' : 'Pitch normal · W dives', 2);
+      } else if (code === 'KeyC') {
         if (autopilot) setAutopilot(false, 'Docking computer off');
         else if (!hasEquipment(cmdr(), 'docking-computer')) flash('Docking computer not fitted', 2);
         else if (player.obj.position.distanceTo(station.root.position) > 10000) flash('Too far from the station', 2);
