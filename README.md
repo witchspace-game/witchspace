@@ -57,6 +57,7 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 | Y / N | Load your commander / start a new one |
 | L | Launch from the station |
 | C | Docking computer (once you've bought one) |
+| G | Galaxy map. Tab switches galactic and local charts; arrows or click select; Enter sets your destination |
 | I | Invert pitch (remembered) |
 | M | Toggle neo-vector / 1984 mode |
 | N | Sound: full / effects only (no engine hum) / off (remembered) |

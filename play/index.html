@@ -58,6 +58,7 @@
     </section>
     <nav class="controls" data-screen="docked">
       <button data-key="KeyM">M · 1984 mode</button>
+      <button data-key="KeyG">G · Galaxy map</button>
       <button data-key="KeyL" class="primary">L · Launch</button>
     </nav>
 
@@ -101,6 +102,12 @@
     </section>
 
     <div id="hit"></div>
+    <section id="galaxy-map" hidden>
+      <canvas></canvas>
+      <p class="map-title"></p>
+      <div class="map-info"></div>
+      <p class="map-keys">Tab galactic / local · Arrows or click to select · Enter or click again to set destination · G or Esc to close</p>
+    </section>
     <p id="banner" hidden></p>
     <canvas id="tunnel" hidden></canvas>
 

@@ -20,7 +20,7 @@ Write flavour text like a terse ship's manual or a bar-room rumour, not a fantas
 
 ## Naming
 
-- **Star systems:** short, alien-sounding names of 2–4 syllables built from simple syllable pairs (e.g. *Tibedi*, *Orerve*, *Anlama*). Avoid real places, real people and existing game systems.
+- **Star systems:** the eight generated galaxies reproduce the original *Elite*'s systems as a tribute (Lave, Diso, Leesti…). Their **descriptions are ours to write**. Never reproduce the original's planet descriptions. **New hand-made places** (stations, outposts, hidden systems, legends) need original names: short, alien-sounding, 2–4 syllables. Avoid real places, real people and systems from other games.
 - **Ships:** original *Elite* class names are used as a tribute; new classes should feel like they belong (snake/animal names, "Mk" variants, blunt industrial names).
 - **Manufacturers:** slightly old-fashioned company names, often two surnames.
 

@@ -24,6 +24,7 @@ import {
   flightInput,
   gamepadPresses,
   isMouseCaptured,
+  setFlightInputSuppressed,
   setFlying,
   toggleControlScheme,
   toggleInvertPitch,
@@ -41,6 +42,8 @@ import { camera, isRetro, makeSpace, render, setRetro } from './render/renderer'
 import { buildShip, disposeShip, heatShip, type ShipModel } from './render/shipModel';
 import { clearFlash, flash, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
+import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
+import { systemAt, type StarSystem } from './galaxy/generate';
 import { playTunnel } from './ui/tunnel';
 import './style.css';
 
@@ -51,6 +54,10 @@ let inSpace = false;
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 function setState(next: State) {
+  if (isMapOpen()) {
+    closeMap();
+    setFlightInputSuppressed(false);
+  }
   state = next;
   document.body.dataset.state = next;
   document.querySelectorAll<HTMLElement>('[data-screen]').forEach((el) => {
@@ -188,6 +195,8 @@ function enterDocked() {
 
 function renderDocked() {
   const c = cmdr();
+  const here = currentSystem();
+  $('#dock-location').textContent = `Coriolis Station · ${here.name}`;
   const rows: [string, string][] = [
     ['Commander', c.name],
     ['Rules', DIFFICULTIES[c.difficulty].name],
@@ -195,6 +204,7 @@ function renderDocked() {
     ['Ship', player.def.name],
     ['Cargo', `${cargoTonnes(c)} / ${player.def.stats.cargo} t`],
     ['Legal status', c.legal === 'fugitive' ? 'Fugitive' : c.legal === 'offender' ? 'Offender' : 'Clean'],
+    ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', 'Harmless'],
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
@@ -809,8 +819,8 @@ function updateAimDisplay() {
 }
 
 const KEYS_HINT = {
-  mouse: 'Mouse aim · Click fire · Right-click centre · W/S throttle · A/D roll · H controls · C docking computer',
-  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · H controls · C docking computer',
+  mouse: 'Mouse aim · Click fire · Right-click centre · W/S throttle · A/D roll · G galaxy map · H controls · C docking computer',
+  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · G galaxy map · H controls · C docking computer',
 };
 
 function renderControlsCard() {
@@ -839,6 +849,7 @@ function renderControlsCard() {
   )
     .concat([
       ['C', 'Docking computer'],
+      ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
       ['K', 'Switch control scheme'],
       ['I', 'Invert pitch'],
       ['M', '1984 mode'],
@@ -876,7 +887,7 @@ async function launch() {
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
   setState('flying');
-  flash('Lave · Coriolis Station', 2.5);
+  flash(`${currentSystem().name} · Coriolis Station`, 2.5);
 }
 
 async function dock() {
@@ -964,8 +975,59 @@ function padToKey(button: 'PadA' | 'PadB' | 'PadY' | 'PadStart'): string | null 
   }
 }
 
+// --- Where you are, and the galaxy charts ---------------------------------------
+
+const JUMP_RANGE = 7; // light years; becomes fuel-limited in the next stage
+
+function currentSystem(): StarSystem {
+  const loc = commander?.location ?? { galaxy: 0, system: 7 };
+  return systemAt(loc.galaxy, loc.system);
+}
+
+function toggleGalaxyMap() {
+  if (isMapOpen()) {
+    closeMap();
+    setFlightInputSuppressed(false);
+    return;
+  }
+  const c = cmdr();
+  const here = currentSystem();
+  openMap({
+    current: here,
+    range: JUMP_RANGE,
+    target: c.target === null ? null : systemAt(here.galaxy, c.target),
+    onTarget: (s) => {
+      c.target = s.index;
+      saveCommander(c);
+      sfx.beep();
+      if (state === 'docked') renderDocked();
+      else flash(`Destination: ${s.name}`, 1.5);
+    },
+  });
+  setFlightInputSuppressed(true);
+}
+
+/** Keys while a chart is open. Returns true if the key was used. */
+function handleMapKey(code: string): boolean {
+  if (!isMapOpen()) return false;
+  if (code === 'KeyG' || code === 'Escape') toggleGalaxyMap();
+  else if (code === 'Tab') toggleMapMode();
+  else if (code === 'ArrowLeft') moveCursor(-1, 0);
+  else if (code === 'ArrowRight') moveCursor(1, 0);
+  else if (code === 'ArrowUp') moveCursor(0, -1);
+  else if (code === 'ArrowDown') moveCursor(0, 1);
+  else if (code === 'Enter' || code === 'NumpadEnter') chooseCursor();
+  else return false;
+  return true;
+}
+
 function handleKey(code: string) {
   unlockAudio();
+  if (handleMapKey(code)) return;
+  if (code === 'KeyG' && (state === 'docked' || state === 'flying') && commander) {
+    toggleGalaxyMap();
+    return;
+  }
   if (code === 'KeyM') {
     setRetro(!isRetro());
     updateModeLabel();
@@ -1017,6 +1079,7 @@ function handleKey(code: string) {
 }
 
 addEventListener('keydown', (e) => {
+  if (e.code === 'Tab' && isMapOpen()) e.preventDefault(); // Tab switches charts, not focus
   if (!e.repeat) handleKey(e.code);
 });
 document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) =>
