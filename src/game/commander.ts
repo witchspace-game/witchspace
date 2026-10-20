@@ -15,6 +15,8 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; blurb: string }> =
 
 export type EquipmentId = 'docking-computer' | 'escape-pod';
 
+export type LegalStatus = 'clean' | 'offender' | 'fugitive';
+
 export interface Equipment {
   id: EquipmentId;
   name: string;
@@ -47,6 +49,7 @@ export interface Commander {
   equipment: EquipmentId[];
   /** Tonnes carried, by commodity name. Filled by trading in the next milestone. */
   cargo: Record<string, number>;
+  legal: LegalStatus;
 }
 
 const KEY = 'witchspace.commander.v1';
@@ -59,6 +62,7 @@ export const newCommander = (difficulty: Difficulty): Commander => ({
   credits: 2000,
   equipment: [],
   cargo: {},
+  legal: 'clean',
 });
 
 export function loadCommander(): Commander | null {

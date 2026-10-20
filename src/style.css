@@ -134,6 +134,7 @@ button.primary { border-color: var(--accent); color: var(--accent); }
   pointer-events: none;
 }
 @keyframes blink { to { visibility: hidden; } }
+#reticle.on-target { border-color: var(--danger); box-shadow: 0 0 14px var(--danger); }
 body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
 
 .rules { width: min(440px, calc(100vw - 32px)); }
@@ -210,6 +211,22 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
 }
 #g-shields::after { background: #4aa8ff; box-shadow: 0 0 8px #4aa8ff; }
 #g-hull::after { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+#g-laser::after { background: #c9ffe9; box-shadow: 0 0 8px #c9ffe9; }
+#g-laser.hot::after { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+#target-info {
+  position: fixed;
+  top: 36px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 15px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #4aa8ff;
+  pointer-events: none;
+}
+#target-info.hostile { color: var(--danger); }
 .bar.centred::after {
   inset: 1px auto 1px calc(50% - 3px + (50% - 4px) * var(--v));
   width: 6px;

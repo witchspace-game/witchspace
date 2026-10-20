@@ -26,6 +26,8 @@ import {
   wantsMouseCapture,
 } from './game/input';
 import { MouseAim } from './game/mouseAim';
+import { NpcShip } from './game/npc';
+import { Beams, POLICE_LASER, PULSE_LASER, rayHit, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun } from './render/bodies';
@@ -179,7 +181,7 @@ function renderDocked() {
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ['Ship', player.def.name],
     ['Cargo', `${cargoTonnes(c)} / ${player.def.stats.cargo} t`],
-    ['Legal status', 'Clean'],
+    ['Legal status', c.legal === 'fugitive' ? 'Fugitive' : c.legal === 'offender' ? 'Offender' : 'Clean'],
     ['Rating', 'Harmless'],
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
@@ -232,11 +234,167 @@ space.scene.add(player.obj);
 const dockingComputer = new DockingComputer();
 let autopilot = false;
 
-const patrols = [0, 1].map((i) => {
-  const model = buildShip(shipById('viper')!);
-  space.scene.add(model.root);
-  return { model, radius: 900 + i * 500, height: i ? -250 : 200, speed: (i ? -1 : 1) * 0.18, phase: i * 2.5 };
-});
+// --- Police and combat ------------------------------------------------------
+
+const police: NpcShip[] = [];
+const beams = new Beams(space.scene);
+let laserCooldown = 0;
+let laserHeat = 0; // 0..100, the original's "LT" gauge
+let overheated = false;
+let reinforceTimer = 0;
+let repopulateTimer = 0;
+const MAX_POLICE = 4;
+
+const isFugitive = () => commander?.legal === 'fugitive';
+
+function spawnViper(fromSlot: boolean) {
+  const i = police.length;
+  const npc = new NpcShip(shipById('viper')!, POLICE_LASER, {
+    centre: station.root.position.clone(),
+    radius: 900 + (i % 3) * 450,
+    height: [200, -250, 60][i % 3],
+    rate: (i % 2 ? -1 : 1) * 0.14,
+    angle: i * 2.1,
+  });
+  if (fromSlot) {
+    station.placeForLaunch(npc.ship);
+    npc.ship.speed = 120;
+  } else {
+    const p = npc.patrol;
+    npc.obj.position.set(Math.cos(p.angle) * p.radius, p.height, Math.sin(p.angle) * p.radius).add(p.centre);
+    npc.ship.speed = Math.abs(p.rate) * p.radius;
+  }
+  npc.hostile = isFugitive();
+  space.scene.add(npc.obj);
+  police.push(npc);
+}
+spawnViper(false);
+spawnViper(false);
+
+function becomeFugitive() {
+  if (isFugitive()) return;
+  cmdr().legal = 'fugitive';
+  for (const p of police) p.hostile = true;
+  reinforceTimer = 6;
+  flash('You are now a FUGITIVE', 2.5);
+}
+
+function destroyNpc(npc: NpcShip) {
+  const boom = new Explosion(npc.def, npc.obj, npc.ship.forward().multiplyScalar(npc.ship.speed));
+  space.scene.add(boom.group);
+  explosions.push(boom);
+  sfx.explosion();
+  police.splice(police.indexOf(npc), 1);
+  npc.dispose();
+  flash(`${npc.def.name} destroyed`, 1.5);
+}
+
+type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' };
+
+function firePlayerLaser() {
+  laserCooldown = PULSE_LASER.interval;
+  laserHeat += PULSE_LASER.heat;
+  if (laserHeat >= 100) {
+    overheated = true;
+    flash('Laser overheated', 1.2);
+  }
+  // Mouse aim: gimballed lasers fire where the ring is (it never strays more
+  // than 30° from the nose). Keyboard scheme: fixed lasers along the nose,
+  // as in 1984.
+  const dir = controlScheme() === 'mouse' && isMouseCaptured() ? aim.dir.clone() : player.forward();
+  const origin = player.obj.position.clone().addScaledVector(dir, 5);
+  const targets: Target<Shot>[] = [
+    ...police.map((npc) => ({ value: { kind: 'npc' as const, npc }, position: npc.obj.position, radius: npc.radius * 0.75 })),
+    ...drifters.map((drifter) => ({ value: { kind: 'drifter' as const, drifter }, position: drifter.model.root.position, radius: 7 })),
+    { value: { kind: 'station' as const }, position: station.root.position, radius: 90 },
+  ];
+  const hit = rayHit(origin, dir, PULSE_LASER.range, targets);
+  const end = hit ? hit.point : origin.clone().addScaledVector(dir, PULSE_LASER.range);
+  for (const side of [-1, 1]) beams.fire(player.obj.localToWorld(new THREE.Vector3(side * 7, -3, 12)), end, PULSE_LASER.color);
+  sfx.laser();
+  if (!hit) return;
+  const shot = hit.target.value;
+  if (shot.kind === 'npc') {
+    sfx.hit();
+    becomeFugitive();
+    if (shot.npc.hit(PULSE_LASER.damage)) destroyNpc(shot.npc);
+  } else if (shot.kind === 'drifter') {
+    const d = shot.drifter;
+    const flare = new Explosion(d.model.def, d.model.root, d.velocity);
+    space.scene.add(flare.group);
+    explosions.push(flare);
+    disposeShip(d.model);
+    drifters.splice(drifters.indexOf(d), 1);
+  }
+}
+
+function updateCombat(dt: number, input: { fire: boolean } | null) {
+  const alive = state === 'flying';
+  beams.update(dt);
+
+  if (alive && input) {
+    laserCooldown -= dt;
+    laserHeat = Math.max(0, laserHeat - PULSE_LASER.cooling * dt);
+    if (overheated && laserHeat < 40) overheated = false;
+    if (input.fire && !overheated && laserCooldown <= 0) firePlayerLaser();
+  }
+
+  for (const npc of [...police]) {
+    const shot = npc.update(dt, player, alive);
+    // Keep police from flying through the station.
+    const fromStation = npc.obj.position.clone().sub(station.root.position);
+    if (fromStation.length() < 120) npc.obj.position.copy(station.root.position).add(fromStation.setLength(120));
+
+    if (shot && alive) {
+      const origin = npc.obj.position.clone().addScaledVector(shot, 20);
+      const hit = rayHit(origin, shot, npc.laser.range, [
+        { value: 'player', position: player.obj.position, radius: 22 },
+        { value: 'station', position: station.root.position, radius: 90 },
+      ]);
+      beams.fire(origin, hit ? hit.point : origin.clone().addScaledVector(shot, npc.laser.range), npc.laser.color);
+      if (npc.obj.position.distanceTo(player.obj.position) < 2500) sfx.enemyLaser();
+      if (hit?.target.value === 'player') {
+        sfx.hit();
+        hitFeedback(0.35);
+        if (player.damage(npc.laser.damage)) {
+          die();
+          return;
+        }
+      }
+    }
+
+    // Ramming hurts both ships.
+    if (alive && npc.obj.position.distanceTo(player.obj.position) < npc.radius * 0.6 + 20) {
+      const away = player.obj.position.clone().sub(npc.obj.position).setLength(npc.radius + 30);
+      player.obj.position.copy(npc.obj.position).add(away);
+      sfx.thud();
+      hitFeedback(0.9);
+      becomeFugitive();
+      if (npc.hit(25)) destroyNpc(npc);
+      if (player.damage(25)) {
+        die();
+        return;
+      }
+    }
+  }
+
+  // The station sends more police after a fugitive, and replaces patrols otherwise.
+  const nearStation = player.obj.position.distanceTo(station.root.position) < 9000;
+  if (alive && isFugitive() && nearStation) {
+    reinforceTimer -= dt;
+    if (reinforceTimer <= 0 && police.length < MAX_POLICE) {
+      spawnViper(true);
+      flash('Police launching', 1.5);
+      reinforceTimer = 20;
+    }
+  } else if (!isFugitive() && police.length < 2) {
+    repopulateTimer -= dt;
+    if (repopulateTimer <= 0) {
+      spawnViper(true);
+      repopulateTimer = 30;
+    }
+  }
+}
 
 /**
  * Things adrift: cargo canisters spilled from wrecks. They tumble near where
@@ -326,16 +484,6 @@ let shake = 0;
 let lastAltitudeWarning = -Infinity;
 const deathCam = { centre: new THREE.Vector3(), offset: new THREE.Vector3(), axis: new THREE.Vector3(0, 1, 0), t: 0 };
 
-function updatePatrols() {
-  for (const p of patrols) {
-    const a = p.phase + elapsed * p.speed;
-    const pos = (t: number) =>
-      new THREE.Vector3(Math.cos(t) * p.radius, p.height + Math.sin(t * 2) * 40, Math.sin(t) * p.radius);
-    p.model.root.position.copy(pos(a));
-    p.model.root.lookAt(pos(a + Math.sign(p.speed) * 0.05));
-    p.model.root.rotateZ(Math.sign(p.speed) * 0.5); // bank into the turn
-  }
-}
 
 // Modern rules: near the station and pointing roughly at the slot, the ship
 // matches the station's spin by itself whenever the pilot isn't rolling.
@@ -343,6 +491,7 @@ function updatePatrols() {
 const ROLL_ASSIST_RANGE = 2500; // metres
 const ROLL_ASSIST_HEADING = THREE.MathUtils.degToRad(35);
 const ROLL_ASSIST_GAIN = 3; // holds within ~3° of the slot (tested in simulation)
+const AUTO_LEVEL_GAIN = 2.5; // levels 50° of tilt in about half a second (tested in simulation)
 let rollAssist = false;
 
 function rollAssistApplies() {
@@ -374,18 +523,19 @@ function hitFeedback(strength: number) {
 function updateSpace(dt: number) {
   elapsed += dt;
   station.update(dt);
-  updatePatrols();
   updateDrifters(dt);
   for (let i = explosions.length - 1; i >= 0; i--) if (!explosions[i].update(dt)) explosions.splice(i, 1);
 
+  let input: ReturnType<typeof flightInput> | null = null;
   if (state === 'flying') {
     const prev = station.toLocal(player.obj.position);
-    const input = flightInput();
+    input = flightInput();
     if (autopilot && input.active) setAutopilot(false, 'Docking computer off');
 
     // Mouse aim: steer the nose towards the reticle. Turning with keys or
     // while the computer flies puts the reticle back on the nose.
     const keysTurning = input.pitch !== 0 || input.yaw !== 0;
+    if (input.recentre) aim.reset(player);
     if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !keysTurning) {
       aim.move(player, input.aimDx, input.aimDy);
       const s = aim.steer(player);
@@ -396,7 +546,15 @@ function updateSpace(dt: number) {
     }
 
     rollAssist = !autopilot && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
-    if (rollAssist) input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
+    if (rollAssist) {
+      input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
+    } else if (!autopilot && controlScheme() === 'mouse' && input.roll === 0) {
+      // Flight assist: with no roll input, level the wings with the star
+      // system's "up" so there's always a horizon. Weaker when pointing
+      // steeply up or down, where "level" stops meaning much.
+      const steep = Math.abs(player.forward().y);
+      input.roll = THREE.MathUtils.clamp(AUTO_LEVEL_GAIN * player.right().y * (1 - steep), -1, 1);
+    }
     if (autopilot) dockingComputer.update(dt, player, station);
     else player.steer(dt, input);
     player.move(dt);
@@ -429,6 +587,8 @@ function updateSpace(dt: number) {
     }
   }
 
+  updateCombat(dt, input);
+
   if (state === 'dead') {
     // Watch the wreck from outside, slowly circling, as the original did.
     deathCam.t += dt;
@@ -448,12 +608,47 @@ function updateSpace(dt: number) {
 
   const blips: Blip[] = [
     { position: station.root.position, color: '#ffb347', big: true },
-    ...patrols.map((p) => ({ position: p.model.root.position, color: '#4aa8ff' })),
+    ...police.map((p) => ({ position: p.obj.position, color: p.hostile ? '#ff4d6d' : '#4aa8ff' })),
     ...drifters.map((d) => ({ position: d.model.root.position, color: '#ffd166' })),
   ];
   if (state === 'flying') {
     updateHud(player, station, blips, autopilot, rollAssist);
     updateAimDisplay();
+    updateCombatHud();
+  }
+}
+
+// --- Combat HUD ------------------------------------------------------------------
+
+const laserGauge = $('#g-laser');
+const targetInfo = $('#target-info');
+
+function updateCombatHud() {
+  laserGauge.style.setProperty('--v', String(laserHeat / 100));
+  laserGauge.classList.toggle('hot', overheated || laserHeat > 75);
+  // Name whatever is closest to where the guns point, if it's near enough.
+  const gimballed = controlScheme() === 'mouse' && isMouseCaptured();
+  const fwd = gimballed ? aim.dir.clone() : player.forward();
+  // The ring turns red when a shot would hit.
+  const onTarget = rayHit(player.obj.position, fwd, PULSE_LASER.range, police.map((npc) => ({ value: npc, position: npc.obj.position, radius: npc.radius * 0.75 })));
+  reticle.classList.toggle('on-target', Boolean(onTarget));
+  let best: NpcShip | null = null;
+  let bestAngle = THREE.MathUtils.degToRad(6);
+  for (const npc of police) {
+    const to = npc.obj.position.clone().sub(player.obj.position);
+    if (to.length() > 5000) continue;
+    const a = fwd.angleTo(to);
+    if (a < bestAngle) {
+      best = npc;
+      bestAngle = a;
+    }
+  }
+  targetInfo.hidden = !best;
+  if (best) {
+    const hull = Math.max(0, (best.ship.shields + best.ship.hull) / (best.def.stats.shields + best.def.stats.hull));
+    const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
+    targetInfo.textContent = `${best.def.name} · ${km} km · ${Math.round(hull * 100)}%${best.hostile ? ' · HOSTILE' : ''}`;
+    targetInfo.classList.toggle('hostile', best.hostile);
   }
 }
 
@@ -482,8 +677,8 @@ function updateAimDisplay() {
 }
 
 const KEYS_HINT = {
-  mouse: 'Mouse aim · W/S throttle · A/D roll · Q/E yaw · H controls · C docking computer · M 1984',
-  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · H controls · C docking computer · M 1984',
+  mouse: 'Mouse aim · Click fire · Right-click centre · W/S throttle · A/D roll · H controls · C docking computer',
+  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · H controls · C docking computer',
 };
 
 function renderControlsCard() {
@@ -495,6 +690,8 @@ function renderControlsCard() {
       ? [
           ['Click', 'Capture the mouse (Esc releases it)'],
           ['Mouse', 'Aim: the ship turns to follow the ring'],
+          ['Left click / F', 'Fire: lasers hit what\'s under the ring (it turns red)'],
+          ['Right click', 'Centre the aim (stop turning)'],
           ['W / S', 'Throttle up / down'],
           ['A / D', 'Roll'],
           ['Q / E', 'Yaw (fine sideways adjustment)'],
@@ -504,6 +701,7 @@ function renderControlsCard() {
           ['W / S', 'Dive / climb (I inverts)'],
           ['A / D', 'Roll'],
           ['Space / Shift', 'Throttle up / down'],
+          ['F', 'Fire laser'],
           ['Swipe / scroll', 'Throttle; sideways swipe rolls'],
         ]
   )
@@ -572,6 +770,11 @@ function die() {
   // Whatever was in the hold is now floating free for anyone with fuel scoops.
   spillCargo(player.obj.position, velocity, cargoTonnes(c));
   c.cargo = {};
+  // A new ship, a clean slate: the police lose interest.
+  c.legal = 'clean';
+  for (const p of police) p.hostile = false;
+  laserHeat = 0;
+  overheated = false;
 
   deathCam.centre.copy(player.obj.position).addScaledVector(velocity, 0.6);
   // Watch from the side away from the nearest big body, so it never blocks the view.
@@ -713,7 +916,7 @@ function frame() {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo,
+      player, station, dockingComputer, drifters, explosions, spillCargo, police, becomeFugitive,
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },

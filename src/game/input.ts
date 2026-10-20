@@ -55,7 +55,7 @@ const held = new Map<string, number>(); // code -> time first pressed (ms)
 
 const FLIGHT_KEYS = new Set([
   'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-  'Space', 'ShiftLeft', 'ShiftRight', 'Slash', 'Comma', 'Period', 'KeyX',
+  'Space', 'ShiftLeft', 'ShiftRight', 'Slash', 'Comma', 'Period', 'KeyX', 'KeyF',
 ]);
 
 addEventListener('keydown', (e) => {
@@ -79,6 +79,8 @@ const keyHeld = (...codes: string[]) => codes.some((c) => held.has(c));
 let flying = false;
 let aimDx = 0;
 let aimDy = 0;
+let mouseFire = false;
+let recentre = false;
 let wheel = 0;
 let swipeRoll = 0;
 
@@ -87,15 +89,27 @@ export function setFlying(value: boolean) {
   flying = value;
   if (!value && document.pointerLockElement) document.exitPointerLock();
   aimDx = aimDy = wheel = swipeRoll = 0;
+  mouseFire = recentre = false;
 }
 
 export const isMouseCaptured = () => flying && document.pointerLockElement !== null;
 export const wantsMouseCapture = () => flying && scheme === 'mouse' && !document.pointerLockElement;
 
 addEventListener('mousedown', (e) => {
+  if (isMouseCaptured()) {
+    if (e.button === 0) mouseFire = true; // left: fire
+    if (e.button === 2) recentre = true; // right: centre the aim, stop turning
+    return;
+  }
   if (!wantsMouseCapture()) return;
   if ((e.target as HTMLElement).closest('button, a, input')) return;
   void document.body.requestPointerLock?.();
+});
+addEventListener('mouseup', (e) => {
+  if (e.button === 0) mouseFire = false;
+});
+addEventListener('contextmenu', (e) => {
+  if (flying) e.preventDefault();
 });
 addEventListener('mousemove', (e) => {
   if (!isMouseCaptured()) return;
@@ -172,6 +186,10 @@ export interface FlightInput {
   /** Mouse movement since last frame, in pixels, for the aiming reticle. */
   aimDx: number;
   aimDy: number;
+  /** Fire the lasers (held). */
+  fire: boolean;
+  /** Snap the aim back to the nose this frame (right-click). */
+  recentre?: boolean;
   /** True if the pilot is touching any control this frame. */
   active: boolean;
 }
@@ -219,8 +237,11 @@ export function flightInput(): FlightInput {
     speedStep: wheel * SCROLL_SPEED,
     aimDx,
     aimDy: sign * aimDy,
+    fire: mouseFire || keyHeld('KeyF') || Boolean(pad?.buttons[5]?.pressed),
+    recentre,
     active: false,
   };
+  recentre = false;
   input.active =
     input.pitch !== 0 || input.roll !== 0 || input.yaw !== 0 || input.throttle !== 0 ||
     input.speedStep !== 0 || aimDx !== 0 || aimDy !== 0;

@@ -34,6 +34,8 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 | Control | Action |
 | --- | --- |
 | Mouse | Aim (Esc releases the mouse) |
+| Left click / F | Fire. Lasers are gimballed: they hit whatever is under the ring, which turns red on target |
+| Right click | Centre the aim and stop turning |
 | W / S | Throttle up / down |
 | A / D | Roll |
 | Q / E | Yaw (fine sideways adjustment) |
@@ -46,6 +48,7 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 | W / S | Dive / climb (X also climbs, as on the BBC) |
 | A / D | Roll (`<` and `>` work too) |
 | Space / Shift | Throttle up / down |
+| F | Fire (fixed lasers, straight ahead, as in 1984) |
 
 **Both schemes**
 
@@ -60,6 +63,8 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 | H | Controls card |
 
 **Gamepad:** left stick pitches and rolls, right stick yaws, triggers set speed, A launches and runs the docking computer, Y toggles 1984 mode.
+
+**Combat:** shoot a police Viper and you become a Fugitive. Every Viper turns on you, and the station launches reinforcements. Watch the laser temperature (LT) gauge: hold fire too long and it overheats. Losing your ship clears your record.
 
 **Docking tip:** the station spins. Under **Modern** rules your ship matches the spin for you once you're close and pointing at the slot ("Roll match" lights up); just steer in and don't touch roll. Under **Classic** rules you keep rolling with it yourself, all the way in, as in 1984. In neo-vector mode, the glide path and docking aid show how far out you are.
 

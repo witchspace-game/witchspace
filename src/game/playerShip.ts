@@ -48,9 +48,9 @@ export class PlayerShip {
     return this.rollVel / (this.def.stats.rollRate ?? 2);
   }
 
-  /** Yaw is slower than pitch: ships turn best by banking, as in the original. */
+  /** Yaw matches pitch unless a ship says otherwise, so mouse aim feels even. */
   get yawRate() {
-    return this.def.stats.yawRate ?? (this.def.stats.pitchRate ?? 1.5) * 0.6;
+    return this.def.stats.yawRate ?? this.def.stats.pitchRate ?? 1.5;
   }
 
   steer(dt: number, input: FlightInput) {
