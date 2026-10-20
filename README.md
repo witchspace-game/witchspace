@@ -12,6 +12,10 @@ Witchspace keeps the soul of the original (crisp vector ships, hidden-line wiref
 
 🚧 **Early but playable.** Launch from a Coriolis station, fly the Cobra Mk III, and try to dock, by hand or with the docking computer and its waltz. Choose **Classic** rules (one life, as in 1984) or **Modern** rules (forgiving, insured). Trading, combat and multiplayer are next. See the [roadmap](#roadmap).
 
+## Play it now
+
+**🚀 [witchspace.vercel.app](https://witchspace.vercel.app)**. It runs in any modern browser, with nothing to install.
+
 ## Play it locally
 
 ```bash
