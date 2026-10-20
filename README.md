@@ -66,7 +66,7 @@ Design notes for upcoming systems live in [`docs/design/`](docs/design). Start w
 3. **Shared space.** See and fly with other commanders in the same system.
 4. **Persistence.** Accounts, saved commanders and a living shared economy.
 5. **Community tools.** MCP server, in-browser ship editor, missions and modding.
-6. **Player-run stations** *(proposal)*. Frontier outposts run by commanders and guilds, within guarantees that keep the galaxy fair. See the [proposal](docs/design/player-stations.md).
+6. **Player, community and AI-run stations** *(proposal)*. Frontier outposts run by commanders and guilds, community-governed stations, and stations run by AI agents with community-written personalities, all within guarantees that keep the galaxy fair. Running a station is earned by contributing to Witchspace, and commanders can invest their trading profits in station upgrades. See the [proposal](docs/design/player-stations.md).
 
 ## Tech
 
@@ -79,6 +79,10 @@ TypeScript · [three.js](https://threejs.org) · [Vite](https://vitejs.dev). Mul
 - Security issues: see [SECURITY.md](SECURITY.md)
 
 Questions and ideas are best raised in [GitHub Discussions](https://github.com/witchspace-game/witchspace/discussions), where everyone can join in.
+
+## No crypto, no pay-to-win
+
+Witchspace is a non-commercial fan project, and nothing in the game can ever be bought with real money: no tokens, no NFTs, no paid credits, ships or advantages. Everything is earned by playing or by contributing. If running costs ever need covering, it'll be through transparent donations with every penny public, and supporters get thanks, never power. See the [stations proposal](docs/design/player-stations.md#no-crypto-no-pay-to-win) for the reasoning.
 
 ## Licence
 
