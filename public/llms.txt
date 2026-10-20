@@ -6,20 +6,20 @@ Code is GPL-3.0. Content is CC BY-SA 4.0. Witchspace is not affiliated with Fron
 
 ## Start here
 
-- [README](https://github.com/witchspace/witchspace/blob/main/README.md): what the project is and how to run it
-- [AGENTS.md](https://github.com/witchspace/witchspace/blob/main/AGENTS.md): rules and workflow for AI assistants creating content or code
-- [CONTRIBUTING](https://github.com/witchspace/witchspace/blob/main/CONTRIBUTING.md): how to add a ship in five minutes
+- [README](https://github.com/witchspace-game/witchspace/blob/main/README.md): what the project is and how to run it
+- [AGENTS.md](https://github.com/witchspace-game/witchspace/blob/main/AGENTS.md): rules and workflow for AI assistants creating content or code
+- [CONTRIBUTING](https://github.com/witchspace-game/witchspace/blob/main/CONTRIBUTING.md): how to add a ship in five minutes
 
 ## Content formats
 
-- [Ship schema](https://github.com/witchspace/witchspace/blob/main/schemas/ship.schema.json): JSON Schema for ships and stations
-- [Example ship: Cobra Mk III](https://github.com/witchspace/witchspace/blob/main/content/ships/cobra-mk3.json)
-- [Example station: Coriolis](https://github.com/witchspace/witchspace/blob/main/content/ships/coriolis.json)
+- [Ship schema](https://github.com/witchspace-game/witchspace/blob/main/schemas/ship.schema.json): JSON Schema for ships and stations
+- [Example ship: Cobra Mk III](https://github.com/witchspace-game/witchspace/blob/main/content/ships/cobra-mk3.json)
+- [Example station: Coriolis](https://github.com/witchspace-game/witchspace/blob/main/content/ships/coriolis.json)
 
 ## Setting
 
-- [Worldbuilding bible](https://github.com/witchspace/witchspace/blob/main/docs/worldbuilding.md): tone, setting and naming conventions
+- [Worldbuilding bible](https://github.com/witchspace-game/witchspace/blob/main/docs/worldbuilding.md): tone, setting and naming conventions
 
 ## Optional
 
-- [Credits](https://github.com/witchspace/witchspace/blob/main/CREDITS.md): tribute to Ian Bell and David Braben, and related projects
+- [Credits](https://github.com/witchspace-game/witchspace/blob/main/CREDITS.md): tribute to Ian Bell and David Braben, and related projects

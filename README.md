@@ -15,7 +15,7 @@ Witchspace keeps the soul of the original (crisp vector ships, hidden-line wiref
 ## Play it locally
 
 ```bash
-git clone https://github.com/witchspace/witchspace.git
+git clone https://github.com/witchspace-game/witchspace.git
 cd witchspace
 npm install
 npm run dev

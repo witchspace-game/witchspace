@@ -22,4 +22,4 @@ Thank you, Ian and David.
 
 ## Witchspace contributors
 
-Every ship, world and mission credits its authors in its own file. Thank you to everyone who has contributed. See the [contributor graph](https://github.com/witchspace/witchspace/graphs/contributors).
+Every ship, world and mission credits its authors in its own file. Thank you to everyone who has contributed. See the [contributor graph](https://github.com/witchspace-game/witchspace/graphs/contributors).

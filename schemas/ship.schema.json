@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://witchspace.dev/schemas/ship.schema.json",
+  "$id": "https://raw.githubusercontent.com/witchspace-game/witchspace/main/schemas/ship.schema.json",
   "title": "Witchspace ship",
   "description": "A ship or station. Geometry is a closed, convex-faced polyhedron drawn as glowing wireframe. Units are metres; +Z is forward (the nose), +Y is up, +X is port (left), matching three.js and glTF.",
   "type": "object",
