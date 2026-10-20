@@ -69,6 +69,14 @@ Coming soon: a **Witchspace MCP server** with tools to validate, preview and bal
 
 TypeScript · [three.js](https://threejs.org) · [Vite](https://vitejs.dev). Multiplayer will use a WebSocket game server.
 
+## Contact
+
+- General: [hello@witchspace.org.uk](mailto:hello@witchspace.org.uk)
+- Code of conduct reports: [conduct@witchspace.org.uk](mailto:conduct@witchspace.org.uk)
+- Security issues: see [SECURITY.md](SECURITY.md)
+
+Questions and ideas are best raised in [GitHub Discussions](https://github.com/witchspace-game/witchspace/discussions), where everyone can join in.
+
 ## Licence
 
 - **Code:** [GPL-3.0](LICENSE). Forks stay open.
