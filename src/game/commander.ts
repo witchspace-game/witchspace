@@ -13,7 +13,7 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; blurb: string }> =
   },
 };
 
-export type EquipmentId = 'docking-computer' | 'escape-pod';
+export type EquipmentId = 'docking-computer' | 'escape-pod' | 'gimbal-mount';
 
 export type LegalStatus = 'clean' | 'offender' | 'fugitive';
 
@@ -24,6 +24,8 @@ export interface Equipment {
   blurb: string;
   /** Only offered under Classic rules, where it matters. */
   classicOnly?: boolean;
+  /** Only offered under Modern rules (not part of the 1984 game). */
+  modernOnly?: boolean;
 }
 
 export const EQUIPMENT: Equipment[] = [
@@ -32,6 +34,13 @@ export const EQUIPMENT: Equipment[] = [
     name: 'Docking Computer',
     price: 1500,
     blurb: 'Press C near a station and enjoy the waltz.',
+  },
+  {
+    id: 'gimbal-mount',
+    name: 'Gimballed Laser Mount',
+    price: 450,
+    blurb: "Lasers swivel to hit what's under the aiming ring. A little less punch than fixed lasers.",
+    modernOnly: true,
   },
   {
     id: 'escape-pod',

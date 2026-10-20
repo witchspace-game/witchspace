@@ -34,7 +34,7 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 | Control | Action |
 | --- | --- |
 | Mouse | Aim (Esc releases the mouse) |
-| Left click / F | Fire. Lasers are gimballed: they hit whatever is under the ring, which turns red on target |
+| Left click / F | Fire. Lasers fire straight ahead at the centre cross, which turns red on target. Fit a **Gimballed Laser Mount** (Modern rules) and they hit whatever is under the ring instead, at 80% damage |
 | Right click | Centre the aim and stop turning |
 | W / S | Throttle up / down |
 | A / D | Roll |

@@ -190,6 +190,7 @@ function renderDocked() {
   list.innerHTML = '';
   for (const item of EQUIPMENT) {
     if (item.classicOnly && c.difficulty !== 'classic') continue;
+    if (item.modernOnly && c.difficulty !== 'modern') continue;
     const li = document.createElement('li');
     const owned = hasEquipment(c, item.id);
     li.innerHTML = `<span>${item.name}</span><small>${item.blurb}</small>`;
@@ -291,6 +292,20 @@ function destroyNpc(npc: NpcShip) {
 
 type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' };
 
+// Lasers fire straight ahead unless a gimballed mount is fitted, in which
+// case (with mouse aim) they swivel to hit what's under the ring. The ring
+// never strays more than 30° from the nose. Gimbals trade a little damage
+// for that convenience.
+const GIMBAL_DAMAGE = 0.8;
+
+function gimballed() {
+  return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(commander) && hasEquipment(cmdr(), 'gimbal-mount');
+}
+
+function laserDirection() {
+  return gimballed() ? aim.dir.clone() : player.forward();
+}
+
 function firePlayerLaser() {
   laserCooldown = PULSE_LASER.interval;
   laserHeat += PULSE_LASER.heat;
@@ -298,10 +313,7 @@ function firePlayerLaser() {
     overheated = true;
     flash('Laser overheated', 1.2);
   }
-  // Mouse aim: gimballed lasers fire where the ring is (it never strays more
-  // than 30° from the nose). Keyboard scheme: fixed lasers along the nose,
-  // as in 1984.
-  const dir = controlScheme() === 'mouse' && isMouseCaptured() ? aim.dir.clone() : player.forward();
+  const dir = laserDirection();
   const origin = player.obj.position.clone().addScaledVector(dir, 5);
   const targets: Target<Shot>[] = [
     ...police.map((npc) => ({ value: { kind: 'npc' as const, npc }, position: npc.obj.position, radius: npc.radius * 0.75 })),
@@ -317,7 +329,8 @@ function firePlayerLaser() {
   if (shot.kind === 'npc') {
     sfx.hit();
     becomeFugitive();
-    if (shot.npc.hit(PULSE_LASER.damage)) destroyNpc(shot.npc);
+    const damage = gimballed() ? PULSE_LASER.damage * GIMBAL_DAMAGE : PULSE_LASER.damage;
+    if (shot.npc.hit(damage)) destroyNpc(shot.npc);
   } else if (shot.kind === 'drifter') {
     const d = shot.drifter;
     const flare = new Explosion(d.model.def, d.model.root, d.velocity);
@@ -621,17 +634,21 @@ function updateSpace(dt: number) {
 // --- Combat HUD ------------------------------------------------------------------
 
 const laserGauge = $('#g-laser');
+const crosshair = $('.crosshair');
 const targetInfo = $('#target-info');
 
 function updateCombatHud() {
   laserGauge.style.setProperty('--v', String(laserHeat / 100));
   laserGauge.classList.toggle('hot', overheated || laserHeat > 75);
   // Name whatever is closest to where the guns point, if it's near enough.
-  const gimballed = controlScheme() === 'mouse' && isMouseCaptured();
-  const fwd = gimballed ? aim.dir.clone() : player.forward();
-  // The ring turns red when a shot would hit.
-  const onTarget = rayHit(player.obj.position, fwd, PULSE_LASER.range, police.map((npc) => ({ value: npc, position: npc.obj.position, radius: npc.radius * 0.75 })));
-  reticle.classList.toggle('on-target', Boolean(onTarget));
+  const fwd = laserDirection();
+  // Whichever sight the lasers follow (ring if gimballed, centre cross if
+  // fixed) turns red when a shot would hit.
+  const onTarget = Boolean(
+    rayHit(player.obj.position, fwd, PULSE_LASER.range, police.map((npc) => ({ value: npc, position: npc.obj.position, radius: npc.radius * 0.75 }))),
+  );
+  reticle.classList.toggle('on-target', onTarget && gimballed());
+  crosshair.classList.toggle('on-target', onTarget && !gimballed());
   let best: NpcShip | null = null;
   let bestAngle = THREE.MathUtils.degToRad(6);
   for (const npc of police) {
@@ -690,7 +707,7 @@ function renderControlsCard() {
       ? [
           ['Click', 'Capture the mouse (Esc releases it)'],
           ['Mouse', 'Aim: the ship turns to follow the ring'],
-          ['Left click / F', 'Fire: lasers hit what\'s under the ring (it turns red)'],
+          ['Left click / F', gimballed() || (commander && hasEquipment(cmdr(), 'gimbal-mount')) ? 'Fire: gimballed lasers hit what\'s under the ring' : 'Fire: lasers fire straight ahead at the centre cross'],
           ['Right click', 'Centre the aim (stop turning)'],
           ['W / S', 'Throttle up / down'],
           ['A / D', 'Roll'],

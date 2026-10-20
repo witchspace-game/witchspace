@@ -134,6 +134,15 @@ button.primary { border-color: var(--accent); color: var(--accent); }
   pointer-events: none;
 }
 @keyframes blink { to { visibility: hidden; } }
+.crosshair.on-target {
+  opacity: 1;
+  background:
+    linear-gradient(var(--danger), var(--danger)) center top / 2px 10px no-repeat,
+    linear-gradient(var(--danger), var(--danger)) center bottom / 2px 10px no-repeat,
+    linear-gradient(var(--danger), var(--danger)) left center / 10px 2px no-repeat,
+    linear-gradient(var(--danger), var(--danger)) right center / 10px 2px no-repeat;
+  filter: drop-shadow(0 0 6px var(--danger));
+}
 #reticle.on-target { border-color: var(--danger); box-shadow: 0 0 14px var(--danger); }
 body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
 
