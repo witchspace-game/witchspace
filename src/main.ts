@@ -44,6 +44,8 @@ import { clearFlash, flash, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
 import { systemAt, type StarSystem } from './galaxy/generate';
+import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
+import { buy, freeTonnes, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { playTunnel } from './ui/tunnel';
 import './style.css';
 
@@ -221,16 +223,86 @@ function enterDocked() {
   setState('docked');
 }
 
+// --- Docked tabs and the market ---------------------------------------------------
+
+type DockTab = 'station' | 'market';
+let dockTab: DockTab = 'station';
+
+function setDockTab(tab: DockTab) {
+  dockTab = tab;
+  document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  $('#tab-station').hidden = tab !== 'station';
+  $('#tab-market').hidden = tab !== 'market';
+  $('.panel.docked').classList.toggle('wide', tab === 'market');
+  if (tab === 'market') renderMarket();
+}
+document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) =>
+  b.addEventListener('click', () => {
+    b.blur();
+    setDockTab(b.dataset.tab as DockTab);
+  }),
+);
+
+function tradeContext(): TradeContext {
+  return { commander: cmdr(), system: currentSystem(), capacity: player.def.stats.cargo, now: Date.now() };
+}
+
+function renderMarket(message = '') {
+  const ctx = tradeContext();
+  const c = ctx.commander;
+  const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  $('#market-summary').innerHTML =
+    `Credits <b>${fmt(c.credits)} Cr</b> · Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>` +
+    (c.difficulty === 'classic' ? ' · 1984 prices' : '');
+  const rows = quotes(ctx)
+    .map((q) => {
+      const id = q.commodity.id;
+      const held = c.cargo[id] ?? 0;
+      const canBuy = maxBuyable(ctx, id);
+      const illegal = q.commodity.legality === 'illegal' ? '<span class="illegal">Illegal</span>' : '';
+      return `<tr class="${held ? 'held' : ''}">
+        <td>${q.commodity.name}${illegal}</td>
+        <td class="num">${fmt(q.price)} Cr/${q.commodity.unit}</td>
+        <td class="num">${q.stock}${q.commodity.unit === 't' ? 't' : q.commodity.unit}</td>
+        <td class="num">${held || '-'}</td>
+        <td class="actions">
+          <button data-buy="${id}" data-qty="1" ${canBuy >= 1 ? '' : 'disabled'} title="Buy one">+1</button>
+          <button data-buy="${id}" data-qty="${canBuy}" ${canBuy >= 1 ? '' : 'disabled'} title="Buy as much as you can">Max</button>
+          <button data-sell="${id}" data-qty="1" ${held >= 1 ? '' : 'disabled'} title="Sell one">-1</button>
+          <button data-sell="${id}" data-qty="${held}" ${held >= 1 ? '' : 'disabled'} title="Sell all">All</button>
+        </td>
+      </tr>`;
+    })
+    .join('');
+  $('#market-table').innerHTML = `<thead><tr><th>Goods</th><th>Price</th><th>Stock</th><th>Hold</th><th></th></tr></thead><tbody>${rows}</tbody>`;
+  $('#market-message').textContent = message;
+}
+
+$('#market-table').addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest('button');
+  if (!b || b.disabled) return;
+  b.blur();
+  const ctx = tradeContext();
+  const qty = Number(b.dataset.qty);
+  const result = b.dataset.buy ? buy(ctx, b.dataset.buy, qty) : sell(ctx, b.dataset.sell!, qty);
+  if (result.ok) {
+    saveCommander(ctx.commander);
+    sfx.beep();
+  }
+  renderMarket(result.message);
+});
+
 function renderDocked() {
   const c = cmdr();
   const here = currentSystem();
   $('#dock-location').textContent = `Coriolis Station · ${here.name}`;
+  if (dockTab === 'market') renderMarket();
   const rows: [string, string][] = [
     ['Commander', c.name],
     ['Rules', DIFFICULTIES[c.difficulty].name],
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ['Ship', player.def.name],
-    ['Cargo', `${cargoTonnes(c)} / ${player.def.stats.cargo} t`],
+    ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${player.def.stats.cargo} t`],
     ['Legal status', c.legal === 'fugitive' ? 'Fugitive' : c.legal === 'offender' ? 'Offender' : 'Clean'],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', 'Harmless'],
@@ -548,6 +620,8 @@ interface Drifter {
   spinRate: number;
   /** Seconds spent burning in the atmosphere; 0 until it gets there. */
   burn: number;
+  /** What's inside, for whoever scoops it up. */
+  contents: { id: string; qty: number } | null;
 }
 const drifters: Drifter[] = [];
 const MAX_DRIFTERS = 40;
@@ -559,11 +633,23 @@ const DRIFT_DRAG = 0.05;
 const BURN_TIME = 2.5; // seconds from first glow to break-up
 const LOST_IN_SPACE = 40000; // drifters further than this from the planet are removed
 
-function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, tonnes: number) {
+/** Pack a cargo manifest into canisters: one per tonne, precious goods together. */
+function packCanisters(cargo: Record<string, number>): { id: string; qty: number }[] {
+  const out: { id: string; qty: number }[] = [];
+  for (const [id, qty] of Object.entries(cargo)) {
+    if (qty <= 0) continue;
+    const perCanister = UNITS_PER_TONNE[commodityById(id)?.unit ?? 't'];
+    for (let left = qty; left > 0; left -= perCanister) out.push({ id, qty: Math.min(perCanister, left) });
+  }
+  return out;
+}
+
+function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, cargo: Record<string, number> | number) {
   const def = shipById('cargo-canister');
   if (!def) return;
-  // One canister per tonne, but don't fill the sky.
-  for (let i = 0; i < Math.min(tonnes, 12); i++) {
+  const loads = typeof cargo === 'number' ? Array.from({ length: cargo }, () => null) : packCanisters(cargo);
+  // Don't fill the sky: at most a dozen canisters from one wreck.
+  for (const contents of loads.slice(0, 12)) {
     const model = buildShip(def);
     model.root.position.copy(at).add(new THREE.Vector3().randomDirection().multiplyScalar(10));
     model.root.quaternion.random();
@@ -574,6 +660,7 @@ function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, tonnes: number) 
       axis: new THREE.Vector3().randomDirection(),
       spinRate: 0.3 + Math.random() * 1.2,
       burn: 0,
+      contents,
     });
   }
   while (drifters.length > MAX_DRIFTERS) disposeShip(drifters.shift()!.model);
@@ -923,6 +1010,7 @@ async function dock() {
   setState('transition');
   sfx.tunnel();
   await playTunnel();
+  cmdr().visits += 1; // Classic markets change with each visit
   saveCommander(cmdr());
   enterDocked();
 }
@@ -939,7 +1027,7 @@ function die() {
   space.scene.add(boom.group);
   explosions.push(boom);
   // Whatever was in the hold is now floating free for anyone with fuel scoops.
-  spillCargo(player.obj.position, velocity, cargoTonnes(c));
+  spillCargo(player.obj.position, velocity, c.cargo);
   c.cargo = {};
   // A new ship, a clean slate: the police lose interest.
   c.legal = 'clean';
@@ -1085,6 +1173,7 @@ function handleKey(code: string) {
       break;
     case 'docked':
       if (code === 'KeyL' || code === 'Enter') void launch();
+      else if (code === 'KeyT') setDockTab(dockTab === 'market' ? 'station' : 'market');
       break;
     case 'flying':
       if (code === 'KeyH') {
@@ -1151,5 +1240,6 @@ if (import.meta.env.DEV) {
 
 setRetro(false);
 updateModeLabel();
+setDockTab('station');
 showTitle();
 frame();

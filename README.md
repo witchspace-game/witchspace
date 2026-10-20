@@ -56,6 +56,7 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 | --- | --- |
 | Y / N | Load your commander / start a new one |
 | L | Launch from the station |
+| T | Market: buy and sell goods (when docked) |
 | C | Docking computer (once you've bought one) |
 | G | Galaxy map. Tab switches galactic and local charts; arrows or click select; Enter sets your destination |
 | I | Invert pitch (remembered) |
