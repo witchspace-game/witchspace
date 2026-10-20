@@ -19,7 +19,7 @@ The original Elite already gave every system a population, productivity, economy
 | **Population** | How much the world produces and consumes, how busy its stations are, how strong the police presence is |
 | **Planet size** | How much orbital room there is for stations |
 | **Economy** (industrial ↔ agricultural) | What it produces and needs |
-| **Tech level** | What can be built and sold there: advanced station classes, shipyards, high-tech equipment |
+| **Tech level** | What can be built, sold **and repaired** there: advanced station classes, shipyards, high-tech equipment. Advanced gear can't be serviced at low-tech stations (see [power and protection](law-and-travel.md#9-power-and-protection)) |
 | **Government** | Law, police, docking rules, and how stations relate to each other |
 
 ## 2. Station classes

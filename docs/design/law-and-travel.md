@@ -28,7 +28,8 @@ Being refused docking, running out of fuel, losing your ship or falling into deb
 | **Offender** | Minor crime | Allowed; a fine is deducted automatically on arrival |
 | **Fugitive** | Serious crime (attacking police or stations, murder) | **Refused** (see "Ways out" below) |
 
-- **Records belong to the system where the crime happened** **(proposed)**. You're wanted in Lave, not across the galaxy.
+- **Ordinary crimes are local:** your record belongs to the system where the crime happened. You're wanted in Lave, not across the galaxy.
+- **Serious crimes become galaxy-wide:** attacking stations, killing clean ships, or crimes beyond the local police's reach produce a **Co-operative Marshals warrant** that follows you into every Co-operative system (see section 9).
 - **Records cool down over time**, faster if you leave the system. We believe the original Elite reduced your record as you jumped between systems; to be confirmed before building.
 - **The type of government shapes everything:**
   - *Lawful* (democracies, corporate states): fair fines, strict docking checks.
@@ -129,7 +130,49 @@ The aim: **under a minute per jump, start to finish, and something worth your at
 
 A run to an outlaw system several jumps away should be **a few tense minutes**, not half an hour of cruising.
 
-## 9. Classic rules
+## 9. Power and protection
+
+What happens when a heavily armed veteran arrives somewhere poor and low-tech? **Against the locals (NPCs), let it be fun:** pirates flee, traders ask for escorts, governments offer work. **Against weaker players, the world pushes back**, through logistics, law and response rather than invisible rules.
+
+### Two tiers of law enforcement
+
+| | **System Police** | **Co-operative Marshals** |
+|---|---|---|
+| Who | Each world's own force | The Galactic Co-operative's own law enforcement, everywhere in Co-operative space |
+| Ships | Vipers: cheap, fast, numerous | Heavier advanced interceptors and patrol cruisers (original designs; a good community contribution) |
+| Jurisdiction | One system | Every Co-operative system; their warrants follow you across the galaxy |
+| Strength | Varies with government and tech level | Always strong |
+| They handle | Day-to-day crime | High-threat ships, serious crimes, organised crime and pirate gangs, Thargoids |
+
+- **Unforgeable markings:** Marshals have their own livery and transponders (working idea: a gold band and white beacons), issued under the same rule as police markings (section 1). A system's police can be corrupt; the Marshals are meant to be incorruptible.
+- **Anarchies:** Marshals don't patrol there, though they may go in after their most-wanted.
+
+### The response scales with the threat
+
+- When a crime is beyond the local police, they **call in the Marshals**, who arrive after a delay: **sooner and stronger the bigger the threat**.
+- **Bounties grow with the gap in power.** Killing a much weaker commander earns a far bigger bounty than killing an equal, which makes a bully a target for every bounty hunter, including other veterans.
+- Insurance won't pay out for criminals (section 7), so a bully who's eventually caught loses a very expensive ship.
+
+### Logistics: advanced gear needs advanced support
+
+- **Repairs and spares need tech.** A low-tech station can patch your hull but can't service a military beam laser or advanced shields. Damaged high-tech gear stays damaged until you return to civilised space (see [stations and worlds](stations-and-worlds.md)).
+- **Power and fuel:** high-end weapons draw heavily on energy and fuel, and low-tech systems sell lower-grade fuel (shorter jumps, slower recharge).
+- A heavily armed ship *can* visit, but its advantages wear down the longer it stays away from support.
+
+### Weapons licences and no-fire zones
+
+- **Military-grade weapons must be licensed** in lawful systems. Your transponder declares what you carry; unlicensed heavy weapons are an offence on arrival. Low-tech lawful worlds may ban some weapon classes outright; corrupt ones take bribes.
+- **No-fire zones around stations:** firing near a station brings its own defences into play, which hurt even top-end ships.
+
+### Protected starter systems
+
+- A few **core systems around the starting stations** have much heavier patrols, a permanent Marshal presence and harsher penalties, so newcomers can learn without being farmed. Veterans can visit and trade; they just can't hunt there without serious consequences.
+
+### The upside
+
+A powerful commander in a poor system can be a **force for good**: escorting convoys, clearing out pirates, bringing in high-tech goods that sell at a premium. Their power becomes a story, not just a threat.
+
+## 10. Classic rules
 
 Classic stays true to 1984:
 
@@ -137,12 +180,14 @@ Classic stays true to 1984:
 - Upgrades hit in combat are **destroyed**, not damaged.
 - Touch the station and you die. Lose your ship without an escape pod and it's **GAME OVER**.
 - Laws, records, police and fuel still apply. They were in the original.
+- Only local Vipers enforce the law: no Marshals, licences or threat-scaled response.
 
 ---
 
 ## Open questions
 
-- **Record scope:** per system (proposed) or galaxy-wide?
+- ~~**Record scope:**~~ settled: ordinary crimes are local; serious crimes become a galaxy-wide Marshals warrant.
+- **Marshals:** name, livery and ship designs; how long until they arrive for a given threat.
 - **Distress beacon and tug:** confirm, including player rescues in multiplayer.
 - **Travel pacing:** is under a minute per jump right, or should it be slower and more atmospheric?
 - **Debt ceiling and hunter escalation:** exact numbers to be tuned in play.
