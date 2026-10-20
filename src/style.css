@@ -281,6 +281,8 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
 #g-hull::after { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
 #g-laser::after { background: #c9ffe9; box-shadow: 0 0 8px #c9ffe9; }
 #g-laser.hot::after { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+#g-temp::after { background: #ffb347; box-shadow: 0 0 8px #ffb347; }
+#g-temp.hot::after { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
 #target-info {
   position: fixed;
   top: 36px;

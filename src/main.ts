@@ -459,11 +459,12 @@ let atmosphere = planetRadius * ATMOSPHERE_SCALE;
 let planetGM = 0.05 * 14000 ** 2; // debris pull; see updateDrifters
 let planet: THREE.Group | null = null;
 const SUN_POS = new THREE.Vector3(-60000, 22000, -40000);
+const SUN_RADIUS = 4000;
 space.sun.position.copy(SUN_POS);
 
 const station = new Station(shipById('coriolis')!);
 space.scene.add(station.root);
-const sun = buildSun(4000);
+const sun = buildSun(SUN_RADIUS);
 sun.position.copy(SUN_POS);
 space.scene.add(sun);
 const dust = new SpaceDust();
@@ -1030,6 +1031,81 @@ function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, cargo: Record<st
   while (drifters.length > MAX_DRIFTERS) disposeShip(drifters.shift()!.model);
 }
 
+// --- Fuel scoops: canisters and sun-skimming ----------------------------------------
+
+const SCOOP_RANGE = 35; // metres from the ship's centre
+const SCOOP_SPEED = 0.4; // fraction of top speed; any faster and the canister bounces off
+const HEAT_RANGE = SUN_RADIUS * 2.5; // above the surface: the cabin starts to warm
+const SKIM_RANGE = SUN_RADIUS * 0.8; // above the surface: close enough to scoop fuel
+const SKIM_RATE = 0.12; // light years per second at full speed
+let cabinTemp = 0; // 0..100+, over 100 the hull starts to burn
+let lastHeatWarning = 0;
+let skimming = false;
+
+/** Scoop a canister if it's close, we're slow and the scoops work. Returns true if it went in the hold. */
+function tryScoop(d: Drifter): boolean {
+  if (d.model.root.position.distanceTo(player.obj.position) > SCOOP_RANGE) return false;
+  const c = cmdr();
+  if (!isWorking(c, 'fuel-scoops') || player.speed > player.maxSpeed * SCOOP_SPEED) {
+    // Too fast, or no scoops: it bounces off.
+    d.velocity.copy(d.model.root.position).sub(player.obj.position).setLength(25).addScaledVector(player.forward(), player.speed);
+    return false;
+  }
+  // Unlabelled canisters (debris from police ships) hold whatever was going spare.
+  const contents = d.contents ?? { id: TRADE_GOODS[Math.floor(Math.random() * TRADE_GOODS.length)], qty: 1 };
+  const commodity = commodityById(contents.id);
+  const tonnes = contents.qty / UNITS_PER_TONNE[commodity?.unit ?? 't'];
+  if (freeTonnes(tradeContext()) < tonnes - 1e-9) {
+    if (elapsed - lastHoldFullWarning > 3) {
+      lastHoldFullWarning = elapsed;
+      flash('Cargo hold full', 1.5);
+    }
+    return false;
+  }
+  c.cargo[contents.id] = (c.cargo[contents.id] ?? 0) + contents.qty;
+  saveCommander(c);
+  sfx.beep();
+  const illegal = commodity?.legality === 'illegal' ? ' · illegal goods' : '';
+  flash(`Scooped ${contents.qty}${commodity?.unit === 't' ? ' t' : ' ' + commodity?.unit} ${commodity?.name ?? contents.id}${illegal}`, 2);
+  return true;
+}
+let lastHoldFullWarning = 0;
+
+/** Heat from the sun; with scoops, fuel from skimming it. Returns true if the heat destroyed the ship. */
+function updateSun(dt: number): boolean {
+  const altitude = player.obj.position.distanceTo(SUN_POS) - SUN_RADIUS;
+  if (altitude < 0) return true; // flew into the sun
+  const exposure = THREE.MathUtils.clamp(1 - altitude / HEAT_RANGE, 0, 1);
+  // Temperature heads towards a level set by how close you are, and cools off away from the star.
+  const targetTemp = exposure ** 1.6 * 140;
+  cabinTemp += (targetTemp - cabinTemp) * Math.min(1, dt * (targetTemp > cabinTemp ? 0.35 : 0.5));
+  const gauge = $('#g-temp');
+  gauge.style.setProperty('--v', String(Math.min(1, cabinTemp / 100)));
+  gauge.classList.toggle('hot', cabinTemp > 75);
+  if (cabinTemp > 80 && elapsed - lastHeatWarning > 4) {
+    lastHeatWarning = elapsed;
+    sfx.beep();
+    flash(cabinTemp > 100 ? 'Cabin temperature critical · hull burning' : 'Cabin temperature high', 1.5);
+  }
+  if (cabinTemp > 100 && damagePlayer((cabinTemp - 100) * 0.6 * dt)) return true;
+
+  const c = cmdr();
+  const canSkim = altitude < SKIM_RANGE && isWorking(c, 'fuel-scoops') && player.speed > player.maxSpeed * 0.2;
+  if (canSkim && c.fuel < FUEL_CAPACITY) {
+    if (!skimming) flash('Fuel scooping', 1.5);
+    c.fuel = Math.min(FUEL_CAPACITY, c.fuel + SKIM_RATE * (player.speed / player.maxSpeed) * dt);
+    if (c.fuel >= FUEL_CAPACITY) {
+      c.fuel = FUEL_CAPACITY;
+      flash('Fuel tanks full', 1.5);
+    }
+  } else if (skimming) {
+    c.fuel = Math.round(c.fuel * 10) / 10;
+    saveCommander(c);
+  }
+  skimming = canSkim && c.fuel < FUEL_CAPACITY;
+  return false;
+}
+
 function updateDrifters(dt: number) {
   const toPlanet = new THREE.Vector3();
   for (let i = drifters.length - 1; i >= 0; i--) {
@@ -1053,6 +1129,12 @@ function updateDrifters(dt: number) {
     }
     root.position.addScaledVector(d.velocity, dt);
     root.rotateOnAxis(d.axis, d.spinRate * dt);
+
+    if (state === 'flying' && tryScoop(d)) {
+      disposeShip(d.model);
+      drifters.splice(i, 1);
+      continue;
+    }
 
     if (d.burn >= BURN_TIME || r < planetRadius) {
       const flare = new Explosion(d.model.def, root, d.velocity);
@@ -1150,6 +1232,11 @@ function updateSpace(dt: number) {
     player.move(dt);
     player.recharge(dt);
 
+    if (updateSun(dt)) {
+      sfx.thud();
+      die();
+      return;
+    }
     const altitude = player.obj.position.distanceTo(planetPos) - planetRadius;
     if (altitude < 0) {
       sfx.thud();
@@ -1247,6 +1334,7 @@ function updateMarkers() {
     label: npc.hostile || npc.obj.position.distanceTo(player.obj.position) < 1500 ? km(npc.obj.position) : undefined,
   }));
   markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
+  markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
   const view = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
   updateIndicators(camera, view, markers);
 }
@@ -1386,6 +1474,7 @@ async function launch() {
   station.placeForLaunch(player);
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
+  cabinTemp = 0;
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
   flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
@@ -1582,6 +1671,7 @@ const J_DISTANCE = 10000; // metres per in-system jump
 const J_LOCK_SHIPS = 3000;
 const J_LOCK_STATION = 4000;
 const J_LOCK_PLANET = 3000; // above the surface
+const J_LOCK_SUN = 6000; // above the surface: jumps stop short of the heat
 
 let countdown: number | null = null;
 let lastTick = 0;
@@ -1688,8 +1778,9 @@ function inSystemJump() {
   const shipsNear = npcs.some((p) => p.obj.position.distanceTo(pos) < J_LOCK_SHIPS);
   const stationNear = pos.distanceTo(station.root.position) < J_LOCK_STATION;
   const planetNear = pos.distanceTo(planetPos) - planetRadius < J_LOCK_PLANET;
-  if (shipsNear || stationNear || planetNear) {
-    flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : 'planet'} too close`, 1.5);
+  const sunNear = pos.distanceTo(SUN_POS) - SUN_RADIUS < J_LOCK_SUN;
+  if (shipsNear || stationNear || planetNear || sunNear) {
+    flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : 'sun'} too close`, 1.5);
     return;
   }
   // Leap forward, but stop short of the station or the planet if they're ahead.
@@ -1704,6 +1795,7 @@ function inSystemJump() {
   };
   limit(station.root.position, J_LOCK_STATION - 200);
   limit(planetPos, planetRadius + J_LOCK_PLANET - 200);
+  limit(SUN_POS, SUN_RADIUS + J_LOCK_SUN - 200);
   if (dist < 500) {
     flash('Mass locked · too close ahead', 1.5);
     return;
@@ -1859,7 +1951,7 @@ function frame() {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, npcs, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, legalStatus,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, legalStatus,
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },

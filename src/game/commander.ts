@@ -13,7 +13,7 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; blurb: string }> =
   },
 };
 
-export type EquipmentId = 'docking-computer' | 'escape-pod' | 'gimbal-mount';
+export type EquipmentId = 'docking-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops';
 
 export type LegalStatus = 'clean' | 'offender' | 'fugitive';
 
@@ -36,6 +36,13 @@ export const EQUIPMENT: Equipment[] = [
     name: 'Docking Computer',
     price: 1500,
     blurb: 'Press C near a station and enjoy the waltz.',
+    minTech: 5,
+  },
+  {
+    id: 'fuel-scoops',
+    name: 'Fuel Scoops',
+    price: 600,
+    blurb: 'Skim a star for free fuel, if you can stand the heat. Fly slowly over cargo canisters to scoop them into the hold.',
     minTech: 5,
   },
   {
