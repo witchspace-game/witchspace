@@ -257,6 +257,7 @@ let laserCooldown = 0;
 let laserHeat = 0; // 0..100, the original's "LT" gauge
 let overheated = false;
 let reinforceTimer = 0;
+let stationFlash = 0; // seconds of white-hot glow after being hit
 let repopulateTimer = 0;
 const MAX_POLICE = 4;
 
@@ -347,6 +348,16 @@ function firePlayerLaser() {
     becomeFugitive();
     const damage = gimballed() ? PULSE_LASER.damage * GIMBAL_DAMAGE : PULSE_LASER.damage;
     if (shot.npc.hit(damage)) destroyNpc(shot.npc);
+  } else if (shot.kind === 'station') {
+    // Coriolis stations shrug off lasers, but firing on one is a serious
+    // crime: you're a Fugitive at once and the police launch immediately.
+    stationFlash = 0.25;
+    sfx.hit();
+    if (!isFugitive()) {
+      becomeFugitive();
+      flash('Station under attack · Police launching', 2.5);
+    }
+    if (police.length < MAX_POLICE && reinforceTimer > 1) reinforceTimer = 0.5;
   } else if (shot.kind === 'drifter') {
     const d = shot.drifter;
     const flare = new Explosion(d.model.def, d.model.root, d.velocity);
@@ -645,6 +656,10 @@ function updateSpace(dt: number) {
   }
 
   updateCombat(dt, input);
+  if (stationFlash > 0) {
+    stationFlash = Math.max(0, stationFlash - dt);
+    heatShip(station.model, stationFlash / 0.25);
+  }
 
   if (state === 'dead') {
     // Watch the wreck from outside, slowly circling, as the original did.
