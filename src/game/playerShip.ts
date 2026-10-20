@@ -53,13 +53,23 @@ export class PlayerShip {
     this.rollVel += (input.roll * (this.def.stats.rollRate ?? 2) - this.rollVel) * k;
     this.obj.rotateX(-this.pitchVel * dt);
     this.obj.rotateZ(this.rollVel * dt);
-    this.speed = THREE.MathUtils.clamp(this.speed + input.throttle * ACCELERATION * dt, 0, this.maxSpeed);
+    this.speed += input.throttle * ACCELERATION * dt + input.speedStep * this.maxSpeed;
+    this.speed = THREE.MathUtils.clamp(this.speed, 0, this.maxSpeed);
   }
 
   /** Let go of the stick, e.g. when the docking computer takes over. */
   centreControls() {
     this.pitchVel = 0;
     this.rollVel = 0;
+  }
+
+  /**
+   * Mirror the docking computer's turn rates on the pitch and roll gauges.
+   * The computer rotates the ship itself, so this only affects the dashboard.
+   */
+  showRates(pitch: number, roll: number) {
+    this.pitchVel = pitch;
+    this.rollVel = roll;
   }
 
   move(dt: number) {

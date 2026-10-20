@@ -278,6 +278,30 @@ button.primary { border-color: var(--accent); color: var(--accent); }
 
 body[data-state='dead'] #banner { font-size: clamp(28px, 6vw, 64px); }
 
+/* Mouse flight: a ring around the crosshair with a dot showing stick position. */
+#mouse-stick {
+  position: fixed;
+  left: 50%;
+  top: 42%;
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+  border: 1px solid rgba(61, 255, 176, 0.35);
+  border-radius: 50%;
+  pointer-events: none;
+}
+#mouse-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
 /* --- 1984 mode: white on black, chunky 8x8-style type ------------------- */
 
 body.retro {

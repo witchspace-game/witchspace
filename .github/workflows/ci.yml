@@ -19,3 +19,5 @@ jobs:
         run: npm run validate
       - name: Typecheck and build
         run: npm run build
+      - name: Docking computer simulation
+        run: npm run sim:docking -- --ci

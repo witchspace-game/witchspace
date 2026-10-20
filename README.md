@@ -27,16 +27,20 @@ npm run dev
 
 Then open http://localhost:5173.
 
-| Key | Action |
+| Keyboard | Action |
 | --- | --- |
 | Y / N | Load your commander / start a new one |
 | L | Launch from the station |
-| W / S or ↑ / ↓ | Pitch (dive / climb). X also climbs, as on the BBC |
+| W / S or ↑ / ↓ | Pitch (dive / climb). X also climbs, as on the BBC. Tap for fine control, hold to turn harder |
 | A / D or ← / → | Roll. `<` and `>` work too |
 | Space / Shift | Speed up / slow down |
 | C | Docking computer (once you've bought one) |
 | M | Toggle neo-vector / 1984 mode |
 | N | Sound on / off (in flight) |
+
+**Mouse:** click the game while flying to capture the mouse. It then works as a joystick: move it forwards and back to pitch, left and right to roll, and scroll to change speed. Esc releases it.
+
+**Gamepad:** left stick to fly, right/left triggers for speed, A for launch and the docking computer, Y for 1984 mode.
 
 **Docking tip:** the station spins. Line up with the slot and keep rolling with it all the way in. In neo-vector mode, the glide path and docking aid show how far out you are.
 

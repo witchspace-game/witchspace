@@ -15,7 +15,7 @@ import {
   type Difficulty,
 } from './game/commander';
 import { DockingComputer } from './game/dockingComputer';
-import { flightInput, isSteering } from './game/input';
+import { centreMouseStick, flightInput, gamepadPresses, isMouseFlying, mouseStick, setMouseFlightAvailable } from './game/input';
 import { PlayerShip } from './game/playerShip';
 import { Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun } from './render/bodies';
@@ -40,6 +40,7 @@ function setState(next: State) {
     el.hidden = !el.dataset.screen!.split(' ').includes(next);
   });
   if (next !== 'flying') $('#dock-aid').hidden = true;
+  setMouseFlightAvailable(next === 'flying');
 }
 
 let commander: Commander | null = null;
@@ -329,6 +330,7 @@ function setAutopilot(on: boolean, message?: string) {
   autopilot = on;
   if (on) {
     dockingComputer.reset();
+    centreMouseStick(); // so taking back control doesn't lurch
     danube.start(!isRetro());
   } else {
     danube.stop();
@@ -354,7 +356,7 @@ function updateSpace(dt: number) {
   if (state === 'flying') {
     const prev = station.toLocal(player.obj.position);
     const input = flightInput();
-    if (autopilot && isSteering(input)) setAutopilot(false, 'Docking computer off');
+    if (autopilot && input.active) setAutopilot(false, 'Docking computer off');
     if (autopilot) dockingComputer.update(dt, player, station);
     else player.steer(dt, input);
     player.move(dt);
@@ -409,7 +411,23 @@ function updateSpace(dt: number) {
     ...patrols.map((p) => ({ position: p.model.root.position, color: '#4aa8ff' })),
     ...drifters.map((d) => ({ position: d.model.root.position, color: '#ffd166' })),
   ];
-  if (state === 'flying') updateHud(player, station, blips, autopilot);
+  if (state === 'flying') {
+    updateHud(player, station, blips, autopilot);
+    updateMouseIndicator();
+  }
+}
+
+const mouseRing = $('#mouse-stick');
+const mouseDot = $('#mouse-dot');
+let wasMouseFlying = false;
+function updateMouseIndicator() {
+  const on = isMouseFlying();
+  mouseRing.hidden = !on;
+  if (on !== wasMouseFlying) flash(on ? 'Mouse flight · Esc to release' : 'Mouse released', 1.5);
+  wasMouseFlying = on;
+  if (!on) return;
+  const s = mouseStick();
+  mouseDot.style.transform = `translate(${s.x * 40}px, ${s.y * 40}px)`;
 }
 
 async function launch() {
@@ -487,6 +505,23 @@ function updateModeLabel() {
   $('#mode').textContent = isRetro() ? '1984 MODE' : 'NEO-VECTOR';
 }
 
+/** Gamepad buttons map onto the keyboard action for the current screen. */
+function padToKey(button: 'PadA' | 'PadB' | 'PadY' | 'PadStart'): string | null {
+  if (button === 'PadY') return 'KeyM';
+  if (button === 'PadB') return state === 'newgame' ? 'Escape' : null;
+  switch (state) {
+    case 'title':
+    case 'newgame':
+      return 'Enter';
+    case 'docked':
+      return 'KeyL';
+    case 'flying':
+      return button === 'PadA' ? 'KeyC' : null;
+    default:
+      return null;
+  }
+}
+
 function handleKey(code: string) {
   unlockAudio();
   if (code === 'KeyM') {
@@ -546,6 +581,10 @@ const clock = new THREE.Clock();
 
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.1);
+  for (const button of gamepadPresses()) {
+    const code = padToKey(button);
+    if (code) handleKey(code);
+  }
   if (inSpace) {
     if (state !== 'transition') updateSpace(dt);
     render(space.scene);
