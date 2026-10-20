@@ -43,6 +43,7 @@ import { Explosion } from './render/explosion';
 import { camera, isRetro, makeSpace, render, setRetro } from './render/renderer';
 import { buildShip, disposeShip, heatShip, type ShipModel } from './render/shipModel';
 import { buildHangar } from './render/hangar';
+import { stationName } from './galaxy/stationNames';
 import { clearFlash, flash, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
@@ -337,7 +338,9 @@ $('#market-table').addEventListener('click', (e) => {
 function renderDocked() {
   const c = cmdr();
   const here = currentSystem();
-  $('#dock-location').textContent = `Coriolis Station · ${here.name}`;
+  const st = stationName(here);
+  $('#dock-location').textContent = `${st.name} · ${here.name}`;
+  $('#dock-location').title = st.honours ? `Named for ${st.honours}` : '';
   if (dockTab === 'market') renderMarket();
   const rows: [string, string][] = [
     ['Commander', c.name],
@@ -1108,7 +1111,7 @@ async function launch() {
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
   setState('flying');
-  flash(`${currentSystem().name} · Coriolis Station`, 2.5);
+  flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
 }
 
 async function dock() {
