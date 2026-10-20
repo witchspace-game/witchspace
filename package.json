@@ -14,11 +14,11 @@
   "license": "GPL-3.0-only",
   "description": "An open-source, browser-based space trading game - a love letter to Elite (1984).",
   "dependencies": {
-    "three": "^0.170.0"
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
-    "@types/three": "^0.170.0",
+    "@types/three": "^0.186.0",
     "ajv": "^8.20.0",
     "marked": "^18.1.1",
     "tsx": "^4.23.15",
