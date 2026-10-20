@@ -1,0 +1,46 @@
+{
+  "$schema": "../../schemas/ship.schema.json",
+  "id": "viper",
+  "name": "Viper",
+  "manufacturer": "Faulcon deLacy",
+  "role": "police",
+  "description": "Fast, cheap and everywhere a station wants order kept. If one is on your scanner and your record isn't clean, it's already turning towards you.",
+  "credits": {
+    "authors": ["Witchspace contributors"],
+    "license": "CC-BY-SA-4.0",
+    "aiAssisted": true
+  },
+  "geometry": {
+    "vertices": [
+      [0, 0, 36],
+      [0, 8, -16],
+      [-22, 0, -16],
+      [0, -6, -16],
+      [22, 0, -16]
+    ],
+    "faces": [
+      [0, 1, 2],
+      [0, 4, 1],
+      [0, 2, 3],
+      [0, 3, 4],
+      [1, 4, 3, 2]
+    ],
+    "details": {
+      "vertices": [
+        [-6, 1.5, -16.2], [6, 1.5, -16.2], [6, -1.5, -16.2], [-6, -1.5, -16.2]
+      ],
+      "lines": [[0, 1], [1, 2], [2, 3], [3, 0]]
+    }
+  },
+  "stats": {
+    "maxSpeed": 320,
+    "pitchRate": 2.2,
+    "rollRate": 3,
+    "hull": 90,
+    "shields": 80,
+    "cargo": 0,
+    "missiles": 1,
+    "price": 0
+  },
+  "style": { "lineColor": "#4aa8ff", "glow": 1.1 }
+}

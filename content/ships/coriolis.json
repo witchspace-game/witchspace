@@ -1,0 +1,53 @@
+{
+  "$schema": "../../schemas/ship.schema.json",
+  "id": "coriolis",
+  "name": "Coriolis Station",
+  "manufacturer": "Galactic Co-operative",
+  "role": "station",
+  "description": "A slowly turning cuboctahedron with a single docking slot. Match its spin, line up with the slot, and keep your nerve.",
+  "credits": {
+    "authors": ["Witchspace contributors"],
+    "license": "CC-BY-SA-4.0",
+    "aiAssisted": true,
+    "notes": "A cuboctahedron, 160m across. Docking slot faces +Z."
+  },
+  "geometry": {
+    "vertices": [
+      [80, 80, 0], [-80, 80, 0], [-80, -80, 0], [80, -80, 0],
+      [80, 0, 80], [-80, 0, 80], [-80, 0, -80], [80, 0, -80],
+      [0, 80, 80], [0, -80, 80], [0, -80, -80], [0, 80, -80]
+    ],
+    "faces": [
+      [0, 4, 3, 7],
+      [1, 6, 2, 5],
+      [0, 11, 1, 8],
+      [3, 9, 2, 10],
+      [4, 8, 5, 9],
+      [7, 10, 6, 11],
+      [0, 8, 4],
+      [1, 5, 8],
+      [2, 9, 5],
+      [3, 4, 9],
+      [0, 7, 11],
+      [1, 11, 6],
+      [2, 6, 10],
+      [3, 10, 7]
+    ],
+    "details": {
+      "vertices": [
+        [-45, 13, 80.5], [45, 13, 80.5], [45, -13, 80.5], [-45, -13, 80.5]
+      ],
+      "lines": [[0, 1], [1, 2], [2, 3], [3, 0]]
+    }
+  },
+  "stats": {
+    "maxSpeed": 0,
+    "pitchRate": 0,
+    "rollRate": 0.25,
+    "hull": 100000,
+    "shields": 100000,
+    "cargo": 0,
+    "price": 0
+  },
+  "style": { "lineColor": "#ffb347", "glow": 0.8 }
+}

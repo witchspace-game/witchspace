@@ -1,0 +1,169 @@
+{
+  "$schema": "../../schemas/ship.schema.json",
+  "id": "cargo-canister",
+  "name": "Cargo Canister",
+  "role": "cargo",
+  "description": "A standard one-tonne cargo pod. Whatever is inside, someone will want it, and someone else will want it more.",
+  "credits": {
+    "authors": [
+      "Witchspace contributors"
+    ],
+    "license": "CC-BY-SA-4.0",
+    "aiAssisted": true
+  },
+  "geometry": {
+    "vertices": [
+      [
+        0,
+        4,
+        5
+      ],
+      [
+        -3.8,
+        1.24,
+        5
+      ],
+      [
+        -2.35,
+        -3.24,
+        5
+      ],
+      [
+        2.35,
+        -3.24,
+        5
+      ],
+      [
+        3.8,
+        1.24,
+        5
+      ],
+      [
+        0,
+        4,
+        -5
+      ],
+      [
+        -3.8,
+        1.24,
+        -5
+      ],
+      [
+        -2.35,
+        -3.24,
+        -5
+      ],
+      [
+        2.35,
+        -3.24,
+        -5
+      ],
+      [
+        3.8,
+        1.24,
+        -5
+      ]
+    ],
+    "faces": [
+      [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      [
+        9,
+        8,
+        7,
+        6,
+        5
+      ],
+      [
+        0,
+        5,
+        6,
+        1
+      ],
+      [
+        1,
+        6,
+        7,
+        2
+      ],
+      [
+        2,
+        7,
+        8,
+        3
+      ],
+      [
+        3,
+        8,
+        9,
+        4
+      ],
+      [
+        4,
+        9,
+        5,
+        0
+      ]
+    ],
+    "details": {
+      "vertices": [
+        [
+          -2,
+          1.2,
+          5.3
+        ],
+        [
+          2,
+          1.2,
+          5.3
+        ],
+        [
+          2,
+          -1.2,
+          5.3
+        ],
+        [
+          -2,
+          -1.2,
+          5.3
+        ]
+      ],
+      "lines": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          0
+        ]
+      ]
+    }
+  },
+  "stats": {
+    "maxSpeed": 0,
+    "pitchRate": 1,
+    "rollRate": 1,
+    "hull": 8,
+    "shields": 0,
+    "cargo": 1,
+    "price": 0
+  },
+  "style": {
+    "lineColor": "#ffd166",
+    "glow": 0.9
+  }
+}

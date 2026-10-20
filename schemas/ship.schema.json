@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://witchspace.dev/schemas/ship.schema.json",
+  "title": "Witchspace ship",
+  "description": "A ship or station. Geometry is a closed, convex-faced polyhedron drawn as glowing wireframe. Units are metres; +Z is forward (the nose), +Y is up, +X is port (left), matching three.js and glTF.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "role", "description", "credits", "geometry", "stats", "style"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "id": {
+      "description": "Unique kebab-case id. Must match the file name (without .json).",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "name": { "description": "Display name, e.g. \"Cobra Mk III\".", "type": "string", "minLength": 1, "maxLength": 40 },
+    "manufacturer": { "type": "string", "maxLength": 60 },
+    "role": {
+      "description": "What the ship is for. Drives AI behaviour and where it spawns.",
+      "enum": ["trader", "fighter", "multirole", "police", "pirate", "miner", "freighter", "alien", "station", "missile", "cargo", "debris"]
+    },
+    "description": { "description": "One or two sentences of in-universe flavour text.", "type": "string", "minLength": 1, "maxLength": 400 },
+    "credits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authors", "license"],
+      "properties": {
+        "authors": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "license": { "const": "CC-BY-SA-4.0" },
+        "aiAssisted": { "description": "True if an AI tool helped create this file.", "type": "boolean" },
+        "notes": { "type": "string" }
+      }
+    },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vertices", "faces"],
+      "properties": {
+        "vertices": {
+          "description": "[x, y, z] points in metres.",
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 256,
+          "items": { "$ref": "#/$defs/vec3" }
+        },
+        "faces": {
+          "description": "Each face is a list of vertex indices forming a flat, convex polygon, wound counter-clockwise when viewed from outside the ship. Run `npm run validate -- --fix` to correct winding automatically. Edges are derived from faces.",
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 256,
+          "items": { "type": "array", "minItems": 3, "items": { "type": "integer", "minimum": 0 } }
+        },
+        "details": {
+          "description": "Optional decorative lines (engine vents, cockpit windows, docking slots) that sit on the hull surface.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["vertices", "lines"],
+          "properties": {
+            "vertices": { "type": "array", "items": { "$ref": "#/$defs/vec3" } },
+            "lines": {
+              "type": "array",
+              "items": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "integer", "minimum": 0 } }
+            }
+          }
+        }
+      }
+    },
+    "stats": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["maxSpeed", "hull", "shields", "cargo", "price"],
+      "properties": {
+        "maxSpeed": { "description": "Metres per second.", "type": "number", "minimum": 0, "maximum": 1000 },
+        "pitchRate": { "description": "Radians per second.", "type": "number", "minimum": 0, "maximum": 6 },
+        "rollRate": { "description": "Radians per second.", "type": "number", "minimum": 0, "maximum": 6 },
+        "hull": { "type": "number", "minimum": 1 },
+        "shields": { "type": "number", "minimum": 0 },
+        "cargo": { "description": "Cargo capacity in tonnes.", "type": "integer", "minimum": 0 },
+        "missiles": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "price": { "description": "Credits. 0 = not for sale.", "type": "number", "minimum": 0 },
+        "bounty": { "description": "Credits paid for destroying one, if wanted.", "type": "number", "minimum": 0 }
+      }
+    },
+    "style": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lineColor"],
+      "properties": {
+        "lineColor": { "description": "Glow colour in neo-vector mode.", "type": "string", "pattern": "^#[0-9a-fA-F]{6}$" },
+        "glow": { "description": "Bloom strength multiplier, 0-2.", "type": "number", "minimum": 0, "maximum": 2 }
+      }
+    }
+  },
+  "$defs": {
+    "vec3": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } }
+  }
+}

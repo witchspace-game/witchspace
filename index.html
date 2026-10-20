@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Witchspace</title>
+    <meta name="description" content="An open-source, browser-based space trading game. A love letter to Elite (1984)." />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body data-state="title">
+    <canvas id="neo"></canvas>
+    <canvas id="retro" hidden></canvas>
+
+    <header class="title" data-screen="title newgame docked">
+      <h1>WITCHSPACE</h1>
+      <span id="mode"></span>
+    </header>
+
+    <!-- Title: ship showroom -->
+    <section class="panel" data-screen="title">
+      <h2 id="ship-name"></h2>
+      <p id="ship-meta" class="meta"></p>
+      <p id="ship-desc" class="desc"></p>
+      <dl id="ship-stats"></dl>
+      <p id="ship-credits" class="credits"></p>
+    </section>
+    <p class="prompt" data-screen="title">Load New Commander (Y/N)?</p>
+    <nav class="controls" data-screen="title">
+      <button data-key="ArrowLeft">◀ Prev</button>
+      <button data-key="ArrowRight">Next ▶</button>
+      <button data-key="KeyM">M · 1984 mode</button>
+      <button data-key="KeyY" id="load-button" class="primary">Y · Load commander</button>
+      <button data-key="KeyN" id="new-button">N · New commander</button>
+    </nav>
+
+    <!-- New commander: choose the rules -->
+    <section class="panel rules" data-screen="newgame">
+      <h2>New commander</h2>
+      <p class="meta">Choose your rules. You can't change them later.</p>
+      <div id="rules"></div>
+    </section>
+    <nav class="controls" data-screen="newgame">
+      <button data-key="KeyM">M · 1984 mode</button>
+      <button data-key="Escape">Esc · Back</button>
+    </nav>
+
+    <!-- Docked at the station -->
+    <section class="panel docked" data-screen="docked">
+      <h2>Docked</h2>
+      <p class="meta" id="dock-location">Coriolis Station · Lave</p>
+      <dl id="cmdr"></dl>
+      <h3>Equip ship</h3>
+      <ul id="equip"></ul>
+      <p class="credits">Trading arrives in the next update. The Galactic Co-operative has advanced you some credits to try the docking computer.</p>
+    </section>
+    <nav class="controls" data-screen="docked">
+      <button data-key="KeyM">M · 1984 mode</button>
+      <button data-key="KeyL" class="primary">L · Launch</button>
+    </nav>
+
+    <!-- Flight -->
+    <div class="crosshair" data-screen="flying"></div>
+    <p class="keys" data-screen="flying">
+      W/S pitch · A/D roll · Space/Shift speed · C docking computer · M 1984 · N sound
+    </p>
+    <section id="dock-aid" hidden>
+      <div class="aid-row"><span>Slot</span><b id="aid-dist"></b></div>
+      <div class="aid-row"><span>Approach</span><b id="aid-heading"></b></div>
+      <div class="aid-row"><span>Roll</span><b id="aid-roll"></b></div>
+      <div class="roll-track"><i id="aid-roll-marker"></i></div>
+    </section>
+    <section class="dash" data-screen="flying">
+      <div class="gauges">
+        <label>SH <span class="bar" id="g-shields"></span></label>
+        <label>HL <span class="bar" id="g-hull"></span></label>
+        <label>SP <span class="bar" id="g-speed"></span></label>
+      </div>
+      <canvas id="scanner" width="360" height="140"></canvas>
+      <div class="gauges">
+        <label>RL <span class="bar centred" id="g-roll"></span></label>
+        <label>DC <span class="bar centred" id="g-pitch"></span></label>
+        <div class="dash-row">
+          <canvas id="compass" width="44" height="44"></canvas>
+          <span id="dc-light" title="Docking computer">AUTO</span>
+        </div>
+      </div>
+    </section>
+
+    <div id="hit"></div>
+    <p id="banner" hidden></p>
+    <canvas id="tunnel" hidden></canvas>
+
+    <footer class="tribute" data-screen="title newgame docked">
+      An unofficial tribute to <em>Elite</em> (1984) by David Braben &amp; Ian Bell. Not affiliated with Frontier Developments.
+    </footer>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
