@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "validate": "tsx tools/validate.ts",
     "sim:docking": "tsx tools/simulate-docking.ts",
-    "site": "tsx tools/build-site.ts"
+    "site": "tsx tools/build-site.ts",
+    "test": "vitest run"
   },
   "license": "GPL-3.0-only",
   "description": "An open-source, browser-based space trading game - a love letter to Elite (1984).",
@@ -22,7 +23,8 @@
     "marked": "^15.0.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
   },
   "private": true,
   "type": "module",

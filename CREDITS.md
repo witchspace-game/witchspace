@@ -6,7 +6,7 @@
 
 In 1984, **Ian Bell** and **David Braben** wrote *Elite* for the BBC Micro while they were undergraduates at Cambridge. Acornsoft published it. They fitted 3D wireframe space flight, eight procedurally generated galaxies and an open-ended trading game into about 22KB of memory. It invented a genre, and for many of us it was the moment computers became worlds.
 
-The ship names in Witchspace (Cobra Mk III, Viper, Sidewinder, Python, Coriolis…) are a deliberate tribute to their work. Everything else is new: the code, the ship geometry, the text and the art were all created from scratch for this project.
+The ship names in Witchspace (Cobra Mk III, Viper, Sidewinder, Python, Coriolis…) are a deliberate tribute to their work. So is the galaxy: Witchspace generates the same eight galaxies of 256 star systems as the original, using our own implementation of the original's generation algorithm as Ian Bell has described it, so Lave, Diso, Leesti and Riedquat are exactly where every commander remembers them. Everything else is new: the code, the ship geometry, the planet descriptions, the text and the art were all created from scratch for this project.
 
 Thank you, Ian and David.
 

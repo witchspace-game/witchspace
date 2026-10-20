@@ -61,6 +61,10 @@ export interface Commander {
   legal: LegalStatus;
   /** Fitted equipment knocked offline in combat (Modern rules); repaired at a station. */
   damaged: EquipmentId[];
+  /** Where you are: galaxy 0..7 and system index 0..255. */
+  location: { galaxy: number; system: number };
+  /** Chosen hyperspace destination (system index in the current galaxy), if any. */
+  target: number | null;
 }
 
 const KEY = 'witchspace.commander.v1';
@@ -75,6 +79,8 @@ export const newCommander = (difficulty: Difficulty): Commander => ({
   cargo: {},
   legal: 'clean',
   damaged: [],
+  location: { galaxy: 0, system: 7 }, // Lave, as in 1984
+  target: null,
 });
 
 export function loadCommander(): Commander | null {

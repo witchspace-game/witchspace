@@ -195,6 +195,13 @@ export interface FlightInput {
 }
 
 let lastPoll = performance.now();
+let suppressed = false;
+
+/** While a chart is open, the arrow keys move its cursor instead of the ship. */
+export function setFlightInputSuppressed(value: boolean) {
+  suppressed = value;
+  if (value && document.pointerLockElement) document.exitPointerLock();
+}
 
 export function flightInput(): FlightInput {
   const now = performance.now();
@@ -246,5 +253,10 @@ export function flightInput(): FlightInput {
     input.pitch !== 0 || input.roll !== 0 || input.yaw !== 0 || input.throttle !== 0 ||
     input.speedStep !== 0 || aimDx !== 0 || aimDy !== 0;
   aimDx = aimDy = wheel = 0;
+  if (suppressed) {
+    input.pitch = input.roll = input.yaw = input.throttle = input.speedStep = input.aimDx = input.aimDy = 0;
+    input.fire = false;
+    input.active = false;
+  }
   return input;
 }
