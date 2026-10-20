@@ -22,6 +22,7 @@ Each station has a market for the classic commodity list: food, textiles, radioa
 - **Production and consumption** depend on the system's **economy** (industrial ↔ agricultural), **tech level** and **government**. Agricultural worlds produce food and want machinery; industrial worlds the reverse.
 - **Prices respond to supply and demand.** Sell twenty tonnes of computers and the price drops for the next seller; the market then recovers over time as the station consumes or produces.
 - **Stock is finite.** A station can run out, and a rival who arrived first may have bought the lot.
+- **Market size follows the world.** A populous world's stations trade far more than a frontier outpost's (see [stations and worlds](stations-and-worlds.md)).
 - **Classic rules** use simpler 1984-style markets: prices set by the system's economy plus a little random variation each visit, with no lasting effects from your trades.
 
 ## 2. Information that travels
