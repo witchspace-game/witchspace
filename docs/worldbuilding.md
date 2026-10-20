@@ -15,6 +15,7 @@ Write flavour text like a terse ship's manual or a bar-room rumour, not a fantas
 - **Governments** range from Corporate States and Democracies down to Feudal worlds, Dictatorships and outright Anarchies. The lower the order, the higher the profit and the risk.
 - **Economies** run from Rich Industrial to Poor Agricultural. Goods flow from where they're made to where they're needed.
 - **Thargoids** are an insectoid alien threat that can drag ships out of witchspace mid-jump. Nobody quite knows what they want.
+- **Police** fly with beacons, a hull band and a transponder issued and keyed by the Galactic Co-operative. None of these can be bought, copied or painted on. A second-hand Viper is just a Viper, and no station, however corrupt, will mistake it for the law.
 - **Commanders** are ranked from *Harmless* to *Elite* by combat record. Legal status is *Clean*, *Offender* or *Fugitive*.
 
 ## Naming

@@ -8,7 +8,10 @@ import {
   deleteCommander,
   EQUIPMENT,
   hasEquipment,
+  isWorking,
   loadCommander,
+  REPAIR_FRACTION,
+  rollEquipmentDamage,
   newCommander,
   removeEquipment,
   saveCommander,
@@ -203,13 +206,25 @@ function renderDocked() {
     if (item.modernOnly && c.difficulty !== 'modern') continue;
     const li = document.createElement('li');
     const owned = hasEquipment(c, item.id);
-    li.innerHTML = `<span>${item.name}</span><small>${item.blurb}</small>`;
+    const damaged = c.damaged.includes(item.id);
+    const repairCost = Math.round(item.price * REPAIR_FRACTION);
+    li.innerHTML = `<span>${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${item.blurb}</small>`;
     const buy = document.createElement('button');
-    buy.textContent = owned ? 'Fitted' : `Buy · ${item.price.toLocaleString()} Cr`;
-    buy.disabled = owned || c.credits < item.price;
+    if (damaged) {
+      buy.textContent = `Repair · ${repairCost.toLocaleString()} Cr`;
+      buy.disabled = c.credits < repairCost;
+    } else {
+      buy.textContent = owned ? 'Fitted' : `Buy · ${item.price.toLocaleString()} Cr`;
+      buy.disabled = owned || c.credits < item.price;
+    }
     buy.addEventListener('click', () => {
-      c.credits -= item.price;
-      c.equipment.push(item.id);
+      if (damaged) {
+        c.credits -= repairCost;
+        c.damaged = c.damaged.filter((id) => id !== item.id);
+      } else {
+        c.credits -= item.price;
+        c.equipment.push(item.id);
+      }
       saveCommander(c);
       sfx.beep();
       renderDocked();
@@ -287,6 +302,24 @@ function spawnViper(fromSlot: boolean) {
 spawnViper(false);
 spawnViper(false);
 
+/**
+ * Damage the player's ship. Shields soak hits first; once a hit reaches the
+ * hull it may take out fitted equipment. Returns true if the ship is destroyed.
+ */
+function damagePlayer(amount: number): boolean {
+  const hullBefore = player.hull;
+  const destroyed = player.damage(amount);
+  if (!destroyed && player.hull < hullBefore && commander) {
+    const hit = rollEquipmentDamage(cmdr());
+    if (hit) {
+      sfx.scrape();
+      flash(cmdr().difficulty === 'classic' ? `${hit.name} destroyed!` : `${hit.name} damaged · repair at a station`, 2.5);
+      if (hit.id === 'docking-computer' && autopilot) setAutopilot(false);
+    }
+  }
+  return destroyed;
+}
+
 function becomeFugitive() {
   if (isFugitive()) return;
   cmdr().legal = 'fugitive';
@@ -316,7 +349,7 @@ type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter 
 const GIMBAL_DAMAGE = 0.8;
 
 function gimballed() {
-  return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(commander) && hasEquipment(cmdr(), 'gimbal-mount');
+  return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(commander) && isWorking(cmdr(), 'gimbal-mount');
 }
 
 function laserDirection() {
@@ -397,7 +430,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
         sfx.hit();
         hitFeedback(0.35);
         showHitDirection(camera, npc.obj.position);
-        if (player.damage(npc.laser.damage)) {
+        if (damagePlayer(npc.laser.damage)) {
           die();
           return;
         }
@@ -412,7 +445,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       hitFeedback(0.9);
       becomeFugitive();
       if (npc.hit(25)) destroyNpc(npc);
-      if (player.damage(25)) {
+      if (damagePlayer(25)) {
         die();
         return;
       }
@@ -646,7 +679,7 @@ function updateSpace(dt: number) {
     } else if (contact) {
       if (contact.kind === 'scrape') sfx.scrape();
       else sfx.thud();
-      if (cmdr().difficulty === 'classic' || player.damage(contact.damage)) {
+      if (cmdr().difficulty === 'classic' || damagePlayer(contact.damage)) {
         die();
       } else {
         hitFeedback(0.8);
@@ -789,7 +822,7 @@ function renderControlsCard() {
       ? [
           ['Click', 'Capture the mouse (Esc releases it)'],
           ['Mouse', 'Aim: the ship turns to follow the ring'],
-          ['Left click / F', gimballed() || (commander && hasEquipment(cmdr(), 'gimbal-mount')) ? 'Fire: gimballed lasers hit what\'s under the ring' : 'Fire: lasers fire straight ahead at the centre cross'],
+          ['Left click / F', gimballed() || (commander && isWorking(cmdr(), 'gimbal-mount')) ? 'Fire: gimballed lasers hit what\'s under the ring' : 'Fire: lasers fire straight ahead at the centre cross'],
           ['Right click', 'Centre the aim (stop turning)'],
           ['W / S', 'Throttle up / down'],
           ['A / D', 'Roll'],
@@ -834,7 +867,7 @@ function showControlsCardOnce() {
 
 async function launch() {
   setState('transition');
-  if (!isRetro() && hasEquipment(cmdr(), 'docking-computer')) preloadRecording();
+  if (!isRetro() && isWorking(cmdr(), 'docking-computer')) preloadRecording();
   sfx.tunnel();
   await playTunnel();
   inSpace = true;
@@ -901,6 +934,7 @@ function die() {
       return;
     }
     if (pod) removeEquipment(c, 'escape-pod');
+    c.damaged = []; // the insurers' replacement ship comes with everything working
     saveCommander(c);
     enterDocked();
     flash(pod ? 'Picked up. Your insurers have replaced the ship.' : 'Insurance paid out. Fly safer, Commander.', 3.5);
@@ -974,6 +1008,7 @@ function handleKey(code: string) {
       } else if (code === 'KeyC') {
         if (autopilot) setAutopilot(false, 'Docking computer off');
         else if (!hasEquipment(cmdr(), 'docking-computer')) flash('Docking computer not fitted', 2);
+        else if (!isWorking(cmdr(), 'docking-computer')) flash('Docking computer damaged · repair at a station', 2);
         else if (player.obj.position.distanceTo(station.root.position) > 10000) flash('Too far from the station', 2);
         else setAutopilot(true, 'Docking computer on');
       }
@@ -1015,7 +1050,7 @@ function frame() {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, police, becomeFugitive,
+      player, station, dockingComputer, drifters, explosions, spillCargo, police, becomeFugitive, damagePlayer,
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },

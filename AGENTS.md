@@ -37,6 +37,7 @@ Most contributions are **content files** (JSON validated by JSON Schema), not co
 - Make hulls closed (every edge shared by exactly two faces). Use `--fix` for winding instead of reasoning about it by hand.
 - Mirror ships across X: if `[x, y, z]` exists, `[-x, y, z]` usually should too.
 - Detail lines (`geometry.details`) sit 0.2–0.5m outside the hull surface, or the depth test hides them.
+- Never imitate police markings (beacons, hull bands) on non-police ships. The game adds them to the `police` role only.
 
 ## Hard rules
 

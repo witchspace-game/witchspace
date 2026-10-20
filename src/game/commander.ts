@@ -59,6 +59,8 @@ export interface Commander {
   /** Tonnes carried, by commodity name. Filled by trading in the next milestone. */
   cargo: Record<string, number>;
   legal: LegalStatus;
+  /** Fitted equipment knocked offline in combat (Modern rules); repaired at a station. */
+  damaged: EquipmentId[];
 }
 
 const KEY = 'witchspace.commander.v1';
@@ -72,6 +74,7 @@ export const newCommander = (difficulty: Difficulty): Commander => ({
   equipment: [],
   cargo: {},
   legal: 'clean',
+  damaged: [],
 });
 
 export function loadCommander(): Commander | null {
@@ -104,6 +107,29 @@ export const cargoTonnes = (c: Commander) => Object.values(c.cargo).reduce((a, b
 
 export const hasEquipment = (c: Commander, id: EquipmentId) => c.equipment.includes(id);
 
+/** Fitted and not damaged. */
+export const isWorking = (c: Commander, id: EquipmentId) => hasEquipment(c, id) && !c.damaged.includes(id);
+
+/** Repairs cost a fraction of the item's price. */
+export const REPAIR_FRACTION = 0.3;
+
+// When a hit gets through to the hull, there's a chance it takes out
+// something fitted: knocked offline under Modern rules (repair at a
+// station), destroyed outright under Classic, as in the original.
+const EQUIPMENT_HIT_CHANCE = 1 / 12;
+
+/** Returns the affected item, if any, after a hull hit. */
+export function rollEquipmentDamage(c: Commander, random = Math.random): Equipment | null {
+  if (random() >= EQUIPMENT_HIT_CHANCE) return null;
+  const candidates = c.equipment.filter((id) => !c.damaged.includes(id));
+  if (!candidates.length) return null;
+  const id = candidates[Math.floor(random() * candidates.length)];
+  if (c.difficulty === 'classic') removeEquipment(c, id);
+  else c.damaged.push(id);
+  return EQUIPMENT.find((e) => e.id === id) ?? null;
+}
+
 export function removeEquipment(c: Commander, id: EquipmentId) {
   c.equipment = c.equipment.filter((e) => e !== id);
+  c.damaged = c.damaged.filter((e) => e !== id);
 }

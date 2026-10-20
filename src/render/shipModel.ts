@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { deriveEdges } from '../content/geometry';
 import type { ShipDef, Vec3 } from '../content/types';
 import type { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
+import { applyPoliceLivery } from './livery';
 import { behindLines, disposeObject, neoLines, registerParts, retroLines, unregisterParts } from './wire';
 
 export interface ShipModel {
@@ -64,6 +65,12 @@ export function buildShip(def: ShipDef): ShipModel {
   ];
 
   root.add(...neo, ...retro);
+  // Police markings come from the role, never from the ship file.
+  if (def.role === 'police') {
+    const livery = applyPoliceLivery(def, root);
+    neo.push(...livery.neo);
+    retro.push(...livery.retro);
+  }
   const parts = { neo, retro };
   registerParts(parts);
 
