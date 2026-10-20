@@ -2,12 +2,13 @@
   "name": "witchspace",
   "version": "0.1.0",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "tsx tools/build-site.ts && vite",
+    "build": "tsc --noEmit && tsx tools/build-site.ts && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "validate": "tsx tools/validate.ts",
-    "sim:docking": "tsx tools/simulate-docking.ts"
+    "sim:docking": "tsx tools/simulate-docking.ts",
+    "site": "tsx tools/build-site.ts"
   },
   "license": "GPL-3.0-only",
   "description": "An open-source, browser-based space trading game - a love letter to Elite (1984).",
@@ -18,6 +19,7 @@
     "@types/node": "^22.10.2",
     "@types/three": "^0.170.0",
     "ajv": "^8.17.1",
+    "marked": "^15.0.4",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vite": "^6.0.7"

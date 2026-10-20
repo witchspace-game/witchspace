@@ -14,7 +14,7 @@ Witchspace keeps the soul of the original (crisp vector ships, hidden-line wiref
 
 ## Play it now
 
-**🚀 [witchspace.org.uk](https://witchspace.org.uk)**. It runs in any modern browser, with nothing to install.
+**🚀 [witchspace.org.uk/play](https://witchspace.org.uk/play/)**. It runs in any modern browser, with nothing to install. The website at [witchspace.org.uk](https://witchspace.org.uk) has the design documents and how to get involved.
 
 ## Play it locally
 
@@ -25,7 +25,7 @@ npm install
 npm run dev
 ```
 
-Then open http://localhost:5173.
+Then open http://localhost:5173/play/ for the game, or http://localhost:5173 for the website.
 
 Witchspace has two control schemes. Press **K** in flight to switch, and **H** to see the controls card.
 
