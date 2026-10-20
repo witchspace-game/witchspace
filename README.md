@@ -56,12 +56,15 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 | --- | --- |
 | Y / N | Load your commander / start a new one |
 | L | Launch from the station |
+| T | Market: buy and sell goods (when docked) |
 | C | Docking computer (once you've bought one) |
+| H | Hyperspace to your chosen destination (10 second countdown; H again cancels) |
+| J | In-system jump: leap about 10 km ahead, unless ships, the station or the planet are too close |
 | G | Galaxy map. Tab switches galactic and local charts; arrows or click select; Enter sets your destination |
 | I | Invert pitch (remembered) |
 | M | Toggle neo-vector / 1984 mode |
 | N | Sound: full / effects only (no engine hum) / off (remembered) |
-| H | Controls card |
+| F1 | Controls card |
 
 **Gamepad:** left stick pitches and rolls, right stick yaws, triggers set speed, A launches and runs the docking computer, Y toggles 1984 mode.
 
@@ -88,7 +91,7 @@ Coming soon: a **Witchspace MCP server** with tools to validate, preview and bal
 
 ## Roadmap
 
-Design notes for upcoming systems live in [`docs/design/`](docs/design). Start with [law, travel, debt and capture](docs/design/law-and-travel.md). Ideas that aren't designed yet are collected in the [ideas backlog](docs/ideas.md). There are also open proposals for [the economy and exchanges](docs/design/economy-and-exchanges.md), [stations and worlds](docs/design/stations-and-worlds.md) and [player-run stations](docs/design/player-stations.md), awaiting community discussion.
+Design notes for upcoming systems live in [`docs/design/`](docs/design). Start with [law, travel, debt and capture](docs/design/law-and-travel.md). Ideas that aren't designed yet are collected in the [ideas backlog](docs/ideas.md). There are also open proposals for [the economy and exchanges](docs/design/economy-and-exchanges.md), [stations and worlds](docs/design/stations-and-worlds.md), [ship condition and servicing](docs/design/ship-condition.md) and [player-run stations](docs/design/player-stations.md), awaiting community discussion.
 
 1. **Core game.** ✅ Flight, docking, docking computer, Classic and Modern rules. Next: trading, fuel scoops, combat and a procedural galaxy (8 galaxies × 256 systems) with witchspace jumps.
 2. **Legends.** Rare, secret encounters hidden around the galaxy: easter-egg ships that tip their hat to great science fiction (a derelict with a gravity drive that should never have been switched on, a survey ship bound somewhere it shouldn't go, a small blue box that isn't there when you get close), plus tributes to *Elite*'s own legends such as the cloaked Cougar. There's no in-game list; you find them, screenshot them and tell everyone. A Legends log on the docked screen records your sightings. **A great first contribution.** See [CONTRIBUTING.md](CONTRIBUTING.md#legends-and-homages).

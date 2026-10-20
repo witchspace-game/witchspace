@@ -14,7 +14,7 @@
     <canvas id="neo"></canvas>
     <canvas id="retro" hidden></canvas>
 
-    <header class="title" data-screen="title newgame docked">
+    <header class="title" data-screen="title newgame">
       <h1>WITCHSPACE</h1>
       <span id="mode"></span>
     </header>
@@ -51,10 +51,21 @@
     <section class="panel docked" data-screen="docked">
       <h2>Docked</h2>
       <p class="meta" id="dock-location">Coriolis Station · Lave</p>
-      <dl id="cmdr"></dl>
-      <h3>Equip ship</h3>
-      <ul id="equip"></ul>
-      <p class="credits">Trading arrives in the next update. The Galactic Co-operative has advanced you some credits to try the docking computer.</p>
+      <div class="tabs" role="tablist">
+        <button data-tab="station" role="tab">Station</button>
+        <button data-tab="market" role="tab">T · Market</button>
+      </div>
+      <div id="tab-station" role="tabpanel">
+        <dl id="cmdr"></dl>
+        <p class="fuel-row" id="fuel"></p>
+        <h3>Equip ship</h3>
+        <ul id="equip"></ul>
+      </div>
+      <div id="tab-market" role="tabpanel" hidden>
+        <p class="market-summary" id="market-summary"></p>
+        <table id="market-table"></table>
+        <p class="market-message" id="market-message" aria-live="polite"></p>
+      </div>
     </section>
     <nav class="controls" data-screen="docked">
       <button data-key="KeyM">M · 1984 mode</button>
@@ -67,6 +78,7 @@
     <div id="indicators" data-screen="flying"></div>
     <div id="hit-dir"></div>
     <div id="reticle" hidden></div>
+    <p id="countdown" hidden></p>
     <p id="target-info" hidden></p>
     <p id="mouse-prompt" hidden>Click to fly with the mouse</p>
     <p class="keys" id="keys-hint" data-screen="flying"></p>
@@ -89,6 +101,8 @@
         <label>HL <span class="bar" id="g-hull"></span></label>
         <label>SP <span class="bar" id="g-speed"></span></label>
         <label>LT <span class="bar" id="g-laser"></span></label>
+        <label>FU <span class="bar" id="g-fuel"></span></label>
+        <label>CT <span class="bar" id="g-temp"></span></label>
       </div>
       <canvas id="scanner" width="360" height="140"></canvas>
       <div class="gauges">
@@ -110,7 +124,9 @@
     </section>
     <p id="banner" hidden></p>
     <canvas id="tunnel" hidden></canvas>
+    <div id="whiteout" hidden></div>
 
+    <p class="showroom-hint" data-screen="title newgame docked">Drag to rotate · Scroll to zoom · Double-click to reset</p>
     <footer class="tribute" data-screen="title newgame docked">
       <a href="/">witchspace.org.uk</a> · An unofficial tribute to <em>Elite</em> (1984) by David Braben &amp; Ian Bell. Not affiliated with Frontier Developments.
     </footer>

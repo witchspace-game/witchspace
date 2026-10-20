@@ -37,6 +37,18 @@ export const POLICE_LASER: Laser = {
   color: '#ff4d6d',
 };
 
+export const PIRATE_LASER: Laser = {
+  name: 'Pulse laser',
+  interval: 0.5,
+  damage: 7,
+  range: 1800,
+  heat: 0,
+  cooling: 0,
+  color: '#ff9a3d',
+};
+
+export const TRADER_LASER: Laser = { ...PIRATE_LASER, interval: 0.8, damage: 5, color: '#ffe08a' };
+
 export interface Target<T> {
   value: T;
   position: THREE.Vector3;

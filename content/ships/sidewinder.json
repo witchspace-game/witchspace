@@ -1,0 +1,53 @@
+{
+  "$schema": "../../schemas/ship.schema.json",
+  "id": "sidewinder",
+  "name": "Sidewinder",
+  "manufacturer": "Faulcon deLacy",
+  "role": "pirate",
+  "description": "A flat, wide scout that turns on a credit and costs little more. Cheap enough to lose, quick enough to catch a laden trader, and so the first ship of half the pirates on any frontier.",
+  "credits": {
+    "authors": ["Witchspace contributors"],
+    "license": "CC-BY-SA-4.0",
+    "aiAssisted": true,
+    "notes": "Original Witchspace geometry: a blunt-nosed flat wedge with a six-sided tail."
+  },
+  "geometry": {
+    "vertices": [
+      [-4, 0, 18],
+      [4, 0, 18],
+      [-26, 0, -12],
+      [26, 0, -12],
+      [-8, 5, -12],
+      [8, 5, -12],
+      [-8, -3, -12],
+      [8, -3, -12]
+    ],
+    "faces": [
+      [0, 1, 5, 4],
+      [0, 4, 2],
+      [1, 3, 5],
+      [0, 6, 7, 1],
+      [0, 2, 6],
+      [1, 7, 3],
+      [2, 4, 5, 3, 7, 6]
+    ],
+    "details": {
+      "vertices": [
+        [-6, 3, -12.3], [-2, 3, -12.3], [-2, -1, -12.3], [-6, -1, -12.3],
+        [2, 3, -12.3], [6, 3, -12.3], [6, -1, -12.3], [2, -1, -12.3]
+      ],
+      "lines": [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4]]
+    }
+  },
+  "stats": {
+    "maxSpeed": 340,
+    "pitchRate": 1.1,
+    "rollRate": 2.0,
+    "hull": 60,
+    "shields": 40,
+    "cargo": 0,
+    "missiles": 0,
+    "price": 30000
+  },
+  "style": { "lineColor": "#ff9a3d", "glow": 1 }
+}
