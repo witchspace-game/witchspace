@@ -87,13 +87,43 @@ Real markets have rules against manipulation, and ours need them too:
 - **Real-money trading is banned and enforced.** Selling credits, scrip or items for real money breaks the rules and leads to account action. The economy only works if everything in it was earned in play.
 - **Public data:** exchange history and station finances are visible, so manipulation leaves a trail.
 
-## 9. Phasing
+## 9. Banking and the Bankers' Guild
+
+### Who looks after your money
+
+**The Bankers' Guild** is a neutral, galaxy-wide institution, like the [Co-operative Marshals](law-and-travel.md#9-power-and-protection) but for money. Your credits sit in a Guild account, **safe whatever happens to your ship**: as in the original, losing a ship never costs you your bank balance (cargo and equipment are another matter).
+
+The Guild:
+
+- **holds accounts** for every commander;
+- **lends** (the lawful lender in [law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks); the working name *Merrow & Daughters* could become a Guild bank, or the Guild itself), keeps **credit ratings** and underwrites **insurance**;
+- **holds escrow** for delivery contracts and settles them, so traders can deal safely with strangers (section 5);
+- **transfers credits between players**, for a small fee, with limits that make laundering and real-money trading hard;
+- **clears station scrip** against the Co-operative credit (section 4).
+
+**Its reach has limits.** The Guild has no branches in anarchies, which is exactly where the loan sharks thrive. Commanders who live outside the law may prefer to keep their wealth where the Guild can't freeze it, and accept the risks that come with that.
+
+### Player banking
+
+Players lending to players is fun but a classic route to scams and pyramid schemes. If allowed, it goes **through Guild-backed contracts**: escrowed collateral, public records and fixed terms. A player banker can go bust, but can't simply disappear with everyone's money.
+
+### The ledger (multiplayer)
+
+In single-player, your commander, credits included, is saved in your own browser. In multiplayer, **the server holds the ledger** and never trusts a player's browser with money. It is built like a real bank's books:
+
+- **Double-entry:** every transfer is recorded as matching debit and credit entries, so money moves but is never created or destroyed by accident.
+- **An append-only transaction history** for every account, which can't be edited after the fact.
+- **Invariant checks:** the total credits in the economy change only through defined sources (trading income, bounties, missions) and sinks (fees, fines, repairs, purchases), and are reconciled regularly.
+- **Atomic transactions:** a trade or transfer completes entirely or not at all, so duplication bugs and crashes can't mint money.
+- **Audit and anomaly detection** for unusual flows (possible exploits, bots or real-money trading).
+
+## 10. Phasing
 
 | Phase | What |
 |---|---|
 | **Trading and galaxy milestone** | Living markets with supply and demand, finite stock, aged price reports, news spreading with NPC traffic; Classic-style markets for Classic rules |
 | **Multiplayer** | Order-book exchanges, market makers, player-to-player trading, delivery contracts |
-| **Later** | Station scrip and currency exchange, futures, station shares, player-driven market events |
+| **Later** | Station scrip and currency exchange, futures, station shares, player-driven market events, the Bankers' Guild's full services and player banking |
 
 ## Open questions
 
@@ -102,3 +132,4 @@ Real markets have rules against manipulation, and ours need them too:
 - Should station scrip exist at all, or is one galaxy-wide credit enough?
 - How should contract disputes be handled, and by whom?
 - What limits stop a large guild dominating an exchange without stifling ambitious traders?
+- Should the Bankers' Guild be one institution, or several competing banks under Guild rules?
