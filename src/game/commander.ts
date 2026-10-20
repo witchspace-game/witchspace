@@ -13,7 +13,11 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; blurb: string }> =
   },
 };
 
-export type EquipmentId = 'docking-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm';
+export type EquipmentId =
+  | 'docking-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm'
+  | 'large-cargo-bay' | 'extra-energy' | 'energy-bomb' | 'galactic-hyperdrive';
+
+export type Mount = 'front' | 'rear' | 'left' | 'right';
 
 export type LegalStatus = 'clean' | 'offender' | 'fugitive';
 
@@ -28,6 +32,10 @@ export interface Equipment {
   modernOnly?: boolean;
   /** Only sold at stations with at least this tech level. */
   minTech: number;
+  /** Structural: can't be knocked out in combat. */
+  undamageable?: boolean;
+  /** Used up when used; buy another afterwards. */
+  consumable?: boolean;
 }
 
 export const EQUIPMENT: Equipment[] = [
@@ -53,6 +61,37 @@ export const EQUIPMENT: Equipment[] = [
     minTech: 6,
   },
   {
+    id: 'large-cargo-bay',
+    name: 'Large Cargo Bay',
+    price: 400,
+    blurb: 'Fifteen more tonnes of hold. The trader\'s first big upgrade.',
+    minTech: 4,
+    undamageable: true,
+  },
+  {
+    id: 'extra-energy',
+    name: 'Extra Energy Unit',
+    price: 1500,
+    blurb: 'Shields recharge twice as fast.',
+    minTech: 8,
+  },
+  {
+    id: 'energy-bomb',
+    name: 'Energy Bomb',
+    price: 900,
+    blurb: 'Press B and every ship within 6 km is destroyed, whoever they are. Single use.',
+    minTech: 7,
+    consumable: true,
+  },
+  {
+    id: 'galactic-hyperdrive',
+    name: 'Galactic Hyperdrive',
+    price: 5000,
+    blurb: 'One jump to the next of the eight galaxies, from the galaxy chart (or Y). Single use.',
+    minTech: 10,
+    consumable: true,
+  },
+  {
     id: 'gimbal-mount',
     name: 'Gimballed Laser Mount',
     price: 450,
@@ -72,6 +111,7 @@ export const EQUIPMENT: Equipment[] = [
 
 import { cargoTonnage } from '../economy/commodities';
 import type { MarketState } from '../economy/market';
+import type { LaserId } from './weapons';
 
 export interface Commander {
   name: string;
@@ -102,6 +142,8 @@ export interface Commander {
   kills: number;
   /** Missiles on the rails. */
   missiles: number;
+  /** The laser fitted to each mount, if any. */
+  lasers: Partial<Record<Mount, LaserId>>;
 }
 
 const KEY = 'witchspace.commander.v1';
@@ -124,7 +166,13 @@ export const newCommander = (difficulty: Difficulty): Commander => ({
   fuel: 7,
   kills: 0,
   missiles: 3, // as in 1984
+  lasers: { front: 'pulse' },
 });
+
+/** Cargo space: the hull's own, plus the large cargo bay. */
+export const LARGE_CARGO_BAY = 15;
+export const cargoCapacity = (c: Commander, hullCargo: number) =>
+  hullCargo + (hasEquipment(c, 'large-cargo-bay') ? LARGE_CARGO_BAY : 0);
 
 export const FUEL_CAPACITY = 7; // light years
 export const FUEL_PRICE = 2; // credits per light year
@@ -178,7 +226,7 @@ const EQUIPMENT_HIT_CHANCE = 1 / 12;
 /** Returns the affected item, if any, after a hull hit. */
 export function rollEquipmentDamage(c: Commander, random = Math.random): Equipment | null {
   if (random() >= EQUIPMENT_HIT_CHANCE) return null;
-  const candidates = c.equipment.filter((id) => !c.damaged.includes(id));
+  const candidates = c.equipment.filter((id) => !c.damaged.includes(id) && !EQUIPMENT.find((e) => e.id === id)?.undamageable);
   if (!candidates.length) return null;
   const id = candidates[Math.floor(random() * candidates.length)];
   if (c.difficulty === 'classic') removeEquipment(c, id);

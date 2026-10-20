@@ -27,6 +27,32 @@ export const PULSE_LASER: Laser = {
   color: '#3dffb0',
 };
 
+export type LaserId = 'pulse' | 'beam' | 'military';
+
+export interface LaserForSale extends Laser {
+  id: LaserId;
+  price: number;
+  /** Only sold at stations with at least this tech level. */
+  minTech: number;
+  blurb: string;
+}
+
+/**
+ * The lasers a commander can buy. Damage per second: pulse 70, beam 90,
+ * military 130. Beams heat up fastest; military lasers run coolest.
+ */
+export const PLAYER_LASERS: Record<LaserId, LaserForSale> = {
+  pulse: { ...PULSE_LASER, id: 'pulse', price: 400, minTech: 3, blurb: 'Short, sharp pulses. Cheap and dependable.' },
+  beam: {
+    id: 'beam', name: 'Beam laser', interval: 0.1, damage: 9, range: 3200, heat: 4.2, cooling: 16, color: '#5ad8ff',
+    price: 1000, minTech: 6, blurb: 'A near-continuous beam. More punch, but watch the temperature.',
+  },
+  military: {
+    id: 'military', name: 'Military laser', interval: 0.1, damage: 13, range: 3600, heat: 3.4, cooling: 18, color: '#c78bff',
+    price: 6000, minTech: 10, blurb: 'Navy issue: hits hardest, runs coolest, and costs accordingly.',
+  },
+};
+
 export const POLICE_LASER: Laser = {
   name: 'Pulse laser',
   interval: 0.45,

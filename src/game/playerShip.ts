@@ -101,8 +101,9 @@ export class PlayerShip {
     return this.hull <= 0;
   }
 
-  recharge(dt: number) {
-    this.shields = Math.min(this.def.stats.shields, this.shields + dt * 6);
+  /** Shields recharge over time; `rate` > 1 with an extra energy unit. */
+  recharge(dt: number, rate = 1) {
+    this.shields = Math.min(this.def.stats.shields, this.shields + dt * 6 * rate);
   }
 
   repair() {
