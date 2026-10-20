@@ -1,6 +1,8 @@
 # Ideas backlog
 
-A parking spot for good ideas that aren't designed yet. When one is picked up, it gets a proper document in [`docs/design/`](design) and a link from here. Add your own through a pull request or GitHub Discussions.
+A parking spot for good ideas that aren't designed yet. When one is picked up, it gets a proper document in [`docs/design/`](design) and a link from here.
+
+**The community decides what comes next.** Each idea gets a thread in the **Ideas** category of GitHub Discussions, where anyone can upvote it and argue its case. Ideas with the most support are designed and built first. Suggest your own in Discussions, or add it here through a pull request.
 
 ## Ships and combat
 
