@@ -3,6 +3,7 @@ import { cycleSoundMode, danube, preloadRecording, sfx, unlockAudio } from './au
 import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
 import { shipById, ships } from './content/ships';
 import {
+  cargoCapacity,
   cargoTonnes,
   DIFFICULTIES,
   deleteCommander,
@@ -53,7 +54,7 @@ import { NpcShip, type NpcRole } from './game/npc';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
 import { combatRating } from './game/rating';
-import { Beams, PIRATE_LASER, POLICE_LASER, PULSE_LASER, rayHit, TRADER_LASER, type Target } from './game/weapons';
+import { Beams, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
@@ -320,7 +321,7 @@ document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) =>
 );
 
 function tradeContext(): TradeContext {
-  return { commander: cmdr(), system: currentSystem(), capacity: player.def.stats.cargo, now: Date.now() };
+  return { commander: cmdr(), system: currentSystem(), capacity: cargoCapacity(cmdr(), player.def.stats.cargo), now: Date.now() };
 }
 
 function renderMarket(message = '') {
@@ -380,7 +381,8 @@ function renderDocked() {
     ['Rules', DIFFICULTIES[c.difficulty].name],
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ['Ship', player.def.name],
-    ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${player.def.stats.cargo} t`],
+    ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t`],
+    ['Laser', PLAYER_LASERS[c.lasers.front ?? 'pulse'].name],
     ['Legal status', legalLabel()],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', combatRating(c.kills)],
@@ -443,6 +445,36 @@ function renderDocked() {
     li.append(pay);
     list.append(li);
   }
+  // Lasers for the front mount. The old one is taken in part exchange at half its price.
+  const current = PLAYER_LASERS[c.lasers.front ?? 'pulse'];
+  for (const laser of Object.values(PLAYER_LASERS)) {
+    const li = document.createElement('li');
+    const fitted = laser.id === current.id;
+    const cost = laser.price - Math.round(current.price / 2);
+    li.innerHTML = `<span>${laser.name} <em class="mount">front</em></span><small>${laser.blurb}</small>`;
+    const fit = document.createElement('button');
+    if (fitted) {
+      fit.textContent = 'Fitted';
+      fit.disabled = true;
+    } else if (here.techLevel < laser.minTech) {
+      fit.textContent = `Needs tech level ${laser.minTech}`;
+      fit.disabled = true;
+    } else {
+      fit.textContent = `Fit · ${cost.toLocaleString()} Cr`;
+      fit.title = `${laser.price.toLocaleString()} Cr, less ${Math.round(current.price / 2).toLocaleString()} Cr for your ${current.name.toLowerCase()}`;
+      fit.disabled = c.credits < cost;
+    }
+    fit.addEventListener('click', () => {
+      c.credits -= cost;
+      c.lasers.front = laser.id as LaserId;
+      saveCommander(c);
+      sfx.beep();
+      renderDocked();
+    });
+    li.append(fit);
+    list.append(li);
+  }
+
   for (const item of EQUIPMENT) {
     if (item.classicOnly && c.difficulty !== 'classic') continue;
     if (item.modernOnly && c.difficulty !== 'modern') continue;
@@ -838,14 +870,18 @@ function gimballed() {
   return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(commander) && isWorking(cmdr(), 'gimbal-mount');
 }
 
+/** The laser on the front mount. */
+const playerLaser = () => PLAYER_LASERS[cmdr().lasers.front ?? 'pulse'];
+
 function laserDirection() {
   return gimballed() ? aim.dir.clone() : player.forward();
 }
 
 function firePlayerLaser() {
   if (surrenderTimer !== null) breakSurrender();
-  laserCooldown = PULSE_LASER.interval;
-  laserHeat += PULSE_LASER.heat;
+  const laser = playerLaser();
+  laserCooldown = laser.interval;
+  laserHeat += laser.heat;
   if (laserHeat >= 100) {
     overheated = true;
     flash('Laser overheated', 1.2);
@@ -857,15 +893,15 @@ function firePlayerLaser() {
     ...drifters.map((drifter) => ({ value: { kind: 'drifter' as const, drifter }, position: drifter.model.root.position, radius: 7 })),
     { value: { kind: 'station' as const }, position: station.root.position, radius: 90 },
   ];
-  const hit = rayHit(origin, dir, PULSE_LASER.range, targets);
-  const end = hit ? hit.point : origin.clone().addScaledVector(dir, PULSE_LASER.range);
-  for (const side of [-1, 1]) beams.fire(player.obj.localToWorld(new THREE.Vector3(side * 7, -3, 12)), end, PULSE_LASER.color);
+  const hit = rayHit(origin, dir, laser.range, targets);
+  const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
+  for (const side of [-1, 1]) beams.fire(player.obj.localToWorld(new THREE.Vector3(side * 7, -3, 12)), end, laser.color);
   sfx.laser();
   if (!hit) return;
   const shot = hit.target.value;
   if (shot.kind === 'npc') {
     sfx.hit();
-    playerHitNpc(shot.npc, gimballed() ? PULSE_LASER.damage * GIMBAL_DAMAGE : PULSE_LASER.damage);
+    playerHitNpc(shot.npc, gimballed() ? laser.damage * GIMBAL_DAMAGE : laser.damage);
   } else if (shot.kind === 'station') {
     // Coriolis stations shrug off lasers, but firing on one is a serious
     // crime: you're a Fugitive at once and the police launch immediately.
@@ -892,7 +928,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
 
   if (alive && input) {
     laserCooldown -= dt;
-    laserHeat = Math.max(0, laserHeat - PULSE_LASER.cooling * dt);
+    laserHeat = Math.max(0, laserHeat - playerLaser().cooling * dt);
     if (overheated && laserHeat < 40) overheated = false;
     if (input.fire && !overheated && laserCooldown <= 0) firePlayerLaser();
   }
@@ -1108,6 +1144,32 @@ function explodeMissile(m: Missile) {
   boomAt(m.position, 1.6, 1200, 1.1);
   missiles.splice(missiles.indexOf(m), 1);
   m.dispose();
+}
+
+const BOMB_RANGE = 6000;
+
+/** B: the energy bomb destroys every ship and missile nearby. Whoever they are. */
+function energyBomb() {
+  const c = cmdr();
+  if (!hasEquipment(c, 'energy-bomb')) {
+    flash('No energy bomb fitted', 1.5);
+    return;
+  }
+  if (surrenderTimer !== null) breakSurrender();
+  removeEquipment(c, 'energy-bomb');
+  saveCommander(c);
+  sfx.explosion();
+  sfx.ecm();
+  hitFeedback(1.4);
+  const el = $('#whiteout');
+  el.classList.remove('fade');
+  el.hidden = false;
+  fadeFromWhite();
+  const near = (p: THREE.Vector3) => p.distanceTo(player.obj.position) < BOMB_RANGE;
+  for (const m of missiles.filter((m) => near(m.position))) explodeMissile(m);
+  const victims = npcs.filter((n) => near(n.obj.position));
+  for (const npc of victims) destroyNpc(npc, player.obj);
+  flash(victims.length ? `Energy bomb · ${victims.length} ship${victims.length > 1 ? 's' : ''} destroyed` : 'Energy bomb', 2.5);
 }
 
 /** Z: the ECM destroys every missile in range, friend or foe. */
@@ -1431,7 +1493,7 @@ function updateSpace(dt: number) {
     if (autopilot) dockingComputer.update(dt, player, station);
     else player.steer(dt, input);
     player.move(dt);
-    player.recharge(dt);
+    player.recharge(dt, isWorking(cmdr(), 'extra-energy') ? 2 : 1);
 
     if (updateSun(dt)) {
       sfx.thud();
@@ -1563,7 +1625,7 @@ function updateCombatHud() {
   // Whichever sight the lasers follow (ring if gimballed, centre cross if
   // fixed) turns red when a shot would hit.
   const onTarget = Boolean(
-    rayHit(player.obj.position, fwd, PULSE_LASER.range, npcs.map((npc) => ({ value: npc, position: npc.obj.position, radius: npc.radius * 0.75 }))),
+    rayHit(player.obj.position, fwd, playerLaser().range, npcs.map((npc) => ({ value: npc, position: npc.obj.position, radius: npc.radius * 0.75 }))),
   );
   reticle.classList.toggle('on-target', onTarget && gimballed());
   crosshair.classList.toggle('on-target', onTarget && !gimballed());
@@ -1638,6 +1700,8 @@ function renderControlsCard() {
       ['T', 'Lock a missile onto the ship in your sights (again with nothing in sight: disarm)'],
       ['X', 'Launch the locked missile'],
       ['Z', 'ECM: destroy every missile nearby, yours included (needs an ECM)'],
+      ['B', 'Energy bomb: destroy every ship within 6 km (single use)'],
+      ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
       ['U', 'Surrender to the police: slow down and hold still (fine, record cleared)'],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
       ['K', 'Switch control scheme'],
@@ -1891,9 +1955,36 @@ function destination(): StarSystem | null {
   return c.target === null ? null : systemAt(currentSystem().galaxy, c.target);
 }
 
+/** Set while a galactic hyperdrive countdown is running. */
+let galacticJump = false;
+
+/** Y, or the button on the galaxy chart: jump to the next galaxy. */
+function toggleGalacticJump() {
+  if (countdown !== null) {
+    countdown = null;
+    galacticJump = false;
+    flash('Galactic jump cancelled', 1.5);
+    return;
+  }
+  if (!hasEquipment(cmdr(), 'galactic-hyperdrive')) {
+    flash('No galactic hyperdrive fitted', 1.5);
+    return;
+  }
+  if (npcs.some((p) => p.hostile && p.obj.position.distanceTo(player.obj.position) < MASS_LOCK_SHIPS)) {
+    flash('Mass locked · hostile ships too close', 2);
+    return;
+  }
+  if (isMapOpen()) toggleGalaxyMap();
+  galacticJump = true;
+  countdown = HYPERSPACE_COUNTDOWN;
+  lastTick = Math.ceil(countdown);
+  flash(`Galactic hyperdrive · to Galaxy ${((currentSystem().galaxy + 1) % 8) + 1}`, 2.5);
+}
+
 function toggleHyperspace() {
   if (countdown !== null) {
     countdown = null;
+    galacticJump = false;
     flash('Hyperspace cancelled', 1.5);
     return;
   }
@@ -1943,15 +2034,19 @@ function updateTravel(dt: number) {
 
 async function hyperspace() {
   const c = cmdr();
-  const dest = destination();
-  if (!dest) return;
   const from = currentSystem();
+  const galactic = galacticJump;
+  galacticJump = false;
+  // The galactic hyperdrive lands you in the same place in the next galaxy.
+  const dest = galactic ? systemAt((from.galaxy + 1) % 8, from.index) : destination();
+  if (!dest) return;
   setAutopilot(false);
   setState('transition');
   sfx.hyperspace();
   await playTunnel(3.2, 'hyperspace');
 
-  c.fuel = Math.max(0, Math.round((c.fuel - distanceLy(from, dest)) * 10) / 10);
+  if (galactic) removeEquipment(c, 'galactic-hyperdrive');
+  else c.fuel = Math.max(0, Math.round((c.fuel - distanceLy(from, dest)) * 10) / 10);
   c.location = { galaxy: dest.galaxy, system: dest.index };
   c.target = null;
   // Records stay in the system where the crime happened, and cool as you travel.
@@ -2044,6 +2139,10 @@ function toggleGalaxyMap() {
       else flash(`Destination: ${s.name}`, 1.5);
     },
   });
+  // The galactic hyperdrive is launched from here, in flight.
+  const galactic = $('#galaxy-map .map-galactic');
+  galactic.hidden = !(state === 'flying' && hasEquipment(c, 'galactic-hyperdrive'));
+  galactic.textContent = `Y · Galactic hyperdrive to Galaxy ${((here.galaxy + 1) % 8) + 1}`;
   setFlightInputSuppressed(true);
 }
 
@@ -2114,6 +2213,10 @@ function handleKey(code: string) {
         fireMissile();
       } else if (code === 'KeyZ') {
         playerEcm();
+      } else if (code === 'KeyB') {
+        energyBomb();
+      } else if (code === 'KeyY') {
+        toggleGalacticJump();
       } else if (code === 'KeyK') {
         const s = toggleControlScheme();
         renderControlsCard();
