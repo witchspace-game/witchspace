@@ -47,10 +47,12 @@ import {
   wantsMouseCapture,
 } from './game/input';
 import { MouseAim } from './game/mouseAim';
-import { NpcShip } from './game/npc';
-import { Beams, POLICE_LASER, PULSE_LASER, rayHit, type Target } from './game/weapons';
+import { NpcShip, type NpcRole } from './game/npc';
+import { think } from './game/ai';
+import { combatRating } from './game/rating';
+import { Beams, PIRATE_LASER, POLICE_LASER, PULSE_LASER, rayHit, TRADER_LASER, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
-import { Station } from './game/station';
+import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { SpaceDust } from './render/dust';
 import { Explosion } from './render/explosion';
@@ -364,7 +366,7 @@ function renderDocked() {
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${player.def.stats.cargo} t`],
     ['Legal status', legalLabel()],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
-    ['Rating', 'Harmless'],
+    ['Rating', combatRating(c.kills)],
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
 
@@ -474,7 +476,9 @@ let autopilot = false;
 
 // --- Police and combat ------------------------------------------------------
 
-const police: NpcShip[] = [];
+/** Every computer-controlled ship in the system: police, traders and pirates. */
+const npcs: NpcShip[] = [];
+const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role);
 const engineSound = new EngineSound();
 const voices = new Map<NpcShip, ShipVoice>();
 const VOICE_RANGE = 2000; // hear other ships' engines within this distance
@@ -486,6 +490,7 @@ let overheated = false;
 let reinforceTimer = 0;
 let stationFlash = 0; // seconds of white-hot glow after being hit
 let repopulateTimer = 0;
+let thinkTimer = 0;
 const MAX_POLICE = 4;
 const SCAN_RANGE = 1200; // metres
 const SCAN_TIME = 3; // seconds within range for a police scan
@@ -504,8 +509,8 @@ function legalLabel() {
 }
 
 function spawnViper(fromSlot: boolean) {
-  const i = police.length;
-  const npc = new NpcShip(shipById('viper')!, POLICE_LASER, {
+  const i = ofRole('police').length;
+  const npc = new NpcShip(shipById('viper')!, 'police', POLICE_LASER, {
     centre: station.root.position.clone(),
     radius: 900 + (i % 3) * 450,
     height: [200, -250, 60][i % 3],
@@ -520,9 +525,138 @@ function spawnViper(fromSlot: boolean) {
     npc.obj.position.set(Math.cos(p.angle) * p.radius, p.height, Math.sin(p.angle) * p.radius).add(p.centre);
     npc.ship.speed = Math.abs(p.rate) * p.radius;
   }
-  npc.hostile = isFugitive();
   space.scene.add(npc.obj);
-  police.push(npc);
+  npcs.push(npc);
+}
+
+// --- Traffic: traders and pirates ----------------------------------------------------
+
+/** Chance of pirates per encounter roll, by government: anarchies are rough, corporate states safe. */
+const PIRATE_CHANCE = [0.75, 0.55, 0.4, 0.3, 0.25, 0.15, 0.1, 0.06];
+const TRADERS_BY_GOVERNMENT = [1, 1, 2, 2, 2, 3, 3, 3];
+const ENCOUNTER_INTERVAL = 40; // seconds between rolls for pirates
+const MAX_PIRATES = 4;
+const BOUNTIES: Record<string, number> = { sidewinder: 50, mamba: 80 };
+const TRADE_GOODS = ['food', 'textiles', 'computers', 'machinery', 'liquor', 'luxuries', 'furs', 'minerals', 'alloys'];
+let encounterTimer = 0;
+let traderTimer = 0;
+
+type Leg = 'inbound' | 'docking' | 'outbound';
+const legs = new WeakMap<NpcShip, Leg>();
+
+/** The station's approach lane: points on the slot axis, which don't move as it spins. */
+const onSlotAxis = (d: number) => station.toWorld(new THREE.Vector3(0, 0, SLOT.z + d));
+
+/** A random direction that keeps well clear of the planet. */
+function awayFromPlanet(): THREE.Vector3 {
+  const toPlanet = planetPos.clone().sub(station.root.position).normalize();
+  const d = new THREE.Vector3().randomDirection();
+  if (d.dot(toPlanet) > -0.2) d.addScaledVector(toPlanet, -(d.dot(toPlanet) + 0.6)).normalize();
+  return d;
+}
+
+function randomCargo(): Record<string, number> {
+  const cargo: Record<string, number> = {};
+  for (let i = 0; i < 1 + Math.floor(Math.random() * 3); i++) {
+    const id = TRADE_GOODS[Math.floor(Math.random() * TRADE_GOODS.length)];
+    cargo[id] = (cargo[id] ?? 0) + 1 + Math.floor(Math.random() * 4);
+  }
+  return cargo;
+}
+
+function addNpc(def: string, role: NpcRole, at: THREE.Vector3, patrolCentre = station.root.position) {
+  const laser = role === 'pirate' ? PIRATE_LASER : role === 'trader' ? TRADER_LASER : POLICE_LASER;
+  const npc = new NpcShip(shipById(def)!, role, laser, {
+    centre: patrolCentre.clone(),
+    radius: 1200 + Math.random() * 600,
+    height: (Math.random() - 0.5) * 600,
+    rate: (Math.random() < 0.5 ? -1 : 1) * 0.12,
+    angle: Math.random() * Math.PI * 2,
+  });
+  npc.obj.position.copy(at);
+  space.scene.add(npc.obj);
+  npcs.push(npc);
+  return npc;
+}
+
+/** A trader either arriving from witchspace and heading in, or launching and heading out. */
+function spawnTrader(arriving: boolean, distance = 14000 + Math.random() * 8000) {
+  if (arriving) {
+    const at = station.root.position.clone().addScaledVector(awayFromPlanet(), distance);
+    const npc = addNpc('cobra-mk3', 'trader', at);
+    npc.obj.lookAt(station.root.position);
+    npc.obj.rotateY(Math.PI); // lookAt points -Z; ships fly +Z
+    npc.ship.speed = npc.ship.maxSpeed * 0.5;
+    npc.destination = onSlotAxis(900);
+    legs.set(npc, 'inbound');
+    npc.cargo = randomCargo();
+  } else {
+    const npc = addNpc('cobra-mk3', 'trader', station.root.position);
+    station.placeForLaunch(npc.ship);
+    npc.ship.speed = 120;
+    npc.destination = station.root.position.clone().addScaledVector(awayFromPlanet(), 22000);
+    legs.set(npc, 'outbound');
+    npc.cargo = randomCargo();
+  }
+}
+
+/** A pirate band of one to three, somewhere ahead of the player and away from the station. */
+function spawnPirates(near: THREE.Vector3) {
+  const dir = player.forward().add(new THREE.Vector3().randomDirection().multiplyScalar(0.8)).normalize();
+  const centre = near.clone().addScaledVector(dir, 5000 + Math.random() * 2500);
+  if (centre.distanceTo(station.root.position) < 5000 || centre.distanceTo(planetPos) < planetRadius * 1.3) return false;
+  const anarchy = currentSystem().government === 0;
+  const count = Math.min(MAX_PIRATES - ofRole('pirate').length, 1 + Math.floor(Math.random() * (anarchy ? 3 : 2)));
+  for (let i = 0; i < count; i++) {
+    const def = Math.random() < 0.6 ? 'sidewinder' : 'mamba';
+    const npc = addNpc(def, 'pirate', centre.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(300)), centre);
+    npc.obj.lookAt(near);
+    npc.obj.rotateY(Math.PI);
+    npc.ship.speed = npc.ship.maxSpeed * 0.4;
+    npc.bounty = BOUNTIES[def] ?? 40;
+    if (Math.random() < 0.4) npc.cargo = { [Math.random() < 0.5 ? 'narcotics' : 'firearms']: 1 + Math.floor(Math.random() * 2) };
+  }
+  return count > 0;
+}
+
+/** Spawn and retire traffic. Traders dock or leave; pirates turn up by chance. */
+function updateTraffic(dt: number) {
+  const sys = currentSystem();
+  for (const npc of [...npcs]) {
+    const leg = legs.get(npc);
+    if (!leg || npc.mode !== 'travel') continue;
+    if (leg === 'inbound' && npc.obj.position.distanceTo(npc.destination!) < 150) {
+      legs.set(npc, 'docking');
+      npc.destination = onSlotAxis(-SLOT.z); // the station's centre, down the slot
+    } else if (leg === 'docking' && station.toLocal(npc.obj.position).z < SLOT.z) {
+      removeNpc(npc); // safely inside
+    } else if (leg === 'outbound' && npc.obj.position.distanceTo(npc.destination!) < 600) {
+      removeNpc(npc); // gone to witchspace
+    }
+  }
+  traderTimer -= dt;
+  if (traderTimer <= 0) {
+    traderTimer = 25 + Math.random() * 35;
+    if (ofRole('trader').length < TRADERS_BY_GOVERNMENT[sys.government]) spawnTrader(Math.random() < 0.6);
+  }
+  encounterTimer -= dt;
+  if (encounterTimer <= 0 && state === 'flying') {
+    encounterTimer = ENCOUNTER_INTERVAL * (0.6 + Math.random() * 0.8);
+    if (ofRole('pirate').length < MAX_PIRATES && Math.random() < PIRATE_CHANCE[sys.government]) {
+      if (spawnPirates(player.obj.position)) flash('Contacts on scanner', 2);
+    }
+  }
+}
+
+function removeNpc(npc: NpcShip) {
+  voices.get(npc)?.dispose();
+  voices.delete(npc);
+  npcs.splice(npcs.indexOf(npc), 1);
+  for (const n of npcs) {
+    if (n.target === npc.ship) n.target = null;
+    if (n.attacker === npc.ship) n.attacker = null;
+  }
+  npc.dispose();
 }
 // --- Building a star system -------------------------------------------------------
 
@@ -554,14 +688,22 @@ function buildSystemScene(sys: StarSystem) {
   sun.position.copy(SUN_POS);
   space.sun.position.copy(SUN_POS);
 
-  for (const npc of police) npc.dispose();
-  police.length = 0;
+  for (const npc of npcs) {
+    voices.get(npc)?.dispose();
+    npc.dispose();
+  }
+  voices.clear();
+  npcs.length = 0;
   for (const d of drifters) disposeShip(d.model);
   drifters.length = 0;
   for (const e of explosions) e.dispose();
   explosions.length = 0;
   for (let i = 0; i < PATROLS_BY_GOVERNMENT[sys.government]; i++) spawnViper(false);
   reinforceTimer = repopulateTimer = 0;
+  // Some traffic already about, and maybe trouble soon after arrival.
+  for (let i = 0; i < TRADERS_BY_GOVERNMENT[sys.government] - 1; i++) spawnTrader(true, 5000 + Math.random() * 10000);
+  traderTimer = 15;
+  encounterTimer = 12 + Math.random() * 10;
   scanned = false;
   scanProgress = 0;
 }
@@ -597,13 +739,13 @@ function damagePlayer(amount: number): boolean {
  */
 function becomeFugitive(serious = false) {
   const c = cmdr();
+  if (!hasLaw(currentSystem())) return;
   const hadWarrant = c.warrant;
   const was = isFugitive();
   recordCrime(c, 'fugitive', serious);
   surrenderTimer = null;
   if (c.warrant && !hadWarrant) flash('Co-operative Marshals warrant issued', 2.5);
   if (was) return;
-  for (const p of police) p.hostile = true;
   reinforceTimer = 6;
   if (!c.warrant || hadWarrant) flash('You are now a FUGITIVE', 2.5);
 }
@@ -614,17 +756,36 @@ function becomeOffender(message: string) {
   flash(message, 3);
 }
 
-function destroyNpc(npc: NpcShip) {
-  const boom = new Explosion(npc.def, npc.obj, npc.ship.forward().multiplyScalar(npc.ship.speed));
+/** A ship blows up. If the player did it, the law and the combat rating take note. */
+function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
+  const velocity = npc.ship.forward().multiplyScalar(npc.ship.speed);
+  const boom = new Explosion(npc.def, npc.obj, velocity);
   space.scene.add(boom.group);
   explosions.push(boom);
   boomAt(npc.obj.position, 2.2, 1600, 1.6);
-  voices.get(npc)?.dispose();
-  voices.delete(npc);
-  police.splice(police.indexOf(npc), 1);
-  npc.dispose();
-  flash(`${npc.def.name} destroyed`, 1.5);
-  becomeFugitive(true); // killing police is a serious crime
+  if (Object.keys(npc.cargo).length) spillCargo(npc.obj.position, velocity, npc.cargo);
+  removeNpc(npc);
+  if (killer !== player.obj) return;
+
+  const c = cmdr();
+  const before = combatRating(c.kills);
+  c.kills += 1;
+  if (npc.role === 'pirate') {
+    c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
+    flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr`, 2.5);
+  } else {
+    flash(`${npc.def.name} destroyed`, 1.5);
+    becomeFugitive(true); // killing police or an innocent trader is a serious crime
+  }
+  if (combatRating(c.kills) !== before) setTimeout(() => flash(`Combat rating: ${combatRating(c.kills)}`, 3), 2600);
+  saveCommander(c);
+}
+
+/** The player shot or rammed a ship. Pirates are fair game; anyone else is a crime. */
+function playerHitNpc(npc: NpcShip, damage: number) {
+  if (npc.role === 'police') becomeFugitive();
+  else if (npc.role === 'trader') becomeOffender('Firing on a trader · you are an OFFENDER');
+  if (npc.hit(damage, player)) destroyNpc(npc, player.obj);
 }
 
 type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' };
@@ -654,7 +815,7 @@ function firePlayerLaser() {
   const dir = laserDirection();
   const origin = player.obj.position.clone().addScaledVector(dir, 5);
   const targets: Target<Shot>[] = [
-    ...police.map((npc) => ({ value: { kind: 'npc' as const, npc }, position: npc.obj.position, radius: npc.radius * 0.75 })),
+    ...npcs.map((npc) => ({ value: { kind: 'npc' as const, npc }, position: npc.obj.position, radius: npc.radius * 0.75 })),
     ...drifters.map((drifter) => ({ value: { kind: 'drifter' as const, drifter }, position: drifter.model.root.position, radius: 7 })),
     { value: { kind: 'station' as const }, position: station.root.position, radius: 90 },
   ];
@@ -666,9 +827,7 @@ function firePlayerLaser() {
   const shot = hit.target.value;
   if (shot.kind === 'npc') {
     sfx.hit();
-    becomeFugitive();
-    const damage = gimballed() ? PULSE_LASER.damage * GIMBAL_DAMAGE : PULSE_LASER.damage;
-    if (shot.npc.hit(damage)) destroyNpc(shot.npc);
+    playerHitNpc(shot.npc, gimballed() ? PULSE_LASER.damage * GIMBAL_DAMAGE : PULSE_LASER.damage);
   } else if (shot.kind === 'station') {
     // Coriolis stations shrug off lasers, but firing on one is a serious
     // crime: you're a Fugitive at once and the police launch immediately.
@@ -678,7 +837,7 @@ function firePlayerLaser() {
       becomeFugitive(true);
       flash('Station under attack · Police launching', 2.5);
     }
-    if (police.length < MAX_POLICE && reinforceTimer > 1) reinforceTimer = 0.5;
+    if (ofRole('police').length < MAX_POLICE && reinforceTimer > 1) reinforceTimer = 0.5;
   } else if (shot.kind === 'drifter') {
     const d = shot.drifter;
     const flare = new Explosion(d.model.def, d.model.root, d.velocity);
@@ -700,21 +859,38 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     if (input.fire && !overheated && laserCooldown <= 0) firePlayerLaser();
   }
 
-  for (const npc of [...police]) {
-    const shot = npc.update(dt, player, alive);
-    // Keep police from flying through the station.
-    const fromStation = npc.obj.position.clone().sub(station.root.position);
-    if (fromStation.length() < 120) npc.obj.position.copy(station.root.position).add(fromStation.setLength(120));
+  // Decide who fights whom a few times a second.
+  thinkTimer -= dt;
+  if (thinkTimer <= 0) {
+    thinkTimer = 0.25;
+    const world = { player, playerPresent: alive, playerWanted: isFugitive(), npcs };
+    for (const npc of npcs) think(npc, world);
+  }
+  updateTraffic(dt);
 
-    if (shot && alive) {
+  for (const npc of [...npcs]) {
+    if (!npcs.includes(npc)) continue; // destroyed earlier this frame
+    const shot = npc.update(dt);
+    // Keep ships from flying through the station, except traders docking down the slot.
+    const fromStation = npc.obj.position.clone().sub(station.root.position);
+    if (fromStation.length() < 120 && legs.get(npc) !== 'docking') npc.obj.position.copy(station.root.position).add(fromStation.setLength(120));
+
+    if (shot) {
       const origin = npc.obj.position.clone().addScaledVector(shot, 20);
-      const hit = rayHit(origin, shot, npc.laser.range, [
-        { value: 'player', position: player.obj.position, radius: 22 },
+      type Struck = 'player' | 'station' | NpcShip;
+      const targets: Target<Struck>[] = [
         { value: 'station', position: station.root.position, radius: 90 },
-      ]);
+        // Ships don't shoot their own side.
+        ...npcs.filter((n) => n !== npc && n.role !== npc.role).map((n) => ({ value: n as Struck, position: n.obj.position, radius: n.radius * 0.75 })),
+      ];
+      if (alive) targets.push({ value: 'player', position: player.obj.position, radius: 22 });
+      const hit = rayHit(origin, shot, npc.laser.range, targets);
       beams.fire(origin, hit ? hit.point : origin.clone().addScaledVector(shot, npc.laser.range), npc.laser.color);
       zapAt(origin, 700, 120, 0.15, 0.5);
-      if (hit?.target.value === 'player') {
+      const struck = hit?.target.value;
+      if (struck instanceof NpcShip) {
+        if (struck.hit(npc.laser.damage, npc.ship)) destroyNpc(struck, npc.obj);
+      } else if (struck === 'player') {
         sfx.hit();
         hitFeedback(0.35);
         showHitDirection(camera, npc.obj.position);
@@ -731,8 +907,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       player.obj.position.copy(npc.obj.position).add(away);
       sfx.thud();
       hitFeedback(0.9);
-      becomeFugitive();
-      if (npc.hit(25)) destroyNpc(npc);
+      playerHitNpc(npc, 25);
       if (damagePlayer(25)) {
         die();
         return;
@@ -741,7 +916,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   }
 
   // Engine sounds for nearby ships, positioned in 3D.
-  for (const npc of police) {
+  for (const npc of npcs) {
     const near = alive && npc.obj.position.distanceTo(player.obj.position) < VOICE_RANGE;
     let voice = voices.get(npc);
     if (near && !voice) voices.set(npc, (voice = new ShipVoice(npc.obj.position)));
@@ -754,7 +929,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
 
   // Police in lawful-ish systems scan ships that loiter near them.
   if (alive && !scanned && scansCargo(currentSystem())) {
-    const scanner = police.find((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < SCAN_RANGE);
+    const scanner = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < SCAN_RANGE);
     scanProgress = scanner ? scanProgress + dt : Math.max(0, scanProgress - dt);
     if (scanProgress >= SCAN_TIME) {
       scanned = true;
@@ -767,7 +942,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   tailWarningTimer -= dt;
   if (alive && tailWarningTimer <= 0) {
     const fwd = player.forward();
-    const onTail = police.find((npc) => {
+    const onTail = npcs.find((npc) => {
       if (!npc.hostile) return false;
       const to = npc.obj.position.clone().sub(player.obj.position);
       return to.length() < 900 && fwd.angleTo(to) > THREE.MathUtils.degToRad(120);
@@ -782,12 +957,12 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   const nearStation = player.obj.position.distanceTo(station.root.position) < 9000;
   if (alive && isFugitive() && nearStation && currentSystem().government > 0) {
     reinforceTimer -= dt;
-    if (reinforceTimer <= 0 && police.length < MAX_POLICE) {
+    if (reinforceTimer <= 0 && ofRole('police').length < MAX_POLICE) {
       spawnViper(true);
       flash('Police launching', 1.5);
       reinforceTimer = 20;
     }
-  } else if (!isFugitive() && police.length < PATROLS_BY_GOVERNMENT[currentSystem().government]) {
+  } else if (!isFugitive() && ofRole('police').length < PATROLS_BY_GOVERNMENT[currentSystem().government]) {
     repopulateTimer -= dt;
     if (repopulateTimer <= 0) {
       spawnViper(true);
@@ -1038,7 +1213,7 @@ function updateSpace(dt: number) {
 
   const blips: Blip[] = [
     { position: station.root.position, color: '#ffb347', big: true },
-    ...police.map((p) => ({ position: p.obj.position, color: p.hostile ? '#ff4d6d' : '#4aa8ff' })),
+    ...npcs.map((p) => ({ position: p.obj.position, color: npcColour(p) })),
     ...drifters.map((d) => ({ position: d.model.root.position, color: '#ffd166' })),
   ];
   if (state === 'flying') {
@@ -1054,14 +1229,20 @@ function updateSpace(dt: number) {
 
 // --- Situational awareness markers ----------------------------------------------
 
+/** Red if it's after you; otherwise police blue, trader green, pirate orange. */
+function npcColour(npc: NpcShip) {
+  if (npc.hostile) return '#ff4d6d';
+  return npc.role === 'police' ? '#4aa8ff' : npc.role === 'pirate' ? '#ff9a3d' : '#9ef0c0';
+}
+
 function updateMarkers() {
   const km = (p: THREE.Vector3) => {
     const d = p.distanceTo(player.obj.position);
     return d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`;
   };
-  const markers: Marker[] = police.map((npc) => ({
+  const markers: Marker[] = npcs.map((npc) => ({
     position: npc.obj.position,
-    color: npc.hostile ? '#ff4d6d' : '#4aa8ff',
+    color: npcColour(npc),
     radius: npc.radius,
     label: npc.hostile || npc.obj.position.distanceTo(player.obj.position) < 1500 ? km(npc.obj.position) : undefined,
   }));
@@ -1084,13 +1265,13 @@ function updateCombatHud() {
   // Whichever sight the lasers follow (ring if gimballed, centre cross if
   // fixed) turns red when a shot would hit.
   const onTarget = Boolean(
-    rayHit(player.obj.position, fwd, PULSE_LASER.range, police.map((npc) => ({ value: npc, position: npc.obj.position, radius: npc.radius * 0.75 }))),
+    rayHit(player.obj.position, fwd, PULSE_LASER.range, npcs.map((npc) => ({ value: npc, position: npc.obj.position, radius: npc.radius * 0.75 }))),
   );
   reticle.classList.toggle('on-target', onTarget && gimballed());
   crosshair.classList.toggle('on-target', onTarget && !gimballed());
   let best: NpcShip | null = null;
   let bestAngle = THREE.MathUtils.degToRad(6);
-  for (const npc of police) {
+  for (const npc of npcs) {
     const to = npc.obj.position.clone().sub(player.obj.position);
     if (to.length() > 5000) continue;
     const a = fwd.angleTo(to);
@@ -1101,9 +1282,10 @@ function updateCombatHud() {
   }
   targetInfo.hidden = !best;
   if (best) {
-    const hull = Math.max(0, (best.ship.shields + best.ship.hull) / (best.def.stats.shields + best.def.stats.hull));
+    // The transponder: type, role, condition and standing.
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
-    targetInfo.textContent = `${best.def.name} · ${km} km · ${Math.round(hull * 100)}%${best.hostile ? ' · HOSTILE' : ''}`;
+    const standing = best.role === 'pirate' ? 'WANTED' : best.role === 'police' ? 'POLICE' : 'CLEAN';
+    targetInfo.textContent = `${best.def.name} · ${best.role.toUpperCase()} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}`;
     targetInfo.classList.toggle('hostile', best.hostile);
   }
 }
@@ -1310,7 +1492,6 @@ async function surrender() {
   const c = cmdr();
   c.visits += 1;
   const settlement = settle(c);
-  for (const p of police) p.hostile = false;
   saveCommander(c);
   enterDocked();
   flash(settlementMessage(settlement, 'You surrendered · record cleared'), 5);
@@ -1334,7 +1515,6 @@ function die() {
   c.records = {};
   c.warrant = false;
   surrenderTimer = null;
-  for (const p of police) p.hostile = false;
   laserHeat = 0;
   overheated = false;
 
@@ -1429,7 +1609,7 @@ function toggleHyperspace() {
     flash(`${dest.name} is ${d.toFixed(1)} LY away · fuel for ${c.fuel.toFixed(1)} LY`, 2.5);
     return;
   }
-  const near = police.some((p) => p.hostile && p.obj.position.distanceTo(player.obj.position) < MASS_LOCK_SHIPS);
+  const near = npcs.some((p) => p.hostile && p.obj.position.distanceTo(player.obj.position) < MASS_LOCK_SHIPS);
   if (near) {
     flash('Mass locked · hostile ships too close', 2);
     return;
@@ -1505,7 +1685,7 @@ async function hyperspace() {
 function inSystemJump() {
   if (jumpCooldown > 0) return;
   const pos = player.obj.position;
-  const shipsNear = police.some((p) => p.obj.position.distanceTo(pos) < J_LOCK_SHIPS);
+  const shipsNear = npcs.some((p) => p.obj.position.distanceTo(pos) < J_LOCK_SHIPS);
   const stationNear = pos.distanceTo(station.root.position) < J_LOCK_STATION;
   const planetNear = pos.distanceTo(planetPos) - planetRadius < J_LOCK_PLANET;
   if (shipsNear || stationNear || planetNear) {
@@ -1679,7 +1859,7 @@ function frame() {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, police, becomeFugitive, damagePlayer, legalStatus,
+      player, station, dockingComputer, drifters, explosions, spillCargo, npcs, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, legalStatus,
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },

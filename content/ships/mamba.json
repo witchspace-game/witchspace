@@ -1,0 +1,187 @@
+{
+  "$schema": "../../schemas/ship.schema.json",
+  "id": "mamba",
+  "name": "Mamba",
+  "manufacturer": "Zorgon Petterson",
+  "role": "pirate",
+  "description": "Built for racing, bought for raiding. Long, low and wide across the tail, a Mamba is mostly engine. Its owners rarely ask where the last one went.",
+  "credits": {
+    "authors": [
+      "Witchspace contributors"
+    ],
+    "license": "CC-BY-SA-4.0",
+    "aiAssisted": true,
+    "notes": "Original Witchspace geometry: a long needle nose over a low, wide tail."
+  },
+  "geometry": {
+    "vertices": [
+      [
+        0,
+        1,
+        34
+      ],
+      [
+        -7,
+        5,
+        -22
+      ],
+      [
+        7,
+        5,
+        -22
+      ],
+      [
+        -22,
+        -2,
+        -22
+      ],
+      [
+        22,
+        -2,
+        -22
+      ],
+      [
+        -7,
+        -4,
+        -22
+      ],
+      [
+        7,
+        -4,
+        -22
+      ]
+    ],
+    "faces": [
+      [
+        2,
+        1,
+        0
+      ],
+      [
+        1,
+        3,
+        0
+      ],
+      [
+        4,
+        2,
+        0
+      ],
+      [
+        3,
+        5,
+        0
+      ],
+      [
+        6,
+        4,
+        0
+      ],
+      [
+        5,
+        6,
+        0
+      ],
+      [
+        2,
+        4,
+        6,
+        5,
+        3,
+        1
+      ]
+    ],
+    "details": {
+      "vertices": [
+        [
+          -14,
+          0.5,
+          -22.3
+        ],
+        [
+          -5,
+          2.5,
+          -22.3
+        ],
+        [
+          -5,
+          -2,
+          -22.3
+        ],
+        [
+          -14,
+          -2,
+          -22.3
+        ],
+        [
+          5,
+          2.5,
+          -22.3
+        ],
+        [
+          14,
+          0.5,
+          -22.3
+        ],
+        [
+          14,
+          -2,
+          -22.3
+        ],
+        [
+          5,
+          -2,
+          -22.3
+        ]
+      ],
+      "lines": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          2
+        ],
+        [
+          2,
+          3
+        ],
+        [
+          3,
+          0
+        ],
+        [
+          4,
+          5
+        ],
+        [
+          5,
+          6
+        ],
+        [
+          6,
+          7
+        ],
+        [
+          7,
+          4
+        ]
+      ]
+    }
+  },
+  "stats": {
+    "maxSpeed": 360,
+    "pitchRate": 0.95,
+    "rollRate": 1.8,
+    "hull": 80,
+    "shields": 60,
+    "cargo": 4,
+    "missiles": 1,
+    "price": 55000
+  },
+  "style": {
+    "lineColor": "#e8d84a",
+    "glow": 1
+  }
+}

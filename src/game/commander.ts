@@ -84,6 +84,8 @@ export interface Commander {
   visits: number;
   /** Witchspace fuel, in light years. */
   fuel: number;
+  /** Ships destroyed, for the combat rating. */
+  kills: number;
 }
 
 const KEY = 'witchspace.commander.v1';
@@ -104,6 +106,7 @@ export const newCommander = (difficulty: Difficulty): Commander => ({
   markets: {},
   visits: 0,
   fuel: 7,
+  kills: 0,
 });
 
 export const FUEL_CAPACITY = 7; // light years
