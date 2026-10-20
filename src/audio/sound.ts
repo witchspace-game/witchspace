@@ -3,13 +3,24 @@
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
-let muted = false;
+// Sound modes, cycled with N: everything, effects without the engine drone, or off.
+export type SoundMode = 'full' | 'effects' | 'off';
+const SOUND_MODES: SoundMode[] = ['full', 'effects', 'off'];
+let soundMode: SoundMode = (() => {
+  try {
+    const v = localStorage.getItem('witchspace.sound') as SoundMode | null;
+    return v && SOUND_MODES.includes(v) ? v : 'full';
+  } catch {
+    return 'full';
+  }
+})();
+export const getSoundMode = () => soundMode;
 
 function audio() {
   if (!ctx) {
     ctx = new AudioContext();
     master = ctx.createGain();
-    master.gain.value = 0.5;
+    master.gain.value = soundMode === 'off' ? 0 : 0.5;
     master.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') void ctx.resume();
@@ -24,11 +35,16 @@ export function unlockAudio() {
   audio();
 }
 
-export function toggleMute(): boolean {
-  muted = !muted;
+export function cycleSoundMode(): SoundMode {
+  soundMode = SOUND_MODES[(SOUND_MODES.indexOf(soundMode) + 1) % SOUND_MODES.length];
+  try {
+    localStorage.setItem('witchspace.sound', soundMode);
+  } catch {
+    // Not saved; applies for this session.
+  }
   const { ctx, master } = audio();
-  master.gain.setTargetAtTime(muted ? 0 : 0.5, ctx.currentTime, 0.05);
-  return muted;
+  master.gain.setTargetAtTime(soundMode === 'off' ? 0 : 0.5, ctx.currentTime, 0.05);
+  return soundMode;
 }
 
 export function noiseBuffer(ctx: AudioContext, seconds: number) {

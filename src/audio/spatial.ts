@@ -1,8 +1,10 @@
 import * as THREE from 'three';
-import { audioGraph, noiseBuffer } from './sound';
+import { audioGraph, getSoundMode, noiseBuffer } from './sound';
 
-// Sounds that help you feel your ship and hear where others are:
-//  - your engine hum rises with speed; thrusters hiss while you turn
+// Sounds that help you feel your ship and hear where others are, kept
+// deliberately subtle so they never become a drone:
+//  - your engine is a whisper when cruising and swells briefly when you
+//    change speed; thrusters hiss only on a real turn
 //  - other ships' engines and lasers come from where they are
 //  - a soft double beep warns of a hostile on your tail
 
@@ -140,17 +142,28 @@ export class EngineSound {
   }
 
   /** speed and turn are 0..1. */
-  update(speed: number, turn: number) {
+  private lastSpeed = 0;
+  private swell = 0;
+
+  /** speed and turn are 0..1; dt in seconds. */
+  update(speed: number, turn: number, dt: number) {
     if (!this.nodes) return;
     const { ctx } = audioGraph();
     const t = ctx.currentTime;
     const n = this.nodes;
+    // Changing speed swells the engine; it settles back within a second or so.
+    const change = Math.abs(speed - this.lastSpeed) / Math.max(dt, 1e-3);
+    this.lastSpeed = speed;
+    this.swell = Math.max(this.swell * Math.exp(-dt * 1.5), Math.min(1, change * 2));
+    const drone = getSoundMode() === 'full' ? 1 : 0;
     setParam(n.hum.frequency, 38 + speed * 46, t, 0.15);
     setParam(n.hum2.frequency, 76.6 + speed * 92, t, 0.15);
-    setParam(n.tone.frequency, 160 + speed * 1100, t, 0.15);
-    setParam(n.humGain.gain, 0.05 + speed * 0.06, t, 0.2);
-    setParam(n.hissGain.gain, Math.min(1, turn) * 0.09, t, 0.06);
-    setParam(n.hissFilter.frequency, 700 + turn * 900, t, 0.06);
+    setParam(n.tone.frequency, 160 + speed * 900 + this.swell * 500, t, 0.15);
+    setParam(n.humGain.gain, drone * (0.008 + speed * 0.01 + this.swell * 0.05), t, 0.2);
+    // Ignore small corrections; hiss only on a real turn.
+    const hiss = Math.max(0, Math.min(1, turn) - 0.2) / 0.8;
+    setParam(n.hissGain.gain, hiss * 0.035, t, 0.08);
+    setParam(n.hissFilter.frequency, 700 + turn * 700, t, 0.08);
   }
 
   stop() {
@@ -190,7 +203,7 @@ export class ShipVoice {
     const t = this.gain.context.currentTime;
     this.spatial.place(at);
     setParam(this.osc.frequency, 60 + speed * 50, t, 0.2);
-    setParam(this.gain.gain, 0.35, t, 0.3);
+    setParam(this.gain.gain, getSoundMode() === 'full' ? 0.12 : 0, t, 0.3);
   }
 
   dispose() {
@@ -212,7 +225,7 @@ export function tailWarning(at: THREE.Vector3) {
     o.type = 'sine';
     o.frequency.value = 1320;
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.12, t + 0.01);
+    g.gain.linearRampToValueAtTime(0.07, t + 0.01);
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
     o.connect(g).connect(p.input);
     o.start(t);

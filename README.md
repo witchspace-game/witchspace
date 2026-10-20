@@ -59,7 +59,7 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 | C | Docking computer (once you've bought one) |
 | I | Invert pitch (remembered) |
 | M | Toggle neo-vector / 1984 mode |
-| N | Sound on / off |
+| N | Sound: full / effects only (no engine hum) / off (remembered) |
 | H | Controls card |
 
 **Gamepad:** left stick pitches and rolls, right stick yaws, triggers set speed, A launches and runs the docking computer, Y toggles 1984 mode.

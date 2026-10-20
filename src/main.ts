@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { danube, preloadRecording, sfx, toggleMute, unlockAudio } from './audio/sound';
+import { cycleSoundMode, danube, preloadRecording, sfx, unlockAudio } from './audio/sound';
 import { boomAt, EngineSound, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
 import { shipById, ships } from './content/ships';
 import {
@@ -250,7 +250,7 @@ let autopilot = false;
 const police: NpcShip[] = [];
 const engineSound = new EngineSound();
 const voices = new Map<NpcShip, ShipVoice>();
-const VOICE_RANGE = 3500; // hear other ships' engines within this distance
+const VOICE_RANGE = 2000; // hear other ships' engines within this distance
 let tailWarningTimer = 0;
 const beams = new Beams(space.scene);
 let laserCooldown = 0;
@@ -431,7 +431,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     });
     if (onTail) {
       tailWarning(onTail.obj.position);
-      tailWarningTimer = 1.2;
+      tailWarningTimer = 2.5;
     }
   }
 
@@ -676,7 +676,7 @@ function updateSpace(dt: number) {
     updateCombatHud();
     updateMarkers();
     const turn = Math.abs(player.pitchGauge) + Math.abs(player.yawGauge) + Math.abs(player.rollGauge) * 0.6;
-    engineSound.update(player.speed / player.maxSpeed, Math.min(1, turn / 1.2));
+    engineSound.update(player.speed / player.maxSpeed, Math.min(1, turn / 1.2), dt);
   }
 }
 
@@ -794,7 +794,7 @@ function renderControlsCard() {
       ['K', 'Switch control scheme'],
       ['I', 'Invert pitch'],
       ['M', '1984 mode'],
-      ['N', 'Sound on / off'],
+      ['N', 'Sound: full / effects only / off'],
       ['H', 'Show / hide this card'],
     ])
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
@@ -924,8 +924,8 @@ function handleKey(code: string) {
     return;
   }
   if (code === 'KeyN' && state !== 'title') {
-    const muted = toggleMute();
-    if (state === 'flying') flash(muted ? 'Sound off' : 'Sound on', 1.2);
+    const mode = cycleSoundMode();
+    flash(mode === 'full' ? 'Sound: full' : mode === 'effects' ? 'Sound: effects only (no engine hum)' : 'Sound: off', 1.6);
     return;
   }
   switch (state) {
