@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { cycleSoundMode, danube, preloadRecording, sfx, unlockAudio } from './audio/sound';
-import { boomAt, EngineSound, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
+import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
 import { shipById, ships } from './content/ships';
 import {
   cargoTonnes,
@@ -1068,8 +1068,8 @@ function launchMissile(from: PlayerShip, target: PlayerShip) {
   const m = new Missile(shipById('missile')!, from, target);
   space.scene.add(m.model.root);
   missiles.push(m);
-  zapAt(m.position, 900, 200, 0.8, 0.4);
   if (from === player) sfx.missileLaunch();
+  else rocketAt(m.position, 0.5);
   if (target === player) {
     sfx.incoming();
     incomingTimer = 1;
