@@ -88,14 +88,23 @@ const cobraIndex = Math.max(0, showroomModels.findIndex((m) => m.def.id === 'cob
 let shipIndex = cobraIndex;
 let flyIn = 0; // 0 = far away, 1 = arrived
 const spin = { x: 0.25, y: 0, dragging: false, lastX: 0, lastY: 0, idle: 0 };
+let zoom = 1; // showroom zoom: >1 is closer
+const ZOOM_MIN = 0.6;
+const ZOOM_MAX = 3;
 
 function showShip(index: number) {
   shipIndex = (index + showroomModels.length) % showroomModels.length;
   showroomModels.forEach((m, i) => (m.root.visible = i === shipIndex));
   flyIn = 0;
+  resetShowroomView();
+  updateShipPanel();
+}
+
+function resetShowroomView() {
   spin.x = 0.25;
   spin.y = 0;
-  updateShipPanel();
+  spin.idle = 0;
+  zoom = 1;
 }
 
 function updateShipPanel() {
@@ -118,7 +127,7 @@ function updateShipPanel() {
 
 function updateShowroom(dt: number) {
   const model = showroomModels[shipIndex];
-  const dist = model.radius * 3.4;
+  const dist = (model.radius * 3.4) / zoom;
   flyIn = Math.min(1, flyIn + dt * 0.7);
   const ease = 1 - Math.pow(1 - flyIn, 3);
   model.root.position.set(0, 0, -dist * 12 * (1 - ease));
@@ -132,8 +141,13 @@ function updateShowroom(dt: number) {
   showroom.stars.position.copy(camera.position);
 }
 
+// Inspect the ship on the title and docked screens: drag to rotate, scroll
+// (or swipe on a Magic Mouse or trackpad) to zoom, double-click to reset.
+const inShowroom = () => state === 'title' || state === 'docked' || state === 'newgame';
+const onControl = (e: Event) => Boolean((e.target as HTMLElement).closest('button, a, input, #galaxy-map, #controls-card'));
+
 addEventListener('pointerdown', (e) => {
-  if (state !== 'title' || (e.target as HTMLElement).closest('button')) return;
+  if (!inShowroom() || onControl(e)) return;
   spin.dragging = true;
   spin.lastX = e.clientX;
   spin.lastY = e.clientY;
@@ -147,6 +161,20 @@ addEventListener('pointermove', (e) => {
   spin.idle = 0;
 });
 addEventListener('pointerup', () => (spin.dragging = false));
+addEventListener(
+  'wheel',
+  (e) => {
+    if (!inShowroom() || onControl(e)) return;
+    const scale = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1;
+    zoom = THREE.MathUtils.clamp(zoom * Math.exp(-e.deltaY * scale * 0.0015), ZOOM_MIN, ZOOM_MAX);
+    spin.idle = 0;
+    e.preventDefault();
+  },
+  { passive: false },
+);
+addEventListener('dblclick', (e) => {
+  if (inShowroom() && !onControl(e)) resetShowroomView();
+});
 
 // --- Title, new commander and docked screens --------------------------------
 

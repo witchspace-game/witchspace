@@ -110,6 +110,24 @@ button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent);
 button:disabled { opacity: 0.4; cursor: default; }
 button.primary { border-color: var(--accent); color: var(--accent); }
 
+.tribute a { color: var(--dim); }
+.tribute a:hover { color: var(--accent); }
+
+.showroom-hint {
+  position: fixed;
+  bottom: 40px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.15em;
+  color: var(--dim);
+  opacity: 0.8;
+  pointer-events: none;
+}
+body.retro .showroom-hint { font-size: 8px; }
+
 .tribute {
   position: fixed;
   bottom: 16px;
