@@ -14,7 +14,7 @@ Witchspace keeps the soul of the original (crisp vector ships, hidden-line wiref
 
 ## Play it now
 
-**🚀 [witchspace.vercel.app](https://witchspace.vercel.app)**. It runs in any modern browser, with nothing to install.
+**🚀 [witchspace.org.uk](https://witchspace.org.uk)**. It runs in any modern browser, with nothing to install.
 
 ## Play it locally
 
