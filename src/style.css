@@ -561,9 +561,113 @@ body.retro .prompt { font-size: 10px; letter-spacing: 0.05em; }
 body.retro #rules button b { font-size: 11px; }
 body.retro #rules button small, body.retro #rules button em { font-size: 8px; line-height: 1.6; }
 
+/* --- Chart close button and touch/desktop text -------------------------------- */
+
+#galaxy-map .map-close { position: absolute; top: 16px; right: 16px; font-size: 18px; padding: 6px 12px; z-index: 1; }
+.touch-only { display: none; }
+body.touch .touch-only { display: inline; }
+body.touch .desk-only { display: none; }
+
+/* --- Touch controls --------------------------------------------------------- */
+
+#touch { position: fixed; inset: 0; z-index: 4; pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+body:not(.touch) #touch { display: none; }
+body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
+#touch > * { pointer-events: auto; }
+#touch .aim-pad { position: absolute; left: 0; top: 0; bottom: 0; width: 58%; }
+#touch .aim-pad span {
+  position: absolute; left: 24px; bottom: 28px; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--dim); opacity: 0.6; transition: opacity 0.3s;
+}
+#touch .aim-pad.active span { opacity: 0; }
+#touch .finger {
+  position: fixed; left: -28px; top: -28px; width: 56px; height: 56px; border-radius: 50%;
+  border: 1px solid var(--accent); box-shadow: 0 0 12px rgba(61, 255, 176, 0.4); opacity: 0; transition: opacity 0.2s;
+}
+#touch .aim-pad.active .finger { opacity: 0.6; }
+#touch .base {
+  position: fixed; left: -44px; top: -44px; width: 88px; height: 88px; border-radius: 50%;
+  border: 1px dashed rgba(61, 255, 176, 0.35); opacity: 0; transition: opacity 0.2s;
+}
+#touch .aim-pad.active .base { opacity: 1; }
+#touch .touch-fly { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); display: flex; align-items: flex-end; gap: 14px; }
+#touch .speed {
+  position: relative; width: 44px; height: 150px; border: 1px solid var(--edge); background: rgba(0, 10, 6, 0.5);
+}
+#touch .speed i {
+  position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--v, 0) * 100%);
+  background: linear-gradient(to top, rgba(61, 255, 176, 0.15), rgba(61, 255, 176, 0.45)); border-top: 2px solid var(--accent);
+}
+#touch .speed b { position: absolute; left: 0; right: 0; bottom: -18px; text-align: center; font-size: 10px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); }
+#touch .fire {
+  width: 92px; height: 92px; border-radius: 50%; border: 2px solid var(--danger); color: var(--danger);
+  background: rgba(40, 0, 10, 0.4); font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase;
+}
+#touch .fire.active { background: rgba(255, 77, 109, 0.35); box-shadow: 0 0 20px var(--danger); }
+#touch .touch-actions {
+  position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 186px);
+  display: grid; grid-template-columns: repeat(2, 72px); gap: 6px;
+}
+#touch .touch-actions button { padding: 7px 4px; font-size: 12px; background: rgba(0, 10, 6, 0.55); }
+#touch .touch-actions button.on { border-color: var(--accent); color: #000; background: var(--accent); }
+/* In flight on a touch screen, the dashboard moves to the top, out of your thumbs' way. */
+body.touch .keys { display: none; }
+body.touch .dash { top: 6px; bottom: auto; transform: translateX(-50%) scale(0.72); transform-origin: top center; }
+body.touch #dock-aid { top: 128px; right: 12px; transform: scale(0.8); transform-origin: top right; }
+body.touch #target-info { top: 110px; }
+body.touch #banner { top: 30%; font-size: clamp(14px, 4.5vw, 24px); letter-spacing: 0.12em; padding: 0 12px; }
+
+/* --- Phones ----------------------------------------------------------------- */
+
 @media (max-width: 700px) {
-  .panel { left: 16px; bottom: 120px; }
-  .controls { left: 16px; right: 16px; bottom: 60px; justify-content: center; }
-  .bar { width: 60px; }
   .keys { display: none; }
+  .title { top: 14px; }
+  .title h1 { letter-spacing: 0.25em; }
+  .prompt { top: 92px; font-size: 14px; letter-spacing: 0.12em; }
+  .controls { left: 12px; right: 12px; bottom: 40px; justify-content: center; gap: 6px; }
+  .controls button { padding: 7px 10px; font-size: 13px; }
+  .panel { left: 12px; right: 12px; width: auto; bottom: calc(var(--controls-h, 48px) + 50px); padding: 12px 14px; }
+  .panel.docked, .panel.docked.wide { width: auto; max-height: calc(100vh - var(--controls-h, 48px) - 72px); }
+  .panel h2 { font-size: 22px; }
+  /* The title screen keeps the ship in view: name and description only. */
+  .panel[data-screen='title'] #ship-stats, .panel[data-screen='title'] .credits { display: none; }
+  .showroom-hint { display: none; }
+  .tribute { bottom: 4px; font-size: 9px; line-height: 1.3; }
+  .tribute em { font-style: normal; }
+  .bar { width: 52px; }
+  #scanner { max-width: 40vw; }
+
+  /* The market: each row's buttons go on a second line. */
+  #market-table thead { display: none; }
+  #market-table tr { display: grid; grid-template-columns: 1fr auto auto 34px; align-items: center; border-top: 1px solid rgba(61, 255, 176, 0.08); padding: 3px 0; }
+  #market-table td { border-top: none; padding: 1px 4px; font-size: 13px; }
+  #market-table td.actions { grid-column: 1 / -1; justify-content: flex-end; }
+  #market-table td:nth-child(4)::before { content: 'hold '; color: var(--dim); font-size: 10px; }
+  #market-table button { padding: 4px 10px; }
+
+  #galaxy-map .map-title { top: 18px; font-size: 14px; letter-spacing: 0.15em; padding: 0 56px; }
+  #galaxy-map .map-info { left: 12px; right: 12px; width: auto; bottom: 48px; font-size: 13px; }
+  #galaxy-map .map-keys { font-size: 11px; padding: 0 12px; }
+}
+
+/* Phones on their side: little height, so keep panels short and scrollable. */
+@media (max-height: 500px) {
+  .title { top: 8px; }
+  .title h1 { font-size: 24px; }
+  #mode { display: none; }
+  .prompt { top: 50px; font-size: 13px; }
+  .panel { bottom: calc(var(--controls-h, 40px) + 34px); max-height: calc(100vh - var(--controls-h, 40px) - 90px); overflow-y: auto; }
+  .panel.docked, .panel.docked.wide { max-height: calc(100vh - var(--controls-h, 40px) - 50px); }
+  .panel[data-screen='title'] #ship-stats, .panel[data-screen='title'] .credits, .panel[data-screen='title'] .desc { display: none; }
+  .controls { bottom: 26px; }
+  .showroom-hint { display: none; }
+  .tribute { bottom: 4px; font-size: 9px; }
+  body.touch .dash { transform: translateX(-50%) scale(0.58); }
+  body.touch #touch .speed { height: 110px; }
+  body.touch #touch .fire { width: 76px; height: 76px; }
+  body.touch #touch .touch-actions { right: auto; left: max(12px, env(safe-area-inset-left)); bottom: auto; top: 10px; grid-template-columns: repeat(3, 64px); }
+  body.touch #touch .aim-pad span { bottom: 16px; }
+  #galaxy-map .map-info { left: auto; right: 12px; width: min(280px, 40vw); bottom: 36px; max-height: calc(100vh - 100px); overflow-y: auto; padding: 8px 12px; }
+  #galaxy-map .map-info dl { font-size: 12px; }
+  #galaxy-map .map-info h3 { font-size: 18px; }
 }

@@ -124,6 +124,7 @@ main { display: block; }
 .tag.proposal { color: var(--amber); }
 .tag.ideas { color: var(--blue); }
 
+.next { margin-top: 22px; }
 .checklist { list-style: none; padding: 0; margin: 0; columns: 2 320px; column-gap: 32px; }
 .checklist li { padding: 4px 0 4px 28px; position: relative; break-inside: avoid; }
 .checklist li::before { content: '▸'; position: absolute; left: 6px; color: var(--accent); }

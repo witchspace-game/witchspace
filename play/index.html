@@ -118,17 +118,37 @@
     </section>
 
     <div id="hit"></div>
+    <!-- Touch controls: only shown on touch screens (body.touch). -->
+    <section id="touch" data-screen="flying" hidden>
+      <div class="aim-pad"><span>Drag to aim</span><i class="base"></i><i class="finger"></i></div>
+      <div class="touch-actions">
+        <button data-key="KeyT">Lock</button>
+        <button data-key="KeyX">Missile</button>
+        <button data-key="KeyZ">ECM</button>
+        <button data-key="KeyJ">Jump</button>
+        <button data-key="KeyH">Hyper</button>
+        <button data-key="KeyC">Dock</button>
+        <button data-key="KeyG">Map</button>
+        <button data-key="KeyU">Surrender</button>
+        <button class="tilt" title="Steer by tilting the phone">Tilt</button>
+      </div>
+      <div class="touch-fly">
+        <div class="speed" aria-label="Speed"><i></i><b>Speed</b></div>
+        <button class="fire" aria-label="Fire">Fire</button>
+      </div>
+    </section>
     <section id="galaxy-map" hidden>
       <canvas></canvas>
       <p class="map-title"></p>
       <div class="map-info"></div>
-      <p class="map-keys">Tab galactic / local · Arrows or click to select · Enter or click again to set destination · G or Esc to close</p>
+      <p class="map-keys"><span class="desk-only">Tab galactic / local · Arrows or click to select · Enter or click again to set destination · G or Esc to close</span><span class="touch-only">Tap a system to select it · tap it again to set your destination</span></p>
+      <button class="map-close" data-key="KeyG" aria-label="Close the chart">✕</button>
     </section>
     <p id="banner" hidden></p>
     <canvas id="tunnel" hidden></canvas>
     <div id="whiteout" hidden></div>
 
-    <p class="showroom-hint" data-screen="title newgame docked">Drag to rotate · Scroll to zoom · Double-click to reset</p>
+    <p class="showroom-hint" data-screen="title newgame docked"><span class="desk-only">Drag to rotate · Scroll to zoom · Double-click to reset</span><span class="touch-only">Drag to rotate the ship</span></p>
     <footer class="tribute" data-screen="title newgame docked">
       <a href="/">witchspace.org.uk</a> · An unofficial tribute to <em>Elite</em> (1984) by David Braben &amp; Ian Bell. Not affiliated with Frontier Developments.
     </footer>
