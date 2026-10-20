@@ -27,21 +27,39 @@ npm run dev
 
 Then open http://localhost:5173.
 
-| Keyboard | Action |
+Witchspace has two control schemes. Press **K** in flight to switch, and **H** to see the controls card.
+
+**Mouse + keyboard (default).** Click the game to capture the mouse, then move it to aim: the ship turns to put its nose on the ring.
+
+| Control | Action |
+| --- | --- |
+| Mouse | Aim (Esc releases the mouse) |
+| W / S | Throttle up / down |
+| A / D | Roll |
+| Q / E | Yaw (fine sideways adjustment) |
+| Scroll / swipe | Throttle. Sideways swipe on a Magic Mouse or trackpad rolls |
+
+**Keyboard only (classic).** Close to the BBC original.
+
+| Key | Action |
+| --- | --- |
+| W / S | Dive / climb (X also climbs, as on the BBC) |
+| A / D | Roll (`<` and `>` work too) |
+| Space / Shift | Throttle up / down |
+
+**Both schemes**
+
+| Key | Action |
 | --- | --- |
 | Y / N | Load your commander / start a new one |
 | L | Launch from the station |
-| W / S or ↑ / ↓ | Pitch (dive / climb). X also climbs, as on the BBC. Tap for fine control, hold to turn harder |
-| A / D or ← / → | Roll. `<` and `>` work too |
-| Space / Shift | Speed up / slow down |
 | C | Docking computer (once you've bought one) |
+| I | Invert pitch (remembered) |
 | M | Toggle neo-vector / 1984 mode |
-| I | Invert pitch, so W climbs (remembered) |
-| N | Sound on / off (in flight) |
+| N | Sound on / off |
+| H | Controls card |
 
-**Mouse:** scroll (or swipe forwards and back on a Magic Mouse or trackpad) to change speed, and swipe sideways to make fine roll corrections. This works alongside the keyboard without capturing anything. For full mouse flight, click the game to capture the mouse: move it to turn (forwards and back to pitch, left and right to roll), and stop moving to stop turning. Esc releases it.
-
-**Gamepad:** left stick to fly, right/left triggers for speed, A for launch and the docking computer, Y for 1984 mode.
+**Gamepad:** left stick pitches and rolls, right stick yaws, triggers set speed, A launches and runs the docking computer, Y toggles 1984 mode.
 
 **Docking tip:** the station spins. Under **Modern** rules your ship matches the spin for you once you're close and pointing at the slot ("Roll match" lights up); just steer in and don't touch roll. Under **Classic** rules you keep rolling with it yourself, all the way in, as in 1984. In neo-vector mode, the glide path and docking aid show how far out you are.
 

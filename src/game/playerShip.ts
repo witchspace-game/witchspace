@@ -16,6 +16,7 @@ export class PlayerShip {
   hull: number;
   private pitchVel = 0;
   private rollVel = 0;
+  private yawVel = 0;
 
   constructor(readonly def: ShipDef) {
     this.shields = def.stats.shields;
@@ -47,12 +48,19 @@ export class PlayerShip {
     return this.rollVel / (this.def.stats.rollRate ?? 2);
   }
 
+  /** Yaw is slower than pitch: ships turn best by banking, as in the original. */
+  get yawRate() {
+    return this.def.stats.yawRate ?? (this.def.stats.pitchRate ?? 1.5) * 0.6;
+  }
+
   steer(dt: number, input: FlightInput) {
     const k = Math.min(1, dt * CONTROL_RESPONSE);
     this.pitchVel += (input.pitch * (this.def.stats.pitchRate ?? 1.5) - this.pitchVel) * k;
     this.rollVel += (input.roll * (this.def.stats.rollRate ?? 2) - this.rollVel) * k;
+    this.yawVel += (input.yaw * this.yawRate - this.yawVel) * k;
     this.obj.rotateX(-this.pitchVel * dt);
     this.obj.rotateZ(this.rollVel * dt);
+    this.obj.rotateY(-this.yawVel * dt); // +yaw = nose to starboard
     this.speed += input.throttle * ACCELERATION * dt + input.speedStep * this.maxSpeed;
     this.speed = THREE.MathUtils.clamp(this.speed, 0, this.maxSpeed);
   }
@@ -61,6 +69,7 @@ export class PlayerShip {
   centreControls() {
     this.pitchVel = 0;
     this.rollVel = 0;
+    this.yawVel = 0;
   }
 
   /**

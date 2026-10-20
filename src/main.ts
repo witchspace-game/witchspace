@@ -15,7 +15,17 @@ import {
   type Difficulty,
 } from './game/commander';
 import { DockingComputer } from './game/dockingComputer';
-import { centreMouseStick, flightInput, gamepadPresses, isMouseFlying, mouseStick, setMouseFlightAvailable, toggleInvertPitch } from './game/input';
+import {
+  controlScheme,
+  flightInput,
+  gamepadPresses,
+  isMouseCaptured,
+  setFlying,
+  toggleControlScheme,
+  toggleInvertPitch,
+  wantsMouseCapture,
+} from './game/input';
+import { MouseAim } from './game/mouseAim';
 import { PlayerShip } from './game/playerShip';
 import { Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun } from './render/bodies';
@@ -40,7 +50,8 @@ function setState(next: State) {
     el.hidden = !el.dataset.screen!.split(' ').includes(next);
   });
   if (next !== 'flying') $('#dock-aid').hidden = true;
-  setMouseFlightAvailable(next === 'flying');
+  setFlying(next === 'flying');
+  if (next === 'flying') showControlsCardOnce();
 }
 
 let commander: Commander | null = null;
@@ -345,7 +356,6 @@ function setAutopilot(on: boolean, message?: string) {
   autopilot = on;
   if (on) {
     dockingComputer.reset();
-    centreMouseStick(); // so taking back control doesn't lurch
     danube.start(!isRetro());
   } else {
     danube.stop();
@@ -372,6 +382,19 @@ function updateSpace(dt: number) {
     const prev = station.toLocal(player.obj.position);
     const input = flightInput();
     if (autopilot && input.active) setAutopilot(false, 'Docking computer off');
+
+    // Mouse aim: steer the nose towards the reticle. Turning with keys or
+    // while the computer flies puts the reticle back on the nose.
+    const keysTurning = input.pitch !== 0 || input.yaw !== 0;
+    if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !keysTurning) {
+      aim.move(player, input.aimDx, input.aimDy);
+      const s = aim.steer(player);
+      input.pitch = s.pitch;
+      input.yaw = s.yaw;
+    } else {
+      aim.reset(player);
+    }
+
     rollAssist = !autopilot && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
     if (rollAssist) input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
     if (autopilot) dockingComputer.update(dt, player, station);
@@ -430,21 +453,86 @@ function updateSpace(dt: number) {
   ];
   if (state === 'flying') {
     updateHud(player, station, blips, autopilot, rollAssist);
-    updateMouseIndicator();
+    updateAimDisplay();
   }
 }
 
-const mouseRing = $('#mouse-stick');
-const mouseDot = $('#mouse-dot');
-let wasMouseFlying = false;
-function updateMouseIndicator() {
-  const on = isMouseFlying();
-  mouseRing.hidden = !on;
-  if (on !== wasMouseFlying) flash(on ? 'Mouse flight · Esc to release' : 'Mouse released', 1.5);
-  wasMouseFlying = on;
-  if (!on) return;
-  const s = mouseStick();
-  mouseDot.style.transform = `translate(${s.x * 40}px, ${s.y * 40}px)`;
+// --- Mouse aim display and controls help -------------------------------------
+
+const aim = new MouseAim();
+const reticle = $('#reticle');
+const mousePrompt = $('#mouse-prompt');
+let wasCaptured = false;
+
+function updateAimDisplay() {
+  const captured = isMouseCaptured();
+  if (captured !== wasCaptured && controlScheme() === 'mouse') {
+    flash(captured ? 'Mouse aim · Esc to release' : 'Mouse released · click to fly', 1.5);
+  }
+  wasCaptured = captured;
+  mousePrompt.hidden = !wantsMouseCapture();
+  reticle.hidden = !captured || controlScheme() !== 'mouse';
+  if (reticle.hidden) return;
+  // Project the aim direction onto whichever canvas is showing.
+  const p = camera.position.clone().addScaledVector(aim.dir, 1000).project(camera);
+  const rect = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
+  const x = rect.left + ((p.x + 1) / 2) * rect.width;
+  const y = rect.top + ((1 - p.y) / 2) * rect.height;
+  reticle.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+const KEYS_HINT = {
+  mouse: 'Mouse aim · W/S throttle · A/D roll · Q/E yaw · H controls · C docking computer · M 1984',
+  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · H controls · C docking computer · M 1984',
+};
+
+function renderControlsCard() {
+  const mouse = controlScheme() === 'mouse';
+  $('#keys-hint').textContent = KEYS_HINT[controlScheme()];
+  $('#controls-scheme').textContent = mouse ? 'Mouse + keyboard' : 'Keyboard only (classic)';
+  $('#controls-list').innerHTML = (
+    mouse
+      ? [
+          ['Click', 'Capture the mouse (Esc releases it)'],
+          ['Mouse', 'Aim: the ship turns to follow the ring'],
+          ['W / S', 'Throttle up / down'],
+          ['A / D', 'Roll'],
+          ['Q / E', 'Yaw (fine sideways adjustment)'],
+          ['Swipe / scroll', 'Throttle; sideways swipe rolls (Magic Mouse, trackpad)'],
+        ]
+      : [
+          ['W / S', 'Dive / climb (I inverts)'],
+          ['A / D', 'Roll'],
+          ['Space / Shift', 'Throttle up / down'],
+          ['Swipe / scroll', 'Throttle; sideways swipe rolls'],
+        ]
+  )
+    .concat([
+      ['C', 'Docking computer'],
+      ['K', 'Switch control scheme'],
+      ['I', 'Invert pitch'],
+      ['M', '1984 mode'],
+      ['N', 'Sound on / off'],
+      ['H', 'Show / hide this card'],
+    ])
+    .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
+    .join('');
+}
+
+function toggleControlsCard(show = $('#controls-card').hidden) {
+  renderControlsCard();
+  $('#controls-card').hidden = !show;
+}
+
+function showControlsCardOnce() {
+  renderControlsCard();
+  try {
+    if (localStorage.getItem('witchspace.seenControls')) return;
+    localStorage.setItem('witchspace.seenControls', '1');
+  } catch {
+    // Storage blocked: show it anyway.
+  }
+  toggleControlsCard(true);
 }
 
 async function launch() {
@@ -455,6 +543,7 @@ async function launch() {
   inSpace = true;
   player.repair();
   station.placeForLaunch(player);
+  aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
   setState('flying');
   flash('Lave · Coriolis Station', 2.5);
@@ -572,8 +661,14 @@ function handleKey(code: string) {
       if (code === 'KeyL' || code === 'Enter') void launch();
       break;
     case 'flying':
-      if (code === 'KeyI') {
-        flash(toggleInvertPitch() ? 'Pitch inverted · W climbs' : 'Pitch normal · W dives', 2);
+      if (code === 'KeyH') {
+        toggleControlsCard();
+      } else if (code === 'KeyK') {
+        const s = toggleControlScheme();
+        renderControlsCard();
+        flash(s === 'mouse' ? 'Mouse + keyboard · click to aim' : 'Keyboard only (classic)', 2);
+      } else if (code === 'KeyI') {
+        flash(toggleInvertPitch() ? 'Pitch inverted' : 'Pitch normal', 2);
       } else if (code === 'KeyC') {
         if (autopilot) setAutopilot(false, 'Docking computer off');
         else if (!hasEquipment(cmdr(), 'docking-computer')) flash('Docking computer not fitted', 2);

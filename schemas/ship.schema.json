@@ -73,6 +73,7 @@
         "maxSpeed": { "description": "Metres per second.", "type": "number", "minimum": 0, "maximum": 1000 },
         "pitchRate": { "description": "Radians per second.", "type": "number", "minimum": 0, "maximum": 6 },
         "rollRate": { "description": "Radians per second.", "type": "number", "minimum": 0, "maximum": 6 },
+        "yawRate": { "description": "Radians per second. Defaults to 60% of pitchRate.", "type": "number", "minimum": 0, "maximum": 6 },
         "hull": { "type": "number", "minimum": 1 },
         "shields": { "type": "number", "minimum": 0 },
         "cargo": { "description": "Cargo capacity in tonnes.", "type": "integer", "minimum": 0 },

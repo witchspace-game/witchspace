@@ -1,18 +1,60 @@
-// Flight controls from keyboard, mouse and gamepad, combined into one set of
-// analogue axes. Discrete actions (launch, toggles) go through main.ts.
+// Flight controls from keyboard, mouse, touch surfaces and gamepad, combined
+// into one set of axes. Discrete actions (launch, toggles) go through main.ts.
+//
+// Two schemes:
+//   mouse    (default) mouse aims, W/S throttle, A/D roll
+//   keyboard (classic) W/S pitch, A/D roll, Space/Shift throttle, as on the BBC
+
+export type ControlScheme = 'mouse' | 'keyboard';
 
 const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
 
-// --- Keyboard ---------------------------------------------------------------
-// Holding a key builds the turn rate up gradually, as in the original, so a
+function load<T extends string>(key: string, fallback: T, allowed: readonly T[]): T {
+  try {
+    const v = localStorage.getItem(key) as T | null;
+    return v && allowed.includes(v) ? v : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function save(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Not saved; the setting still applies for this session.
+  }
+}
+
+// --- Settings -----------------------------------------------------------------
+
+let scheme = load<ControlScheme>('witchspace.controls', 'mouse', ['mouse', 'keyboard']);
+export const controlScheme = () => scheme;
+export function toggleControlScheme(): ControlScheme {
+  scheme = scheme === 'mouse' ? 'keyboard' : 'mouse';
+  save('witchspace.controls', scheme);
+  if (scheme === 'keyboard' && document.pointerLockElement) document.exitPointerLock();
+  return scheme;
+}
+
+// Pitch direction: by default the keyboard scheme is flight-stick style
+// (W = dive) and the mouse aims like a game (mouse up = aim up). I flips both.
+let invertPitch = load<'0' | '1'>('witchspace.invertPitch', '0', ['0', '1']) === '1';
+export const isPitchInverted = () => invertPitch;
+export function toggleInvertPitch(): boolean {
+  invertPitch = !invertPitch;
+  save('witchspace.invertPitch', invertPitch ? '1' : '0');
+  return invertPitch;
+}
+
+// --- Keyboard -----------------------------------------------------------------
+// Holding a turn key builds the rate up gradually, as in the original, so a
 // tap gives a fine correction and a long hold gives a full-rate turn.
 
 const KEY_RAMP = 0.7; // seconds from tap to full rate
-
 const held = new Map<string, number>(); // code -> time first pressed (ms)
 
 const FLIGHT_KEYS = new Set([
-  'KeyW', 'KeyS', 'KeyA', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+  'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
   'Space', 'ShiftLeft', 'ShiftRight', 'Slash', 'Comma', 'Period', 'KeyX',
 ]);
 
@@ -23,7 +65,6 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => held.delete(e.code));
 addEventListener('blur', () => held.clear());
 
-/** 0..1: how far a key group has ramped up. */
 function keyRamp(now: number, ...codes: string[]): number {
   let since = Infinity;
   for (const c of codes) since = Math.min(since, held.get(c) ?? Infinity);
@@ -33,88 +74,47 @@ function keyRamp(now: number, ...codes: string[]): number {
 }
 const keyHeld = (...codes: string[]) => codes.some((c) => held.has(c));
 
-// --- Pitch direction ----------------------------------------------------------
-// Default is flight-stick style (W / push forward = dive). Many players expect
-// the opposite, so it can be flipped with I, and the choice is remembered.
+// --- Mouse ----------------------------------------------------------------------
 
-const INVERT_KEY = 'witchspace.invertPitch';
-let invertPitch = (() => {
-  try {
-    return localStorage.getItem(INVERT_KEY) === '1';
-  } catch {
-    return false;
-  }
-})();
-
-export const isPitchInverted = () => invertPitch;
-
-export function toggleInvertPitch(): boolean {
-  invertPitch = !invertPitch;
-  try {
-    localStorage.setItem(INVERT_KEY, invertPitch ? '1' : '0');
-  } catch {
-    // Not saved; the setting still applies for this session.
-  }
-  return invertPitch;
-}
-
-// --- Mouse (pointer lock) ------------------------------------------------------
-// While captured, the mouse is a joystick that springs back to centre: move
-// it to turn, stop moving and the ship stops turning. Scroll for speed.
-
-const MOUSE_RANGE = 160; // pixels of travel for full deflection
-const MOUSE_RECENTRE = 3; // per second; how quickly the stick springs back
-const stick = { x: 0, y: 0, moved: false };
+let flying = false;
+let aimDx = 0;
+let aimDy = 0;
 let wheel = 0;
-let mouseEnabled = false;
+let swipeRoll = 0;
 
-export const isMouseFlying = () => mouseEnabled && document.pointerLockElement !== null;
-
-/** Allow capturing the mouse by clicking the game (only while flying). */
-export function setMouseFlightAvailable(available: boolean) {
-  mouseEnabled = available;
-  if (!available && document.pointerLockElement) document.exitPointerLock();
-  if (!available) centreMouseStick();
+/** Mouse capture and scrolling only apply while flying. */
+export function setFlying(value: boolean) {
+  flying = value;
+  if (!value && document.pointerLockElement) document.exitPointerLock();
+  aimDx = aimDy = wheel = swipeRoll = 0;
 }
 
-export function centreMouseStick() {
-  stick.x = 0;
-  stick.y = 0;
-}
+export const isMouseCaptured = () => flying && document.pointerLockElement !== null;
+export const wantsMouseCapture = () => flying && scheme === 'mouse' && !document.pointerLockElement;
 
 addEventListener('mousedown', (e) => {
-  if (!mouseEnabled || document.pointerLockElement) return;
+  if (!wantsMouseCapture()) return;
   if ((e.target as HTMLElement).closest('button, a, input')) return;
-  centreMouseStick();
   void document.body.requestPointerLock?.();
 });
 addEventListener('mousemove', (e) => {
-  if (!isMouseFlying()) return;
-  stick.x += e.movementX / MOUSE_RANGE;
-  stick.y += e.movementY / MOUSE_RANGE;
-  const r = Math.hypot(stick.x, stick.y);
-  if (r > 1) {
-    stick.x /= r;
-    stick.y /= r;
-  }
-  stick.moved = true;
+  if (!isMouseCaptured()) return;
+  aimDx += e.movementX;
+  aimDy += e.movementY;
 });
-// Scrolling works whenever you're flying, captured or not, so a mouse can
-// sit alongside the keyboard. A notched wheel, an Apple Magic Mouse's touch
-// surface and a trackpad all arrive as scroll events, so we scale by distance
-// rather than counting events (a Magic Mouse swipe sends dozens of them).
-//   forwards/back -> speed      sideways -> fine roll
+
+// A notched wheel, an Apple Magic Mouse's touch surface and a trackpad all
+// arrive as scroll events, so scale by distance rather than counting events
+// (a Magic Mouse swipe sends dozens). Forwards/back = speed, sideways = roll.
 // With macOS natural scrolling (the default), both follow your finger.
 const SCROLL_SPEED = 0.0008; // fraction of top speed per pixel; a wheel notch ≈ 8%
 const SWIPE_ROLL = 0.012; // roll per pixel of sideways swipe
 const SWIPE_ROLL_DECAY = 6; // per second; a swipe gives a short, smooth roll
 
-let swipeRoll = 0;
-
 addEventListener(
   'wheel',
   (e) => {
-    if (!mouseEnabled) return;
+    if (!flying) return;
     const scale = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1; // lines / pages -> pixels
     wheel += e.deltaY * scale;
     swipeRoll = clamp1(swipeRoll - e.deltaX * scale * SWIPE_ROLL);
@@ -122,14 +122,8 @@ addEventListener(
   },
   { passive: false },
 );
-document.addEventListener('pointerlockchange', () => {
-  if (!document.pointerLockElement) centreMouseStick();
-});
 
-/** Current virtual stick position, for the on-screen indicator. */
-export const mouseStick = () => ({ x: stick.x, y: stick.y });
-
-// --- Gamepad ----------------------------------------------------------------
+// --- Gamepad ------------------------------------------------------------------
 
 const DEADZONE = 0.15;
 let padButtons: boolean[] = [];
@@ -147,15 +141,14 @@ function activePad(): Gamepad | null {
   return null;
 }
 
-/**
- * Standard-mapping gamepad buttons that were pressed since the last call,
- * reported as virtual key names for main.ts to act on.
- */
-export function gamepadPresses(): ('PadA' | 'PadB' | 'PadY' | 'PadStart')[] {
+export type PadButton = 'PadA' | 'PadB' | 'PadY' | 'PadStart';
+
+/** Standard-mapping gamepad buttons pressed since the last call. */
+export function gamepadPresses(): PadButton[] {
   const pad = activePad();
   if (!pad) return [];
-  const names: Record<number, 'PadA' | 'PadB' | 'PadY' | 'PadStart'> = { 0: 'PadA', 1: 'PadB', 3: 'PadY', 9: 'PadStart' };
-  const out: ('PadA' | 'PadB' | 'PadY' | 'PadStart')[] = [];
+  const names: Record<number, PadButton> = { 0: 'PadA', 1: 'PadB', 3: 'PadY', 9: 'PadStart' };
+  const out: PadButton[] = [];
   pad.buttons.forEach((b, i) => {
     if (b.pressed && !padButtons[i] && names[i]) out.push(names[i]);
   });
@@ -170,11 +163,16 @@ export interface FlightInput {
   pitch: number;
   /** +1 = roll right */
   roll: number;
+  /** +1 = nose right */
+  yaw: number;
   /** +1 = speed up (held) */
   throttle: number;
-  /** One-off change in speed, as a fraction of top speed (scroll wheel / swipe). */
+  /** One-off change in speed, as a fraction of top speed (scroll / swipe). */
   speedStep: number;
-  /** True if the pilot is actively touching any control this frame. */
+  /** Mouse movement since last frame, in pixels, for the aiming reticle. */
+  aimDx: number;
+  aimDy: number;
+  /** True if the pilot is touching any control this frame. */
   active: boolean;
 }
 
@@ -184,45 +182,48 @@ export function flightInput(): FlightInput {
   const now = performance.now();
   const dt = Math.min(0.1, (now - lastPoll) / 1000);
   lastPoll = now;
+  const sign = invertPitch ? -1 : 1;
 
-  // Flight-stick convention: push forward (W / ↑) to dive. X is the BBC's "climb" key.
-  const kbPitch = keyRamp(now, 'KeyS', 'ArrowDown', 'KeyX') - keyRamp(now, 'KeyW', 'ArrowUp');
-  // < and > rolled the ship on the BBC Micro.
-  const kbRoll = keyRamp(now, 'KeyD', 'ArrowRight', 'Period') - keyRamp(now, 'KeyA', 'ArrowLeft', 'Comma');
-  const kbThrottle = (keyHeld('Space') ? 1 : 0) - (keyHeld('ShiftLeft', 'ShiftRight', 'Slash') ? 1 : 0);
+  // Arrow keys always pitch and roll; < > roll as on the BBC Micro.
+  let kbPitch = keyRamp(now, 'ArrowDown') - keyRamp(now, 'ArrowUp');
+  let kbRoll = keyRamp(now, 'ArrowRight', 'Period') - keyRamp(now, 'ArrowLeft', 'Comma');
+  let kbYaw = 0;
+  let kbThrottle = (keyHeld('Space') ? 1 : 0) - (keyHeld('ShiftLeft', 'ShiftRight', 'Slash') ? 1 : 0);
 
-  // Mouse: pull back (towards you) to climb, like a joystick.
-  const mouse = isMouseFlying() ? { pitch: shapeAxis(stick.y), roll: shapeAxis(stick.x) } : { pitch: 0, roll: 0 };
+  if (scheme === 'mouse') {
+    // Modern layout: W/S throttle, A/D roll, Q/E yaw.
+    kbThrottle += (keyHeld('KeyW') ? 1 : 0) - (keyHeld('KeyS') ? 1 : 0);
+    kbRoll += keyRamp(now, 'KeyD') - keyRamp(now, 'KeyA');
+    kbYaw = keyRamp(now, 'KeyE') - keyRamp(now, 'KeyQ');
+  } else {
+    // Classic: W/S pitch (push forward to dive), X climbs as on the BBC.
+    kbPitch += keyRamp(now, 'KeyS', 'KeyX') - keyRamp(now, 'KeyW');
+    kbRoll += keyRamp(now, 'KeyD') - keyRamp(now, 'KeyA');
+  }
 
   const pad = activePad();
   const padPitch = pad ? shapeAxis(pad.axes[1] ?? 0) : 0;
   const padRoll = pad ? shapeAxis(pad.axes[0] ?? 0) : 0;
+  const padYaw = pad ? shapeAxis(pad.axes[2] ?? 0) : 0;
   const padThrottle = pad ? (pad.buttons[7]?.value ?? 0) - (pad.buttons[6]?.value ?? 0) : 0;
 
-  const speedStep = wheel * SCROLL_SPEED;
   const swipe = swipeRoll;
   swipeRoll *= Math.exp(-dt * SWIPE_ROLL_DECAY);
   if (Math.abs(swipeRoll) < 0.01) swipeRoll = 0;
-  const mouseMoved = stick.moved;
-  wheel = 0;
-  stick.moved = false;
-  if (!mouseMoved) {
-    const k = Math.exp(-dt * MOUSE_RECENTRE);
-    stick.x *= k;
-    stick.y *= k;
-  }
 
-  const pitchSign = invertPitch ? -1 : 1;
   const input: FlightInput = {
-    pitch: pitchSign * clamp1(kbPitch + mouse.pitch + padPitch),
-    roll: clamp1(kbRoll + mouse.roll + padRoll + swipe),
+    pitch: sign * clamp1(kbPitch + padPitch),
+    roll: clamp1(kbRoll + padRoll + swipe),
+    yaw: clamp1(kbYaw + padYaw),
     throttle: clamp1(kbThrottle + padThrottle),
-    speedStep,
+    speedStep: wheel * SCROLL_SPEED,
+    aimDx,
+    aimDy: sign * aimDy,
     active: false,
   };
-  // A resting mouse stick is not "steering"; moving it is.
   input.active =
-    kbPitch !== 0 || kbRoll !== 0 || kbThrottle !== 0 || padPitch !== 0 || padRoll !== 0 ||
-    Math.abs(padThrottle) > 0.05 || speedStep !== 0 || swipe !== 0 || mouseMoved;
+    input.pitch !== 0 || input.roll !== 0 || input.yaw !== 0 || input.throttle !== 0 ||
+    input.speedStep !== 0 || aimDx !== 0 || aimDy !== 0;
+  aimDx = aimDy = wheel = 0;
   return input;
 }

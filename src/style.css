@@ -134,6 +134,7 @@ button.primary { border-color: var(--accent); color: var(--accent); }
   pointer-events: none;
 }
 @keyframes blink { to { visibility: hidden; } }
+body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
 
 .rules { width: min(440px, calc(100vw - 32px)); }
 #rules { display: grid; gap: 10px; }
@@ -288,29 +289,44 @@ button.primary { border-color: var(--accent); color: var(--accent); }
 
 body[data-state='dead'] #banner { font-size: clamp(28px, 6vw, 64px); }
 
-/* Mouse flight: a ring around the crosshair with a dot showing stick position. */
-#mouse-stick {
+/* Mouse aim: a ring where you're aiming; the ship turns to put its nose on it. */
+#reticle {
   position: fixed;
-  left: 50%;
-  top: 42%;
-  width: 96px;
-  height: 96px;
-  margin: -48px 0 0 -48px;
-  border: 1px solid rgba(61, 255, 176, 0.35);
+  left: 0;
+  top: 0;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 2px solid var(--accent);
   border-radius: 50%;
+  box-shadow: 0 0 10px rgba(61, 255, 176, 0.6);
   pointer-events: none;
 }
-#mouse-dot {
-  position: absolute;
+#mouse-prompt {
+  position: fixed;
+  top: 30%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--fg);
+  animation: blink 1.4s steps(2, start) infinite;
+  pointer-events: none;
+}
+#controls-card {
   left: 50%;
   top: 50%;
-  width: 8px;
-  height: 8px;
-  margin: -4px 0 0 -4px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
+  bottom: auto;
+  transform: translate(-50%, -50%);
+  width: min(460px, calc(100vw - 32px));
+  z-index: 7;
 }
+#controls-card dl { grid-template-columns: auto 1fr; gap: 6px 16px; margin-top: 8px; }
+#controls-card dt { color: var(--accent); white-space: nowrap; }
+#controls-card dd { text-align: left; }
 
 /* --- 1984 mode: white on black, chunky 8x8-style type ------------------- */
 

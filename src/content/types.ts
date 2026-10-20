@@ -27,6 +27,7 @@ export interface ShipDef {
     maxSpeed: number;
     pitchRate?: number;
     rollRate?: number;
+    yawRate?: number;
     hull: number;
     shields: number;
     cargo: number;
