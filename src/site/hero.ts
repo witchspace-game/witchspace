@@ -44,6 +44,16 @@ const camera = new THREE.PerspectiveCamera(40, 1, 1, 20000);
 }
 
 const showcase = ships.filter((s) => s.role !== 'cargo').map(buildShip);
+
+// How tall each model can get on screen while it turns (it spins about Y
+// with a slight tilt), so tall stations and flat ships both fit the frame.
+const TILT = 0.3;
+const fitHeight = new Map(
+  showcase.map((m) => [
+    m,
+    Math.max(...m.def.geometry.vertices.map(([x, y, z]) => Math.abs(y) * Math.cos(TILT) + Math.hypot(x, z) * Math.sin(TILT))),
+  ]),
+);
 for (const m of showcase) {
   m.root.visible = false;
   scene.add(m.root);
@@ -79,6 +89,11 @@ function resize() {
 new ResizeObserver(resize).observe(canvas);
 resize();
 
+// The header is transparent over the hero; make it solid once you scroll.
+const onScroll = () => document.body.classList.toggle('scrolled', scrollY > 40);
+addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
 // Only animate while the hero is on screen and the tab is visible.
 let visible = true;
 new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
@@ -95,16 +110,24 @@ function frame() {
   if (shownFor > SHOW_SECONDS && showcase.length > 1) show((index = (index + 1) % showcase.length));
 
   const model = showcase[index];
-  const dist = model.radius * (camera.aspect < 1 ? 6 : 4.4);
+  // Frame the model in the upper part of the hero: its centre about 27% from
+  // the top, filling at most ~30% of the hero's height (with a margin for
+  // perspective) and ~75% of its width, so it never meets the header or title.
+  const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const NDC_CENTRE = 0.46; // vertical position of the model's centre (0 = middle, 1 = top)
+  const dist = Math.max(
+    (fitHeight.get(model)! * 1.15) / (0.3 * tanHalf),
+    model.radius / (0.75 * tanHalf * camera.aspect),
+  );
   // Fly in from the distance, as on the original's title screen.
   const t = reducedMotion ? 1 : Math.min(1, shownFor / 1.6);
   const ease = 1 - Math.pow(1 - t, 3);
   spin += dt * (reducedMotion ? 0.12 : 0.4);
   model.root.position.set(0, 0, -dist * 10 * (1 - ease));
-  model.root.rotation.set(0.3, spin, 0);
-  // Look below the ship so it sits in the upper part of the hero, above the title.
-  camera.position.set(0, model.radius * 0.25, dist);
-  camera.lookAt(0, -model.radius * 0.95, 0);
+  model.root.rotation.set(TILT, spin, 0);
+  // Look below the model so it sits in the upper part of the hero, above the title.
+  camera.position.set(0, 0, dist);
+  camera.lookAt(0, -NDC_CENTRE * dist * tanHalf, 0);
   composer.render();
 }
 frame();

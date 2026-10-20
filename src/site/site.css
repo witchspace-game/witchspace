@@ -130,9 +130,25 @@ main { display: block; }
 
 /* --- Hero ---------------------------------------------------------------- */
 
+/* On the home page the header floats over the hero, transparent until you scroll. */
+body.home .site-header {
+  position: fixed;
+  left: 0;
+  right: 0;
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+  transition: background 0.25s, border-color 0.25s;
+}
+body.home.scrolled .site-header {
+  background: rgba(2, 6, 10, 0.82);
+  backdrop-filter: blur(8px);
+  border-bottom-color: var(--edge);
+}
+
 .hero {
   position: relative;
-  min-height: min(82vh, 760px);
+  min-height: min(92vh, 820px);
   display: grid;
   place-items: center;
   overflow: hidden;
