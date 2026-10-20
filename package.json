@@ -15,12 +15,12 @@
     "three": "^0.170.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
+    "@types/node": "^26.6.5",
     "@types/three": "^0.170.0",
-    "ajv": "^8.17.1",
-    "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "vite": "^6.0.7"
+    "ajv": "^8.20.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.4"
   },
   "private": true,
   "type": "module",
