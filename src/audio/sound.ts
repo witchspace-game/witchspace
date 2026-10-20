@@ -102,7 +102,54 @@ export const sfx = {
     zap(660, 660, 0.08, 0.05, 'square');
     setTimeout(() => zap(990, 990, 0.1, 0.05, 'square'), 90);
   },
-  missileLaunch: () => noise(1.1, 'bandpass', 500, 2400, 0.45),
+  /**
+   * Missile away: a dull clunk as it drops off the rail, then the motor
+   * catches with a roar that brightens and fades as it pulls away.
+   */
+  missileLaunch: () => {
+    const { ctx, master } = audio();
+    const t = ctx.currentTime;
+    const clunk = ctx.createOscillator();
+    const cg = ctx.createGain();
+    clunk.type = 'sine';
+    clunk.frequency.setValueAtTime(150, t);
+    clunk.frequency.exponentialRampToValueAtTime(50, t + 0.18);
+    cg.gain.setValueAtTime(0.35, t);
+    cg.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    clunk.connect(cg).connect(master);
+    clunk.start(t);
+    clunk.stop(t + 0.22);
+
+    const ignite = t + 0.14;
+    const length = 1.8;
+    const hiss = ctx.createBufferSource();
+    hiss.buffer = noiseBuffer(ctx, length);
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.Q.value = 1.5;
+    f.frequency.setValueAtTime(250, ignite);
+    f.frequency.exponentialRampToValueAtTime(3800, ignite + 0.35);
+    f.frequency.exponentialRampToValueAtTime(600, ignite + length);
+    const hg = ctx.createGain();
+    hg.gain.setValueAtTime(0.0001, ignite);
+    hg.gain.exponentialRampToValueAtTime(0.4, ignite + 0.06);
+    hg.gain.setTargetAtTime(0.0001, ignite + 0.35, 0.4);
+    hiss.connect(f).connect(hg).connect(master);
+    hiss.start(ignite);
+    hiss.stop(ignite + length);
+
+    const rumble = ctx.createOscillator();
+    const rg = ctx.createGain();
+    rumble.type = 'triangle';
+    rumble.frequency.setValueAtTime(70, ignite);
+    rumble.frequency.exponentialRampToValueAtTime(40, ignite + 1.2);
+    rg.gain.setValueAtTime(0.0001, ignite);
+    rg.gain.exponentialRampToValueAtTime(0.18, ignite + 0.05);
+    rg.gain.exponentialRampToValueAtTime(0.0001, ignite + 1.2);
+    rumble.connect(rg).connect(master);
+    rumble.start(ignite);
+    rumble.stop(ignite + 1.3);
+  },
   /** Incoming missile: a short, insistent warble. */
   incoming: () => {
     zap(1300, 900, 0.09, 0.05, 'square');

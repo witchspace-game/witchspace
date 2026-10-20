@@ -74,6 +74,29 @@ export function zapAt(at: THREE.Vector3, from: number, to: number, seconds: numb
   o.onended = () => p.disconnect();
 }
 
+/** A missile motor lighting up somewhere out there: a roar that swells and fades. */
+export function rocketAt(at: THREE.Vector3, volume: number) {
+  const { ctx } = audioGraph();
+  const t = ctx.currentTime;
+  const length = 1.6;
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(ctx, length);
+  const f = ctx.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(300, t);
+  f.frequency.exponentialRampToValueAtTime(3000, t + 0.3);
+  f.frequency.exponentialRampToValueAtTime(500, t + length);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(volume, t + 0.08);
+  g.gain.setTargetAtTime(0.0001, t + 0.3, 0.4);
+  const p = makeSpatial(at);
+  src.connect(f).connect(g).connect(p.input);
+  src.start(t);
+  src.stop(t + length);
+  src.onended = () => p.disconnect();
+}
+
 /** A burst of filtered noise from a point in space (impacts, explosions). */
 export function boomAt(at: THREE.Vector3, seconds: number, cutoff: number, volume: number) {
   const { ctx } = audioGraph();
