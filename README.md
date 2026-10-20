@@ -27,18 +27,46 @@ npm run dev
 
 Then open http://localhost:5173.
 
+Witchspace has two control schemes. Press **K** in flight to switch, and **H** to see the controls card.
+
+**Mouse + keyboard (default).** Click the game to capture the mouse, then move it to aim: the ship turns to put its nose on the ring.
+
+| Control | Action |
+| --- | --- |
+| Mouse | Aim (Esc releases the mouse) |
+| Left click / F | Fire. Lasers fire straight ahead at the centre cross, which turns red on target. Fit a **Gimballed Laser Mount** (Modern rules) and they hit whatever is under the ring instead, at 80% damage |
+| Right click | Centre the aim and stop turning |
+| W / S | Throttle up / down |
+| A / D | Roll |
+| Q / E | Yaw (fine sideways adjustment) |
+| Scroll / swipe | Throttle. Sideways swipe on a Magic Mouse or trackpad rolls |
+
+**Keyboard only (classic).** Close to the BBC original.
+
+| Key | Action |
+| --- | --- |
+| W / S | Dive / climb (X also climbs, as on the BBC) |
+| A / D | Roll (`<` and `>` work too) |
+| Space / Shift | Throttle up / down |
+| F | Fire (fixed lasers, straight ahead, as in 1984) |
+
+**Both schemes**
+
 | Key | Action |
 | --- | --- |
 | Y / N | Load your commander / start a new one |
 | L | Launch from the station |
-| W / S or ↑ / ↓ | Pitch (dive / climb). X also climbs, as on the BBC |
-| A / D or ← / → | Roll. `<` and `>` work too |
-| Space / Shift | Speed up / slow down |
 | C | Docking computer (once you've bought one) |
+| I | Invert pitch (remembered) |
 | M | Toggle neo-vector / 1984 mode |
-| N | Sound on / off (in flight) |
+| N | Sound: full / effects only (no engine hum) / off (remembered) |
+| H | Controls card |
 
-**Docking tip:** the station spins. Line up with the slot and keep rolling with it all the way in. In neo-vector mode, the glide path and docking aid show how far out you are.
+**Gamepad:** left stick pitches and rolls, right stick yaws, triggers set speed, A launches and runs the docking computer, Y toggles 1984 mode.
+
+**Combat:** shoot a police Viper and you become a Fugitive. Every Viper turns on you, and the station launches reinforcements. Watch the laser temperature (LT) gauge: hold fire too long and it overheats. Losing your ship clears your record.
+
+**Docking tip:** the station spins. Under **Modern** rules your ship matches the spin for you once you're close and pointing at the slot ("Roll match" lights up); just steer in and don't touch roll. Under **Classic** rules you keep rolling with it yourself, all the way in, as in 1984. In neo-vector mode, the glide path and docking aid show how far out you are.
 
 ## Contribute a ship, a world or a mission
 

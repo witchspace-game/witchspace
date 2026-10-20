@@ -63,20 +63,31 @@
 
     <!-- Flight -->
     <div class="crosshair" data-screen="flying"></div>
-    <p class="keys" data-screen="flying">
-      W/S pitch · A/D roll · Space/Shift speed · C docking computer · M 1984 · N sound
-    </p>
+    <div id="indicators" data-screen="flying"></div>
+    <div id="hit-dir"></div>
+    <div id="reticle" hidden></div>
+    <p id="target-info" hidden></p>
+    <p id="mouse-prompt" hidden>Click to fly with the mouse</p>
+    <p class="keys" id="keys-hint" data-screen="flying"></p>
+    <section id="controls-card" class="panel" hidden>
+      <h2>Controls</h2>
+      <p class="meta" id="controls-scheme"></p>
+      <dl id="controls-list"></dl>
+      <p class="credits">Press H to close.</p>
+    </section>
     <section id="dock-aid" hidden>
       <div class="aid-row"><span>Slot</span><b id="aid-dist"></b></div>
       <div class="aid-row"><span>Approach</span><b id="aid-heading"></b></div>
       <div class="aid-row"><span>Roll</span><b id="aid-roll"></b></div>
       <div class="roll-track"><i id="aid-roll-marker"></i></div>
+      <p id="aid-roll-match" hidden>Roll match</p>
     </section>
     <section class="dash" data-screen="flying">
       <div class="gauges">
         <label>SH <span class="bar" id="g-shields"></span></label>
         <label>HL <span class="bar" id="g-hull"></span></label>
         <label>SP <span class="bar" id="g-speed"></span></label>
+        <label>LT <span class="bar" id="g-laser"></span></label>
       </div>
       <canvas id="scanner" width="360" height="140"></canvas>
       <div class="gauges">

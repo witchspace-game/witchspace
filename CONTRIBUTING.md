@@ -19,6 +19,7 @@ Welcome, Commander. 🚀 Whether you design ships, write lore, build missions or
 - The hull should be **closed**, with every edge shared by exactly two faces.
 - Wind faces counter-clockwise when seen from outside. If you're not sure, `--fix` sorts it out.
 - Edges are drawn automatically from the faces. Use `details` for extra lines such as engines, cockpits and docking slots. Lift detail lines about 0.2–0.5m off the hull so it doesn't hide them.
+- **Police markings are not yours to add.** Beacons and the hull band are applied by the game to ships in the `police` role; a ship file can't declare them. Don't draw police-like stripes or lights as `details` on other ships.
 - Keep it lean. Classic ships have roughly 5–40 vertices. The look comes from clean silhouettes, not polygon count.
 
 ### Style guide

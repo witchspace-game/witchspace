@@ -3,32 +3,51 @@
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
-let muted = false;
+// Sound modes, cycled with N: everything, effects without the engine drone, or off.
+export type SoundMode = 'full' | 'effects' | 'off';
+const SOUND_MODES: SoundMode[] = ['full', 'effects', 'off'];
+let soundMode: SoundMode = (() => {
+  try {
+    const v = localStorage.getItem('witchspace.sound') as SoundMode | null;
+    return v && SOUND_MODES.includes(v) ? v : 'full';
+  } catch {
+    return 'full';
+  }
+})();
+export const getSoundMode = () => soundMode;
 
 function audio() {
   if (!ctx) {
     ctx = new AudioContext();
     master = ctx.createGain();
-    master.gain.value = 0.5;
+    master.gain.value = soundMode === 'off' ? 0 : 0.5;
     master.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') void ctx.resume();
   return { ctx, master: master! };
 }
 
+/** Shared audio graph for other sound modules (see spatial.ts). */
+export const audioGraph = () => audio();
+
 /** Browsers only allow audio after a user gesture; call this from one. */
 export function unlockAudio() {
   audio();
 }
 
-export function toggleMute(): boolean {
-  muted = !muted;
+export function cycleSoundMode(): SoundMode {
+  soundMode = SOUND_MODES[(SOUND_MODES.indexOf(soundMode) + 1) % SOUND_MODES.length];
+  try {
+    localStorage.setItem('witchspace.sound', soundMode);
+  } catch {
+    // Not saved; applies for this session.
+  }
   const { ctx, master } = audio();
-  master.gain.setTargetAtTime(muted ? 0 : 0.5, ctx.currentTime, 0.05);
-  return muted;
+  master.gain.setTargetAtTime(soundMode === 'off' ? 0 : 0.5, ctx.currentTime, 0.05);
+  return soundMode;
 }
 
-function noiseBuffer(ctx: AudioContext, seconds: number) {
+export function noiseBuffer(ctx: AudioContext, seconds: number) {
   const buf = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
   const data = buf.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -50,7 +69,24 @@ function noise(seconds: number, filter: BiquadFilterType, from: number, to: numb
   src.start();
 }
 
+function zap(from: number, to: number, seconds: number, volume: number, type: OscillatorType) {
+  const { ctx, master } = audio();
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(from, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(to, ctx.currentTime + seconds);
+  g.gain.setValueAtTime(volume, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + seconds);
+  o.connect(g).connect(master);
+  o.start();
+  o.stop(ctx.currentTime + seconds);
+}
+
 export const sfx = {
+  laser: () => zap(1400, 180, 0.12, 0.09, 'square'),
+  enemyLaser: () => zap(700, 120, 0.15, 0.06, 'sawtooth'),
+  hit: () => noise(0.12, 'highpass', 3000, 1200, 0.5),
   thud: () => noise(0.5, 'lowpass', 600, 60, 0.9),
   scrape: () => noise(0.8, 'bandpass', 2500, 300, 0.6),
   tunnel: () => noise(1.6, 'bandpass', 200, 3000, 0.35),

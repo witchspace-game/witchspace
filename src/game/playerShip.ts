@@ -16,6 +16,7 @@ export class PlayerShip {
   hull: number;
   private pitchVel = 0;
   private rollVel = 0;
+  private yawVel = 0;
 
   constructor(readonly def: ShipDef) {
     this.shields = def.stats.shields;
@@ -46,20 +47,41 @@ export class PlayerShip {
   get rollGauge() {
     return this.rollVel / (this.def.stats.rollRate ?? 2);
   }
+  get yawGauge() {
+    return this.yawVel / this.yawRate;
+  }
+
+  /** Yaw matches pitch unless a ship says otherwise, so mouse aim feels even. */
+  get yawRate() {
+    return this.def.stats.yawRate ?? this.def.stats.pitchRate ?? 1.5;
+  }
 
   steer(dt: number, input: FlightInput) {
     const k = Math.min(1, dt * CONTROL_RESPONSE);
     this.pitchVel += (input.pitch * (this.def.stats.pitchRate ?? 1.5) - this.pitchVel) * k;
     this.rollVel += (input.roll * (this.def.stats.rollRate ?? 2) - this.rollVel) * k;
+    this.yawVel += (input.yaw * this.yawRate - this.yawVel) * k;
     this.obj.rotateX(-this.pitchVel * dt);
     this.obj.rotateZ(this.rollVel * dt);
-    this.speed = THREE.MathUtils.clamp(this.speed + input.throttle * ACCELERATION * dt, 0, this.maxSpeed);
+    this.obj.rotateY(-this.yawVel * dt); // +yaw = nose to starboard
+    this.speed += input.throttle * ACCELERATION * dt + input.speedStep * this.maxSpeed;
+    this.speed = THREE.MathUtils.clamp(this.speed, 0, this.maxSpeed);
   }
 
   /** Let go of the stick, e.g. when the docking computer takes over. */
   centreControls() {
     this.pitchVel = 0;
     this.rollVel = 0;
+    this.yawVel = 0;
+  }
+
+  /**
+   * Mirror the docking computer's turn rates on the pitch and roll gauges.
+   * The computer rotates the ship itself, so this only affects the dashboard.
+   */
+  showRates(pitch: number, roll: number) {
+    this.pitchVel = pitch;
+    this.rollVel = roll;
   }
 
   move(dt: number) {

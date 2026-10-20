@@ -46,8 +46,8 @@
   },
   "stats": {
     "maxSpeed": 280,
-    "pitchRate": 1.6,
-    "rollRate": 2.4,
+    "pitchRate": 0.8,
+    "rollRate": 1.5,
     "hull": 150,
     "shields": 100,
     "cargo": 20,
