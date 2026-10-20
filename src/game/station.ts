@@ -113,6 +113,13 @@ export class Station {
     return null;
   }
 
+  /** Docking refused: the slot's field holds the ship just outside, stopped. */
+  turnAway(ship: PlayerShip) {
+    const p = this.toLocal(ship.obj.position);
+    ship.obj.position.copy(this.toWorld(new THREE.Vector3(p.x, p.y, SLOT.z + 40)));
+    ship.speed = 0;
+  }
+
   /** Where a launching ship appears: just outside the slot, nose out. */
   placeForLaunch(ship: PlayerShip) {
     ship.obj.position.copy(this.toWorld(new THREE.Vector3(0, 0, SLOT.z + 60)));

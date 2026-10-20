@@ -52,6 +52,13 @@ export function quotes(ctx: TradeContext): Quote[] {
   return quoteModern(ctx.system, state);
 }
 
+/** Confederacies, democracies and corporate states don't trade illegal goods. */
+export const isLawful = (s: StarSystem) => s.government >= 5;
+
+export function tradesHere(ctx: TradeContext, id: string): boolean {
+  return !(commodityById(id)?.legality === 'illegal' && isLawful(ctx.system));
+}
+
 export function freeTonnes(ctx: TradeContext): number {
   return ctx.capacity - cargoTonnage(ctx.commander.cargo);
 }
@@ -67,6 +74,7 @@ function price(ctx: TradeContext, id: string, qty: number, buying: boolean): num
 
 /** The most of a commodity you could buy right now (credits, stock and hold space allowing). */
 export function maxBuyable(ctx: TradeContext, id: string): number {
+  if (!tradesHere(ctx, id)) return 0;
   const c = commodityById(id)!;
   const stock = marketState(ctx).stock[id] ?? 0;
   const bySpace = Math.floor(freeTonnes(ctx) * UNITS_PER_TONNE[c.unit] + 1e-9);
@@ -78,6 +86,7 @@ export function maxBuyable(ctx: TradeContext, id: string): number {
 export function buy(ctx: TradeContext, id: string, qty: number): TradeResult {
   const c = commodityById(id);
   if (!c || qty <= 0) return { ok: false, message: 'Nothing to buy' };
+  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} can't be traded at a lawful station` };
   const state = marketState(ctx);
   if ((state.stock[id] ?? 0) < qty) return { ok: false, message: `Not enough ${c.name} in stock` };
   if (qty / UNITS_PER_TONNE[c.unit] > freeTonnes(ctx) + 1e-9) return { ok: false, message: 'Not enough room in the hold' };
@@ -93,6 +102,7 @@ export function sell(ctx: TradeContext, id: string, qty: number): TradeResult {
   const c = commodityById(id);
   const held = ctx.commander.cargo[id] ?? 0;
   if (!c || qty <= 0 || held < qty) return { ok: false, message: 'Nothing to sell' };
+  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} can't be traded at a lawful station` };
   const proceeds = price(ctx, id, qty, false);
   ctx.commander.credits = Math.round((ctx.commander.credits + proceeds) * 10) / 10;
   const state = marketState(ctx);

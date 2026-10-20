@@ -68,3 +68,15 @@ describe('trading', () => {
     expect(quotes(t).find((q) => q.commodity.id === 'food')!.price).toBe(before);
   });
 });
+
+describe('the law at the market', () => {
+  it('lawful worlds refuse illegal goods; others have black markets', () => {
+    const lawful = { commander: newCommander('modern'), system: systemAt(0, 147), capacity: 20, now: 0 }; // Diso, a democracy
+    lawful.commander.credits = 1000;
+    expect(buy(lawful, 'narcotics', 1).ok).toBe(false);
+    expect(maxBuyable(lawful, 'narcotics')).toBe(0);
+    const lave = { commander: newCommander('modern'), system: systemAt(0, 7), capacity: 20, now: 0 }; // a dictatorship
+    lave.commander.credits = 1000;
+    expect(buy(lave, 'narcotics', 1).ok).toBe(true);
+  });
+});

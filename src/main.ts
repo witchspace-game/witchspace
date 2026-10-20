@@ -22,6 +22,20 @@ import {
 } from './game/commander';
 import { DockingComputer } from './game/dockingComputer';
 import {
+  carriesContraband,
+  checksClearance,
+  coolRecords,
+  hasLaw,
+  inspectsHolds,
+  legalStatus,
+  recordCrime,
+  redeemImpound,
+  scansCargo,
+  settle,
+  systemKey,
+  type Settlement,
+} from './game/law';
+import {
   controlScheme,
   flightInput,
   gamepadPresses,
@@ -348,7 +362,7 @@ function renderDocked() {
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ['Ship', player.def.name],
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${player.def.stats.cargo} t`],
-    ['Legal status', c.legal === 'fugitive' ? 'Fugitive' : c.legal === 'offender' ? 'Offender' : 'Clean'],
+    ['Legal status', legalLabel()],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', 'Harmless'],
   ];
@@ -373,6 +387,26 @@ function renderDocked() {
 
   const list = $('#equip');
   list.innerHTML = '';
+  // Equipment held here until a fine is paid.
+  if (c.impound) {
+    const imp = c.impound;
+    const li = document.createElement('li');
+    const names = imp.items.map((id) => EQUIPMENT.find((e) => e.id === id)?.name ?? id).join(', ') || 'Nothing';
+    const atHere = imp.at === systemKey(here);
+    const where = atHere ? 'this station' : systemAt(Number(imp.at.split(':')[0]), Number(imp.at.split(':')[1])).name;
+    li.innerHTML = `<span>Impounded <em class="damaged">${imp.owed.toLocaleString()} Cr owed</em></span><small>${names}, held at ${where} until the fine is paid.</small>`;
+    const pay = document.createElement('button');
+    pay.textContent = atHere ? `Pay · ${imp.owed.toLocaleString()} Cr` : 'Pay there';
+    pay.disabled = !atHere || c.credits < imp.owed;
+    pay.addEventListener('click', () => {
+      if (!redeemImpound(c)) return;
+      saveCommander(c);
+      sfx.beep();
+      renderDocked();
+    });
+    li.append(pay);
+    list.append(li);
+  }
   for (const item of EQUIPMENT) {
     if (item.classicOnly && c.difficulty !== 'classic') continue;
     if (item.modernOnly && c.difficulty !== 'modern') continue;
@@ -380,11 +414,17 @@ function renderDocked() {
     const owned = hasEquipment(c, item.id);
     const damaged = c.damaged.includes(item.id);
     const repairCost = Math.round(item.price * REPAIR_FRACTION);
+    const sold = here.techLevel >= item.minTech;
     li.innerHTML = `<span>${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${item.blurb}</small>`;
     const buy = document.createElement('button');
     if (damaged) {
       buy.textContent = `Repair · ${repairCost.toLocaleString()} Cr`;
       buy.disabled = c.credits < repairCost;
+    } else if (!owned && !sold) {
+      // High-tech gear needs a high-tech world.
+      buy.textContent = `Needs tech level ${item.minTech}`;
+      buy.title = `${here.name} is tech level ${here.techLevel}`;
+      buy.disabled = true;
     } else {
       buy.textContent = owned ? 'Fitted' : `Buy · ${item.price.toLocaleString()} Cr`;
       buy.disabled = owned || c.credits < item.price;
@@ -447,8 +487,21 @@ let reinforceTimer = 0;
 let stationFlash = 0; // seconds of white-hot glow after being hit
 let repopulateTimer = 0;
 const MAX_POLICE = 4;
+const SCAN_RANGE = 1200; // metres
+const SCAN_TIME = 3; // seconds within range for a police scan
+let scanned = false; // once per visit to a system
+let scanProgress = 0;
 
-const isFugitive = () => commander?.legal === 'fugitive';
+const isFugitive = () => Boolean(commander) && legalStatus(cmdr()) === 'fugitive';
+
+function legalLabel() {
+  const c = cmdr();
+  const status = legalStatus(c);
+  const label = status === 'fugitive' ? 'Fugitive' : status === 'offender' ? 'Offender' : 'Clean';
+  if (c.warrant) return `${label} · Marshals warrant`;
+  if (!hasLaw(currentSystem())) return `${label} · no law here`;
+  return label;
+}
 
 function spawnViper(fromSlot: boolean) {
   const i = police.length;
@@ -509,6 +562,8 @@ function buildSystemScene(sys: StarSystem) {
   explosions.length = 0;
   for (let i = 0; i < PATROLS_BY_GOVERNMENT[sys.government]; i++) spawnViper(false);
   reinforceTimer = repopulateTimer = 0;
+  scanned = false;
+  scanProgress = 0;
 }
 
 /** Make sure the scene matches where the commander is. */
@@ -535,12 +590,28 @@ function damagePlayer(amount: number): boolean {
   return destroyed;
 }
 
-function becomeFugitive() {
-  if (isFugitive()) return;
-  cmdr().legal = 'fugitive';
+/**
+ * Attacking police makes you a Fugitive here. Serious crimes (destroying
+ * police, attacking the station) also bring a Marshals warrant under Modern
+ * rules, which follows you to every system with a government.
+ */
+function becomeFugitive(serious = false) {
+  const c = cmdr();
+  const hadWarrant = c.warrant;
+  const was = isFugitive();
+  recordCrime(c, 'fugitive', serious);
+  surrenderTimer = null;
+  if (c.warrant && !hadWarrant) flash('Co-operative Marshals warrant issued', 2.5);
+  if (was) return;
   for (const p of police) p.hostile = true;
   reinforceTimer = 6;
-  flash('You are now a FUGITIVE', 2.5);
+  if (!c.warrant || hadWarrant) flash('You are now a FUGITIVE', 2.5);
+}
+
+function becomeOffender(message: string) {
+  if (legalStatus(cmdr()) !== 'clean') return;
+  recordCrime(cmdr(), 'offender');
+  flash(message, 3);
 }
 
 function destroyNpc(npc: NpcShip) {
@@ -553,6 +624,7 @@ function destroyNpc(npc: NpcShip) {
   police.splice(police.indexOf(npc), 1);
   npc.dispose();
   flash(`${npc.def.name} destroyed`, 1.5);
+  becomeFugitive(true); // killing police is a serious crime
 }
 
 type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' };
@@ -572,6 +644,7 @@ function laserDirection() {
 }
 
 function firePlayerLaser() {
+  if (surrenderTimer !== null) breakSurrender();
   laserCooldown = PULSE_LASER.interval;
   laserHeat += PULSE_LASER.heat;
   if (laserHeat >= 100) {
@@ -601,8 +674,8 @@ function firePlayerLaser() {
     // crime: you're a Fugitive at once and the police launch immediately.
     stationFlash = 0.25;
     sfx.hit();
-    if (!isFugitive()) {
-      becomeFugitive();
+    if (!isFugitive() || !cmdr().warrant) {
+      becomeFugitive(true);
       flash('Station under attack · Police launching', 2.5);
     }
     if (police.length < MAX_POLICE && reinforceTimer > 1) reinforceTimer = 0.5;
@@ -677,6 +750,17 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       voices.delete(npc);
     }
     voice?.update(npc.obj.position, npc.ship.speed / npc.ship.maxSpeed);
+  }
+
+  // Police in lawful-ish systems scan ships that loiter near them.
+  if (alive && !scanned && scansCargo(currentSystem())) {
+    const scanner = police.find((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < SCAN_RANGE);
+    scanProgress = scanner ? scanProgress + dt : Math.max(0, scanProgress - dt);
+    if (scanProgress >= SCAN_TIME) {
+      scanned = true;
+      if (carriesContraband(cmdr())) becomeOffender('Scanned by police · contraband found · you are an OFFENDER');
+      else flash('Scanned by police · clean', 1.5);
+    }
   }
 
   // A soft double beep when a hostile is close behind you.
@@ -904,7 +988,12 @@ function updateSpace(dt: number) {
     }
 
     const contact = station.contact(player, prev);
-    if (contact?.kind === 'docked') {
+    if (contact?.kind === 'docked' && clearanceRefused()) {
+      station.turnAway(player);
+      sfx.thud();
+      setAutopilot(false);
+      flash('Docking refused · Fugitive · U to surrender', 3);
+    } else if (contact?.kind === 'docked') {
       void dock();
     } else if (contact) {
       if (contact.kind === 'scrape') sfx.scrape();
@@ -919,6 +1008,10 @@ function updateSpace(dt: number) {
   }
 
   updateCombat(dt, input);
+  if (state === 'flying') {
+    updateClearance();
+    updateSurrender(dt);
+  }
   if (stationFlash > 0) {
     stationFlash = Math.max(0, stationFlash - dt);
     heatShip(station.model, stationFlash / 0.25);
@@ -1072,6 +1165,7 @@ function renderControlsCard() {
       ['C', 'Docking computer'],
       ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
       ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
+      ['U', 'Surrender to the police: slow down and hold still (fine, record cleared)'],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
       ['K', 'Switch control scheme'],
       ['I', 'Invert pitch'],
@@ -1110,18 +1204,116 @@ async function launch() {
   station.placeForLaunch(player);
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
+  clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
   flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
 }
 
 async function dock() {
   setAutopilot(false);
+  surrenderTimer = null;
   setState('transition');
   sfx.tunnel();
   await playTunnel();
-  cmdr().visits += 1; // Classic markets change with each visit
-  saveCommander(cmdr());
+  const c = cmdr();
+  c.visits += 1; // Classic markets change with each visit
+  // Offenders are fined on arrival; lawful stations also inspect the hold.
+  const sys = currentSystem();
+  const due = checksClearance(sys) && (legalStatus(c) === 'offender' || (inspectsHolds(sys) && carriesContraband(c)));
+  const settlement = due ? settle(c) : null;
+  saveCommander(c);
   enterDocked();
+  if (settlement) flash(settlementMessage(settlement, 'Fined on arrival'), 5);
+}
+
+function settlementMessage(s: Settlement, lead: string) {
+  const parts = [`${lead} · ${s.fine.toLocaleString()} Cr`];
+  if (s.confiscated.length) parts.push(`${s.confiscated.map((id) => commodityById(id)?.name ?? id).join(', ')} confiscated`);
+  if (s.owed > 0) parts.push(`couldn't pay ${s.owed.toLocaleString()} Cr · equipment impounded`);
+  return parts.join(' · ');
+}
+
+// --- Docking clearance and surrender ------------------------------------------------
+
+const CLEARANCE_RANGE = 5000; // metres
+let clearanceAnnounced = false;
+
+/** Fugitives are turned away by any station that checks; anarchies and feudal worlds don't. */
+const clearanceRefused = () => checksClearance(currentSystem()) && isFugitive();
+
+function updateClearance() {
+  const d = player.obj.position.distanceTo(station.root.position);
+  if (d > CLEARANCE_RANGE * 1.6) clearanceAnnounced = false;
+  if (clearanceAnnounced || d > CLEARANCE_RANGE) return;
+  clearanceAnnounced = true;
+  const name = stationName(currentSystem()).name;
+  if (clearanceRefused()) flash(`${name} · Docking refused: you are a Fugitive · U to surrender`, 4);
+  else if (checksClearance(currentSystem())) flash(`${name} · Transponder checked · Docking clearance granted`, 2.5);
+  else flash(`${name} · No questions asked`, 2.5);
+}
+
+const SURRENDER_TIME = 5; // seconds holding still before the police take you in
+const SURRENDER_SPEED = 0.15; // fraction of top speed
+let surrenderTimer: number | null = null;
+
+/** U: hand yourself in. Always works where there's law, and always hurts. */
+function toggleSurrender() {
+  const c = cmdr();
+  if (surrenderTimer !== null) {
+    surrenderTimer = null;
+    flash('Surrender withdrawn', 1.5);
+    return;
+  }
+  if (!hasLaw(currentSystem())) {
+    flash('No law here to surrender to', 2);
+    return;
+  }
+  if (legalStatus(c) === 'clean' && !carriesContraband(c)) {
+    flash('Nothing on your record here', 2);
+    return;
+  }
+  if (player.speed > player.maxSpeed * SURRENDER_SPEED) {
+    flash('Cut your speed to surrender', 2);
+    return;
+  }
+  setAutopilot(false);
+  countdown = null;
+  surrenderTimer = SURRENDER_TIME;
+  flash('Surrender signalled · hold still, weapons cold', 2.5);
+}
+
+function breakSurrender() {
+  surrenderTimer = null;
+  flash('Surrender broken', 2);
+  becomeFugitive(true);
+}
+
+function updateSurrender(dt: number) {
+  if (surrenderTimer === null) return;
+  if (player.speed > player.maxSpeed * (SURRENDER_SPEED + 0.05)) {
+    breakSurrender();
+    return;
+  }
+  const before = Math.ceil(surrenderTimer);
+  surrenderTimer -= dt;
+  if (Math.ceil(surrenderTimer) < before && surrenderTimer > 0) flash(`Police escort on its way · ${Math.ceil(surrenderTimer)}`, 1.1);
+  if (surrenderTimer <= 0) {
+    surrenderTimer = null;
+    void surrender();
+  }
+}
+
+async function surrender() {
+  setState('transition');
+  sfx.tunnel();
+  await playTunnel();
+  const c = cmdr();
+  c.visits += 1;
+  const settlement = settle(c);
+  for (const p of police) p.hostile = false;
+  saveCommander(c);
+  enterDocked();
+  flash(settlementMessage(settlement, 'You surrendered · record cleared'), 5);
 }
 
 function die() {
@@ -1139,7 +1331,9 @@ function die() {
   spillCargo(player.obj.position, velocity, c.cargo);
   c.cargo = {};
   // A new ship, a clean slate: the police lose interest.
-  c.legal = 'clean';
+  c.records = {};
+  c.warrant = false;
+  surrenderTimer = null;
   for (const p of police) p.hostile = false;
   laserHeat = 0;
   overheated = false;
@@ -1281,8 +1475,9 @@ async function hyperspace() {
   c.fuel = Math.max(0, Math.round((c.fuel - distanceLy(from, dest)) * 10) / 10);
   c.location = { galaxy: dest.galaxy, system: dest.index };
   c.target = null;
-  // Records stay in the system where the crime happened (the law arrives in stage 4).
-  c.legal = 'clean';
+  // Records stay in the system where the crime happened, and cool as you travel.
+  coolRecords(c);
+  surrenderTimer = null;
   saveCommander(c);
   buildSystemScene(dest);
 
@@ -1298,7 +1493,12 @@ async function hyperspace() {
   player.speed = player.maxSpeed * 0.1;
   setState('flying');
   fadeFromWhite();
-  flash(`${dest.name} · ${GOVERNMENTS[dest.government]} · ${ECONOMIES[dest.economy]}`, 4);
+  const wanted = legalStatus(c);
+  flash(
+    `${dest.name} · ${GOVERNMENTS[dest.government]} · ${ECONOMIES[dest.economy]}` +
+      (wanted === 'fugitive' ? (c.warrant ? ' · Marshals warrant: police hostile' : ' · You are wanted here') : wanted === 'offender' ? ' · Offender here' : ''),
+    4,
+  );
 }
 
 /** The original's J key: leap ahead when nothing is near enough to mass-lock you. */
@@ -1425,6 +1625,8 @@ function handleKey(code: string) {
         toggleHyperspace();
       } else if (code === 'KeyJ') {
         inSystemJump();
+      } else if (code === 'KeyU') {
+        toggleSurrender();
       } else if (code === 'KeyK') {
         const s = toggleControlScheme();
         renderControlsCard();
@@ -1477,7 +1679,7 @@ function frame() {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, police, becomeFugitive, damagePlayer,
+      player, station, dockingComputer, drifters, explosions, spillCargo, police, becomeFugitive, damagePlayer, legalStatus,
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },

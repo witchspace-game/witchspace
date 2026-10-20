@@ -30,7 +30,7 @@ Being refused docking, running out of fuel, losing your ship or falling into deb
 
 - **Ordinary crimes are local:** your record belongs to the system where the crime happened. You're wanted in Lave, not across the galaxy.
 - **Serious crimes become galaxy-wide:** attacking stations, killing clean ships, or crimes beyond the local police's reach produce a **Co-operative Marshals warrant** that follows you into every Co-operative system (see section 9).
-- **Records cool down over time**, faster if you leave the system. We believe the original Elite reduced your record as you jumped between systems; to be confirmed before building.
+- **Records cool down as you travel.** *(Built: each hyperspace jump away counts. An Offender record clears after 2 jumps; a Fugitive record cools to Offender after 6. Tune these in `src/game/law.ts`.)*
 - **The type of government shapes everything:**
   - *Lawful* (democracies, corporate states): fair fines, strict docking checks.
   - *Corrupt* (dictatorships, feudal worlds): bribes possible; the authorities may "lose" some of your cargo.
@@ -46,6 +46,7 @@ Being refused docking, running out of fuel, losing your ship or falling into deb
 | **Run** | Jump to another system, ideally an anarchy | Fuel, time and danger |
 
 - **Surrender is the guaranteed way out. It always works in a lawful system, and it always hurts.**
+- *(Built, first pass: U surrenders anywhere with a government. Slow below 15% speed and hold still for 5 seconds; firing or speeding up breaks it and counts as a serious crime. You pay the fine, the contraband is confiscated and your record here is cleared. If you can't pay, your equipment is impounded at that station until you do. Docking as an Offender settles the fine automatically, and lawful stations inspect your hold. Fugitives are refused docking wherever transponders are checked, which means everywhere but anarchies and feudal worlds. Police in those systems scan nearby ships for contraband.)*
 - **Surrender is not a free escape from a losing fight:** you're exposed until the police arrive.
 - **Firing after surrendering** pushes your record to its most serious level, and that system won't accept another surrender from you for a while.
 
