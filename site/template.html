@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{title}}</title>
+    <meta name="description" content="{{description}}" />
+    <meta property="og:title" content="{{title}}" />
+    <meta property="og:description" content="{{description}}" />
+    <meta property="og:type" content="website" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/site/site.css" />
+  </head>
+  <body class="{{bodyClass}}">
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="/">WITCHSPACE</a>
+      <nav aria-label="Main">
+        {{nav}}
+        <a class="button play" href="/play/">Play</a>
+      </nav>
+    </header>
+
+    <main id="main">
+{{content}}
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        An unofficial, non-commercial tribute to <em>Elite</em> (1984) by Ian Bell &amp; David Braben.
+        Not affiliated with Frontier Developments.
+      </p>
+      <p>
+        Code <a href="https://github.com/witchspace-game/witchspace/blob/main/LICENSE">GPL-3.0</a> ·
+        Content <a href="https://github.com/witchspace-game/witchspace/blob/main/CONTENT_LICENSE.txt">CC BY-SA 4.0</a> ·
+        <a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a> ·
+        <a href="https://github.com/witchspace-game/witchspace">GitHub</a>
+      </p>
+    </footer>
+{{scripts}}
+  </body>
+</html>
