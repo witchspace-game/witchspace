@@ -83,7 +83,7 @@ Real markets have rules against manipulation, and ours need them too:
 
 - **Position and order limits** so no single commander or guild can corner a market instantly.
 - **Wash-trading detection:** trading with yourself, or with your own other accounts, to fake volume or prices.
-- **Bot and multi-account rules**, with detection on the server.
+- **Bot and multi-account rules**, with detection on the server. **Proposed:** in single-player, automate whatever you like; it's your game. In the shared galaxy, unattended automation (a script or browser agent trading while nobody is at the keyboard) isn't allowed, because it would flood shared markets and drown out people who are playing. Assistive tools with a human present (price lookups, route planners, the community's own trading tools) are welcome. Unattended automation could have a sanctioned home later, such as NPC trading companies a commander owns and pays to run, so it costs in-game resources instead of just running free.
 - **Real-money trading is banned and enforced.** Selling credits, scrip or items for real money breaks the rules and leads to account action. The economy only works if everything in it was earned in play.
 - **Public data:** exchange history and station finances are visible, so manipulation leaves a trail.
 
