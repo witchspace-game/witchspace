@@ -15,6 +15,7 @@ import {
   isWorking,
   loadCommander,
   REPAIR_FRACTION,
+  type Mount,
   rollEquipmentDamage,
   newCommander,
   removeEquipment,
@@ -382,7 +383,7 @@ function renderDocked() {
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ['Ship', player.def.name],
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t`],
-    ['Laser', PLAYER_LASERS[c.lasers.front ?? 'pulse'].name],
+    ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}: ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '')}`).join(' · ')],
     ['Legal status', legalLabel()],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', combatRating(c.kills)],
@@ -445,33 +446,39 @@ function renderDocked() {
     li.append(pay);
     list.append(li);
   }
-  // Lasers for the front mount. The old one is taken in part exchange at half its price.
-  const current = PLAYER_LASERS[c.lasers.front ?? 'pulse'];
+  // Lasers, for each of the four mounts. Whatever was on the mount is taken
+  // in part exchange at half its price.
   for (const laser of Object.values(PLAYER_LASERS)) {
     const li = document.createElement('li');
-    const fitted = laser.id === current.id;
-    const cost = laser.price - Math.round(current.price / 2);
-    li.innerHTML = `<span>${laser.name} <em class="mount">front</em></span><small>${laser.blurb}</small>`;
-    const fit = document.createElement('button');
-    if (fitted) {
-      fit.textContent = 'Fitted';
-      fit.disabled = true;
-    } else if (here.techLevel < laser.minTech) {
-      fit.textContent = `Needs tech level ${laser.minTech}`;
-      fit.disabled = true;
-    } else {
-      fit.textContent = `Fit · ${cost.toLocaleString()} Cr`;
-      fit.title = `${laser.price.toLocaleString()} Cr, less ${Math.round(current.price / 2).toLocaleString()} Cr for your ${current.name.toLowerCase()}`;
-      fit.disabled = c.credits < cost;
+    const sold = here.techLevel >= laser.minTech;
+    li.innerHTML = `<span>${laser.name}</span><small>${laser.blurb} ${laser.price.toLocaleString()} Cr per mount.</small>`;
+    const mounts = document.createElement('div');
+    mounts.className = 'mounts';
+    for (const mount of VIEWS) {
+      const old = c.lasers[mount];
+      const tradeIn = old ? Math.round(PLAYER_LASERS[old].price / 2) : 0;
+      const cost = laser.price - tradeIn;
+      const fit = document.createElement('button');
+      const fitted = old === laser.id;
+      fit.classList.toggle('fitted', fitted);
+      fit.textContent = fitted ? `✓ ${mount}` : mount;
+      fit.disabled = fitted || !sold || c.credits < cost;
+      fit.title = fitted
+        ? `Fitted to the ${mount} mount`
+        : !sold
+          ? `Needs tech level ${laser.minTech}`
+          : `Fit to the ${mount} mount: ${cost.toLocaleString()} Cr${tradeIn ? ` after ${tradeIn.toLocaleString()} Cr for the ${PLAYER_LASERS[old!].name.toLowerCase()}` : ''}`;
+      fit.addEventListener('click', () => {
+        c.credits -= cost;
+        c.lasers[mount] = laser.id as LaserId;
+        saveCommander(c);
+        sfx.beep();
+        renderDocked();
+      });
+      mounts.append(fit);
     }
-    fit.addEventListener('click', () => {
-      c.credits -= cost;
-      c.lasers.front = laser.id as LaserId;
-      saveCommander(c);
-      sfx.beep();
-      renderDocked();
-    });
-    li.append(fit);
+    if (!sold) li.querySelector('small')!.append(` Needs tech level ${laser.minTech}.`);
+    li.append(mounts);
     list.append(li);
   }
 
@@ -870,16 +877,56 @@ function gimballed() {
   return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(commander) && isWorking(cmdr(), 'gimbal-mount');
 }
 
-/** The laser on the front mount. */
-const playerLaser = () => PLAYER_LASERS[cmdr().lasers.front ?? 'pulse'];
+/** The laser on the mount you're looking along, if any. */
+const mountLaser = () => {
+  const id = cmdr().lasers[view];
+  return id ? PLAYER_LASERS[id] : null;
+};
+/** For heat and range: the current mount's laser, or the front one. */
+const playerLaser = () => mountLaser() ?? PLAYER_LASERS[cmdr().lasers.front ?? 'pulse'];
 
 function laserDirection() {
-  return gimballed() ? aim.dir.clone() : player.forward();
+  if (view === 'front') return gimballed() ? aim.dir.clone() : player.forward();
+  const dir = viewDirection();
+  if (cmdr().difficulty !== 'modern') return dir;
+  // Modern turrets swing onto the nearest ship near the middle of the view.
+  let best: THREE.Vector3 | null = null;
+  let bestAngle = TURRET_CONE;
+  for (const npc of npcs) {
+    const to = npc.obj.position.clone().sub(player.obj.position);
+    if (to.length() > playerLaser().range) continue;
+    const a = dir.angleTo(to);
+    if (a < bestAngle) {
+      bestAngle = a;
+      best = to.normalize();
+    }
+  }
+  return best ?? dir;
+}
+
+/** Where the beams leave the hull for the current mount. */
+function muzzles(): THREE.Vector3[] {
+  const at = (x: number, y: number, z: number) => player.obj.localToWorld(new THREE.Vector3(x, y, z));
+  switch (view) {
+    case 'rear':
+      return [at(-7, -3, -14), at(7, -3, -14)];
+    case 'left':
+      return [at(20, -2, -4)];
+    case 'right':
+      return [at(-20, -2, -4)];
+    default:
+      return [at(-7, -3, 12), at(7, -3, 12)];
+  }
 }
 
 function firePlayerLaser() {
   if (surrenderTimer !== null) breakSurrender();
-  const laser = playerLaser();
+  const laser = mountLaser();
+  if (!laser) {
+    laserCooldown = 0.6;
+    flash(`No ${view} laser fitted`, 1.2);
+    return;
+  }
   laserCooldown = laser.interval;
   laserHeat += laser.heat;
   if (laserHeat >= 100) {
@@ -895,7 +942,7 @@ function firePlayerLaser() {
   ];
   const hit = rayHit(origin, dir, laser.range, targets);
   const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
-  for (const side of [-1, 1]) beams.fire(player.obj.localToWorld(new THREE.Vector3(side * 7, -3, 12)), end, laser.color);
+  for (const muzzle of muzzles()) beams.fire(muzzle, end, laser.color);
   sfx.laser();
   if (!hit) return;
   const shot = hit.target.value;
@@ -1414,6 +1461,41 @@ function updateDrifters(dt: number) {
 const explosions: Explosion[] = [];
 
 const FLIP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+
+// --- Views: look front, rear, left or right while the ship flies on ---------------
+// Each view fires the laser on that mount. Classic mounts are fixed, as in
+// 1984; Modern rear and side mounts are turrets that hit the nearest ship
+// near the middle of the view.
+
+const VIEWS: Mount[] = ['front', 'rear', 'left', 'right'];
+const VIEW_TURN: Record<Mount, number> = { front: 0, rear: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 };
+const TURRET_CONE = THREE.MathUtils.degToRad(20);
+let view: Mount = 'front';
+
+function setView(next: Mount) {
+  view = next;
+  const label = $('#view-label');
+  label.hidden = view === 'front';
+  label.textContent = `${view} view`;
+  if (view !== 'front') {
+    const laser = cmdr().lasers[view];
+    flash(laser ? `${view} view · ${PLAYER_LASERS[laser].name}` : `${view} view · no ${view} laser fitted`, 1.4);
+  }
+}
+
+/** Which way the current view looks, in the world. */
+function viewDirection(): THREE.Vector3 {
+  switch (view) {
+    case 'rear':
+      return player.forward().negate();
+    case 'left':
+      return player.right().negate();
+    case 'right':
+      return player.right();
+    default:
+      return player.forward();
+  }
+}
 let elapsed = 0;
 let shake = 0;
 let lastAltitudeWarning = -Infinity;
@@ -1471,7 +1553,7 @@ function updateSpace(dt: number) {
     // while the computer flies puts the reticle back on the nose.
     const keysTurning = input.pitch !== 0 || input.yaw !== 0;
     if (input.recentre) aim.reset(player);
-    if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !keysTurning) {
+    if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !keysTurning && view === 'front') {
       aim.move(player, input.aimDx, input.aimDy);
       const s = aim.steer(player);
       input.pitch = s.pitch;
@@ -1551,6 +1633,7 @@ function updateSpace(dt: number) {
   } else {
     camera.position.copy(player.obj.position);
     camera.quaternion.copy(player.obj.quaternion).multiply(FLIP);
+    if (view !== 'front') camera.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), VIEW_TURN[view]));
     if (shake > 0.01) {
       camera.position.add(new THREE.Vector3().randomDirection().multiplyScalar(shake * 2.5));
       shake *= Math.exp(-dt * 6);
@@ -1654,7 +1737,7 @@ function updateAimDisplay() {
   }
   wasCaptured = captured;
   mousePrompt.hidden = !wantsMouseCapture();
-  reticle.hidden = !captured || controlScheme() !== 'mouse';
+  reticle.hidden = !captured || controlScheme() !== 'mouse' || view !== 'front';
   if (reticle.hidden) return;
   // Project the aim direction onto whichever canvas is showing.
   const p = camera.position.clone().addScaledVector(aim.dir, 1000).project(camera);
@@ -1700,6 +1783,7 @@ function renderControlsCard() {
       ['T', 'Lock a missile onto the ship in your sights (again with nothing in sight: disarm)'],
       ['X', 'Launch the locked missile'],
       ['Z', 'ECM: destroy every missile nearby, yours included (needs an ECM)'],
+      ['1 2 3 4 / V', 'Look front, rear, left or right (V cycles); fire uses that mount\'s laser'],
       ['B', 'Energy bomb: destroy every ship within 6 km (single use)'],
       ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
       ['U', 'Surrender to the police: slow down and hold still (fine, record cleared)'],
@@ -1744,6 +1828,7 @@ async function launch() {
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
   locked = null;
+  setView('front');
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
   if (isTouch && innerHeight > innerWidth && !portraitTipShown) {
@@ -1861,6 +1946,7 @@ async function surrender() {
 
 function die() {
   const c = cmdr();
+  setView('front');
   setAutopilot(false);
   setState('dead');
   sfx.explosion();
@@ -2065,6 +2151,7 @@ async function hyperspace() {
   player.obj.lookAt(station.root.position);
   aim.reset(player);
   player.speed = player.maxSpeed * 0.1;
+  setView('front');
   setState('flying');
   fadeFromWhite();
   const wanted = legalStatus(c);
@@ -2215,6 +2302,10 @@ function handleKey(code: string) {
         playerEcm();
       } else if (code === 'KeyB') {
         energyBomb();
+      } else if (code === 'KeyV') {
+        setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]);
+      } else if (/^Digit[1-4]$/.test(code)) {
+        setView(VIEWS[Number(code.slice(5)) - 1]);
       } else if (code === 'KeyY') {
         toggleGalacticJump();
       } else if (code === 'KeyK') {
