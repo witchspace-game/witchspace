@@ -16,6 +16,9 @@ function audio() {
   return { ctx, master: master! };
 }
 
+/** Shared audio graph for other sound modules (see spatial.ts). */
+export const audioGraph = () => audio();
+
 /** Browsers only allow audio after a user gesture; call this from one. */
 export function unlockAudio() {
   audio();
@@ -28,7 +31,7 @@ export function toggleMute(): boolean {
   return muted;
 }
 
-function noiseBuffer(ctx: AudioContext, seconds: number) {
+export function noiseBuffer(ctx: AudioContext, seconds: number) {
   const buf = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
   const data = buf.getChannelData(0);
   for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;

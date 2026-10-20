@@ -354,6 +354,64 @@ body[data-state='dead'] #banner { font-size: clamp(28px, 6vw, 64px); }
 #controls-card dt { color: var(--accent); white-space: nowrap; }
 #controls-card dd { text-align: left; }
 
+/* Situational awareness: brackets on visible ships, arrows for off-screen ones. */
+#indicators { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+#indicators > div { position: absolute; left: 0; top: 0; --c: var(--accent); }
+#indicators .bracket i {
+  position: absolute;
+  inset: 0;
+  /* Four corner marks rather than a full box, so the ship stays visible. */
+  background:
+    linear-gradient(var(--c), var(--c)) left top / 8px 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) left top / 2px 8px no-repeat,
+    linear-gradient(var(--c), var(--c)) right top / 8px 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) right top / 2px 8px no-repeat,
+    linear-gradient(var(--c), var(--c)) left bottom / 8px 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) left bottom / 2px 8px no-repeat,
+    linear-gradient(var(--c), var(--c)) right bottom / 8px 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) right bottom / 2px 8px no-repeat;
+  filter: drop-shadow(0 0 4px var(--c));
+}
+#indicators .bracket span {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 4px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  color: var(--c);
+}
+#indicators .edge i {
+  position: absolute;
+  left: -9px;
+  top: -8px;
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 16px solid var(--c);
+  filter: drop-shadow(0 0 5px var(--c));
+}
+#indicators .edge span { display: none; }
+
+/* Where a hit came from: an arc that flashes towards the attacker. */
+#hit-dir {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: min(60vh, 520px);
+  height: min(60vh, 520px);
+  border-radius: 50%;
+  border-top: 6px solid var(--danger);
+  filter: drop-shadow(0 0 10px var(--danger));
+  opacity: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+#hit-dir.on { animation: hit 0.7s ease-out; }
+
 /* --- 1984 mode: white on black, chunky 8x8-style type ------------------- */
 
 body.retro {
@@ -378,6 +436,9 @@ body.retro .gauges { font-size: 8px; }
 body.retro .bar::after, body.retro #banner { box-shadow: none; text-shadow: none; }
 body.retro #banner { font-size: 14px; }
 body.retro #hit { display: none; }
+body.retro #indicators > div { --c: #fff !important; }
+body.retro #indicators .bracket i, body.retro #indicators .edge i, body.retro #hit-dir { filter: none; }
+body.retro #hit-dir { border-top-color: #fff; }
 body.retro .prompt { font-size: 10px; letter-spacing: 0.05em; }
 body.retro #rules button b { font-size: 11px; }
 body.retro #rules button small, body.retro #rules button em { font-size: 8px; line-height: 1.6; }

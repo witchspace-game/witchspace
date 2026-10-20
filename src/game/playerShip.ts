@@ -47,6 +47,9 @@ export class PlayerShip {
   get rollGauge() {
     return this.rollVel / (this.def.stats.rollRate ?? 2);
   }
+  get yawGauge() {
+    return this.yawVel / this.yawRate;
+  }
 
   /** Yaw matches pitch unless a ship says otherwise, so mouse aim feels even. */
   get yawRate() {

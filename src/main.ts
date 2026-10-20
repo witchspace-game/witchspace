@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { danube, preloadRecording, sfx, toggleMute, unlockAudio } from './audio/sound';
+import { boomAt, EngineSound, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
 import { shipById, ships } from './content/ships';
 import {
   cargoTonnes,
@@ -36,6 +37,7 @@ import { Explosion } from './render/explosion';
 import { camera, isRetro, makeSpace, render, setRetro } from './render/renderer';
 import { buildShip, disposeShip, heatShip, type ShipModel } from './render/shipModel';
 import { clearFlash, flash, updateHud, type Blip } from './ui/hud';
+import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { playTunnel } from './ui/tunnel';
 import './style.css';
 
@@ -53,7 +55,15 @@ function setState(next: State) {
   });
   if (next !== 'flying') $('#dock-aid').hidden = true;
   setFlying(next === 'flying');
-  if (next === 'flying') showControlsCardOnce();
+  if (next === 'flying') {
+    showControlsCardOnce();
+    engineSound.start();
+  } else {
+    engineSound.stop();
+    clearIndicators();
+    for (const v of voices.values()) v.dispose();
+    voices.clear();
+  }
 }
 
 let commander: Commander | null = null;
@@ -238,6 +248,10 @@ let autopilot = false;
 // --- Police and combat ------------------------------------------------------
 
 const police: NpcShip[] = [];
+const engineSound = new EngineSound();
+const voices = new Map<NpcShip, ShipVoice>();
+const VOICE_RANGE = 3500; // hear other ships' engines within this distance
+let tailWarningTimer = 0;
 const beams = new Beams(space.scene);
 let laserCooldown = 0;
 let laserHeat = 0; // 0..100, the original's "LT" gauge
@@ -284,7 +298,9 @@ function destroyNpc(npc: NpcShip) {
   const boom = new Explosion(npc.def, npc.obj, npc.ship.forward().multiplyScalar(npc.ship.speed));
   space.scene.add(boom.group);
   explosions.push(boom);
-  sfx.explosion();
+  boomAt(npc.obj.position, 2.2, 1600, 1.6);
+  voices.get(npc)?.dispose();
+  voices.delete(npc);
   police.splice(police.indexOf(npc), 1);
   npc.dispose();
   flash(`${npc.def.name} destroyed`, 1.5);
@@ -365,10 +381,11 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
         { value: 'station', position: station.root.position, radius: 90 },
       ]);
       beams.fire(origin, hit ? hit.point : origin.clone().addScaledVector(shot, npc.laser.range), npc.laser.color);
-      if (npc.obj.position.distanceTo(player.obj.position) < 2500) sfx.enemyLaser();
+      zapAt(origin, 700, 120, 0.15, 0.5);
       if (hit?.target.value === 'player') {
         sfx.hit();
         hitFeedback(0.35);
+        showHitDirection(camera, npc.obj.position);
         if (player.damage(npc.laser.damage)) {
           die();
           return;
@@ -388,6 +405,33 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
         die();
         return;
       }
+    }
+  }
+
+  // Engine sounds for nearby ships, positioned in 3D.
+  for (const npc of police) {
+    const near = alive && npc.obj.position.distanceTo(player.obj.position) < VOICE_RANGE;
+    let voice = voices.get(npc);
+    if (near && !voice) voices.set(npc, (voice = new ShipVoice(npc.obj.position)));
+    if (!near && voice) {
+      voice.dispose();
+      voices.delete(npc);
+    }
+    voice?.update(npc.obj.position, npc.ship.speed / npc.ship.maxSpeed);
+  }
+
+  // A soft double beep when a hostile is close behind you.
+  tailWarningTimer -= dt;
+  if (alive && tailWarningTimer <= 0) {
+    const fwd = player.forward();
+    const onTail = police.find((npc) => {
+      if (!npc.hostile) return false;
+      const to = npc.obj.position.clone().sub(player.obj.position);
+      return to.length() < 900 && fwd.angleTo(to) > THREE.MathUtils.degToRad(120);
+    });
+    if (onTail) {
+      tailWarning(onTail.obj.position);
+      tailWarningTimer = 1.2;
     }
   }
 
@@ -617,6 +661,7 @@ function updateSpace(dt: number) {
     }
   }
   space.stars.position.copy(camera.position);
+  setListener(camera.position, camera.getWorldDirection(new THREE.Vector3()), new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion));
   dust.update(camera.position, state === 'flying' ? player.forward().multiplyScalar(player.speed) : new THREE.Vector3());
 
   const blips: Blip[] = [
@@ -628,7 +673,28 @@ function updateSpace(dt: number) {
     updateHud(player, station, blips, autopilot, rollAssist);
     updateAimDisplay();
     updateCombatHud();
+    updateMarkers();
+    const turn = Math.abs(player.pitchGauge) + Math.abs(player.yawGauge) + Math.abs(player.rollGauge) * 0.6;
+    engineSound.update(player.speed / player.maxSpeed, Math.min(1, turn / 1.2));
   }
+}
+
+// --- Situational awareness markers ----------------------------------------------
+
+function updateMarkers() {
+  const km = (p: THREE.Vector3) => {
+    const d = p.distanceTo(player.obj.position);
+    return d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`;
+  };
+  const markers: Marker[] = police.map((npc) => ({
+    position: npc.obj.position,
+    color: npc.hostile ? '#ff4d6d' : '#4aa8ff',
+    radius: npc.radius,
+    label: npc.hostile || npc.obj.position.distanceTo(player.obj.position) < 1500 ? km(npc.obj.position) : undefined,
+  }));
+  markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
+  const view = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
+  updateIndicators(camera, view, markers);
 }
 
 // --- Combat HUD ------------------------------------------------------------------
