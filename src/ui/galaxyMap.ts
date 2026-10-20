@@ -1,4 +1,5 @@
 import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, type StarSystem } from '../galaxy/generate';
+import { escapeHtml } from './escape';
 import { stationName } from '../galaxy/stationNames';
 import { isRetro } from '../render/renderer';
 
@@ -209,8 +210,9 @@ function renderInfo() {
     ['Average radius', `${s.radius.toLocaleString()} km`],
   ];
   const isTarget = opts.target === s;
-  info.innerHTML = `<h3>${s.name}${isTarget ? ' <em>Destination</em>' : ''}</h3><dl>${rows
-    .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
+  // Station names are community content, so everything is escaped.
+  info.innerHTML = `<h3>${escapeHtml(s.name)}${isTarget ? ' <em>Destination</em>' : ''}</h3><dl>${rows
+    .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`)
     .join('')}</dl>`;
 }
 
