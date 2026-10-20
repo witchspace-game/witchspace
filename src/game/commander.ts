@@ -51,6 +51,9 @@ export const EQUIPMENT: Equipment[] = [
   },
 ];
 
+import { cargoTonnage } from '../economy/commodities';
+import type { MarketState } from '../economy/market';
+
 export interface Commander {
   name: string;
   difficulty: Difficulty;
@@ -65,22 +68,27 @@ export interface Commander {
   location: { galaxy: number; system: number };
   /** Chosen hyperspace destination (system index in the current galaxy), if any. */
   target: number | null;
+  /** Market state per system ("galaxy:index") you've traded at. */
+  markets: Record<string, MarketState>;
+  /** Number of times you've docked; Classic prices change with each visit. */
+  visits: number;
 }
 
 const KEY = 'witchspace.commander.v1';
 
-// Trading arrives in the next milestone. Until then the Galactic Co-operative
-// fronts every new commander enough to try the docking computer.
+// Every commander starts as in 1984: a Cobra, Lave and 100 credits.
 export const newCommander = (difficulty: Difficulty): Commander => ({
   name: 'Jameson',
   difficulty,
-  credits: 2000,
+  credits: 100,
   equipment: [],
   cargo: {},
   legal: 'clean',
   damaged: [],
   location: { galaxy: 0, system: 7 }, // Lave, as in 1984
   target: null,
+  markets: {},
+  visits: 0,
 });
 
 export function loadCommander(): Commander | null {
@@ -109,7 +117,8 @@ export function deleteCommander() {
   }
 }
 
-export const cargoTonnes = (c: Commander) => Object.values(c.cargo).reduce((a, b) => a + b, 0);
+/** Tonnes used in the hold (gold counts by the kilogram, gems by the gram). */
+export const cargoTonnes = (c: Commander) => cargoTonnage(c.cargo);
 
 export const hasEquipment = (c: Commander, id: EquipmentId) => c.equipment.includes(id);
 
