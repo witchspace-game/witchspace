@@ -310,6 +310,13 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
 }
 #dc-light.on { color: #000; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
 
+/* Missiles on the rails: one pip each; red and pulsing when locked on. */
+#missile-pips { display: flex; gap: 3px; }
+#missile-pips i { width: 7px; height: 14px; border: 1px solid var(--edge); }
+#missile-pips i.armed { background: var(--accent); box-shadow: 0 0 6px var(--accent); border-color: var(--accent); }
+#missile-pips.locked i.armed:first-child { background: var(--danger); border-color: var(--danger); box-shadow: 0 0 10px var(--danger); animation: lock-pulse 0.5s infinite alternate; }
+@keyframes lock-pulse { to { opacity: 0.4; } }
+
 #dock-aid {
   position: fixed;
   right: 24px;

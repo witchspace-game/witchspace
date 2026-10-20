@@ -9,6 +9,7 @@ import {
   EQUIPMENT,
   FUEL_CAPACITY,
   FUEL_PRICE,
+  MISSILE_PRICE,
   hasEquipment,
   isWorking,
   loadCommander,
@@ -49,6 +50,7 @@ import {
 import { MouseAim } from './game/mouseAim';
 import { NpcShip, type NpcRole } from './game/npc';
 import { think } from './game/ai';
+import { Missile, MISSILE } from './game/missile';
 import { combatRating } from './game/rating';
 import { Beams, PIRATE_LASER, POLICE_LASER, PULSE_LASER, rayHit, TRADER_LASER, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
@@ -387,6 +389,23 @@ function renderDocked() {
   });
   $('#fuel').append(refuel);
 
+  // Missiles: top up the rails.
+  const rails = player.def.stats.missiles ?? 0;
+  const short = rails - c.missiles;
+  const canAfford = Math.min(short, Math.floor(c.credits / MISSILE_PRICE));
+  $('#missile-row').innerHTML = `<span>Missiles <b>${c.missiles} / ${rails}</b></span>`;
+  const rearm = document.createElement('button');
+  rearm.textContent = short <= 0 ? 'Full' : `Buy ${canAfford || short} · ${(canAfford || short) * MISSILE_PRICE} Cr`;
+  rearm.disabled = short <= 0 || canAfford <= 0;
+  rearm.addEventListener('click', () => {
+    c.credits -= canAfford * MISSILE_PRICE;
+    c.missiles += canAfford;
+    saveCommander(c);
+    sfx.beep();
+    renderDocked();
+  });
+  $('#missile-row').append(rearm);
+
   const list = $('#equip');
   list.innerHTML = '';
   // Equipment held here until a fine is paid.
@@ -526,6 +545,7 @@ function spawnViper(fromSlot: boolean) {
     npc.obj.position.set(Math.cos(p.angle) * p.radius, p.height, Math.sin(p.angle) * p.radius).add(p.centre);
     npc.ship.speed = Math.abs(p.rate) * p.radius;
   }
+  npc.ecm = Math.random() < 0.6;
   space.scene.add(npc.obj);
   npcs.push(npc);
 }
@@ -586,7 +606,6 @@ function spawnTrader(arriving: boolean, distance = 14000 + Math.random() * 8000)
     const at = station.root.position.clone().addScaledVector(awayFromPlanet(), distance);
     const npc = addNpc('cobra-mk3', 'trader', at);
     npc.obj.lookAt(station.root.position);
-    npc.obj.rotateY(Math.PI); // lookAt points -Z; ships fly +Z
     npc.ship.speed = npc.ship.maxSpeed * 0.5;
     npc.destination = onSlotAxis(900);
     legs.set(npc, 'inbound');
@@ -612,9 +631,9 @@ function spawnPirates(near: THREE.Vector3) {
     const def = Math.random() < 0.6 ? 'sidewinder' : 'mamba';
     const npc = addNpc(def, 'pirate', centre.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(300)), centre);
     npc.obj.lookAt(near);
-    npc.obj.rotateY(Math.PI);
     npc.ship.speed = npc.ship.maxSpeed * 0.4;
     npc.bounty = BOUNTIES[def] ?? 40;
+    npc.ecm = Math.random() < 0.25;
     if (Math.random() < 0.4) npc.cargo = { [Math.random() < 0.5 ? 'narcotics' : 'firearms']: 1 + Math.floor(Math.random() * 2) };
   }
   return count > 0;
@@ -695,6 +714,9 @@ function buildSystemScene(sys: StarSystem) {
   }
   voices.clear();
   npcs.length = 0;
+  for (const m of missiles) m.dispose();
+  missiles.length = 0;
+  locked = null;
   for (const d of drifters) disposeShip(d.model);
   drifters.length = 0;
   for (const e of explosions) e.dispose();
@@ -866,7 +888,9 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     thinkTimer = 0.25;
     const world = { player, playerPresent: alive, playerWanted: isFugitive(), npcs };
     for (const npc of npcs) think(npc, world);
+    for (const npc of npcs) maybeFireNpcMissile(npc);
   }
+  updateMissiles(dt);
   updateTraffic(dt);
 
   for (const npc of [...npcs]) {
@@ -969,6 +993,168 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       spawnViper(true);
       repopulateTimer = 30;
     }
+  }
+}
+
+// --- Missiles and ECM ---------------------------------------------------------------
+
+const missiles: Missile[] = [];
+let locked: NpcShip | null = null; // the player's missile lock
+let ecmCooldown = 0;
+let incomingTimer = 0;
+const LOCK_RANGE = 5000; // metres: how far away you can lock on
+const LOCK_HOLD = 8000; // the lock breaks beyond this
+const ECM_RANGE = 4000;
+const ECM_COOLDOWN = 4; // seconds
+const NPC_ECM_RANGE = 1500; // NPCs trigger their ECM when a missile gets this close
+const NPC_MISSILE_RANGE = [600, 2500]; // NPCs only fire within this band
+const NPC_MISSILE_CHANCE = 0.015; // per decision tick (4 a second) while attacking in range
+
+/** Whatever is nearest to where the guns point, if it's close enough to name. */
+function sightedNpc(range = 5000): NpcShip | null {
+  const fwd = laserDirection();
+  let best: NpcShip | null = null;
+  let bestAngle = THREE.MathUtils.degToRad(6);
+  for (const npc of npcs) {
+    const to = npc.obj.position.clone().sub(player.obj.position);
+    if (to.length() > range) continue;
+    const a = fwd.angleTo(to);
+    if (a < bestAngle) {
+      best = npc;
+      bestAngle = a;
+    }
+  }
+  return best;
+}
+
+/** T: lock a missile onto the ship in your sights, or disarm. */
+function toggleLock() {
+  const c = cmdr();
+  if (c.missiles <= 0) {
+    flash('No missiles · buy more at a station', 1.5);
+    return;
+  }
+  const target = sightedNpc(LOCK_RANGE);
+  if (!target) {
+    if (locked) {
+      locked = null;
+      flash('Missile disarmed', 1.2);
+    } else {
+      flash('No target in your sights', 1.2);
+    }
+    return;
+  }
+  locked = target;
+  sfx.lock();
+  flash(`Missile locked · ${target.def.name}`, 1.5);
+}
+
+/** X: launch at the locked target. */
+function fireMissile() {
+  const c = cmdr();
+  if (!locked) {
+    flash(c.missiles > 0 ? 'Lock a target first (T)' : 'No missiles', 1.5);
+    return;
+  }
+  if (surrenderTimer !== null) breakSurrender();
+  c.missiles -= 1;
+  saveCommander(c);
+  launchMissile(player, locked.ship);
+  flash(`Missile away · ${locked.def.name}`, 1.2);
+  locked = null;
+}
+
+function launchMissile(from: PlayerShip, target: PlayerShip) {
+  const m = new Missile(shipById('missile')!, from, target);
+  space.scene.add(m.model.root);
+  missiles.push(m);
+  zapAt(m.position, 900, 200, 0.8, 0.4);
+  if (from === player) sfx.missileLaunch();
+  if (target === player) {
+    sfx.incoming();
+    incomingTimer = 1;
+    flash('INCOMING MISSILE · break hard or use ECM (Z)', 2.5);
+  }
+}
+
+function maybeFireNpcMissile(npc: NpcShip) {
+  if (npc.missiles <= 0 || npc.mode !== 'attack' || !npc.target || npc.role === 'trader') return;
+  if (npc.target === player && state !== 'flying') return;
+  const d = npc.obj.position.distanceTo(npc.target.obj.position);
+  if (d < NPC_MISSILE_RANGE[0] || d > NPC_MISSILE_RANGE[1] || Math.random() > NPC_MISSILE_CHANCE) return;
+  npc.missiles -= 1;
+  launchMissile(npc.ship, npc.target);
+}
+
+function explodeMissile(m: Missile) {
+  const flare = new Explosion(m.model.def, m.model.root, m.dir.clone().multiplyScalar(m.speed * 0.3));
+  space.scene.add(flare.group);
+  explosions.push(flare);
+  boomAt(m.position, 1.6, 1200, 1.1);
+  missiles.splice(missiles.indexOf(m), 1);
+  m.dispose();
+}
+
+/** Z: the ECM destroys every missile in range, friend or foe. */
+function playerEcm() {
+  if (!isWorking(cmdr(), 'ecm')) {
+    flash(hasEquipment(cmdr(), 'ecm') ? 'ECM damaged · repair at a station' : 'No ECM fitted', 1.5);
+    return;
+  }
+  if (ecmCooldown > 0) return;
+  ecmCooldown = ECM_COOLDOWN;
+  sfx.ecm();
+  hitFeedback(0.2);
+  const hits = missiles.filter((m) => m.position.distanceTo(player.obj.position) < ECM_RANGE);
+  for (const m of hits) explodeMissile(m);
+  flash(hits.length ? `ECM · ${hits.length} missile${hits.length > 1 ? 's' : ''} destroyed` : 'ECM', 1.5);
+}
+
+function updateMissiles(dt: number) {
+  ecmCooldown = Math.max(0, ecmCooldown - dt);
+  const alive = state === 'flying';
+  if (locked && (!npcs.includes(locked) || locked.obj.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
+    locked = null;
+    if (alive) flash('Missile lock lost', 1.2);
+  }
+
+  for (const m of [...missiles]) {
+    // Lose track of targets that have gone: wrecks, docked ships, a dead player.
+    if (m.target && (m.target === player ? !alive : !npcs.some((n) => n.ship === m.target))) m.target = null;
+    const victim = m.target && m.target !== player ? npcs.find((n) => n.ship === m.target) : undefined;
+    if (victim?.ecm && m.position.distanceTo(victim.obj.position) < NPC_ECM_RANGE) {
+      if (m.position.distanceTo(player.obj.position) < 6000) {
+        sfx.ecm();
+        if (m.owner === player) flash(`${victim.def.name} used ECM · missile destroyed`, 1.8);
+      }
+      explodeMissile(m);
+      continue;
+    }
+
+    const result = m.update(dt);
+    if (result === 'flying') continue;
+    explodeMissile(m);
+    if (result !== 'hit') continue;
+
+    if (m.target === player) {
+      sfx.hit();
+      hitFeedback(1.2);
+      showHitDirection(camera, m.position);
+      if (damagePlayer(MISSILE.damage)) {
+        die();
+        return;
+      }
+    } else if (victim) {
+      if (m.owner === player) playerHitNpc(victim, MISSILE.damage);
+      else if (victim.hit(MISSILE.damage, m.owner)) destroyNpc(victim, m.owner.obj);
+    }
+  }
+
+  // Keep warning while something is homing in.
+  incomingTimer -= dt;
+  if (alive && incomingTimer <= 0 && missiles.some((m) => m.target === player)) {
+    sfx.incoming();
+    incomingTimer = 1;
   }
 }
 
@@ -1302,6 +1488,7 @@ function updateSpace(dt: number) {
     { position: station.root.position, color: '#ffb347', big: true },
     ...npcs.map((p) => ({ position: p.obj.position, color: npcColour(p) })),
     ...drifters.map((d) => ({ position: d.model.root.position, color: '#ffd166' })),
+    ...missiles.map((m) => ({ position: m.position, color: '#ff6b6b' })),
   ];
   if (state === 'flying') {
     updateHud(player, station, blips, autopilot, rollAssist);
@@ -1329,12 +1516,13 @@ function updateMarkers() {
   };
   const markers: Marker[] = npcs.map((npc) => ({
     position: npc.obj.position,
-    color: npcColour(npc),
+    color: npc === locked ? '#ff4d6d' : npcColour(npc),
     radius: npc.radius,
     label: npc.hostile || npc.obj.position.distanceTo(player.obj.position) < 1500 ? km(npc.obj.position) : undefined,
   }));
   markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
   markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
+  for (const m of missiles) if (m.target === player) markers.push({ position: m.position, color: '#ff4d6d', radius: 6, label: `MISSILE ${km(m.position)}` });
   const view = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
   updateIndicators(camera, view, markers);
 }
@@ -1345,7 +1533,13 @@ const laserGauge = $('#g-laser');
 const crosshair = $('.crosshair');
 const targetInfo = $('#target-info');
 
+const missilePips = $('#missile-pips');
+
 function updateCombatHud() {
+  const rails = player.def.stats.missiles ?? 0;
+  if (missilePips.childElementCount !== rails) missilePips.innerHTML = '<i></i>'.repeat(rails);
+  missilePips.querySelectorAll('i').forEach((pip, i) => pip.classList.toggle('armed', i < cmdr().missiles));
+  missilePips.classList.toggle('locked', Boolean(locked));
   laserGauge.style.setProperty('--v', String(laserHeat / 100));
   laserGauge.classList.toggle('hot', overheated || laserHeat > 75);
   // Name whatever is closest to where the guns point, if it's near enough.
@@ -1357,23 +1551,13 @@ function updateCombatHud() {
   );
   reticle.classList.toggle('on-target', onTarget && gimballed());
   crosshair.classList.toggle('on-target', onTarget && !gimballed());
-  let best: NpcShip | null = null;
-  let bestAngle = THREE.MathUtils.degToRad(6);
-  for (const npc of npcs) {
-    const to = npc.obj.position.clone().sub(player.obj.position);
-    if (to.length() > 5000) continue;
-    const a = fwd.angleTo(to);
-    if (a < bestAngle) {
-      best = npc;
-      bestAngle = a;
-    }
-  }
+  const best = sightedNpc();
   targetInfo.hidden = !best;
   if (best) {
     // The transponder: type, role, condition and standing.
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
     const standing = best.role === 'pirate' ? 'WANTED' : best.role === 'police' ? 'POLICE' : 'CLEAN';
-    targetInfo.textContent = `${best.def.name} · ${best.role.toUpperCase()} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}`;
+    targetInfo.textContent = `${best.def.name} · ${best.role.toUpperCase()} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === locked ? ' · LOCKED' : ''}`;
     targetInfo.classList.toggle('hostile', best.hostile);
   }
 }
@@ -1403,8 +1587,8 @@ function updateAimDisplay() {
 }
 
 const KEYS_HINT = {
-  mouse: 'Mouse aim · Click fire · W/S throttle · A/D roll · G galaxy map · H hyperspace · J jump · C docking computer · F1 controls',
-  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · G galaxy map · H hyperspace · J jump · C docking computer · F1 controls',
+  mouse: 'Mouse aim · Click fire · W/S throttle · A/D roll · T lock · X missile · G map · H hyperspace · J jump · C docking computer · F1 controls',
+  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · T lock · X missile · G map · H hyperspace · J jump · C docking · F1 controls',
 };
 
 function renderControlsCard() {
@@ -1435,6 +1619,9 @@ function renderControlsCard() {
       ['C', 'Docking computer'],
       ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
       ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
+      ['T', 'Lock a missile onto the ship in your sights (again with nothing in sight: disarm)'],
+      ['X', 'Launch the locked missile'],
+      ['Z', 'ECM: destroy every missile nearby, yours included (needs an ECM)'],
       ['U', 'Surrender to the police: slow down and hold still (fine, record cleared)'],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
       ['K', 'Switch control scheme'],
@@ -1475,6 +1662,7 @@ async function launch() {
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
+  locked = null;
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
   flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
@@ -1899,6 +2087,12 @@ function handleKey(code: string) {
         inSystemJump();
       } else if (code === 'KeyU') {
         toggleSurrender();
+      } else if (code === 'KeyT') {
+        toggleLock();
+      } else if (code === 'KeyX') {
+        fireMissile();
+      } else if (code === 'KeyZ') {
+        playerEcm();
       } else if (code === 'KeyK') {
         const s = toggleControlScheme();
         renderControlsCard();
@@ -1954,7 +2148,7 @@ function frame(now?: number) {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, legalStatus,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, legalStatus,
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },

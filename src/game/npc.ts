@@ -53,6 +53,9 @@ export class NpcShip {
   cargo: Record<string, number> = {};
   /** Credits paid for destroying this ship (pirates). */
   bounty = 0;
+  /** Missiles left, and whether an ECM is fitted to destroy incoming ones. */
+  missiles: number;
+  ecm = false;
   private cooldown = Math.random();
   private flash = 0;
   private breakTimer = 0;
@@ -65,6 +68,7 @@ export class NpcShip {
     readonly patrol: Patrol,
   ) {
     this.ship = new PlayerShip(def);
+    this.missiles = def.stats.missiles ?? 0;
     this.model = buildShip(def);
     this.ship.obj.add(this.model.root);
   }

@@ -13,7 +13,7 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; blurb: string }> =
   },
 };
 
-export type EquipmentId = 'docking-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops';
+export type EquipmentId = 'docking-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm';
 
 export type LegalStatus = 'clean' | 'offender' | 'fugitive';
 
@@ -44,6 +44,13 @@ export const EQUIPMENT: Equipment[] = [
     price: 600,
     blurb: 'Skim a star for free fuel, if you can stand the heat. Fly slowly over cargo canisters to scoop them into the hold.',
     minTech: 5,
+  },
+  {
+    id: 'ecm',
+    name: 'E.C.M. System',
+    price: 600,
+    blurb: 'Press Z to destroy every missile nearby, including your own.',
+    minTech: 6,
   },
   {
     id: 'gimbal-mount',
@@ -93,6 +100,8 @@ export interface Commander {
   fuel: number;
   /** Ships destroyed, for the combat rating. */
   kills: number;
+  /** Missiles on the rails. */
+  missiles: number;
 }
 
 const KEY = 'witchspace.commander.v1';
@@ -114,10 +123,12 @@ export const newCommander = (difficulty: Difficulty): Commander => ({
   visits: 0,
   fuel: 7,
   kills: 0,
+  missiles: 3, // as in 1984
 });
 
 export const FUEL_CAPACITY = 7; // light years
 export const FUEL_PRICE = 2; // credits per light year
+export const MISSILE_PRICE = 30;
 
 export function loadCommander(): Commander | null {
   try {
