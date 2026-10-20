@@ -98,12 +98,15 @@ onScroll();
 let visible = true;
 new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
 
-const clock = new THREE.Clock();
+// Timer pauses while the tab is hidden, so there's no huge step on return.
+const timer = new THREE.Timer();
+timer.connect(document);
 let spin = 0;
 
-function frame() {
+function frame(now?: number) {
   requestAnimationFrame(frame);
-  const dt = Math.min(clock.getDelta(), 0.1);
+  timer.update(now);
+  const dt = Math.min(timer.getDelta(), 0.1);
   if (!visible || document.hidden) return;
 
   shownFor += dt;

@@ -1929,10 +1929,13 @@ document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) =>
 
 // --- Main loop --------------------------------------------------------------
 
-const clock = new THREE.Clock();
+// Timer pauses while the tab is hidden, so there's no huge step on return.
+const timer = new THREE.Timer();
+timer.connect(document);
 
-function frame() {
-  const dt = Math.min(clock.getDelta(), 0.1);
+function frame(now?: number) {
+  timer.update(now);
+  const dt = Math.min(timer.getDelta(), 0.1);
   for (const button of gamepadPresses()) {
     const code = padToKey(button);
     if (code) handleKey(code);
