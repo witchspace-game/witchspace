@@ -65,6 +65,11 @@ export class PlayerShip {
     this.obj.rotateZ(this.rollVel * dt);
     this.obj.rotateY(-this.yawVel * dt); // +yaw = nose to starboard
     this.speed += input.throttle * ACCELERATION * dt + input.speedStep * this.maxSpeed;
+    if (input.speedTarget !== undefined) {
+      // Touch slider: ease towards the speed asked for, as fast as the engines allow.
+      const want = input.speedTarget * this.maxSpeed;
+      this.speed += THREE.MathUtils.clamp(want - this.speed, -ACCELERATION * dt, ACCELERATION * dt);
+    }
     this.speed = THREE.MathUtils.clamp(this.speed, 0, this.maxSpeed);
   }
 

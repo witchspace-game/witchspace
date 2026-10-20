@@ -89,13 +89,42 @@ export function setFlying(value: boolean) {
   flying = value;
   if (!value && document.pointerLockElement) document.exitPointerLock();
   aimDx = aimDy = wheel = swipeRoll = 0;
-  mouseFire = recentre = false;
+  mouseFire = recentre = touchFire = false;
+  touchSpeed = null;
 }
 
-export const isMouseCaptured = () => flying && document.pointerLockElement !== null;
-export const wantsMouseCapture = () => flying && scheme === 'mouse' && !document.pointerLockElement;
+// --- Touch -------------------------------------------------------------------
+// Phones and tablets fly with the mouse-aim scheme: drag on the left of the
+// screen to move the aiming ring, a slider for speed and a fire button.
+// Add ?touch to the URL to try touch mode with a mouse.
+
+export const isTouch =
+  matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('touch');
+let touchFire = false;
+let touchSpeed: number | null = null; // speed the slider asks for, as a fraction of top speed
+let touchMoved = false;
+
+/** Drag on the aim pad: moves the aiming ring like the mouse does. */
+export function touchAim(dx: number, dy: number) {
+  aimDx += dx;
+  aimDy += dy;
+}
+export function setTouchFire(on: boolean) {
+  touchFire = on;
+}
+/** The speed slider: a target speed (0..1 of top speed), or null to leave speed alone. */
+export function setTouchSpeed(fraction: number | null) {
+  touchSpeed = fraction;
+  touchMoved = true;
+}
+export const touchSpeedTarget = () => touchSpeed;
+
+/** Aiming with the ring: the mouse is captured, or we're on a touch screen. */
+export const isMouseCaptured = () => flying && (isTouch || document.pointerLockElement !== null);
+export const wantsMouseCapture = () => flying && !isTouch && scheme === 'mouse' && !document.pointerLockElement;
 
 addEventListener('mousedown', (e) => {
+  if (isTouch) return; // taps arrive as mouse events too; touch has its own fire button
   if (isMouseCaptured()) {
     if (e.button === 0) mouseFire = true; // left: fire
     if (e.button === 2) recentre = true; // right: centre the aim, stop turning
@@ -188,6 +217,8 @@ export interface FlightInput {
   aimDy: number;
   /** Fire the lasers (held). */
   fire: boolean;
+  /** Touch speed slider: the speed wanted, as a fraction of top speed. */
+  speedTarget?: number;
   /** Snap the aim back to the nose this frame (right-click). */
   recentre?: boolean;
   /** True if the pilot is touching any control this frame. */
@@ -244,19 +275,22 @@ export function flightInput(): FlightInput {
     speedStep: wheel * SCROLL_SPEED,
     aimDx,
     aimDy: sign * aimDy,
-    fire: mouseFire || keyHeld('KeyF') || Boolean(pad?.buttons[5]?.pressed),
+    fire: mouseFire || touchFire || keyHeld('KeyF') || Boolean(pad?.buttons[5]?.pressed),
+    speedTarget: touchSpeed ?? undefined,
     recentre,
     active: false,
   };
   recentre = false;
   input.active =
     input.pitch !== 0 || input.roll !== 0 || input.yaw !== 0 || input.throttle !== 0 ||
-    input.speedStep !== 0 || aimDx !== 0 || aimDy !== 0;
+    input.speedStep !== 0 || aimDx !== 0 || aimDy !== 0 || touchMoved;
+  touchMoved = false;
   aimDx = aimDy = wheel = 0;
   if (suppressed) {
     input.pitch = input.roll = input.yaw = input.throttle = input.speedStep = input.aimDx = input.aimDy = 0;
     input.fire = false;
     input.active = false;
+    input.speedTarget = undefined;
   }
   return input;
 }

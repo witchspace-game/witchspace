@@ -41,6 +41,7 @@ import {
   flightInput,
   gamepadPresses,
   isMouseCaptured,
+  isTouch,
   setFlightInputSuppressed,
   setFlying,
   toggleControlScheme,
@@ -69,6 +70,7 @@ import { distanceLy, ECONOMIES, GOVERNMENTS, systemAt, type StarSystem } from '.
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
+import { initTouch, updateTouch } from './ui/touch';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -92,6 +94,7 @@ function setState(next: State) {
   document.querySelectorAll<HTMLElement>('[data-screen]').forEach((el) => {
     el.hidden = !el.dataset.screen!.split(' ').includes(next);
   });
+  layoutForScreen();
   if (next !== 'flying') $('#dock-aid').hidden = true;
   setFlying(next === 'flying');
   if (next === 'flying') {
@@ -104,6 +107,18 @@ function setState(next: State) {
     voices.clear();
   }
 }
+
+/**
+ * Panels sit above the row of buttons, whose height depends on the screen
+ * width (they wrap on phones), so measure it rather than guess.
+ */
+function layoutForScreen() {
+  const controls = [...document.querySelectorAll<HTMLElement>('nav.controls')].find((el) => !el.hidden);
+  document.documentElement.style.setProperty('--controls-h', `${controls?.offsetHeight ?? 0}px`);
+}
+addEventListener('resize', layoutForScreen);
+
+let portraitTipShown = false;
 
 let commander: Commander | null = null;
 const cmdr = () => commander!;
@@ -1492,6 +1507,7 @@ function updateSpace(dt: number) {
   ];
   if (state === 'flying') {
     updateHud(player, station, blips, autopilot, rollAssist);
+    updateTouch(dt, player.speed / player.maxSpeed);
     updateAimDisplay();
     updateCombatHud();
     updateTravel(dt);
@@ -1641,6 +1657,7 @@ function toggleControlsCard(show = $('#controls-card').hidden) {
 
 function showControlsCardOnce() {
   renderControlsCard();
+  if (isTouch) return; // the card lists keys; touch has its own on-screen controls
   try {
     if (localStorage.getItem('witchspace.seenControls')) return;
     localStorage.setItem('witchspace.seenControls', '1');
@@ -1665,6 +1682,10 @@ async function launch() {
   locked = null;
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
+  if (isTouch && innerHeight > innerWidth && !portraitTipShown) {
+    portraitTipShown = true;
+    setTimeout(() => flash('Tip: turn your phone sideways for the best view', 3), 2600);
+  }
   flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
 }
 
@@ -2158,6 +2179,7 @@ if (import.meta.env.DEV) {
 
 setRetro(false);
 updateModeLabel();
+initTouch();
 setDockTab('station');
 showTitle();
 frame();
