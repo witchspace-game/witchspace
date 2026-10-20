@@ -40,6 +40,18 @@ The original Elite already gave every system a population, productivity, economy
 - **Size limits where a ship can dock.** A large freighter physically can't use an outpost's pads; a small courier can dock anywhere.
 - This creates real trade-offs: big haulers carry more but have fewer places to sell; small ships reach frontier outposts that big ones can't.
 
+### What's for sale depends on where you are
+
+Ships, upgrades and services are **only available in systems that can make, sell and support them**:
+
+- **Every ship and item has a minimum tech level.** A docking computer might need tech level 5; military lasers or advanced shields 10 or more; the most advanced ships only appear at the shipyards of the richest high-tech worlds.
+- **Government matters too.** Lawful worlds won't sell illegal weapons or contraband; anarchies and corrupt worlds have black markets that sell things lawful stations won't.
+- **Station class matters.** Outposts sell the basics; only large orbitals and specialist shipyard satellites sell new ships.
+- **Supply matters (multiplayer).** A station that's short of alloys or computers may run out of the equipment built from them.
+- **The same rules decide where things can be repaired** (see [power and protection](law-and-travel.md#9-power-and-protection)).
+
+The result is that the galaxy has **real geography**: you travel to a high-tech world to buy that beam laser, and you think twice before taking it somewhere nobody can fix it. Ship and equipment files will declare their tech level and any legal restrictions, so community-made items fit the same rules.
+
 ## 4. Docking capacity is real (multiplayer)
 
 - **Berths fill up.** At busy times ships join a **docking queue**, and traffic control admits them one at a time. This is where clearance checks and transponder scans happen (see [law and travel](law-and-travel.md#1-identity-transponders-and-police-markings)).
@@ -86,7 +98,7 @@ A station grows by **investment** (credits, materials, [development funds](playe
 
 | Phase | What |
 |---|---|
-| **Trading and galaxy milestone** | World facts in the galaxy generator (population, planet size, economy, tech level, government); Coriolis stations everywhere plus outposts at some worlds; ship size classes and docking restrictions |
+| **Trading and galaxy milestone** | World facts in the galaxy generator (population, planet size, economy, tech level, government); Coriolis stations everywhere plus outposts at some worlds; ship size classes and docking restrictions; **equipment availability by tech level and government** |
 | **Multiplayer** | Docking queues and capacity, supply and decline, several stations per world |
 | **Later** | Rival and allied stations with shifting relationships, station growth and specialist satellites, derelicts and restoration |
 
