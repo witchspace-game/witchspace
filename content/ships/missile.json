@@ -1,0 +1,48 @@
+{
+  "$schema": "../../schemas/ship.schema.json",
+  "id": "missile",
+  "name": "Missile",
+  "manufacturer": "Galactic Co-operative Armouries",
+  "role": "missile",
+  "description": "A homing missile with a proximity fuse. Lock on, let it go, and hope they didn't buy ECM.",
+  "credits": {
+    "authors": ["Witchspace contributors"],
+    "license": "CC-BY-SA-4.0",
+    "aiAssisted": true,
+    "notes": "Original Witchspace geometry: a slim four-sided dart with cross fins."
+  },
+  "geometry": {
+    "vertices": [
+      [0, 0, 5],
+      [0.8, 0.8, -4],
+      [-0.8, 0.8, -4],
+      [-0.8, -0.8, -4],
+      [0.8, -0.8, -4]
+    ],
+    "faces": [
+      [0, 1, 2],
+      [0, 2, 3],
+      [0, 3, 4],
+      [0, 4, 1],
+      [1, 4, 3, 2]
+    ],
+    "details": {
+      "vertices": [
+        [0, 0.9, -1.5], [0, 2.4, -4.6], [0, -0.9, -1.5], [0, -2.4, -4.6],
+        [0.9, 0, -1.5], [2.4, 0, -4.6], [-0.9, 0, -1.5], [-2.4, 0, -4.6]
+      ],
+      "lines": [[0, 1], [2, 3], [4, 5], [6, 7]]
+    }
+  },
+  "stats": {
+    "maxSpeed": 650,
+    "pitchRate": 1.6,
+    "rollRate": 0,
+    "hull": 1,
+    "shields": 0,
+    "cargo": 0,
+    "missiles": 0,
+    "price": 30
+  },
+  "style": { "lineColor": "#ff6b6b", "glow": 1.2 }
+}

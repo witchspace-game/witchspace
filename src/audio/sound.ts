@@ -97,6 +97,21 @@ export const sfx = {
   jump: () => noise(0.7, 'bandpass', 4000, 300, 0.4),
   tick: () => zap(1200, 1100, 0.05, 0.05, 'square'),
   explosion: () => noise(2.2, 'lowpass', 1800, 40, 1),
+  /** Missile lock: two rising notes. */
+  lock: () => {
+    zap(660, 660, 0.08, 0.05, 'square');
+    setTimeout(() => zap(990, 990, 0.1, 0.05, 'square'), 90);
+  },
+  missileLaunch: () => noise(1.1, 'bandpass', 500, 2400, 0.45),
+  /** Incoming missile: a short, insistent warble. */
+  incoming: () => {
+    zap(1300, 900, 0.09, 0.05, 'square');
+    setTimeout(() => zap(1300, 900, 0.09, 0.05, 'square'), 140);
+  },
+  ecm: () => {
+    zap(200, 3200, 0.5, 0.06, 'sawtooth');
+    noise(0.6, 'highpass', 6000, 2000, 0.25);
+  },
   beep: () => {
     const { ctx, master } = audio();
     const o = ctx.createOscillator();
