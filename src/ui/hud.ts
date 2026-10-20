@@ -24,7 +24,13 @@ const gauges = {
 const scanner = $<HTMLCanvasElement>('#scanner');
 const compass = $<HTMLCanvasElement>('#compass');
 const dockAid = $('#dock-aid');
-const aid = { dist: $('#aid-dist'), roll: $('#aid-roll'), heading: $('#aid-heading'), rollMarker: $('#aid-roll-marker') };
+const aid = {
+  dist: $('#aid-dist'),
+  roll: $('#aid-roll'),
+  heading: $('#aid-heading'),
+  rollMarker: $('#aid-roll-marker'),
+  rollMatch: $('#aid-roll-match'),
+};
 const banner = $('#banner');
 const dcLight = $('#dc-light');
 
@@ -112,7 +118,7 @@ function drawCompass(ship: PlayerShip, target: THREE.Vector3) {
   else ctx.stroke();
 }
 
-export function updateHud(ship: PlayerShip, station: Station, blips: Blip[], dockingComputerOn: boolean) {
+export function updateHud(ship: PlayerShip, station: Station, blips: Blip[], dockingComputerOn: boolean, rollMatching: boolean) {
   setBar(gauges.shields, ship.shields / ship.def.stats.shields);
   setBar(gauges.hull, ship.hull / ship.def.stats.hull);
   setBar(gauges.speed, ship.speed / ship.maxSpeed);
@@ -137,5 +143,6 @@ export function updateHud(ship: PlayerShip, station: Station, blips: Blip[], doc
     aid.heading.classList.toggle('ok', heading < THREE.MathUtils.degToRad(20));
     setCentred(aid.rollMarker, roll / (Math.PI / 2));
     aid.rollMarker.classList.toggle('ok', rollOk);
+    aid.rollMatch.hidden = !rollMatching;
   }
 }

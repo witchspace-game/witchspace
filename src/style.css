@@ -249,6 +249,16 @@ button.primary { border-color: var(--accent); color: var(--accent); }
   background: var(--danger);
 }
 #aid-roll-marker.ok { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+#aid-roll-match {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #000;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
 
 #banner {
   position: fixed;

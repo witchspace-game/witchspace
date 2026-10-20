@@ -1,6 +1,8 @@
 // Flight controls from keyboard, mouse and gamepad, combined into one set of
 // analogue axes. Discrete actions (launch, toggles) go through main.ts.
 
+const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
+
 // --- Keyboard ---------------------------------------------------------------
 // Holding a key builds the turn rate up gradually, as in the original, so a
 // tap gives a fine correction and a long hold gives a full-rate turn.
@@ -97,11 +99,25 @@ addEventListener('mousemove', (e) => {
   }
   stick.moved = true;
 });
+// Scrolling works whenever you're flying, captured or not, so a mouse can
+// sit alongside the keyboard. A notched wheel, an Apple Magic Mouse's touch
+// surface and a trackpad all arrive as scroll events, so we scale by distance
+// rather than counting events (a Magic Mouse swipe sends dozens of them).
+//   forwards/back -> speed      sideways -> fine roll
+// With macOS natural scrolling (the default), both follow your finger.
+const SCROLL_SPEED = 0.0008; // fraction of top speed per pixel; a wheel notch ≈ 8%
+const SWIPE_ROLL = 0.012; // roll per pixel of sideways swipe
+const SWIPE_ROLL_DECAY = 6; // per second; a swipe gives a short, smooth roll
+
+let swipeRoll = 0;
+
 addEventListener(
   'wheel',
   (e) => {
-    if (!isMouseFlying()) return;
-    wheel += Math.sign(e.deltaY);
+    if (!mouseEnabled) return;
+    const scale = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1; // lines / pages -> pixels
+    wheel += e.deltaY * scale;
+    swipeRoll = clamp1(swipeRoll - e.deltaX * scale * SWIPE_ROLL);
     e.preventDefault();
   },
   { passive: false },
@@ -156,13 +172,11 @@ export interface FlightInput {
   roll: number;
   /** +1 = speed up (held) */
   throttle: number;
-  /** One-off change in speed, as a fraction of top speed (scroll wheel). */
+  /** One-off change in speed, as a fraction of top speed (scroll wheel / swipe). */
   speedStep: number;
   /** True if the pilot is actively touching any control this frame. */
   active: boolean;
 }
-
-const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
 
 let lastPoll = performance.now();
 
@@ -185,7 +199,10 @@ export function flightInput(): FlightInput {
   const padRoll = pad ? shapeAxis(pad.axes[0] ?? 0) : 0;
   const padThrottle = pad ? (pad.buttons[7]?.value ?? 0) - (pad.buttons[6]?.value ?? 0) : 0;
 
-  const speedStep = -wheel * 0.08;
+  const speedStep = wheel * SCROLL_SPEED;
+  const swipe = swipeRoll;
+  swipeRoll *= Math.exp(-dt * SWIPE_ROLL_DECAY);
+  if (Math.abs(swipeRoll) < 0.01) swipeRoll = 0;
   const mouseMoved = stick.moved;
   wheel = 0;
   stick.moved = false;
@@ -198,7 +215,7 @@ export function flightInput(): FlightInput {
   const pitchSign = invertPitch ? -1 : 1;
   const input: FlightInput = {
     pitch: pitchSign * clamp1(kbPitch + mouse.pitch + padPitch),
-    roll: clamp1(kbRoll + mouse.roll + padRoll),
+    roll: clamp1(kbRoll + mouse.roll + padRoll + swipe),
     throttle: clamp1(kbThrottle + padThrottle),
     speedStep,
     active: false,
@@ -206,6 +223,6 @@ export function flightInput(): FlightInput {
   // A resting mouse stick is not "steering"; moving it is.
   input.active =
     kbPitch !== 0 || kbRoll !== 0 || kbThrottle !== 0 || padPitch !== 0 || padRoll !== 0 ||
-    Math.abs(padThrottle) > 0.05 || speedStep !== 0 || mouseMoved;
+    Math.abs(padThrottle) > 0.05 || speedStep !== 0 || swipe !== 0 || mouseMoved;
   return input;
 }

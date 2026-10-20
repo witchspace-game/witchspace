@@ -39,11 +39,11 @@ Then open http://localhost:5173.
 | I | Invert pitch, so W climbs (remembered) |
 | N | Sound on / off (in flight) |
 
-**Mouse:** click the game while flying to capture the mouse. Move it to turn (forwards and back to pitch, left and right to roll); stop moving and the ship stops turning. Scroll to change speed. Esc releases it.
+**Mouse:** scroll (or swipe forwards and back on a Magic Mouse or trackpad) to change speed, and swipe sideways to make fine roll corrections. This works alongside the keyboard without capturing anything. For full mouse flight, click the game to capture the mouse: move it to turn (forwards and back to pitch, left and right to roll), and stop moving to stop turning. Esc releases it.
 
 **Gamepad:** left stick to fly, right/left triggers for speed, A for launch and the docking computer, Y for 1984 mode.
 
-**Docking tip:** the station spins. Line up with the slot and keep rolling with it all the way in. In neo-vector mode, the glide path and docking aid show how far out you are.
+**Docking tip:** the station spins. Under **Modern** rules your ship matches the spin for you once you're close and pointing at the slot ("Roll match" lights up); just steer in and don't touch roll. Under **Classic** rules you keep rolling with it yourself, all the way in, as in 1984. In neo-vector mode, the glide path and docking aid show how far out you are.
 
 ## Contribute a ship, a world or a mission
 

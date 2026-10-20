@@ -326,6 +326,21 @@ function updatePatrols() {
   }
 }
 
+// Modern rules: near the station and pointing roughly at the slot, the ship
+// matches the station's spin by itself whenever the pilot isn't rolling.
+// Classic rules leave it all to you, as in 1984.
+const ROLL_ASSIST_RANGE = 2500; // metres
+const ROLL_ASSIST_HEADING = THREE.MathUtils.degToRad(35);
+const ROLL_ASSIST_GAIN = 3; // holds within ~3° of the slot (tested in simulation)
+let rollAssist = false;
+
+function rollAssistApplies() {
+  return (
+    player.obj.position.distanceTo(station.root.position) < ROLL_ASSIST_RANGE &&
+    station.headingError(player) < ROLL_ASSIST_HEADING
+  );
+}
+
 function setAutopilot(on: boolean, message?: string) {
   autopilot = on;
   if (on) {
@@ -357,6 +372,8 @@ function updateSpace(dt: number) {
     const prev = station.toLocal(player.obj.position);
     const input = flightInput();
     if (autopilot && input.active) setAutopilot(false, 'Docking computer off');
+    rollAssist = !autopilot && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
+    if (rollAssist) input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
     if (autopilot) dockingComputer.update(dt, player, station);
     else player.steer(dt, input);
     player.move(dt);
@@ -412,7 +429,7 @@ function updateSpace(dt: number) {
     ...drifters.map((d) => ({ position: d.model.root.position, color: '#ffd166' })),
   ];
   if (state === 'flying') {
-    updateHud(player, station, blips, autopilot);
+    updateHud(player, station, blips, autopilot, rollAssist);
     updateMouseIndicator();
   }
 }
