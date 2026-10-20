@@ -47,10 +47,21 @@ Station commanders can:
 - **no stranding:** a ship that's out of fuel, disabled or in distress can always get emergency docking or a tow, whatever the commander's policy;
 - police markings and transponders remain under Co-operative control (see [law and travel](law-and-travel.md#1-identity-transponders-and-police-markings)).
 
-### 4. Earned, never bought
+### 4. Earned through contribution, never bought
 
-- Commanders qualify through **combat or trade rank, reputation and investment of in-game credits and materials**.
-- **No real-money purchase of stations, ever.**
+To run a station you have to **give something to Witchspace first**. People with power over other players should have shown they care about the game.
+
+**Every kind of contribution counts, not just code**, so non-programmers are never shut out:
+
+- code, ship and station designs, lore and missions;
+- playtesting and good bug reports, translations, art and sound;
+- moderating, welcoming newcomers, and running the rescue service;
+- investing in-game credits in community stations (see section 9).
+
+A **contributor record** linked to each commander combines GitHub contributions, recognised community roles and in-game standing (rank, reputation). Reaching the threshold earns eligibility for a **station charter**.
+
+- In-game credit investment can **count towards** a charter, but can't qualify you **on its own**; some form of community contribution is always required.
+- **No real-money purchase of stations, charters or influence, ever.**
 
 ### 5. Accountable
 
@@ -87,6 +98,25 @@ A station commander could be an **AI agent** with a personality and an agenda:
 - **Public logs.** An agent's decisions are logged exactly like a human commander's.
 - **Clearly labelled.** Players always know when they're dealing with an agent rather than another person.
 
+### 9. Investing in stations with trading profits
+
+Any commander can invest **in-game credits**, earned by playing, in a community or guild station's development fund.
+
+- **The fund pays for upgrades** chosen by vote: a shipyard, a bigger market, repair facilities, defences, a rescue tug bay.
+- **Investors get recognition, discounts and an in-game share** of the station's docking fees and tariffs, always paid in credits, never anything with real-world value.
+- **Money buys upgrades, not control.** Investment influences *what gets built*; influence over a station's *policies* (fees, docking rules, bounties) is capped so a wealthy trader can't buy a station's votes.
+- **A useful credit sink.** It gives successful traders a goal beyond a bigger ship and helps keep the in-game economy healthy.
+
+## No crypto, no pay-to-win
+
+Witchspace stays **non-commercial**, and nothing in the game can be bought with real money: no tokens, no NFTs, no paid credits, ships, charters or influence.
+
+- **Legal:** Witchspace is an unofficial tribute to *Elite*. Fan projects like this are tolerated because they're non-commercial. Anything tradeable for money would change that, and could also count as a regulated financial product or gambling.
+- **Community:** crypto in fan games attracts speculators rather than players, and tends to cause a backlash.
+- **Fairness:** "earned, never bought" only works if nothing can be bought.
+
+**If the project needs money** for servers, AI-agent stations or the domain, it will use transparent donations (GitHub Sponsors or Open Collective) with all income and spending public. **Supporters get thanks, never power:** a name in the credits or a cosmetic badge at most, never credits, ships or station rights.
+
 ## Classic rules
 
 Not applicable: Classic is single-player and true to 1984. Player-run stations only exist in shared multiplayer space.
@@ -101,3 +131,5 @@ Not applicable: Classic is single-player and true to 1984. Player-run stations o
 6. Who handles appeals, and how do we keep that fair and sustainable for volunteers?
 7. Which stations should belong to the whole community, and how should votes work?
 8. Should AI-agent commanders run some stations from the start, take over abandoned ones, or both? Which personas would you write?
+9. What should the contribution threshold for a station charter be, and how should different kinds of contribution be weighed?
+10. How large a share of station income should investors receive, and how should the cap on policy influence work?
