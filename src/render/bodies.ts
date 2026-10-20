@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { behindLines, circleSegments, neoLines, registerParts, retroLines } from './wire';
+import { behindLines, circleSegments, disposeObject, neoLines, registerParts, retroLines, unregisterParts } from './wire';
 
 /** Where the atmosphere ends, as a multiple of the planet's radius. Debris burns up inside it. */
 export const ATMOSPHERE_SCALE = 1.06;
@@ -65,8 +65,16 @@ export function buildPlanet(radius: number, lineColor: string): THREE.Group {
     retroLines([...latitude(0), ...meridian(0), ...meridian(90)]),
   ];
   g.add(...neo, ...retro);
-  registerParts({ neo, retro });
+  const parts = { neo, retro };
+  registerParts(parts);
+  g.userData.parts = parts;
   return g;
+}
+
+/** Remove a planet built by buildPlanet and free its GPU resources. */
+export function disposePlanet(g: THREE.Group) {
+  unregisterParts(g.userData.parts);
+  disposeObject(g);
 }
 
 export function buildSun(radius: number): THREE.Group {

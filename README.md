@@ -58,11 +58,13 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 | L | Launch from the station |
 | T | Market: buy and sell goods (when docked) |
 | C | Docking computer (once you've bought one) |
+| H | Hyperspace to your chosen destination (10 second countdown; H again cancels) |
+| J | In-system jump: leap about 10 km ahead, unless ships, the station or the planet are too close |
 | G | Galaxy map. Tab switches galactic and local charts; arrows or click select; Enter sets your destination |
 | I | Invert pitch (remembered) |
 | M | Toggle neo-vector / 1984 mode |
 | N | Sound: full / effects only (no engine hum) / off (remembered) |
-| H | Controls card |
+| F1 | Controls card |
 
 **Gamepad:** left stick pitches and rolls, right stick yaws, triggers set speed, A launches and runs the docking computer, Y toggles 1984 mode.
 

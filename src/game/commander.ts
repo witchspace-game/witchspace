@@ -72,6 +72,8 @@ export interface Commander {
   markets: Record<string, MarketState>;
   /** Number of times you've docked; Classic prices change with each visit. */
   visits: number;
+  /** Witchspace fuel, in light years. */
+  fuel: number;
 }
 
 const KEY = 'witchspace.commander.v1';
@@ -89,7 +91,11 @@ export const newCommander = (difficulty: Difficulty): Commander => ({
   target: null,
   markets: {},
   visits: 0,
+  fuel: 7,
 });
+
+export const FUEL_CAPACITY = 7; // light years
+export const FUEL_PRICE = 2; // credits per light year
 
 export function loadCommander(): Commander | null {
   try {

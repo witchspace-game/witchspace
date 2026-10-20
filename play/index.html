@@ -57,6 +57,7 @@
       </div>
       <div id="tab-station" role="tabpanel">
         <dl id="cmdr"></dl>
+        <p class="fuel-row" id="fuel"></p>
         <h3>Equip ship</h3>
         <ul id="equip"></ul>
       </div>
@@ -77,6 +78,7 @@
     <div id="indicators" data-screen="flying"></div>
     <div id="hit-dir"></div>
     <div id="reticle" hidden></div>
+    <p id="countdown" hidden></p>
     <p id="target-info" hidden></p>
     <p id="mouse-prompt" hidden>Click to fly with the mouse</p>
     <p class="keys" id="keys-hint" data-screen="flying"></p>
@@ -99,6 +101,7 @@
         <label>HL <span class="bar" id="g-hull"></span></label>
         <label>SP <span class="bar" id="g-speed"></span></label>
         <label>LT <span class="bar" id="g-laser"></span></label>
+        <label>FU <span class="bar" id="g-fuel"></span></label>
       </div>
       <canvas id="scanner" width="360" height="140"></canvas>
       <div class="gauges">
@@ -120,6 +123,7 @@
     </section>
     <p id="banner" hidden></p>
     <canvas id="tunnel" hidden></canvas>
+    <div id="whiteout" hidden></div>
 
     <p class="showroom-hint" data-screen="title newgame docked">Drag to rotate · Scroll to zoom · Double-click to reset</p>
     <footer class="tribute" data-screen="title newgame docked">
