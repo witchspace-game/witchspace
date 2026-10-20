@@ -42,6 +42,7 @@ import { SpaceDust } from './render/dust';
 import { Explosion } from './render/explosion';
 import { camera, isRetro, makeSpace, render, setRetro } from './render/renderer';
 import { buildShip, disposeShip, heatShip, type ShipModel } from './render/shipModel';
+import { buildHangar } from './render/hangar';
 import { clearFlash, flash, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
@@ -134,8 +135,41 @@ function updateShipPanel() {
   $('#ship-credits').textContent = `Design: ${def.credits.authors.join(', ')}${def.credits.aiAssisted ? ' (AI-assisted)' : ''} · ${def.credits.license}`;
 }
 
+// When docked, the ship sits in a berth and the camera walks around it.
+const hangar = buildHangar();
+hangar.visible = false;
+showroom.scene.add(hangar);
+
+function updateBerth(dt: number, model: ShipModel) {
+  hangar.visible = true;
+  showroom.stars.visible = false;
+  // Rest the ship on the pad: its lowest point at floor level.
+  const lowest = Math.min(...model.def.geometry.vertices.map((v) => v[1]));
+  model.root.position.set(0, -lowest + 1, 0);
+  model.root.rotation.set(0, 0.5, 0);
+  if (!spin.dragging) {
+    spin.idle += dt;
+    if (spin.idle > 1.5) spin.y += dt * 0.12; // a slow walk around the ship
+  }
+  const dist = (model.radius * 3.2) / zoom;
+  const elevation = THREE.MathUtils.clamp(0.28 + spin.x * 0.5, 0.05, 1.1);
+  const centre = new THREE.Vector3(0, -lowest * 0.6 + 4, 0);
+  camera.position.set(
+    Math.sin(spin.y) * Math.cos(elevation) * dist,
+    centre.y + Math.sin(elevation) * dist,
+    Math.cos(spin.y) * Math.cos(elevation) * dist,
+  );
+  camera.lookAt(centre);
+}
+
 function updateShowroom(dt: number) {
   const model = showroomModels[shipIndex];
+  if (state === 'docked') {
+    updateBerth(dt, model);
+    return;
+  }
+  hangar.visible = false;
+  showroom.stars.visible = true;
   const dist = (model.radius * 3.4) / zoom;
   flyIn = Math.min(1, flyIn + dt * 0.7);
   const ease = 1 - Math.pow(1 - flyIn, 3);
