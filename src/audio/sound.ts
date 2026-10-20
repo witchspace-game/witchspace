@@ -90,6 +90,12 @@ export const sfx = {
   thud: () => noise(0.5, 'lowpass', 600, 60, 0.9),
   scrape: () => noise(0.8, 'bandpass', 2500, 300, 0.6),
   tunnel: () => noise(1.6, 'bandpass', 200, 3000, 0.35),
+  hyperspace: () => {
+    noise(3.4, 'bandpass', 160, 2600, 0.28);
+    zap(55, 220, 3.2, 0.06, 'sine');
+  },
+  jump: () => noise(0.7, 'bandpass', 4000, 300, 0.4),
+  tick: () => zap(1200, 1100, 0.05, 0.05, 'square'),
   explosion: () => noise(2.2, 'lowpass', 1800, 40, 1),
   beep: () => {
     const { ctx, master } = audio();

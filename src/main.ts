@@ -7,6 +7,8 @@ import {
   DIFFICULTIES,
   deleteCommander,
   EQUIPMENT,
+  FUEL_CAPACITY,
+  FUEL_PRICE,
   hasEquipment,
   isWorking,
   loadCommander,
@@ -35,7 +37,7 @@ import { NpcShip } from './game/npc';
 import { Beams, POLICE_LASER, PULSE_LASER, rayHit, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { Station } from './game/station';
-import { ATMOSPHERE_SCALE, buildPlanet, buildSun } from './render/bodies';
+import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { SpaceDust } from './render/dust';
 import { Explosion } from './render/explosion';
 import { camera, isRetro, makeSpace, render, setRetro } from './render/renderer';
@@ -43,10 +45,10 @@ import { buildShip, disposeShip, heatShip, type ShipModel } from './render/shipM
 import { clearFlash, flash, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
-import { systemAt, type StarSystem } from './galaxy/generate';
+import { distanceLy, ECONOMIES, GOVERNMENTS, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
-import { playTunnel } from './ui/tunnel';
+import { fadeFromWhite, playTunnel } from './ui/tunnel';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -56,6 +58,11 @@ let inSpace = false;
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 function setState(next: State) {
+  if (next !== 'flying') {
+    countdown = null; // leaving flight cancels a hyperspace countdown
+    // Overlays that only make sense in flight; they're updated each frame while flying.
+    for (const id of ['#mouse-prompt', '#reticle', '#target-info', '#countdown']) $(id).hidden = true;
+  }
   if (isMapOpen()) {
     closeMap();
     setFlightInputSuppressed(false);
@@ -216,6 +223,7 @@ function startCommander(difficulty: Difficulty) {
 }
 
 function enterDocked() {
+  ensureSystemScene();
   inSpace = false;
   player.repair();
   showShip(cobraIndex);
@@ -309,6 +317,23 @@ function renderDocked() {
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
 
+  // Fuel: top up to a full tank at the station.
+  const missing = Math.round((FUEL_CAPACITY - c.fuel) * 10) / 10;
+  const fuelCost = Math.round(missing * FUEL_PRICE * 10) / 10;
+  const affordable = Math.min(missing, Math.floor((c.credits / FUEL_PRICE) * 10) / 10);
+  $('#fuel').innerHTML = `<span>Fuel <b>${c.fuel.toFixed(1)} / ${FUEL_CAPACITY} LY</b></span>`;
+  const refuel = document.createElement('button');
+  refuel.textContent = missing <= 0 ? 'Full' : affordable < missing ? `Refuel ${affordable.toFixed(1)} LY · ${(affordable * FUEL_PRICE).toFixed(1)} Cr` : `Refuel · ${fuelCost.toFixed(1)} Cr`;
+  refuel.disabled = missing <= 0 || affordable <= 0;
+  refuel.addEventListener('click', () => {
+    c.credits = Math.round((c.credits - affordable * FUEL_PRICE) * 10) / 10;
+    c.fuel = Math.round((c.fuel + affordable) * 10) / 10;
+    saveCommander(c);
+    sfx.beep();
+    renderDocked();
+  });
+  $('#fuel').append(refuel);
+
   const list = $('#equip');
   list.innerHTML = '';
   for (const item of EQUIPMENT) {
@@ -347,18 +372,18 @@ function renderDocked() {
 // --- Space ------------------------------------------------------------------
 
 const space = makeSpace();
-const PLANET_POS = new THREE.Vector3(0, 0, 14000); // the slot faces the planet, as in the original
-const PLANET_RADIUS = 5000;
-const ATMOSPHERE = PLANET_RADIUS * ATMOSPHERE_SCALE;
+// The station sits at the origin with its slot facing the planet, as in the
+// original. Everything else about the system is rebuilt on arrival.
+const planetPos = new THREE.Vector3(0, 0, 14000);
+let planetRadius = 5000;
+let atmosphere = planetRadius * ATMOSPHERE_SCALE;
+let planetGM = 0.05 * 14000 ** 2; // debris pull; see updateDrifters
+let planet: THREE.Group | null = null;
 const SUN_POS = new THREE.Vector3(-60000, 22000, -40000);
 space.sun.position.copy(SUN_POS);
 
 const station = new Station(shipById('coriolis')!);
 space.scene.add(station.root);
-const planet = buildPlanet(PLANET_RADIUS, '#4aa8ff');
-planet.position.copy(PLANET_POS);
-planet.rotation.z = 0.4;
-space.scene.add(planet);
 const sun = buildSun(4000);
 sun.position.copy(SUN_POS);
 space.scene.add(sun);
@@ -409,8 +434,51 @@ function spawnViper(fromSlot: boolean) {
   space.scene.add(npc.obj);
   police.push(npc);
 }
-spawnViper(false);
-spawnViper(false);
+// --- Building a star system -------------------------------------------------------
+
+/** Planet line colour by economy: industrial worlds violet, farm worlds blue-green. */
+function planetColour(sys: StarSystem): string {
+  return new THREE.Color().setHSL((270 - sys.economy * 17) / 360, 0.75, 0.62).getStyle();
+}
+
+/** Police patrols by government: none in anarchies, most in democracies and corporate states. */
+const PATROLS_BY_GOVERNMENT = [0, 1, 1, 2, 2, 2, 3, 3];
+
+let builtSystem: StarSystem | null = null;
+
+/** Rebuild the planet, police and debris for a star system. */
+function buildSystemScene(sys: StarSystem) {
+  builtSystem = sys;
+  if (planet) disposePlanet(planet);
+  planetRadius = sys.radius * 1.2;
+  atmosphere = planetRadius * ATMOSPHERE_SCALE;
+  planetPos.set(0, 0, planetRadius + 9000);
+  planetGM = 0.05 * planetPos.z ** 2;
+  planet = buildPlanet(planetRadius, planetColour(sys));
+  planet.position.copy(planetPos);
+  planet.rotation.set(((sys.extraSeed[0] / 255) - 0.5) * 0.8, sys.extraSeed[1] / 40, ((sys.extraSeed[2] / 255) - 0.5) * 0.8);
+  space.scene.add(planet);
+  // The sun sits somewhere different in each system.
+  const a = (sys.extraSeed[3] / 255) * Math.PI * 2;
+  SUN_POS.set(Math.cos(a) * 70000, 20000 + sys.extraSeed[1] * 40, Math.sin(a) * 70000 - 30000);
+  sun.position.copy(SUN_POS);
+  space.sun.position.copy(SUN_POS);
+
+  for (const npc of police) npc.dispose();
+  police.length = 0;
+  for (const d of drifters) disposeShip(d.model);
+  drifters.length = 0;
+  for (const e of explosions) e.dispose();
+  explosions.length = 0;
+  for (let i = 0; i < PATROLS_BY_GOVERNMENT[sys.government]; i++) spawnViper(false);
+  reinforceTimer = repopulateTimer = 0;
+}
+
+/** Make sure the scene matches where the commander is. */
+function ensureSystemScene() {
+  const here = currentSystem();
+  if (builtSystem !== here) buildSystemScene(here);
+}
 
 /**
  * Damage the player's ship. Shields soak hits first; once a hit reaches the
@@ -591,14 +659,14 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
 
   // The station sends more police after a fugitive, and replaces patrols otherwise.
   const nearStation = player.obj.position.distanceTo(station.root.position) < 9000;
-  if (alive && isFugitive() && nearStation) {
+  if (alive && isFugitive() && nearStation && currentSystem().government > 0) {
     reinforceTimer -= dt;
     if (reinforceTimer <= 0 && police.length < MAX_POLICE) {
       spawnViper(true);
       flash('Police launching', 1.5);
       reinforceTimer = 20;
     }
-  } else if (!isFugitive() && police.length < 2) {
+  } else if (!isFugitive() && police.length < PATROLS_BY_GOVERNMENT[currentSystem().government]) {
     repopulateTimer -= dt;
     if (repopulateTimer <= 0) {
       spawnViper(true);
@@ -627,8 +695,8 @@ const drifters: Drifter[] = [];
 const MAX_DRIFTERS = 40;
 // Pull at the station's distance is about 0.05 m/s², so debris lingers for
 // several minutes (a window for scavengers) before falling in.
-// Simulated: canisters spilled near the station burn up after ~9 minutes (2.5–13).
-const PLANET_GM = 0.05 * 14000 ** 2;
+// Simulated: canisters spilled near the station burn up after ~9 minutes
+// (2.5–13). The pull scales with each system's station-to-planet distance.
 const DRIFT_DRAG = 0.05;
 const BURN_TIME = 2.5; // seconds from first glow to break-up
 const LOST_IN_SPACE = 40000; // drifters further than this from the planet are removed
@@ -671,16 +739,16 @@ function updateDrifters(dt: number) {
   for (let i = drifters.length - 1; i >= 0; i--) {
     const d = drifters[i];
     const root = d.model.root;
-    toPlanet.copy(PLANET_POS).sub(root.position);
+    toPlanet.copy(planetPos).sub(root.position);
     const r = toPlanet.length();
     toPlanet.normalize();
-    d.velocity.addScaledVector(toPlanet, (PLANET_GM / (r * r)) * dt);
+    d.velocity.addScaledVector(toPlanet, (planetGM / (r * r)) * dt);
     // Sideways and outward drift slowly dies away; the fall itself doesn't.
     // Without this, wrecks at speed would fling canisters off into deep space.
     const falling = Math.max(0, d.velocity.dot(toPlanet));
     d.velocity.addScaledVector(toPlanet, -falling).multiplyScalar(Math.exp(-DRIFT_DRAG * dt)).addScaledVector(toPlanet, falling);
 
-    if (r < ATMOSPHERE) {
+    if (r < atmosphere) {
       // Re-entry: air drag, faster tumbling, and the hull glows towards white-hot.
       d.burn += dt;
       d.velocity.multiplyScalar(Math.exp(-dt * 0.3));
@@ -690,12 +758,12 @@ function updateDrifters(dt: number) {
     root.position.addScaledVector(d.velocity, dt);
     root.rotateOnAxis(d.axis, d.spinRate * dt);
 
-    if (d.burn >= BURN_TIME || r < PLANET_RADIUS) {
+    if (d.burn >= BURN_TIME || r < planetRadius) {
       const flare = new Explosion(d.model.def, root, d.velocity);
       space.scene.add(flare.group);
       explosions.push(flare);
     }
-    if (d.burn >= BURN_TIME || r < PLANET_RADIUS || r > LOST_IN_SPACE) {
+    if (d.burn >= BURN_TIME || r < planetRadius || r > LOST_IN_SPACE) {
       disposeShip(d.model);
       drifters.splice(i, 1);
     }
@@ -786,13 +854,13 @@ function updateSpace(dt: number) {
     player.move(dt);
     player.recharge(dt);
 
-    const altitude = player.obj.position.distanceTo(PLANET_POS) - PLANET_RADIUS;
+    const altitude = player.obj.position.distanceTo(planetPos) - planetRadius;
     if (altitude < 0) {
       sfx.thud();
       die();
       return;
     }
-    if (altitude < PLANET_RADIUS * 0.12 && elapsed - lastAltitudeWarning > 4) {
+    if (altitude < planetRadius * 0.12 && elapsed - lastAltitudeWarning > 4) {
       lastAltitudeWarning = elapsed;
       sfx.beep();
       flash('Altitude warning', 1.5);
@@ -847,6 +915,7 @@ function updateSpace(dt: number) {
     updateHud(player, station, blips, autopilot, rollAssist);
     updateAimDisplay();
     updateCombatHud();
+    updateTravel(dt);
     updateMarkers();
     const turn = Math.abs(player.pitchGauge) + Math.abs(player.yawGauge) + Math.abs(player.rollGauge) * 0.6;
     engineSound.update(player.speed / player.maxSpeed, Math.min(1, turn / 1.2), dt);
@@ -934,8 +1003,8 @@ function updateAimDisplay() {
 }
 
 const KEYS_HINT = {
-  mouse: 'Mouse aim · Click fire · Right-click centre · W/S throttle · A/D roll · G galaxy map · H controls · C docking computer',
-  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · G galaxy map · H controls · C docking computer',
+  mouse: 'Mouse aim · Click fire · W/S throttle · A/D roll · G galaxy map · H hyperspace · J jump · C docking computer · F1 controls',
+  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · G galaxy map · H hyperspace · J jump · C docking computer · F1 controls',
 };
 
 function renderControlsCard() {
@@ -964,12 +1033,14 @@ function renderControlsCard() {
   )
     .concat([
       ['C', 'Docking computer'],
+      ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
+      ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
       ['K', 'Switch control scheme'],
       ['I', 'Invert pitch'],
       ['M', '1984 mode'],
       ['N', 'Sound: full / effects only / off'],
-      ['H', 'Show / hide this card'],
+      ['F1', 'Show / hide this card'],
     ])
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
     .join('');
@@ -992,6 +1063,7 @@ function showControlsCardOnce() {
 }
 
 async function launch() {
+  ensureSystemScene();
   setState('transition');
   if (!isRetro() && isWorking(cmdr(), 'docking-computer')) preloadRecording();
   sfx.tunnel();
@@ -1038,8 +1110,8 @@ function die() {
   deathCam.centre.copy(player.obj.position).addScaledVector(velocity, 0.6);
   // Watch from the side away from the nearest big body, so it never blocks the view.
   const fromStation = deathCam.centre.distanceTo(station.root.position);
-  const fromPlanet = deathCam.centre.distanceTo(PLANET_POS) - PLANET_RADIUS;
-  const away = deathCam.centre.clone().sub(fromPlanet < fromStation ? PLANET_POS : station.root.position);
+  const fromPlanet = deathCam.centre.distanceTo(planetPos) - planetRadius;
+  const away = deathCam.centre.clone().sub(fromPlanet < fromStation ? planetPos : station.root.position);
   if (away.lengthSq() < 1) away.copy(player.up());
   away.normalize();
   deathCam.axis.copy(away);
@@ -1091,9 +1163,143 @@ function padToKey(button: 'PadA' | 'PadB' | 'PadY' | 'PadStart'): string | null 
   }
 }
 
+// --- Witchspace travel: fuel, hyperspace and the in-system jump --------------------
+
+const HYPERSPACE_COUNTDOWN = 10; // seconds
+const MASS_LOCK_SHIPS = 2500; // metres: hostile ships this close stop a hyperspace jump
+const J_DISTANCE = 10000; // metres per in-system jump
+const J_LOCK_SHIPS = 3000;
+const J_LOCK_STATION = 4000;
+const J_LOCK_PLANET = 3000; // above the surface
+
+let countdown: number | null = null;
+let lastTick = 0;
+let jumpCooldown = 0;
+
+function destination(): StarSystem | null {
+  const c = cmdr();
+  return c.target === null ? null : systemAt(currentSystem().galaxy, c.target);
+}
+
+function toggleHyperspace() {
+  if (countdown !== null) {
+    countdown = null;
+    flash('Hyperspace cancelled', 1.5);
+    return;
+  }
+  const c = cmdr();
+  const dest = destination();
+  if (!dest || dest === currentSystem()) {
+    flash('No destination · choose one on the galaxy map (G)', 2.5);
+    return;
+  }
+  const d = distanceLy(currentSystem(), dest);
+  if (d > c.fuel) {
+    flash(`${dest.name} is ${d.toFixed(1)} LY away · fuel for ${c.fuel.toFixed(1)} LY`, 2.5);
+    return;
+  }
+  const near = police.some((p) => p.hostile && p.obj.position.distanceTo(player.obj.position) < MASS_LOCK_SHIPS);
+  if (near) {
+    flash('Mass locked · hostile ships too close', 2);
+    return;
+  }
+  countdown = HYPERSPACE_COUNTDOWN;
+  lastTick = Math.ceil(countdown);
+  flash(`Hyperspace to ${dest.name} · ${d.toFixed(1)} LY`, 2);
+}
+
+function updateTravel(dt: number) {
+  jumpCooldown = Math.max(0, jumpCooldown - dt);
+  $('#g-fuel').style.setProperty('--v', String(cmdr().fuel / FUEL_CAPACITY));
+  const el = $('#countdown');
+  if (countdown === null) {
+    el.hidden = true;
+    return;
+  }
+  countdown -= dt;
+  const shown = Math.max(0, Math.ceil(countdown));
+  el.hidden = false;
+  el.textContent = String(shown);
+  if (shown < lastTick) {
+    lastTick = shown;
+    sfx.tick();
+  }
+  if (countdown <= 0) {
+    countdown = null;
+    el.hidden = true;
+    void hyperspace();
+  }
+}
+
+async function hyperspace() {
+  const c = cmdr();
+  const dest = destination();
+  if (!dest) return;
+  const from = currentSystem();
+  setAutopilot(false);
+  setState('transition');
+  sfx.hyperspace();
+  await playTunnel(3.2, 'hyperspace');
+
+  c.fuel = Math.max(0, Math.round((c.fuel - distanceLy(from, dest)) * 10) / 10);
+  c.location = { galaxy: dest.galaxy, system: dest.index };
+  c.target = null;
+  // Records stay in the system where the crime happened (the law arrives in stage 4).
+  c.legal = 'clean';
+  saveCommander(c);
+  buildSystemScene(dest);
+
+  // Arrive some way out, off to one side of the station-planet line, so the
+  // station is ahead and the planet clearly beside it rather than behind it.
+  // Drifting slowly: take in the new system, then throttle up or use J.
+  const side = dest.extraSeed[2] & 1 ? 1 : -1;
+  const out = new THREE.Vector3(side, 0.3, -0.25).normalize();
+  player.obj.position.copy(out.multiplyScalar(26000));
+  player.obj.up.set(0, 1, 0);
+  player.obj.lookAt(station.root.position);
+  aim.reset(player);
+  player.speed = player.maxSpeed * 0.1;
+  setState('flying');
+  fadeFromWhite();
+  flash(`${dest.name} · ${GOVERNMENTS[dest.government]} · ${ECONOMIES[dest.economy]}`, 4);
+}
+
+/** The original's J key: leap ahead when nothing is near enough to mass-lock you. */
+function inSystemJump() {
+  if (jumpCooldown > 0) return;
+  const pos = player.obj.position;
+  const shipsNear = police.some((p) => p.obj.position.distanceTo(pos) < J_LOCK_SHIPS);
+  const stationNear = pos.distanceTo(station.root.position) < J_LOCK_STATION;
+  const planetNear = pos.distanceTo(planetPos) - planetRadius < J_LOCK_PLANET;
+  if (shipsNear || stationNear || planetNear) {
+    flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : 'planet'} too close`, 1.5);
+    return;
+  }
+  // Leap forward, but stop short of the station or the planet if they're ahead.
+  const fwd = player.forward();
+  let dist = J_DISTANCE;
+  const limit = (target: THREE.Vector3, keepOut: number) => {
+    const to = target.clone().sub(pos);
+    const along = to.dot(fwd);
+    if (along <= 0) return;
+    const miss = to.clone().addScaledVector(fwd, -along).length();
+    if (miss < keepOut) dist = Math.min(dist, Math.max(0, along - Math.sqrt(keepOut * keepOut - miss * miss)));
+  };
+  limit(station.root.position, J_LOCK_STATION - 200);
+  limit(planetPos, planetRadius + J_LOCK_PLANET - 200);
+  if (dist < 500) {
+    flash('Mass locked · too close ahead', 1.5);
+    return;
+  }
+  pos.addScaledVector(fwd, dist);
+  jumpCooldown = 1.2;
+  sfx.jump();
+  hitFeedback(0.15);
+  flash('Jump', 0.6);
+}
+
 // --- Where you are, and the galaxy charts ---------------------------------------
 
-const JUMP_RANGE = 7; // light years; becomes fuel-limited in the next stage
 
 function currentSystem(): StarSystem {
   const loc = commander?.location ?? { galaxy: 0, system: 7 };
@@ -1110,7 +1316,7 @@ function toggleGalaxyMap() {
   const here = currentSystem();
   openMap({
     current: here,
-    range: JUMP_RANGE,
+    range: c.fuel,
     target: c.target === null ? null : systemAt(here.galaxy, c.target),
     onTarget: (s) => {
       c.target = s.index;
@@ -1176,8 +1382,12 @@ function handleKey(code: string) {
       else if (code === 'KeyT') setDockTab(dockTab === 'market' ? 'station' : 'market');
       break;
     case 'flying':
-      if (code === 'KeyH') {
+      if (code === 'F1') {
         toggleControlsCard();
+      } else if (code === 'KeyH') {
+        toggleHyperspace();
+      } else if (code === 'KeyJ') {
+        inSystemJump();
       } else if (code === 'KeyK') {
         const s = toggleControlScheme();
         renderControlsCard();
