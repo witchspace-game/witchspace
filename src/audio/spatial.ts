@@ -3,55 +3,55 @@ import { audioGraph, noiseBuffer } from './sound';
 
 // Sounds that help you feel your ship and hear where others are:
 //  - your engine hum rises with speed; thrusters hiss while you turn
-//  - other ships' engines and lasers come from where they are (3D audio,
-//    best with headphones)
+//  - other ships' engines and lasers come from where they are
 //  - a soft double beep warns of a hostile on your tail
 
 const setParam = (p: AudioParam, v: number, t: number, smooth = 0.08) => p.setTargetAtTime(v, t, smooth);
 
+// Positioning is explicit stereo rather than the browser's HRTF "3D audio",
+// which is subtle and nearly centred on laptop and desktop speakers:
+//  - left/right: strong stereo pan from the sound's direction
+//  - behind you: muffled (low-pass), as sounds behind your head are
+//  - distance: quieter further away
+const listenerInverse = new THREE.Matrix4();
+const REF_DISTANCE = 200; // metres at full volume
+const PAN_STRENGTH = 1.6; // >1 exaggerates left/right so it's obvious on speakers
+
 /** Keep the listener's ears where the camera is. */
-export function setListener(position: THREE.Vector3, forward: THREE.Vector3, up: THREE.Vector3) {
-  const { ctx } = audioGraph();
-  const l = ctx.listener;
-  if (l.positionX) {
-    const t = ctx.currentTime;
-    l.positionX.setValueAtTime(position.x, t);
-    l.positionY.setValueAtTime(position.y, t);
-    l.positionZ.setValueAtTime(position.z, t);
-    l.forwardX.setValueAtTime(forward.x, t);
-    l.forwardY.setValueAtTime(forward.y, t);
-    l.forwardZ.setValueAtTime(forward.z, t);
-    l.upX.setValueAtTime(up.x, t);
-    l.upY.setValueAtTime(up.y, t);
-    l.upZ.setValueAtTime(up.z, t);
-  } else {
-    l.setPosition(position.x, position.y, position.z);
-    l.setOrientation(forward.x, forward.y, forward.z, up.x, up.y, up.z);
-  }
+export function setListener(camera: THREE.Camera) {
+  listenerInverse.copy(camera.matrixWorldInverse);
 }
 
-function placePanner(p: PannerNode, at: THREE.Vector3) {
-  const t = p.context.currentTime;
-  if (p.positionX) {
-    p.positionX.setValueAtTime(at.x, t);
-    p.positionY.setValueAtTime(at.y, t);
-    p.positionZ.setValueAtTime(at.z, t);
-  } else {
-    p.setPosition(at.x, at.y, at.z);
-  }
+interface Spatial {
+  input: AudioNode;
+  place(at: THREE.Vector3): void;
+  disconnect(): void;
 }
 
-function makePanner(at: THREE.Vector3): PannerNode {
+function makeSpatial(at: THREE.Vector3, refDistance = REF_DISTANCE): Spatial {
   const { ctx, master } = audioGraph();
-  const p = ctx.createPanner();
-  p.panningModel = 'HRTF';
-  p.distanceModel = 'inverse';
-  p.refDistance = 150;
-  p.rolloffFactor = 1.1;
-  p.maxDistance = 12000;
-  placePanner(p, at);
-  p.connect(master);
-  return p;
+  const muffle = ctx.createBiquadFilter();
+  muffle.type = 'lowpass';
+  const pan = ctx.createStereoPanner();
+  const gain = ctx.createGain();
+  muffle.connect(pan).connect(gain).connect(master);
+  const v = new THREE.Vector3();
+  const place = (p: THREE.Vector3) => {
+    v.copy(p).applyMatrix4(listenerInverse); // camera space: +x right, -z ahead
+    const dist = Math.max(1, v.length());
+    const t = ctx.currentTime;
+    setParam(pan.pan, THREE.MathUtils.clamp((v.x / dist) * PAN_STRENGTH, -1, 1), t, 0.03);
+    const behind = THREE.MathUtils.clamp(v.z / dist, 0, 1); // 0 ahead or beside, 1 directly behind
+    setParam(muffle.frequency, THREE.MathUtils.lerp(16000, 900, behind), t, 0.03);
+    setParam(gain.gain, refDistance / (refDistance + Math.max(0, dist - refDistance)), t, 0.03);
+  };
+  // Start from the right place rather than gliding in from the centre.
+  v.copy(at).applyMatrix4(listenerInverse);
+  const dist0 = Math.max(1, v.length());
+  pan.pan.value = THREE.MathUtils.clamp((v.x / dist0) * PAN_STRENGTH, -1, 1);
+  muffle.frequency.value = THREE.MathUtils.lerp(16000, 900, THREE.MathUtils.clamp(v.z / dist0, 0, 1));
+  gain.gain.value = refDistance / (refDistance + Math.max(0, dist0 - refDistance));
+  return { input: muffle, place, disconnect: () => gain.disconnect() };
 }
 
 /** A laser zap from a point in space. */
@@ -60,13 +60,13 @@ export function zapAt(at: THREE.Vector3, from: number, to: number, seconds: numb
   const t = ctx.currentTime;
   const o = ctx.createOscillator();
   const g = ctx.createGain();
-  const p = makePanner(at);
+  const p = makeSpatial(at);
   o.type = 'sawtooth';
   o.frequency.setValueAtTime(from, t);
   o.frequency.exponentialRampToValueAtTime(to, t + seconds);
   g.gain.setValueAtTime(volume, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + seconds);
-  o.connect(g).connect(p);
+  o.connect(g).connect(p.input);
   o.start(t);
   o.stop(t + seconds + 0.05);
   o.onended = () => p.disconnect();
@@ -85,8 +85,8 @@ export function boomAt(at: THREE.Vector3, seconds: number, cutoff: number, volum
   const g = ctx.createGain();
   g.gain.setValueAtTime(volume, t);
   g.gain.exponentialRampToValueAtTime(0.001, t + seconds);
-  const p = makePanner(at);
-  src.connect(f).connect(g).connect(p);
+  const p = makeSpatial(at);
+  src.connect(f).connect(g).connect(p.input);
   src.start(t);
   src.onended = () => p.disconnect();
 }
@@ -169,7 +169,7 @@ export class EngineSound {
 export class ShipVoice {
   private readonly osc: OscillatorNode;
   private readonly gain: GainNode;
-  private readonly panner: PannerNode;
+  private readonly spatial: Spatial;
 
   constructor(at: THREE.Vector3) {
     const { ctx } = audioGraph();
@@ -181,31 +181,30 @@ export class ShipVoice {
     filter.frequency.value = 420;
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
-    this.panner = makePanner(at);
-    this.osc.connect(filter).connect(this.gain).connect(this.panner);
+    this.spatial = makeSpatial(at);
+    this.osc.connect(filter).connect(this.gain).connect(this.spatial.input);
     this.osc.start();
   }
 
   update(at: THREE.Vector3, speed: number) {
-    const t = this.panner.context.currentTime;
-    placePanner(this.panner, at);
+    const t = this.gain.context.currentTime;
+    this.spatial.place(at);
     setParam(this.osc.frequency, 60 + speed * 50, t, 0.2);
     setParam(this.gain.gain, 0.35, t, 0.3);
   }
 
   dispose() {
-    const t = this.panner.context.currentTime;
+    const t = this.gain.context.currentTime;
     setParam(this.gain.gain, 0, t, 0.1);
     this.osc.stop(t + 0.5);
-    this.osc.onended = () => this.panner.disconnect();
+    this.osc.onended = () => this.spatial.disconnect();
   }
 }
 
 /** Two soft beeps from the direction of the threat. */
 export function tailWarning(at: THREE.Vector3) {
   const { ctx } = audioGraph();
-  const p = makePanner(at);
-  p.refDistance = 2000; // keep it audible regardless of distance
+  const p = makeSpatial(at, 2000); // audible regardless of distance
   for (const offset of [0, 0.14]) {
     const t = ctx.currentTime + offset;
     const o = ctx.createOscillator();
@@ -215,7 +214,7 @@ export function tailWarning(at: THREE.Vector3) {
     g.gain.setValueAtTime(0, t);
     g.gain.linearRampToValueAtTime(0.12, t + 0.01);
     g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-    o.connect(g).connect(p);
+    o.connect(g).connect(p.input);
     o.start(t);
     o.stop(t + 0.12);
   }

@@ -661,7 +661,8 @@ function updateSpace(dt: number) {
     }
   }
   space.stars.position.copy(camera.position);
-  setListener(camera.position, camera.getWorldDirection(new THREE.Vector3()), new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion));
+  camera.updateMatrixWorld();
+  setListener(camera);
   dust.update(camera.position, state === 'flying' ? player.forward().multiplyScalar(player.speed) : new THREE.Vector3());
 
   const blips: Blip[] = [
