@@ -30,6 +30,9 @@ The core Coriolis stations in established systems are never player-run. The law,
 
 ### 2. Players build outposts on the frontier
 
+*Physical limits apply: how many stations a world can hold, and how big they can grow, depend on its size, population and supply. See [stations and worlds](stations-and-worlds.md).*
+
+
 Player stations are **new places on the map**, built in frontier and anarchy systems, not takeovers of existing stations. That's where independent power fits the story, and it means player stations add to the galaxy rather than replacing the parts newcomers rely on.
 
 ### 3. Limited levers, within fixed bounds
