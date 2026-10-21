@@ -39,7 +39,7 @@ Prices are known **locally and immediately**, but everywhere else they're **news
 
 ## 3. Station exchanges (multiplayer)
 
-*(Built so far, single-player Modern: the market screen is an exchange. Each good trades as a pair against the credit. The order book is the station's real pricing curve. Prices drift slowly over real time, and a candlestick chart shows the market's exact price history, including your own trades. Player orders, market makers and AI-agent traders need multiplayer.)*
+*(Built so far, single-player Modern: the market screen is an exchange. Each good trades as a pair against the credit. The order book is the station's real pricing curve. Prices drift slowly over real time, and NPC traders buy and sell at every market as a deterministic stream of trades that moves prices, shows in the trades feed and in candle volume. The chart (TradingView Lightweight Charts) shows each market's exact price history, including your own trades. Player orders, resting limit orders, market makers and AI-agent traders need multiplayer.)*
 
 Busy stations run an **exchange with an order book** instead of a single posted price.
 

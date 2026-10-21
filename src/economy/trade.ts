@@ -24,7 +24,7 @@ const key = (s: StarSystem) => `${s.galaxy}:${s.index}`;
 /** Living markets remember recent trades, for the price history. */
 function logTrade(ctx: TradeContext, state: MarketState, id: string, side: 'buy' | 'sell', qty: number, total: number) {
   if (ctx.commander.difficulty === 'classic') return;
-  state.trades = [...(state.trades ?? []), { t: ctx.now, id, side, qty, total, stockAfter: state.stock[id] }].slice(-TRADE_MEMORY);
+  state.trades = [...(state.trades ?? []), { t: ctx.now, id, side, qty, total }].slice(-TRADE_MEMORY);
 }
 
 /** This station's market, created or brought up to date as needed. */
@@ -82,11 +82,17 @@ function price(ctx: TradeContext, id: string, qty: number, buying: boolean): num
 export function maxBuyable(ctx: TradeContext, id: string): number {
   if (!tradesHere(ctx, id)) return 0;
   const c = commodityById(id)!;
-  const stock = marketState(ctx).stock[id] ?? 0;
+  const stock = quotes(ctx).find((q) => q.commodity.id === id)!.stock;
   const bySpace = Math.floor(freeTonnes(ctx) * UNITS_PER_TONNE[c.unit] + 1e-9);
-  let n = Math.min(stock, bySpace);
-  while (n > 0 && price(ctx, id, n, true) > ctx.commander.credits) n--;
-  return n;
+  // Cost only rises with quantity, so find the most you can afford by halving.
+  let lo = 0;
+  let hi = Math.min(stock, bySpace);
+  while (lo < hi) {
+    const mid = Math.ceil((lo + hi) / 2);
+    if (price(ctx, id, mid, true) <= ctx.commander.credits) lo = mid;
+    else hi = mid - 1;
+  }
+  return lo;
 }
 
 export function buy(ctx: TradeContext, id: string, qty: number): TradeResult {
@@ -94,7 +100,7 @@ export function buy(ctx: TradeContext, id: string, qty: number): TradeResult {
   if (!c || qty <= 0) return { ok: false, message: 'Nothing to buy' };
   if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} can't be traded at a lawful station` };
   const state = marketState(ctx);
-  if ((state.stock[id] ?? 0) < qty) return { ok: false, message: `Not enough ${c.name} in stock` };
+  if (quotes(ctx).find((q) => q.commodity.id === id)!.stock < qty) return { ok: false, message: `Not enough ${c.name} in stock` };
   if (qty / UNITS_PER_TONNE[c.unit] > freeTonnes(ctx) + 1e-9) return { ok: false, message: 'Not enough room in the hold' };
   const cost = price(ctx, id, qty, true);
   if (cost > ctx.commander.credits) return { ok: false, message: 'Not enough credits' };

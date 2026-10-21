@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy, systemAt } from '../galaxy/generate';
 import { cargoTonnage, COMMODITIES } from './commodities';
-import { candles, costToBuy, drift, freshMarket, orderBook, priceAt, quoteClassic, quoteModern, recover } from './market';
+import { candles, costToBuy, drift, freshMarket, npcTrades, orderBook, priceAt, quoteClassic, quoteModern, recentTrades, recover, stockFor } from './market';
 
 const price = (q: ReturnType<typeof quoteModern>, id: string) => q.find((x) => x.commodity.id === id)!.price;
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -106,7 +106,7 @@ describe('the exchange view of a living market', () => {
     const state = freshMarket(lave, NOW);
     const before = priceAt(lave, state, 'food', NOW);
     state.stock.food -= 15;
-    state.trades = [{ t: NOW, id: 'food', side: 'buy', qty: 15, total: 0, stockAfter: state.stock.food }];
+    state.trades = [{ t: NOW, id: 'food', side: 'buy', qty: 15, total: 0 }];
     expect(priceAt(lave, state, 'food', NOW + 1)).toBeGreaterThan(before);
     expect(priceAt(lave, state, 'food', NOW - 1)).toBeCloseTo(before, 6);
   });
@@ -121,9 +121,35 @@ describe('the exchange view of a living market', () => {
 
   it('stops the asks where the stock runs out', () => {
     const state = freshMarket(lave, NOW);
-    state.stock.furs = 3;
+    state.stock.furs -= stockFor(lave, state, 'furs') - 3; // leave three for sale, other traders included
     const { asks, step } = orderBook(lave, state, 'furs', 8);
+    expect(stockFor(lave, state, 'furs')).toBe(3);
     expect(asks.reduce((n, l) => n + l.qty, 0)).toBe(3);
     expect(step).toBeGreaterThan(0);
+  });
+
+  it('has other traders buying and selling, the same for everyone', () => {
+    const a = npcTrades(lave, 'food', NOW, NOW + 3600_000);
+    expect(a.length).toBeGreaterThan(5);
+    expect(npcTrades(lave, 'food', NOW, NOW + 3600_000)).toEqual(a);
+    expect(new Set(a.map((e) => e.side)).size).toBe(2);
+  });
+
+  it('lets other traders move the price', () => {
+    const state = freshMarket(lave, NOW);
+    const [first] = npcTrades(lave, 'food', NOW, NOW + 3600_000);
+    const before = priceAt(lave, state, 'food', first.t - 1);
+    const after = priceAt(lave, state, 'food', first.t + 1);
+    if (first.side === 'buy') expect(after).toBeGreaterThan(before);
+    else expect(after).toBeLessThan(before);
+  });
+
+  it('counts everyone in the candle volume, and lists the latest trades newest first', () => {
+    const state = freshMarket(lave, NOW);
+    const cs = candles(lave, state, 'food', NOW, 3600_000, 6);
+    expect(cs.reduce((n, c) => n + c.volume, 0)).toBeGreaterThan(0);
+    const recent = recentTrades(lave, state, 'food', NOW, 10);
+    for (let k = 1; k < recent.length; k++) expect(recent[k].t).toBeLessThanOrEqual(recent[k - 1].t);
+    for (const e of recent) expect(e.price).toBeGreaterThan(0);
   });
 });
