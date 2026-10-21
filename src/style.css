@@ -331,6 +331,38 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
   pointer-events: none;
 }
 #target-info.hostile { color: var(--danger); }
+/* Exploring: the survey under way, and what you find at a signal. */
+#survey {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #c9b3ff;
+  pointer-events: none;
+}
+#survey .survey-bar { width: 180px; height: 3px; background: rgba(201, 179, 255, 0.2); }
+#survey .survey-bar i { display: block; height: 100%; width: calc(var(--v, 0) * 100%); background: #c9b3ff; box-shadow: 0 0 8px #c9b3ff; }
+#poi-log {
+  position: fixed;
+  left: 50%;
+  bottom: 200px; /* above the dashboard */
+  transform: translateX(-50%);
+  width: min(520px, calc(100vw - 32px));
+  border-color: rgba(201, 179, 255, 0.5);
+}
+#poi-log h3 { margin: 0 0 6px; color: #c9b3ff; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; }
+#poi-log p { margin: 0 0 6px; line-height: 1.45; }
+body.retro #survey { font-size: 8px; color: #fff; }
+body.retro #survey .survey-bar { background: #444; }
+body.retro #survey .survey-bar i { background: #fff; box-shadow: none; }
+body.retro #poi-log h3 { color: #fff; font-size: 12px; }
 #target-info .cargo { display: block; margin-top: 3px; font-size: 12px; letter-spacing: 0.06em; text-transform: none; color: var(--amber); }
 body.retro #target-info .cargo { font-size: 8px; color: inherit; }
 .bar.centred::after {

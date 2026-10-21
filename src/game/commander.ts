@@ -131,6 +131,7 @@ export const EQUIPMENT: Equipment[] = [
 import { cargoTonnage } from '../economy/commodities';
 import type { MarketState } from '../economy/market';
 import type { LaserId } from './weapons';
+import type { ExploreRecord } from './explore';
 
 export interface Commander {
   name: string;
@@ -169,6 +170,8 @@ export interface Commander {
   missiles: number;
   /** The laser fitted to each mount, if any. */
   lasers: Partial<Record<Mount, LaserId>>;
+  /** Where you've been, what you've surveyed and found (game/explore.ts). */
+  explore?: ExploreRecord;
 }
 
 const KEY = 'witchspace.commander.v1';

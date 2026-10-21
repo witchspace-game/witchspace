@@ -71,6 +71,8 @@ import { Beams, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
+import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
+import { bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, sellData, SURVEY, worldOf, type Body, type Poi } from './game/explore';
 import { SpaceDust } from './render/dust';
 import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
@@ -624,6 +626,7 @@ function renderDocked() {
     ['Legal status', legalLabel()],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', combatRating(c.kills)],
+    ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited`],
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   $('#cmdr .rename').addEventListener('click', () => startRename());
@@ -645,6 +648,27 @@ function renderDocked() {
     renderDocked();
   });
   $('#fuel').append(refuel);
+
+  // Survey data: sold here, for more the further it's come.
+  const dataRow = $('#data-row');
+  const data = exploreOf(c).data;
+  dataRow.hidden = c.difficulty !== 'modern';
+  if (!dataRow.hidden) {
+    const worth = data.reduce((sum, d) => sum + dataValue(d, here), 0);
+    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b></span>`;
+    dataRow.title = data.length ? data.map((d) => `${d.name}: ${dataValue(d, here)} Cr`).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
+    const sell = document.createElement('button');
+    sell.textContent = data.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
+    sell.disabled = !data.length;
+    sell.addEventListener('click', () => {
+      const paid = sellData(c, here);
+      saveCommander(c);
+      sfx.beep();
+      flash(`Survey data sold · ${paid.toLocaleString()} Cr`, 2);
+      renderDocked();
+    });
+    dataRow.append(sell);
+  }
 
   // Missiles: top up the rails.
   const rails = player.def.stats.missiles ?? 0;
@@ -1427,12 +1451,217 @@ function buildSystemScene(sys: StarSystem) {
   encounterTimer = 12 + Math.random() * 10;
   scanned = false;
   scanProgress = 0;
+  buildExploreScene(sys);
 }
 
 /** Make sure the scene matches where the commander is. */
 function ensureSystemScene() {
   const here = currentSystem();
   if (builtSystem !== here) buildSystemScene(here);
+}
+
+// --- Exploring (game/explore.ts) -----------------------------------------------------
+// Rings and moons are drawn for everyone; surveys and signals pay, so they're
+// Modern only, like the rest of what we've added to 1984.
+
+interface SceneBody {
+  body: Body;
+  centre: THREE.Vector3;
+  radius: number;
+  /** How low you need to be over its surface to survey it, in metres. */
+  range: number;
+}
+interface ScenePoi {
+  poi: Poi;
+  position: THREE.Vector3;
+  /** Shown on the HUD: after surveying the planet, or on flying near. */
+  revealed: boolean;
+  models: ShipModel[];
+  beacon: THREE.Group | null;
+}
+let sceneBodies: SceneBody[] = [];
+let scenePois: ScenePoi[] = [];
+let worldParts: THREE.Group[] = [];
+let survey: { target: SceneBody; progress: number } | null = null;
+const SIGNAL_DETECT = 6000; // metres: close enough to notice a signal without a survey
+const SIGNAL_REACH = 900; // metres: close enough to find out what it is
+const SIGNAL_COLOUR = '#c9b3ff';
+const DEAD_HULL = new THREE.Color(0.16, 0.16, 0.17); // no power, no glow
+const exploring = () => cmdr().difficulty === 'modern';
+
+function disposeExploreScene() {
+  for (const g of worldParts) disposeWorldPart(g);
+  for (const p of scenePois) {
+    for (const m of p.models) disposeShip(m);
+    if (p.beacon) disposeWorldPart(p.beacon);
+  }
+  worldParts = [];
+  scenePois = [];
+  sceneBodies = [];
+  survey = null;
+  $('#survey').hidden = true;
+}
+
+function buildExploreScene(sys: StarSystem) {
+  disposeExploreScene();
+  const w = worldOf(sys);
+  const c = commander;
+  if (w.rings) {
+    const rings = buildRings(planetRadius, w.rings, planetColour(sys));
+    rings.position.copy(planetPos);
+    space.scene.add(rings);
+    worldParts.push(rings);
+  }
+  const bodies = bodiesOf(sys);
+  sceneBodies.push({ body: bodies[0], centre: planetPos, radius: planetRadius, range: planetRadius * SURVEY.planet.altitude });
+  sceneBodies.push({ body: bodies[1], centre: SUN_POS, radius: SUN_RADIUS, range: SUN_RADIUS * SURVEY.star.altitude });
+  w.moons.forEach((m, i) => {
+    const radius = m.size * planetRadius;
+    let angle = m.angle;
+    const at = () => new THREE.Vector3(Math.cos(angle) * Math.cos(m.tilt), Math.sin(m.tilt), Math.sin(angle) * Math.cos(m.tilt)).multiplyScalar(m.orbit * planetRadius).add(planetPos);
+    // Keep the station's approach clear.
+    if (at().distanceTo(station.root.position) < planetRadius + radius) angle += Math.PI;
+    const moon = buildMoon(radius);
+    moon.position.copy(at());
+    space.scene.add(moon);
+    worldParts.push(moon);
+    sceneBodies.push({ body: bodies[2 + i], centre: moon.position, radius, range: radius * SURVEY.moon.altitude });
+  });
+  if (!c || c.difficulty !== 'modern') return;
+  const planetDone = isSurveyed(c, sys, 'planet');
+  for (const poi of poisOf(sys)) {
+    const dir = new THREE.Vector3(...poi.direction);
+    // Near enough that salvage isn't lost to space, and clear of the moons.
+    const position = dir.clone().multiplyScalar(Math.min(poi.distance * planetRadius, 30000)).add(planetPos);
+    for (const b of sceneBodies) if (b.body.kind === 'moon' && position.distanceTo(b.centre) < b.radius * 3) position.addScaledVector(dir, b.radius * 4);
+    const found = isFound(c, sys, poi.id);
+    const sp: ScenePoi = { poi, position, revealed: planetDone || found, models: [], beacon: null };
+    if (poi.kind === 'beacon') {
+      sp.beacon = buildBeacon();
+      sp.beacon.position.copy(position);
+      space.scene.add(sp.beacon);
+    } else {
+      const def = shipById(poi.ship ?? 'sidewinder');
+      const hulls = poi.kind === 'wrecks' ? 4 : 1;
+      for (let k = 0; def && k < hulls; k++) {
+        const model = buildShip(def);
+        // Dead ships: dark lines, slowly tumbling.
+        for (const l of model.lines) l.material.color.copy(l.base).multiplyScalar(0.08).lerp(DEAD_HULL, 0.6);
+        model.root.position.copy(position).add(new THREE.Vector3(Math.sin(k * 2.4), Math.cos(k * 1.7) * 0.5, Math.cos(k * 2.4)).multiplyScalar(k ? 120 + k * 40 : 0));
+        model.root.rotation.set(k * 1.1 + poi.direction[0], k * 0.7, poi.direction[2] * 2);
+        space.scene.add(model.root);
+        sp.models.push(model);
+      }
+    }
+    scenePois.push(sp);
+  }
+}
+
+/** Surveys under way, signals found, and the moons' surfaces. Returns true if you hit a moon. */
+function updateExplore(dt: number): boolean {
+  const pos = player.obj.position;
+  for (const b of sceneBodies) if (b.body.kind === 'moon' && pos.distanceTo(b.centre) < b.radius) return true;
+  for (const p of scenePois) {
+    for (const m of p.models) m.root.rotateOnAxis(TUMBLE_AXIS, dt * 0.03);
+    if (p.beacon) blinkBeacon(p.beacon, elapsed);
+  }
+  if (!exploring()) return false;
+  const c = cmdr();
+  const here = currentSystem();
+
+  // Surveying: hold close to something you haven't surveyed yet.
+  const near = sceneBodies.find((b) => pos.distanceTo(b.centre) - b.radius < b.range && !isSurveyed(c, here, b.body.id));
+  if (near && survey?.target !== near) survey = { target: near, progress: 0 };
+  if (survey) {
+    survey.progress = THREE.MathUtils.clamp(survey.progress + (near === survey.target ? dt : -dt * 0.5), 0, survey.target.body.time);
+    if (survey.progress >= survey.target.body.time) {
+      const done = survey.target.body;
+      recordSurvey(c, here, done);
+      saveCommander(c);
+      sfx.beep();
+      flash(`Survey complete · ${done.name} · data worth ${dataValue(exploreOf(c).data.at(-1)!, here)} Cr here, more further away`, 3.5);
+      survey = null;
+      if (done.id === 'planet') {
+        const hidden = scenePois.filter((p) => !p.revealed);
+        for (const p of hidden) p.revealed = true;
+        if (hidden.length) setTimeout(() => state === 'flying' && flash(hidden.length === 1 ? 'The survey picked up an unidentified signal' : `The survey picked up ${hidden.length} unidentified signals`, 3), 3800);
+      }
+    } else if (survey.progress <= 0 && near !== survey.target) survey = null;
+  }
+  const bar = $('#survey');
+  bar.hidden = !survey;
+  if (survey) {
+    bar.querySelector('.survey-label')!.textContent = `Surveying ${survey.target.body.name} · ${Math.floor((survey.progress / survey.target.body.time) * 100)}%`;
+    bar.style.setProperty('--v', String(survey.progress / survey.target.body.time));
+  }
+
+  // Signals: noticed close up, and found by flying to them.
+  for (const p of scenePois) {
+    if (isFound(c, here, p.poi.id)) continue;
+    const d = pos.distanceTo(p.position);
+    if (!p.revealed && d < SIGNAL_DETECT) {
+      p.revealed = true;
+      flash('Unidentified signal nearby', 2.5);
+    }
+    if (d < SIGNAL_REACH) discover(p);
+  }
+  return false;
+}
+const TUMBLE_AXIS = new THREE.Vector3(0.3, 1, 0.2).normalize();
+
+function discover(p: ScenePoi) {
+  const c = cmdr();
+  recordDiscovery(c, currentSystem(), p.poi);
+  if (p.poi.salvage.length) {
+    const cargo: Record<string, number> = {};
+    for (const s of p.poi.salvage) cargo[s.id] = (cargo[s.id] ?? 0) + s.qty * UNITS_PER_TONNE[commodityById(s.id)?.unit ?? 't'];
+    spillCargo(p.position, new THREE.Vector3(), cargo);
+  }
+  saveCommander(c);
+  sfx.beep();
+  flash(`Discovered: ${p.poi.name}${p.poi.salvage.length ? ' · cargo drifting free' : ''}`, 3);
+  showPoiLog(p.poi);
+}
+
+let poiLogTimer = 0;
+function showPoiLog(poi: Poi) {
+  const log = $('#poi-log');
+  log.querySelector('h3')!.textContent = poi.name;
+  log.querySelector('p')!.textContent = poi.log;
+  log.hidden = false;
+  clearTimeout(poiLogTimer);
+  poiLogTimer = window.setTimeout(() => (log.hidden = true), 14000);
+}
+addEventListener('keydown', () => {
+  const log = $('#poi-log');
+  if (!log.hidden) {
+    clearTimeout(poiLogTimer);
+    poiLogTimer = window.setTimeout(() => (log.hidden = true), 400); // let the key do its job too
+  }
+});
+
+/** HUD markers for moons and signals. */
+function exploreMarkers(km: (p: THREE.Vector3) => string): Marker[] {
+  const out: Marker[] = [];
+  for (const b of sceneBodies) {
+    if (b.body.kind !== 'moon') continue;
+    const near = player.obj.position.distanceTo(b.centre) < 30000;
+    out.push({ position: b.centre, color: '#9aa3ad', radius: b.radius, label: near ? `${b.body.name} ${km(b.centre)}` : undefined });
+  }
+  if (!exploring()) return out;
+  for (const p of scenePois) {
+    if (!p.revealed) continue;
+    const found = isFound(cmdr(), currentSystem(), p.poi.id);
+    out.push({ position: p.position, color: SIGNAL_COLOUR, radius: 30, label: found ? `${p.poi.name} ${km(p.position)}` : `Signal ${km(p.position)}` });
+  }
+  return out;
+}
+
+/** On arriving anywhere: note the visit, and say what's special here. */
+function arrivalNote(sys: StarSystem): string {
+  const first = recordVisit(cmdr(), sys);
+  const world = describeWorld(worldOf(sys));
+  return [world, first ? 'First visit' : ''].filter(Boolean).join(' · ');
 }
 
 // Fitted equipment is only at risk once the hull is badly hurt, and never
@@ -2414,7 +2643,7 @@ function updateSpace(dt: number) {
       return;
     }
     const altitude = player.obj.position.distanceTo(planetPos) - planetRadius;
-    if (altitude < 0) {
+    if (altitude < 0 || updateExplore(dt)) {
       sfx.thud();
       die();
       return;
@@ -2523,6 +2752,7 @@ function updateMarkers() {
   }));
   markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
   markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
+  markers.push(...exploreMarkers(km));
   for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, radius: 30, label: callsignTag(r, km(r.position)) });
   if (carrier?.rift) markers.push({ position: carrier.rift.group.position, color: '#cfe0ff', radius: carrier.rift.radius, label: `Rift ${km(carrier.rift.group.position)}` });
   for (const m of missiles) if (m.target === player) markers.push({ position: m.position, color: '#ff4d6d', radius: 6, label: `MISSILE ${km(m.position)}` });
@@ -2695,6 +2925,7 @@ async function launch() {
     setTimeout(() => flash('Tip: turn your phone sideways for the best view', 3), 2600);
   }
   flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
+  if (recordVisit(cmdr(), currentSystem())) saveCommander(cmdr()); // where you started counts
   announceEvent(currentSystem(), 2800);
 }
 
@@ -3313,12 +3544,15 @@ async function hyperspace() {
   setState('flying');
   fadeFromWhite();
   const wanted = legalStatus(c);
+  const note = arrivalNote(dest);
+  saveCommander(c);
+  if (note) setTimeout(() => state === 'flying' && flash(note, 3), 4200);
   flash(
     `${dest.name} · ${GOVERNMENTS[dest.government]} · ${ECONOMIES[dest.economy]}` +
       (wanted === 'fugitive' ? (c.warrant ? ' · Marshals warrant: police hostile' : ' · You are wanted here') : wanted === 'offender' ? ' · Offender here' : ''),
     4,
   );
-  announceEvent(dest, 4500);
+  announceEvent(dest, note ? 7800 : 4500);
   if (slipped) setTimeout(() => state === 'flying' && flash('You slipped away before the Marshals came through', 3.5), 5000);
   scheduleMarshals();
 }
@@ -3386,6 +3620,14 @@ function toggleGalaxyMap() {
     range: c.fuel,
     target: c.target === null ? null : systemAt(here.galaxy, c.target),
     news: newsLine,
+    explored: (s) => {
+      const e = exploreOf(c);
+      if (!e.visited.includes(`${s.galaxy}:${s.index}`)) return { visited: false, line: 'Not yet' };
+      if (c.difficulty !== 'modern') return { visited: true, line: 'Visited' };
+      const surveyed = bodiesOf(s).filter((b) => isSurveyed(c, s, b.id)).length;
+      const found = poisOf(s).filter((p) => isFound(c, s, p.id)).length;
+      return { visited: true, line: `Visited · surveyed ${surveyed} of ${bodiesOf(s).length}${found ? ` · ${found} signal${found === 1 ? '' : 's'} found` : ''}` };
+    },
     onTarget: (s) => {
       c.target = s.index;
       saveCommander(c);
@@ -3569,6 +3811,13 @@ if (import.meta.env.DEV) {
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },
+      get explore() { return { bodies: sceneBodies, pois: scenePois, planetPos, survey }; },
+      /** Hyperspace straight to a system in this galaxy, fuel or not. */
+      jumpTo(index: number) {
+        cmdr().target = index;
+        cmdr().fuel = FUEL_CAPACITY;
+        void hyperspace();
+      },
     },
   });
 }
