@@ -776,6 +776,13 @@ body.touch #banner { top: 30%; font-size: clamp(14px, 4.5vw, 24px); letter-spaci
 .ex-sym { color: var(--ex-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ex-sym b { color: var(--ex-text); font-weight: 600; }
 .ex-sym em { display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--ex-down); vertical-align: middle; font-size: 0; }
+.ex-tag { margin-left: 5px; padding: 0 4px; border-radius: 3px; font-style: normal; font-size: 9px; font-weight: 600; vertical-align: 1px; }
+.ex-tag.short { background: rgba(46, 189, 133, 0.16); color: var(--ex-up); }
+.ex-tag.glut { background: rgba(246, 70, 93, 0.16); color: var(--ex-down); }
+.ex-order { display: grid; grid-template-columns: 1.3fr 0.9fr 0.9fr; width: 100%; margin: 3px 0; padding: 4px 10px; border: 1px dashed; border-radius: 0; background: none; font-size: 11.5px; font-weight: 600; cursor: pointer; text-align: left; }
+.ex-order.buy { color: var(--ex-up); border-color: rgba(46, 189, 133, 0.5); background: rgba(46, 189, 133, 0.08); }
+.ex-order.sell { color: var(--ex-down); border-color: rgba(246, 70, 93, 0.5); background: rgba(246, 70, 93, 0.08); }
+.ex-order:hover { filter: brightness(1.2); }
 .ex-held { display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--ex-gold); vertical-align: middle; }
 
 /* Header */

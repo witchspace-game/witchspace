@@ -14,7 +14,7 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts';
 import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
-import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades } from '../economy/market';
+import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
 
 // The station market as a trading exchange, in the style of today's crypto
@@ -37,6 +37,7 @@ const TICKERS: Record<string, string> = {
   food: 'FOOD', textiles: 'TEXT', radioactives: 'RADS', slaves: 'SLAV', liquor: 'LIQR', luxuries: 'LUXR',
   narcotics: 'NARC', computers: 'COMP', machinery: 'MACH', alloys: 'ALOY', firearms: 'ARMS', furs: 'FURS',
   minerals: 'MINR', gold: 'GOLD', platinum: 'PLAT', gems: 'GEMS', alien: 'ALIN',
+  water: 'WATR', hydrogen: 'HYDR', electronics: 'ELEC', medicine: 'MEDS',
 };
 const ticker = (id: string) => TICKERS[id] ?? id.slice(0, 4).toUpperCase();
 
@@ -164,8 +165,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         const change = (q.price - was) / was;
         const held = ctx.commander.cargo[id] ?? 0;
         const off = !tradesHere(ctx, id);
+        const order = off ? null : stationOrder(ctx.system, state, id);
+        const tag = order ? `<i class="ex-tag ${order.side === 'buy' ? 'short' : 'glut'}">${order.side === 'buy' ? 'Short' : 'Surplus'}</i>` : '';
         return `<button class="ex-pair${id === selected ? ' active' : ''}${off ? ' off' : ''}" data-id="${id}" title="${q.commodity.name}${off ? ' · not traded at this lawful station' : ''}">
-          <span class="ex-sym"><b>${ticker(id)}</b>/CR${held ? '<i class="ex-held" title="In your hold"></i>' : ''}${q.commodity.legality === 'illegal' ? '<em title="Illegal goods">Illegal</em>' : ''}</span>
+          <span class="ex-sym"><b>${ticker(id)}</b>/CR${held ? '<i class="ex-held" title="In your hold"></i>' : ''}${q.commodity.legality === 'illegal' ? '<em title="Illegal goods">Illegal</em>' : ''}${tag}</span>
           <span class="num">${fmt(q.price)}</span>
           <span class="num ${change >= 0 ? 'up' : 'down'}">${pct(change)}</span>
         </button>`;
@@ -187,6 +190,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const fair = equilibriumPrice(ctx.system, c, index()) * drift(ctx.system, c, index(), ctx.now);
     const held = ctx.commander.cargo[selected] ?? 0;
     const u = unitLabel(c);
+    const balance = tradeBalance(ctx.system, selected);
+    const role = balance > 0.25 ? 'Made here · exported' : balance < -0.25 ? 'Imported' : 'Made and used locally';
+    const order = stationOrder(ctx.system, state, selected);
+    const demand = order
+      ? `<div><dt>Station ${order.side === 'buy' ? 'wants' : 'selling'}</dt><dd class="${order.side === 'buy' ? 'up' : 'down'}">${order.qty.toLocaleString()} ${u}</dd></div>`
+      : '';
     $('.ex-head').innerHTML = `
       <div class="ex-title"><b>${ticker(selected)}</b><span>/CR</span><small>${c.name} · per ${u}${c.legality === 'illegal' ? ' · <em>Illegal</em>' : ''}</small></div>
       <div class="ex-last ${change >= 0 ? 'up' : 'down'}">${fmt(q.price)}<small>Cr</small></div>
@@ -196,6 +205,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div><dt>1h low</dt><dd>${fmt(low)}</dd></div>
         <div><dt>Fair value</dt><dd title="The price if the station's stock were at its usual level">${fmt(fair)}</dd></div>
         <div><dt>Station stock</dt><dd>${q.stock.toLocaleString()} ${u}</dd></div>
+        <div><dt>Trade</dt><dd>${role}</dd></div>
+        ${demand}
         <div><dt>In your hold</dt><dd>${held.toLocaleString()} ${u}</dd></div>
       </dl>`;
   }
@@ -269,8 +280,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       );
       return kind === 'ask' ? html.reverse().join('') : html.join('');
     };
-    $('.ex-asks').innerHTML = asks.length ? rows(asks, 'ask') : '<p class="ex-empty">Sold out</p>';
-    $('.ex-bids').innerHTML = rows(bids, 'bid');
+    // The station's own order, if it's short or overstocked, sits at the top of its side.
+    const order = tradesHere(ctx, selected) ? stationOrder(ctx.system, state, selected) : null;
+    const orderRow = (o: NonNullable<typeof order>) =>
+      `<button class="ex-order ${o.side}" data-order="${o.side}" data-total="${o.qty}" title="${o.side === 'buy' ? 'The station is short and buying to restock: deliveries fill this order' : 'The station is overstocked and selling its surplus'}">
+        <span>${o.side === 'buy' ? 'Station buying' : 'Station selling'}</span><span class="num">${o.qty.toLocaleString()} ${u}</span><span class="num">avg ${fmt(o.price)}</span></button>`;
+    $('.ex-asks').innerHTML = (asks.length ? rows(asks, 'ask') : '<p class="ex-empty">Sold out</p>') + (order?.side === 'sell' ? orderRow(order) : '');
+    $('.ex-bids').innerHTML = (order?.side === 'buy' ? orderRow(order) : '') + rows(bids, 'bid');
     const live = quotes(ctx).find((x) => x.commodity.id === selected)!.price;
     const spread = asks.length ? asks[0].price - bids[0].price : 0;
     const was = priceAt(ctx.system, state, selected, ctx.now - HOUR);
@@ -381,6 +397,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       interval = el.dataset.interval as Interval;
     } else if (el.dataset.pct) {
       setQty((maxQty(deps.context()) * Number(el.dataset.pct)) / 100);
+    } else if (el.dataset.order) {
+      // Fill the station's order: sell into a buy order, buy from a sell order.
+      side = el.dataset.order === 'buy' ? 'sell' : 'buy';
+      setQty(Number(el.dataset.total));
     } else if (el.dataset.kind) {
       // Clicking a level fills the form: asks to buy, bids to sell, down to that level.
       side = el.dataset.kind === 'ask' ? 'buy' : 'sell';
