@@ -67,7 +67,7 @@ import { camera, isRetro, makeSpace, render, setRetro } from './render/renderer'
 import { buildShip, disposeShip, heatShip, type ShipModel } from './render/shipModel';
 import { buildHangar } from './render/hangar';
 import { stationName } from './galaxy/stationNames';
-import { clearFlash, flash, updateHud, type Blip } from './ui/hud';
+import { clearFlash, flash, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, GOVERNMENTS, systemAt, type StarSystem } from './galaxy/generate';
@@ -1967,11 +1967,12 @@ function updateSpace(dt: number) {
   setListener(camera);
   dust.update(camera.position, state === 'flying' ? player.forward().multiplyScalar(player.speed) : new THREE.Vector3());
 
+  const sighted = state === 'flying' ? sightedNpc() : null;
   const blips: Blip[] = [
-    { position: station.root.position, color: '#ffb347', big: true },
-    ...npcs.map((p) => ({ position: p.obj.position, color: npcColour(p) })),
-    ...drifters.map((d) => ({ position: d.model.root.position, color: '#ffd166' })),
-    ...missiles.map((m) => ({ position: m.position, color: '#ff6b6b' })),
+    { position: station.root.position, color: '#ffb347', kind: 'station' },
+    ...npcs.map((p): Blip => ({ position: p.obj.position, color: npcColour(p), kind: 'ship', sighted: p === sighted, locked: p === locked })),
+    ...drifters.map((d): Blip => ({ position: d.model.root.position, color: '#ffd166', kind: 'cargo' })),
+    ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
   if (state === 'flying') {
     updateHud(player, station, blips, autopilot, rollAssist);
@@ -2118,6 +2119,7 @@ function renderControlsCard() {
       ['X', 'Launch the locked missile'],
       ['Z', 'ECM: destroy every missile nearby, yours included (needs an ECM)'],
       ['1 2 3 4 / V', 'Look front, rear, left or right (V cycles); fire uses that mount\'s laser'],
+      ['R', 'Scanner range: 4 km for dogfights, 12 km for traffic'],
       ['B', 'Energy bomb: destroy every ship within 6 km (single use)'],
       ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
       ['U', 'Surrender to the police: slow down and hold still (fine, record cleared)'],
@@ -2659,6 +2661,8 @@ function handleKey(code: string) {
         toggleControlsCard();
       } else if (code === 'KeyH') {
         toggleHyperspace();
+      } else if (code === 'KeyR') {
+        flash(`Scanner range ${toggleScannerRange() / 1000} km`, 1.2);
       } else if (code === 'KeyJ') {
         inSystemJump();
       } else if (code === 'KeyU') {

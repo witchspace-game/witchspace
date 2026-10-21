@@ -3,13 +3,40 @@ import type { PlayerShip } from '../game/playerShip';
 import { MAX_ROLL_ERROR, type Station } from '../game/station';
 import { isRetro } from '../render/renderer';
 
-const SCANNER_RANGE = 4000; // metres
 const DOCK_AID_RANGE = 3000;
+
+// The scanner: the original's ellipse with stalks for height. Two ranges
+// (R switches): close for dogfights, wide for traffic.
+const SCANNER_RANGES = [4000, 12000]; // metres
+let rangeIndex = (() => {
+  try {
+    return Number(localStorage.getItem('witchspace.scannerRange') ?? 0) === 1 ? 1 : 0;
+  } catch {
+    return 0;
+  }
+})();
+
+/** Switch the scanner's range; returns the new range in metres. */
+export function toggleScannerRange(): number {
+  rangeIndex = 1 - rangeIndex;
+  try {
+    localStorage.setItem('witchspace.scannerRange', String(rangeIndex));
+  } catch {
+    // Storage blocked: the choice lasts this session.
+  }
+  return SCANNER_RANGES[rangeIndex];
+}
+
+export type BlipKind = 'station' | 'ship' | 'cargo' | 'missile';
 
 export interface Blip {
   position: THREE.Vector3;
   color: string;
-  big?: boolean;
+  kind: BlipKind;
+  /** The ship in your sights. */
+  sighted?: boolean;
+  /** Your missile is locked on to it. */
+  locked?: boolean;
 }
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -82,25 +109,86 @@ function drawScanner(ship: PlayerShip, blips: Blip[]) {
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  // Each contact is a dot on the ecliptic with a stalk showing height.
+  const range = SCANNER_RANGES[rangeIndex];
+  const now = performance.now() / 1000;
+  ctx.font = `${retro ? 8 : 11}px ${retro ? '"Press Start 2P", monospace' : 'Rajdhani, sans-serif'}`;
+  ctx.fillStyle = line;
+  ctx.textAlign = 'right';
+  ctx.fillText(`${range / 1000} km`, w - 4, h - 4);
+  ctx.textAlign = 'left';
+
+  // Each contact sits on the ecliptic with a stalk showing its height.
+  // Ships are bars, as in 1984; cargo a small box; missiles a blinking dart.
   const local = new THREE.Vector3();
   for (const b of blips) {
     local.copy(b.position);
     ship.obj.worldToLocal(local);
-    if (local.length() > SCANNER_RANGE) continue;
-    const x = cx + (-local.x / SCANNER_RANGE) * rx;
-    const y = cy - (local.z / SCANNER_RANGE) * ry;
-    const top = y - (local.y / SCANNER_RANGE) * ry * 1.6;
     const color = retro ? '#ffffff' : b.color;
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = retro ? 2 : 1.5;
+    if (local.length() > range) {
+      // Out of range: an arrow on the rim pointing its way. Not for cargo.
+      if (b.kind === 'cargo') continue;
+      const ang = Math.atan2(local.z, -local.x);
+      const ex = cx + Math.cos(ang) * rx;
+      const ey = cy - Math.sin(ang) * ry;
+      ctx.globalAlpha = 0.75;
+      ctx.beginPath();
+      const out = Math.atan2(-(ey - cy) / ry, (ex - cx) / rx);
+      const tip = (b.kind === 'station' ? 7 : 5) + (retro ? 1 : 0);
+      ctx.moveTo(ex + Math.cos(out) * 2, ey - Math.sin(out) * 2);
+      ctx.lineTo(ex - Math.cos(out) * tip + Math.sin(out) * tip * 0.6, ey + Math.sin(out) * tip + Math.cos(out) * tip * 0.6);
+      ctx.lineTo(ex - Math.cos(out) * tip - Math.sin(out) * tip * 0.6, ey + Math.sin(out) * tip - Math.cos(out) * tip * 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      continue;
+    }
+    const x = cx + (-local.x / range) * rx;
+    const y = cy - (local.z / range) * ry;
+    const top = y - (local.y / range) * ry * 1.6;
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(x, top);
     ctx.stroke();
-    const s = b.big ? 7 : 5;
-    ctx.fillRect(x - s / 2, top - 2, s, 3);
+    if (b.kind === 'cargo') {
+      ctx.strokeRect(Math.round(x - 2) + 0.5, Math.round(top - 3) + 0.5, 4, 4);
+    } else if (b.kind === 'missile') {
+      if (Math.floor(now * 6) % 2 === 0) {
+        ctx.beginPath();
+        ctx.moveTo(x, top - 4);
+        ctx.lineTo(x - 3, top + 2);
+        ctx.lineTo(x + 3, top + 2);
+        ctx.closePath();
+        ctx.fill();
+      }
+    } else {
+      const s = b.kind === 'station' ? 9 : 6;
+      ctx.fillRect(x - s / 2, top - 2, s, 3);
+    }
+    // The ship in your sights gets brackets; a missile lock, a pulsing ring.
+    if (b.sighted) {
+      ctx.strokeStyle = retro ? '#ffffff' : '#eafff6';
+      ctx.lineWidth = 1;
+      const r = 6;
+      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        ctx.beginPath();
+        ctx.moveTo(x + sx * r, top + sy * (r - 3));
+        ctx.lineTo(x + sx * r, top + sy * r);
+        ctx.lineTo(x + sx * (r - 3), top + sy * r);
+        ctx.stroke();
+      }
+    }
+    if (b.locked) {
+      ctx.strokeStyle = retro ? '#ffffff' : '#ff4d6d';
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.5 + 0.5 * Math.sin(now * 8);
+      ctx.beginPath();
+      ctx.arc(x, top, 9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
   }
 }
 
