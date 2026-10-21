@@ -38,6 +38,7 @@ import {
   systemKey,
   type Settlement,
 } from './game/law';
+import { claimInsurance } from './game/insurance';
 import {
   controlScheme,
   flightInput,
@@ -498,7 +499,7 @@ function renderDocked() {
     const names = imp.items.map((id) => EQUIPMENT.find((e) => e.id === id)?.name ?? id).join(', ') || 'Nothing';
     const atHere = imp.at === systemKey(here);
     const where = atHere ? 'this station' : systemAt(Number(imp.at.split(':')[0]), Number(imp.at.split(':')[1])).name;
-    li.innerHTML = `<span>Impounded <em class="damaged">${imp.owed.toLocaleString()} Cr owed</em></span><small>${names}, held at ${where} until the fine is paid.</small>`;
+    li.innerHTML = `<span>Impounded <em class="damaged">${imp.owed.toLocaleString()} Cr owed</em></span><small>${names}, held at ${where} until it's paid.</small>`;
     const pay = document.createElement('button');
     pay.textContent = atHere ? `Pay · ${imp.owed.toLocaleString()} Cr` : 'Pay there';
     pay.disabled = !atHere || c.credits < imp.owed;
@@ -1463,7 +1464,7 @@ function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, cargo: Record<st
 
 // --- Fuel scoops: canisters and sun-skimming ----------------------------------------
 
-const SCOOP_RANGE = 35; // metres from the ship's centre
+const SCOOP_RANGE = 45; // metres from the ship's centre
 const SCOOP_SPEED = 0.4; // fraction of top speed; any faster and the canister bounces off
 const HEAT_RANGE = SUN_RADIUS * 2.5; // above the surface: the cabin starts to warm
 const SKIM_RANGE = SUN_RADIUS * 0.8; // above the surface: close enough to scoop fuel
@@ -1477,8 +1478,15 @@ function tryScoop(d: Drifter): boolean {
   if (d.model.root.position.distanceTo(player.obj.position) > SCOOP_RANGE) return false;
   const c = cmdr();
   if (!isWorking(c, 'fuel-scoops') || player.speed > player.maxSpeed * SCOOP_SPEED) {
-    // Too fast, or no scoops: it bounces off.
+    // Too fast, or no scoops: it bounces off, and we say why.
     d.velocity.copy(d.model.root.position).sub(player.obj.position).setLength(25).addScaledVector(player.forward(), player.speed);
+    if (elapsed - lastScoopWarning > 3) {
+      lastScoopWarning = elapsed;
+      sfx.scrape();
+      if (!hasEquipment(c, 'fuel-scoops')) flash('Canister bounced off · no fuel scoops fitted', 2);
+      else if (!isWorking(c, 'fuel-scoops')) flash('Canister bounced off · fuel scoops damaged', 2);
+      else flash(`Too fast to scoop · slow to under ${Math.round(SCOOP_SPEED * 100)}% speed`, 2);
+    }
     return false;
   }
   // Unlabelled canisters (debris from police ships) hold whatever was going spare.
@@ -1500,6 +1508,7 @@ function tryScoop(d: Drifter): boolean {
   return true;
 }
 let lastHoldFullWarning = 0;
+let lastScoopWarning = -Infinity;
 
 /** Heat from the sun; with scoops, fuel from skimming it. Returns true if the heat destroyed the ship. */
 function updateSun(dt: number): boolean {
@@ -1907,6 +1916,7 @@ function renderControlsCard() {
       ['B', 'Energy bomb: destroy every ship within 6 km (single use)'],
       ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
       ['U', 'Surrender to the police: slow down and hold still (fine, record cleared)'],
+      ['Scoop', `Fly slowly (under ${Math.round(SCOOP_SPEED * 100)}% speed) straight into a cargo canister, a yellow dot on the scanner (needs Fuel Scoops)`],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
       ['K', 'Switch control scheme'],
       ['I', 'Invert pitch'],
@@ -2079,9 +2089,12 @@ function die() {
   // Whatever was in the hold is now floating free for anyone with fuel scoops.
   spillCargo(player.obj.position, velocity, c.cargo);
   c.cargo = {};
-  // A new ship, a clean slate: the police lose interest.
-  c.records = {};
-  c.warrant = false;
+  // Classic, as in 1984: a new ship is a clean slate and the police lose
+  // interest. Under Modern rules your record stands (see claimInsurance).
+  if (c.difficulty === 'classic') {
+    c.records = {};
+    c.warrant = false;
+  }
   surrenderTimer = null;
   laserHeat = 0;
   overheated = false;
@@ -2099,7 +2112,7 @@ function die() {
   player.speed = 0;
 
   const classic = c.difficulty === 'classic';
-  const pod = classic && hasEquipment(c, 'escape-pod');
+  const pod = hasEquipment(c, 'escape-pod');
   const gameOver = classic && !pod;
   setTimeout(() => flash(gameOver ? 'GAME OVER' : pod ? 'Escape pod launched' : 'Ship destroyed', 0), 1200);
 
@@ -2111,11 +2124,22 @@ function die() {
       showTitle();
       return;
     }
-    if (pod) removeEquipment(c, 'escape-pod');
-    c.damaged = []; // the insurers' replacement ship comes with everything working
+    let message: string;
+    if (classic) {
+      removeEquipment(c, 'escape-pod');
+      message = 'Picked up. Your insurers have replaced the ship.';
+    } else {
+      const claim = claimInsurance(c);
+      if (claim.kind === 'void') {
+        message = 'Insurance void: you were a Fugitive · the Co-operative has issued you a bare Cobra';
+      } else {
+        message = `${claim.pod ? 'Picked up. ' : ''}Insurance paid out · excess ${claim.excess.toLocaleString()} Cr`;
+        if (claim.owed > 0) message += ` · couldn't pay ${claim.owed.toLocaleString()} Cr · equipment impounded`;
+      }
+    }
     saveCommander(c);
     enterDocked();
-    flash(pod ? 'Picked up. Your insurers have replaced the ship.' : 'Insurance paid out. Fly safer, Commander.', 3.5);
+    flash(message, 5);
   }, 5000);
 }
 
@@ -2483,7 +2507,7 @@ function frame(now?: number) {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, legalStatus, renderDocked,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked,
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },

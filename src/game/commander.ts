@@ -9,7 +9,7 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; blurb: string }> =
   },
   modern: {
     name: 'Modern',
-    blurb: 'Scrapes cost shields and hull instead of your life. If you are destroyed, your insurers replace the ship and its equipment. Your cargo is still lost to space.',
+    blurb: 'Scrapes cost shields and hull instead of your life. If you are destroyed, your insurers replace the ship and its equipment, less an excess, but they won\'t pay for a Fugitive. Your cargo is still lost to space.',
   },
 };
 
@@ -103,8 +103,7 @@ export const EQUIPMENT: Equipment[] = [
     id: 'escape-pod',
     name: 'Escape Pod',
     price: 1000,
-    blurb: 'Ejects you if the ship is destroyed. Single use.',
-    classicOnly: true,
+    blurb: 'Ejects you if the ship is destroyed, and your equipment is saved, whatever the insurers say. Single use.',
     minTech: 5,
   },
 ];
@@ -218,7 +217,7 @@ export const isWorking = (c: Commander, id: EquipmentId) => hasEquipment(c, id) 
 /** Repairs cost a fraction of the item's price. */
 export const REPAIR_FRACTION = 0.3;
 
-// When a hit gets through to the hull, there's a chance it takes out
+// When a hit gets through to a badly hurt hull, there's a chance it takes out
 // something fitted: knocked offline under Modern rules (repair at a
 // station), destroyed outright under Classic, as in the original.
 const EQUIPMENT_HIT_CHANCE = 1 / 12;

@@ -93,9 +93,17 @@ export function settle(c: Commander, caught = false): Settlement {
   for (const id of confiscated) delete c.cargo[id];
   if (confiscated.length && status === 'clean') fine = FINES.offender; // caught at inspection
 
-  const paid = Math.min(fine, c.credits);
+  const { paid, owed, impounded } = charge(c, fine);
+  clearRecord(c);
+  c.warrant = false;
+  return { fine, paid, confiscated, impounded, owed };
+}
+
+/** Take what you can pay; if it isn't enough, your equipment is impounded here until you pay the rest. */
+export function charge(c: Commander, amount: number): { paid: number; owed: number; impounded: EquipmentId[] } {
+  const paid = Math.min(amount, c.credits);
   c.credits = Math.round((c.credits - paid) * 10) / 10;
-  const owed = Math.round((fine - paid) * 10) / 10;
+  const owed = Math.round((amount - paid) * 10) / 10;
   let impounded: EquipmentId[] = [];
   if (owed > 0) {
     impounded = [...c.equipment];
@@ -104,9 +112,7 @@ export function settle(c: Commander, caught = false): Settlement {
     const prev = c.impound && c.impound.at === systemKey(here(c)) ? c.impound : null;
     c.impound = { at: systemKey(here(c)), items: [...(prev?.items ?? []), ...impounded], owed: owed + (prev?.owed ?? 0) };
   }
-  clearRecord(c);
-  c.warrant = false;
-  return { fine, paid, confiscated, impounded, owed };
+  return { paid, owed, impounded };
 }
 
 /** Pay off an impound at the station holding it and get your equipment back. */
