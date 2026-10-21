@@ -164,7 +164,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (callsign.length < 2) return json({ error: 'Callsigns need at least two letters' }, 400);
     const rule = nameRule(callsign);
     if (rule?.rule === 'never') return json({ error: `${callsign} can't be used as a callsign: try another` }, 409);
-    if (rule && !this.releasedTo(callsign, account.email)) return json({ error: `${callsign} is reserved: try another` }, 409);
+    const holder = this.releasedTo(callsign);
+    if ((rule || holder) && holder !== account.email) return json({ error: `${callsign} is reserved: try another` }, 409);
     const key = callsign.toLowerCase();
     const taken = this.sql.exec('SELECT id FROM accounts WHERE callsign_key = ? AND id != ?', key, account.id).toArray()[0];
     if (taken) return json({ error: `CMDR ${callsign} is already taken: try another` }, 409);
@@ -172,8 +173,10 @@ export class Accounts extends DurableObject<AccountsEnv> {
     return json({ callsign });
   }
 
-  private releasedTo(callsign: string, email: string): boolean {
-    return this.sql.exec('SELECT 1 FROM releases WHERE name_key = ? AND email = ?', nameKey(callsign), email).toArray().length > 0;
+  /** The email a callsign has been released to, if any. */
+  private releasedTo(callsign: string): string | null {
+    const row = this.sql.exec('SELECT email FROM releases WHERE name_key = ?', nameKey(callsign)).toArray()[0];
+    return row ? (row.email as string) : null;
   }
 
   // --- Admin: releasing protected callsigns --------------------------------------
@@ -191,9 +194,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (request.method === 'POST' && path === '/admin/names/release') {
       const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
       if (!EMAIL.test(email)) return json({ error: 'That email doesn’t look right' }, 400);
+      if (name.length < 2) return json({ error: 'Callsigns need at least two letters' }, 400);
+      const holder = this.sql.exec('SELECT email FROM accounts WHERE callsign_key = ?', name.toLowerCase()).toArray()[0];
+      if (holder && holder.email !== email) return json({ error: `${name} is already someone’s callsign: revoke it first` }, 409);
       const rule = nameRule(name);
-      if (!rule) return json({ error: `${name} isn’t reserved: anyone can claim it` }, 400);
-      if (rule.rule === 'never') return json({ error: `${name} is never released (${rule.why})` }, 409);
+      // Releasing a name that isn't on the list protects it too: how we hold a fan's old callsign for them.
+      if (rule?.rule === 'never') return json({ error: `${name} is never released (${rule.why})` }, 409);
       this.sql.exec('INSERT OR REPLACE INTO releases (name_key, name, email, created) VALUES (?, ?, ?, ?)', nameKey(name), name, email, Date.now());
       return json({ released: name, to: email });
     }

@@ -6,6 +6,9 @@
 //              particular email address (tools/names.ts), and only the account
 //              signed in with that address can then claim it.
 //
+// Any other name can be released the same way, which protects it too: that's
+// how we hold an original fan's old callsign for them (launch/outreach.md).
+//
 // Names are matched loosely: case, spaces, punctuation, a CMDR prefix and
 // look-alike digits are ignored, so "CMDR J4meson" and "D. Braben" count.
 // `within` also catches the name inside a longer one; keep that for names
@@ -30,7 +33,7 @@ export const NAMES: NameRule[] = [
   { name: 'Acornsoft', rule: 'protected', within: true, why: 'Elite’s first publisher' },
   { name: 'Firebird', rule: 'protected', why: 'Published Elite on other machines' },
   { name: 'Frontier', rule: 'protected', why: 'Braben’s company and Elite’s sequel' },
-  { name: 'Moxon', rule: 'protected', within: true, why: 'Kept back by request' },
+  { name: 'Moxon', rule: 'protected', within: true, why: 'Mark Moxon, whose annotated Elite source (bbcelite.com) guided us' },
   { name: 'Oolite', rule: 'protected', within: true, why: 'The open-source Elite: for its people' },
 
   // This project
