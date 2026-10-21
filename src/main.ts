@@ -57,10 +57,11 @@ import { MouseAim } from './game/mouseAim';
 import { allies, NpcShip, type NpcRole } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
 import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
+import { cleanName } from '../server/src/protocol';
 import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
-import { combatRating } from './game/rating';
+import { combatRating, rankInsignia } from './game/rating';
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { Beams, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
@@ -325,6 +326,8 @@ function showNewGame() {
 
 function startCommander(difficulty: Difficulty) {
   commander = newCommander(difficulty);
+  // Your callsign: what other commanders see. Blank keeps the original's Jameson.
+  commander.name = cleanName($<HTMLInputElement>('#callsign').value.trim() || commander.name);
   saveCommander(commander);
   sfx.beep();
   enterDocked();
@@ -559,6 +562,27 @@ function showFittings(c: Commander | null) {
   model.root.add(fittings.group);
 }
 
+/** Change your callsign at a station: the name becomes a little form until you save or cancel. */
+function startRename() {
+  const c = cmdr();
+  const dd = $('#cmdr .rename').parentElement!;
+  dd.innerHTML = `<form class="rename-form"><input maxlength="24" value="${escapeHtml(c.name).replace(/"/g, '&quot;')}" aria-label="Callsign" /> <button type="submit">Save</button> <button type="button" data-cancel>Cancel</button></form>`;
+  const input = dd.querySelector('input')!;
+  input.focus();
+  input.select();
+  dd.querySelector('[data-cancel]')!.addEventListener('click', () => renderDocked());
+  dd.querySelector('form')!.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = cleanName(input.value);
+    if (name !== c.name) {
+      c.name = name;
+      saveCommander(c);
+      flash(`Callsign changed: CMDR ${name}`, 2);
+    }
+    renderDocked();
+  });
+}
+
 function renderDocked() {
   const c = cmdr();
   showFittings(c);
@@ -569,7 +593,7 @@ function renderDocked() {
   if (dockTab === 'market') renderMarket();
   if (dockTab === 'news') renderNews();
   const rows: [string, string][] = [
-    ['Commander', c.name],
+    ['Commander', `${escapeHtml(c.name)} <button type="button" class="rename" title="Change your callsign">Rename</button>`],
     ['Rules', DIFFICULTIES[c.difficulty].name],
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ['Ship', player.def.name],
@@ -580,6 +604,7 @@ function renderDocked() {
     ['Rating', combatRating(c.kills)],
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  $('#cmdr .rename').addEventListener('click', () => startRename());
 
   // Fuel: top up to a full tank at the station.
   const missing = Math.round((FUEL_CAPACITY - c.fuel) * 10) / 10;
@@ -2392,7 +2417,7 @@ function updateSpace(dt: number) {
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
   if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#cfe0ff', kind: 'station' });
-  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, kind: 'ship' });
+  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, kind: 'commander' });
   // Near a rift, contacts jitter about on the scanner.
   const noise = state === 'flying' ? riftInterference() : 0;
   if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
@@ -2430,7 +2455,7 @@ function updateMarkers() {
   }));
   markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
   markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
-  for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, radius: 30, label: `${r.name} ${km(r.position)}` });
+  for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, radius: 30, label: callsignTag(r, km(r.position)) });
   if (carrier?.rift) markers.push({ position: carrier.rift.group.position, color: '#cfe0ff', radius: carrier.rift.radius, label: `Rift ${km(carrier.rift.group.position)}` });
   for (const m of missiles) if (m.target === player) markers.push({ position: m.position, color: '#ff4d6d', radius: 6, label: `MISSILE ${km(m.position)}` });
   const view = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
@@ -2791,7 +2816,10 @@ function die() {
 // (see net/space.ts and server/). Stage 1 is look and fly together: their
 // lasers are drawn but don't hit anyone yet, and nothing is saved.
 
-const COMMANDER_COLOUR = '#dfe9ff';
+const COMMANDER_COLOUR = '#dfe9ff'; // their tags and scanner marks; ships keep their own colours
+
+/** Another commander's tag: rank insignia, callsign and range, e.g. "◆◆ CMDR Moxon · 0.8 km". */
+const callsignTag = (r: Remote, range: string) => `${rankInsignia(r.rank)} CMDR ${r.name} · ${range}`.trim();
 const BUMP_SEPARATION = 40; // metres each ship moves apart after a collision
 const remoteModels = new Map<string, { model: ShipModel; fireCooldown: number }>();
 const sharedSpace = new SharedSpace(onSpaceEvent);
@@ -2825,7 +2853,7 @@ function onSpaceEvent(e: SpaceEvent) {
       flash(e.others ? `Shared space · ${e.others} other commander${e.others === 1 ? '' : 's'} in ${currentSystem().name}` : `Shared space · nobody else in ${currentSystem().name} yet`, 3);
       break;
     case 'joined':
-      flash(`Commander ${e.remote.name} has arrived`, 2.5);
+      flash(`${`${rankInsignia(e.remote.rank)} CMDR ${e.remote.name}`.trim()} (${e.remote.rank}) has arrived`, 2.5);
       break;
     case 'left': {
       const m = remoteModels.get(e.remote.id);
@@ -2905,7 +2933,7 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
     return;
   }
   const here = currentSystem();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3', Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)));
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3', Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills));
   const back = sharedSpace.takeCorrection();
   if (back) player.obj.position.copy(back);
   sharedSpace.update(dt, {
@@ -2919,9 +2947,8 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
   for (const r of sharedSpace.remotes.values()) {
     let m = remoteModels.get(r.id);
     if (!m) {
-      // Other commanders' ships in their own colour, so you can tell them from NPCs.
-      const def = shipById(r.ship) ?? shipById('cobra-mk3')!;
-      const model = buildShip({ ...def, style: { ...def.style, lineColor: COMMANDER_COLOUR } });
+      // Other commanders fly their ships in the ship's own colours; their callsign tag says who they are.
+      const model = buildShip(shipById(r.ship) ?? shipById('cobra-mk3')!);
       space.scene.add(model.root);
       m = { model, fireCooldown: 0 };
       remoteModels.set(r.id, m);
@@ -3353,6 +3380,12 @@ addEventListener('keydown', (e) => {
   if ((e.target as HTMLElement).closest?.('input')) return; // typing a quantity, not flying
   if (e.code === 'Tab' && isMapOpen()) e.preventDefault(); // Tab switches charts, not focus
   if (!e.repeat) handleKey(e.code);
+});
+// Enter in the callsign box confirms it and starts with the default rules, as Enter does on that screen.
+$<HTMLInputElement>('#callsign').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  (e.target as HTMLInputElement).blur();
+  handleKey('Enter');
 });
 document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) =>
   b.addEventListener('click', () => {

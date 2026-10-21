@@ -5,7 +5,7 @@
 // See docs/design/servers-and-hosting.md.
 
 import { DurableObject } from 'cloudflare:workers';
-import { BUMP_COOLDOWN, cleanName, COLLIDE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
+import { BUMP_COOLDOWN, cleanName, COLLIDE, RANKS, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, takeHit, type Health, type Sample, type Track } from './rules';
 
 export interface Env {
@@ -88,7 +88,8 @@ export class SystemRoom extends DurableObject<Env> {
 
     if (msg.type === 'hello' && !a.commander) {
       const ship = msg.ship in SHIPS ? msg.ship : 'cobra-mk3';
-      a.commander = { id: crypto.randomUUID().slice(0, 8), name: cleanName(msg.name), ship, p: [0, 0, 0], q: [0, 0, 0, 1], s: 0, f: false };
+      const rank = typeof msg.rank === 'string' && RANKS.includes(msg.rank) ? msg.rank : 'Harmless';
+      a.commander = { id: crypto.randomUUID().slice(0, 8), name: cleanName(msg.name), rank, ship, p: [0, 0, 0], q: [0, 0, 0, 1], s: 0, f: false };
       ws.serializeAttachment(a);
       const lasers = Array.isArray(msg.lasers) ? msg.lasers.filter((l): l is string => typeof l === 'string' && l in LASERS) : [];
       this.combat.set(a.commander.id, {
