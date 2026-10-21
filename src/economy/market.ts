@@ -94,13 +94,26 @@ export function equilibriumPrice(system: StarSystem, c: Commodity, i: number): n
   return Math.max(0.4, c.basePrice * econ * tech * character);
 }
 
+/** How much a world makes of a good relative to an average world: above 1 it's a producer, below 1 it imports. */
+const production = (system: StarSystem, c: Commodity) => Math.min(3, Math.max(0.1, 1 - 4 * c.economyBias * (system.economy - MID)));
+
+/**
+ * A world's trade balance in a good, from -1 (imports nearly all it uses)
+ * to 1 (a big exporter). NPC traders mostly buy where it's positive and
+ * mostly deliver where it's negative.
+ */
+export function tradeBalance(system: StarSystem, id: string): number {
+  const c = COMMODITIES.find((x) => x.id === id)!;
+  if (c.baseSupply === 0) return 0;
+  return Math.max(-1, Math.min(1, Math.log2(production(system, c)) / 1.6));
+}
+
 export function equilibriumStock(system: StarSystem, c: Commodity, i: number): number {
   if (c.baseSupply === 0) return 0;
   // Worlds stock more of what they produce (where it's cheap).
-  const production = Math.min(3, Math.max(0.1, 1 - 4 * c.economyBias * (system.economy - MID)));
   const size = Math.sqrt(system.population / 2.5);
   const character = 0.75 + hash(system, 2, i) * 0.5;
-  return Math.round(c.baseSupply * production * size * character);
+  return Math.round(c.baseSupply * production(system, c) * size * character);
 }
 
 export function freshMarket(system: StarSystem, now: number): MarketState {
@@ -138,6 +151,12 @@ function pressure(eqStock: number, stock: number): number {
 // trades, since other traders' flows tend to offset); impacts older than
 // IMPACT_MEMORY have faded to nothing that matters. In the shared galaxy,
 // players' trades will be events on the same books.
+//
+// Trade has a direction. Producer worlds see NPC traders mostly buying
+// (exports), importers mostly see them delivering. Left to itself an
+// importer's stock would sit below its usual level and a producer's above;
+// it's the steady flow of traders that brings both to normal. Stop the
+// traders (a blockade, later) and importers run short.
 
 const NPC_SLOT = 120_000; // ms: at most one NPC trade per commodity per slot
 const NPC_CHANCE = 0.3; // chance of a trade in each slot, at a market of 20 units or more
@@ -155,6 +174,24 @@ export interface MarketEvent {
   price: number;
 }
 
+// Small markets see far fewer trades, as real illiquid markets do, so a
+// handful of tonnes isn't bought out every hour.
+const npcChance = (eq: number) => NPC_CHANCE * Math.min(1, (eq / 20) ** 2);
+const NPC_BIAS = 0.35; // how strongly trade direction follows the world's balance
+
+/**
+ * The average push the NPC trade flow gives a world's stock, in units: up at
+ * importers (deliveries), down at producers (exports). Subtracted from the
+ * flow's effect, so with normal traffic stock averages its usual level.
+ */
+function npcFlowMean(system: StarSystem, c: Commodity, i: number): number {
+  const eq = equilibriumStock(system, c, i);
+  if (eq <= 0) return 0;
+  const perMinute = npcChance(eq) / (NPC_SLOT / 60000);
+  const meanQty = levelStep(system, c, i) * 1.5;
+  return perMinute * NPC_RECOVERY_MINUTES * meanQty * (-2 * NPC_BIAS * tradeBalance(system, c.id));
+}
+
 /** The size of one level of the order book, and of a typical NPC trade. */
 const levelStep = (system: StarSystem, c: Commodity, i: number) => Math.max(1, Math.round(equilibriumStock(system, c, i) / 20));
 
@@ -165,9 +202,8 @@ export function npcTrades(system: StarSystem, id: string, from: number, to: numb
   const eq = equilibriumStock(system, c, i);
   if (eq <= 0) return [];
   const step = levelStep(system, c, i);
-  // Small markets see far fewer trades, as real illiquid markets do, so a
-  // handful of tonnes isn't bought out every hour.
-  const chance = NPC_CHANCE * Math.min(1, (eq / 20) ** 2);
+  const chance = npcChance(eq);
+  const pBuy = 0.5 + NPC_BIAS * tradeBalance(system, id);
   const out: MarketEvent[] = [];
   const M = 1_000_003;
   for (let k = Math.floor(from / NPC_SLOT); k <= Math.floor(to / NPC_SLOT); k++) {
@@ -175,7 +211,7 @@ export function npcTrades(system: StarSystem, id: string, from: number, to: numb
     if (hash(system, 20_000 + slot, i) >= chance) continue;
     const t = k * NPC_SLOT + hash(system, 30_000 + slot, i) * NPC_SLOT;
     if (t < from || t > to) continue;
-    const side = hash(system, 40_000 + slot, i) < 0.5 ? 'buy' : 'sell';
+    const side = hash(system, 40_000 + slot, i) < pBuy ? 'buy' : 'sell';
     out.push({ t, side, qty: step * (1 + Math.floor(hash(system, 50_000 + slot, i) * 2)), by: 'npc', price: 0 });
   }
   return out;
@@ -189,7 +225,8 @@ function npcDeviation(system: StarSystem, id: string, t: number): number {
   const key = `${system.galaxy}:${system.index}:${id}:${t}`;
   let d = npcCache.get(key);
   if (d === undefined) {
-    d = 0;
+    const i = COMMODITIES.findIndex((c) => c.id === id);
+    d = -npcFlowMean(system, COMMODITIES[i], i);
     for (const e of npcTrades(system, id, t - IMPACT_MEMORY, t)) d += signed(e) * npcDecay(t - e.t);
     if (npcCache.size > 5000) npcCache.clear();
     npcCache.set(key, d);
@@ -221,7 +258,7 @@ function yourDeviation(state: MarketState, id: string, t: number): number {
 
 /** Price at time `t` given the NPC trades in the window before it (oldest first). */
 function priceWith(system: StarSystem, state: MarketState, c: Commodity, i: number, t: number, npc: MarketEvent[]): number {
-  let d = yourDeviation(state, c.id, t);
+  let d = yourDeviation(state, c.id, t) - npcFlowMean(system, c, i);
   for (const e of npc) if (e.t <= t && e.t > t - IMPACT_MEMORY) d += signed(e) * npcDecay(t - e.t);
   const eq = equilibriumStock(system, c, i);
   return equilibriumPrice(system, c, i) * drift(system, c, i, t) * pressure(eq, eq + d);
@@ -277,6 +314,38 @@ export function recentTrades(system: StarSystem, state: MarketState, id: string,
   return events.sort((a, b) => b.t - a.t).slice(0, limit);
 }
 
+/** Below this share of its usual stock a station is short, and posts an order to restock. */
+export const SHORTAGE = 0.8;
+/** Above this share it has a surplus to clear. */
+export const SURPLUS = 1.25;
+
+export interface StationOrder {
+  side: 'buy' | 'sell'; // what the station is doing
+  qty: number; // units to get back to its usual stock
+  price: number; // average credits per unit across the order
+}
+
+/**
+ * The station's own order, if it's short or overstocked: a buy order for what
+ * it needs to get back to its usual stock, or a sell order for its surplus.
+ * Deliveries (yours or other traders') fill it, and it shrinks as they do.
+ */
+export function stationOrder(system: StarSystem, state: MarketState, id: string): StationOrder | null {
+  const i = COMMODITIES.findIndex((c) => c.id === id);
+  const eq = equilibriumStock(system, COMMODITIES[i], i);
+  if (eq <= 0) return null;
+  const stock = stockFor(system, state, id);
+  if (stock < eq * SHORTAGE) {
+    const qty = eq - stock;
+    return { side: 'buy', qty, price: proceedsToSell(system, state, id, qty) / qty };
+  }
+  if (stock > eq * SURPLUS) {
+    const qty = stock - eq;
+    return { side: 'sell', qty, price: costToBuy(system, state, id, qty) / qty };
+  }
+  return null;
+}
+
 export interface BookLevel {
   price: number; // average credits per unit across the level
   qty: number; // units
@@ -306,9 +375,10 @@ export function orderBook(system: StarSystem, state: MarketState, id: string, le
   return { asks, bids, step };
 }
 
-/** Prices for a Classic market: fresh each visit, `visit` picks the variation. */
+/** Prices for a Classic market: fresh each visit, `visit` picks the variation. The original goods only. */
 export function quoteClassic(system: StarSystem, visit: number): Quote[] {
-  return COMMODITIES.map((c, i) => {
+  return COMMODITIES.flatMap((c, i) => {
+    if (c.modernOnly) return [];
     const swing = 1 + (hash(system, 100 + visit, i) * 2 - 1) * c.volatility;
     const stockSwing = 0.8 + hash(system, 200 + visit, i) * 0.4;
     return {

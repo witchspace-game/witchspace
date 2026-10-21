@@ -22,6 +22,8 @@ export interface Commodity {
   /** How much prices vary between worlds and visits (0..1). */
   volatility: number;
   legality: Legality;
+  /** A Witchspace addition, traded under Modern rules only; Classic keeps the original list. */
+  modernOnly?: boolean;
 }
 
 export const COMMODITIES: Commodity[] = [
@@ -42,6 +44,11 @@ export const COMMODITIES: Commodity[] = [
   { id: 'platinum', name: 'Platinum', unit: 'kg', basePrice: 66, economyBias: -0.01, baseSupply: 110, volatility: 0.1, legality: 'legal' },
   { id: 'gems', name: 'Gem-stones', unit: 'g', basePrice: 17, economyBias: -0.01, baseSupply: 400, volatility: 0.15, legality: 'legal' },
   { id: 'alien', name: 'Alien Items', unit: 't', basePrice: 60, economyBias: 0, baseSupply: 0, volatility: 0.2, legality: 'legal' },
+  // Witchspace's additions, after the originals so their prices don't change.
+  { id: 'water', name: 'Water', unit: 't', basePrice: 2.4, economyBias: -0.05, baseSupply: 30, volatility: 0.06, legality: 'legal', modernOnly: true },
+  { id: 'hydrogen', name: 'Hydrogen Fuel Cells', unit: 't', basePrice: 14, economyBias: 0.04, baseSupply: 16, volatility: 0.12, legality: 'legal', modernOnly: true },
+  { id: 'electronics', name: 'Electronics', unit: 't', basePrice: 42, economyBias: 0.08, baseSupply: 10, volatility: 0.1, legality: 'legal', modernOnly: true },
+  { id: 'medicine', name: 'Medicine', unit: 't', basePrice: 48, economyBias: 0.06, baseSupply: 8, volatility: 0.2, legality: 'legal', modernOnly: true },
 ];
 
 export const commodityById = (id: string) => COMMODITIES.find((c) => c.id === id);

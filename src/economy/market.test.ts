@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy, systemAt } from '../galaxy/generate';
 import { cargoTonnage, COMMODITIES } from './commodities';
-import { candles, costToBuy, drift, freshMarket, npcTrades, orderBook, priceAt, quoteClassic, quoteModern, recentTrades, recover, stockFor } from './market';
+import { candles, costToBuy, drift, equilibriumStock, freshMarket, npcTrades, orderBook, priceAt, quoteClassic, quoteModern, recentTrades, recover, stationOrder, stockFor, tradeBalance } from './market';
 
 const price = (q: ReturnType<typeof quoteModern>, id: string) => q.find((x) => x.commodity.id === id)!.price;
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -151,5 +151,50 @@ describe('the exchange view of a living market', () => {
     const recent = recentTrades(lave, state, 'food', NOW, 10);
     for (let k = 1; k < recent.length; k++) expect(recent[k].t).toBeLessThanOrEqual(recent[k - 1].t);
     for (const e of recent) expect(e.price).toBeGreaterThan(0);
+  });
+});
+
+describe('supply and demand', () => {
+  const NOW = 1_800_000_000_000;
+  const systems = galaxy(0);
+
+  it('sends traders to buy where goods are made and deliver where they are wanted', () => {
+    const farm = systems.find((s) => tradeBalance(s, 'food') > 0.5)!;
+    const works = systems.find((s) => tradeBalance(s, 'food') < -0.5)!;
+    const sells = (s: typeof farm) => npcTrades(s, 'food', NOW, NOW + 48 * 3600_000).filter((e) => e.side === 'sell').length;
+    const buys = (s: typeof farm) => npcTrades(s, 'food', NOW, NOW + 48 * 3600_000).filter((e) => e.side === 'buy').length;
+    expect(buys(farm)).toBeGreaterThan(sells(farm));
+    expect(sells(works)).toBeGreaterThan(buys(works));
+  });
+
+  it('keeps stock around its usual level with normal traffic', () => {
+    for (const s of systems.slice(0, 40)) {
+      const i = COMMODITIES.findIndex((c) => c.id === 'food');
+      const eq = equilibriumStock(s, COMMODITIES[i], i);
+      if (eq < 20) continue;
+      let total = 0;
+      const n = 200;
+      for (let k = 0; k < n; k++) total += stockFor(s, freshMarket(s, NOW + k * 1_234_567), 'food');
+      expect(total / n).toBeGreaterThan(eq * 0.85);
+      expect(total / n).toBeLessThan(eq * 1.15);
+    }
+  });
+
+  it('posts a buy order when short, filled down by deliveries', () => {
+    const lave = systemAt(0, 7);
+    const state = freshMarket(lave, NOW);
+    const usual = equilibriumStock(lave, COMMODITIES[0], 0);
+    state.stock.food -= stockFor(lave, state, 'food') - Math.floor(usual / 2); // half empty
+    const order = stationOrder(lave, state, 'food')!;
+    expect(order.side).toBe('buy');
+    expect(order.qty).toBe(usual - Math.floor(usual / 2));
+    state.stock.food += 5;
+    expect(stationOrder(lave, state, 'food')!.qty).toBe(order.qty - 5);
+  });
+
+  it('keeps the new goods out of Classic markets', () => {
+    const lave = systemAt(0, 7);
+    expect(quoteClassic(lave, 1).some((q) => q.commodity.modernOnly)).toBe(false);
+    expect(quoteModern(lave, freshMarket(lave, NOW)).some((q) => q.commodity.id === 'medicine')).toBe(true);
   });
 });
