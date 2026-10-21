@@ -307,6 +307,9 @@ body.home.scrolled .site-header { background: rgba(5, 7, 13, 0.72); border-botto
 .compare-label.right { right: 16px; color: #fff; }
 .retro-label { font-family: ui-monospace, 'SF Mono', Menlo, monospace; letter-spacing: 0.1em; border-radius: 0; }
 
+.trailer { display: block; width: 100%; max-width: 1000px; margin: 0 auto; aspect-ratio: 16 / 9; border-radius: var(--radius); border: 1px solid var(--border-strong); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); background: #000; }
+.trailer-section { padding-bottom: 0; }
+
 /* --- Feature rows -------------------------------------------------------- */
 
 .showcase { display: grid; gap: clamp(64px, 9vw, 120px); }

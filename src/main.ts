@@ -2350,6 +2350,7 @@ function die() {
 
 function updateModeLabel() {
   $('#mode').textContent = isRetro() ? '1984 MODE' : 'NEO-VECTOR';
+  $('#look').classList.toggle('retro', isRetro());
 }
 
 /** Gamepad buttons map onto the keyboard action for the current screen. */

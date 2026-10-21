@@ -63,6 +63,26 @@ body.retro #whiteout { background: #fff; }
   text-shadow: 0 0 12px var(--accent), 0 0 32px rgba(61, 255, 176, 0.4);
 }
 #mode { font-size: 12px; letter-spacing: 0.3em; color: var(--dim); }
+/* The look switch: top right, out of the way of the main actions. */
+#look {
+  position: fixed;
+  top: 14px;
+  right: 16px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+#look span { padding: 3px 9px; color: var(--dim); }
+#look .neo, #look.retro .r84 { color: var(--bg, #000); background: var(--accent); }
+#look.retro .neo { color: var(--dim); background: none; }
+#look kbd { margin-left: 6px; padding: 0 5px; font: inherit; font-size: 10px; color: var(--dim); border: 1px solid var(--edge); }
+body.retro #look { font-size: 8px; letter-spacing: 0; }
+body.retro #look .r84 { color: #000; background: #fff; }
+body.touch #look kbd { display: none; }
 
 .panel {
   position: fixed;

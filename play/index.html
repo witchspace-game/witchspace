@@ -19,6 +19,11 @@
       <span id="mode"></span>
     </header>
 
+    <!-- The look: neo-vector or 1984. M switches it anywhere. -->
+    <button id="look" data-key="KeyM" data-screen="title newgame docked" title="Switch between neo-vector and 1984 mode (M)" aria-label="Switch between neo-vector and 1984 mode">
+      <span class="neo">Neo-vector</span><span class="r84">1984</span><kbd>M</kbd>
+    </button>
+
     <!-- Title: ship showroom -->
     <section class="panel" data-screen="title">
       <h2 id="ship-name"></h2>
@@ -31,7 +36,6 @@
     <nav class="controls" data-screen="title">
       <button data-key="ArrowLeft">◀ Prev</button>
       <button data-key="ArrowRight">Next ▶</button>
-      <button data-key="KeyM">M · 1984 mode</button>
       <button data-key="KeyY" id="load-button" class="primary">Y · Load commander</button>
       <button data-key="KeyN" id="new-button">N · New commander</button>
     </nav>
@@ -43,7 +47,6 @@
       <div id="rules"></div>
     </section>
     <nav class="controls" data-screen="newgame">
-      <button data-key="KeyM">M · 1984 mode</button>
       <button data-key="Escape">Esc · Back</button>
     </nav>
 
@@ -75,7 +78,6 @@
       </div>
     </section>
     <nav class="controls" data-screen="docked">
-      <button data-key="KeyM">M · 1984 mode</button>
       <button data-key="KeyG">G · Galaxy map</button>
       <button data-key="KeyL" class="primary">L · Launch</button>
     </nav>
