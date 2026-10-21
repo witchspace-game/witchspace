@@ -2,13 +2,22 @@ import * as THREE from 'three';
 import type { ShipDef, Vec3 } from '../content/types';
 import { neoLines, retroLines } from './wire';
 
-// Police livery: alternating blue/red light strips at the wingtips and a band
-// around the hull. It is applied by the game to ships in the police role and
-// can't be declared in a ship file, so nobody can paint themselves as police.
+// Liveries the law wears. Police: alternating blue/red light strips at the
+// wingtips and a white band around the hull. Co-operative Marshals: a gold
+// band and white lights that flash together. They're applied by the game to
+// ships in those roles and can't be declared in a ship file, so nobody can
+// paint themselves as the law.
 
-const BEACON_RATE = 2.2; // flashes per second
 const BLUE = new THREE.Color(0.9, 1.6, 6);
 const RED = new THREE.Color(4, 0.5, 0.6);
+const WHITE = new THREE.Color(1.7, 1.7, 1.9);
+
+export type Livery = 'police' | 'marshal';
+
+const LIVERIES: Record<Livery, { band: THREE.Color; bands: number; lights: [THREE.Color, THREE.Color]; rate: number; together: boolean }> = {
+  police: { band: new THREE.Color(1.6, 1.6, 1.8), bands: 1, lights: [BLUE, RED], rate: 2.2, together: false },
+  marshal: { band: new THREE.Color(3.4, 2.4, 0.6), bands: 2, lights: [WHITE, WHITE], rate: 1.1, together: true },
+};
 
 /** Line segments where the hull meets the plane z = z0: a band around the ship. */
 function hullBand(def: ShipDef, z0: number, inflate: number): number[] {
@@ -56,15 +65,19 @@ function lightStrip(def: ShipDef, tip: number, inflate: number): number[] {
 }
 
 /** Adds the livery to `root` and returns its neo/retro parts for the ship to register. */
-export function applyPoliceLivery(def: ShipDef, root: THREE.Group): { neo: THREE.Object3D[]; retro: THREE.Object3D[] } {
+export function applyLivery(def: ShipDef, root: THREE.Group, kind: Livery): { neo: THREE.Object3D[]; retro: THREE.Object3D[] } {
+  const look = LIVERIES[kind];
   const zs = def.geometry.vertices.map((v) => v[2]);
   const zMin = Math.min(...zs);
   const zMax = Math.max(...zs);
   const mid = zMin + (zMax - zMin) * 0.42;
   const width = (zMax - zMin) * 0.05;
-  const band = [...hullBand(def, mid, 1.03), ...hullBand(def, mid + width, 1.03)];
-  const stripeColor = new THREE.Color(1.6, 1.6, 1.8);
-  const neoStripe = neoLines(band, stripeColor, 1.8);
+  const band: number[] = [];
+  for (let k = 0; k < look.bands; k++) {
+    const at = mid - k * width * 2.2;
+    band.push(...hullBand(def, at, 1.03), ...hullBand(def, at + width, 1.03));
+  }
+  const neoStripe = neoLines(band, look.band, 1.8);
   const retroStripe = retroLines(band);
 
   // Light strips set into the hull along the edges that meet at each
@@ -74,12 +87,12 @@ export function applyPoliceLivery(def: ShipDef, root: THREE.Group): { neo: THREE
   const beacons = ([1, -1] as const).map((side, i) => {
     const t = tipIndex(side);
     const strip = lightStrip(def, t, 1.03);
-    const neo = neoLines(strip, i ? RED : BLUE, 3.4);
+    const neo = neoLines(strip, look.lights[i], 3.4);
     const retro = retroLines(strip);
     // Alternate the two sides, blinking by wall-clock time wherever the ship is drawn.
     const blink = (obj: THREE.Object3D, set: (on: boolean) => void) => {
       obj.onBeforeRender = () => {
-        const phase = (performance.now() / 1000) * BEACON_RATE + i * 0.5;
+        const phase = (performance.now() / 1000) * look.rate + (look.together ? 0 : i * 0.5);
         set(phase % 1 < 0.45);
       };
     };

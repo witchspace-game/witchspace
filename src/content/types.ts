@@ -3,7 +3,7 @@
 export type Vec3 = [number, number, number];
 
 export type ShipRole =
-  | 'trader' | 'fighter' | 'multirole' | 'police' | 'pirate' | 'miner'
+  | 'trader' | 'fighter' | 'multirole' | 'police' | 'marshal' | 'pirate' | 'miner'
   | 'freighter' | 'alien' | 'station' | 'missile' | 'cargo' | 'debris';
 
 export interface ShipDef {
