@@ -1,5 +1,5 @@
-import { commodityById } from '../economy/commodities';
 import { systemAt, type StarSystem } from '../galaxy/generate';
+import { contrabandAt } from '../economy/legality';
 import { EQUIPMENT, type Commander, type EquipmentId, type LegalStatus } from './commander';
 
 // The law, as set out in docs/design/law-and-travel.md:
@@ -61,13 +61,10 @@ export function coolRecords(c: Commander) {
 
 export const FINES = { offender: 100, fugitive: 500, warrant: 1000 };
 
-const contraband = (c: Commander) =>
-  Object.keys(c.cargo).filter((id) => c.cargo[id] > 0 && commodityById(id)?.legality === 'illegal');
+const contraband = (c: Commander, system: StarSystem = here(c)) => contrabandAt(c, system);
 
-export const carriesContraband = (c: Commander) => contraband(c).length > 0;
+export const carriesContraband = (c: Commander, system: StarSystem = here(c)) => contraband(c, system).length > 0;
 
-/** Lawful stations inspect your hold when you dock. */
-export const inspectsHolds = (s: StarSystem) => s.government >= 5;
 
 export interface Settlement {
   fine: number;

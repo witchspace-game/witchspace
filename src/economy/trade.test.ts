@@ -70,12 +70,30 @@ describe('trading', () => {
 });
 
 describe('the law at the market', () => {
-  it('lawful worlds refuse illegal goods; others have black markets', () => {
+  it('trades goods openly only where they are legal (Modern)', () => {
     const lawful = { commander: newCommander('modern'), system: systemAt(0, 147), capacity: 20, now: 0 }; // Diso, a democracy
     lawful.commander.credits = 1000;
     expect(buy(lawful, 'narcotics', 1).ok).toBe(false);
     expect(maxBuyable(lawful, 'narcotics')).toBe(0);
-    const lave = { commander: newCommander('modern'), system: systemAt(0, 7), capacity: 20, now: 0 }; // a dictatorship
+    const lave = { commander: newCommander('modern'), system: systemAt(0, 7), capacity: 20, now: 0 }; // a dictatorship: narcotics banned
+    lave.commander.credits = 1000;
+    expect(buy(lave, 'narcotics', 1).ok).toBe(false);
+    const anarchy = Array.from({ length: 256 }, (_, i) => systemAt(0, i)).find((s) => s.government === 0)!;
+    const free = { commander: newCommander('modern'), system: anarchy, capacity: 20, now: 0 };
+    free.commander.credits = 1000;
+    expect(buy(free, 'narcotics', 1).ok).toBe(true);
+  });
+
+  it('needs a weapons licence for firearms where they are licensed', () => {
+    const lave = { commander: newCommander('modern'), system: systemAt(0, 7), capacity: 20, now: 0 }; // dictatorship: licensed
+    lave.commander.credits = 1000;
+    expect(buy(lave, 'firearms', 1).ok).toBe(false);
+    lave.commander.equipment.push('weapons-licence');
+    expect(buy(lave, 'firearms', 1).ok).toBe(true);
+  });
+
+  it('keeps the 1984 rule under Classic: only lawful stations refuse illegal goods', () => {
+    const lave = { commander: newCommander('classic'), system: systemAt(0, 7), capacity: 20, now: 0 };
     lave.commander.credits = 1000;
     expect(buy(lave, 'narcotics', 1).ok).toBe(true);
   });

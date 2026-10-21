@@ -17,7 +17,7 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; tagline: string; b
 
 export type EquipmentId =
   | 'docking-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm'
-  | 'large-cargo-bay' | 'extra-energy' | 'energy-bomb' | 'galactic-hyperdrive';
+  | 'large-cargo-bay' | 'extra-energy' | 'energy-bomb' | 'galactic-hyperdrive' | 'weapons-licence';
 
 export type Mount = 'front' | 'rear' | 'left' | 'right';
 
@@ -108,6 +108,15 @@ export const EQUIPMENT: Equipment[] = [
     blurb: 'Ejects you if the ship is destroyed, and your equipment is saved, whatever the insurers say. Single use.',
     minTech: 5,
   },
+  {
+    id: 'weapons-licence',
+    name: 'Weapons Licence',
+    price: 300,
+    blurb: 'Lets you trade and carry Firearms where they are licensed rather than banned.',
+    modernOnly: true,
+    minTech: 1,
+    undamageable: true,
+  },
 ];
 
 import { cargoTonnage } from '../economy/commodities';
@@ -141,6 +150,8 @@ export interface Commander {
   fuel: number;
   /** Ships destroyed, for the combat rating. */
   kills: number;
+  /** Slaves handed to abolitionists to be freed (Modern rules). */
+  freed?: number;
   /** Missiles on the rails. */
   missiles: number;
   /** The laser fitted to each mount, if any. */

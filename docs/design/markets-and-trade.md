@@ -103,6 +103,8 @@ Events change production and consumption, so markets react on their own:
 
 ## 3. The black market
 
+*(Built so far, Modern rules: legality by government as in the table below; a Weapons Licence (300 Cr) for firearms where they're licensed; contraband judged by the local law in scans and inspections, and inspections at lawful stations are likely rather than certain (50–80%). A back room on the exchange in every system with a law to break: thin stock, an 8% spread each side, prices from 1.5× (feudal) to 3.2× (corporate state) the open price, smugglers coming and going, crackdowns drying it up, and a sting chance per deal from 2% to 22%, higher for big deals. A sting seizes the goods or the credits and makes you an Offender. Abolitionists at lawful worlds buy slaves to free them, legally, at about half the back-room price, and count the people you've freed. Traceable goods and the liberation mission line are still to come.)*
+
 Weapons, narcotics and slaves trade under their own rules.
 
 ### Legality by government
