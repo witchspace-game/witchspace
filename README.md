@@ -10,7 +10,7 @@ Witchspace keeps the soul of the original (crisp vector ships, hidden-line wiref
 
 ## Status
 
-🚧 **Early but playable.** Launch from a Coriolis station, fly the Cobra Mk III, and try to dock, by hand or with the docking computer and its waltz. Choose **Classic** rules (one life, as in 1984) or **Modern** rules (forgiving, insured). Trading, combat and multiplayer are next. See the [roadmap](#roadmap).
+🚧 **Early but playable.** Launch from a Coriolis station, fly the Cobra Mk III, and try to dock, by hand or with the docking computer and its waltz. Choose **Classic** rules (one life, as in 1984) or **Modern** rules (forgiving, insured, but crime doesn't pay). Trading, combat and multiplayer are next. See the [roadmap](#roadmap).
 
 ## Play it now
 
@@ -27,7 +27,7 @@ npm run dev
 
 Then open http://localhost:5173/play/ for the game, or http://localhost:5173 for the website.
 
-Witchspace has two control schemes. Press **K** in flight to switch, and **H** to see the controls card.
+Witchspace has two control schemes. Press **K** in flight to switch, and **F1** (fn + F1 on a Mac) to see the controls card.
 
 **Mouse + keyboard (default).** Click the game to capture the mouse, then move it to aim: the ship turns to put its nose on the ring.
 
@@ -68,7 +68,9 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **H** t
 
 **Gamepad:** left stick pitches and rolls, right stick yaws, triggers set speed, A launches and runs the docking computer, Y toggles 1984 mode.
 
-**Combat:** shoot a police Viper and you become a Fugitive. Every Viper turns on you, and the station launches reinforcements. Watch the laser temperature (LT) gauge: hold fire too long and it overheats. Losing your ship clears your record.
+**Combat:** shoot a police Viper and you become a Fugitive. Every Viper turns on you, and the station launches reinforcements. Watch the laser temperature (LT) gauge: hold fire too long and it overheats. Under **Classic** rules losing your ship clears your record. Under **Modern** rules your insurers replace the ship and kit, less an excess (a tenth of the kit's value, at least 250 Cr). The record stands, and they won't pay for a Fugitive: you get a bare Cobra instead, unless you fitted an escape pod. Surrendering (U) is usually cheaper.
+
+**Scooping cargo:** fit **Fuel Scoops**, then fly slowly (under 40% speed) straight into a cargo canister, the yellow dots on the scanner. It goes into the hold automatically.
 
 **Docking tip:** the station spins. Under **Modern** rules your ship matches the spin for you once you're close and pointing at the slot ("Roll match" lights up); just steer in and don't touch roll. Under **Classic** rules you keep rolling with it yourself, all the way in, as in 1984. In neo-vector mode, the glide path and docking aid show how far out you are.
 

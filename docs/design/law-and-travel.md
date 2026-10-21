@@ -67,7 +67,7 @@ Being refused docking, running out of fuel, losing your ship or falling into deb
 
 ## 5. Damage, disabling and capture
 
-*(Built so far: fitted upgrades can be knocked offline (Modern) or destroyed (Classic) by hull hits, 1 in 12 per hit, and are repaired at a station for 30% of their price.)*
+*(Built so far: fitted upgrades can be knocked offline (Modern) or destroyed (Classic) by hull hits once the hull is below half, 1 in 12 per hit and at most one every 10 seconds, and are repaired at a station for 30% of their price.)*
 
 - **Core systems can be hit, not just upgrades:** main engines, manoeuvring thrusters, shield generator, lasers and witchspace drive. Below about **25% hull**, hits are much more likely to reach them.
 - **Damage comes in stages:** a hit engine limps at half speed; damaged thrusters turn sluggishly; a hit witchspace drive can't jump.
@@ -91,6 +91,8 @@ Being refused docking, running out of fuel, losing your ship or falling into deb
 ## 7. Losing your ship: insurance, loans and loan sharks
 
 ### Insurance is a product you buy
+
+*(Built so far: everyone is insured, with no premiums yet. A claim costs an excess of a tenth of the kit's value (at least 250 Cr), impounding the kit if you can't pay. Kit that was already damaged stays damaged, and your record stands. Fugitives aren't covered and get a bare Cobra (pulse laser, no upgrades), unless an escape pod saves their kit.)*
 
 - **Insured:** you pay a premium each time you launch; losing your ship costs only an excess.
 - **Premiums rise** with a poor record. **Fugitives can't get cover.**
