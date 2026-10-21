@@ -268,7 +268,26 @@ function showTitle() {
   load.hidden = !saved;
   if (saved) load.textContent = `Y · Load ${saved.name} (${DIFFICULTIES[saved.difficulty].name})`;
   $('#new-button').classList.toggle('primary', !saved);
+  disarmNewCommander();
   setState('title');
+}
+
+// There's one commander at a time, and their rules can't change, so starting
+// again deletes them. That takes a second press.
+let newCommanderArmed = false;
+
+function armNewCommander(saved: Commander) {
+  newCommanderArmed = true;
+  const b = $('#new-button');
+  b.classList.add('armed');
+  b.textContent = `N again · delete ${saved.name} (${DIFFICULTIES[saved.difficulty].name} · ${saved.credits.toLocaleString()} Cr · ${combatRating(saved.kills)})`;
+}
+
+function disarmNewCommander() {
+  newCommanderArmed = false;
+  const b = $('#new-button');
+  b.classList.remove('armed');
+  b.textContent = 'N · New commander';
 }
 
 /** Classic is the natural default for anyone playing in 1984 mode. */
@@ -281,7 +300,7 @@ function showNewGame() {
     const b = document.createElement('button');
     const isDefault = d === defaultDifficulty();
     b.classList.toggle('primary', isDefault);
-    b.innerHTML = `<b>${i + 1} · ${DIFFICULTIES[d].name}</b><small>${DIFFICULTIES[d].blurb}</small>${isDefault ? '<em>Default · Enter</em>' : ''}`;
+    b.innerHTML = `<b>${i + 1} · ${DIFFICULTIES[d].name}</b><strong>${DIFFICULTIES[d].tagline}</strong><small>${DIFFICULTIES[d].blurb}</small>${isDefault ? '<em>Default · Enter</em>' : ''}`;
     b.addEventListener('click', () => startCommander(d));
     list.append(b);
   });
@@ -2417,7 +2436,12 @@ function handleKey(code: string) {
         commander = loadCommander();
         if (commander) enterDocked();
         else showNewGame();
-      } else if (code === 'KeyN') showNewGame();
+      } else if (code === 'KeyN') {
+        const saved = loadCommander();
+        if (saved && !newCommanderArmed) armNewCommander(saved);
+        else showNewGame();
+      }
+      if (code !== 'KeyN' && newCommanderArmed) disarmNewCommander();
       break;
     case 'newgame':
       if (code === 'Digit1') startCommander('classic');
