@@ -902,6 +902,12 @@ function ensureSystemScene() {
   if (builtSystem !== here) buildSystemScene(here);
 }
 
+// Fitted equipment is only at risk once the hull is badly hurt, and never
+// more than one item in quick succession, so a scrape doesn't strip the ship.
+const EQUIPMENT_RISK_HULL = 0.5; // fraction of full hull
+const EQUIPMENT_HIT_GAP = 10; // seconds between items lost
+let equipmentHitCooldown = 0;
+
 /**
  * Damage the player's ship. Shields soak hits first; once a hit reaches the
  * hull it may take out fitted equipment. Returns true if the ship is destroyed.
@@ -909,9 +915,11 @@ function ensureSystemScene() {
 function damagePlayer(amount: number): boolean {
   const hullBefore = player.hull;
   const destroyed = player.damage(amount);
-  if (!destroyed && player.hull < hullBefore && commander) {
+  const badlyHurt = player.hull < player.def.stats.hull * EQUIPMENT_RISK_HULL;
+  if (!destroyed && player.hull < hullBefore && badlyHurt && equipmentHitCooldown <= 0 && commander) {
     const hit = rollEquipmentDamage(cmdr());
     if (hit) {
+      equipmentHitCooldown = EQUIPMENT_HIT_GAP;
       sfx.scrape();
       flash(cmdr().difficulty === 'classic' ? `${hit.name} destroyed!` : `${hit.name} damaged · repair at a station`, 2.5);
       if (hit.id === 'docking-computer' && autopilot) setAutopilot(false);
@@ -1347,6 +1355,7 @@ function playerEcm() {
 
 function updateMissiles(dt: number) {
   ecmCooldown = Math.max(0, ecmCooldown - dt);
+  equipmentHitCooldown = Math.max(0, equipmentHitCooldown - dt);
   const alive = state === 'flying';
   if (locked && (!npcs.includes(locked) || locked.obj.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
     locked = null;
