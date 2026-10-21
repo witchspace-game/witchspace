@@ -56,7 +56,7 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **F1** 
 | --- | --- |
 | Y / N | Load your commander / start a new one (press N twice: it replaces your current commander) |
 | L | Launch from the station |
-| T | Market: buy and sell goods (when docked) |
+| T | Market: buy and sell goods (when docked). Under Modern rules it's a full exchange: pairs, a live candlestick chart, the order book and market orders |
 | C | Docking computer (once you've bought one) |
 | H | Hyperspace to your chosen destination (10 second countdown; H again cancels) |
 | J | In-system jump: leap about 10 km ahead, unless ships, the station or the planet are too close |

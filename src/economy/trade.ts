@@ -1,7 +1,7 @@
 import type { Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
 import { commodityById, cargoTonnage, UNITS_PER_TONNE } from './commodities';
-import { costToBuy, freshMarket, proceedsToSell, quoteClassic, quoteModern, recover, type MarketState, type Quote } from './market';
+import { costToBuy, freshMarket, proceedsToSell, quoteClassic, quoteModern, recover, TRADE_MEMORY, type MarketState, type Quote } from './market';
 
 // Buying and selling at the station you're docked at. Pure functions over the
 // commander's state, so they can be tested without the game running.
@@ -21,8 +21,14 @@ export interface TradeResult {
 
 const key = (s: StarSystem) => `${s.galaxy}:${s.index}`;
 
+/** Living markets remember recent trades, for the price history. */
+function logTrade(ctx: TradeContext, state: MarketState, id: string, side: 'buy' | 'sell', qty: number, total: number) {
+  if (ctx.commander.difficulty === 'classic') return;
+  state.trades = [...(state.trades ?? []), { t: ctx.now, id, side, qty, total, stockAfter: state.stock[id] }].slice(-TRADE_MEMORY);
+}
+
 /** This station's market, created or brought up to date as needed. */
-function marketState(ctx: TradeContext): MarketState {
+export function marketState(ctx: TradeContext): MarketState {
   const c = ctx.commander;
   const k = key(ctx.system);
   if (c.difficulty === 'classic') {
@@ -95,6 +101,7 @@ export function buy(ctx: TradeContext, id: string, qty: number): TradeResult {
   ctx.commander.credits = Math.round((ctx.commander.credits - cost) * 10) / 10;
   state.stock[id] -= qty;
   ctx.commander.cargo[id] = (ctx.commander.cargo[id] ?? 0) + qty;
+  logTrade(ctx, state, id, 'buy', qty, cost);
   return { ok: true, message: `Bought ${qty} ${c.unit} of ${c.name} for ${cost.toFixed(1)} Cr` };
 }
 
@@ -108,6 +115,7 @@ export function sell(ctx: TradeContext, id: string, qty: number): TradeResult {
   const state = marketState(ctx);
   state.stock[id] = (state.stock[id] ?? 0) + qty;
   ctx.commander.cargo[id] = held - qty;
+  logTrade(ctx, state, id, 'sell', qty, proceeds);
   if (ctx.commander.cargo[id] <= 0) delete ctx.commander.cargo[id];
   return { ok: true, message: `Sold ${qty} ${c.unit} of ${c.name} for ${proceeds.toFixed(1)} Cr` };
 }

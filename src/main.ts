@@ -56,6 +56,7 @@ import { NpcShip, type NpcRole } from './game/npc';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
 import { combatRating } from './game/rating';
+import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { Beams, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
@@ -356,8 +357,13 @@ function setDockTab(tab: DockTab) {
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
   $('#tab-market').hidden = tab !== 'market';
-  $('.panel.docked').classList.toggle('wide', tab === 'market');
-  if (tab === 'market') renderMarket();
+  if (tab === 'market') {
+    exchange.selectHeld(cmdr().cargo);
+    renderMarket();
+  } else {
+    $('.panel.docked').classList.remove('wide', 'exchange');
+    exchange.stop();
+  }
 }
 document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) =>
   b.addEventListener('click', () => {
@@ -370,7 +376,32 @@ function tradeContext(): TradeContext {
   return { commander: cmdr(), system: currentSystem(), capacity: cargoCapacity(cmdr(), player.def.stats.cargo), now: Date.now() };
 }
 
+// Modern markets in neo-vector mode get the full exchange; Classic and 1984
+// mode keep the plain price list.
+const exchange = mountExchange($('#exchange'), {
+  context: tradeContext,
+  traded(result) {
+    if (result.ok) {
+      saveCommander(cmdr());
+      sfx.beep();
+    }
+    renderMarket(result.message);
+  },
+});
+const useExchange = () => cmdr().difficulty === 'modern' && !isRetro();
+
 function renderMarket(message = '') {
+  const ex = useExchange();
+  $('.panel.docked').classList.toggle('exchange', ex);
+  $('.panel.docked').classList.toggle('wide', !ex);
+  $('#exchange').hidden = !ex;
+  for (const id of ['#market-summary', '#market-table', '#market-message']) $(id).hidden = ex;
+  if (ex) {
+    exchange.render(message || undefined);
+    exchange.start();
+    return;
+  }
+  exchange.stop();
   const ctx = tradeContext();
   const c = ctx.commander;
   const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -2466,6 +2497,7 @@ function handleKey(code: string) {
     setRetro(!isRetro());
     updateModeLabel();
     if (state === 'newgame') showNewGame(); // the default rules follow the mode
+    if (state === 'docked' && dockTab === 'market') renderMarket(); // exchange or 1984 price list
     return;
   }
   if (code === 'KeyN' && state !== 'title') {
@@ -2539,6 +2571,7 @@ function handleKey(code: string) {
 }
 
 addEventListener('keydown', (e) => {
+  if ((e.target as HTMLElement).closest?.('input')) return; // typing a quantity, not flying
   if (e.code === 'Tab' && isMapOpen()) e.preventDefault(); // Tab switches charts, not focus
   if (!e.repeat) handleKey(e.code);
 });
