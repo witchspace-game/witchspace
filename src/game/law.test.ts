@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
 import { newCommander } from './commander';
-import { coolRecords, equipmentForSale, legalStatus, recordCrime, redeemImpound, settle, FINES } from './law';
+import { coolRecords, equipmentForSale, legalStatus, recordCrime, redeemImpound, settle, fineDue, FINES } from './law';
 
 const LAVE = systemAt(0, 7);
 
@@ -62,6 +62,16 @@ describe('the law', () => {
     expect(c.credits).toBe(1000 - FINES.offender);
     expect(c.cargo).toEqual({ food: 3 });
     expect(legalStatus(c)).toBe('clean');
+  });
+
+  it('a warrant adds to the fine, and settling lifts it', () => {
+    const c = newCommander('modern');
+    c.credits = 5000;
+    recordCrime(c, 'fugitive', true);
+    expect(fineDue(c)).toBe(FINES.fugitive + FINES.warrant);
+    expect(settle(c).fine).toBe(FINES.fugitive + FINES.warrant);
+    expect(c.warrant).toBe(false);
+    expect(fineDue(c)).toBe(0);
   });
 
   it('impounds equipment when you cannot pay, until you do', () => {
