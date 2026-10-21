@@ -1,12 +1,31 @@
+import {
+  CandlestickSeries,
+  ColorType,
+  createChart,
+  createSeriesMarkers,
+  CrosshairMode,
+  HistogramSeries,
+  LineStyle,
+  type CandlestickData,
+  type IPriceLine,
+  type MouseEventParams,
+  type SeriesMarker,
+  type Time,
+  type UTCTimestamp,
+} from 'lightweight-charts';
 import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
-import { candles, drift, equilibriumPrice, orderBook, priceAt, type Candle } from '../economy/market';
+import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades } from '../economy/market';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
 
 // The station market as a trading exchange, in the style of today's crypto
 // exchanges: a list of pairs against the credit, a candlestick chart, the
 // order book and a trade form. Everything shown comes from the living market
 // itself: the book is the station's real pricing curve, the chart is the
-// market's real price history, and the trades are yours.
+// market's real price history (TradingView's open-source Lightweight
+// Charts), and the trades feed is every trade, other traders' and yours.
+//
+// TradingView Lightweight Charts™ Copyright (c) TradingView, Inc. https://www.tradingview.com/
+// Licensed under the Apache License 2.0; the chart shows TradingView's attribution logo.
 
 export interface ExchangeDeps {
   context(): TradeContext;
@@ -35,9 +54,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   let selected = 'food';
   let side: 'buy' | 'sell' = 'buy';
   let interval: Interval = '15m';
-  let hover: number | null = null;
   let message = '';
-  let shown: Candle[] = [];
   let timer = 0;
 
   root.innerHTML = `
@@ -54,7 +71,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
           </div>
           <span class="ex-ohlc"></span>
         </div>
-        <div class="ex-canvas"><canvas></canvas></div>
+        <div class="ex-canvas"></div>
       </section>
       <section class="ex-book" aria-label="Order book">
         <h4>Order book</h4>
@@ -77,16 +94,51 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <button class="ex-submit"></button>
         <p class="ex-msg" aria-live="polite"></p>
       </section>
-      <section class="ex-trades" aria-label="Your trades">
-        <h4>Your trades here</h4>
-        <div class="ex-trades-list"></div>
+      <section class="ex-trades">
+        <div class="ex-feed" aria-label="Market trades">
+          <h4>Market trades</h4>
+          <div class="ex-feed-list"></div>
+        </div>
+        <div class="ex-mine" aria-label="Your trades">
+          <h4>Your trades here</h4>
+          <div class="ex-trades-list"></div>
+        </div>
       </section>
     </div>`;
 
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const qtyInput = $<HTMLInputElement>('.ex-qty input');
   const slider = $<HTMLInputElement>('.ex-slider');
-  const canvas = $<HTMLCanvasElement>('.ex-chart canvas');
+
+  // The chart: candles, volume underneath, a fair-value line and your trades as markers.
+  const chart = createChart($('.ex-canvas'), {
+    autoSize: true,
+    layout: {
+      background: { type: ColorType.Solid, color: 'transparent' },
+      textColor: '#848e9c',
+      fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+      fontSize: 11,
+      attributionLogo: true,
+    },
+    grid: { vertLines: { color: 'rgba(255,255,255,0.04)' }, horzLines: { color: 'rgba(255,255,255,0.05)' } },
+    rightPriceScale: { borderColor: '#1e242c' },
+    timeScale: { borderColor: '#1e242c', timeVisible: true, secondsVisible: false, rightOffset: 3 },
+    crosshair: { mode: CrosshairMode.Normal },
+  });
+  const candleSeries = chart.addSeries(CandlestickSeries, {
+    upColor: UP,
+    downColor: DOWN,
+    borderVisible: false,
+    wickUpColor: UP,
+    wickDownColor: DOWN,
+  });
+  candleSeries.priceScale().applyOptions({ scaleMargins: { top: 0.08, bottom: 0.24 } });
+  const volumeSeries = chart.addSeries(HistogramSeries, { priceScaleId: 'volume', priceFormat: { type: 'volume' }, lastValueVisible: false, priceLineVisible: false });
+  chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+  const markers = createSeriesMarkers(candleSeries, []);
+  let fairLine: IPriceLine | null = null;
+  let chartKey = '';
+  chart.subscribeCrosshairMove((param: MouseEventParams) => legend(param.seriesData.get(candleSeries) as CandlestickData | undefined, param.time));
 
   const commodity = () => commodityById(selected)!;
   const index = () => COMMODITIES.findIndex((c) => c.id === selected);
@@ -150,18 +202,54 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   // --- Chart ------------------------------------------------------------------
 
+  function legend(k: CandlestickData | undefined, time?: Time) {
+    if (!k) {
+      const data = candleSeries.data();
+      k = data[data.length - 1] as CandlestickData | undefined;
+      time = k?.time;
+    }
+    if (!k) return;
+    $('.ex-ohlc').innerHTML = `<span>${clock(fromChartTime(time as UTCTimestamp))}</span> O <b>${fmt(k.open)}</b> H <b>${fmt(k.high)}</b> L <b>${fmt(k.low)}</b> C <b class="${k.close >= k.open ? 'up' : 'down'}">${fmt(k.close)}</b>`;
+  }
+
   function renderChart(ctx: TradeContext) {
     const state = marketState(ctx);
     const [ms, count] = INTERVALS[interval];
-    shown = candles(ctx.system, state, selected, ctx.now, ms, count);
+    const cs = candles(ctx.system, state, selected, ctx.now, ms, count);
     const live = quotes(ctx).find((x) => x.commodity.id === selected)!.price;
-    shown[shown.length - 1].close = live;
+    cs[cs.length - 1].close = live;
+    cs[cs.length - 1].high = Math.max(cs[cs.length - 1].high, live);
+    cs[cs.length - 1].low = Math.min(cs[cs.length - 1].low, live);
     const c = commodity();
     const fair = equilibriumPrice(ctx.system, c, index()) * drift(ctx.system, c, index(), ctx.now);
+    const precision = live < 10 ? 2 : 1;
     root.querySelectorAll<HTMLButtonElement>('[data-interval]').forEach((b) => b.classList.toggle('active', b.dataset.interval === interval));
-    drawChart(canvas, shown, live, fair, (state.trades ?? []).filter((t) => t.id === selected && t.t >= shown[0].t), ms, hover);
-    const k = shown[hover ?? shown.length - 1];
-    $('.ex-ohlc').innerHTML = `<span>${clock(k.t)}</span> O <b>${fmt(k.open)}</b> H <b>${fmt(k.high)}</b> L <b>${fmt(k.low)}</b> C <b class="${k.close >= k.open ? 'up' : 'down'}">${fmt(k.close)}</b>`;
+
+    // Keep the reader's zoom and scroll when only the prices have moved.
+    const key = `${selected}:${interval}`;
+    const range = key === chartKey ? chart.timeScale().getVisibleLogicalRange() : null;
+    candleSeries.applyOptions({ priceFormat: { type: 'price', precision, minMove: 1 / 10 ** precision } });
+    candleSeries.setData(cs.map((k) => ({ time: toChartTime(k.t), open: k.open, high: k.high, low: k.low, close: k.close })));
+    volumeSeries.setData(cs.map((k) => ({ time: toChartTime(k.t), value: k.volume, color: k.close >= k.open ? 'rgba(46,189,133,0.35)' : 'rgba(246,70,93,0.35)' })));
+    if (range) chart.timeScale().setVisibleLogicalRange(range);
+    else requestAnimationFrame(() => chart.timeScale().fitContent()); // once the chart has its size
+    chartKey = key;
+
+    if (fairLine) fairLine.applyOptions({ price: fair });
+    else fairLine = candleSeries.createPriceLine({ price: fair, color: 'rgba(247,166,0,0.6)', lineStyle: LineStyle.Dotted, lineWidth: 1, axisLabelVisible: true, title: 'Fair' });
+
+    const start = cs[0].t;
+    const mine: SeriesMarker<Time>[] = (state.trades ?? [])
+      .filter((t) => t.id === selected && t.t >= start)
+      .map((t) => ({
+        time: toChartTime(start + Math.floor((t.t - start) / ms) * ms),
+        position: t.side === 'buy' ? 'belowBar' : 'aboveBar',
+        shape: t.side === 'buy' ? 'arrowUp' : 'arrowDown',
+        color: t.side === 'buy' ? UP : DOWN,
+        text: `${t.side === 'buy' ? 'B' : 'S'} ${t.qty}`,
+      }));
+    markers.setMarkers(mine);
+    legend(undefined);
   }
 
   // --- Order book --------------------------------------------------------------
@@ -227,7 +315,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const submit = $<HTMLButtonElement>('.ex-submit');
     let reason = '';
     if (!tradesHere(ctx, selected)) reason = 'Not traded at this lawful station';
-    else if (side === 'buy' && max === 0) reason = (state.stock[selected] ?? 0) <= 0 ? 'Out of stock' : freeTonnes(ctx) < 1 / UNITS_PER_TONNE[c.unit] ? 'Hold full' : 'Not enough credits';
+    else if (side === 'buy' && max === 0) reason = quotes(ctx).find((x) => x.commodity.id === selected)!.stock <= 0 ? 'Out of stock' : freeTonnes(ctx) < 1 / UNITS_PER_TONNE[c.unit] ? 'Hold full' : 'Not enough credits';
     else if (side === 'sell' && held === 0) reason = `No ${c.name} in your hold`;
     submit.disabled = Boolean(reason) || n === 0;
     submit.textContent = reason || `${side === 'buy' ? 'Buy' : 'Sell'} ${n ? n.toLocaleString() + ' ' + u + ' ' : ''}${ticker(selected)}`;
@@ -235,6 +323,19 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   }
 
   // --- Your trades ----------------------------------------------------------------
+
+  function renderFeed(ctx: TradeContext) {
+    const u = unitLabel(commodity());
+    const events = recentTrades(ctx.system, marketState(ctx), selected, ctx.now, 14);
+    $('.ex-feed-list').innerHTML = events.length
+      ? `<table><thead><tr><th>Price (Cr)</th><th class="num">Qty (${u})</th><th class="num">Time</th></tr></thead><tbody>${events
+          .map(
+            (e) => `<tr class="${e.by === 'you' ? 'you' : ''}"><td class="${e.side === 'buy' ? 'up' : 'down'}">${fmt(e.price, 2)}</td>
+            <td class="num">${e.qty.toLocaleString()}${e.by === 'you' ? ' <em>you</em>' : ''}</td><td class="num">${clock(e.t)}</td></tr>`,
+          )
+          .join('')}</tbody></table>`
+      : '<p class="ex-empty">No trades in the last few hours.</p>';
+  }
 
   function renderTrades(ctx: TradeContext) {
     const trades = (marketState(ctx).trades ?? []).slice().reverse();
@@ -256,6 +357,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     renderChart(ctx);
     renderBook(ctx);
     renderForm(ctx);
+    renderFeed(ctx);
     renderTrades(ctx);
   }
 
@@ -267,7 +369,6 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     el.blur();
     if (el.dataset.id) {
       selected = el.dataset.id;
-      hover = null;
       message = '';
       qtyInput.value = '';
       slider.value = '0';
@@ -278,7 +379,6 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       message = '';
     } else if (el.dataset.interval) {
       interval = el.dataset.interval as Interval;
-      hover = null;
     } else if (el.dataset.pct) {
       setQty((maxQty(deps.context()) * Number(el.dataset.pct)) / 100);
     } else if (el.dataset.kind) {
@@ -311,20 +411,6 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     setQty((maxQty(ctx) * Number(slider.value)) / 100, ctx);
     renderForm(ctx);
   });
-  canvas.addEventListener('mousemove', (e) => {
-    const r = canvas.getBoundingClientRect();
-    const k = Math.floor(((e.clientX - r.left) / (r.width - AXIS_W)) * shown.length);
-    const next = k >= 0 && k < shown.length ? k : null;
-    if (next !== hover) {
-      hover = next;
-      renderChart(deps.context());
-    }
-  });
-  canvas.addEventListener('mouseleave', () => {
-    hover = null;
-    renderChart(deps.context());
-  });
-
   return {
     render,
     /** Prices move while you watch: refresh every couple of seconds while open. */
@@ -338,6 +424,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
           renderChart(ctx);
           renderBook(ctx);
           renderForm(ctx);
+          renderFeed(ctx);
         }
       }, 2000);
     },
@@ -353,132 +440,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   };
 }
 
-// --- Drawing the candlestick chart ------------------------------------------------------
+// --- Chart time ------------------------------------------------------------------------
 
-const AXIS_W = 52; // right-hand price axis
-const TIME_H = 18; // time labels along the bottom
-const TOP_PAD = 10; // room for the top price label
+// Lightweight Charts shows times as UTC, so shift them to read as local time.
+const offset = (t: number) => new Date(t).getTimezoneOffset() * 60;
+const toChartTime = (t: number) => (Math.floor(t / 1000) - offset(t)) as UTCTimestamp;
+const fromChartTime = (t: UTCTimestamp) => (t + offset(t * 1000)) * 1000;
+
 const UP = '#2ebd85';
 const DOWN = '#f6465d';
-
-function drawChart(
-  canvas: HTMLCanvasElement,
-  cs: Candle[],
-  live: number,
-  fair: number,
-  trades: { t: number; side: 'buy' | 'sell'; total: number; qty: number }[],
-  interval: number,
-  hover: number | null,
-) {
-  const dpr = Math.min(devicePixelRatio || 1, 2);
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
-  if (!w || !h) return;
-  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
-    canvas.width = Math.round(w * dpr);
-    canvas.height = Math.round(h * dpr);
-  }
-  const g = canvas.getContext('2d')!;
-  g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.clearRect(0, 0, w, h);
-
-  const plotW = w - AXIS_W;
-  const plotH = h - TIME_H;
-  const top = TOP_PAD;
-  let lo = Math.min(...cs.map((c) => c.low), fair);
-  let hi = Math.max(...cs.map((c) => c.high), fair);
-  const pad = Math.max((hi - lo) * 0.12, hi * 0.002);
-  lo -= pad;
-  hi += pad;
-  const y = (p: number) => plotH - ((p - lo) / (hi - lo)) * (plotH - top);
-  const step = plotW / cs.length;
-
-  g.font = '11px system-ui, -apple-system, "Segoe UI", sans-serif';
-  g.textBaseline = 'middle';
-
-  // Grid and price axis.
-  g.strokeStyle = 'rgba(255,255,255,0.06)';
-  g.fillStyle = '#848e9c';
-  g.lineWidth = 1;
-  for (let k = 0; k <= 4; k++) {
-    const p = lo + ((hi - lo) * k) / 4;
-    const yy = Math.round(y(p)) + 0.5;
-    g.beginPath();
-    g.moveTo(0, yy);
-    g.lineTo(plotW, yy);
-    g.stroke();
-    g.fillText(fmt(p, p < 10 ? 2 : 1), plotW + 6, yy);
-  }
-  // Time labels.
-  g.textAlign = 'center';
-  const every = Math.ceil(cs.length / 6);
-  for (let k = Math.floor(every / 2); k < cs.length; k += every) g.fillText(clock(cs[k].t), k * step + step / 2, plotH + TIME_H / 2 + 2);
-  g.textAlign = 'left';
-
-  // Fair value.
-  g.setLineDash([2, 4]);
-  g.strokeStyle = 'rgba(247,166,0,0.55)';
-  g.beginPath();
-  g.moveTo(0, Math.round(y(fair)) + 0.5);
-  g.lineTo(plotW, Math.round(y(fair)) + 0.5);
-  g.stroke();
-  g.setLineDash([]);
-
-  // Hover column.
-  if (hover !== null) {
-    g.fillStyle = 'rgba(255,255,255,0.05)';
-    g.fillRect(hover * step, 0, step, plotH);
-  }
-
-  // Candles.
-  const bodyW = Math.max(1, Math.min(10, step * 0.62));
-  cs.forEach((c, k) => {
-    const x = k * step + step / 2;
-    const up = c.close >= c.open;
-    g.strokeStyle = g.fillStyle = up ? UP : DOWN;
-    g.beginPath();
-    g.moveTo(Math.round(x) + 0.5, y(c.high));
-    g.lineTo(Math.round(x) + 0.5, y(c.low));
-    g.stroke();
-    const body = y(Math.max(c.open, c.close));
-    g.fillRect(Math.round(x - bodyW / 2), body, Math.round(bodyW), Math.max(1, y(Math.min(c.open, c.close)) - body));
-  });
-
-  // Your trades, as markers: buys below the candle, sells above.
-  const start = cs[0].t;
-  for (const t of trades) {
-    const k = Math.floor((t.t - start) / interval);
-    if (k < 0 || k >= cs.length) continue;
-    const x = k * step + step / 2;
-    const p = t.total / t.qty;
-    const yy = t.side === 'buy' ? Math.min(plotH - 4, y(p) + 10) : Math.max(4, y(p) - 10);
-    g.fillStyle = t.side === 'buy' ? UP : DOWN;
-    g.beginPath();
-    if (t.side === 'buy') {
-      g.moveTo(x, yy - 5);
-      g.lineTo(x - 4, yy + 2);
-      g.lineTo(x + 4, yy + 2);
-    } else {
-      g.moveTo(x, yy + 5);
-      g.lineTo(x - 4, yy - 2);
-      g.lineTo(x + 4, yy - 2);
-    }
-    g.fill();
-  }
-
-  // Last price line and tag.
-  const ly = Math.round(y(live)) + 0.5;
-  const last = cs[cs.length - 1];
-  const colour = last.close >= last.open ? UP : DOWN;
-  g.setLineDash([3, 3]);
-  g.strokeStyle = colour;
-  g.beginPath();
-  g.moveTo(0, ly);
-  g.lineTo(plotW, ly);
-  g.stroke();
-  g.setLineDash([]);
-  g.fillStyle = colour;
-  g.fillRect(plotW, ly - 9, AXIS_W, 18);
-  g.fillStyle = '#fff';
-  g.fillText(fmt(live, live < 10 ? 2 : 1), plotW + 6, ly);
-}
