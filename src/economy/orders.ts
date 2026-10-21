@@ -1,4 +1,4 @@
-import type { Commander } from '../game/commander';
+import { cleanQty, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
 import { cargoTonnage, commodityById, UNITS_PER_TONNE } from './commodities';
 import { priceAt, RECOVERY_MINUTES, TRADE_MEMORY, type MarketState } from './market';
@@ -62,6 +62,7 @@ export function placeOrder(c: Commander, system: StarSystem, state: OrderState, 
     c.credits = Math.round((c.credits - hold) * 10) / 10;
   } else {
     if ((c.cargo[id] ?? 0) < qty) return { ok: false, message: `You haven't got that much ${good.name}` };
+    if (system.government > 0 && qty > cleanQty(c, id)) return { ok: false, message: `Some of your ${good.name} is stolen: the station won't take it` };
     c.cargo[id] -= qty;
     if (c.cargo[id] <= 0) delete c.cargo[id];
   }
