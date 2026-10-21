@@ -5,22 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{title}}</title>
     <meta name="description" content="{{description}}" />
+    <meta name="theme-color" content="#05070d" />
     <meta property="og:title" content="{{title}}" />
     <meta property="og:description" content="{{description}}" />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://witchspace.org.uk/screens/combat.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/site/site.css" />
   </head>
   <body class="{{bodyClass}}">
     <a class="skip" href="#main">Skip to content</a>
     <header class="site-header">
-      <a class="brand" href="/">WITCHSPACE</a>
+      <a class="brand" href="/" aria-label="Witchspace home">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 18 L12 9 L20 9 L28 18 L18 23 L14 23 Z M12 9 L14 23 M20 9 L18 23" /></svg>
+        <span>WITCHSPACE</span>
+      </a>
       <nav aria-label="Main">
         {{nav}}
-        <a class="button play" href="/play/">Play</a>
+        <a class="button primary small" href="/play/">Play free</a>
       </nav>
     </header>
 
@@ -29,16 +35,42 @@
     </main>
 
     <footer class="site-footer">
-      <p>
-        An unofficial, non-commercial tribute to <em>Elite</em> (1984) by Ian Bell &amp; David Braben.
-        Not affiliated with Frontier Developments.
-      </p>
-      <p>
-        Code <a href="https://github.com/witchspace-game/witchspace/blob/main/LICENSE">GPL-3.0</a> ·
-        Content <a href="https://github.com/witchspace-game/witchspace/blob/main/CONTENT_LICENSE.txt">CC BY-SA 4.0</a> ·
-        <a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a> ·
-        <a href="https://github.com/witchspace-game/witchspace">GitHub</a>
-      </p>
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="/">
+            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 18 L12 9 L20 9 L28 18 L18 23 L14 23 Z M12 9 L14 23 M20 9 L18 23" /></svg>
+            <span>WITCHSPACE</span>
+          </a>
+          <p>A free, open-source space game in your browser. A love letter to <em>Elite</em> (1984).</p>
+        </div>
+        <div>
+          <h2>Game</h2>
+          <ul>
+            <li><a href="/play/">Play now</a></li>
+            <li><a href="/design/">Design &amp; roadmap</a></li>
+            <li><a href="/about/">About</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Community</h2>
+          <ul>
+            <li><a href="/get-involved/">Get involved</a></li>
+            <li><a href="https://github.com/witchspace-game/witchspace">GitHub</a></li>
+            <li><a href="https://github.com/witchspace-game/witchspace/discussions">Discussions</a></li>
+            <li><a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-legal">
+        <p>
+          An unofficial, non-commercial tribute to <em>Elite</em> (1984) by Ian Bell &amp; David Braben.
+          Not affiliated with Frontier Developments.
+        </p>
+        <p>
+          Code <a href="https://github.com/witchspace-game/witchspace/blob/main/LICENSE">GPL-3.0</a> ·
+          Content <a href="https://github.com/witchspace-game/witchspace/blob/main/CONTENT_LICENSE.txt">CC BY-SA 4.0</a>
+        </p>
+      </div>
     </footer>
 {{scripts}}
   </body>

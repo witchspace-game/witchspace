@@ -18,7 +18,7 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x02060a);
+scene.background = new THREE.Color(0x05070d);
 scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 const sun = new THREE.DirectionalLight(0xfff1dd, 2.2);
 sun.position.set(1, 0.8, 0.6);
@@ -113,14 +113,15 @@ function frame(now?: number) {
   if (shownFor > SHOW_SECONDS && showcase.length > 1) show((index = (index + 1) % showcase.length));
 
   const model = showcase[index];
-  // Frame the model in the upper part of the hero: its centre about 27% from
-  // the top, filling at most ~30% of the hero's height (with a margin for
-  // perspective) and ~75% of its width, so it never meets the header or title.
+  // Wide screens: the model sits in the right half, beside the headline.
+  // Narrow screens: it sits in the upper part, above the headline. Either
+  // way it's sized to its slot so it never meets the text or the header.
   const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const NDC_CENTRE = 0.46; // vertical position of the model's centre (0 = middle, 1 = top)
+  const wide = camera.aspect > 1.15;
+  const slot = wide ? { x: 0.48, y: 0.06, h: 0.46, w: 0.36 } : { x: 0, y: 0.5, h: 0.3, w: 0.8 };
   const dist = Math.max(
-    (fitHeight.get(model)! * 1.15) / (0.3 * tanHalf),
-    model.radius / (0.75 * tanHalf * camera.aspect),
+    (fitHeight.get(model)! * 1.15) / (slot.h * tanHalf),
+    model.radius / (slot.w * tanHalf * camera.aspect),
   );
   // Fly in from the distance, as on the original's title screen.
   const t = reducedMotion ? 1 : Math.min(1, shownFor / 1.6);
@@ -128,9 +129,9 @@ function frame(now?: number) {
   spin += dt * (reducedMotion ? 0.12 : 0.4);
   model.root.position.set(0, 0, -dist * 10 * (1 - ease));
   model.root.rotation.set(TILT, spin, 0);
-  // Look below the model so it sits in the upper part of the hero, above the title.
-  camera.position.set(0, 0, dist);
-  camera.lookAt(0, -NDC_CENTRE * dist * tanHalf, 0);
+  // Aim the camera away from the model so it lands in its slot on screen.
+  camera.position.set(-slot.x * dist * tanHalf * camera.aspect, -slot.y * dist * tanHalf, dist);
+  camera.lookAt(camera.position.x, camera.position.y, 0);
   composer.render();
 }
 frame();
