@@ -168,7 +168,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         const order = off ? null : stationOrder(ctx.system, state, id);
         const tag = order ? `<i class="ex-tag ${order.side === 'buy' ? 'short' : 'glut'}">${order.side === 'buy' ? 'Short' : 'Surplus'}</i>` : '';
         return `<button class="ex-pair${id === selected ? ' active' : ''}${off ? ' off' : ''}" data-id="${id}" title="${q.commodity.name}${off ? ' · not traded at this lawful station' : ''}">
-          <span class="ex-sym"><b>${ticker(id)}</b>/CR${held ? '<i class="ex-held" title="In your hold"></i>' : ''}${q.commodity.legality === 'illegal' ? '<em title="Illegal goods">Illegal</em>' : ''}${tag}</span>
+          <span class="ex-sym"><b>${ticker(id)}</b>${held ? '<i class="ex-held" title="In your hold"></i>' : ''}${q.commodity.legality === 'illegal' ? '<em title="Illegal goods">Illegal</em>' : ''}${tag}</span>
           <span class="num">${fmt(q.price)}</span>
           <span class="num ${change >= 0 ? 'up' : 'down'}">${pct(change)}</span>
         </button>`;
