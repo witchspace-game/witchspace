@@ -440,8 +440,9 @@ function renderDocked() {
   const affordable = Math.min(missing, Math.floor((c.credits / FUEL_PRICE) * 10) / 10);
   $('#fuel').innerHTML = `<span>Fuel <b>${c.fuel.toFixed(1)} / ${FUEL_CAPACITY} LY</b></span>`;
   const refuel = document.createElement('button');
-  refuel.textContent = missing <= 0 ? 'Full' : affordable < missing ? `Refuel ${affordable.toFixed(1)} LY · ${(affordable * FUEL_PRICE).toFixed(1)} Cr` : `Refuel · ${fuelCost.toFixed(1)} Cr`;
+  refuel.textContent = missing <= 0 ? 'Full' : affordable < missing ? `${affordable.toFixed(1)} LY · ${(affordable * FUEL_PRICE).toFixed(1)} Cr` : `Refuel · ${fuelCost.toFixed(1)} Cr`;
   refuel.disabled = missing <= 0 || affordable <= 0;
+  refuel.title = affordable < missing ? `Refuel as far as your credits allow` : `Fill the tank`;
   refuel.addEventListener('click', () => {
     c.credits = Math.round((c.credits - affordable * FUEL_PRICE) * 10) / 10;
     c.fuel = Math.round((c.fuel + affordable) * 10) / 10;
@@ -467,7 +468,10 @@ function renderDocked() {
     sfx.beep();
     renderDocked();
   });
-  $('#missile-row').append(rearm);
+  const missileButtons = document.createElement('div');
+  missileButtons.className = 'buttons';
+  missileButtons.append(rearm);
+  $('#missile-row').append(missileButtons);
   if (c.missiles > 0) {
     const undo = boughtHere.missiles > 0;
     const back = undo ? MISSILE_PRICE : MISSILE_PRICE / 2;
@@ -482,7 +486,7 @@ function renderDocked() {
       sfx.beep();
       renderDocked();
     });
-    $('#missile-row').append(sell);
+    missileButtons.append(sell);
   }
 
   const list = $('#equip');

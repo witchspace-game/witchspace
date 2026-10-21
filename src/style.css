@@ -125,6 +125,9 @@ body.retro #countdown { font-size: 32px; text-shadow: none; }
 #equip li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 6px 0; }
 #equip li small { grid-column: 1; color: var(--dim); font-size: 12px; }
 #equip li button { grid-row: 1 / span 2; grid-column: 2; }
+/* Every shop action is the same size, whatever its label. */
+#equip li > button, .fuel-row button { flex-shrink: 0; width: 158px; height: 36px; padding: 0 6px; white-space: nowrap; text-align: center; }
+.fuel-row .buttons { display: flex; flex-direction: column; gap: 4px; }
 #equip .damaged { font-style: normal; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--danger); margin-left: 6px; }
 
 .controls {
@@ -560,6 +563,8 @@ body.retro #hit-dir { border-top-color: #fff; }
 body.retro .prompt { font-size: 10px; letter-spacing: 0.05em; }
 body.retro #rules button b { font-size: 11px; }
 body.retro #rules button small, body.retro #rules button em { font-size: 8px; line-height: 1.6; }
+body.retro #equip button, body.retro .fuel-row button { font-size: 7px; letter-spacing: 0; }
+body.retro #equip .mounts button { min-width: 0; }
 
 /* --- Chart close button and touch/desktop text -------------------------------- */
 
@@ -569,8 +574,8 @@ body.retro #rules button small, body.retro #rules button em { font-size: 8px; li
   text-shadow: 0 0 10px rgba(255, 179, 71, 0.6);
 }
 body.touch #view-label { top: 128px; }
-#equip .mounts { grid-column: 1 / -1; display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-#equip .mounts button { padding: 4px 9px; font-size: 12px; }
+#equip .mounts { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
+#equip .mounts button { grid-row: auto; grid-column: auto; padding: 0 4px; height: 28px; font-size: 12px; white-space: nowrap; }
 #equip button.fitted { border-color: var(--accent); color: var(--accent); opacity: 1; }
 #equip button.armed { border-color: var(--amber); color: var(--amber); }
 #galaxy-map .map-galactic { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 1; }
