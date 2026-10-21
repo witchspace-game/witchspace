@@ -73,7 +73,8 @@ import { clearIndicators, showHitDirection, updateIndicators, type Marker } from
 import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, GOVERNMENTS, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
-import { buy, freeTonnes, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
+import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
+import { loseDelivery, upcomingDeliveries } from './economy/market';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
 import { initTouch, updateTouch } from './ui/touch';
 import './style.css';
@@ -781,6 +782,28 @@ let traderTimer = 0;
 type Leg = 'inbound' | 'docking' | 'outbound';
 const legs = new WeakMap<NpcShip, Leg>();
 
+// Inbound traders carry the market's real upcoming deliveries (Modern rules):
+// destroy one and those goods never reach the station.
+type Delivery = { id: string; t: number; qty: number };
+const deliveries = new WeakMap<NpcShip, Delivery[]>();
+let carried = new Set<string>(); // deliveries already given to a trader in this system
+const DELIVERY_WINDOW = [2 * 60_000, 15 * 60_000]; // ms ahead: due after the trader could dock
+
+function loadDeliveries(npc: NpcShip): boolean {
+  if (!commander || cmdr().difficulty !== 'modern') return false;
+  const now = Date.now();
+  const due = upcomingDeliveries(currentSystem(), marketState(tradeContext()), now + DELIVERY_WINDOW[0], now + DELIVERY_WINDOW[1]).filter(
+    (d) => !carried.has(`${d.id}:${d.t}`),
+  );
+  const load: Delivery[] = [];
+  for (const d of due) if (load.length < 3 && !load.some((x) => x.id === d.id)) load.push(d);
+  if (!load.length) return false;
+  for (const d of load) carried.add(`${d.id}:${d.t}`);
+  deliveries.set(npc, load);
+  npc.cargo = Object.fromEntries(load.map((d) => [d.id, d.qty]));
+  return true;
+}
+
 /** The station's approach lane: points on the slot axis, which don't move as it spins. */
 const onSlotAxis = (d: number) => station.toWorld(new THREE.Vector3(0, 0, SLOT.z + d));
 
@@ -825,7 +848,7 @@ function spawnTrader(arriving: boolean, distance = 14000 + Math.random() * 8000)
     npc.ship.speed = npc.ship.maxSpeed * 0.5;
     npc.destination = onSlotAxis(900);
     legs.set(npc, 'inbound');
-    npc.cargo = randomCargo();
+    if (!loadDeliveries(npc)) npc.cargo = randomCargo();
   } else {
     const npc = addNpc('cobra-mk3', 'trader', station.root.position);
     station.placeForLaunch(npc.ship);
@@ -939,6 +962,7 @@ function buildSystemScene(sys: StarSystem) {
   explosions.length = 0;
   for (let i = 0; i < PATROLS_BY_GOVERNMENT[sys.government]; i++) spawnViper(false);
   reinforceTimer = repopulateTimer = 0;
+  carried = new Set();
   // Some traffic already about, and maybe trouble soon after arrival.
   for (let i = 0; i < TRADERS_BY_GOVERNMENT[sys.government] - 1; i++) spawnTrader(true, 5000 + Math.random() * 10000);
   traderTimer = 15;
@@ -1011,6 +1035,16 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   explosions.push(boom);
   boomAt(npc.obj.position, 2.2, 1600, 1.6);
   if (Object.keys(npc.cargo).length) spillCargo(npc.obj.position, velocity, npc.cargo);
+  const lost = deliveries.get(npc);
+  if (lost && commander) {
+    const market = marketState(tradeContext());
+    for (const d of lost) loseDelivery(market, d, Date.now());
+    saveCommander(cmdr());
+    if (npc.obj.position.distanceTo(player.obj.position) < 8000) {
+      const goods = lost.map((d) => `${d.qty}${commodityById(d.id)?.unit === 't' ? ' t' : ' ' + commodityById(d.id)?.unit} ${commodityById(d.id)?.name}`).join(', ');
+      setTimeout(() => flash(`Delivery lost · ${goods} won't reach ${currentSystem().name}`, 3), 1600);
+    }
+  }
   removeNpc(npc);
   if (killer !== player.obj) return;
 
@@ -1199,7 +1233,15 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   thinkTimer -= dt;
   if (thinkTimer <= 0) {
     thinkTimer = 0.25;
-    const world = { player, playerPresent: alive, playerWanted: isFugitive(), npcs };
+    const prices = commander ? new Map(quotes(tradeContext()).map((q) => [q.commodity.id, q.price])) : new Map<string, number>();
+    const holdValue = (cargo: Record<string, number>) => Object.entries(cargo).reduce((v, [id, q]) => v + q * (prices.get(id) ?? 0), 0);
+    const world = {
+      player,
+      playerPresent: alive,
+      playerWanted: isFugitive(),
+      npcs,
+      cargoValue: (ship: PlayerShip) => (ship === player ? (commander ? holdValue(cmdr().cargo) : 0) : holdValue(npcs.find((n) => n.ship === ship)?.cargo ?? {})),
+    };
     for (const npc of npcs) think(npc, world);
     for (const npc of npcs) maybeFireNpcMissile(npc);
   }
@@ -1917,6 +1959,7 @@ function updateMarkers() {
 const laserGauge = $('#g-laser');
 const crosshair = $('.crosshair');
 const targetInfo = $('#target-info');
+const CARGO_SCAN_RANGE = 2000; // metres: close enough to read another ship's hold
 
 const missilePips = $('#missile-pips');
 
@@ -1943,6 +1986,16 @@ function updateCombatHud() {
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
     const standing = best.role === 'pirate' ? 'WANTED' : best.role === 'police' ? 'POLICE' : 'CLEAN';
     targetInfo.textContent = `${best.def.name} · ${best.role.toUpperCase()} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === locked ? ' · LOCKED' : ''}`;
+    // Close enough, the scanner reads the hold.
+    if (best.obj.position.distanceTo(player.obj.position) < CARGO_SCAN_RANGE && best.role !== 'police') {
+      const hold = Object.entries(best.cargo)
+        .filter(([, q]) => q > 0)
+        .map(([id, q]) => `${q}${commodityById(id)?.unit === 't' ? ' t' : ' ' + commodityById(id)?.unit} ${commodityById(id)?.name ?? id}`);
+      const line = document.createElement('span');
+      line.className = 'cargo';
+      line.textContent = `Hold: ${hold.join(' · ') || 'empty'}`;
+      targetInfo.append(line);
+    }
     targetInfo.classList.toggle('hostile', best.hostile);
   }
 }

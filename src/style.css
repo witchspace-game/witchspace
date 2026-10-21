@@ -302,6 +302,8 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
   pointer-events: none;
 }
 #target-info.hostile { color: var(--danger); }
+#target-info .cargo { display: block; margin-top: 3px; font-size: 12px; letter-spacing: 0.06em; text-transform: none; color: var(--amber); }
+body.retro #target-info .cargo { font-size: 8px; color: inherit; }
 .bar.centred::after {
   inset: 1px auto 1px calc(50% - 3px + (50% - 4px) * var(--v));
   width: 6px;
@@ -865,6 +867,8 @@ body.touch #banner { top: 30%; font-size: clamp(14px, 4.5vw, 24px); letter-spaci
 .ex-feed td { border-top: 0; padding: 1px 4px; }
 .ex-feed tr.you td { background: rgba(247, 166, 0, 0.08); }
 .ex-feed em { font-style: normal; font-size: 10px; color: var(--ex-gold); }
+.ex-feed tr.lost td { color: var(--ex-dim); text-decoration: line-through; }
+.ex-feed tr.lost em { color: var(--ex-down); }
 .ex-trades table { width: 100%; border-collapse: collapse; }
 .ex-trades th { color: var(--ex-dim); font-weight: 400; font-size: 11px; text-align: left; padding: 2px 4px; }
 .ex-trades th.num { text-align: right; }
