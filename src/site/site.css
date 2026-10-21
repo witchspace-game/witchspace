@@ -729,3 +729,58 @@ body.viewing { overflow: hidden; }
   .factsheet dt { border-bottom: 0; padding-bottom: 2px; }
 }
 button.button { cursor: pointer; }
+
+/* --- Ideas board --------------------------------------------------------------- */
+
+.ideas-layout { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: clamp(24px, 4vw, 48px); align-items: start; }
+.idea-form { position: sticky; top: 92px; display: flex; flex-direction: column; gap: 14px; padding: 22px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); }
+.idea-form h3 { margin: 0; font-size: 19px; }
+.idea-form label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--muted); }
+.idea-form input, .idea-form textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--fg);
+  font: 15px var(--font);
+  resize: vertical;
+}
+.idea-form input:focus, .idea-form textarea:focus { outline: none; border-color: var(--accent); }
+.idea-form .button { align-self: flex-start; }
+.form-note { margin: 0; font-size: 13.5px; }
+.form-note.warn { color: var(--amber); }
+.form-note.good { color: var(--accent); }
+.turnstile:empty { display: none; }
+
+.ideas-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.idea { display: grid; grid-template-columns: 52px 1fr; gap: 14px; padding: 16px 18px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); }
+.votes { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.vote {
+  width: 36px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.vote:hover { color: var(--fg); border-color: rgba(255, 255, 255, 0.3); }
+.vote.up.on { color: #03140e; background: var(--accent); border-color: var(--accent); }
+.vote.down.on { color: #fff; background: var(--danger); border-color: var(--danger); }
+.score { font-family: var(--display); font-weight: 600; font-size: 17px; }
+.idea-text h3 { margin: 2px 0 6px; font-size: 17.5px; }
+.idea-text p { margin: 0 0 6px; color: #c2cddb; font-size: 15px; }
+.status { display: inline-block; vertical-align: middle; margin-left: 6px; padding: 1px 9px; border-radius: 999px; font: 600 11.5px var(--font); letter-spacing: 0.05em; border: 1px solid currentColor; }
+.status.planned { color: var(--accent-2); }
+.status.building { color: var(--amber); }
+.status.built { color: var(--accent); }
+.status.declined { color: var(--muted); }
+.report { padding: 0; border: 0; background: none; color: var(--muted); font: 12.5px var(--font); cursor: pointer; opacity: 0.7; }
+.report:hover { opacity: 1; color: var(--fg); }
+
+@media (max-width: 800px) {
+  .ideas-layout { grid-template-columns: 1fr; }
+  .idea-form { position: static; }
+}

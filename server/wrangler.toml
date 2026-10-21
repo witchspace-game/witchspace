@@ -10,10 +10,19 @@ routes = [{ pattern = "space.witchspace.org.uk", custom_domain = true }]
 name = "SYSTEMS"
 class_name = "SystemRoom"
 
+[[durable_objects.bindings]]
+name = "IDEAS"
+class_name = "IdeasBoard"
+
 # SQLite-backed Durable Objects, which the free Workers plan supports.
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["SystemRoom"]
+
+# The ideas board: one Durable Object with its own SQLite database.
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["IdeasBoard"]
 
 [observability]
 enabled = true
