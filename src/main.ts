@@ -2792,6 +2792,7 @@ function die() {
 // lasers are drawn but don't hit anyone yet, and nothing is saved.
 
 const COMMANDER_COLOUR = '#dfe9ff';
+const BUMP_SEPARATION = 40; // metres each ship moves apart after a collision
 const remoteModels = new Map<string, { model: ShipModel; fireCooldown: number }>();
 const sharedSpace = new SharedSpace(onSpaceEvent);
 
@@ -2849,21 +2850,32 @@ function onSpaceEvent(e: SpaceEvent) {
       // Firing on another commander is like firing on any clean ship.
       becomeOffender(`Firing on Commander ${e.remote.name} · you are an OFFENDER`);
       break;
+    case 'bump':
+      // The server's word on the damage; move apart so we're not still touching.
+      if (state !== 'flying') break;
+      player.shields = e.shields;
+      player.hull = e.hull;
+      player.obj.position.addScaledVector(e.push, BUMP_SEPARATION);
+      player.speed *= 0.5;
+      sfx.thud();
+      hitFeedback(0.9);
+      flash(e.with ? `Collision with Commander ${e.with.name}` : 'Collision', 2);
+      break;
     case 'destroyed':
       if (e.me) {
         if (state === 'flying') {
-          flash(e.by ? `Destroyed by Commander ${e.by.name}` : 'Ship destroyed', 3);
+          flash(e.collision ? 'Destroyed in a collision' : e.by ? `Destroyed by Commander ${e.by.name}` : 'Ship destroyed', 3);
           die();
         }
         break;
       }
-      if (e.remote) commanderDestroyed(e.remote, e.byMe);
+      if (e.remote) commanderDestroyed(e.remote, e.byMe, e.collision);
       break;
   }
 }
 
 /** Another commander's ship breaks up. If we did it, the law and the rating take note. */
-function commanderDestroyed(r: Remote, byMe: boolean) {
+function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
   const m = remoteModels.get(r.id);
   if (m) {
     const boom = new Explosion(m.model.def, m.model.root, new THREE.Vector3(0, 0, 1).applyQuaternion(r.quaternion).multiplyScalar(100));
@@ -2872,8 +2884,9 @@ function commanderDestroyed(r: Remote, byMe: boolean) {
     boomAt(r.position, 2.2, 1600, 1.6);
     m.model.root.visible = false; // gone; the server tells us when they leave
   }
-  if (!byMe) {
-    flash(`Commander ${r.name} has been destroyed`, 2.5);
+  // A collision is an accident: no kill, and no crime.
+  if (!byMe || collision) {
+    flash(collision ? `Commander ${r.name} was destroyed in a collision` : `Commander ${r.name} has been destroyed`, 2.5);
     return;
   }
   const c = cmdr();

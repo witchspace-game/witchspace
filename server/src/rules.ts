@@ -122,3 +122,20 @@ export function reportHealth(h: Health, reported: unknown, maxShields: number, n
   if (!Array.isArray(reported) || reported.length !== 2 || !reported.every((n) => typeof n === 'number' && Number.isFinite(n))) return r;
   return { shields: Math.max(0, Math.min(r.shields, reported[0])), hull: Math.max(0, Math.min(r.hull, reported[1])), at: now };
 }
+
+// --- Collisions -----------------------------------------------------------------
+// Ships report where they are ten times a second, and two fast ships can close
+// 50 m or more between reports, so we check the whole path since the last one,
+// not just where they ended up.
+
+/** The closest two ships came while one moved from `a0` to `a1` past the other at `b`. */
+export function closestApproach(a0: Vec3, a1: Vec3, b: Vec3): number {
+  const d: Vec3 = [a1[0] - a0[0], a1[1] - a0[1], a1[2] - a0[2]];
+  const w: Vec3 = [b[0] - a0[0], b[1] - a0[1], b[2] - a0[2]];
+  const len2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+  const k = len2 > 0 ? Math.max(0, Math.min(1, (w[0] * d[0] + w[1] * d[1] + w[2] * d[2]) / len2)) : 0;
+  return Math.hypot(a0[0] + d[0] * k - b[0], a0[1] + d[1] * k - b[1], a0[2] + d[2] * k - b[2]);
+}
+
+/** Damage to each ship in a collision: a knock at low speed, serious head on. */
+export const collisionDamage = (closing: number) => Math.round(10 + Math.max(0, closing) * 0.1);
