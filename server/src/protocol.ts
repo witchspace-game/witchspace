@@ -19,10 +19,12 @@ export interface Commander {
 }
 
 export type ClientMessage =
-  /** First message: who you are and what you fly. */
-  | { type: 'hello'; name: string; ship: string }
-  /** About ten times a second: where you are. */
-  | { type: 'state'; p: Vec3; q: Quat; s: number; f: boolean };
+  /** First message: who you are, what you fly, and the lasers fitted. */
+  | { type: 'hello'; name: string; ship: string; lasers?: string[] }
+  /** About ten times a second: where you are, and your shields and hull (which can only go down this way). */
+  | { type: 'state'; p: Vec3; q: Quat; s: number; f: boolean; h?: [number, number] }
+  /** A laser shot: the direction it went, and which laser. The server decides what it hit. */
+  | { type: 'fire'; d: Vec3; l: string };
 
 export type ServerMessage =
   /** Your id, and everyone already here. */
@@ -31,10 +33,30 @@ export type ServerMessage =
   | { type: 'state'; id: string; p: Vec3; q: Quat; s: number; f: boolean }
   | { type: 'leave'; id: string }
   /** The server didn't accept a move: you're put back here. */
-  | { type: 'correct'; p: Vec3 };
+  | { type: 'correct'; p: Vec3 }
+  /** You were hit: by whom, how hard, and what you have left. */
+  | { type: 'hit'; by: string; damage: number; shields: number; hull: number }
+  /** Your shot hit this commander. */
+  | { type: 'hitconfirm'; id: string }
+  /** A commander was destroyed, and by whom. */
+  | { type: 'destroyed'; id: string; by: string };
 
-/** The ships commanders can fly in shared space (stage 1: the Cobra). */
-export const SHIPS: Record<string, { maxSpeed: number }> = { 'cobra-mk3': { maxSpeed: 280 } };
+/** The ships commanders can fly in shared space (stage 1: the Cobra). Must match content/ships. */
+export const SHIPS: Record<string, { maxSpeed: number; shields: number; hull: number; radius: number }> = {
+  'cobra-mk3': { maxSpeed: 280, shields: 100, hull: 150, radius: 28 },
+};
+
+/** Player lasers, as in src/game/weapons.ts (a test checks they match). */
+export const LASERS: Record<string, { interval: number; damage: number; range: number }> = {
+  pulse: { interval: 0.2, damage: 14, range: 3000 },
+  beam: { interval: 0.1, damage: 9, range: 3200 },
+  military: { interval: 0.1, damage: 13, range: 3600 },
+};
+
+export const SHIELD_RECHARGE = 6; // per second, as in the game
+export const GIMBAL_DAMAGE = 0.8; // shots well off the nose are gimballed or turret shots: a little weaker
+export const REWIND = 0.2; // seconds: hits are judged where the shooter saw the target
+export const SPREAD = 0.006; // radians: every laser's own scatter
 
 /** How far apart two state messages may put you: speed with some slack, plus an in-system jump. */
 export const JUMP = 10_500; // metres: the J jump
