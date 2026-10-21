@@ -20,6 +20,7 @@ import {
   type Mount,
   rollEquipmentDamage,
   newCommander,
+  onSave,
   removeEquipment,
   saveCommander,
   type Commander,
@@ -57,6 +58,8 @@ import { MouseAim } from './game/mouseAim';
 import { allies, NpcShip, type NpcRole } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
 import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
+import { sessionToken, signedIn, currentAccount } from './net/account';
+import { claimCallsign, commanderSaved, initAccount, isAccountPanelOpen, toggleAccountPanel } from './ui/accountPanel';
 import { cleanName } from '../server/src/protocol';
 import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
 import { think } from './game/ai';
@@ -98,6 +101,7 @@ let inSpace = false;
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 function setState(next: State) {
+  if (next !== 'title' && isAccountPanelOpen()) toggleAccountPanel(false);
   if (next !== 'flying') {
     countdown = null; // leaving flight cancels a hyperspace countdown
     combatComputer = null;
@@ -329,8 +333,18 @@ function showNewGame() {
 
 function startCommander(difficulty: Difficulty) {
   commander = newCommander(difficulty);
-  // Your callsign: what other commanders see. Blank keeps the original's Jameson.
-  commander.name = cleanName($<HTMLInputElement>('#callsign').value.trim() || commander.name);
+  // Your callsign: what other commanders see. Blank keeps your account's, or the original's Jameson.
+  const typed = $<HTMLInputElement>('#callsign').value.trim();
+  commander.name = cleanName(typed || currentAccount()?.callsign || commander.name);
+  if (signedIn() && commander.name !== currentAccount()?.callsign) {
+    const wanted = commander.name;
+    claimCallsign(wanted).catch((e: Error) => {
+      // Taken by someone else: keep the account's callsign.
+      commander!.name = currentAccount()?.callsign ?? 'Jameson';
+      saveCommander(commander!);
+      flash(`${e.message} · you're CMDR ${commander!.name}`, 4);
+    });
+  }
   saveCommander(commander);
   sfx.beep();
   enterDocked();
@@ -577,12 +591,16 @@ function startRename() {
   dd.querySelector('form')!.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = cleanName(input.value);
-    if (name !== c.name) {
-      c.name = name;
-      saveCommander(c);
-      flash(`Callsign changed: CMDR ${name}`, 2);
-    }
-    renderDocked();
+    if (name === c.name) return renderDocked();
+    // Signed in, your callsign is your account's: it has to be free.
+    claimCallsign(name)
+      .then((claimed) => {
+        c.name = claimed;
+        saveCommander(c);
+        flash(`Callsign changed: CMDR ${claimed}`, 2);
+      })
+      .catch((err: Error) => flash(err.message, 3))
+      .finally(() => renderDocked());
   });
 }
 
@@ -2868,7 +2886,7 @@ function die() {
 const COMMANDER_COLOUR = '#dfe9ff'; // their tags and scanner marks; ships keep their own colours
 
 /** Another commander's tag: rank insignia, callsign and range, e.g. "◆◆ CMDR Moxon · 0.8 km". */
-const callsignTag = (r: Remote, range: string) => `${rankInsignia(r.rank)} CMDR ${r.name} · ${range}`.trim();
+const callsignTag = (r: Remote, range: string) => `${rankInsignia(r.rank)} CMDR ${r.name}${r.verified ? '' : ' (guest)'} · ${range}`.trim();
 const BUMP_SEPARATION = 40; // metres each ship moves apart after a collision
 const remoteModels = new Map<string, { model: ShipModel; fireCooldown: number }>();
 const sharedSpace = new SharedSpace(onSpaceEvent);
@@ -2997,7 +3015,7 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
     return;
   }
   const here = currentSystem();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3', Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'));
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3', Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken());
   const back = sharedSpace.takeCorrection();
   if (back) player.obj.position.copy(back);
   sharedSpace.update(dt, {
@@ -3433,6 +3451,8 @@ function handleKey(code: string) {
         else showNewGame();
       } else if (code === 'KeyS') {
         toggleSharedSpace();
+      } else if (code === 'KeyA' || (code === 'Escape' && isAccountPanelOpen())) {
+        toggleAccountPanel();
       }
       if (code !== 'KeyN' && newCommanderArmed) disarmNewCommander();
       break;
@@ -3558,3 +3578,12 @@ initTouch();
 setDockTab('station');
 showTitle();
 frame();
+
+// Accounts: every save also goes to the cloud when signed in; sign-in links land here.
+onSave(commanderSaved);
+void initAccount({
+  flash,
+  commanderReplaced: () => {
+    if (state === 'title') showTitle();
+  },
+});

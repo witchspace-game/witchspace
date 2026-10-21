@@ -27,6 +27,8 @@ export interface Remote {
   id: string;
   name: string;
   rank: string;
+  /** Signed in, with their account's callsign; otherwise a guest. */
+  verified: boolean;
   ship: string;
   /** Where to draw them now (interpolated). */
   position: THREE.Vector3;
@@ -80,7 +82,7 @@ export class SharedSpace {
   }
 
   /** Be in this system's shared space (or none). Reconnects only when it changes. */
-  join(galaxy: number, system: number, name: string, ship: string, lasers: string[], rank: string, missiles: number, ecm: boolean) {
+  join(galaxy: number, system: number, name: string, ship: string, lasers: string[], rank: string, missiles: number, ecm: boolean, session?: string) {
     const key = `${galaxy}/${system}`;
     if (key === this.system && this.ws) return;
     if (this.clock < this.retryAt) return;
@@ -88,7 +90,7 @@ export class SharedSpace {
     this.system = key;
     const ws = new WebSocket(`${SPACE_URL}/system/${key}`);
     this.ws = ws;
-    ws.onopen = () => this.send({ type: 'hello', name, ship, lasers, rank, missiles, ecm });
+    ws.onopen = () => this.send({ type: 'hello', name, ship, lasers, rank, missiles, ecm, session });
     ws.onmessage = (e) => this.receive(JSON.parse(e.data as string) as ServerMessage);
     ws.onclose = () => {
       if (this.ws !== ws) return; // a deliberate leave
@@ -227,7 +229,7 @@ export class SharedSpace {
   }
 
   private add(c: Commander): Remote {
-    const r: Remote = { id: c.id, name: c.name, rank: c.rank ?? 'Harmless', ship: c.ship, position: toV(c.p), quaternion: toQ(c.q), firing: c.f, history: [{ t: this.clock, p: toV(c.p), q: toQ(c.q), f: c.f }], hostileUntil: 0 };
+    const r: Remote = { id: c.id, name: c.name, rank: c.rank ?? 'Harmless', verified: Boolean(c.verified), ship: c.ship, position: toV(c.p), quaternion: toQ(c.q), firing: c.f, history: [{ t: this.clock, p: toV(c.p), q: toQ(c.q), f: c.f }], hostileUntil: 0 };
     this.remotes.set(c.id, r);
     return r;
   }

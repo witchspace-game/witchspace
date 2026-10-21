@@ -9,6 +9,7 @@
 //   someone looks at it.
 
 import { DurableObject } from 'cloudflare:workers';
+import { isHuman, json, networkOf } from './http';
 import { SEED_IDEAS } from './seed-ideas';
 
 export interface IdeasEnv {
@@ -79,7 +80,7 @@ export class IdeasBoard extends DurableObject<IdeasEnv> {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const voter = request.headers.get('X-Voter');
-    const net = await this.network(request);
+    const net = await networkOf(request, (this.env.ADMIN_KEY ?? 'witchspace') + ':ideas');
     const parts = url.pathname.split('/').filter(Boolean); // ['ideas', id?, action?]
 
     if (request.method === 'GET' && parts.length === 1) return json(this.list(url.searchParams.get('sort'), voterOk(voter) ? voter : ''));
@@ -120,7 +121,7 @@ export class IdeasBoard extends DurableObject<IdeasEnv> {
     const text = cleanText(body?.body, BODY_MAX);
     if (title.length < 4) return json({ error: 'Give your idea a title' }, 400);
     if (this.recent(voter, net, 'post', 3600_000) >= POSTS_PER_HOUR) return json({ error: 'That’s plenty of ideas for one hour: try again later' }, 429);
-    if (!(await this.human(body?.turnstile, request))) return json({ error: 'The human check didn’t pass: please try again' }, 403);
+    if (!(await isHuman(this.env.TURNSTILE_SECRET, body?.turnstile, request))) return json({ error: 'The human check didn’t pass: please try again' }, 403);
     const id = crypto.randomUUID().slice(0, 8);
     this.sql.exec('INSERT INTO ideas (id, title, body, created) VALUES (?, ?, ?, ?)', id, title, text, Date.now());
     this.note(voter, net, 'post');
@@ -183,30 +184,4 @@ export class IdeasBoard extends DurableObject<IdeasEnv> {
   private note(voter: string, net: string, kind: string) {
     this.sql.exec('INSERT INTO activity (voter, net, kind, t) VALUES (?, ?, ?, ?)', voter, net, kind, Date.now());
   }
-
-  /** The visitor's network, as a salted hash: we never keep the address itself. */
-  private async network(request: Request): Promise<string> {
-    const ip = request.headers.get('CF-Connecting-IP') ?? 'local';
-    const salt = (this.env.ADMIN_KEY ?? 'witchspace') + ':ideas';
-    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(salt + ip));
-    return [...new Uint8Array(digest)].slice(0, 12).map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  /** Cloudflare Turnstile: is this a person? Skipped when no secret is set (local development). */
-  private async human(token: unknown, request: Request): Promise<boolean> {
-    if (!this.env.TURNSTILE_SECRET) return true;
-    if (typeof token !== 'string' || !token) return false;
-    const form = new FormData();
-    form.append('secret', this.env.TURNSTILE_SECRET);
-    form.append('response', token);
-    const ip = request.headers.get('CF-Connecting-IP');
-    if (ip) form.append('remoteip', ip);
-    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body: form });
-    const out = (await res.json().catch(() => ({}))) as { success?: boolean };
-    return out.success === true;
-  }
-}
-
-function json(data: unknown, status = 200): Response {
-  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 }

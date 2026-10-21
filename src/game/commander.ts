@@ -1,4 +1,5 @@
-// The player's persistent state. Lives in localStorage until accounts arrive.
+// The player's persistent state. Lives in localStorage, and in the cloud too
+// when you're signed in (see net/account.ts).
 
 export type Difficulty = 'classic' | 'modern';
 
@@ -215,12 +216,17 @@ export function loadCommander(): Commander | null {
   return null;
 }
 
+const saveListeners: ((c: Commander) => void)[] = [];
+/** Be told after every save (the cloud save uses this). */
+export const onSave = (fn: (c: Commander) => void) => saveListeners.push(fn);
+
 export function saveCommander(c: Commander) {
   try {
     localStorage.setItem(KEY, JSON.stringify(c));
   } catch {
     // Ignore; see loadCommander.
   }
+  for (const fn of saveListeners) fn(c);
 }
 
 export function deleteCommander() {
