@@ -19,6 +19,21 @@ A parking spot for good ideas that aren't designed yet. When one is picked up, i
 
 - **J in-system jump drive.** Jump most of the way to the planet or station in seconds, blocked by mass lock when ships are near, as in the original. (Part of the [travel pacing](design/law-and-travel.md#8-travel-pacing) design.)
 
+## Exploration
+
+**Priority: Explore should be as good as Trade and Fight.** Trading now has a living exchange and fighting has the law, the Marshals and the combat computer. Commanders who'd rather wander the galaxy need the same depth: reasons to go somewhere new, things worth finding, and something to show for it.
+
+- **Worlds worth visiting.** Every system already has its 1984 description (its economy, government, species and the odd local custom). Bring that to life when you arrive: the planet's look from its seed (colour, bands, rings, moons), a short arrival card, and the occasional binary star, gas giant or ringed world. Rare systems become destinations.
+- **Scan and survey.** Fly close to a planet, star or station and scan it; deep surveys take time and nerve (close orbits, sun skimming). Survey data sells at stations, more the further it is from where it was gathered, so explorers earn a living without trading or fighting.
+- **Points of interest.** Derelicts, wreck fields, abandoned stations, signal sources, nebulae and dead stars, placed from each system's seed so everyone finds the same things. Many are small stories: a log to read, a cargo to salvage, a clue that points to the next system.
+- **Legends,** already on the roadmap: the rare secret encounters. Exploration is how you find them.
+- **Witchspace itself.** Misjumps that strand you between systems, Thargoid space, and rifts like the Marshals' that occasionally open on their own and lead somewhere unmarked.
+- **The chart as a record.** The galactic chart remembers where you've been, what you've scanned and what you found, and fills in as you explore. Milestones for visiting every system in a galaxy, or reaching the far edge.
+- **An explorer's rank.** Its own road, separate from combat and trading, earned by distance, discoveries and surveys. In the shared galaxy: first discoveries carry the finder's name, as the system's chart entry shows.
+- **Explorer's kit.** Long-range fuel tanks, better scanners, a survey probe, and fuel scoops that matter more the further out you go.
+- **Photos.** The P key already takes clean shots; a gallery of the best ones, by system, shows other commanders what's out there.
+- **Community content.** Points of interest, logs and Legends as data files with a validator, like ships, so anyone can add a place worth finding.
+
 ## Multiplayer and communication
 
 - **Radio.** Text channels for local radio (ships in range in the same system), station traffic control, direct hails to your target, and guild channels. **Opt-in proximity voice** that fades and crackles with distance and is positioned left and right like other ship sounds. Hail anything: stations, police and AI-agent commanders answer too. Distress calls go out over the radio so nearby players hear them. **Safety from day one:** mute, block and report; voice off by default; push-to-talk; optional filtering.
