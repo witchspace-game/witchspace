@@ -6,22 +6,27 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, LOCK_RANGE, MISSILE, RANKS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
+import { Accounts, type AccountsEnv } from './accounts';
 import { IdeasBoard, type IdeasEnv } from './ideas';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
 
-export interface Env extends IdeasEnv {
+export interface Env extends IdeasEnv, AccountsEnv {
   SYSTEMS: DurableObjectNamespace<SystemRoom>;
   IDEAS: DurableObjectNamespace<IdeasBoard>;
+  ACCOUNTS: DurableObjectNamespace<Accounts>;
 }
 
-export { IdeasBoard };
+export { Accounts, IdeasBoard };
+
+/** The one Accounts object, which holds every account. */
+const accountsOf = (env: Env) => env.ACCOUNTS.get(env.ACCOUNTS.idFromName('accounts'));
 
 /** CORS for the ideas board, which the website calls from witchspace.org.uk. */
 function cors(origin: string): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, X-Voter, X-Admin-Key',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Voter, X-Admin-Key, Authorization',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
   };
@@ -37,13 +42,15 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
-    // The ideas board: /ideas, /ideas/<id>/vote, /ideas/<id>/report.
-    if (url.pathname === '/ideas' || url.pathname.startsWith('/ideas/')) {
+    // The ideas board (/ideas…) and accounts (/auth…, /me…), called from our pages.
+    const ideas = url.pathname === '/ideas' || url.pathname.startsWith('/ideas/');
+    const accounts = url.pathname.startsWith('/auth/') || url.pathname === '/me' || url.pathname.startsWith('/me/');
+    if (ideas || accounts) {
       const origin = request.headers.get('Origin') ?? '';
       const allowed = ORIGINS.some((o) => o.test(origin));
       if (!allowed) return new Response('Forbidden', { status: 403 });
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
-      const res = await env.IDEAS.get(env.IDEAS.idFromName('board')).fetch(request);
+      const res = await (ideas ? env.IDEAS.get(env.IDEAS.idFromName('board')) : accountsOf(env)).fetch(request);
       const out = new Response(res.body, res);
       for (const [k, v] of Object.entries(cors(origin))) out.headers.set(k, v);
       return out;
@@ -133,7 +140,11 @@ export class SystemRoom extends DurableObject<Env> {
     if (msg.type === 'hello' && !a.commander) {
       const ship = msg.ship in SHIPS ? msg.ship : 'cobra-mk3';
       const rank = typeof msg.rank === 'string' && RANKS.includes(msg.rank) ? msg.rank : 'Harmless';
-      a.commander = { id: crypto.randomUUID().slice(0, 8), name: cleanName(msg.name), rank, ship, p: [0, 0, 0], q: [0, 0, 0, 1], s: 0, f: false };
+      // Signed in: the callsign comes from the account, not the browser. Otherwise a guest.
+      const who = typeof msg.session === 'string' ? await accountsOf(this.env).whoIs(msg.session) : null;
+      const verified = Boolean(who?.callsign);
+      const name = verified ? who!.callsign! : cleanName(msg.name);
+      a.commander = { id: crypto.randomUUID().slice(0, 8), name, rank, verified, ship, p: [0, 0, 0], q: [0, 0, 0, 1], s: 0, f: false };
       ws.serializeAttachment(a);
       const lasers = Array.isArray(msg.lasers) ? msg.lasers.filter((l): l is string => typeof l === 'string' && l in LASERS) : [];
       this.combat.set(a.commander.id, {

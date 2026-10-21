@@ -38,8 +38,12 @@
       <button data-key="ArrowRight">Next ▶</button>
       <button data-key="KeyY" id="load-button" class="primary">Y · Load commander</button>
       <button data-key="KeyN" id="new-button">N · New commander</button>
+      <button data-key="KeyA" id="account-button" title="Sign in to keep your callsign and play on any device">A · Sign in</button>
       <button data-key="KeyS" id="shared-button" title="Fly with other commanders in the same system (Modern rules)">S · Shared space (beta): off</button>
     </nav>
+
+    <!-- Your account: sign in, callsign, cloud save (src/ui/accountPanel.ts) -->
+    <section class="panel account" id="account-panel" hidden></section>
 
     <!-- New commander: choose the rules -->
     <section class="panel rules" data-screen="newgame">

@@ -14,6 +14,10 @@ class_name = "SystemRoom"
 name = "IDEAS"
 class_name = "IdeasBoard"
 
+[[durable_objects.bindings]]
+name = "ACCOUNTS"
+class_name = "Accounts"
+
 # SQLite-backed Durable Objects, which the free Workers plan supports.
 [[migrations]]
 tag = "v1"
@@ -23,6 +27,11 @@ new_sqlite_classes = ["SystemRoom"]
 [[migrations]]
 tag = "v2"
 new_sqlite_classes = ["IdeasBoard"]
+
+# Accounts: email sign-in, callsigns and cloud saves, in one SQLite database.
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["Accounts"]
 
 [observability]
 enabled = true
