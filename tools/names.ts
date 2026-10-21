@@ -1,5 +1,6 @@
 // Reserved callsigns (server/src/names.ts): see them, and release a protected
-// one to the right person.
+// one to the right person. Releasing any other name holds it for that person
+// alone, as we do for fans of the original.
 //
 //   npx tsx tools/names.ts list
 //   npx tsx tools/names.ts release "Witchspace" someone@example.com
