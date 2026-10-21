@@ -71,8 +71,9 @@ const LensShader = {
       vec2 bent = bend(d);
       vec3 seen = texture2D(tDiffuse, center + bent * vec2(1.0 / aspect, 1.0)).rgb;
       float x = length(d) / radius;
-      float field = stars(bent) * strength * smoothstep(0.85, 1.15, x) * smoothstep(5.0, 2.5, x);
-      gl_FragColor = vec4(seen + field * vec3(0.75, 0.8, 1.0), 1.0);
+      // Faint, and only close around the rim, so it never reads as glare.
+      float field = stars(bent) * strength * smoothstep(0.9, 1.15, x) * smoothstep(3.0, 1.6, x);
+      gl_FragColor = vec4(seen + field * vec3(0.3, 0.33, 0.4), 1.0);
     }`,
 };
 

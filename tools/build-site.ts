@@ -5,9 +5,12 @@
 import { marked, type Tokens } from 'marked';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, relative, resolve } from 'node:path';
+import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from './media';
 
 const root = resolve(import.meta.dirname, '..');
 const REPO = 'https://github.com/witchspace-game/witchspace/blob/main/';
+const SITE = 'https://witchspace.org.uk';
+const media = loadMedia(root);
 const template = readFileSync(join(root, 'site/template.html'), 'utf8');
 
 const NAV = [
@@ -24,6 +27,10 @@ interface Page {
   content: string;
   scripts?: string[];
   bodyClass?: string;
+  /** The share card image (1200×630); defaults to the featured press image. */
+  image?: string;
+  /** Extra tags for <head>. */
+  head?: string;
 }
 
 const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
@@ -38,6 +45,9 @@ function render(page: Page): string {
   return template
     .replaceAll('{{title}}', escapeAttr(page.title))
     .replaceAll('{{description}}', escapeAttr(page.description))
+    .replaceAll('{{url}}', SITE + page.path)
+    .replaceAll('{{image}}', escapeAttr(page.image ?? shareImage(media)))
+    .replace('{{head}}', page.head ?? '')
     .replace('{{bodyClass}}', page.bodyClass ?? '')
     .replace('{{nav}}', nav)
     .replace('{{content}}', page.content)
@@ -55,8 +65,18 @@ function write(page: Page) {
 for (const name of readdirSync(join(root, 'site/pages'))) {
   const html = readFileSync(join(root, 'site/pages', name), 'utf8');
   const meta = JSON.parse(html.match(/^<!--\s*(\{.*?\})\s*-->/s)![1]);
-  write({ ...meta, content: html.replace(/^<!--.*?-->\s*/s, '') });
+  const content = html
+    .replace(/^<!--.*?-->\s*/s, '')
+    .replace('<!-- press:gallery -->', galleryHtml(media))
+    .replace('<!-- press:data -->', galleryData(media))
+    // {{media:<id>:large}} and the like: a press item's link at a given size.
+    .replace(/\{\{media:([\w-]+):(large|og|direct)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct') => links(media, media.items.find((i) => i.id === id)!)[size]);
+  write({ ...meta, content });
 }
+
+// --- A page per press image and video, so each can be shared on its own ------
+
+for (const item of media.items) write(itemPage(media, item, SITE));
 
 // --- Design documents from Markdown -------------------------------------------
 
@@ -159,5 +179,11 @@ ${roadmapHtml}
 </section>`,
 });
 
-const generated = ['index.html', ...NAV.slice(1).map(([p]) => p.slice(1) + 'index.html'), ...docMeta.map((d) => `design/${d.slug}/index.html`)];
+const generated = [
+  'index.html',
+  ...NAV.slice(1).map(([p]) => p.slice(1) + 'index.html'),
+  'press/index.html',
+  ...docMeta.map((d) => `design/${d.slug}/index.html`),
+  ...media.items.map((i) => `press/${i.id}/index.html`),
+];
 console.log(`Built ${generated.length} pages: ${generated.map((f) => relative(root, join(root, f))).join(', ')}`);
