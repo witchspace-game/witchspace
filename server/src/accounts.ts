@@ -8,7 +8,8 @@
 // Deleting your account removes all of it.
 
 import { DurableObject } from 'cloudflare:workers';
-import { cleanName, isReservedName } from './protocol';
+import { cleanName } from './protocol';
+import { NAMES, nameKey, nameRule } from './names';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
 
 export interface AccountsEnv {
@@ -44,6 +45,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, account TEXT NOT NULL, expires INTEGER NOT NULL)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS saves (account TEXT PRIMARY KEY, data TEXT NOT NULL, updated INTEGER NOT NULL)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS sends (email TEXT NOT NULL, net TEXT NOT NULL, t INTEGER NOT NULL)');
+    // Protected callsigns released to one person (names.ts): only that email's account may claim them.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS releases (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, created INTEGER NOT NULL)');
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -52,6 +55,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const m = request.method;
     if (m === 'POST' && path === '/auth/request') return this.requestLink(request);
     if (m === 'POST' && path === '/auth/verify') return this.verify(request);
+    if (path.startsWith('/admin/')) return this.admin(request, path);
 
     const account = await this.sessionAccount(request);
     if (!account) return json({ error: 'Please sign in' }, 401);
@@ -158,12 +162,48 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const body = (await request.json().catch(() => null)) as { callsign?: unknown } | null;
     const callsign = cleanName(body?.callsign);
     if (callsign.length < 2) return json({ error: 'Callsigns need at least two letters' }, 400);
-    if (isReservedName(callsign)) return json({ error: `CMDR ${callsign} is reserved: try another` }, 409);
+    const rule = nameRule(callsign);
+    if (rule?.rule === 'never') return json({ error: `${callsign} can't be used as a callsign: try another` }, 409);
+    if (rule && !this.releasedTo(callsign, account.email)) return json({ error: `${callsign} is reserved: try another` }, 409);
     const key = callsign.toLowerCase();
     const taken = this.sql.exec('SELECT id FROM accounts WHERE callsign_key = ? AND id != ?', key, account.id).toArray()[0];
     if (taken) return json({ error: `CMDR ${callsign} is already taken: try another` }, 409);
     this.sql.exec('UPDATE accounts SET callsign = ?, callsign_key = ? WHERE id = ?', callsign, key, account.id);
     return json({ callsign });
+  }
+
+  private releasedTo(callsign: string, email: string): boolean {
+    return this.sql.exec('SELECT 1 FROM releases WHERE name_key = ? AND email = ?', nameKey(callsign), email).toArray().length > 0;
+  }
+
+  // --- Admin: releasing protected callsigns --------------------------------------
+
+  /** GET /admin/names, POST /admin/names/release {name, email}, POST /admin/names/revoke {name}. Needs the admin key. */
+  private async admin(request: Request, path: string): Promise<Response> {
+    const key = request.headers.get('X-Admin-Key');
+    if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return json({ error: 'Forbidden' }, 403);
+    if (request.method === 'GET' && path === '/admin/names') {
+      const releases = this.sql.exec('SELECT name, email, created FROM releases ORDER BY created').toArray();
+      return json({ rules: NAMES, releases });
+    }
+    const body = (await request.json().catch(() => null)) as { name?: unknown; email?: unknown } | null;
+    const name = cleanName(body?.name);
+    if (request.method === 'POST' && path === '/admin/names/release') {
+      const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+      if (!EMAIL.test(email)) return json({ error: 'That email doesn’t look right' }, 400);
+      const rule = nameRule(name);
+      if (!rule) return json({ error: `${name} isn’t reserved: anyone can claim it` }, 400);
+      if (rule.rule === 'never') return json({ error: `${name} is never released (${rule.why})` }, 409);
+      this.sql.exec('INSERT OR REPLACE INTO releases (name_key, name, email, created) VALUES (?, ?, ?, ?)', nameKey(name), name, email, Date.now());
+      return json({ released: name, to: email });
+    }
+    if (request.method === 'POST' && path === '/admin/names/revoke') {
+      this.sql.exec('DELETE FROM releases WHERE name_key = ?', nameKey(name));
+      // Whoever holds it gives it up: they'll be asked for another callsign.
+      const freed = this.sql.exec('UPDATE accounts SET callsign = NULL, callsign_key = NULL WHERE callsign_key = ?', name.toLowerCase()).rowsWritten;
+      return json({ revoked: name, freed });
+    }
+    return json({ error: 'Not found' }, 404);
   }
 
   // --- The cloud save --------------------------------------------------------------

@@ -5,7 +5,8 @@
 // See docs/design/servers-and-hosting.md.
 
 import { DurableObject } from 'cloudflare:workers';
-import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMAGE, isQuat, isReservedName, isVec3, LASERS, LOCK_RANGE, MISSILE, RANKS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
+import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, LOCK_RANGE, MISSILE, RANKS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
+import { nameRule } from './names';
 import { Accounts, type AccountsEnv } from './accounts';
 import { IdeasBoard, type IdeasEnv } from './ideas';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
@@ -42,9 +43,9 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
-    // The ideas board (/ideas…) and accounts (/auth…, /me…), called from our pages.
+    // The ideas board (/ideas…) and accounts (/auth…, /me…, /admin…), called from our pages and tools.
     const ideas = url.pathname === '/ideas' || url.pathname.startsWith('/ideas/');
-    const accounts = url.pathname.startsWith('/auth/') || url.pathname === '/me' || url.pathname.startsWith('/me/');
+    const accounts = url.pathname.startsWith('/auth/') || url.pathname === '/me' || url.pathname.startsWith('/me/') || url.pathname.startsWith('/admin/');
     if (ideas || accounts) {
       const origin = request.headers.get('Origin') ?? '';
       const allowed = ORIGINS.some((o) => o.test(origin));
@@ -145,7 +146,7 @@ export class SystemRoom extends DurableObject<Env> {
       const verified = Boolean(who?.callsign);
       // A guest can't borrow a reserved name either.
       const guestName = cleanName(msg.name);
-      const name = verified ? who!.callsign! : isReservedName(guestName) ? 'Commander' : guestName;
+      const name = verified ? who!.callsign! : nameRule(guestName) ? 'Commander' : guestName;
       a.commander = { id: crypto.randomUUID().slice(0, 8), name, rank, verified, ship, p: [0, 0, 0], q: [0, 0, 0, 1], s: 0, f: false };
       ws.serializeAttachment(a);
       const lasers = Array.isArray(msg.lasers) ? msg.lasers.filter((l): l is string => typeof l === 'string' && l in LASERS) : [];

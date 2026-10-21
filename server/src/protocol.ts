@@ -97,24 +97,6 @@ export function cleanName(name: unknown): string {
   return s || 'Commander';
 }
 
-// Names nobody can claim: Elite's own commander, its makers, this project, and
-// anything that sounds official. Checked loosely, so "CMDR J4meson" and
-// "D. Braben" count too.
-const RESERVED = new Set(['jameson', 'witchspace', 'elite', 'moxon', 'bell', 'ianbell', 'braben', 'davidbraben', 'acornsoft', 'firebird', 'frontier', 'oolite', 'galcop', 'admin', 'administrator', 'moderator', 'mod', 'official', 'staff', 'support', 'system', 'commander', 'cmdr']);
-/** Reserved even inside a longer name: these are distinctive enough not to catch anyone by accident. */
-const RESERVED_WITHIN = ['jameson', 'witchspace', 'braben', 'ianbell', 'moxon', 'acornsoft'];
-const LOOKALIKE: Record<string, string> = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '8': 'b' };
-
-export function isReservedName(name: string): boolean {
-  const key = name
-    .normalize('NFKD')
-    .toLowerCase()
-    .replace(/[0-9]/g, (d) => LOOKALIKE[d] ?? d)
-    .replace(/[^a-z]/g, '')
-    .replace(/^(commander|cmdr)(?=.)/, '');
-  return RESERVED.has(key) || RESERVED_WITHIN.some((r) => key.includes(r));
-}
-
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 export const isVec3 = (v: unknown): v is Vec3 => Array.isArray(v) && v.length === 3 && v.every(finite);
 export const isQuat = (v: unknown): v is Quat => Array.isArray(v) && v.length === 4 && v.every(finite);

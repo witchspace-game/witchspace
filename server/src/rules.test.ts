@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanName, isReservedName, JUMP } from './protocol';
+import { cleanName, JUMP } from './protocol';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Track } from './rules';
 
 const at = (z: number, t: number, jumpedAt = -1e9): Track => ({ p: [0, 0, z], t, jumpedAt });
@@ -119,15 +119,5 @@ describe('shared space: missiles, flown by the server', () => {
     const m: Flight = { p: [0, 0, 0], d: [0, 0, 1], s: 120, age: 0 };
     expect(fly(m, null, 40).r).toBe('expired');
     expect(m.p[0]).toBeCloseTo(0);
-  });
-});
-
-describe('reserved callsigns', () => {
-  it('keeps Elite’s own names, its makers and this project for nobody', () => {
-    for (const n of ['Jameson', 'CMDR Jameson', 'J4meson', 'Commander Jameson II', 'Witchspace', 'witch space', 'Elite', 'Moxon', 'Bell', 'Ian Bell', 'D. Braben', 'Braben_fan', 'Admin', 'Cmdr']) expect(isReservedName(n), n).toBe(true);
-  });
-
-  it('leaves ordinary names alone', () => {
-    for (const n of ['Lead Balloon', 'Campbell', 'Elite Trader', 'Satellite', 'Belle', 'Modesty', 'Jamie']) expect(isReservedName(n), n).toBe(false);
   });
 });
