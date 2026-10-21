@@ -50,7 +50,7 @@ The money supply follows what actually happens in the system:
 - **Burned** through station fees, fines, taxes and repairs, and when a station buys back its own currency to defend a peg.
 - **Shocks:** blockades, raids and incursions cut production, so less is minted and confidence falls. Booms do the opposite. Market events from [economy and exchanges](economy-and-exchanges.md#7-market-events) feed straight in.
 
-Every mint and burn is recorded in the ledger (section 6), so total supply is always known.
+Every mint and burn is recorded in the ledger (section 7), so total supply is always known.
 
 ## 4. Exchanges
 
@@ -87,7 +87,40 @@ Crises come from the rules, not from scripts:
 
 News of a crisis travels like any other news ([information that travels](economy-and-exchanges.md#2-information-that-travels)), so the first commander to arrive with a full hold of a collapsing currency's goods, or a hold of credits, can do very well.
 
-## 6. A ledger anyone can check
+## 6. The single currency: a union with an agenda
+
+A powerful bloc pushes **one currency for many systems**, much like the euro. Its working name is **the Meridian Compact** and its currency **the Meridian (MRD)**; both are placeholders for the community to rename. In Witchspace's story **the Compact are the antagonists**: polished, persuasive and very hard to leave.
+
+### How it works, based on real currency unions
+
+- **Joining has entry criteria.** A system must keep inflation, debt and deficits within the Compact's limits for a while before it's allowed in, much like the euro's convergence criteria.
+- **Members give up their own policy.** Their own currency is retired at a fixed conversion rate. They can't print, devalue or set their own rates any more; the Compact decides for everyone.
+- **One size fits all, badly.** The Compact sets policy for its richest core worlds. When a member is hit by its own shock (a famine, a blockade, an incursion), it can't devalue its way out the way an independent system could. Real economists call this an **asymmetric shock**, and it's where the trouble starts.
+- **Benefits are real.** Members get no exchange fees between them, a stable currency, deep liquidity and preferential docking and trade. That's why systems join, and why it's tempting.
+- **Bailouts come with strings.** A member in crisis is rescued, but only if it accepts Compact control of its station fees, tariffs and budgets: austerity, imposed from outside.
+- **Leaving is brutal.** A system can leave, but its debts stay in Meridians while its new currency is worth far less (**redenomination risk**). Rumours of an exit trigger capital flight before it happens.
+- **The ledger shows the strain.** Imbalances between strong and weak members are published (like the euro area's TARGET2 balances), so sharp traders can see which member is closest to breaking.
+
+### Why they're the bad guys
+
+- **Expansion by pressure.** The Compact grows by making life hard for holdouts: tariffs and docking surcharges on non-members, trade embargoes, and "assistance" offered to systems in crisis.
+- **Its own enforcers.** Compact patrols escort Meridian convoys and blockade awkward systems. They're not police; attacking them is a crime only in member systems.
+- **Polite, not cartoonish.** The Compact's messages are reasonable and its benefits genuine. That's what makes it effective, and what makes resisting it interesting.
+
+### What commanders can do
+
+- **Back the holdouts:** run supplies through Compact blockades, keep independent currencies liquid, escort convoys to free systems.
+- **Bet on breakups:** speculate on which member will leave next, or against a weak member's debts.
+- **Smuggle:** buy at the cheap independent rate and sell inside the union, where the Meridian is strong.
+- **Work for the Compact:** escort Meridian convoys, enforce embargoes, and take Compact combat missions. Playing the antagonist is a legitimate career, with its own rewards and enemies.
+
+### Guardrails
+
+- The Compact is an **NPC faction** run by the game, possibly with an AI-agent leadership as in [player-run stations](player-stations.md). Players can work for it but not take it over.
+- The **Co-operative credit** and the Bankers' Guild stay neutral; the Compact can't absorb them.
+- How far the Compact spreads depends on what players do, and it should never be able to take the whole galaxy.
+
+## 7. A ledger anyone can check
 
 The server is in charge, but it proves its honesty with the same cryptography blockchains use, without needing a blockchain:
 
@@ -98,24 +131,24 @@ The server is in charge, but it proves its honesty with the same cryptography bl
 
 The ledger keeps the double-entry, append-only and invariant rules already in the [economy design](economy-and-exchanges.md#the-ledger-multiplayer).
 
-## 7. What it looks like in play
+## 8. What it looks like in play
 
 - **Docked:** prices show in the local currency, with the credit equivalent alongside. A **Currency** tab shows the exchange rate, pool depth, your balances, and the system's policy, supply and reserves.
 - **Galaxy map:** a currency overlay colours systems by strength or volatility, with the last known rates and how old that news is.
 - **Fuel and essentials:** you can always pay for fuel, repairs and docking in credits at a fair rate, so no commander is ever stranded by a currency they don't hold.
 
-## 8. Classic and single-player
+## 9. Classic and single-player
 
 - **Classic** stays as in 1984: credits only.
 - **Single-player Modern** can have system currencies with NPC traders providing the market, as a way to learn the system before the shared galaxy. Its ledger lives in the browser, like the rest of the commander.
 
-## 9. Building it in stages
+## 10. Building it in stages
 
 | Stage | What |
 |---|---|
 | **Single-player** | Generated currencies, government policies, minting and burning, one constant-product pool per station, the Currency tab |
 | **Shared galaxy** | Server ledger with hash chains, published Merkle roots and signed transactions; player liquidity provision; order books |
-| **Later** | Currency crises driven by player activity, futures on currencies, guild treasuries |
+| **Later** | Currency crises driven by player activity, futures on currencies, guild treasuries, the Meridian Compact |
 
 ---
 
@@ -126,3 +159,4 @@ The ledger keeps the double-entry, append-only and invariant rules already in th
 - **Station scrip:** do player stations still issue their own scrip on top of system currencies, or use their system's?
 - **Keys and wallets:** how commanders' keys are created and recovered without making sign-in hard.
 - **Exchange limits:** how tight Communist exchange limits should be before they stop being fun.
+- **The Compact:** its real name, where in the galaxy it starts, and how its leadership is run.
