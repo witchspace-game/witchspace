@@ -2,6 +2,7 @@ import type { Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
 import { commodityById, cargoTonnage, UNITS_PER_TONNE } from './commodities';
 import { stationTrades } from './legality';
+import { checkOrders } from './orders';
 import { costToBuy, freshMarket, proceedsToSell, quoteClassic, quoteModern, recover, TRADE_MEMORY, type MarketState, type Quote } from './market';
 
 // Buying and selling at the station you're docked at. Pure functions over the
@@ -48,6 +49,8 @@ export function marketState(ctx: TradeContext): MarketState {
   const recovered = recover(ctx.system, existing, ctx.now);
   existing.stock = recovered.stock;
   existing.updated = recovered.updated;
+  // Limit orders here may have filled while you were away.
+  checkOrders(c, ctx.system, existing, ctx.now);
   return existing;
 }
 
