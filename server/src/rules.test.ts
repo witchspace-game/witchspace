@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cleanName, JUMP } from './protocol';
-import { checkMove, type Track } from './rules';
+import { canFire, checkMove, positionAt, recharge, reportHealth, resolveShot, takeHit, type Track } from './rules';
 
 const at = (z: number, t: number, jumpedAt = -1e9): Track => ({ p: [0, 0, z], t, jumpedAt });
 
@@ -32,5 +32,45 @@ describe('shared space: what the server accepts', () => {
     expect(cleanName('<script>alert(1)</script>')).toBe('scriptalert1script');
     expect(cleanName('x'.repeat(40))).toHaveLength(24);
     expect(cleanName(42)).toBe('Commander');
+  });
+});
+
+describe('shared space: lasers, refereed by the server', () => {
+  const still = () => 0.5; // no scatter
+
+  it('judges a shot where the shooter saw the target, a moment ago', () => {
+    const history = [{ t: 0, p: [0, 0, 1000] as [number, number, number] }, { t: 200, p: [200, 0, 1000] as [number, number, number] }];
+    expect(positionAt(history, 100)).toEqual([100, 0, 1000]);
+    expect(positionAt(history, -50)).toEqual([0, 0, 1000]);
+    expect(positionAt(history, 999)).toEqual([200, 0, 1000]);
+  });
+
+  it('hits the nearest ship in line, within range, and misses wide shots', () => {
+    const targets = [
+      { id: 'far', p: [0, 0, 2000] as [number, number, number], radius: 28 },
+      { id: 'near', p: [10, 0, 800] as [number, number, number], radius: 28 },
+      { id: 'beside', p: [200, 0, 500] as [number, number, number], radius: 28 },
+    ];
+    expect(resolveShot([0, 0, 0], [0, 0, 1], 3000, targets, still)).toBe('near');
+    expect(resolveShot([0, 0, 0], [0, 0, 1], 500, targets, still)).toBeNull(); // out of range
+    expect(resolveShot([0, 0, 0], [0, 0, -1], 3000, targets, still)).toBeNull(); // behind
+    expect(resolveShot([0, 0, 0], [0, 0, 0], 3000, targets, still)).toBeNull(); // nonsense direction
+  });
+
+  it('only allows lasers that are fitted, no faster than they fire', () => {
+    expect(canFire('beam', ['beam'], 0, 100)).toBe(true);
+    expect(canFire('beam', ['beam'], 0, 50)).toBe(false); // too soon
+    expect(canFire('military', ['beam'], 0, 1000)).toBe(false); // not fitted
+    expect(canFire('death-ray', ['death-ray'], 0, 1000)).toBe(false); // no such laser
+  });
+
+  it('takes damage on the shields first, recharges them, and only believes reports of less health', () => {
+    let h = { shields: 100, hull: 150, at: 0 };
+    h = takeHit(h, 120).health;
+    expect(h).toMatchObject({ shields: 0, hull: 130 });
+    expect(takeHit({ shields: 0, hull: 10, at: 0 }, 14).destroyed).toBe(true);
+    expect(recharge(h, 100, 5000).shields).toBe(30); // 6 per second
+    expect(reportHealth(h, [100, 150], 100, 0)).toMatchObject({ shields: 0, hull: 130 }); // can't heal by saying so
+    expect(reportHealth(h, [0, 90], 100, 0)).toMatchObject({ hull: 90 }); // NPC damage counts
   });
 });

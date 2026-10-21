@@ -101,7 +101,43 @@ Single-player stays exactly as it is: **the whole game runs in your browser** an
 
 Costs are covered by **transparent donations** (GitHub Sponsors or Open Collective), with all income and spending public, as set out in the [player-stations proposal](player-stations.md#no-pay-to-win). Supporters get thanks, never power. The design aims to keep costs low enough that this is realistic.
 
-## 9. Building it in stages
+## 9. Fair play
+
+**The rule: in the shared galaxy, the browser is never trusted with anything that matters.** The code is open source, so we assume some players run modified clients, and design so that it gets them nothing.
+
+### Single-player: let it be
+
+A single-player commander lives in your own browser, and you can edit it if you want; it's your game and nobody else is affected. Classic stays fully offline. Fighting this would only get in honest players' way.
+
+### The server keeps the books
+
+- **Commanders live on the server** in the shared galaxy: credits, cargo, equipment, ratings, legal records. The browser shows a copy.
+- **Every action is a request** ("buy 10 t of Food", "fit a beam laser"). The server decides whether it happens and at what price, and writes it to a ledger that can't be quietly edited (see [system currencies](system-currencies.md) for the hash-chained ledger).
+- **Single-player commanders don't carry over.** Everyone starts fresh in the shared galaxy, so an edited save is worth nothing there.
+
+### The server referees flying and fighting
+
+- **Movement:** speed, teleporting and positions outside the system are refused (built). Turn rates next.
+- **Lasers:** the browser says "I fired, this way". The server works out whether it hit, rewinding the target to where the shooter saw it (lag compensation), and checks the rate of fire. Damage, kills, bounties and rating points are only ever decided on the server.
+- **Aim assistance:** gimbals are a legal aim assist, so an aimbot gains less than in most games, and the server applies each laser's own spread, so perfect aim isn't a perfect hit.
+
+### Markets nobody can see ahead
+
+Markets and world events come from each system's seed and the clock, and the code is public, so anyone could run it forward and know next week's famine or prices. Harmless in single-player; an exploit in a shared economy. So in the shared galaxy the server **mixes a secret seed into future events and NPC trading**. To stay provably fair, it publishes a fingerprint (a hash) of each period's secret in advance and reveals the secret afterwards, so anyone can check that nothing was rigged.
+
+### Bots and multiple accounts
+
+- **Sign-in with a verified email** (Resend), and one commander per account.
+- **New accounts start limited:** small trade and contract caps until they've played a while, so farming with throwaway accounts is pointless.
+- **Rate limits** on every connection (built), and watching for non-human patterns: perfect timing, trading around the clock.
+- **Automated trading only as declared market makers**, never hidden bots (see [Merchants](markets-and-trade.md#5-merchants-trading-without-flying)).
+- **No real money in or out**, which removes most of the reason to cheat at all.
+
+### People
+
+A report button, and server logs to check reports against. Moderation by people, with clear rules, not automatic bans.
+
+## 10. Building it in stages
 
 | Stage | Server work |
 |---|---|
@@ -117,7 +153,8 @@ Costs are covered by **transparent donations** (GitHub Sponsors or Open Collecti
 - **Hosting:** Cloudflare Workers with **one Durable Object per star system** (`server/`), at `space.witchspace.org.uk`. Durable Objects use hibernating WebSockets, so a system with nobody in it costs nothing, and the SQLite-backed kind runs on the free Workers plan.
 - **What it does:** the game opens one WebSocket to its system and sends its position about ten times a second. The server refuses impossible moves: speeding, teleporting (the in-system jump is allowed, with a cooldown) and positions far outside the system. Refused moves put you back where you were. Everything else is passed to the other commanders there, whose browsers draw each ship slightly in the past, between updates, so it moves smoothly.
 - **In the game:** opt-in from the title screen (**S · Shared space (beta)**), Modern rules only. Other commanders fly Cobras in a white commander colour, with name labels and scanner contacts, and their lasers are drawn. Hyperspace is the handover between system servers.
-- **Not yet:** lasers that hit other players (server-checked, with lag compensation), accounts and anything saved, chat. Those are the next steps.
+- **Lasers between commanders (built):** the browser sends "I fired, this way, with this laser". The server checks the laser is fitted and not firing faster than it can, judges the target where the shooter saw it (200 ms back) with the laser's own scatter, and keeps everyone's shields and hull, recharging as in the game. Browsers report their own health so NPC damage counts, but can only lower it. The victim's shields and hull come from the server, and only the server says who was destroyed. Firing on a commander makes you an Offender, and destroying one is a serious crime (a Marshals warrant) wherever there's law; anarchies have none.
+- **Not yet:** collisions between commanders (today ships pass through each other; ramming should be refereed by the server too), missiles between commanders, fitted lasers decided by the server (today the browser says what's fitted, until commanders are saved on the server), accounts and anything saved, chat.
 
 ## Open questions
 
@@ -125,4 +162,4 @@ Costs are covered by **transparent donations** (GitHub Sponsors or Open Collecti
 - **Signing in:** email magic links, GitHub, or both?
 - **Update rate:** 10 or 20 updates a second? Decide by testing what feels right in a dogfight.
 - **Crowded systems:** the closely-simulated ship cap per system, and whether to split crowded systems into copies at all.
-- **Single-player commanders:** can a single-player Modern commander move into the shared galaxy, or does everyone start fresh there?
+- ~~**Single-player commanders:**~~ settled: everyone starts fresh in the shared galaxy (section 9).

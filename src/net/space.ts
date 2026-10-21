@@ -32,9 +32,23 @@ export interface Remote {
   quaternion: THREE.Quaternion;
   firing: boolean;
   history: Snapshot[];
+  /** Until when (our clock, seconds) they count as hostile: they've shot at us. */
+  hostileUntil: number;
 }
 
-export type SpaceEvent = { kind: 'joined'; remote: Remote } | { kind: 'left'; remote: Remote } | { kind: 'connected'; others: number } | { kind: 'lost' };
+export type SpaceEvent =
+  | { kind: 'joined'; remote: Remote }
+  | { kind: 'left'; remote: Remote }
+  | { kind: 'connected'; others: number }
+  | { kind: 'lost' }
+  /** We were hit (by a commander we may not have seen yet): the server's word on our shields and hull. */
+  | { kind: 'hit'; by: Remote | null; damage: number; shields: number; hull: number }
+  /** Our shot hit them. */
+  | { kind: 'hitconfirm'; remote: Remote }
+  /** Someone was destroyed: us (`me`), or a commander we can see. */
+  | { kind: 'destroyed'; me: boolean; remote: Remote | null; by: Remote | null; byMe: boolean };
+
+const HOSTILE_FOR = 15; // seconds a commander who shot at you stays marked hostile
 
 const toV = (a: [number, number, number]) => new THREE.Vector3(...a);
 const toQ = (a: [number, number, number, number]) => new THREE.Quaternion(...a);
@@ -48,6 +62,7 @@ export class SharedSpace {
   private clock = 0;
   private correction: THREE.Vector3 | null = null;
   private retryAt = 0;
+  private myId = '';
   private lostReported = false;
 
   constructor(private readonly onEvent: (e: SpaceEvent) => void) {}
@@ -57,7 +72,7 @@ export class SharedSpace {
   }
 
   /** Be in this system's shared space (or none). Reconnects only when it changes. */
-  join(galaxy: number, system: number, name: string, ship: string) {
+  join(galaxy: number, system: number, name: string, ship: string, lasers: string[]) {
     const key = `${galaxy}/${system}`;
     if (key === this.system && this.ws) return;
     if (this.clock < this.retryAt) return;
@@ -65,7 +80,7 @@ export class SharedSpace {
     this.system = key;
     const ws = new WebSocket(`${SPACE_URL}/system/${key}`);
     this.ws = ws;
-    ws.onopen = () => this.send({ type: 'hello', name, ship });
+    ws.onopen = () => this.send({ type: 'hello', name, ship, lasers });
     ws.onmessage = (e) => this.receive(JSON.parse(e.data as string) as ServerMessage);
     ws.onclose = () => {
       if (this.ws !== ws) return; // a deliberate leave
@@ -94,14 +109,23 @@ export class SharedSpace {
   }
 
   /** Each frame: send our state now and then, and move everyone else along. */
-  update(dt: number, me: { position: THREE.Vector3; quaternion: THREE.Quaternion; speed: number; firing: boolean }) {
+  /** A laser shot: the server decides whether it hit anyone. */
+  fire(direction: THREE.Vector3, laser: string) {
+    this.send({ type: 'fire', d: [direction.x, direction.y, direction.z], l: laser });
+  }
+
+  isHostile(r: Remote) {
+    return r.hostileUntil > this.clock;
+  }
+
+  update(dt: number, me: { position: THREE.Vector3; quaternion: THREE.Quaternion; speed: number; firing: boolean; shields: number; hull: number }) {
     this.clock += dt;
     this.sendTimer -= dt;
     if (this.connected && this.sendTimer <= 0) {
       this.sendTimer = SEND_INTERVAL;
       const p = me.position;
       const q = me.quaternion;
-      this.send({ type: 'state', p: [round(p.x), round(p.y), round(p.z)], q: [q.x, q.y, q.z, q.w], s: round(me.speed), f: me.firing });
+      this.send({ type: 'state', p: [round(p.x), round(p.y), round(p.z)], q: [q.x, q.y, q.z, q.w], s: round(me.speed), f: me.firing, h: [round(me.shields), round(me.hull)] });
     }
     const at = this.clock - DELAY;
     for (const r of this.remotes.values()) interpolate(r, at);
@@ -111,6 +135,7 @@ export class SharedSpace {
     switch (msg.type) {
       case 'welcome':
         this.lostReported = false;
+        this.myId = msg.id;
         for (const c of msg.others) this.add(c);
         this.onEvent({ kind: 'connected', others: msg.others.length });
         break;
@@ -134,11 +159,25 @@ export class SharedSpace {
       case 'correct':
         this.correction = toV(msg.p);
         break;
+      case 'hit': {
+        const by = this.remotes.get(msg.by) ?? null;
+        if (by) by.hostileUntil = this.clock + HOSTILE_FOR;
+        this.onEvent({ kind: 'hit', by, damage: msg.damage, shields: msg.shields, hull: msg.hull });
+        break;
+      }
+      case 'hitconfirm': {
+        const r = this.remotes.get(msg.id);
+        if (r) this.onEvent({ kind: 'hitconfirm', remote: r });
+        break;
+      }
+      case 'destroyed':
+        this.onEvent({ kind: 'destroyed', me: msg.id === this.myId, remote: this.remotes.get(msg.id) ?? null, by: this.remotes.get(msg.by) ?? null, byMe: msg.by === this.myId });
+        break;
     }
   }
 
   private add(c: Commander): Remote {
-    const r: Remote = { id: c.id, name: c.name, ship: c.ship, position: toV(c.p), quaternion: toQ(c.q), firing: c.f, history: [{ t: this.clock, p: toV(c.p), q: toQ(c.q), f: c.f }] };
+    const r: Remote = { id: c.id, name: c.name, ship: c.ship, position: toV(c.p), quaternion: toQ(c.q), firing: c.f, history: [{ t: this.clock, p: toV(c.p), q: toQ(c.q), f: c.f }], hostileUntil: 0 };
     this.remotes.set(c.id, r);
     return r;
   }

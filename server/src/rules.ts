@@ -3,7 +3,7 @@
 // in-system jump, which has a cooldown. Anything else is refused and you're
 // put back where you were.
 
-import { JUMP, JUMP_COOLDOWN, SHIPS, SLACK, SYSTEM_RADIUS, type Vec3 } from './protocol';
+import { JUMP, JUMP_COOLDOWN, LASERS, SHIELD_RECHARGE, SHIPS, SLACK, SPREAD, SYSTEM_RADIUS, type Vec3 } from './protocol';
 
 export interface Track {
   p: Vec3;
@@ -27,4 +27,98 @@ export function checkMove(ship: string, track: Track | null, p: Vec3, s: number,
   if (moved <= max * SLACK * dt + 50) return 'ok';
   if (moved <= JUMP + max * SLACK * dt && now - track.jumpedAt >= JUMP_COOLDOWN) return 'jump';
   return 'teleport';
+}
+
+// --- Lasers -------------------------------------------------------------------
+// The shooter only says "I fired, this way, with this laser". The server checks
+// they could have, then works out what it hit, judging each target where the
+// shooter saw it (a moment in the past) and adding the laser's own scatter.
+
+export interface Sample {
+  t: number; // ms
+  p: Vec3;
+}
+
+/** Where a commander was at time `t`, from their recent accepted positions. */
+export function positionAt(history: Sample[], t: number): Vec3 | null {
+  if (!history.length) return null;
+  if (t <= history[0].t) return history[0].p;
+  for (let i = 1; i < history.length; i++) {
+    const a = history[i - 1];
+    const b = history[i];
+    if (t <= b.t) {
+      const k = (t - a.t) / Math.max(1, b.t - a.t);
+      return [a.p[0] + (b.p[0] - a.p[0]) * k, a.p[1] + (b.p[1] - a.p[1]) * k, a.p[2] + (b.p[2] - a.p[2]) * k];
+    }
+  }
+  return history[history.length - 1].p;
+}
+
+/** Whether a shot is allowed: a laser that's fitted, and no faster than it fires. */
+export function canFire(laser: string, fitted: string[], lastShotAt: number, now: number): boolean {
+  const l = LASERS[laser];
+  return Boolean(l) && fitted.includes(laser) && now - lastShotAt >= l.interval * 1000 * 0.85;
+}
+
+const unit = (v: Vec3): Vec3 | null => {
+  const n = Math.hypot(...v);
+  return n > 0.5 && n < 1.5 ? [v[0] / n, v[1] / n, v[2] / n] : null;
+};
+
+/** Nudge a direction by up to `spread` radians, at random. */
+function scatter(d: Vec3, spread: number, random: () => number): Vec3 {
+  const j: Vec3 = [d[0] + (random() * 2 - 1) * spread, d[1] + (random() * 2 - 1) * spread, d[2] + (random() * 2 - 1) * spread];
+  return unit(j) ?? d;
+}
+
+export interface ShotTarget {
+  id: string;
+  p: Vec3;
+  radius: number;
+}
+
+/** The nearest target a laser shot hits, if any. */
+export function resolveShot(origin: Vec3, direction: Vec3, range: number, targets: ShotTarget[], random = Math.random): string | null {
+  const u = unit(direction);
+  if (!u) return null;
+  const d = scatter(u, SPREAD, random);
+  let best: string | null = null;
+  let bestT = range;
+  for (const t of targets) {
+    const o: Vec3 = [t.p[0] - origin[0], t.p[1] - origin[1], t.p[2] - origin[2]];
+    const along = o[0] * d[0] + o[1] * d[1] + o[2] * d[2];
+    if (along < 0 || along > bestT) continue;
+    const off = Math.hypot(o[0] - d[0] * along, o[1] - d[1] * along, o[2] - d[2] * along);
+    if (off <= t.radius) {
+      best = t.id;
+      bestT = along;
+    }
+  }
+  return best;
+}
+
+export interface Health {
+  shields: number;
+  hull: number;
+  /** When shields were last worked out (ms). */
+  at: number;
+}
+
+/** Shields recharge as they do in the game. */
+export function recharge(h: Health, maxShields: number, now: number): Health {
+  return { ...h, shields: Math.min(maxShields, h.shields + ((now - h.at) / 1000) * SHIELD_RECHARGE), at: now };
+}
+
+/** Take a hit: shields first, then the hull. Returns the new health, and whether that destroyed the ship. */
+export function takeHit(h: Health, damage: number): { health: Health; destroyed: boolean } {
+  const absorbed = Math.min(h.shields, damage);
+  const health = { ...h, shields: h.shields - absorbed, hull: h.hull - (damage - absorbed) };
+  return { health, destroyed: health.hull <= 0 };
+}
+
+/** The browser reports its own health (NPC damage happens there): accept it only if it's no better than ours. */
+export function reportHealth(h: Health, reported: unknown, maxShields: number, now: number): Health {
+  const r = recharge(h, maxShields, now);
+  if (!Array.isArray(reported) || reported.length !== 2 || !reported.every((n) => typeof n === 'number' && Number.isFinite(n))) return r;
+  return { shields: Math.max(0, Math.min(r.shields, reported[0])), hull: Math.max(0, Math.min(r.hull, reported[1])), at: now };
 }

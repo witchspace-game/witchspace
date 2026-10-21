@@ -56,7 +56,7 @@ import {
 import { MouseAim } from './game/mouseAim';
 import { allies, NpcShip, type NpcRole } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
-import { SharedSpace, type SpaceEvent } from './net/space';
+import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
 import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
@@ -1509,7 +1509,7 @@ function playerHitNpc(npc: NpcShip, damage: number) {
   if (npc.hit(damage, player)) destroyNpc(npc, player.obj);
 }
 
-type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' };
+type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' } | { kind: 'commander' };
 
 // Lasers fire straight ahead unless a gimballed mount is fitted, in which
 // case (with mouse aim) they swivel to hit what's under the ring. The ring
@@ -1599,6 +1599,8 @@ function firePlayerLaser() {
     ...npcs.map((npc) => ({ value: { kind: 'npc' as const, npc }, position: npc.obj.position, radius: npc.radius * 0.75 })),
     ...drifters.map((drifter) => ({ value: { kind: 'drifter' as const, drifter }, position: drifter.model.root.position, radius: 7 })),
     { value: { kind: 'station' as const }, position: station.root.position, radius: 90 },
+    // Other commanders stop the beam on screen; whether it hurt them is the server's call.
+    ...[...sharedSpace.remotes.values()].map((r) => ({ value: { kind: 'commander' as const }, position: r.position, radius: 28 })),
   ];
   const hit = rayHit(origin, dir, laser.range, targets);
   if (hit?.target.value.kind === 'station' && cmdr().difficulty === 'modern' && fireHeld < FIRE_OVERRIDE && !isFugitive()) {
@@ -1616,6 +1618,7 @@ function firePlayerLaser() {
   const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
   for (const muzzle of muzzles()) beams.fire(muzzle, end, laser.color);
   sfx.laser();
+  if (sharedSpace.connected) sharedSpace.fire(dir, laser.id);
   if (!hit) return;
   const shot = hit.target.value;
   if (shot.kind === 'npc') {
@@ -2389,7 +2392,7 @@ function updateSpace(dt: number) {
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
   if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#cfe0ff', kind: 'station' });
-  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: COMMANDER_COLOUR, kind: 'ship' });
+  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, kind: 'ship' });
   // Near a rift, contacts jitter about on the scanner.
   const noise = state === 'flying' ? riftInterference() : 0;
   if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
@@ -2427,7 +2430,7 @@ function updateMarkers() {
   }));
   markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
   markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
-  for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: COMMANDER_COLOUR, radius: 30, label: `${r.name} ${km(r.position)}` });
+  for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, radius: 30, label: `${r.name} ${km(r.position)}` });
   if (carrier?.rift) markers.push({ position: carrier.rift.group.position, color: '#cfe0ff', radius: carrier.rift.radius, label: `Rift ${km(carrier.rift.group.position)}` });
   for (const m of missiles) if (m.target === player) markers.push({ position: m.position, color: '#ff4d6d', radius: 6, label: `MISSILE ${km(m.position)}` });
   const view = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
@@ -2832,7 +2835,54 @@ function onSpaceEvent(e: SpaceEvent) {
     case 'lost':
       if (state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
       break;
+    case 'hit':
+      // The server's word on our shields and hull.
+      if (state !== 'flying') break;
+      player.shields = e.shields;
+      player.hull = e.hull;
+      sfx.hit();
+      hitFeedback(0.35);
+      if (e.by) showHitDirection(camera, e.by.position);
+      break;
+    case 'hitconfirm':
+      sfx.hit();
+      // Firing on another commander is like firing on any clean ship.
+      becomeOffender(`Firing on Commander ${e.remote.name} · you are an OFFENDER`);
+      break;
+    case 'destroyed':
+      if (e.me) {
+        if (state === 'flying') {
+          flash(e.by ? `Destroyed by Commander ${e.by.name}` : 'Ship destroyed', 3);
+          die();
+        }
+        break;
+      }
+      if (e.remote) commanderDestroyed(e.remote, e.byMe);
+      break;
   }
+}
+
+/** Another commander's ship breaks up. If we did it, the law and the rating take note. */
+function commanderDestroyed(r: Remote, byMe: boolean) {
+  const m = remoteModels.get(r.id);
+  if (m) {
+    const boom = new Explosion(m.model.def, m.model.root, new THREE.Vector3(0, 0, 1).applyQuaternion(r.quaternion).multiplyScalar(100));
+    space.scene.add(boom.group);
+    explosions.push(boom);
+    boomAt(r.position, 2.2, 1600, 1.6);
+    m.model.root.visible = false; // gone; the server tells us when they leave
+  }
+  if (!byMe) {
+    flash(`Commander ${r.name} has been destroyed`, 2.5);
+    return;
+  }
+  const c = cmdr();
+  const before = combatRating(c.kills);
+  c.kills += combatComputer ? 0.5 : 1;
+  flash(`Commander ${r.name} destroyed`, 2.5);
+  becomeFugitive(true); // killing a clean commander is a serious crime
+  if (combatRating(c.kills) !== before) setTimeout(() => flash(`Combat rating: ${combatRating(c.kills)}`, 3), 2600);
+  saveCommander(c);
 }
 
 function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
@@ -2842,10 +2892,17 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
     return;
   }
   const here = currentSystem();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3');
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3', Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)));
   const back = sharedSpace.takeCorrection();
   if (back) player.obj.position.copy(back);
-  sharedSpace.update(dt, { position: player.obj.position, quaternion: player.obj.quaternion, speed: player.speed, firing: Boolean(input?.fire) && !overheated });
+  sharedSpace.update(dt, {
+    position: player.obj.position,
+    quaternion: player.obj.quaternion,
+    speed: player.speed,
+    firing: Boolean(input?.fire) && !overheated,
+    shields: player.shields,
+    hull: player.hull,
+  });
   for (const r of sharedSpace.remotes.values()) {
     let m = remoteModels.get(r.id);
     if (!m) {
