@@ -3512,7 +3512,7 @@ function handleKey(code: string) {
 }
 
 addEventListener('keydown', (e) => {
-  if ((e.target as HTMLElement).closest?.('input')) return; // typing a quantity, not flying
+  if ((e.target as HTMLElement).closest?.('input, textarea')) return; // typing, not flying
   if (e.code === 'Tab' && isMapOpen()) e.preventDefault(); // Tab switches charts, not focus
   if (!e.repeat) handleKey(e.code);
 });
