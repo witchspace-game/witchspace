@@ -21,6 +21,8 @@ interface Options {
   onTarget: (s: StarSystem) => void;
   /** News of a system that has reached the current one: a short line, or null. */
   news?: (s: StarSystem) => string | null;
+  /** Your record of a system: whether you've been, and a line on what you surveyed and found. */
+  explored?: (s: StarSystem) => { visited: boolean; line: string };
 }
 
 const root = document.querySelector<HTMLElement>('#galaxy-map')!;
@@ -156,6 +158,14 @@ function draw() {
       ctx.arc(x, y, size, 0, Math.PI * 2);
       ctx.fill();
     }
+    // Where you've been: a fine ring, so the chart fills in as you explore.
+    if (opts.explored?.(s).visited) {
+      ctx.strokeStyle = reachable || retro ? colours.star : colours.dim;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, y, size + 2.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
     if (mode === 'local') {
       ctx.fillStyle = reachable ? colours.text : colours.dim;
       ctx.fillText(s.name, x + size + 6, y);
@@ -227,6 +237,8 @@ function renderInfo() {
   ];
   const news = opts.news?.(s);
   if (news) rows.push(['News', news]);
+  const explored = opts.explored?.(s);
+  if (explored) rows.push(['Explored', explored.line]);
   const isTarget = opts.target === s;
   // Station names are community content, so everything is escaped.
   info.innerHTML = `<h3>${escapeHtml(s.name)}${isTarget ? ' <em>Destination</em>' : ''}</h3><dl>${rows

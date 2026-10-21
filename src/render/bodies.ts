@@ -34,8 +34,8 @@ function buildAtmosphere(radius: number, color: THREE.Color): THREE.Mesh {
   );
 }
 
-/** A planet drawn as a lit globe with glowing lines of latitude and longitude. */
-export function buildPlanet(radius: number, lineColor: string): THREE.Group {
+/** A planet drawn as a lit globe with glowing lines of latitude and longitude. Moons go without air. */
+export function buildPlanet(radius: number, lineColor: string, atmosphere = true): THREE.Group {
   const g = new THREE.Group();
   const color = new THREE.Color(lineColor);
   const sphere = new THREE.SphereGeometry(radius, 64, 32);
@@ -57,7 +57,7 @@ export function buildPlanet(radius: number, lineColor: string): THREE.Group {
   const neo = [
     new THREE.Mesh(sphere, new THREE.MeshLambertMaterial({ color: color.clone().multiplyScalar(0.12), ...behindLines })),
     neoLines(neoGrid, color.clone().multiplyScalar(0.9), 1.2),
-    buildAtmosphere(radius * ATMOSPHERE_SCALE, color),
+    ...(atmosphere ? [buildAtmosphere(radius * ATMOSPHERE_SCALE, color)] : []),
   ];
   // The BBC Micro drew planets as an outline with an equator and a meridian.
   const retro = [
