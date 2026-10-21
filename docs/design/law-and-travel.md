@@ -153,6 +153,7 @@ What happens when a heavily armed veteran arrives somewhere poor and low-tech? *
 ### The response scales with the threat
 
 - When a crime is beyond the local police, they **call in the Marshals**, who arrive after a delay: **sooner and stronger the bigger the threat**.
+- **How they arrive (built, Modern rules):** a commander with a warrant is hunted by a **Bastion** carrier (805 m) with a wing of eight **Lancer** interceptors (46 m). It comes through a **witchspace rift** about 2.4 km across that opens some 7 km away: a far-off flicker, then spinning rings and a building drone for about half a minute before the carrier slides out side-on. The rift is marked on the HUD and never mass-locks you, so a commander who reads the signs can jump out first. The carrier circles at a 3 km stand-off and launches Lancers in pairs, at most four out at once, keeping the rest as replacements. It leaves through a rift of its own when the warrant is cleared, when its wing is gone, or when it's badly hurt. A destroyed Bastion takes any Lancers still aboard with it and spills its alloys (stolen goods, if you did it), and each one destroyed brings the next carrier sooner. Flying into it is fatal: a collision with anything five times your ship's weight destroys you.
 - **Bounties grow with the gap in power.** Killing a much weaker commander earns a far bigger bounty than killing an equal, which makes a bully a target for every bounty hunter, including other veterans.
 - Insurance won't pay out for criminals (section 7), so a bully who's eventually caught loses a very expensive ship.
 
@@ -191,7 +192,7 @@ Classic stays true to 1984:
 ## Open questions
 
 - ~~**Record scope:**~~ settled: ordinary crimes are local; serious crimes become a galaxy-wide Marshals warrant.
-- **Marshals:** name, livery and ship designs; how long until they arrive for a given threat.
+- **Marshals:** how arrival time and strength should scale with the threat (today: one carrier per warrant, sooner for each Bastion destroyed); a response to "traders attacked" headlines.
 - **Distress beacon and tug:** confirm, including player rescues in multiplayer.
 - **Travel pacing:** is under a minute per jump right, or should it be slower and more atmospheric?
 - **Debt ceiling and hunter escalation:** exact numbers to be tuned in play.

@@ -459,8 +459,13 @@ body[data-state='dead'] #banner { top: 22%; padding: 0; font-size: clamp(28px, 6
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--fg);
-  animation: blink 1.4s steps(2, start) infinite;
+  animation: breathe 2.8s ease-in-out infinite;
   pointer-events: none;
+}
+/* A gentle pulse rather than a blink: it should invite, not nag. */
+@keyframes breathe {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.45; }
 }
 #controls-card {
   left: 50%;

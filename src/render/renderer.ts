@@ -38,6 +38,8 @@ const neoRenderer = new THREE.WebGLRenderer({ canvas: neoCanvas, antialias: true
 neoRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const retroRenderer = new THREE.WebGLRenderer({ canvas: retroCanvas, antialias: false });
 retroRenderer.setPixelRatio(1);
+// Ships coming through a witchspace rift are clipped at its mouth.
+neoRenderer.localClippingEnabled = retroRenderer.localClippingEnabled = true;
 
 export const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 1, 120000);
 

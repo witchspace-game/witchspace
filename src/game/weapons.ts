@@ -63,6 +63,16 @@ export const POLICE_LASER: Laser = {
   color: '#ff4d6d',
 };
 
+export const MARSHAL_LASER: Laser = {
+  name: 'Beam laser',
+  interval: 0.35,
+  damage: 9,
+  range: 2400,
+  heat: 0,
+  cooling: 0,
+  color: '#ffd98a',
+};
+
 export const PIRATE_LASER: Laser = {
   name: 'Pulse laser',
   interval: 0.5,

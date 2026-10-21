@@ -6,7 +6,8 @@ import type { PlayerShip } from './playerShip';
 // npc.ts does the flying.
 //
 // - Police patrol the station, chase the player if wanted here, and attack
-//   pirates in range. Pirates are always fair game.
+//   pirates in range. Pirates are always fair game. Marshals' Lancers do the
+//   same; their carrier doesn't fight, it launches them.
 // - Traders fly their route. Shot at, they run from whoever fired.
 // - Pirates hunt traders or the player, fight back when shot at, and run
 //   when badly hurt. They scan holds: a rich cargo is worth flying further for.
@@ -82,8 +83,10 @@ export function think(npc: NpcShip, world: World) {
     npc.mode = npc.destination ? 'travel' : 'patrol';
   };
 
+  if (npc.fights === false) return cruise();
   switch (npc.role) {
-    case 'police': {
+    case 'police':
+    case 'marshal': {
       if (world.playerWanted && world.playerPresent) return attack(player);
       const pirate = nearest(at, others.filter((n) => n.role === 'pirate').map((n) => n.ship), POLICE_RANGE);
       return pirate ? attack(pirate) : cruise();

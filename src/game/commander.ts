@@ -150,6 +150,8 @@ export interface Commander {
   fuel: number;
   /** Ships destroyed, for the combat rating. */
   kills: number;
+  /** Co-operative Marshals carriers destroyed: each one brings the next sooner. */
+  bastionsDestroyed?: number;
   /** Slaves handed to abolitionists to be freed (Modern rules). */
   freed?: number;
   /** Of the cargo, how much of each good is stolen: scooped from a clean ship you destroyed. */
