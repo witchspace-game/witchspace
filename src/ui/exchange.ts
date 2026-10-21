@@ -17,6 +17,7 @@ import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../
 import { abolitionistPrice, backRoomQuotes, freeSlaves, hasAbolitionists, hasBackRoom, stingChance, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
 import { activeEvent, eventsAt, EVENT_KINDS } from '../economy/events';
 import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
+import { cancelOrder, collect, describeFill, placeOrder, type OrderState } from '../economy/orders';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
 
 // The station market as a trading exchange, in the style of today's crypto
@@ -92,7 +93,11 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
           <button data-side="buy" role="tab">Buy</button>
           <button data-side="sell" role="tab">Sell</button>
         </div>
-        <p class="ex-ordertype">Market order <span>fills now, at the station's prices</span></p>
+        <div class="ex-types" role="group" aria-label="Order type">
+          <button data-type="market">Market</button><button data-type="limit">Limit</button>
+        </div>
+        <p class="ex-ordertype"></p>
+        <label class="ex-price" hidden><span>Price</span><input type="number" min="0" step="0.01" inputmode="decimal" /><b>Cr</b></label>
         <p class="ex-avail"></p>
         <label class="ex-qty"><span>Quantity</span><input type="number" min="0" step="1" inputmode="numeric" /><b class="ex-qty-unit"></b></label>
         <input class="ex-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Quantity as a share of the most you can trade" />
@@ -115,6 +120,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
   const qtyInput = $<HTMLInputElement>('.ex-qty input');
+  const priceInput = $<HTMLInputElement>('.ex-price input');
+  let orderType: 'market' | 'limit' = 'market';
   const slider = $<HTMLInputElement>('.ex-slider');
 
   // The chart: candles, volume underneath, a fair-value line and your trades as markers.
@@ -144,12 +151,24 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   chart.priceScale('volume').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
   const markers = createSeriesMarkers(candleSeries, []);
   let fairLine: IPriceLine | null = null;
+  let orderLines: IPriceLine[] = [];
   let chartKey = '';
   chart.subscribeCrosshairMove((param: MouseEventParams) => legend(param.seriesData.get(candleSeries) as CandlestickData | undefined, param.time));
 
   const commodity = () => commodityById(selected)!;
   const index = () => COMMODITIES.findIndex((c) => c.id === selected);
-  const maxQty = (ctx: TradeContext) => (side === 'buy' ? maxBuyable(ctx, selected) : (ctx.commander.cargo[selected] ?? 0));
+  const limitPrice = () => Number(priceInput.value) || 0;
+  const maxQty = (ctx: TradeContext) => {
+    if (side === 'sell') return ctx.commander.cargo[selected] ?? 0;
+    // A limit buy waits for the price, so it's limited by credits, not stock or hold.
+    if (orderType === 'limit') return limitPrice() > 0 ? Math.floor(ctx.commander.credits / limitPrice()) : 0;
+    return maxBuyable(ctx, selected);
+  };
+  /** Start the limit price a little better than the market: below it to buy, above it to sell. */
+  const suggestPrice = (ctx: TradeContext) => {
+    const p = quotes(ctx).find((x) => x.commodity.id === selected)!.price;
+    priceInput.value = (p * (side === 'buy' ? 0.98 : 1.02)).toFixed(2);
+  };
   const qty = () => Math.max(0, Math.floor(Number(qtyInput.value) || 0));
 
   function setQty(n: number, ctx = deps.context()) {
@@ -258,6 +277,11 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     else requestAnimationFrame(() => chart.timeScale().fitContent()); // once the chart has its size
     chartKey = key;
 
+    // Your open orders on this pair, as lines at their limits.
+    for (const l of orderLines) candleSeries.removePriceLine(l);
+    orderLines = ((state as OrderState).orders ?? [])
+      .filter((o) => o.id === selected)
+      .map((o) => candleSeries.createPriceLine({ price: o.limit, color: o.side === 'buy' ? UP : DOWN, lineStyle: LineStyle.Dashed, lineWidth: 1, axisLabelVisible: true, title: `${o.side === 'buy' ? 'Buy' : 'Sell'} ${o.qty}` }));
     if (fairLine) fairLine.applyOptions({ price: fair });
     else fairLine = candleSeries.createPriceLine({ price: fair, color: 'rgba(247,166,0,0.6)', lineStyle: LineStyle.Dotted, lineWidth: 1, axisLabelVisible: true, title: 'Fair' });
 
@@ -323,7 +347,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const c = commodity();
     const u = unitLabel(c);
     root.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => b.classList.toggle('active', b.dataset.side === side));
+    root.querySelectorAll<HTMLButtonElement>('[data-type]').forEach((b) => b.classList.toggle('active', b.dataset.type === orderType));
     $('.ex-form').classList.toggle('selling', side === 'sell');
+    const limit = orderType === 'limit';
+    $('.ex-price').hidden = !limit;
+    $('.ex-ordertype').innerHTML = limit
+      ? `Limit order <span>waits until the price reaches yours; ${side === 'buy' ? 'your credits are held' : 'your goods are held'} until then</span>`
+      : `Market order <span>fills now, at the station's prices</span>`;
     const max = maxQty(ctx);
     if (qty() > max) setQty(max, ctx);
     $('.ex-qty-unit').textContent = u;
@@ -335,6 +365,22 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
     const n = qty();
     const state = marketState(ctx);
+    if (limit) {
+      const value = n * limitPrice();
+      $('.ex-est').innerHTML = `
+        <div><dt>Limit price</dt><dd>${limitPrice() ? `${fmt(limitPrice(), 2)} Cr` : '-'}</dd></div>
+        <div><dt>Market now</dt><dd>${fmt(quotes(ctx).find((x) => x.commodity.id === selected)!.price, 2)} Cr</dd></div>
+        <div><dt>${side === 'buy' ? 'Credits held' : 'You receive when filled'}</dt><dd><b>${value ? `${fmt(value)} Cr` : '-'}</b></dd></div>`;
+      const submit = $<HTMLButtonElement>('.ex-submit');
+      let why = '';
+      if (!tradesHere(ctx, selected)) why = 'Not traded openly here';
+      else if (side === 'sell' && held === 0) why = `No ${c.name} in your hold`;
+      else if (side === 'buy' && value > ctx.commander.credits) why = 'Not enough credits';
+      submit.disabled = Boolean(why) || n === 0 || !limitPrice();
+      submit.textContent = why || `Place ${side} order${n ? ` · ${n.toLocaleString()} ${u} at ${fmt(limitPrice(), 2)}` : ''}`;
+      $('.ex-msg').textContent = message;
+      return;
+    }
     const best = side === 'buy' ? orderBook(ctx.system, state, selected, 1).asks[0]?.price : orderBook(ctx.system, state, selected, 1).bids[0]?.price;
     let total = 0;
     if (n > 0) {
@@ -380,15 +426,31 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   }
 
   function renderTrades(ctx: TradeContext) {
-    const trades = (marketState(ctx).trades ?? []).slice().reverse();
-    $('.ex-trades-list').innerHTML = trades.length
+    const state = marketState(ctx) as OrderState;
+    const trades = (state.trades ?? []).slice().reverse();
+    const orders = state.orders ?? [];
+    const stored = Object.entries(state.storage ?? {}).filter(([, q]) => q > 0);
+    const openHtml = orders.length
+      ? `<h5>Open orders</h5><table class="ex-orders"><thead><tr><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Limit</th><th class="num">Market</th><th></th></tr></thead><tbody>${orders
+          .map((o) => {
+            const now = quotes(ctx).find((x) => x.commodity.id === o.id)!.price;
+            return `<tr><td>${ticker(o.id)}/CR</td><td class="${o.side === 'buy' ? 'up' : 'down'}">${o.side === 'buy' ? 'Buy' : 'Sell'}</td><td class="num">${o.qty.toLocaleString()}</td>
+              <td class="num">${fmt(o.limit, 2)}</td><td class="num">${fmt(now, 2)}</td><td class="num"><button data-cancel="${o.oid}">Cancel</button></td></tr>`;
+          })
+          .join('')}</tbody></table>`
+      : '';
+    const storageHtml = stored.length
+      ? `<p class="ex-storage">In storage here, waiting for hold space: ${stored.map(([id, q]) => `<b>${q.toLocaleString()} ${unitLabel(commodityById(id)!)} ${ticker(id)}</b>`).join(', ')}</p>`
+      : '';
+    $('.ex-mine h4').textContent = orders.length ? 'Your orders and trades here' : 'Your trades here';
+    $('.ex-trades-list').innerHTML = openHtml + storageHtml + (trades.length
       ? `<table><thead><tr><th>Time</th><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Avg</th><th class="num">Total</th></tr></thead><tbody>${trades
           .map(
             (t) => `<tr><td>${clock(t.t)}</td><td>${ticker(t.id)}/CR</td><td class="${t.side === 'buy' ? 'up' : 'down'}">${t.side === 'buy' ? 'Buy' : 'Sell'}</td>
             <td class="num">${t.qty.toLocaleString()}</td><td class="num">${fmt(t.total / t.qty, 2)}</td><td class="num">${fmt(t.total)}</td></tr>`,
           )
           .join('')}</tbody></table>`
-      : '<p class="ex-empty">No trades at this station yet.</p>';
+      : '<p class="ex-empty">No trades at this station yet.</p>');
   }
 
   // --- The back room -------------------------------------------------------------------
@@ -444,6 +506,16 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   function render(newMessage?: string) {
     if (newMessage !== undefined) message = newMessage;
     const ctx = deps.context();
+    // Orders that filled since we last looked, and goods waiting in storage.
+    const state = marketState(ctx) as OrderState;
+    const notes = (state.fills ?? []).map(describeFill);
+    state.fills = [];
+    const moved = collect(ctx.commander, state, ctx.capacity);
+    for (const [id, q] of Object.entries(moved)) notes.push(`Collected ${q.toLocaleString()} ${unitLabel(commodityById(id)!)} of ${commodityById(id)?.name} from storage`);
+    if (notes.length) {
+      deps.traded({ ok: true, message: notes.join(' · ') });
+      return;
+    }
     renderBackRoom(ctx);
     renderPairs(ctx);
     renderHead(ctx);
@@ -481,6 +553,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       return;
     } else if (el.dataset.id) {
       selected = el.dataset.id;
+      if (orderType === 'limit') queueMicrotask(() => suggestPrice(deps.context()));
       message = '';
       qtyInput.value = '';
       slider.value = '0';
@@ -489,6 +562,19 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       qtyInput.value = '';
       slider.value = '0';
       message = '';
+      if (orderType === 'limit') suggestPrice(deps.context());
+    } else if (el.dataset.type) {
+      orderType = el.dataset.type as 'market' | 'limit';
+      qtyInput.value = '';
+      slider.value = '0';
+      message = '';
+      if (orderType === 'limit') suggestPrice(deps.context());
+    } else if (el.dataset.cancel) {
+      const ctx = deps.context();
+      const result = cancelOrder(ctx.commander, marketState(ctx) as OrderState, Number(el.dataset.cancel), ctx.capacity);
+      message = result.message;
+      deps.traded(result);
+      return;
     } else if (el.dataset.interval) {
       interval = el.dataset.interval as Interval;
     } else if (el.dataset.pct) {
@@ -504,7 +590,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     } else if (el.classList.contains('ex-submit')) {
       const ctx = deps.context();
       const n = qty();
-      const result = side === 'buy' ? buy(ctx, selected, n) : sell(ctx, selected, n);
+      const result =
+        orderType === 'limit'
+          ? placeOrder(ctx.commander, ctx.system, marketState(ctx) as OrderState, selected, side, n, limitPrice(), ctx.now)
+          : side === 'buy'
+            ? buy(ctx, selected, n)
+            : sell(ctx, selected, n);
       if (result.ok) {
         qtyInput.value = '';
         slider.value = '0';
@@ -522,6 +613,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     slider.value = String(max ? Math.round((qty() / max) * 100) : 0);
     renderForm(ctx);
   });
+  priceInput.addEventListener('input', () => renderForm(deps.context()));
   slider.addEventListener('input', () => {
     const ctx = deps.context();
     setQty((maxQty(ctx) * Number(slider.value)) / 100, ctx);
@@ -533,16 +625,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     start() {
       if (timer) return;
       timer = window.setInterval(() => {
-        if (root.offsetParent && !document.hidden) {
-          const ctx = deps.context();
-          renderBackRoom(ctx);
-          renderPairs(ctx);
-          renderHead(ctx);
-          renderChart(ctx);
-          renderBook(ctx);
-          renderForm(ctx);
-          renderFeed(ctx);
-        }
+        // Everything, including orders that have filled and goods to collect.
+        if (root.offsetParent && !document.hidden) render();
       }, 2000);
     },
     stop() {

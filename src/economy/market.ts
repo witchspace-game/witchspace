@@ -48,7 +48,7 @@ export interface Quote {
 }
 
 const ELASTICITY = 0.35; // how strongly stock levels move prices
-const RECOVERY_MINUTES = 30; // time constant for markets to settle back
+export const RECOVERY_MINUTES = 30; // time constant for markets to settle back
 
 
 // Drift: smooth noise at three time scales, weighted, up to ±DRIFT × the
