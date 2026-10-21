@@ -16,7 +16,7 @@ export type NameRule = { name: string; rule: 'never' | 'protected'; within?: boo
 
 export const NAMES: NameRule[] = [
   // Elite itself
-  { name: 'Jameson', rule: 'never', within: true, why: 'Elite’s own commander: the default name, and everyone’s' },
+  { name: 'Jameson', rule: 'protected', within: true, why: 'Elite’s own commander, flown by Witchspace’s founder' },
   { name: 'Elite', rule: 'never', why: 'The game we pay tribute to' },
   { name: 'Commander', rule: 'never', why: 'The title, and the name shared space gives guests' },
   { name: 'Cmdr', rule: 'never', why: 'The title' },
