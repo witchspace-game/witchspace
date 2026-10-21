@@ -14,7 +14,8 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts';
 import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
-import { abolitionistPrice, backRoomQuotes, freeSlaves, hasAbolitionists, hasBackRoom, stingChance, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
+import { abolitionistPrice, backRoomQuotes, fenceQuotes, fenceSell, freeSlaves, hasAbolitionists, hasBackRoom, stingChance, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
+import { cleanQty, stolenQty } from '../game/commander';
 import { activeEvent, eventsAt, EVENT_KINDS } from '../economy/events';
 import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
 import { cancelOrder, collect, describeFill, placeOrder, type OrderState } from '../economy/orders';
@@ -159,7 +160,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   const index = () => COMMODITIES.findIndex((c) => c.id === selected);
   const limitPrice = () => Number(priceInput.value) || 0;
   const maxQty = (ctx: TradeContext) => {
-    if (side === 'sell') return ctx.commander.cargo[selected] ?? 0;
+    // Where there's a law, only clean goods can be sold openly.
+    if (side === 'sell') return ctx.system.government > 0 ? cleanQty(ctx.commander, selected) : (ctx.commander.cargo[selected] ?? 0);
     // A limit buy waits for the price, so it's limited by credits, not stock or hold.
     if (orderType === 'limit') return limitPrice() > 0 ? Math.floor(ctx.commander.credits / limitPrice()) : 0;
     return maxBuyable(ctx, selected);
@@ -193,7 +195,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         const order = off ? null : stationOrder(ctx.system, state, id);
         const tag = order ? `<i class="ex-tag ${order.side === 'buy' ? 'short' : 'glut'}">${order.side === 'buy' ? 'Short' : 'Surplus'}</i>` : '';
         return `<button class="ex-pair${id === selected ? ' active' : ''}${off ? ' off' : ''}" data-id="${id}" title="${q.commodity.name}${off ? ' · not traded at this lawful station' : ''}">
-          <span class="ex-sym"><b>${ticker(id)}</b>${held ? '<i class="ex-held" title="In your hold"></i>' : ''}${q.commodity.legality === 'illegal' ? '<em title="Illegal goods">Illegal</em>' : ''}${tag}</span>
+          <span class="ex-sym"><b>${ticker(id)}</b>${held ? `<i class="ex-held${stolenQty(ctx.commander, id) ? ' hot' : ''}" title="${stolenQty(ctx.commander, id) ? 'In your hold, some of it stolen' : 'In your hold'}"></i>` : ''}${q.commodity.legality === 'illegal' ? '<em title="Illegal goods">Illegal</em>' : ''}${tag}</span>
           <span class="num">${fmt(q.price)}</span>
           <span class="num ${change >= 0 ? 'up' : 'down'}">${pct(change)}</span>
         </button>`;
@@ -238,7 +240,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div><dt>Station stock</dt><dd>${q.stock.toLocaleString()} ${u}</dd></div>
         <div><dt>Trade</dt><dd>${role}</dd></div>
         ${demand}
-        <div><dt>In your hold</dt><dd>${held.toLocaleString()} ${u}</dd></div>
+        <div><dt>In your hold</dt><dd>${held.toLocaleString()} ${u}${stolenQty(ctx.commander, selected) ? ` <em class="ex-hot">${stolenQty(ctx.commander, selected).toLocaleString()} stolen</em>` : ''}</dd></div>
       </dl>`;
   }
 
@@ -403,6 +405,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     if (!tradesHere(ctx, selected)) reason = 'Not traded at this lawful station';
     else if (side === 'buy' && max === 0) reason = quotes(ctx).find((x) => x.commodity.id === selected)!.stock <= 0 ? 'Out of stock' : freeTonnes(ctx) < 1 / UNITS_PER_TONNE[c.unit] ? 'Hold full' : 'Not enough credits';
     else if (side === 'sell' && held === 0) reason = `No ${c.name} in your hold`;
+    else if (side === 'sell' && max === 0) reason = 'Stolen: try a fence in the back room';
     submit.disabled = Boolean(reason) || n === 0;
     submit.textContent = reason || `${side === 'buy' ? 'Buy' : 'Sell'} ${n ? n.toLocaleString() + ' ' + u + ' ' : ''}${ticker(selected)}`;
     $('.ex-msg').textContent = message;
@@ -464,8 +467,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const room = hasBackRoom(c, ctx.system);
     const quotesHere = room ? backRoomQuotes(c, ctx.system, marketState(ctx), ctx.now) : [];
     const abolition = hasAbolitionists(c, ctx.system);
+    const fence = fenceQuotes(c, ctx.system, marketState(ctx), ctx.now);
     const toggle = $<HTMLButtonElement>('.ex-backroom-toggle');
-    toggle.hidden = !quotesHere.length && !(abolition && (c.cargo.slaves ?? 0) > 0);
+    toggle.hidden = !quotesHere.length && !fence.length && !(abolition && (c.cargo.slaves ?? 0) > 0);
     if (!backOpen) return;
     const risk = stingChance(ctx.system, 1);
     const rows = quotesHere
@@ -493,6 +497,17 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       <header><button class="ex-back-close">‹ Exchange</button><h3>Back room</h3><span>No questions asked</span>
         ${quotesHere.length ? `<span class="ex-heat" title="The chance any one deal is with undercover police. Bigger deals draw more attention.">Undercover risk ${(risk * 100).toFixed(0)}% a deal, more for big ones</span>` : ''}</header>
       ${quotesHere.length ? `<table><thead><tr><th>Goods</th><th class="num">They sell</th><th class="num">They buy</th><th class="num">Their stock</th><th class="num">Your hold</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="ex-empty">Nothing here is against the law.</p>'}
+      ${
+        fence.length
+          ? `<div class="ex-fence"><h4>The fence</h4><p>Stolen goods, bought at about 60% of the open price. No questions asked, though the buyer could be police.</p><table><tbody>${fence
+              .map((f) => {
+                const good = commodityById(f.id)!;
+                return `<tr><td><b>${good.name}</b><small>stolen</small></td><td class="num">${fmt(f.bid)} Cr each</td><td class="num">${f.qty.toLocaleString()} ${unitLabel(good)} aboard</td>
+                  <td class="ex-back-actions"><button data-fence="${f.id}" data-n="1">Sell 1</button><button data-fence="${f.id}" data-n="${f.qty}">Sell all</button></td></tr>`;
+              })
+              .join('')}</tbody></table></div>`
+          : ''
+      }
       <p class="ex-back-msg${backCaught ? ' caught' : ''}" aria-live="polite">${backMessage}</p>
       ${abolitionists}`;
   }
@@ -540,6 +555,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     } else if (el.dataset.back) {
       const ctx = deps.context();
       const result = backRoomTrade(ctx.commander, ctx.system, marketState(ctx), el.dataset.good!, el.dataset.back as 'buy' | 'sell', Number(el.dataset.n), ctx.capacity, ctx.now);
+      backMessage = result.message;
+      backCaught = result.caught;
+      deps.dealt(result);
+      return;
+    } else if (el.dataset.fence) {
+      const ctx = deps.context();
+      const result = fenceSell(ctx.commander, ctx.system, marketState(ctx), el.dataset.fence, Number(el.dataset.n), ctx.now);
       backMessage = result.message;
       backCaught = result.caught;
       deps.dealt(result);

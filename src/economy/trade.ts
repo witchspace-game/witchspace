@@ -1,4 +1,4 @@
-import type { Commander } from '../game/commander';
+import { cleanQty, stolenQty, tidyStolen, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
 import { commodityById, cargoTonnage, UNITS_PER_TONNE } from './commodities';
 import { stationTrades } from './legality';
@@ -119,6 +119,11 @@ export function sell(ctx: TradeContext, id: string, qty: number): TradeResult {
   const held = ctx.commander.cargo[id] ?? 0;
   if (!c || qty <= 0 || held < qty) return { ok: false, message: 'Nothing to sell' };
   if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} isn't traded openly here` };
+  // Where there's a law, stations won't take stolen goods.
+  if (ctx.system.government > 0 && qty > cleanQty(ctx.commander, id)) {
+    const hot = stolenQty(ctx.commander, id);
+    return { ok: false, message: `${hot} of your ${c.name} ${hot === 1 ? 'is' : 'are'} stolen: the station won't take ${hot === 1 ? 'it' : 'them'}. Try a fence in the back room` };
+  }
   const proceeds = price(ctx, id, qty, false);
   ctx.commander.credits = Math.round((ctx.commander.credits + proceeds) * 10) / 10;
   const state = marketState(ctx);
@@ -126,5 +131,6 @@ export function sell(ctx: TradeContext, id: string, qty: number): TradeResult {
   ctx.commander.cargo[id] = held - qty;
   logTrade(ctx, state, id, 'sell', qty, proceeds);
   if (ctx.commander.cargo[id] <= 0) delete ctx.commander.cargo[id];
+  tidyStolen(ctx.commander);
   return { ok: true, message: `Sold ${qty} ${c.unit} of ${c.name} for ${proceeds.toFixed(1)} Cr` };
 }

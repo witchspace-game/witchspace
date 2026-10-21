@@ -14,6 +14,7 @@ import {
   hasEquipment,
   isWorking,
   loadCommander,
+  markStolen,
   REPAIR_FRACTION,
   type Mount,
   rollEquipmentDamage,
@@ -74,7 +75,7 @@ import { distanceLy, ECONOMIES, GOVERNMENTS, systemAt, type StarSystem } from '.
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
-import { activeEvent, EVENT_KINDS, newsAt, newsOf } from './economy/events';
+import { activeEvent, EVENT_KINDS, newsArrives, newsAt, newsOf } from './economy/events';
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
@@ -397,6 +398,26 @@ function newsLine(s: StarSystem): string | null {
   return `${EVENT_KINDS[n.event.type].name}${over ? ' (may be over)' : ''} · heard ${ago(Date.now() - n.heard)} ago`;
 }
 
+/**
+ * News of traders being picked off: three or more deliveries lost near one
+ * system within two hours. It spreads like any other news.
+ */
+function attackNews(here: StarSystem, now: number) {
+  const out: { where: StarSystem; distance: number; heard: number; lost: number }[] = [];
+  for (const [key, market] of Object.entries(cmdr().markets)) {
+    const recent = (market.lost ?? []).filter((l) => l.t <= now && l.t > now - 2 * 3600_000);
+    if (recent.length < 3) continue;
+    const [g, i] = key.split(':').map(Number);
+    if (g !== here.galaxy) continue;
+    const where = systemAt(g, i);
+    const distance = distanceLy(where, here);
+    if (distance > 25) continue;
+    const heard = newsArrives(where, here, recent[2].t);
+    if (heard <= now) out.push({ where, distance, heard, lost: recent.length });
+  }
+  return out;
+}
+
 function renderNews() {
   const here = currentSystem();
   const now = Date.now();
@@ -404,8 +425,14 @@ function renderNews() {
   const items = newsAt(here, now)
     .sort((a, b) => Number(now > a.event.end) - Number(now > b.event.end) || b.heard - a.heard)
     .slice(0, 8);
-  $('#news-list').innerHTML = items.length
-    ? items
+  const attacks = attackNews(here, now)
+    .map(
+      (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${escapeHtml(`Traders attacked near ${n.where.name}: ${n.lost} shipments lost`)}</b>
+        <small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · heard ${ago(now - n.heard)} ago · Wanted: whatever it imports</small></li>`,
+    )
+    .join('');
+  $('#news-list').innerHTML = (attacks || items.length)
+    ? attacks + items
         .map((n) => {
           const kind = EVENT_KINDS[n.event.type];
           const local = n.where === here;
@@ -1091,7 +1118,8 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   space.scene.add(boom.group);
   explosions.push(boom);
   boomAt(npc.obj.position, 2.2, 1600, 1.6);
-  if (Object.keys(npc.cargo).length) spillCargo(npc.obj.position, velocity, npc.cargo);
+  // Cargo from a clean ship you destroyed is stolen; from a pirate, or someone else's kill, it's salvage.
+  if (Object.keys(npc.cargo).length) spillCargo(npc.obj.position, velocity, npc.cargo, killer === player.obj && npc.role !== 'pirate');
   const lost = deliveries.get(npc);
   if (lost && commander) {
     const market = marketState(tradeContext());
@@ -1612,6 +1640,8 @@ interface Drifter {
   burn: number;
   /** What's inside, for whoever scoops it up. */
   contents: { id: string; qty: number } | null;
+  /** From a clean ship you destroyed: whoever scoops it is holding stolen goods. */
+  stolen?: boolean;
 }
 const drifters: Drifter[] = [];
 const MAX_DRIFTERS = 40;
@@ -1634,7 +1664,7 @@ function packCanisters(cargo: Record<string, number>): { id: string; qty: number
   return out;
 }
 
-function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, cargo: Record<string, number> | number) {
+function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, cargo: Record<string, number> | number, stolen = false) {
   const def = shipById('cargo-canister');
   if (!def) return;
   const loads = typeof cargo === 'number' ? Array.from({ length: cargo }, () => null) : packCanisters(cargo);
@@ -1651,6 +1681,7 @@ function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, cargo: Record<st
       spinRate: 0.3 + Math.random() * 1.2,
       burn: 0,
       contents,
+      stolen,
     });
   }
   while (drifters.length > MAX_DRIFTERS) disposeShip(drifters.shift()!.model);
@@ -1695,9 +1726,10 @@ function tryScoop(d: Drifter): boolean {
     return false;
   }
   c.cargo[contents.id] = (c.cargo[contents.id] ?? 0) + contents.qty;
+  if (d.stolen) markStolen(c, contents.id, contents.qty);
   saveCommander(c);
   sfx.beep();
-  const illegal = commodity?.legality === 'illegal' ? ' · illegal goods' : '';
+  const illegal = commodity?.legality === 'illegal' ? ' · illegal goods' : d.stolen ? ' · stolen goods' : '';
   flash(`Scooped ${contents.qty}${commodity?.unit === 't' ? ' t' : ' ' + commodity?.unit} ${commodity?.name ?? contents.id}${illegal}`, 2);
   return true;
 }
@@ -2301,6 +2333,7 @@ function die() {
   // Whatever was in the hold is now floating free for anyone with fuel scoops.
   spillCargo(player.obj.position, velocity, c.cargo);
   c.cargo = {};
+  c.stolen = {};
   // Classic, as in 1984: a new ship is a clean slate and the police lose
   // interest. Under Modern rules your record stands (see claimInsurance).
   if (c.difficulty === 'classic') {

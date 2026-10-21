@@ -1,9 +1,9 @@
-import type { Commander } from '../game/commander';
+import { removeStolen, stolenQty, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
 import { COMMODITIES, UNITS_PER_TONNE, cargoTonnage } from './commodities';
 import { eventShare } from './events';
 import { hasLicence, legalityAt } from './legality';
-import { drift, equilibriumPrice, npcTrades, type MarketState } from './market';
+import { drift, equilibriumPrice, npcTrades, priceAt, type MarketState } from './market';
 
 // The back room: where goods that are against the law here change hands.
 // As set out in docs/design/markets-and-trade.md (section 3), it's thin
@@ -149,6 +149,43 @@ export function backRoomTrade(
   }
   state.backRoom = [...(state.backRoom ?? []).filter((x) => x.t > now - MEMORY_MS), { t: now, id, side, qty }];
   return { ok: true, caught: false, message: `${side === 'buy' ? 'Bought' : 'Sold'} ${qty}${units} of ${good.name} for ${total.toFixed(1)} Cr, no questions asked` };
+}
+
+// --- The fence ---------------------------------------------------------------------
+//
+// Stolen goods can't be sold openly where there's a law, but a fence will
+// take them: for about 60% of the open price, no questions asked, though the
+// buyer could still be police.
+
+const FENCE_CUT = 0.6;
+
+export interface FenceQuote {
+  id: string;
+  bid: number; // per unit
+  qty: number; // stolen units you hold
+  risk: number;
+}
+
+/** What a fence here will pay for each stolen good you're carrying. */
+export function fenceQuotes(c: Commander, s: StarSystem, state: MarketState, now: number): FenceQuote[] {
+  if (!hasBackRoom(c, s)) return [];
+  return Object.keys(c.stolen ?? {})
+    .map((id) => ({ id, qty: stolenQty(c, id) }))
+    .filter((x) => x.qty > 0)
+    .map(({ id, qty }) => ({ id, qty, bid: round1(priceAt(s, state, id, now) * FENCE_CUT), risk: RISK[s.government] }));
+}
+
+/** Sell stolen goods to the fence. A sting seizes them, as in the back room. */
+export function fenceSell(c: Commander, s: StarSystem, state: MarketState, id: string, qty: number, now: number, random = Math.random): BackRoomResult {
+  const q = fenceQuotes(c, s, state, now).find((x) => x.id === id);
+  const good = COMMODITIES.find((x) => x.id === id);
+  if (!q || !good || qty <= 0 || qty > q.qty) return { ok: false, caught: false, message: 'Nothing to fence' };
+  const units = good.unit === 't' ? ' t' : ` ${good.unit}`;
+  removeStolen(c, id, qty);
+  if (random() < stingChance(s, qty)) return { ok: true, caught: true, message: `Sting! The fence was police: ${qty}${units} of stolen ${good.name} seized` };
+  const paid = Math.round(q.bid * qty * 10) / 10;
+  c.credits = Math.round((c.credits + paid) * 10) / 10;
+  return { ok: true, caught: false, message: `Fenced ${qty}${units} of stolen ${good.name} for ${paid.toFixed(1)} Cr` };
 }
 
 // --- Abolitionists ----------------------------------------------------------------

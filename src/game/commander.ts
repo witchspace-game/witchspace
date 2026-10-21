@@ -152,6 +152,8 @@ export interface Commander {
   kills: number;
   /** Slaves handed to abolitionists to be freed (Modern rules). */
   freed?: number;
+  /** Of the cargo, how much of each good is stolen: scooped from a clean ship you destroyed. */
+  stolen?: Record<string, number>;
   /** Missiles on the rails. */
   missiles: number;
   /** The laser fitted to each mount, if any. */
@@ -249,4 +251,42 @@ export function rollEquipmentDamage(c: Commander, random = Math.random): Equipme
 export function removeEquipment(c: Commander, id: EquipmentId) {
   c.equipment = c.equipment.filter((e) => e !== id);
   c.damaged = c.damaged.filter((e) => e !== id);
+}
+
+// --- Stolen goods -------------------------------------------------------------------
+//
+// Cargo taken from a clean ship you destroyed keeps its provenance. Where
+// there's a law, the police treat it as contraband and stations won't buy it
+// openly; a fence in the back room will, for less. Stolen units are always a
+// part of what's in the hold, never more.
+
+/** Units of a good in the hold that are stolen. */
+export const stolenQty = (c: Commander, id: string) => Math.min(c.stolen?.[id] ?? 0, c.cargo[id] ?? 0);
+
+/** Units of a good in the hold that are clean. */
+export const cleanQty = (c: Commander, id: string) => (c.cargo[id] ?? 0) - stolenQty(c, id);
+
+export function markStolen(c: Commander, id: string, qty: number) {
+  c.stolen = { ...(c.stolen ?? {}), [id]: (c.stolen?.[id] ?? 0) + qty };
+  tidyStolen(c);
+}
+
+/** Keep the stolen tally within what's actually in the hold. */
+export function tidyStolen(c: Commander) {
+  if (!c.stolen) return;
+  for (const id of Object.keys(c.stolen)) {
+    const n = Math.min(c.stolen[id], c.cargo[id] ?? 0);
+    if (n > 0) c.stolen[id] = n;
+    else delete c.stolen[id];
+  }
+}
+
+/** Take stolen units out of the hold (confiscated, or sold to a fence). */
+export function removeStolen(c: Commander, id: string, qty: number) {
+  const n = Math.min(qty, stolenQty(c, id));
+  c.cargo[id] -= n;
+  if (c.cargo[id] <= 0) delete c.cargo[id];
+  c.stolen![id] -= n;
+  tidyStolen(c);
+  return n;
 }

@@ -29,6 +29,12 @@ export function legalityAt(system: StarSystem, id: string, difficulty: 'classic'
 
 export const hasLicence = (c: Commander) => c.equipment.includes('weapons-licence');
 
+/** Stolen goods in the hold, where there's a law to care. */
+export function stolenAt(c: Commander, system: StarSystem): string[] {
+  if (c.difficulty === 'classic' || system.government === 0) return [];
+  return Object.keys(c.stolen ?? {}).filter((id) => Math.min(c.stolen![id], c.cargo[id] ?? 0) > 0);
+}
+
 /** Goods in the hold that are against the law here: illegal ones, and licensed ones without a licence. */
 export function contrabandAt(c: Commander, system: StarSystem): string[] {
   return Object.keys(c.cargo).filter((id) => {

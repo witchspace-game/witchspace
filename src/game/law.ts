@@ -1,6 +1,6 @@
 import { systemAt, type StarSystem } from '../galaxy/generate';
-import { contrabandAt } from '../economy/legality';
-import { EQUIPMENT, type Commander, type EquipmentId, type LegalStatus } from './commander';
+import { contrabandAt, stolenAt } from '../economy/legality';
+import { EQUIPMENT, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
 
 // The law, as set out in docs/design/law-and-travel.md:
 // - ordinary crimes are local: your record belongs to the system where it happened;
@@ -63,7 +63,8 @@ export const FINES = { offender: 100, fugitive: 500, warrant: 1000 };
 
 const contraband = (c: Commander, system: StarSystem = here(c)) => contrabandAt(c, system);
 
-export const carriesContraband = (c: Commander, system: StarSystem = here(c)) => contraband(c, system).length > 0;
+/** Anything the police would object to: contraband, or stolen goods. */
+export const carriesContraband = (c: Commander, system: StarSystem = here(c)) => contraband(c, system).length > 0 || stolenAt(c, system).length > 0;
 
 
 export interface Settlement {
@@ -88,6 +89,12 @@ export function settle(c: Commander, caught = false): Settlement {
 
   const confiscated = contraband(c);
   for (const id of confiscated) delete c.cargo[id];
+  // Stolen goods go back to their owners; the rest of the hold stays yours.
+  for (const id of stolenAt(c, here(c))) {
+    removeStolen(c, id, Infinity);
+    if (!confiscated.includes(id)) confiscated.push(id);
+  }
+  tidyStolen(c);
   if (confiscated.length && status === 'clean') fine = FINES.offender; // caught at inspection
 
   const { paid, owed, impounded } = charge(c, fine);

@@ -859,6 +859,11 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-order.buy { color: var(--ex-up); border-color: rgba(46, 189, 133, 0.5); background: rgba(46, 189, 133, 0.08); }
 .ex-order.sell { color: var(--ex-down); border-color: rgba(246, 70, 93, 0.5); background: rgba(246, 70, 93, 0.08); }
 .ex-order:hover { filter: brightness(1.2); }
+.ex-held.hot { background: var(--ex-down); }
+.ex-hot { font-style: normal; font-size: 11px; color: var(--ex-down); }
+.ex-fence { margin-top: 14px; padding: 12px 14px; border-left: 3px solid #f6465d; background: rgba(246, 70, 93, 0.06); }
+.ex-fence h4 { margin: 0 0 4px; color: #ff8a9a; font-size: 14px; letter-spacing: 0; text-transform: none; }
+.ex-fence p { margin: 0 0 8px; color: #d9c8cb; }
 .ex-held { display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--ex-gold); vertical-align: middle; }
 
 /* Header */
