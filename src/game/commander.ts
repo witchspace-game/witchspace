@@ -16,7 +16,7 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; tagline: string; b
 };
 
 export type EquipmentId =
-  | 'docking-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm'
+  | 'docking-computer' | 'combat-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm'
   | 'large-cargo-bay' | 'extra-energy' | 'energy-bomb' | 'galactic-hyperdrive' | 'weapons-licence';
 
 export type Mount = 'front' | 'rear' | 'left' | 'right';
@@ -47,6 +47,14 @@ export const EQUIPMENT: Equipment[] = [
     price: 1500,
     blurb: 'Press C near a station and enjoy the waltz.',
     minTech: 5,
+  },
+  {
+    id: 'combat-computer',
+    name: 'Combat Computer',
+    price: 6000,
+    blurb: 'Flies the ship in a fight while you man a turret. Press O; needs a rear or side laser. Kills count half towards your rating.',
+    modernOnly: true,
+    minTech: 9,
   },
   {
     id: 'fuel-scoops',

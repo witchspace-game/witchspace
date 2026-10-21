@@ -51,9 +51,11 @@ import {
   toggleControlScheme,
   toggleInvertPitch,
   wantsMouseCapture,
+  type FlightInput,
 } from './game/input';
 import { MouseAim } from './game/mouseAim';
 import { allies, NpcShip, type NpcRole } from './game/npc';
+import { chooseTarget, CombatPilot } from './game/combatPilot';
 import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
@@ -96,6 +98,7 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 function setState(next: State) {
   if (next !== 'flying') {
     countdown = null; // leaving flight cancels a hyperspace countdown
+    combatComputer = null;
     // Overlays that only make sense in flight; they're updated each frame while flying.
     for (const id of ['#mouse-prompt', '#reticle', '#target-info', '#countdown']) $(id).hidden = true;
   }
@@ -1460,7 +1463,9 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
 
   const c = cmdr();
   const before = combatRating(c.kills);
-  c.kills += 1;
+  // Kills made while the combat computer flies count for half: the rating
+  // should mean you flew the fight yourself.
+  c.kills += combatComputer ? 0.5 : 1;
   if (npc.role === 'pirate') {
     c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
     flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr`, 2.5);
@@ -2269,12 +2274,17 @@ function updateSpace(dt: number) {
     const prev = station.toLocal(player.obj.position);
     input = flightInput();
     if (autopilot && input.active) setAutopilot(false, 'Docking computer off');
+    checkCombatComputer(input);
 
     // Mouse aim: steer the nose towards the reticle. Turning with keys or
     // while the computer flies puts the reticle back on the nose.
     const keysTurning = input.pitch !== 0 || input.yaw !== 0;
     if (input.recentre) aim.reset(player);
-    if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !keysTurning && view === 'front') {
+    if (combatComputer) {
+      // The computer flies; the mouse (or aim pad) only aims the guns.
+      aim.move(player, input.aimDx, input.aimDy);
+      aim.clamp(player);
+    } else if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !keysTurning && view === 'front') {
       aim.move(player, input.aimDx, input.aimDy);
       const s = aim.steer(player);
       input.pitch = s.pitch;
@@ -2283,10 +2293,10 @@ function updateSpace(dt: number) {
       aim.reset(player);
     }
 
-    rollAssist = !autopilot && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
+    rollAssist = !autopilot && !combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
     if (rollAssist) {
       input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
-    } else if (!autopilot && controlScheme() === 'mouse' && input.roll === 0) {
+    } else if (!autopilot && !combatComputer && controlScheme() === 'mouse' && input.roll === 0) {
       // Flight assist: with no roll input, level the wings with the star
       // system's "up" so there's always a horizon. Weaker when pointing
       // steeply up or down, where "level" stops meaning much.
@@ -2294,7 +2304,9 @@ function updateSpace(dt: number) {
       input.roll = THREE.MathUtils.clamp(AUTO_LEVEL_GAIN * player.right().y * (1 - steep), -1, 1);
     }
     if (autopilot) dockingComputer.update(dt, player, station);
-    else player.steer(dt, input);
+    else if (combatComputer) {
+      if (!combatComputer.fly(dt, player, npcs, locked, { centre: planetPos, radius: planetRadius })) stopCombatComputer('No hostiles · combat computer standing down · you have control');
+    } else player.steer(dt, input);
     player.move(dt);
     player.recharge(dt, isWorking(cmdr(), 'extra-energy') ? 2 : 1);
 
@@ -2378,7 +2390,7 @@ function updateSpace(dt: number) {
   if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
   setInterference(noise);
   if (state === 'flying') {
-    updateHud(player, station, blips, autopilot, rollAssist);
+    updateHud(player, station, blips, autopilot || Boolean(combatComputer), rollAssist);
     updateTouch(dt, player.speed / player.maxSpeed);
     updateAimDisplay();
     updateCombatHud();
@@ -2518,6 +2530,7 @@ function renderControlsCard() {
     .concat([
       ['C', 'Docking computer'],
       ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
+      ['O', 'Combat computer: it flies, you man the turrets (needs one fitted; any flight control takes over)'],
       ['P', 'Take a photo of the view, without the HUD (saved, or shared on phones)'],
       ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
       ['T', 'Lock a missile onto the ship in your sights (again with nothing in sight: disarm)'],
@@ -2761,6 +2774,45 @@ function die() {
     enterDocked();
     flash(message, 5);
   }, 5000);
+}
+
+// --- The combat computer ----------------------------------------------------
+// Modern rules: it flies the ship in a fight (see game/combatPilot.ts) while
+// you man a turret or the gimballed front laser. Touch any flight control
+// and you have the ship back.
+
+let combatComputer: CombatPilot | null = null;
+const COMBAT_COMPUTER_MIN_HULL = 0.25; // fraction of full hull: below this, you fly
+
+const hasTurret = () => (['rear', 'left', 'right'] as const).some((m) => Boolean(cmdr().lasers[m]));
+
+function toggleCombatComputer() {
+  const c = cmdr();
+  if (combatComputer) return stopCombatComputer('Combat computer off · you have control');
+  if (!hasEquipment(c, 'combat-computer')) return flash(c.difficulty === 'modern' ? 'Combat computer not fitted' : 'No combat computers under Classic rules', 2);
+  if (!isWorking(c, 'combat-computer')) return flash('Combat computer damaged · repair at a station', 2);
+  if (!hasTurret()) return flash('Fit a rear or side laser to use the combat computer: it flies, you man the turret', 3);
+  const target = chooseTarget(player.obj.position, npcs, locked);
+  if (!target) return flash('No hostiles in range', 1.5);
+  if (autopilot) setAutopilot(false);
+  combatComputer = new CombatPilot();
+  sfx.lock();
+  flash(`Strap in, Commander · combat computer engaged · ${target.def.name} · you have the guns`, 3);
+}
+
+function stopCombatComputer(message?: string) {
+  if (!combatComputer) return;
+  combatComputer = null;
+  aim.reset(player);
+  if (message) flash(message, 2.5);
+}
+
+/** Hand the ship back when the pilot takes the controls, or things get bad. */
+function checkCombatComputer(input: FlightInput) {
+  if (!combatComputer) return;
+  if (input.pitch || input.roll || input.yaw || input.throttle || input.speedStep) stopCombatComputer('Combat computer off · you have control');
+  else if (player.hull < player.def.stats.hull * COMBAT_COMPUTER_MIN_HULL) stopCombatComputer('Hull critical · combat computer off · you have control');
+  else if (!isWorking(cmdr(), 'combat-computer')) stopCombatComputer('Combat computer damaged · you have control');
 }
 
 // --- Photos -----------------------------------------------------------------
@@ -3118,7 +3170,10 @@ function handleKey(code: string) {
         flash(s === 'mouse' ? 'Mouse + keyboard · click to aim' : 'Keyboard only (classic)', 2);
       } else if (code === 'KeyI') {
         flash(toggleInvertPitch() ? 'Pitch inverted' : 'Pitch normal', 2);
+      } else if (code === 'KeyO') {
+        toggleCombatComputer();
       } else if (code === 'KeyC') {
+        stopCombatComputer();
         if (autopilot) setAutopilot(false, 'Docking computer off');
         else if (!hasEquipment(cmdr(), 'docking-computer')) flash('Docking computer not fitted', 2);
         else if (!isWorking(cmdr(), 'docking-computer')) flash('Docking computer damaged · repair at a station', 2);

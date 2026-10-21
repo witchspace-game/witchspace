@@ -102,6 +102,10 @@ Easy targets wear thin as you improve. Every NPC has a **threat rank** worked ou
 
 A Deadly pilot gets nothing for Sidewinders, but every fight with a real threat still counts.
 
+### The combat computer
+
+Kills made while the combat computer flies the ship count **× 0.5**: the rating should mean you flew the fight yourself. (Built: today a kill counts 1, or 0.5 with the computer on.)
+
 ## 4. Points for player kills (multiplayer)
 
 Other players are the most valuable targets **when they're a real match**.
