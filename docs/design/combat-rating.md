@@ -171,7 +171,7 @@ Missions should provide **well over half** of the points above Competent. Elite 
 
 ## 8. Classic rules
 
-Classic stays as it was: **one point per kill, for everything you kill**, including police and traders. There's no experience rule and no player-kill rules. Combat missions may appear under Classic later, as one-off campaigns in the spirit of the 1984 disc version's missions.
+Classic uses the **original per-ship values** from section 2, as the Commodore 64, BBC Master, Apple II and NES versions did, rather than the first BBC version's one point per kill. Every kill counts, police and traders included, at their original (low) values: it's a crime, but the rating doesn't judge. There's no role, threat or experience multiplier, and no player kills, because Classic is single-player. Combat missions may appear under Classic later, as one-off campaigns in the spirit of the original's missions.
 
 ## 9. Moving existing commanders over
 
@@ -181,7 +181,7 @@ Existing commanders keep their kills, converted one-for-one into rating points, 
 
 ## Open questions
 
-- **Classic:** confirm the 1984 rule of one point per kill, rather than the later versions' per-ship values.
+- ~~**Classic:**~~ settled: the original per-ship values, with no multipliers.
 - **Ship values for new ships:** who sets them, and how are they reviewed when community ships arrive?
 - **Agreed duels:** how two players agree a fight (a hail and accept?), and whether duels count fully or at a reduced rate.
 - **Exact multipliers and pacing:** to be tuned in play.
