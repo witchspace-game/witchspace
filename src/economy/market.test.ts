@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy, systemAt } from '../galaxy/generate';
-import { cargoTonnage } from './commodities';
-import { costToBuy, freshMarket, quoteClassic, quoteModern, recover } from './market';
+import { cargoTonnage, COMMODITIES } from './commodities';
+import { candles, costToBuy, drift, freshMarket, orderBook, priceAt, quoteClassic, quoteModern, recover } from './market';
 
 const price = (q: ReturnType<typeof quoteModern>, id: string) => q.find((x) => x.commodity.id === id)!.price;
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -71,5 +71,59 @@ describe('classic markets', () => {
 describe('the cargo hold', () => {
   it('counts gold in kilograms and gems in grams', () => {
     expect(cargoTonnage({ food: 3, gold: 500, gems: 250_000 })).toBeCloseTo(3.75);
+  });
+});
+
+describe('the exchange view of a living market', () => {
+  const lave = systemAt(0, 7);
+  const NOW = 1_800_000_000_000;
+
+  it('drifts gently, within the commodity volatility', () => {
+    const food = COMMODITIES.findIndex((c) => c.id === 'food');
+    for (let t = NOW; t < NOW + 6 * 3600_000; t += 97_000) {
+      const d = drift(lave, COMMODITIES[food], food, t);
+      expect(Math.abs(d - 1)).toBeLessThanOrEqual(COMMODITIES[food].volatility * 0.2 + 1e-9);
+    }
+  });
+
+  it('moves smoothly, without jumps between nearby moments', () => {
+    const gems = COMMODITIES.findIndex((c) => c.id === 'gems');
+    const a = drift(lave, COMMODITIES[gems], gems, NOW);
+    const b = drift(lave, COMMODITIES[gems], gems, NOW + 1000);
+    expect(Math.abs(a - b)).toBeLessThan(0.002);
+  });
+
+  it('has a price history that ends at the live price', () => {
+    const state = freshMarket(lave, NOW);
+    const live = price(quoteModern(lave, state), 'computers');
+    expect(priceAt(lave, state, 'computers', NOW)).toBeCloseTo(live, 0);
+    const cs = candles(lave, state, 'computers', NOW, 300_000, 24);
+    expect(cs).toHaveLength(24);
+    for (const c of cs) expect(c.high).toBeGreaterThanOrEqual(Math.max(c.open, c.close) - 1e-9);
+  });
+
+  it('remembers trades: the history shows a big purchase pushing the price up', () => {
+    const state = freshMarket(lave, NOW);
+    const before = priceAt(lave, state, 'food', NOW);
+    state.stock.food -= 15;
+    state.trades = [{ t: NOW, id: 'food', side: 'buy', qty: 15, total: 0, stockAfter: state.stock.food }];
+    expect(priceAt(lave, state, 'food', NOW + 1)).toBeGreaterThan(before);
+    expect(priceAt(lave, state, 'food', NOW - 1)).toBeCloseTo(before, 6);
+  });
+
+  it('implies an order book: asks rise, bids fall, and the spread is never negative', () => {
+    const state = freshMarket(lave, NOW);
+    const { asks, bids } = orderBook(lave, state, 'computers', 8);
+    for (let k = 1; k < asks.length; k++) expect(asks[k].price).toBeGreaterThanOrEqual(asks[k - 1].price);
+    for (let k = 1; k < bids.length; k++) expect(bids[k].price).toBeLessThanOrEqual(bids[k - 1].price);
+    expect(asks[0].price).toBeGreaterThanOrEqual(bids[0].price);
+  });
+
+  it('stops the asks where the stock runs out', () => {
+    const state = freshMarket(lave, NOW);
+    state.stock.furs = 3;
+    const { asks, step } = orderBook(lave, state, 'furs', 8);
+    expect(asks.reduce((n, l) => n + l.qty, 0)).toBe(3);
+    expect(step).toBeGreaterThan(0);
   });
 });
