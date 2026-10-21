@@ -93,7 +93,7 @@ Coming soon: a **Witchspace MCP server** with tools to validate, preview and bal
 
 ## Roadmap
 
-Design notes for upcoming systems live in [`docs/design/`](docs/design). Start with [law, travel, debt and capture](docs/design/law-and-travel.md). Ideas that aren't designed yet are collected in the [ideas backlog](docs/ideas.md). There are also open proposals for [the economy and exchanges](docs/design/economy-and-exchanges.md), [stations and worlds](docs/design/stations-and-worlds.md), [ship condition and servicing](docs/design/ship-condition.md), [the combat rating and combat missions](docs/design/combat-rating.md), [servers and hosting](docs/design/servers-and-hosting.md) and [player-run stations](docs/design/player-stations.md), awaiting community discussion.
+Design notes for upcoming systems live in [`docs/design/`](docs/design). Start with [law, travel, debt and capture](docs/design/law-and-travel.md). Ideas that aren't designed yet are collected in the [ideas backlog](docs/ideas.md). There are also open proposals for [the economy and exchanges](docs/design/economy-and-exchanges.md), [stations and worlds](docs/design/stations-and-worlds.md), [ship condition and servicing](docs/design/ship-condition.md), [the combat rating and combat missions](docs/design/combat-rating.md), [system currencies](docs/design/system-currencies.md), [servers and hosting](docs/design/servers-and-hosting.md) and [player-run stations](docs/design/player-stations.md), awaiting community discussion.
 
 1. **Core game.** ✅ Flight, docking and the docking computer, Classic and Modern rules, trading, combat, the law, fuel scoops, and a procedural galaxy (8 galaxies × 256 systems) with witchspace jumps.
 2. **Legends.** Rare, secret encounters hidden around the galaxy: easter-egg ships that tip their hat to great science fiction (a derelict with a gravity drive that should never have been switched on, a survey ship bound somewhere it shouldn't go, a small blue box that isn't there when you get close), plus tributes to *Elite*'s own legends such as the cloaked Cougar. There's no in-game list; you find them, screenshot them and tell everyone. A Legends log on the docked screen records your sightings. **A great first contribution.** See [CONTRIBUTING.md](CONTRIBUTING.md#legends-and-homages).
@@ -114,9 +114,9 @@ TypeScript · [three.js](https://threejs.org) · [Vite](https://vitejs.dev). Mul
 
 Questions and ideas are best raised in [GitHub Discussions](https://github.com/witchspace-game/witchspace/discussions), where everyone can join in.
 
-## No crypto, no pay-to-win
+## No pay-to-win
 
-Witchspace is a non-commercial fan project, and nothing in the game can ever be bought with real money: no tokens, no NFTs, no paid credits, ships or advantages. Everything is earned by playing or by contributing. If running costs ever need covering, it'll be through transparent donations with every penny public, and supporters get thanks, never power. See the [stations proposal](docs/design/player-stations.md#no-crypto-no-pay-to-win) for the reasoning.
+Witchspace is a non-commercial fan project, and nothing in the game can ever be bought with real money: no paid credits, currencies, ships or advantages. The in-game currencies are virtual and can't be cashed out. Everything is earned by playing or by contributing. If running costs ever need covering, it'll be through transparent donations with every penny public, and supporters get thanks, never power. See the [stations proposal](docs/design/player-stations.md#no-pay-to-win) for the reasoning.
 
 ## Licence
 

@@ -99,7 +99,7 @@ Single-player stays exactly as it is: **the whole game runs in your browser** an
 
 ## 8. Paying for it
 
-Costs are covered by **transparent donations** (GitHub Sponsors or Open Collective), with all income and spending public, as set out in the [player-stations proposal](player-stations.md#no-crypto-no-pay-to-win). Supporters get thanks, never power. The design aims to keep costs low enough that this is realistic.
+Costs are covered by **transparent donations** (GitHub Sponsors or Open Collective), with all income and spending public, as set out in the [player-stations proposal](player-stations.md#no-pay-to-win). Supporters get thanks, never power. The design aims to keep costs low enough that this is realistic.
 
 ## 9. Building it in stages
 
