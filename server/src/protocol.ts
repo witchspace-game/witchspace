@@ -10,6 +10,8 @@ export type Quat = [number, number, number, number];
 export interface Commander {
   id: string;
   name: string;
+  /** Combat rank, shown as insignia beside the callsign. */
+  rank: string;
   ship: string;
   p: Vec3;
   q: Quat;
@@ -20,7 +22,7 @@ export interface Commander {
 
 export type ClientMessage =
   /** First message: who you are, what you fly, and the lasers fitted. */
-  | { type: 'hello'; name: string; ship: string; lasers?: string[] }
+  | { type: 'hello'; name: string; ship: string; lasers?: string[]; rank?: string }
   /** About ten times a second: where you are, and your shields and hull (which can only go down this way). */
   | { type: 'state'; p: Vec3; q: Quat; s: number; f: boolean; h?: [number, number] }
   /** A laser shot: the direction it went, and which laser. The server decides what it hit. */
@@ -67,6 +69,9 @@ export const JUMP = 10_500; // metres: the J jump
 export const JUMP_COOLDOWN = 1000; // ms between jumps
 export const SLACK = 1.3; // allowance for lag and timing
 export const SYSTEM_RADIUS = 250_000; // metres from the station: nothing legitimate is further out
+
+/** The combat ranks, as in src/game/rating.ts (a test checks they match). Claimed by the browser until commanders are saved on the server. */
+export const RANKS = ['Harmless', 'Mostly Harmless', 'Poor', 'Average', 'Above Average', 'Competent', 'Dangerous', 'Deadly', 'Elite'];
 
 /** A display name: printable, trimmed, at most 24 characters. */
 export function cleanName(name: unknown): string {

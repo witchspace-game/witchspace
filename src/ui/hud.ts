@@ -27,7 +27,7 @@ export function toggleScannerRange(): number {
   return SCANNER_RANGES[rangeIndex];
 }
 
-export type BlipKind = 'station' | 'ship' | 'cargo' | 'missile';
+export type BlipKind = 'station' | 'ship' | 'commander' | 'cargo' | 'missile';
 
 export interface Blip {
   position: THREE.Vector3;
@@ -175,6 +175,15 @@ function drawScanner(ship: PlayerShip, blips: Blip[]) {
         ctx.closePath();
         ctx.fill();
       }
+    } else if (b.kind === 'commander') {
+      // Another commander: a diamond, so players stand out from NPC ships.
+      ctx.beginPath();
+      ctx.moveTo(x, top - 4);
+      ctx.lineTo(x + 4, top);
+      ctx.lineTo(x, top + 4);
+      ctx.lineTo(x - 4, top);
+      ctx.closePath();
+      ctx.fill();
     } else {
       const s = b.kind === 'station' ? 9 : 6;
       ctx.fillRect(x - s / 2, top - 2, s, 3);

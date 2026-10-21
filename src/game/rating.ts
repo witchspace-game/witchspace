@@ -24,3 +24,24 @@ export function nextRating(kills: number): { name: string; at: number } | null {
   }
   return null;
 }
+
+/** The ranks in order, Harmless first. */
+export const RANK_NAMES = RATINGS.map(([, name]) => name).reverse();
+
+/**
+ * A rank's insignia, shown beside a commander's callsign: chevrons for the
+ * lower ranks, diamonds for the middle, stars at the top, and Elite's own mark.
+ */
+const INSIGNIA: Record<string, string> = {
+  Harmless: '',
+  'Mostly Harmless': '›',
+  Poor: '››',
+  Average: '›››',
+  'Above Average': '◆',
+  Competent: '◆◆',
+  Dangerous: '◆◆◆',
+  Deadly: '★',
+  Elite: '★ ELITE',
+};
+
+export const rankInsignia = (rank: string) => INSIGNIA[rank] ?? '';

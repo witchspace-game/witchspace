@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { LASERS, SHIPS } from '../../server/src/protocol';
+import { LASERS, RANKS, SHIPS } from '../../server/src/protocol';
+import { RANK_NAMES } from '../game/rating';
 import { shipById } from '../content/ships';
 import { PLAYER_LASERS } from '../game/weapons';
 
@@ -8,6 +9,10 @@ import { PLAYER_LASERS } from '../game/weapons';
 describe('the shared space server agrees with the game', () => {
   it('on lasers', () => {
     for (const [id, l] of Object.entries(PLAYER_LASERS)) expect(LASERS[id]).toEqual({ interval: l.interval, damage: l.damage, range: l.range });
+  });
+
+  it('on ranks', () => {
+    expect(RANKS).toEqual(RANK_NAMES);
   });
 
   it('on ships', () => {
