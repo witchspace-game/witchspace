@@ -19,6 +19,19 @@ Being refused docking, running out of fuel, losing your ship or falling into deb
 - **A second-hand Viper is just a Viper.** No beacons, no police transponder.
 - **Running dark.** You can switch your transponder off. Smugglers will want to, but an unidentified ship is suspicious in itself: police treat it as hostile and lawful stations won't let it dock.
 - **Multiplayer:** the server decides who is police. Players can never choose to appear as police.
+- **Callsigns and rank insignia** *(built, shared space)*: other commanders are known by a tag: rank insignia, callsign and range, e.g. `◆◆ CMDR Moxon · 0.8 km`. You choose your callsign and can change it at a station.
+
+### Ship registry and flags
+
+Like real ships, every ship is **registered** in a system: its **flag**. The registry is part of the transponder and shows as that system's **crest** beside the callsign.
+
+- **Crests from the seed.** Each system's crest (shape, colours, a symbol for its economy or government) is generated from its seed like everything else, so every system in all eight galaxies has its own badge.
+- **Locals and foreigners.** In the system you're registered in you're a local. Anywhere else you're a foreign ship: scanned more often, charged docking fees and import tariffs (in the local currency; see [system currencies](system-currencies.md)), and last in line for some local contracts. Unregistered ships are foreigners everywhere, and draw the most attention.
+- **Registering.** At any station, for a fee that depends on the government; a new commander is registered where they start. Changing your flag takes time and paperwork, so it's a decision rather than a trick.
+- **Flags of convenience.** As at sea: register in a corporate state for low tariffs and a respectable flag, or in an anarchy where nobody asks questions, and live with what that flag says about you. Some governments refuse to register ships with records; others will register anyone.
+- **Team insignia.** Guilds and wings get an insignia of their own beside the crest, issued by the server so nobody can wear another team's badge. Needs accounts.
+- **Classic rules:** no registry, as in 1984.
+
 
 ## 2. The law and your record
 

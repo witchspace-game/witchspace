@@ -22,11 +22,15 @@ export interface Commander {
 
 export type ClientMessage =
   /** First message: who you are, what you fly, and the lasers fitted. */
-  | { type: 'hello'; name: string; ship: string; lasers?: string[]; rank?: string }
+  | { type: 'hello'; name: string; ship: string; lasers?: string[]; rank?: string; missiles?: number; ecm?: boolean }
   /** About ten times a second: where you are, and your shields and hull (which can only go down this way). */
   | { type: 'state'; p: Vec3; q: Quat; s: number; f: boolean; h?: [number, number] }
   /** A laser shot: the direction it went, and which laser. The server decides what it hit. */
-  | { type: 'fire'; d: Vec3; l: string };
+  | { type: 'fire'; d: Vec3; l: string }
+  /** Launch a missile at a commander. The server flies it and decides whether it hits. */
+  | { type: 'missile'; target: string }
+  /** Fire the ECM: destroys missiles nearby. */
+  | { type: 'ecm' };
 
 export type ServerMessage =
   /** Your id, and everyone already here. */
@@ -43,11 +47,17 @@ export type ServerMessage =
   /** You collided with a commander: the damage, what you have left, and which way you were pushed. */
   | { type: 'bump'; with: string; damage: number; shields: number; hull: number; push: Vec3 }
   /** A commander was destroyed, and by whom (none for a collision). */
-  | { type: 'destroyed'; id: string; by: string; cause?: 'laser' | 'collision' };
+  | { type: 'destroyed'; id: string; by: string; cause?: 'laser' | 'missile' | 'collision' }
+  /** A missile is away: who fired it at whom, and where it starts. */
+  | { type: 'missile'; id: string; owner: string; target: string; p: Vec3; d: Vec3; s: number }
+  /** A missile is gone: it hit, an ECM got it, or its motor burned out. */
+  | { type: 'missileEnd'; id: string; how: 'hit' | 'ecm' | 'expired'; p: Vec3 }
+  /** Someone fired an ECM, here. */
+  | { type: 'ecm'; id: string; p: Vec3 };
 
 /** The ships commanders can fly in shared space (stage 1: the Cobra). Must match content/ships. */
-export const SHIPS: Record<string, { maxSpeed: number; shields: number; hull: number; radius: number }> = {
-  'cobra-mk3': { maxSpeed: 280, shields: 100, hull: 150, radius: 28 },
+export const SHIPS: Record<string, { maxSpeed: number; shields: number; hull: number; radius: number; missiles: number }> = {
+  'cobra-mk3': { maxSpeed: 280, shields: 100, hull: 150, radius: 28, missiles: 3 },
 };
 
 /** Player lasers, as in src/game/weapons.ts (a test checks they match). */
@@ -61,6 +71,12 @@ export const SHIELD_RECHARGE = 6; // per second, as in the game
 export const GIMBAL_DAMAGE = 0.8; // shots well off the nose are gimballed or turret shots: a little weaker
 export const REWIND = 0.2; // seconds: hits are judged where the shooter saw the target
 export const SPREAD = 0.006; // radians: every laser's own scatter
+/** Missiles, as in src/game/missile.ts (a test checks they match). */
+export const MISSILE = { launchSpeed: 120, maxSpeed: 650, acceleration: 260, turnRate: 1.5, fuse: 40, lifetime: 30, damage: 140 };
+export const LOCK_RANGE = 5000; // metres: how far away you can lock on
+export const ECM_RANGE = 4000;
+export const ECM_COOLDOWN = 4000; // ms
+
 export const COLLIDE = 0.75; // of a ship's radius: how close counts as touching
 export const BUMP_COOLDOWN = 1000; // ms: one contact between two ships only hurts once
 

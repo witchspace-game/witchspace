@@ -102,6 +102,9 @@ function setState(next: State) {
     countdown = null; // leaving flight cancels a hyperspace countdown
     combatComputer = null;
     sharedSpace.leave(); // back in when flying again, wherever that is
+    lockedCommander = null;
+    for (const n of netMissiles.values()) n.missile.dispose();
+    netMissiles.clear();
     // Overlays that only make sense in flight; they're updated each frame while flying.
     for (const id of ['#mouse-prompt', '#reticle', '#target-info', '#countdown']) $(id).hidden = true;
   }
@@ -1837,6 +1840,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
 
 const missiles: Missile[] = [];
 let locked: NpcShip | null = null; // the player's missile lock
+let lockedCommander: Remote | null = null; // or a lock on another commander (shared space)
 let ecmCooldown = 0;
 let incomingTimer = 0;
 const LOCK_RANGE = 5000; // metres: how far away you can lock on
@@ -1876,9 +1880,18 @@ function toggleLock() {
     return;
   }
   const target = sightedNpc(LOCK_RANGE);
+  const commanderTarget = target ? null : sightedCommander(LOCK_RANGE);
+  if (commanderTarget) {
+    locked = null;
+    lockedCommander = commanderTarget;
+    sfx.lock();
+    flash(`Missile locked · CMDR ${commanderTarget.name}`, 1.5);
+    return;
+  }
   if (!target) {
-    if (locked) {
+    if (locked || lockedCommander) {
       locked = null;
+      lockedCommander = null;
       flash('Missile disarmed', 1.2);
     } else {
       flash('No target in your sights', 1.2);
@@ -1886,13 +1899,42 @@ function toggleLock() {
     return;
   }
   locked = target;
+  lockedCommander = null;
   sfx.lock();
   flash(`Missile locked · ${target.def.name}`, 1.5);
+}
+
+/** The commander nearest the middle of your sights, within range. */
+function sightedCommander(range: number): Remote | null {
+  const fwd = laserDirection();
+  let best: Remote | null = null;
+  let bestAngle = THREE.MathUtils.degToRad(6);
+  for (const r of sharedSpace.remotes.values()) {
+    const to = r.position.clone().sub(player.obj.position);
+    if (to.length() > range) continue;
+    const a = fwd.angleTo(to);
+    if (a < bestAngle) {
+      best = r;
+      bestAngle = a;
+    }
+  }
+  return best;
 }
 
 /** X: launch at the locked target. */
 function fireMissile() {
   const c = cmdr();
+  if (lockedCommander) {
+    // The server flies missiles between commanders; we draw it when it says it's away.
+    if (surrenderTimer !== null) breakSurrender();
+    c.missiles -= 1;
+    saveCommander(c);
+    sharedSpace.launchMissile(lockedCommander.id);
+    sfx.missileLaunch();
+    flash(`Missile away · CMDR ${lockedCommander.name}`, 1.2);
+    lockedCommander = null;
+    return;
+  }
   if (!locked) {
     flash(c.missiles > 0 ? 'Lock a target first (T)' : 'No missiles', 1.5);
     return;
@@ -1974,6 +2016,7 @@ function playerEcm() {
   hitFeedback(0.2);
   const hits = missiles.filter((m) => m.position.distanceTo(player.obj.position) < ECM_RANGE);
   for (const m of hits) explodeMissile(m);
+  if (sharedSpace.connected) sharedSpace.ecm(); // the server clears commanders' missiles
   flash(hits.length ? `ECM · ${hits.length} missile${hits.length > 1 ? 's' : ''} destroyed` : 'ECM', 1.5);
 }
 
@@ -1985,6 +2028,11 @@ function updateMissiles(dt: number) {
     locked = null;
     if (alive) flash('Missile lock lost', 1.2);
   }
+  if (lockedCommander && (![...sharedSpace.remotes.values()].includes(lockedCommander) || lockedCommander.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
+    lockedCommander = null;
+    if (alive) flash('Missile lock lost', 1.2);
+  }
+  updateNetMissiles(dt);
 
   for (const m of [...missiles]) {
     // Lose track of targets that have gone: wrecks, docked ships, a dead player.
@@ -2020,7 +2068,7 @@ function updateMissiles(dt: number) {
 
   // Keep warning while something is homing in.
   incomingTimer -= dt;
-  if (alive && incomingTimer <= 0 && missiles.some((m) => m.target === player)) {
+  if (alive && incomingTimer <= 0 && (missiles.some((m) => m.target === player) || [...netMissiles.values()].some((n) => n.missile.target === player))) {
     sfx.incoming();
     incomingTimer = 1;
   }
@@ -2417,7 +2465,8 @@ function updateSpace(dt: number) {
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
   if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#cfe0ff', kind: 'station' });
-  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, kind: 'commander' });
+  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, kind: 'commander', locked: r === lockedCommander });
+  for (const n of netMissiles.values()) blips.push({ position: n.missile.position, color: '#ff6b6b', kind: 'missile' });
   // Near a rift, contacts jitter about on the scanner.
   const noise = state === 'flying' ? riftInterference() : 0;
   if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
@@ -2878,6 +2927,21 @@ function onSpaceEvent(e: SpaceEvent) {
       // Firing on another commander is like firing on any clean ship.
       becomeOffender(`Firing on Commander ${e.remote.name} · you are an OFFENDER`);
       break;
+    case 'missile':
+      startNetMissile(e);
+      break;
+    case 'missileEnd': {
+      const n = netMissiles.get(e.id);
+      if (!n) break;
+      netMissiles.delete(e.id);
+      n.missile.position.copy(e.p);
+      explodeNetMissile(n.missile);
+      break;
+    }
+    case 'ecm':
+      if (e.p.distanceTo(player.obj.position) < 6000) sfx.ecm();
+      if (e.by) flash(`CMDR ${e.by.name} fired an ECM`, 1.2);
+      break;
     case 'bump':
       // The server's word on the damage; move apart so we're not still touching.
       if (state !== 'flying') break;
@@ -2933,7 +2997,7 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
     return;
   }
   const here = currentSystem();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3', Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills));
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3', Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'));
   const back = sharedSpace.takeCorrection();
   if (back) player.obj.position.copy(back);
   sharedSpace.update(dt, {
@@ -2964,6 +3028,57 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
       beams.fire(origin, origin.clone().addScaledVector(fwd, 2000), COMMANDER_COLOUR);
     }
   }
+}
+
+// Missiles between commanders: the server flies them and decides what they hit
+// (server/src/rules.ts); we fly a copy alongside so there's something to see.
+
+interface NetMissile {
+  missile: Missile;
+  /** The ship it's chasing, kept where that commander is (or the player). */
+  target: PlayerShip | null;
+  remote: Remote | null;
+}
+const netMissiles = new Map<string, NetMissile>();
+
+function startNetMissile(e: Extract<SpaceEvent, { kind: 'missile' }>) {
+  // A stand-in launcher at the server's launch point, so the missile leaves the rail as normal.
+  const launcher = new PlayerShip(shipById('cobra-mk3')!);
+  launcher.obj.position.copy(e.p).addScaledVector(e.d, -10);
+  launcher.obj.lookAt(launcher.obj.position.clone().add(e.d));
+  launcher.speed = Math.max(0, e.s - MISSILE.launchSpeed);
+  let target: PlayerShip | null = null;
+  if (e.targetIsMe) target = player;
+  else if (e.target) {
+    target = new PlayerShip(shipById('cobra-mk3')!);
+    target.obj.position.copy(e.target.position);
+  }
+  const missile = new Missile(shipById('missile')!, launcher, target);
+  space.scene.add(missile.model.root);
+  netMissiles.set(e.id, { missile, target, remote: e.target });
+  if (e.ownerIsMe) return;
+  rocketAt(missile.position, 0.5);
+  if (e.targetIsMe && state === 'flying') {
+    sfx.incoming();
+    incomingTimer = 1;
+    flash(`INCOMING MISSILE from CMDR ${e.owner?.name ?? 'unknown'} · break hard or use ECM (Z)`, 2.5);
+  }
+}
+
+function updateNetMissiles(dt: number) {
+  for (const n of netMissiles.values()) {
+    if (n.remote && n.target && n.target !== player) n.target.obj.position.copy(n.remote.position);
+    // Until the server says how it ended, it keeps flying (or waits at the target).
+    if (n.missile.update(dt) !== 'flying') n.missile.target = null;
+  }
+}
+
+function explodeNetMissile(m: Missile) {
+  const flare = new Explosion(m.model.def, m.model.root, m.dir.clone().multiplyScalar(m.speed * 0.3));
+  space.scene.add(flare.group);
+  explosions.push(flare);
+  boomAt(m.position, 1.6, 1200, 1.1);
+  m.dispose();
 }
 
 // --- The combat computer ----------------------------------------------------
