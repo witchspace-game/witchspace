@@ -571,7 +571,8 @@ body.retro #rules button small, body.retro #rules button em { font-size: 8px; li
 body.touch #view-label { top: 128px; }
 #equip .mounts { grid-column: 1 / -1; display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
 #equip .mounts button { padding: 4px 9px; font-size: 12px; }
-#equip .mounts button.fitted { border-color: var(--accent); color: var(--accent); opacity: 1; }
+#equip button.fitted { border-color: var(--accent); color: var(--accent); opacity: 1; }
+#equip button.armed { border-color: var(--amber); color: var(--amber); }
 #galaxy-map .map-galactic { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 1; }
 #equip .mount { font-style: normal; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); margin-left: 6px; }
 #galaxy-map .map-close { position: absolute; top: 16px; right: 16px; font-size: 18px; padding: 6px 12px; z-index: 1; }
