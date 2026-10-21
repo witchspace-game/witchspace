@@ -367,6 +367,7 @@ function setDockTab(tab: DockTab) {
     renderMarket();
   } else {
     $('.panel.docked').classList.remove('wide', 'exchange');
+    document.body.classList.remove('exchange-open');
     exchange.stop();
   }
 }
@@ -444,6 +445,12 @@ function renderMarket(message = '') {
   const ex = useExchange();
   $('.panel.docked').classList.toggle('exchange', ex);
   $('.panel.docked').classList.toggle('wide', !ex);
+  document.body.classList.toggle('exchange-open', ex);
+  if (ex) {
+    const ctx = tradeContext();
+    const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    $('#dock-funds').innerHTML = `Credits <b>${fmt(ctx.commander.credits)} Cr</b> · Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>`;
+  }
   $('#exchange').hidden = !ex;
   for (const id of ['#market-summary', '#market-table', '#market-message']) $(id).hidden = ex;
   if (ex) {
@@ -2726,7 +2733,7 @@ function frame(now?: number) {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim,
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },

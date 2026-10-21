@@ -48,7 +48,7 @@ const ticker = (id: string) => TICKERS[id] ?? id.slice(0, 4).toUpperCase();
 const INTERVALS = { '5m': [5 * 60_000, 60], '15m': [15 * 60_000, 60], '1h': [3600_000, 48] } as const;
 type Interval = keyof typeof INTERVALS;
 const HOUR = 3600_000;
-const BOOK_LEVELS = 8;
+const ROW = 19; // px: one order-book level
 
 const fmt = (n: number, dp = 1) => n.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
 const pct = (n: number) => `${n >= 0 ? '+' : ''}${(n * 100).toFixed(2)}%`;
@@ -288,7 +288,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   function renderBook(ctx: TradeContext) {
     const state = marketState(ctx);
-    const { asks, bids } = orderBook(ctx.system, state, selected, BOOK_LEVELS);
+    // As many levels as fit: the book grows with the screen.
+    const room = $('.ex-book').clientHeight - 130;
+    const levels = Math.max(4, Math.min(16, Math.floor(room / 2 / ROW)));
+    const { asks, bids } = orderBook(ctx.system, state, selected, levels);
     const u = unitLabel(commodity());
     $('.ex-book-unit').textContent = `Size (${u})`;
     const rows = (levels: typeof asks, kind: 'ask' | 'bid') => {
