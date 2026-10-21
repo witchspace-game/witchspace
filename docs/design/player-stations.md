@@ -110,12 +110,11 @@ Any commander can invest **in-game credits**, earned by playing, in a community 
 - **Money buys upgrades, not control.** Investment influences *what gets built*; influence over a station's *policies* (fees, docking rules, bounties) is capped so a wealthy trader can't buy a station's votes.
 - **A useful credit sink.** It gives successful traders a goal beyond a bigger ship and helps keep the in-game economy healthy.
 
-## No crypto, no pay-to-win
+## No pay-to-win
 
-Witchspace stays **non-commercial**, and nothing in the game can be bought with real money: no tokens, no NFTs, no paid credits, ships, charters or influence.
+Witchspace stays **non-commercial**, and nothing in the game can be bought with real money: no paid credits, currencies, ships, charters or influence. The in-game currencies, including the [system currencies](system-currencies.md), are virtual and can never be cashed out.
 
 - **Legal:** Witchspace is an unofficial tribute to *Elite*. Fan projects like this are tolerated because they're non-commercial. Anything tradeable for money would change that, and could also count as a regulated financial product or gambling.
-- **Community:** crypto in fan games attracts speculators rather than players, and tends to cause a backlash.
 - **Fairness:** "earned, never bought" only works if nothing can be bought.
 
 **If the project needs money** for servers, AI-agent stations or the domain, it will use transparent donations (GitHub Sponsors or Open Collective) with all income and spending public. **Supporters get thanks, never power:** a name in the credits or a cosmetic badge at most, never credits, ships or station rights.

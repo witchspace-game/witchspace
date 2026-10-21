@@ -71,9 +71,12 @@ const slug = (text: string) =>
 
 const DOCS: { file: string; slug: string; blurb: string }[] = [
   { file: 'docs/design/law-and-travel.md', slug: 'law-and-travel', blurb: 'Transponders, the law, surrender, getting caught, disabling and capture, fuel and rescue, insurance, loans and loan sharks, the Co-operative Marshals, and travel pacing.' },
-  { file: 'docs/design/economy-and-exchanges.md', slug: 'economy-and-exchanges', blurb: 'Living markets, news that travels, station exchanges, local currencies, contracts and futures, station shares, and fair play. All in-game, no crypto.' },
+  { file: 'docs/design/economy-and-exchanges.md', slug: 'economy-and-exchanges', blurb: 'Living markets, news that travels, station exchanges, local currencies, contracts and futures, station shares, and fair play. All virtual, all earned in play.' },
+  { file: 'docs/design/system-currencies.md', slug: 'system-currencies', blurb: 'A currency for every system, modelled on real crypto: government monetary policies, liquidity pools, pegs and crises, and a ledger anyone can verify. Virtual only.' },
   { file: 'docs/design/stations-and-worlds.md', slug: 'stations-and-worlds', blurb: 'Physical limits: station classes, ship sizes, docking capacity, how many stations a world can support, supply and decline, rivals and allies.' },
   { file: 'docs/design/ship-condition.md', slug: 'ship-condition', blurb: 'Ships wear with use: condition, readable symptoms and breakdowns, servicing at stations, second-hand ships with a history, and engineering. Modern rules only.' },
+  { file: 'docs/design/combat-rating.md', slug: 'combat-rating', blurb: 'The road from Harmless to Elite: points weighted by danger, nothing for crimes or easy targets, player kills, and combat missions as the main way up.' },
+  { file: 'docs/design/servers-and-hosting.md', slug: 'servers-and-hosting', blurb: 'How the shared galaxy will run: a small server-authoritative setup, what it costs, community-run servers later, and why not peer-to-peer.' },
   { file: 'docs/design/player-stations.md', slug: 'player-stations', blurb: 'Stations run by players, guilds, the community and AI agents, earned by contributing and funded by trading profits.' },
   { file: 'docs/ideas.md', slug: 'ideas', blurb: 'Ideas that aren\'t designed yet, from multicrew ships to a streamer mode. The community votes on what comes next.' },
 ];
@@ -132,12 +135,15 @@ write({
   title: 'Design · Witchspace',
   description: 'How Witchspace is being designed, in the open: agreed designs, proposals for discussion, the ideas backlog and the roadmap.',
   content: `<section class="section">
+  <div class="section-head">
+  <p class="kicker">Designed in the open</p>
   <h2>Design</h2>
   <p class="lede">Witchspace is designed in the open. Ideas are discussed and written down before they're built, so anyone can see where the game is going and help shape it.</p>
+  </div>
   <div class="grid">
 ${docMeta
   .map(
-    (d) => `    <a class="card" href="/design/${d.slug}/" style="text-decoration:none">
+    (d) => `    <a class="card link" href="/design/${d.slug}/">
       <span class="tag ${d.status}">${statusLabel[d.status as keyof typeof statusLabel]}</span>
       <h3>${d.title}</h3>
       <p>${d.blurb}</p>

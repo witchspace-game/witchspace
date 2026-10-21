@@ -1,77 +1,172 @@
-<!-- {"path": "/", "title": "Witchspace: a love letter to Elite", "description": "An open-source space trading game in your browser. Glowing vector ships, an authentic 1984 mode, and a galaxy built by its community.", "scripts": ["/src/site/hero.ts"], "bodyClass": "home"} -->
+<!-- {"path": "/", "title": "Witchspace: a love letter to Elite", "description": "A free, open-source space trading game in your browser. Glowing vector ships, eight galaxies, an authentic 1984 mode, and a galaxy built by its community.", "scripts": ["/src/site/hero.ts", "/src/site/home.ts"], "bodyClass": "home"} -->
 <section class="hero">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
-  <div class="hero-copy">
-    <h1>WITCHSPACE</h1>
-    <p>Trade, fight and explore a galaxy of glowing wireframe ships, right in your browser. A love letter to <em>Elite</em> (1984).</p>
-    <div class="actions">
-      <a class="button big" href="/play/">Play now</a>
-      <a class="button big secondary" href="/get-involved/">Get involved</a>
+  <div class="hero-glow" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <p class="eyebrow"><span class="dot"></span>Free · Open source · Plays in your browser</p>
+      <h1>Trade. Fight.<br /><span class="gradient">Explore.</span></h1>
+      <p class="hero-lede">
+        Fly a Cobra Mk III across eight galaxies of glowing vector space. A love letter to <em>Elite</em> (1984), rebuilt for today's browsers, with the original look one key away.
+      </p>
+      <div class="actions">
+        <a class="button primary big" href="/play/">Play now, it's free</a>
+        <a class="button ghost big" href="#screens">See the game</a>
+      </div>
+      <p class="hero-note">No download, no account. Mouse, keyboard, gamepad or touch.</p>
     </div>
-    <p class="ship-name" id="hero-ship" aria-live="polite"></p>
+  </div>
+  <p class="ship-name" id="hero-ship" aria-live="polite"></p>
+  <dl class="stats">
+    <div><dt>2,048</dt><dd>star systems</dd></div>
+    <div><dt>8</dt><dd>galaxies</dd></div>
+    <div><dt>17</dt><dd>trade goods</dd></div>
+    <div><dt>100 Cr</dt><dd>to start, as ever</dd></div>
+  </dl>
+</section>
+
+<section class="section compare-section" id="screens">
+  <div class="section-head">
+    <p class="kicker">Two looks, one key</p>
+    <h2>1984 is always one keypress away</h2>
+    <p class="lede">Neo-vector brings bloom, colour and shattering explosions. Press <kbd>M</kbd> at any moment and you're back in 1984: white lines on black, sharpened for modern screens. Drag to compare.</p>
+  </div>
+  <div class="compare" id="compare" style="--pos: 46%">
+    <img src="/screens/retro.jpg" alt="The same scene in 1984 mode: white wireframe station and planet on black" width="1200" height="900" loading="lazy" />
+    <img class="compare-top" src="/screens/neo.jpg" alt="A Coriolis station and planet in neo-vector mode, with police Vipers on patrol" width="1200" height="900" loading="lazy" />
+    <span class="compare-label left">Neo-vector</span>
+    <span class="compare-label right retro-label">1984</span>
+    <span class="compare-handle" aria-hidden="true"></span>
+    <input type="range" min="0" max="100" value="46" aria-label="Compare neo-vector and 1984 modes" />
+  </div>
+</section>
+
+<section class="section showcase">
+  <article class="feature">
+    <figure><img src="/screens/combat.jpg" alt="Military lasers firing at two pirate ships in front of a planet" width="1600" height="900" loading="lazy" /></figure>
+    <div class="feature-copy">
+      <p class="kicker">Combat</p>
+      <h2>Dogfights with weight</h2>
+      <p>Same physics for everyone: pitch, roll and no drift, just like 1984. Pirates hunt traders, police answer crimes, and your laser runs hot if you hold the trigger too long.</p>
+      <ul class="ticks">
+        <li>Pulse, beam and military lasers on four mounts</li>
+        <li>Homing missiles, ECM and the energy bomb</li>
+        <li>Bounties, and a combat rating from Harmless to Elite</li>
+      </ul>
+    </div>
+  </article>
+  <article class="feature reverse">
+    <figure><img src="/screens/map.jpg" alt="The galactic chart, with Lave selected and its economy, government and tech level shown" width="1600" height="900" loading="lazy" /></figure>
+    <div class="feature-copy">
+      <p class="kicker">Trade &amp; explore</p>
+      <h2>2,048 systems, right where you left them</h2>
+      <p>Every galaxy is generated just as it was in 1984, so Lave, Diso and Leesti are where you remember. Buy low, jump, sell high, and keep one eye on the scanner.</p>
+      <ul class="ticks">
+        <li>Living markets for the classic seventeen goods</li>
+        <li>Hyperspace, in-system jumps and galactic hyperdrives</li>
+        <li>Fuel scoops: skim a star, salvage cargo from wrecks</li>
+      </ul>
+    </div>
+  </article>
+  <article class="feature">
+    <figure><img src="/screens/hangar.jpg" alt="The station hangar, with a Cobra Mk III on the pad and the equipment shop open" width="1600" height="900" loading="lazy" /></figure>
+    <div class="feature-copy">
+      <p class="kicker">Your ship</p>
+      <h2>Kit out your Cobra</h2>
+      <p>Dock, trade and refit with your ship on the pad, turning it to see your upgrades. Laser louvres and missile hatches show on the hull, so a sharp-eyed pilot can tell what you're carrying.</p>
+      <ul class="ticks">
+        <li>Docking computer, with that waltz</li>
+        <li>Cargo bay, extra energy, escape pod and more</li>
+        <li>The law: records, scans, fines, and surrender when it goes wrong</li>
+      </ul>
+    </div>
+  </article>
+</section>
+
+<section class="section">
+  <div class="section-head center">
+    <p class="kicker">Your game, your way</p>
+    <h2>Pick it up anywhere</h2>
+  </div>
+  <div class="tiles">
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5" /><path d="M12 7v4" /></svg>
+      <h3>Mouse and keyboard</h3>
+      <p>Aim with the mouse and fly with W, A, S, D. Trackpads and Magic Mouse swipes work too.</p>
+    </div>
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></svg>
+      <h3>Classic keyboard</h3>
+      <p>The keyboard-only scheme, close to the BBC original, for purists.</p>
+    </div>
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 0 1 2 14v-1a4 4 0 0 1 4-4z" /><path d="M7 11v3M5.5 12.5h3M16 12h.01M18 13.5h.01" /></svg>
+      <h3>Gamepad</h3>
+      <p>Sticks for pitch, roll and yaw; triggers for speed. Launch and dock from the sofa.</p>
+    </div>
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5" /><path d="M11 18h2" /></svg>
+      <h3>Phone and tablet</h3>
+      <p>Touch controls, or tilt to steer. Turn your phone sideways and fly.</p>
+    </div>
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4v5c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V7z" /><path d="M9 12l2 2 4-4" /></svg>
+      <h3>Classic or Modern rules</h3>
+      <p>One life and GAME OVER, as in 1984. Or Modern: flight assists, insurance, and a little forgiveness.</p>
+    </div>
+    <div class="tile">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" /></svg>
+      <h3>Nothing to install</h3>
+      <p>It runs in any modern browser, on almost any machine. Your commander saves as you play.</p>
+    </div>
   </div>
 </section>
 
 <section class="section">
-  <h2>Remember the first time you docked?</h2>
-  <p class="lede">
-    Witchspace keeps the soul of the original (crisp vector ships, hidden-line wireframes, that heart-in-mouth docking) and renders it the way a BBC Micro never could. Press <strong>M</strong> any time to drop back to 1984 mode: white on black, hard pixels and the pixel font, sharpened for modern screens. Add <code>?pixels</code> to the address for the original 256×192.
-  </p>
-  <div class="grid">
-    <div class="card">
-      <h3>Neo-vector</h3>
-      <p>Glowing lines, bloom, explosions that shatter hulls into tumbling panels. Light enough to run on almost anything.</p>
-    </div>
-    <div class="card">
-      <h3>Fly it your way</h3>
-      <p>Mouse aim with W/S/A/D, the classic keyboard-only scheme, a gamepad, the touch surface of a Magic Mouse, or touch and tilt on a phone.</p>
-    </div>
-    <div class="card">
-      <h3>Classic or Modern</h3>
-      <p>One life and GAME OVER, as it was in 1984. Or Modern rules, with flight assists and a little more forgiveness.</p>
-    </div>
-    <div class="card">
-      <h3>Built by its community</h3>
-      <p>Ships, worlds and missions are open content. Design them by hand or with your favourite AI assistant.</p>
-    </div>
+  <div class="section-head center">
+    <p class="kicker">Built in the open</p>
+    <h2>A galaxy made by its players</h2>
+    <p class="lede">Ships are small JSON files, worlds and missions are open content, and the design is written down before it's built, so everyone can have a say.</p>
   </div>
-</section>
-
-<section class="section">
-  <h2>What you can do today</h2>
-  <p class="muted">Witchspace is an early prototype, growing in the open.</p>
-  <ul class="checklist">
-    <li>Launch from a spinning Coriolis station, and dock by hand or with a docking computer and the waltz</li>
-    <li>Trade the classic seventeen goods in living markets. Start, as ever, with 100 credits</li>
-    <li>Explore 2,048 star systems across eight galaxies, just where you remember them, each with a named station</li>
-    <li>Hyperspace between systems, and use the in-system jump drive to cross them</li>
-    <li>Share space with traders, police and pirates. Collect bounties and climb from Harmless towards Elite</li>
-    <li>Fit pulse, beam or military lasers front, rear and sides, and look around while you fly</li>
-    <li>Lock on and launch missiles, and buy an ECM for when they're coming the other way</li>
-    <li>Scoop cargo from wrecks, and skim a star for fuel if you can stand the heat</li>
-    <li>Live with the law: local records, docking clearance, police scans, fines, and surrender when it all goes wrong</li>
-    <li>Switch between neo-vector and 1984 mode at any moment</li>
-    <li>Play on a phone or tablet with touch controls, or tilt to steer</li>
-  </ul>
-  <p class="next">
-    <strong>Coming next:</strong> more ships, missions and the road to multiplayer. See the <a href="/design/">design</a> and have your say.
-  </p>
-</section>
-
-<section class="section">
-  <h2>Fair by design</h2>
-  <div class="grid">
-    <div class="card">
+  <div class="cards three">
+    <a class="card link" href="/get-involved/">
+      <h3>Design a ship</h3>
+      <p>Draw one by hand or with your favourite AI assistant. Drop the file in and it flies.</p>
+      <span class="more">Get involved →</span>
+    </a>
+    <a class="card link" href="/design/">
+      <h3>Shape what comes next</h3>
+      <p>Read the designs for the law, the economy, combat rating and multiplayer, and argue for your ideas.</p>
+      <span class="more">Read the designs →</span>
+    </a>
+    <a class="card link" href="https://github.com/witchspace-game/witchspace">
       <h3>Free and open source</h3>
-      <p>Code under GPL-3.0, content under CC BY-SA 4.0. Forks stay open, and contributions stay credited.</p>
-    </div>
-    <div class="card">
-      <h3>No crypto, no pay-to-win</h3>
-      <p>Nothing in Witchspace can be bought with real money. Everything is earned by playing or by contributing.</p>
-    </div>
-    <div class="card">
-      <h3>Decided together</h3>
-      <p>The community votes on what gets built next. Designs are written in the open before they're coded.</p>
-    </div>
+      <p>Code under GPL-3.0, content under CC BY-SA 4.0. Forks stay open, contributions stay credited.</p>
+      <span class="more">View on GitHub →</span>
+    </a>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head center">
+    <p class="kicker">Roadmap</p>
+    <h2>Where it's heading</h2>
+  </div>
+  <ol class="roadmap">
+    <li class="done"><span>1</span><h3>Core game</h3><p>Flight, docking, trading, combat, the law and eight galaxies.</p></li>
+    <li><span>2</span><h3>Legends</h3><p>Rare, secret encounters hidden around the galaxy.</p></li>
+    <li><span>3</span><h3>Shared space</h3><p>Fly alongside other commanders in the same system.</p></li>
+    <li><span>4</span><h3>Persistence</h3><p>Accounts, saved commanders and a shared economy.</p></li>
+    <li><span>5</span><h3>Community tools</h3><p>Ship editor, missions and modding.</p></li>
+    <li><span>6</span><h3>Player stations</h3><p>Outposts run by commanders, guilds and the community.</p></li>
+  </ol>
+  <p class="center muted"><a href="/design/#roadmap">The full roadmap →</a></p>
+</section>
+
+<section class="cta">
+  <div class="cta-inner">
+    <h2>Your Cobra is fuelled and waiting at Lave.</h2>
+    <p>Right on, Commander.</p>
+    <a class="button primary big" href="/play/">Launch</a>
   </div>
 </section>

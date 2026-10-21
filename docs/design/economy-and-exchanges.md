@@ -8,7 +8,7 @@ Witchspace's economy should feel like a **real market**: prices that rise and fa
 
 ## Principles
 
-1. **In-game only.** Credits, scrip, contracts and shares exist only on the Witchspace server. Nothing can be bought, sold or withdrawn for real money. No blockchain, no tokens, no NFTs. (See [no crypto, no pay-to-win](player-stations.md#no-crypto-no-pay-to-win) for why.)
+1. **In-game only.** Credits, system currencies, scrip, contracts and shares are virtual and exist only in Witchspace. They can be modelled on real cryptocurrencies, but nothing can be bought, sold or withdrawn for real money. (See [no pay-to-win](player-stations.md#no-pay-to-win) for why.)
 2. **Server-authoritative.** The game server runs every exchange and ledger. That's simpler, faster and far harder to cheat than a distributed ledger, and a central server is needed for fair combat and trade anyway.
 3. **Earned by playing.** Every credit in the economy came from trading, mining, bounties, missions or contribution.
 4. **Drama comes from information.** In the original Elite, the thrill of trading was knowing something others didn't. We keep that: prices are local, and knowledge of them travels.
@@ -46,6 +46,8 @@ Busy stations run an **exchange with an order book** instead of a single posted 
 - **Fees** are set by the station within legal bounds, and are a station's main income (which investors share; see [player stations](player-stations.md#9-investing-in-stations-with-trading-profits)).
 
 ## 4. Currencies and station scrip (multiplayer)
+
+*Expanded into a currency for every system, modelled on real cryptocurrencies: see [system currencies](system-currencies.md).*
 
 - **The Co-operative credit** is the galaxy's common currency, accepted everywhere.
 - **Station scrip:** player and community stations may issue their **own local currency**, used for fees, local goods and services, sometimes at a discount to attract business.
