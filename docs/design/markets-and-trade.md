@@ -53,6 +53,19 @@ NPC traders stop trading at random. Each one runs a route:
 
 So **prices even out between systems through arbitrage**, as they do in real markets, and you're competing with the NPCs for the best runs. Busy routes are well served and thin; remote systems pay more because fewer traders bother.
 
+### New goods
+
+Four goods join the original seventeen, to give supply chains more links. They're Witchspace's own additions; **Classic keeps the original list**.
+
+| Good | Made on | Wanted by | Notes |
+|---|---|---|---|
+| **Water** | Ice and ocean worlds, agricultural worlds | Industrial and desert worlds, everywhere in a drought | Cheap and bulky: a high-volume, thin-margin staple |
+| **Hydrogen fuel cells** | Industrial and high-tech worlds, gas-rich systems | Busy systems (demand rises with traffic), industry | Also what stations refuel ships with, so traffic consumes it |
+| **Electronics** | Mid-tech industrial worlds, from Minerals | High-tech worlds that build Computers and Machinery | A link in the chain Minerals → Electronics → Computers |
+| **Medicine** | High-tech worlds | Everywhere in a plague or war; poorer worlds always | Prices spike hard in a crisis; running Medicine into a plague zone is a mission in itself |
+
+With these, production uses inputs: a world making Computers consumes Electronics, and one making Electronics consumes Minerals. Disrupt a link and the shortage spreads down the chain.
+
 ### Real cargo on real ships
 
 NPC traders' cargo is real. The traders you meet in flight are carrying it, and their arrival is what fills the orders. **If a trader never arrives, its delivery never happens:**
@@ -70,10 +83,11 @@ Events change production and consumption, so markets react on their own:
 | Event | Effect |
 |---|---|
 | **Famine** | Food production collapses; big Food buy orders at high prices |
-| **Plague** | Consumption of Luxuries and Liquor falls; Medicine-like goods (a future addition) spike |
+| **Plague** | Medicine wanted urgently; consumption of Luxuries and Liquor falls |
 | **Boom** | Consumption of everything rises; Luxuries especially |
+| **Drought** | Water and Food wanted; Water-hungry industry slows |
 | **Mining strike** | Minerals, Gold and Platinum production stops |
-| **Civil war** | Firearms demand soars; Food and Machinery wanted; trade traffic dangerous |
+| **Civil war** | Firearms and Medicine demand soars; Food and Machinery wanted; trade traffic dangerous |
 | **Pirate blockade** | NPC traders stop arriving; imports dry up across the board |
 | **Thargoid incursion** | Trade traffic collapses; Alloys and Firearms wanted; Alien Items appear |
 | **Police crackdown** | Black-market supply dries up; contraband prices soar (section 3) |
@@ -125,7 +139,8 @@ In systems where the law is weak or for sale (anarchies, feudal worlds, dictator
 
 - **Narcotics:** demand barely changes with price. A crackdown makes prices spike rather than demand fall, which makes narcotics the most profitable and most volatile thing to run.
 - **Firearms:** demand follows conflict. Civil wars, incursions and Compact embargoes ([the Meridian Compact](system-currencies.md#6-the-single-currency-a-union-with-an-agenda)) send it soaring.
-- **Slaves:** kept from the original game's list as a tribute, and illegal almost everywhere with a working government. Trading them is always a crime in lawful space, and freeing them (selling to an abolitionist buyer for less) could become a mission line.
+- **Slaves:** kept from the original game's list as a tribute, and illegal almost everywhere with a working government. Trading them is always a crime in lawful space.
+  - **Liberation:** abolitionist groups in lawful systems buy slaves to free them. They pay less than the black market, but freeing them earns reputation with lawful governments and the Marshals, and opens a **liberation mission line**: intercepting slaver convoys, raiding pens in anarchies, and escorting freed people to safe worlds. The trade stays possible; the game makes clear which side is heroic.
 
 ## 4. In the shared galaxy
 
@@ -137,7 +152,7 @@ In systems where the law is weak or for sale (anarchies, feudal worlds, dictator
 
 | Stage | What |
 |---|---|
-| **1. Supply and demand** | Production and consumption; station buy and sell orders in the book; deliveries fill orders first; NPC traders running routes on a deterministic schedule |
+| **1. Supply and demand** | The four new goods; production and consumption, with inputs; station buy and sell orders in the book; deliveries fill orders first; NPC traders running routes on a deterministic schedule |
 | **2. Events** | Generated events with headlines and chart markers; blockades from destroyed traffic; news spreading with ships |
 | **3. Black market** | Legality by government; the back-room exchange; smugglers; undercover buyers; crackdowns |
 | **4. Shared galaxy** | Player limit orders, AI-agent market makers, server-side books |
@@ -147,7 +162,7 @@ In systems where the law is weak or for sale (anarchies, feudal worlds, dictator
 ## Open questions
 
 - **Rates:** production, consumption and order sizes, tuned so trade routes are worth flying without any one route being a money machine.
-- **Medicine and new goods:** should the list grow beyond the original seventeen (Medicine for plagues, for example), or stay a tribute?
+- ~~**New goods:**~~ settled: Water, Hydrogen fuel cells, Electronics and Medicine join the list (Modern rules only).
 - **Event frequency:** how often a world should be in crisis for the galaxy to feel alive without feeling chaotic.
 - **Black-market access:** is the back room open to everyone in corrupt systems, or reached through contacts and reputation?
-- **Slaves:** keep as in the original, rename, or turn into a liberation mission line?
+- ~~**Slaves:**~~ settled: kept as in the original, with abolitionist buyers and a liberation mission line.
