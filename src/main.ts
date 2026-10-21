@@ -55,6 +55,7 @@ import { NpcShip, type NpcRole } from './game/npc';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
 import { combatRating } from './game/rating';
+import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { Beams, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
@@ -223,7 +224,7 @@ function updateShowroom(dt: number) {
 // Inspect the ship on the title and docked screens: drag to rotate, scroll
 // (or swipe on a Magic Mouse or trackpad) to zoom, double-click to reset.
 const inShowroom = () => state === 'title' || state === 'docked' || state === 'newgame';
-const onControl = (e: Event) => Boolean((e.target as HTMLElement).closest('button, a, input, #galaxy-map, #controls-card'));
+const onControl = (e: Event) => Boolean((e.target as HTMLElement).closest('button, a, input, .panel, #galaxy-map, #controls-card'));
 
 addEventListener('pointerdown', (e) => {
   if (!inShowroom() || onControl(e)) return;
@@ -259,6 +260,7 @@ addEventListener('dblclick', (e) => {
 
 function showTitle() {
   inSpace = false;
+  showFittings(null);
   showShip(cobraIndex);
   const saved = loadCommander();
   const load = $<HTMLButtonElement>('#load-button');
@@ -293,12 +295,35 @@ function startCommander(difficulty: Difficulty) {
 }
 
 function enterDocked() {
+  boughtHere = { equipment: new Set(), lasers: {}, missiles: 0 };
   ensureSystemScene();
   inSpace = false;
   player.repair();
   showShip(cobraIndex);
   renderDocked();
   setState('docked');
+}
+
+// What was bought on this visit, so a change of mind before launch gets the
+// full price back. Anything older sells for half, like a laser part exchange.
+let boughtHere: {
+  equipment: Set<string>;
+  /** Per mount: what was fitted before, and what the swap cost. */
+  lasers: Partial<Record<Mount, { previous?: LaserId; paid: number }>>;
+  missiles: number;
+} = { equipment: new Set(), lasers: {}, missiles: 0 };
+
+/** A sale at half price loses money, so it asks for a second click. */
+function confirmSale(button: HTMLButtonElement, label: string, sell: () => void) {
+  button.addEventListener('click', () => {
+    if (button.dataset.armed) return sell();
+    button.dataset.armed = '1';
+    button.textContent = label;
+    button.classList.add('armed');
+  });
+  button.addEventListener('blur', () => {
+    if (button.dataset.armed) renderDocked();
+  });
 }
 
 // --- Docked tabs and the market ---------------------------------------------------
@@ -370,8 +395,27 @@ $('#market-table').addEventListener('click', (e) => {
   renderMarket(result.message);
 });
 
+// The commander's lasers, missiles and equipment, drawn on the hangar ship.
+let fittings: Fittings | null = null;
+
+function showFittings(c: Commander | null) {
+  if (fittings) disposeFittings(fittings);
+  fittings = null;
+  const model = showroomModels.find((m) => m.def.id === player.def.id);
+  if (!c || !model) return;
+  const size = { pulse: 1, beam: 2, military: 3 };
+  const lasers: Loadout['lasers'] = {};
+  for (const mount of VIEWS) {
+    const id = c.lasers[mount];
+    if (id) lasers[mount] = { color: PLAYER_LASERS[id].color, size: size[id] };
+  }
+  fittings = buildFittings(model.def, { lasers, missiles: c.missiles, equipment: c.equipment });
+  model.root.add(fittings.group);
+}
+
 function renderDocked() {
   const c = cmdr();
+  showFittings(c);
   const here = currentSystem();
   const st = stationName(here);
   $('#dock-location').textContent = `${st.name} · ${here.name}`;
@@ -383,7 +427,7 @@ function renderDocked() {
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ['Ship', player.def.name],
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t`],
-    ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}: ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '')}`).join(' · ')],
+    ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
     ['Legal status', legalLabel()],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', combatRating(c.kills)],
@@ -418,11 +462,28 @@ function renderDocked() {
   rearm.addEventListener('click', () => {
     c.credits -= canAfford * MISSILE_PRICE;
     c.missiles += canAfford;
+    boughtHere.missiles += canAfford;
     saveCommander(c);
     sfx.beep();
     renderDocked();
   });
   $('#missile-row').append(rearm);
+  if (c.missiles > 0) {
+    const undo = boughtHere.missiles > 0;
+    const back = undo ? MISSILE_PRICE : MISSILE_PRICE / 2;
+    const sell = document.createElement('button');
+    sell.textContent = `Sell 1 · +${back} Cr`;
+    sell.title = undo ? 'Bought here: full refund' : 'Sells for half price';
+    sell.addEventListener('click', () => {
+      c.credits += back;
+      c.missiles -= 1;
+      if (undo) boughtHere.missiles -= 1;
+      saveCommander(c);
+      sfx.beep();
+      renderDocked();
+    });
+    $('#missile-row').append(sell);
+  }
 
   const list = $('#equip');
   list.innerHTML = '';
@@ -462,14 +523,37 @@ function renderDocked() {
       const fitted = old === laser.id;
       fit.classList.toggle('fitted', fitted);
       fit.textContent = fitted ? `✓ ${mount}` : mount;
-      fit.disabled = fitted || !sold || c.credits < cost;
-      fit.title = fitted
-        ? `Fitted to the ${mount} mount`
-        : !sold
+      if (fitted) {
+        // Fitted this visit: put back what was there and refund the swap.
+        // Otherwise take it off for half price.
+        const undo = boughtHere.lasers[mount];
+        const back = undo ? undo.paid : Math.round(laser.price / 2);
+        fit.title = undo
+          ? `Undo: ${undo.previous ? `refit the ${PLAYER_LASERS[undo.previous].name.toLowerCase()} and ` : ''}refund ${back.toLocaleString()} Cr`
+          : `Remove from the ${mount} mount: sells for ${back.toLocaleString()} Cr`;
+        const remove = () => {
+          c.credits += back;
+          if (undo?.previous) c.lasers[mount] = undo.previous;
+          else delete c.lasers[mount];
+          delete boughtHere.lasers[mount];
+          saveCommander(c);
+          sfx.beep();
+          renderDocked();
+        };
+        if (undo) fit.addEventListener('click', remove);
+        else confirmSale(fit, `Sell · +${back.toLocaleString()} Cr?`, remove);
+        mounts.append(fit);
+        continue;
+      }
+      fit.disabled = !sold || c.credits < cost;
+      fit.title = !sold
           ? `Needs tech level ${laser.minTech}`
           : `Fit to the ${mount} mount: ${cost.toLocaleString()} Cr${tradeIn ? ` after ${tradeIn.toLocaleString()} Cr for the ${PLAYER_LASERS[old!].name.toLowerCase()}` : ''}`;
       fit.addEventListener('click', () => {
         c.credits -= cost;
+        // Swapping twice in one visit undoes back to what was fitted on arrival.
+        const earlier = boughtHere.lasers[mount];
+        boughtHere.lasers[mount] = { previous: earlier ? earlier.previous : old, paid: (earlier?.paid ?? 0) + cost };
         c.lasers[mount] = laser.id as LaserId;
         saveCommander(c);
         sfx.beep();
@@ -500,9 +584,31 @@ function renderDocked() {
       buy.textContent = `Needs tech level ${item.minTech}`;
       buy.title = `${here.name} is tech level ${here.techLevel}`;
       buy.disabled = true;
+    } else if (owned) {
+      const undo = boughtHere.equipment.has(item.id);
+      const back = undo ? item.price : Math.round(item.price / 2);
+      const remove = () => {
+        c.credits += back;
+        removeEquipment(c, item.id);
+        boughtHere.equipment.delete(item.id);
+        saveCommander(c);
+        sfx.beep();
+        renderDocked();
+      };
+      // The hold can't shrink below what's in it.
+      const full = item.id === 'large-cargo-bay' && cargoTonnes(c) > player.def.stats.cargo;
+      buy.textContent = undo ? `✓ Undo · +${back.toLocaleString()} Cr` : `✓ Sell · +${back.toLocaleString()} Cr`;
+      buy.classList.add('fitted');
+      buy.disabled = full;
+      buy.title = full ? 'Sell cargo first: it would not fit in the smaller hold' : undo ? 'Bought here: full refund' : 'Sells for half price';
+      if (undo) buy.addEventListener('click', remove);
+      else confirmSale(buy, `Sell for ${back.toLocaleString()} Cr?`, remove);
+      li.append(buy);
+      list.append(li);
+      continue;
     } else {
-      buy.textContent = owned ? 'Fitted' : `Buy · ${item.price.toLocaleString()} Cr`;
-      buy.disabled = owned || c.credits < item.price;
+      buy.textContent = `Buy · ${item.price.toLocaleString()} Cr`;
+      buy.disabled = c.credits < item.price;
     }
     buy.addEventListener('click', () => {
       if (damaged) {
@@ -511,6 +617,7 @@ function renderDocked() {
       } else {
         c.credits -= item.price;
         c.equipment.push(item.id);
+        boughtHere.equipment.add(item.id);
       }
       saveCommander(c);
       sfx.beep();
@@ -2363,7 +2470,7 @@ function frame(now?: number) {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, legalStatus,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, legalStatus, renderDocked,
       get commander() { return commander; },
       get state() { return state; },
       get autopilot() { return autopilot; },
