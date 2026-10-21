@@ -1,5 +1,7 @@
 import type { StarSystem } from '../galaxy/generate';
 import { COMMODITIES, type Commodity } from './commodities';
+import { eventShare } from './events';
+import { hash } from './seed';
 
 // Station markets.
 //
@@ -48,14 +50,6 @@ export interface Quote {
 const ELASTICITY = 0.35; // how strongly stock levels move prices
 const RECOVERY_MINUTES = 30; // time constant for markets to settle back
 
-/** A stable pseudo-random number in [0, 1) from a system, a salt and a commodity. */
-function hash(system: StarSystem, salt: number, index: number): number {
-  const [a, b, c, d] = system.extraSeed;
-  let h = (a * 73856093) ^ (b * 19349663) ^ (c * 83492791) ^ (d * 2654435761) ^ (salt * 97) ^ (index * 1013);
-  h = Math.imul(h ^ (h >>> 15), 2246822507);
-  h = Math.imul(h ^ (h >>> 13), 3266489909);
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
-}
 
 // Drift: smooth noise at three time scales, weighted, up to ±DRIFT × the
 // commodity's volatility. Volatile goods (narcotics) swing far more than
@@ -254,9 +248,17 @@ export const CHAIN_INPUTS: Record<string, string[]> = {
 };
 const CHAIN = 0.5; // how much of an input's shortage, as a share, passes to the output
 
-/** Effects on the stock from outside your own trading: other traders, lost deliveries and the supply chain. */
+/** Effects on the stock from outside your own trading: other traders, lost deliveries, world events and the supply chain. */
 function external(system: StarSystem, state: MarketState, id: string, t: number, live: boolean): number {
-  return npcDeviation(system, id, t) + lostDeviation(state, id, t) + chainDeviation(system, state, id, t, live);
+  return npcDeviation(system, id, t) + lostDeviation(state, id, t) + eventDeviation(system, id, t) + chainDeviation(system, state, id, t, live);
+}
+
+/** World events here (and the echo of news from nearby) shift the stock by a share of its usual level. */
+function eventDeviation(system: StarSystem, id: string, t: number): number {
+  const i = COMMODITIES.findIndex((c) => c.id === id);
+  const eq = equilibriumStock(system, COMMODITIES[i], i);
+  if (eq <= 0) return 0;
+  return eq * eventShare(system, id, t, tradeBalance(system, id) < -0.2);
 }
 
 /**

@@ -19,6 +19,8 @@ interface Options {
   /** Currently chosen destination, if any. */
   target: StarSystem | null;
   onTarget: (s: StarSystem) => void;
+  /** News of a system that has reached the current one: a short line, or null. */
+  news?: (s: StarSystem) => string | null;
 }
 
 const root = document.querySelector<HTMLElement>('#galaxy-map')!;
@@ -186,6 +188,20 @@ function draw() {
     }
     ctx.shadowBlur = 0;
   };
+  // Systems in the news: a small diamond beside them.
+  if (opts.news) {
+    ctx.fillStyle = retro ? '#fff' : '#ffb347';
+    for (const s of galaxy(cur.galaxy)) {
+      if (!opts.news(s)) continue;
+      const [x, y] = toScreen(s);
+      ctx.beginPath();
+      ctx.moveTo(x + 7, y - 9);
+      ctx.lineTo(x + 10, y - 6);
+      ctx.lineTo(x + 7, y - 3);
+      ctx.lineTo(x + 4, y - 6);
+      ctx.fill();
+    }
+  }
   mark(cur, colours.current, 7, false);
   if (opts.target) mark(opts.target, colours.target, 9, false);
   if (cursor) mark(cursor, colours.cursor, 12, true);
@@ -209,6 +225,8 @@ function renderInfo() {
     ['Productivity', `${s.productivity.toLocaleString()} M Cr`],
     ['Average radius', `${s.radius.toLocaleString()} km`],
   ];
+  const news = opts.news?.(s);
+  if (news) rows.push(['News', news]);
   const isTarget = opts.target === s;
   // Station names are community content, so everything is escaped.
   info.innerHTML = `<h3>${escapeHtml(s.name)}${isTarget ? ' <em>Destination</em>' : ''}</h3><dl>${rows

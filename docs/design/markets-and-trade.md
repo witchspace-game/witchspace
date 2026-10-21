@@ -78,6 +78,8 @@ Traders far from the player don't need to be simulated in flight. A deterministi
 
 ## 2. World events
 
+*(Built so far: generated events (famine, drought, plague, boom, mining strike, civil war, pirate blockade, Thargoid incursion, police crackdown) from each system's seed and the clock, about one world in ten affected at any time, lasting two to eight hours. They shift the stock of the goods they touch, so prices move, stations post orders and shortages spread down supply chains. News travels at 10 minutes plus 12 minutes per light year, up to 25 light years: a News tab at stations, diamonds and a News line on the galaxy map, a banner on the exchange, markers on the chart, and a headline when you arrive somewhere in crisis. Once news of a shortage reaches a world, its traders start buying what's wanted, so a fast ship that gets there first buys cheaper. Player-made blockades and community-written event files are still to come.)*
+
 Events change production and consumption, so markets react on their own:
 
 | Event | Effect |

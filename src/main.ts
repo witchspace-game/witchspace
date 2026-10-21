@@ -75,6 +75,8 @@ import { distanceLy, ECONOMIES, GOVERNMENTS, systemAt, type StarSystem } from '.
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
+import { activeEvent, EVENT_KINDS, newsAt, newsOf } from './economy/events';
+import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
 import { initTouch, updateTouch } from './ui/touch';
 import './style.css';
@@ -350,7 +352,7 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'market';
+type DockTab = 'station' | 'market' | 'news';
 let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
@@ -358,6 +360,8 @@ function setDockTab(tab: DockTab) {
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
   $('#tab-market').hidden = tab !== 'market';
+  $('#tab-news').hidden = tab !== 'news';
+  if (tab === 'news') renderNews();
   if (tab === 'market') {
     exchange.selectHeld(cmdr().cargo);
     renderMarket();
@@ -375,6 +379,42 @@ document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) =>
 
 function tradeContext(): TradeContext {
   return { commander: cmdr(), system: currentSystem(), capacity: cargoCapacity(cmdr(), player.def.stats.cargo), now: Date.now() };
+}
+
+// --- News --------------------------------------------------------------------------
+
+const ago = (ms: number) => {
+  const m = Math.max(0, Math.round(ms / 60000));
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
+};
+
+/** A line for the galaxy map: the latest news of a system that has reached here. */
+function newsLine(s: StarSystem): string | null {
+  const n = newsOf(s, currentSystem(), Date.now());
+  if (!n) return null;
+  const over = Date.now() > n.event.end;
+  return `${EVENT_KINDS[n.event.type].name}${over ? ' (may be over)' : ''} · heard ${ago(Date.now() - n.heard)} ago`;
+}
+
+function renderNews() {
+  const here = currentSystem();
+  const now = Date.now();
+  // Ongoing news first, then what's probably over; the latest eight.
+  const items = newsAt(here, now)
+    .sort((a, b) => Number(now > a.event.end) - Number(now > b.event.end) || b.heard - a.heard)
+    .slice(0, 8);
+  $('#news-list').innerHTML = items.length
+    ? items
+        .map((n) => {
+          const kind = EVENT_KINDS[n.event.type];
+          const local = n.where === here;
+          const over = now > n.event.end;
+          const status = local ? (over ? 'Over' : 'Here, now') : over ? 'May be over by now' : `${n.distance.toFixed(1)} LY away · news ${ago(n.heard - n.event.start)} old when it arrived`;
+          return `<li class="${local ? 'here' : ''}${over ? ' over' : ''}"><b>${escapeHtml(kind.headline(n.where.name))}</b>
+            <small>${escapeHtml(status)} · heard ${ago(now - n.heard)} ago · Wanted: ${escapeHtml(kind.wanted)}</small></li>`;
+        })
+        .join('')
+    : '<li class="quiet">No news. All quiet within 25 light years.</li>';
 }
 
 // Modern markets in neo-vector mode get the full exchange; Classic and 1984
@@ -473,6 +513,7 @@ function renderDocked() {
   $('#dock-location').textContent = `${st.name} · ${here.name}`;
   $('#dock-location').title = st.honours ? `Named for ${st.honours}` : '';
   if (dockTab === 'market') renderMarket();
+  if (dockTab === 'news') renderNews();
   const rows: [string, string][] = [
     ['Commander', c.name],
     ['Rules', DIFFICULTIES[c.difficulty].name],
@@ -2114,6 +2155,7 @@ async function launch() {
     setTimeout(() => flash('Tip: turn your phone sideways for the best view', 3), 2600);
   }
   flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
+  announceEvent(currentSystem(), 2800);
 }
 
 async function dock() {
@@ -2452,6 +2494,13 @@ async function hyperspace() {
       (wanted === 'fugitive' ? (c.warrant ? ' · Marshals warrant: police hostile' : ' · You are wanted here') : wanted === 'offender' ? ' · Offender here' : ''),
     4,
   );
+  announceEvent(dest, 4500);
+}
+
+/** Arriving somewhere in the middle of a crisis: say so. */
+function announceEvent(sys: StarSystem, delay: number) {
+  const e = activeEvent(sys, Date.now());
+  if (e) setTimeout(() => state === 'flying' && flash(EVENT_KINDS[e.type].headline(sys.name), 4), delay);
 }
 
 /** The original's J key: leap ahead when nothing is near enough to mass-lock you. */
@@ -2510,6 +2559,7 @@ function toggleGalaxyMap() {
     current: here,
     range: c.fuel,
     target: c.target === null ? null : systemAt(here.galaxy, c.target),
+    news: newsLine,
     onTarget: (s) => {
       c.target = s.index;
       saveCommander(c);
