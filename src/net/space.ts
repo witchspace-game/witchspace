@@ -49,7 +49,12 @@ export type SpaceEvent =
   /** We collided with a commander: the damage, what we have left, and which way to move apart. */
   | { kind: 'bump'; with: Remote | null; damage: number; shields: number; hull: number; push: THREE.Vector3 }
   /** Someone was destroyed: us (`me`), or a commander we can see; by a laser, or in a collision. */
-  | { kind: 'destroyed'; me: boolean; remote: Remote | null; by: Remote | null; byMe: boolean; collision: boolean };
+  | { kind: 'destroyed'; me: boolean; remote: Remote | null; by: Remote | null; byMe: boolean; collision: boolean }
+  /** A missile is away. `owner` and `target` are null when they're us (see the flags). */
+  | { kind: 'missile'; id: string; owner: Remote | null; ownerIsMe: boolean; target: Remote | null; targetIsMe: boolean; p: THREE.Vector3; d: THREE.Vector3; s: number }
+  | { kind: 'missileEnd'; id: string; how: 'hit' | 'ecm' | 'expired'; p: THREE.Vector3 }
+  /** Someone else fired an ECM. */
+  | { kind: 'ecm'; by: Remote | null; p: THREE.Vector3 };
 
 const HOSTILE_FOR = 15; // seconds a commander who shot at you stays marked hostile
 
@@ -75,7 +80,7 @@ export class SharedSpace {
   }
 
   /** Be in this system's shared space (or none). Reconnects only when it changes. */
-  join(galaxy: number, system: number, name: string, ship: string, lasers: string[], rank: string) {
+  join(galaxy: number, system: number, name: string, ship: string, lasers: string[], rank: string, missiles: number, ecm: boolean) {
     const key = `${galaxy}/${system}`;
     if (key === this.system && this.ws) return;
     if (this.clock < this.retryAt) return;
@@ -83,7 +88,7 @@ export class SharedSpace {
     this.system = key;
     const ws = new WebSocket(`${SPACE_URL}/system/${key}`);
     this.ws = ws;
-    ws.onopen = () => this.send({ type: 'hello', name, ship, lasers, rank });
+    ws.onopen = () => this.send({ type: 'hello', name, ship, lasers, rank, missiles, ecm });
     ws.onmessage = (e) => this.receive(JSON.parse(e.data as string) as ServerMessage);
     ws.onclose = () => {
       if (this.ws !== ws) return; // a deliberate leave
@@ -115,6 +120,15 @@ export class SharedSpace {
   /** A laser shot: the server decides whether it hit anyone. */
   fire(direction: THREE.Vector3, laser: string) {
     this.send({ type: 'fire', d: [direction.x, direction.y, direction.z], l: laser });
+  }
+
+  /** Launch a missile at a commander: the server flies it. */
+  launchMissile(target: string) {
+    this.send({ type: 'missile', target });
+  }
+
+  ecm() {
+    this.send({ type: 'ecm' });
   }
 
   isHostile(r: Remote) {
@@ -173,6 +187,29 @@ export class SharedSpace {
         if (r) this.onEvent({ kind: 'hitconfirm', remote: r });
         break;
       }
+      case 'missile':
+        this.onEvent({
+          kind: 'missile',
+          id: msg.id,
+          owner: this.remotes.get(msg.owner) ?? null,
+          ownerIsMe: msg.owner === this.myId,
+          target: this.remotes.get(msg.target) ?? null,
+          targetIsMe: msg.target === this.myId,
+          p: toV(msg.p),
+          d: toV(msg.d),
+          s: msg.s,
+        });
+        if (msg.target === this.myId) {
+          const r = this.remotes.get(msg.owner);
+          if (r) r.hostileUntil = this.clock + HOSTILE_FOR;
+        }
+        break;
+      case 'missileEnd':
+        this.onEvent({ kind: 'missileEnd', id: msg.id, how: msg.how, p: toV(msg.p) });
+        break;
+      case 'ecm':
+        if (msg.id !== this.myId) this.onEvent({ kind: 'ecm', by: this.remotes.get(msg.id) ?? null, p: toV(msg.p) });
+        break;
       case 'bump':
         this.onEvent({ kind: 'bump', with: this.remotes.get(msg.with) ?? null, damage: msg.damage, shields: msg.shields, hull: msg.hull, push: toV(msg.push) });
         break;

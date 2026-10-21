@@ -390,7 +390,7 @@ body.home.scrolled .site-header { background: rgba(5, 7, 13, 0.72); border-botto
 
 /* --- Roadmap -------------------------------------------------------------- */
 
-.roadmap { list-style: none; padding: 0; margin: 0 0 28px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; counter-reset: none; }
+.roadmap { list-style: none; padding: 0; margin: 0 0 28px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; counter-reset: none; }
 .roadmap li { position: relative; padding: 22px 18px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); }
 .roadmap li span {
   display: grid;
@@ -408,6 +408,9 @@ body.home.scrolled .site-header { background: rgba(5, 7, 13, 0.72); border-botto
 .roadmap li.done { border-color: rgba(61, 255, 176, 0.4); background: linear-gradient(180deg, rgba(61, 255, 176, 0.1), rgba(61, 255, 176, 0.02)); }
 .roadmap li.done span { border: 0; background: var(--gradient); color: #03140e; }
 .roadmap li.done span::after { content: ' ✓'; font-size: 0; }
+/* In progress: amber, the colour of work under way. */
+.roadmap li.now { border-color: rgba(255, 179, 71, 0.45); background: linear-gradient(180deg, rgba(255, 179, 71, 0.09), rgba(255, 179, 71, 0.02)); }
+.roadmap li.now span { border-color: var(--amber); color: var(--amber); }
 .roadmap h3 { margin: 0 0 6px; font-size: 17px; }
 .roadmap p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.5; }
 

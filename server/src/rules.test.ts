@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cleanName, JUMP } from './protocol';
-import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, takeHit, type Track } from './rules';
+import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Track } from './rules';
 
 const at = (z: number, t: number, jumpedAt = -1e9): Track => ({ p: [0, 0, z], t, jumpedAt });
 
@@ -90,5 +90,34 @@ describe('shared space: collisions', () => {
     expect(collisionDamage(150)).toBe(25);
     expect(collisionDamage(560)).toBe(66); // two Cobras head on at full speed
     expect(collisionDamage(-5)).toBe(10);
+  });
+});
+
+describe('shared space: missiles, flown by the server', () => {
+  const fly = (m: Flight, target: [number, number, number] | null, seconds: number) => {
+    for (let t = 0; t < seconds; t += 0.05) {
+      const r = stepMissile(m, target, 0.05);
+      if (r !== 'flying') return { r, t };
+    }
+    return { r: 'flying' as const, t: seconds };
+  };
+
+  it('homes in on a ship off to one side', () => {
+    const m: Flight = { p: [0, 0, 0], d: [0, 0, 1], s: 120, age: 0 };
+    const { r, t } = fly(m, [1500, 0, 1500], 20);
+    expect(r).toBe('hit');
+    expect(t).toBeLessThan(8);
+  });
+
+  it('turns only so fast, so a target right behind takes a while', () => {
+    const ahead: Flight = { p: [0, 0, 0], d: [0, 0, 1], s: 120, age: 0 };
+    const behind: Flight = { p: [0, 0, 0], d: [0, 0, 1], s: 120, age: 0 };
+    expect(fly(behind, [0, 0, -1500], 30).t).toBeGreaterThan(fly(ahead, [0, 0, 1500], 30).t + 1);
+  });
+
+  it('flies straight on and burns out without a target', () => {
+    const m: Flight = { p: [0, 0, 0], d: [0, 0, 1], s: 120, age: 0 };
+    expect(fly(m, null, 40).r).toBe('expired');
+    expect(m.p[0]).toBeCloseTo(0);
   });
 });

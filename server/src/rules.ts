@@ -3,7 +3,7 @@
 // in-system jump, which has a cooldown. Anything else is refused and you're
 // put back where you were.
 
-import { JUMP, JUMP_COOLDOWN, LASERS, SHIELD_RECHARGE, SHIPS, SLACK, SPREAD, SYSTEM_RADIUS, type Vec3 } from './protocol';
+import { JUMP, JUMP_COOLDOWN, LASERS, MISSILE, SHIELD_RECHARGE, SHIPS, SLACK, SPREAD, SYSTEM_RADIUS, type Vec3 } from './protocol';
 
 export interface Track {
   p: Vec3;
@@ -139,3 +139,52 @@ export function closestApproach(a0: Vec3, a1: Vec3, b: Vec3): number {
 
 /** Damage to each ship in a collision: a knock at low speed, serious head on. */
 export const collisionDamage = (closing: number) => Math.round(10 + Math.max(0, closing) * 0.1);
+
+// --- Missiles -----------------------------------------------------------------
+// Flown by the server, exactly as the game flies them: off the rail, speeding
+// up, turning towards the target at a limited rate (a hard break can still
+// shake one), and exploding within the fuse distance.
+
+export interface Flight {
+  p: Vec3;
+  /** Unit direction of travel. */
+  d: Vec3;
+  s: number;
+  age: number;
+}
+
+const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+/** Rotate `v` about unit `axis` by `angle` (Rodrigues). */
+function turn(v: Vec3, axis: Vec3, angle: number): Vec3 {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const k = cross(axis, v);
+  const kd = dot(axis, v) * (1 - c);
+  return [v[0] * c + k[0] * s + axis[0] * kd, v[1] * c + k[1] * s + axis[1] * kd, v[2] * c + k[2] * s + axis[2] * kd];
+}
+
+/** Fly a missile for `dt` seconds towards `target` (or straight on without one). */
+export function stepMissile(m: Flight, target: Vec3 | null, dt: number): 'flying' | 'hit' | 'expired' {
+  m.age += dt;
+  if (m.age > MISSILE.lifetime) return 'expired';
+  m.s = Math.min(MISSILE.maxSpeed, m.s + MISSILE.acceleration * dt);
+  if (target) {
+    const want: Vec3 = [target[0] - m.p[0], target[1] - m.p[1], target[2] - m.p[2]];
+    const dist = Math.hypot(...want);
+    if (dist < MISSILE.fuse) return 'hit';
+    const w: Vec3 = [want[0] / dist, want[1] / dist, want[2] / dist];
+    const angle = Math.acos(Math.max(-1, Math.min(1, dot(m.d, w))));
+    if (angle > 1e-4) {
+      let axis = cross(m.d, w);
+      const len = Math.hypot(...axis);
+      axis = len < 1e-9 ? [0, 1, 0] : [axis[0] / len, axis[1] / len, axis[2] / len];
+      const d = turn(m.d, axis, Math.min(angle, MISSILE.turnRate * dt));
+      const n = Math.hypot(...d);
+      m.d = [d[0] / n, d[1] / n, d[2] / n];
+    }
+  }
+  m.p = [m.p[0] + m.d[0] * m.s * dt, m.p[1] + m.d[1] * m.s * dt, m.p[2] + m.d[2] * m.s * dt];
+  return 'flying';
+}

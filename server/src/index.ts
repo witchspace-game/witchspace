@@ -5,8 +5,8 @@
 // See docs/design/servers-and-hosting.md.
 
 import { DurableObject } from 'cloudflare:workers';
-import { BUMP_COOLDOWN, cleanName, COLLIDE, RANKS, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
-import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, takeHit, type Health, type Sample, type Track } from './rules';
+import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, LOCK_RANGE, MISSILE, RANKS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
+import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
 
 export interface Env {
   SYSTEMS: DurableObjectNamespace<SystemRoom>;
@@ -54,7 +54,22 @@ interface Combatant {
   lasers: string[];
   lastShotAt: number;
   destroyed: boolean;
+  /** Missiles left on the rails, and the ECM. */
+  missiles: number;
+  ecm: boolean;
+  lastEcmAt: number;
 }
+
+/** A missile in flight, flown by the server. */
+interface InFlight {
+  id: string;
+  owner: string;
+  target: string;
+  flight: Flight;
+  steppedAt: number; // ms
+}
+
+const MISSILE_STEP = 0.05; // seconds: missiles are flown in steps no longer than this
 
 const HISTORY_MS = 1200;
 
@@ -62,6 +77,7 @@ export class SystemRoom extends DurableObject<Env> {
   private readonly combat = new Map<string, Combatant>();
   /** When each pair of commanders last collided (ms), so one contact only hurts once. */
   private readonly bumps = new Map<string, number>();
+  private readonly inFlight = new Map<string, InFlight>();
 
   async fetch(): Promise<Response> {
     if (this.ctx.getWebSockets().length >= MAX_PER_SYSTEM) return new Response('This system is full', { status: 503 });
@@ -85,6 +101,8 @@ export class SystemRoom extends DurableObject<Env> {
     } catch {
       return;
     }
+    // Missiles fly on between messages; catch them up to now.
+    this.flyMissiles(now);
 
     if (msg.type === 'hello' && !a.commander) {
       const ship = msg.ship in SHIPS ? msg.ship : 'cobra-mk3';
@@ -98,6 +116,9 @@ export class SystemRoom extends DurableObject<Env> {
         lasers,
         lastShotAt: 0,
         destroyed: false,
+        missiles: Math.max(0, Math.min(SHIPS[ship].missiles, Math.floor(Number(msg.missiles) || 0))),
+        ecm: msg.ecm === true,
+        lastEcmAt: 0,
       });
       const others = this.commanders().filter((c) => c.id !== a.commander!.id && c.s >= 0);
       this.send(ws, { type: 'welcome', id: a.commander.id, others });
@@ -130,6 +151,85 @@ export class SystemRoom extends DurableObject<Env> {
     }
 
     if (msg.type === 'fire' && a.commander && a.track) this.fire(ws, a.commander, msg.d, msg.l, now);
+    else if (msg.type === 'missile' && a.commander && a.track) this.launch(a.commander, msg.target, now);
+    else if (msg.type === 'ecm' && a.commander && a.track) this.ecm(a.commander, now);
+  }
+
+  /** Launch a missile, if there's one on the rails and the target is in range. */
+  private launch(owner: Commander, targetId: unknown, now: number) {
+    const me = this.combat.get(owner.id);
+    if (!me || me.destroyed || me.missiles <= 0 || typeof targetId !== 'string' || targetId === owner.id) return;
+    const target = this.combat.get(targetId);
+    const at = target?.history[target.history.length - 1]?.p;
+    if (!target || target.destroyed || !at) return;
+    if (Math.hypot(at[0] - owner.p[0], at[1] - owner.p[1], at[2] - owner.p[2]) > LOCK_RANGE) return;
+    me.missiles -= 1;
+    const d = rotate([0, 0, 1], owner.q);
+    const flight: Flight = { p: [owner.p[0] + d[0] * 10, owner.p[1] + d[1] * 10, owner.p[2] + d[2] * 10], d, s: owner.s + MISSILE.launchSpeed, age: 0 };
+    const id = crypto.randomUUID().slice(0, 8);
+    this.inFlight.set(id, { id, owner: owner.id, target: targetId, flight, steppedAt: now });
+    this.broadcastAll({ type: 'missile', id, owner: owner.id, target: targetId, p: flight.p, d: flight.d, s: flight.s });
+  }
+
+  /** Fly every missile up to now; resolve hits and burn-outs. */
+  private flyMissiles(now: number) {
+    for (const m of this.inFlight.values()) {
+      let left = (now - m.steppedAt) / 1000;
+      m.steppedAt = now;
+      let result: 'flying' | 'hit' | 'expired' = 'flying';
+      while (left > 0 && result === 'flying') {
+        const dt = Math.min(MISSILE_STEP, left);
+        left -= dt;
+        const target = this.combat.get(m.target);
+        const at = target && !target.destroyed ? (target.history[target.history.length - 1]?.p ?? null) : null;
+        result = stepMissile(m.flight, at, dt);
+      }
+      if (result === 'flying') continue;
+      this.inFlight.delete(m.id);
+      this.broadcastAll({ type: 'missileEnd', id: m.id, how: result, p: m.flight.p });
+      if (result === 'hit') this.missileHit(m, now);
+    }
+  }
+
+  private missileHit(m: InFlight, now: number) {
+    const victim = this.combat.get(m.target);
+    const victimCmdr = this.commanderById(m.target);
+    if (!victim || !victimCmdr || victim.destroyed) return;
+    const { health, destroyed } = takeHit(recharge(victim.health, SHIPS[victimCmdr.ship].shields, now), MISSILE.damage);
+    victim.health = health;
+    const victimWs = this.socketOf(m.target);
+    if (victimWs) this.send(victimWs, { type: 'hit', by: m.owner, damage: MISSILE.damage, shields: Math.max(0, health.shields), hull: Math.max(0, health.hull) });
+    const ownerWs = this.socketOf(m.owner);
+    if (ownerWs) this.send(ownerWs, { type: 'hitconfirm', id: m.target });
+    if (destroyed) {
+      victim.destroyed = true;
+      this.broadcastAll({ type: 'destroyed', id: m.target, by: m.owner, cause: 'missile' });
+    }
+  }
+
+  /** The ECM destroys every missile near the ship that fires it, friend or foe. */
+  private ecm(c: Commander, now: number) {
+    const me = this.combat.get(c.id);
+    if (!me || me.destroyed || !me.ecm || now - me.lastEcmAt < ECM_COOLDOWN) return;
+    me.lastEcmAt = now;
+    this.broadcastAll({ type: 'ecm', id: c.id, p: c.p });
+    for (const m of this.inFlight.values()) {
+      const p = m.flight.p;
+      if (Math.hypot(p[0] - c.p[0], p[1] - c.p[1], p[2] - c.p[2]) > ECM_RANGE) continue;
+      this.inFlight.delete(m.id);
+      this.broadcastAll({ type: 'missileEnd', id: m.id, how: 'ecm', p });
+    }
+  }
+
+  private broadcastAll(msg: ServerMessage) {
+    const text = JSON.stringify(msg);
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.send(text);
+      } catch {
+        // Gone; webSocketClose tidies up.
+      }
+    }
   }
 
   /** A laser shot: check it could happen, then decide what it hit. */
