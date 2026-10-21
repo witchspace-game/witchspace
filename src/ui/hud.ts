@@ -38,9 +38,17 @@ const setBar = (el: HTMLElement, frac: number) => el.style.setProperty('--v', St
 const setCentred = (el: HTMLElement, v: number) => el.style.setProperty('--v', String(THREE.MathUtils.clamp(v, -1, 1)));
 
 let bannerTimer = 0;
+/** Messages that warn of danger or trouble with the law get a red edge. */
+const DANGER = /incoming|destroyed!|fugitive|offender|sting|lost|refused|under attack|overheated|game over|warrant|cease fire|damaged|hostile/i;
+
 export function flash(text: string, seconds = 2.5) {
   banner.textContent = text;
   banner.hidden = false;
+  banner.classList.toggle('danger', DANGER.test(text));
+  // Restart the entrance each time a new message arrives.
+  banner.classList.remove('pop');
+  void banner.offsetWidth;
+  banner.classList.add('pop');
   clearTimeout(bannerTimer);
   if (seconds > 0) bannerTimer = window.setTimeout(() => (banner.hidden = true), seconds * 1000);
 }
