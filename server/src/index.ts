@@ -6,10 +6,25 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, LOCK_RANGE, MISSILE, RANKS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
+import { IdeasBoard, type IdeasEnv } from './ideas';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
 
-export interface Env {
+export interface Env extends IdeasEnv {
   SYSTEMS: DurableObjectNamespace<SystemRoom>;
+  IDEAS: DurableObjectNamespace<IdeasBoard>;
+}
+
+export { IdeasBoard };
+
+/** CORS for the ideas board, which the website calls from witchspace.org.uk. */
+function cors(origin: string): Record<string, string> {
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Voter, X-Admin-Key',
+    'Access-Control-Max-Age': '86400',
+    Vary: 'Origin',
+  };
 }
 
 /** Pages allowed to connect: the live site and local development. */
@@ -22,6 +37,17 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
+    // The ideas board: /ideas, /ideas/<id>/vote, /ideas/<id>/report.
+    if (url.pathname === '/ideas' || url.pathname.startsWith('/ideas/')) {
+      const origin = request.headers.get('Origin') ?? '';
+      const allowed = ORIGINS.some((o) => o.test(origin));
+      if (!allowed) return new Response('Forbidden', { status: 403 });
+      if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
+      const res = await env.IDEAS.get(env.IDEAS.idFromName('board')).fetch(request);
+      const out = new Response(res.body, res);
+      for (const [k, v] of Object.entries(cors(origin))) out.headers.set(k, v);
+      return out;
+    }
     // /system/<galaxy>/<index>
     const m = url.pathname.match(/^\/system\/([0-7])\/(\d{1,3})$/);
     if (!m || Number(m[2]) > 255) return new Response('Not found', { status: 404 });

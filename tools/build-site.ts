@@ -16,6 +16,7 @@ const template = readFileSync(join(root, 'site/template.html'), 'utf8');
 const NAV = [
   ['/', 'Home'],
   ['/design/', 'Design'],
+  ['/ideas/', 'Ideas'],
   ['/get-involved/', 'Get involved'],
   ['/about/', 'About'],
 ] as const;

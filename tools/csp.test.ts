@@ -20,6 +20,13 @@ describe('the security policy allows what the site uses', () => {
     expect(directive('media-src')).toContain('https://res.cloudinary.com');
   });
 
+  it('lets the ideas board reach its server and run the human check', () => {
+    const api = readFileSync(join(root, 'src/site/ideas.ts'), 'utf8').match(/'(https:\/\/[^']+)\/ideas'/)![1];
+    expect(directive('connect-src')).toContain(api);
+    expect(directive('script-src')).toContain('https://challenges.cloudflare.com');
+    expect(directive('frame-src')).toContain('https://challenges.cloudflare.com');
+  });
+
   it('lets the game connect to the shared space server', () => {
     const space = readFileSync(join(root, 'src/net/space.ts'), 'utf8').match(/'(wss:\/\/[^']+)'/)![1];
     expect(directive('connect-src')).toContain(space);

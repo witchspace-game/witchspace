@@ -1,0 +1,30 @@
+<!-- {"path": "/ideas/", "title": "Ideas · Witchspace", "description": "Suggest what Witchspace should do next, and vote ideas up or down. No account needed.", "scripts": ["/src/site/ideas.ts"], "bodyClass": "ideas-page"} -->
+<section class="section">
+  <div class="section-head">
+    <p class="kicker">Ideas</p>
+    <h2>What should Witchspace do next?</h2>
+    <p class="lede">Suggest an idea, or vote the ones you care about up or down. The most popular get designed and built first, and you'll see them move to Planned and Built. No account needed.</p>
+  </div>
+
+  <div class="ideas-layout">
+    <form class="idea-form" id="idea-form">
+      <h3>Suggest an idea</h3>
+      <label>Idea <input name="title" maxlength="80" required placeholder="A short title, e.g. Asteroid mining" /></label>
+      <label>Details <textarea name="body" maxlength="600" rows="5" placeholder="What would it add, and why would it be fun?"></textarea></label>
+      <div class="turnstile" id="turnstile"></div>
+      <button type="submit" class="button primary">Post idea</button>
+      <p class="form-note muted" id="idea-note">Plain text only. Ideas go live straight away; anything inappropriate can be reported.</p>
+    </form>
+
+    <div class="ideas-list-wrap">
+      <div class="chips" role="group" aria-label="Sort ideas">
+        <button type="button" class="chip" data-sort="top" aria-pressed="true">Top</button>
+        <button type="button" class="chip" data-sort="new" aria-pressed="false">New</button>
+        <button type="button" class="chip" data-sort="rising" aria-pressed="false">Rising</button>
+        <button type="button" class="chip" data-status="planned" aria-pressed="false">Planned</button>
+        <button type="button" class="chip" data-status="built" aria-pressed="false">Built</button>
+      </div>
+      <ol class="ideas-list" id="ideas" aria-live="polite"><li class="muted">Loading ideas…</li></ol>
+    </div>
+  </div>
+</section>

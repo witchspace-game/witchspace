@@ -2,7 +2,7 @@
 
 A parking spot for good ideas that aren't designed yet. When one is picked up, it gets a proper document in [`docs/design/`](design) and a link from here.
 
-**The community decides what comes next.** Each idea gets a thread in the **Ideas** category of GitHub Discussions, where anyone can upvote it and argue its case. Ideas with the most support are designed and built first. Suggest your own in Discussions, or add it here through a pull request.
+**The community decides what comes next.** Suggest ideas and vote them up or down on the [ideas board](https://witchspace.org.uk/ideas/), no account needed. Ideas with the most support are designed and built first, and the board shows them move to Planned and Built. For longer discussion there's the **Ideas** category of GitHub Discussions, and ideas can be added here through a pull request.
 
 ## Ships and combat
 
