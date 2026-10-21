@@ -1,13 +1,13 @@
 import * as THREE from 'three';
 import type { ShipDef, Vec3 } from '../content/types';
-import { neoLines, RETRO_DOT, retroLines } from './wire';
+import { neoLines, retroLines } from './wire';
 
-// Police livery: alternating blue/red beacons on the wingtips and a band
+// Police livery: alternating blue/red light strips at the wingtips and a band
 // around the hull. It is applied by the game to ships in the police role and
 // can't be declared in a ship file, so nobody can paint themselves as police.
 
 const BEACON_RATE = 2.2; // flashes per second
-const BLUE = new THREE.Color(0.6, 1.2, 4);
+const BLUE = new THREE.Color(0.9, 1.6, 6);
 const RED = new THREE.Color(4, 0.5, 0.6);
 
 /** Line segments where the hull meets the plane z = z0: a band around the ship. */
@@ -31,6 +31,30 @@ function hullBand(def: ShipDef, z0: number, inflate: number): number[] {
   return out;
 }
 
+/**
+ * Short strips along every hull edge that meets vertex `tip`, from just
+ * inboard of the tip to about a third of the way along, pushed slightly
+ * outward so the hull fill doesn't hide them.
+ */
+function lightStrip(def: ShipDef, tip: number, inflate: number): number[] {
+  const { vertices, faces } = def.geometry;
+  const neighbours = new Set<number>();
+  for (const f of faces) {
+    f.forEach((k, j) => {
+      if (k !== tip) return;
+      neighbours.add(f[(j + 1) % f.length]);
+      neighbours.add(f[(j + f.length - 1) % f.length]);
+    });
+  }
+  const at = (a: Vec3, b: Vec3, t: number): Vec3 => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+  const out: number[] = [];
+  const a = vertices[tip];
+  for (const n of neighbours) {
+    for (const p of [at(a, vertices[n], 0.04), at(a, vertices[n], 0.34)]) out.push(p[0] * inflate, p[1] * inflate, p[2]);
+  }
+  return out;
+}
+
 /** Adds the livery to `root` and returns its neo/retro parts for the ship to register. */
 export function applyPoliceLivery(def: ShipDef, root: THREE.Group): { neo: THREE.Object3D[]; retro: THREE.Object3D[] } {
   const zs = def.geometry.vertices.map((v) => v[2]);
@@ -43,28 +67,27 @@ export function applyPoliceLivery(def: ShipDef, root: THREE.Group): { neo: THREE
   const neoStripe = neoLines(band, stripeColor, 1.8);
   const retroStripe = retroLines(band);
 
-  // Beacons on the widest points of the hull (wingtips).
+  // Light strips set into the hull along the edges that meet at each
+  // wingtip, flashing blue and red in turn: part of the ship, not bulbs on it.
   const verts = def.geometry.vertices;
-  const tip = (side: 1 | -1) => verts.reduce((best, v) => (v[0] * side > best[0] * side ? v : best));
+  const tipIndex = (side: 1 | -1) => verts.reduce((best, v, k) => (v[0] * side > verts[best][0] * side ? k : best), 0);
   const beacons = ([1, -1] as const).map((side, i) => {
-    const p = tip(side);
-    const neo = new THREE.Mesh(new THREE.SphereGeometry(1.4, 10, 6), new THREE.MeshBasicMaterial({ color: i ? RED : BLUE }));
-    neo.position.set(p[0] * 1.04, p[1] + 1, p[2]);
-    const retro = new THREE.Points(
-      new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([p[0], p[1] + 1, p[2]], 3)),
-      new THREE.PointsMaterial({ color: 0xffffff, size: 2 * RETRO_DOT, sizeAttenuation: false }),
-    );
+    const t = tipIndex(side);
+    const strip = lightStrip(def, t, 1.03);
+    const neo = neoLines(strip, i ? RED : BLUE, 3.4);
+    const retro = retroLines(strip);
     // Alternate the two sides, blinking by wall-clock time wherever the ship is drawn.
-    const blink = (obj: THREE.Object3D) => {
+    const blink = (obj: THREE.Object3D, set: (on: boolean) => void) => {
       obj.onBeforeRender = () => {
         const phase = (performance.now() / 1000) * BEACON_RATE + i * 0.5;
-        const on = phase % 1 < 0.45;
-        if (obj instanceof THREE.Mesh) (obj.material as THREE.MeshBasicMaterial).color.copy(on ? (i ? RED : BLUE) : new THREE.Color(0.05, 0.05, 0.08));
-        else (obj as THREE.Points).material = on ? retroOn : retroOff;
+        set(phase % 1 < 0.45);
       };
     };
-    blink(neo);
-    blink(retro);
+    // Off means not drawn at all, so the hull edge underneath shows as normal.
+    const mats = [neo.material, retro.material as THREE.LineBasicMaterial];
+    for (const m of mats) Object.assign(m, { transparent: true, depthWrite: false });
+    blink(neo, (on) => (mats[0].opacity = on ? 1 : 0));
+    blink(retro, (on) => (mats[1].opacity = on ? 1 : 0));
     return { neo, retro };
   });
 
@@ -72,5 +95,3 @@ export function applyPoliceLivery(def: ShipDef, root: THREE.Group): { neo: THREE
   return { neo: [neoStripe, ...beacons.map((b) => b.neo)], retro: [retroStripe, ...beacons.map((b) => b.retro)] };
 }
 
-const retroOn = new THREE.PointsMaterial({ color: 0xffffff, size: 2 * RETRO_DOT, sizeAttenuation: false });
-const retroOff = new THREE.PointsMaterial({ color: 0x000000, size: 2 * RETRO_DOT, sizeAttenuation: false });
