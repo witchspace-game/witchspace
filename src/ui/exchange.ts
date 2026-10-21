@@ -14,6 +14,7 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts';
 import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
+import { activeEvent, eventsAt, EVENT_KINDS } from '../economy/events';
 import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
 
@@ -196,7 +197,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const demand = order
       ? `<div><dt>Station ${order.side === 'buy' ? 'wants' : 'selling'}</dt><dd class="${order.side === 'buy' ? 'up' : 'down'}">${order.qty.toLocaleString()} ${u}</dd></div>`
       : '';
+    const event = activeEvent(ctx.system, ctx.now);
+    const touched = event && ((EVENT_KINDS[event.type].effects[selected] ?? 0) !== 0 || (balance < -0.2 && EVENT_KINDS[event.type].effects.imports));
+    const eventPill = event
+      ? `<div class="ex-event${touched ? ' hit' : ''}" title="${EVENT_KINDS[event.type].headline(ctx.system.name)}">${EVENT_KINDS[event.type].name}${touched ? ` · ${ticker(selected)} affected` : ''}</div>`
+      : '';
     $('.ex-head').innerHTML = `
+      ${eventPill}
       <div class="ex-title"><b>${ticker(selected)}</b><span>/CR</span><small>${c.name} · per ${u}${c.legality === 'illegal' ? ' · <em>Illegal</em>' : ''}</small></div>
       <div class="ex-last ${change >= 0 ? 'up' : 'down'}">${fmt(q.price)}<small>Cr</small></div>
       <dl>
@@ -259,7 +266,16 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         color: t.side === 'buy' ? UP : DOWN,
         text: `${t.side === 'buy' ? 'B' : 'S'} ${t.qty}`,
       }));
-    markers.setMarkers(mine);
+    // World events here, where they start and end on the chart.
+    const lastStart = cs[cs.length - 1].t;
+    const at = (t: number) => toChartTime(start + Math.min(Math.floor((t - start) / ms), cs.length - 1) * ms);
+    const events: SeriesMarker<Time>[] = [];
+    for (const e of eventsAt(ctx.system, start, ctx.now)) {
+      const name = EVENT_KINDS[e.type].name;
+      if (e.start >= start) events.push({ time: at(e.start), position: 'aboveBar', shape: 'square', color: '#f7a600', text: name });
+      if (e.end >= start && e.end <= lastStart + ms) events.push({ time: at(e.end), position: 'aboveBar', shape: 'circle', color: '#848e9c', text: `${name} ends` });
+    }
+    markers.setMarkers([...mine, ...events].sort((a, b) => (a.time as number) - (b.time as number)));
     legend(undefined);
   }
 
