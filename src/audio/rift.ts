@@ -3,7 +3,8 @@ import { audioGraph, noiseBuffer } from './sound';
 // The sound of a witchspace rift: a deep, detuned drone that builds for as
 // long as the rift is opening. The filter slowly opens, a throb quickens and
 // a thin whine climbs above it, so you hear the tension mount before
-// anything comes through. Then breach() for the moment it does.
+// anything comes through. Then riftGroan() as it does, and riftClose()
+// as the rift shuts. No bangs: this is space.
 
 export interface Drone {
   /** Fade out and stop. */
@@ -103,46 +104,58 @@ export function riftDrone(seconds: number): Drone {
   };
 }
 
-/** Something huge breaking through: a deep boom, a falling roar and a ring of metal. */
-export function riftBreach() {
+/**
+ * Something huge coming through: no bang (this is space), but a deep groan
+ * that bends slowly downwards, as if space itself were straining.
+ */
+export function riftGroan(seconds: number) {
   const { ctx, master } = audioGraph();
   const now = ctx.currentTime;
-
-  const boom = ctx.createOscillator();
-  boom.frequency.setValueAtTime(110, now);
-  boom.frequency.exponentialRampToValueAtTime(24, now + 1.8);
-  const boomGain = ctx.createGain();
-  boomGain.gain.setValueAtTime(0.0001, now);
-  boomGain.gain.exponentialRampToValueAtTime(0.7, now + 0.04);
-  boomGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.2);
-  boom.connect(boomGain).connect(master);
-
-  const roar = ctx.createBufferSource();
-  roar.buffer = noiseBuffer(ctx, 3.5);
-  const low = ctx.createBiquadFilter();
-  low.type = 'lowpass';
-  low.frequency.setValueAtTime(2600, now);
-  low.frequency.exponentialRampToValueAtTime(70, now + 3.4);
-  const roarGain = ctx.createGain();
-  roarGain.gain.setValueAtTime(0.55, now);
-  roarGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.5);
-  roar.connect(low).connect(roarGain).connect(master);
-
-  const ring = ctx.createOscillator();
-  ring.type = 'sawtooth';
-  ring.frequency.setValueAtTime(330, now);
-  ring.frequency.exponentialRampToValueAtTime(82, now + 2.5);
-  const ringBand = ctx.createBiquadFilter();
-  ringBand.type = 'bandpass';
-  ringBand.frequency.value = 600;
-  ringBand.Q.value = 8;
-  const ringGain = ctx.createGain();
-  ringGain.gain.setValueAtTime(0.12, now);
-  ringGain.gain.exponentialRampToValueAtTime(0.0001, now + 2.6);
-  ring.connect(ringBand).connect(ringGain).connect(master);
-
-  for (const s of [boom, roar, ring]) {
-    s.start(now);
-    s.stop(now + 3.6);
+  const end = now + seconds;
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0.0001, now);
+  out.gain.exponentialRampToValueAtTime(0.2, now + 1.5);
+  out.gain.exponentialRampToValueAtTime(0.0001, end);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.Q.value = 9;
+  filter.frequency.setValueAtTime(700, now);
+  filter.frequency.exponentialRampToValueAtTime(90, end);
+  filter.connect(out).connect(master);
+  const voices = [49, 49.6, 73.4].map((hz) => {
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(hz, now);
+    o.frequency.exponentialRampToValueAtTime(hz / 2, end);
+    o.connect(filter);
+    return o;
+  });
+  for (const o of voices) {
+    o.start(now);
+    o.stop(end + 0.1);
   }
+}
+
+/**
+ * The rift closing: a soft rising inhale of air that cuts off dead into
+ * silence, as though the hole had sucked itself shut.
+ */
+export function riftClose() {
+  const { ctx, master } = audioGraph();
+  const now = ctx.currentTime;
+  const rise = 1.3;
+  const air = ctx.createBufferSource();
+  air.buffer = noiseBuffer(ctx, rise + 0.1);
+  const band = ctx.createBiquadFilter();
+  band.type = 'bandpass';
+  band.Q.value = 1.5;
+  band.frequency.setValueAtTime(250, now);
+  band.frequency.exponentialRampToValueAtTime(3500, now + rise);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.3, now + rise);
+  g.gain.setValueAtTime(0.0001, now + rise + 0.02); // cut dead
+  air.connect(band).connect(g).connect(master);
+  air.start(now);
+  air.stop(now + rise + 0.1);
 }

@@ -54,7 +54,7 @@ import {
 } from './game/input';
 import { MouseAim } from './game/mouseAim';
 import { allies, NpcShip, type NpcRole } from './game/npc';
-import { ARRIVAL, ARRIVAL_WARNINGS, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
+import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
 import { combatRating } from './game/rating';
@@ -67,12 +67,12 @@ import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render
 import { SpaceDust } from './render/dust';
 import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
-import { riftBreach, riftDrone, type Drone } from './audio/rift';
-import { camera, isRetro, makeSpace, render, setRetro } from './render/renderer';
+import { riftClose, riftDrone, riftGroan, type Drone } from './audio/rift';
+import { camera, isRetro, lens, makeSpace, render, setRetro } from './render/renderer';
 import { buildShip, disposeShip, heatShip, type ShipModel } from './render/shipModel';
 import { buildHangar } from './render/hangar';
 import { stationName } from './galaxy/stationNames';
-import { clearFlash, flash, toggleScannerRange, updateHud, type Blip } from './ui/hud';
+import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, GOVERNMENTS, systemAt, type StarSystem } from './galaxy/generate';
@@ -1033,6 +1033,9 @@ interface Carrier {
   /** The rift's mouth: the hull is clipped here while it's passing through. */
   mouth: THREE.Plane;
   drone: Drone | null;
+  /** The commander has been warned about the rift's pull, and when it last tore at them. */
+  pullWarned: boolean;
+  tornAt: number;
 }
 
 let carrier: Carrier | null = null;
@@ -1087,6 +1090,7 @@ function summonCarrier() {
   // Waiting inside the rift, nose at the mouth.
   npc.obj.position.copy(at).addScaledVector(npc.ship.forward(), -BAY.z);
   npc.obj.visible = false;
+  npc.model.root.userData.lights = 0; // dark until it's through
   space.scene.add(npc.obj);
   const normal = npc.ship.forward();
   carrier = {
@@ -1101,6 +1105,8 @@ function summonCarrier() {
     through: 0,
     mouth: new THREE.Plane(normal, -normal.dot(at)),
     drone: riftDrone(WARNING),
+    pullWarned: false,
+    tornAt: -Infinity,
   };
 }
 
@@ -1131,6 +1137,44 @@ function disposeCarrier() {
   carrier = null;
 }
 
+// An open rift scrambles sensors for kilometres around, and close in it drags
+// at the ship: the pull grows the nearer you get, and too near it tears at
+// the shields and hull.
+const RIFT_PULL_RANGE = 4; // rift radii
+const RIFT_PULL = 140; // m/s at the rim of a fully open rift
+const RIFT_TEAR = 45; // damage per second inside the mouth
+
+/** How badly the rift is scrambling the ship's sensors here, 0..1. */
+function riftInterference(): number {
+  const r = carrier?.rift;
+  if (!r || r.open <= 0) return 0;
+  const d = r.group.position.distanceTo(player.obj.position);
+  return THREE.MathUtils.clamp(r.open * 1.4 * (1 - d / (r.radius * 12)), 0, 1);
+}
+
+function riftPull(c: Carrier, dt: number) {
+  const r = c.rift;
+  if (!r || r.open <= 0 || state !== 'flying') return;
+  const to = r.group.position.clone().sub(player.obj.position);
+  const d = to.length();
+  const reach = r.radius * RIFT_PULL_RANGE;
+  if (d > reach) return;
+  const k = r.open * (1 - d / reach) ** 2;
+  player.obj.position.addScaledVector(to.normalize(), RIFT_PULL * k * dt);
+  shake = Math.max(shake, 0.6 * k);
+  if (!c.pullWarned) {
+    c.pullWarned = true;
+    flash('Gravitational shear · the rift is pulling you in', 3);
+  }
+  if (d < r.radius * r.open) {
+    if (elapsed - c.tornAt > 4) {
+      c.tornAt = elapsed;
+      flash('Hull stress · the rift is tearing at the ship', 2.5);
+    }
+    if (damagePlayer(RIFT_TEAR * dt)) die();
+  }
+}
+
 function updateMarshals(dt: number) {
   const flying = state === 'flying';
   if (marshalTimer !== null && flying) {
@@ -1144,6 +1188,11 @@ function updateMarshals(dt: number) {
   if (!c) return;
   c.t += dt;
   c.rift?.update(dt);
+  riftPull(c, dt);
+  if (locked && riftInterference() > 0.7) {
+    locked = null;
+    flash('Missile lock lost · rift interference', 1.5);
+  }
   const fwd = c.npc.ship.forward();
 
   if (c.phase === 'arriving') {
@@ -1158,36 +1207,38 @@ function updateMarshals(dt: number) {
       c.t = 0;
       c.npc.obj.visible = true;
       clipShip(c.npc, c.mouth);
-      c.rift!.flash();
-      c.drone?.stop(0.15);
+      // The nose punches through, and the drone dies away as it comes.
+      c.drone?.stop(ARRIVAL.emerging * 0.6);
       c.drone = null;
-      riftBreach();
+      riftGroan(ARRIVAL.emerging);
     }
   } else if (c.phase === 'emerging') {
+    // It slides out slowly while the rift closes around it.
     c.through += EMERGE_SPEED * dt;
     c.npc.obj.position.addScaledVector(fwd, EMERGE_SPEED * dt);
-    heatShip(c.npc.model, Math.max(0, 0.45 - c.t / ARRIVAL.emerging));
     const length = BAY.z - c.npc.def.geometry.vertices.reduce((z, v) => Math.min(z, v[2]), 0);
+    c.rift!.open = closingOpenness(c.through / length);
     if (c.through >= length + 20) {
+      // The rift slams shut behind the stern.
       c.phase = 'deployed';
       c.t = 0;
       clipShip(c.npc, null);
-      heatShip(c.npc.model, 0);
       c.npc.ship.speed = EMERGE_SPEED;
       npcs.push(c.npc);
       c.launchTimer = FIRST_LAUNCH;
+      c.rift!.open = 0;
       c.rift!.flash();
+      riftClose();
       if (flying) flash('Co-operative Marshals · Bastion carrier on scanner', 3);
     }
   } else if (c.phase === 'deployed') {
-    // The arrival rift closes behind it.
-    if (c.rift) {
-      c.rift.open = Math.max(0, 1 - c.t / ARRIVAL.collapse);
-      if (c.rift.open <= 0) {
-        c.rift.dispose();
-        c.rift = null;
-      }
+    // Gone, once the flash of it closing has faded.
+    if (c.rift && c.t > 1.5) {
+      c.rift.dispose();
+      c.rift = null;
     }
+    // Its lights come up once it's clear of the rift.
+    c.npc.model.root.userData.lights = Math.min(1, c.t / 3);
     if (!npcs.includes(c.npc)) {
       carrier = null; // destroyed: its wing fights on alone
       c.rift?.dispose();
@@ -1241,7 +1292,7 @@ function updateMarshals(dt: number) {
       c.rift!.flash();
       c.drone?.stop(0.15);
       c.drone = null;
-      riftBreach();
+      riftClose();
       c.npc.obj.visible = false;
     }
     if (c.through) {
@@ -1781,6 +1832,10 @@ function toggleLock() {
     flash('No missiles · buy more at a station', 1.5);
     return;
   }
+  if (riftInterference() > 0.4) {
+    flash('Lock failed · rift interference', 1.5);
+    return;
+  }
   const target = sightedNpc(LOCK_RANGE);
   if (!target) {
     if (locked) {
@@ -2315,6 +2370,10 @@ function updateSpace(dt: number) {
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
   if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#b98cff', kind: 'station' });
+  // Near a rift, contacts jitter about on the scanner.
+  const noise = state === 'flying' ? riftInterference() : 0;
+  if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
+  setInterference(noise);
   if (state === 'flying') {
     updateHud(player, station, blips, autopilot, rollAssist);
     updateTouch(dt, player.speed / player.maxSpeed);
@@ -3071,8 +3130,11 @@ function frame(now?: number) {
   }
   if (inSpace) {
     if (state !== 'transition') updateSpace(dt);
+    const rift = carrier?.rift;
+    lens.aim(camera, rift ? rift.group.position : null, rift ? rift.radius * rift.open : 0, rift ? rift.open : 0);
     render(space.scene);
   } else {
+    lens.aim(camera, null, 0, 0);
     updateShowroom(dt);
     render(showroom.scene);
   }

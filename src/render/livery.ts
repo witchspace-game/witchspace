@@ -10,13 +10,14 @@ import { neoLines, retroLines } from './wire';
 
 const BLUE = new THREE.Color(0.9, 1.6, 6);
 const RED = new THREE.Color(4, 0.5, 0.6);
-const WHITE = new THREE.Color(1.7, 1.7, 1.9);
+const WHITE = new THREE.Color(1.1, 1.1, 1.25);
 
 export type Livery = 'police' | 'marshal';
 
-const LIVERIES: Record<Livery, { band: THREE.Color; bands: number; lights: [THREE.Color, THREE.Color]; rate: number; together: boolean }> = {
-  police: { band: new THREE.Color(1.6, 1.6, 1.8), bands: 1, lights: [BLUE, RED], rate: 2.2, together: false },
-  marshal: { band: new THREE.Color(3.4, 2.4, 0.6), bands: 2, lights: [WHITE, WHITE], rate: 1.1, together: true },
+const LIVERIES: Record<Livery, { band: THREE.Color; bands: number; lights: [THREE.Color, THREE.Color]; bandWidth: number; width: number; rate: number; together: boolean }> = {
+  police: { band: new THREE.Color(1.6, 1.6, 1.8), bands: 1, lights: [BLUE, RED], bandWidth: 1.8, width: 3.4, rate: 2.2, together: false },
+  // Subdued: Marshal ships are big and seen from far off, where bright lines bloom into a blob.
+  marshal: { band: new THREE.Color(1.5, 1.05, 0.25), bands: 2, lights: [WHITE, WHITE], bandWidth: 1.3, width: 2, rate: 1.1, together: true },
 };
 
 /** Line segments where the hull meets the plane z = z0: a band around the ship. */
@@ -64,7 +65,11 @@ function lightStrip(def: ShipDef, tip: number, inflate: number): number[] {
   return out;
 }
 
-/** Adds the livery to `root` and returns its neo/retro parts for the ship to register. */
+/**
+ * Adds the livery to `root` and returns its neo/retro parts for the ship to
+ * register. Set `root.userData.lights` (0..1) to dim it, as when a ship is
+ * still coming through a witchspace rift.
+ */
 export function applyLivery(def: ShipDef, root: THREE.Group, kind: Livery): { neo: THREE.Object3D[]; retro: THREE.Object3D[] } {
   const look = LIVERIES[kind];
   const zs = def.geometry.vertices.map((v) => v[2]);
@@ -77,8 +82,11 @@ export function applyLivery(def: ShipDef, root: THREE.Group, kind: Livery): { ne
     const at = mid - k * width * 2.2;
     band.push(...hullBand(def, at, 1.03), ...hullBand(def, at + width, 1.03));
   }
-  const neoStripe = neoLines(band, look.band, 1.8);
+  const neoStripe = neoLines(band, look.band, look.bandWidth);
   const retroStripe = retroLines(band);
+  const level = () => (root.userData.lights as number | undefined) ?? 1;
+  Object.assign(neoStripe.material, { transparent: true });
+  neoStripe.onBeforeRender = () => (neoStripe.material.opacity = level());
 
   // Light strips set into the hull along the edges that meet at each
   // wingtip, flashing blue and red in turn: part of the ship, not bulbs on it.
@@ -87,7 +95,7 @@ export function applyLivery(def: ShipDef, root: THREE.Group, kind: Livery): { ne
   const beacons = ([1, -1] as const).map((side, i) => {
     const t = tipIndex(side);
     const strip = lightStrip(def, t, 1.03);
-    const neo = neoLines(strip, look.lights[i], 3.4);
+    const neo = neoLines(strip, look.lights[i], look.width);
     const retro = retroLines(strip);
     // Alternate the two sides, blinking by wall-clock time wherever the ship is drawn.
     const blink = (obj: THREE.Object3D, set: (on: boolean) => void) => {
@@ -99,8 +107,8 @@ export function applyLivery(def: ShipDef, root: THREE.Group, kind: Livery): { ne
     // Off means not drawn at all, so the hull edge underneath shows as normal.
     const mats = [neo.material, retro.material as THREE.LineBasicMaterial];
     for (const m of mats) Object.assign(m, { transparent: true, depthWrite: false });
-    blink(neo, (on) => (mats[0].opacity = on ? 1 : 0));
-    blink(retro, (on) => (mats[1].opacity = on ? 1 : 0));
+    blink(neo, (on) => (mats[0].opacity = on ? level() : 0));
+    blink(retro, (on) => (mats[1].opacity = on && level() > 0.5 ? 1 : 0));
     return { neo, retro };
   });
 

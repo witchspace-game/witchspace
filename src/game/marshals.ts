@@ -13,20 +13,20 @@ export const ARRIVAL = {
   disturbance: 12,
   /** The rift opens to full size. */
   opening: 20,
-  /** The carrier slides out (from 805 m of hull at EMERGE_SPEED). */
-  emerging: 12,
+  /** The carrier slides out (818 m of hull at EMERGE_SPEED) as the rift closes around it. */
+  emerging: 17,
   /** The rift collapses behind it. */
   collapse: 3,
 };
 
 export const WARNING = ARRIVAL.disturbance + ARRIVAL.opening; // seconds before the carrier appears
-export const EMERGE_SPEED = 70; // m/s while coming through
+export const EMERGE_SPEED = 50; // m/s while coming through
 export const WING = 8; // Lancers aboard a Bastion
 export const FIRST_LAUNCH = 6; // seconds after it's through
 export const LAUNCH_GAP = 15; // seconds between pairs
 export const MAX_OUT = 4; // Lancers in space at once: the rest wait as replacements
-export const RIFT_DISTANCE = 7000; // metres from the commander
-export const RIFT_RADIUS = 1200; // metres: big enough to see, and to find, from across the system
+export const RIFT_DISTANCE = 9000; // metres from the commander
+export const RIFT_RADIUS = 1500; // metres: a tear in space you can see, and find, from across the system
 
 /** How open the arrival rift is, `t` seconds after the first flicker. */
 export function riftOpenness(t: number): number {
@@ -34,6 +34,15 @@ export function riftOpenness(t: number): number {
   if (t < ARRIVAL.disturbance) return 0.12 * (t / ARRIVAL.disturbance);
   const s = Math.min(1, (t - ARRIVAL.disturbance) / ARRIVAL.opening);
   return 0.12 + 0.88 * s * s * (3 - 2 * s);
+}
+
+/**
+ * How open the rift is while the carrier comes through, by the share of its
+ * hull that's out: wide at first, closing in around it, and never tighter
+ * than the hull until the stern is clear.
+ */
+export function closingOpenness(out: number): number {
+  return Math.max(0.1, 1 - Math.min(1, out) ** 2);
 }
 
 /** The warnings flashed during the arrival, at seconds after the first flicker. */

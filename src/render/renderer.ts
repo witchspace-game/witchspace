@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { LensPass } from './lens';
 import { ORIGINAL_PIXELS, RETRO_DOT, registerParts, setLineResolution, setRetroParts } from './wire';
 
 // 1984 mode: white lines on black with hard pixels, letterboxed to 4:3. The
@@ -46,6 +47,9 @@ export const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 
 const renderPass = new RenderPass(new THREE.Scene(), camera);
 const composer = new EffectComposer(neoRenderer);
 composer.addPass(renderPass);
+/** Space bending around a witchspace rift; see lens.ts. */
+export const lens = new LensPass();
+composer.addPass(lens);
 composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.0, 0.5, 0.2));
 composer.addPass(new OutputPass());
 
