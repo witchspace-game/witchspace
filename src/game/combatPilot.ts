@@ -10,7 +10,9 @@ import type { PlayerShip } from './playerShip';
 
 export const PILOT_RANGE = 6000; // metres: it fights ships this close
 const BREAKOFF_RANGE = 450; // metres: peel away early (two ships close fast)
-const BREAKOFF_TIME = 2.4; // seconds before coming round again
+const BREAKOFF_TIME = 2.4; // seconds, at least, before coming round again
+const BREAKOFF_CLEAR = 900; // metres: open the range this far first, so the next run is a real one
+const BREAKOFF_MAX = 6; // seconds: come round by then regardless
 const LEAD = 0.15; // seconds: aim where the target will be
 const CLOSE = 900; // metres: slow down to fight inside this
 const ACCEL = 80; // m/s per second
@@ -60,14 +62,17 @@ export class CombatPilot {
       if (dist < BREAKOFF_RANGE) {
         this.mode = 'breakoff';
         this.breakTimer = BREAKOFF_TIME;
-        // Peel away sideways from the target's line of fire.
-        this.breakDir.copy(ship.forward()).add(new THREE.Vector3().randomDirection().multiplyScalar(1.4)).normalize();
+        // Peel away to the side and back from the target, never past it:
+        // a random direction square to the line between the ships, plus some away.
+        const away = to.clone().normalize().negate();
+        const side = new THREE.Vector3().randomDirection().projectOnPlane(away).normalize();
+        this.breakDir.copy(side).addScaledVector(away, 0.6).normalize();
       }
       aimAt = target.obj.position.clone().addScaledVector(target.ship.forward(), target.ship.speed * LEAD);
       if (dist < CLOSE) speed = ship.maxSpeed * 0.65;
     } else {
       this.breakTimer -= dt;
-      if (this.breakTimer <= 0) this.mode = 'attack';
+      if ((this.breakTimer <= 0 && dist > BREAKOFF_CLEAR) || this.breakTimer <= BREAKOFF_TIME - BREAKOFF_MAX) this.mode = 'attack';
       aimAt = at.clone().addScaledVector(this.breakDir, 1000);
     }
     // Never fly into the planet chasing someone.

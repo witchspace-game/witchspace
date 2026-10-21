@@ -43,18 +43,25 @@ describe('the combat computer', () => {
   });
 
   it('breaks away rather than ramming, then comes round again', () => {
-    const me = cobra();
-    me.speed = 200;
-    const pirate = npc('pirate', 0, 250, true); // dead ahead and very close
-    const pilot = new CombatPilot();
-    pilot.fly(1 / 60, me, [pirate], null);
-    expect(pilot.mode).toBe('breakoff');
-    for (let i = 0; i < 60 * 3; i++) {
+    // The break direction is random, so try it many times.
+    for (let run = 0; run < 25; run++) {
+      const me = cobra();
+      me.speed = 200;
+      const pirate = npc('pirate', 0, 440, true); // dead ahead, just inside break-off range
+      const pilot = new CombatPilot();
       pilot.fly(1 / 60, me, [pirate], null);
-      me.move(1 / 60);
+      expect(pilot.mode).toBe('breakoff');
+      let closest = Infinity;
+      let cameRound = false;
+      for (let i = 0; i < 60 * 7 && !cameRound; i++) {
+        pilot.fly(1 / 60, me, [pirate], null);
+        me.move(1 / 60);
+        closest = Math.min(closest, me.obj.position.distanceTo(pirate.obj.position));
+        cameRound = pilot.mode === 'attack';
+      }
+      expect(closest).toBeGreaterThan(150); // never flew through it
+      expect(cameRound).toBe(true); // and came round for another run
     }
-    expect(pilot.mode).toBe('attack');
-    expect(me.obj.position.distanceTo(pirate.obj.position)).toBeGreaterThan(450);
   });
 
   it('stands down when there is nothing to fight', () => {
