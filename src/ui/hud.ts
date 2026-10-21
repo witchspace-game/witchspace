@@ -91,7 +91,7 @@ export function setInterference(level: number) {
 
 /** Speckles of static across the scanner, thicker the worse the interference. */
 function drawStatic(ctx: CanvasRenderingContext2D, w: number, h: number) {
-  ctx.fillStyle = isRetro() ? '#ffffff' : 'rgba(185,140,255,0.8)';
+  ctx.fillStyle = isRetro() ? '#ffffff' : 'rgba(207,224,255,0.75)';
   for (let i = 0; i < interference * 260; i++) ctx.fillRect(Math.random() * w, Math.random() * h, 2, 1);
 }
 

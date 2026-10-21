@@ -1129,6 +1129,14 @@ function carrierLeaves(c: Carrier, message: string) {
   if (state === 'flying') flash(message, 3);
 }
 
+/** Their quarry is dead: the carrier and its wing quietly leave the system. */
+function marshalsStandDown() {
+  if (carrier) for (const l of carrier.wing) if (npcs.includes(l)) removeNpc(l);
+  if (carrier && npcs.includes(carrier.npc)) removeNpc(carrier.npc, false);
+  disposeCarrier();
+  marshalTimer = null;
+}
+
 function disposeCarrier() {
   if (!carrier) return;
   carrier.rift?.dispose();
@@ -1226,22 +1234,16 @@ function updateMarshals(dt: number) {
       c.npc.ship.speed = EMERGE_SPEED;
       npcs.push(c.npc);
       c.launchTimer = FIRST_LAUNCH;
-      c.rift!.open = 0;
-      c.rift!.flash();
+      c.rift!.dispose(); // shut
+      c.rift = null;
       riftClose();
       if (flying) flash('Co-operative Marshals · Bastion carrier on scanner', 3);
     }
   } else if (c.phase === 'deployed') {
-    // Gone, once the flash of it closing has faded.
-    if (c.rift && c.t > 1.5) {
-      c.rift.dispose();
-      c.rift = null;
-    }
     // Its lights come up once it's clear of the rift.
     c.npc.model.root.userData.lights = Math.min(1, c.t / 3);
     if (!npcs.includes(c.npc)) {
       carrier = null; // destroyed: its wing fights on alone
-      c.rift?.dispose();
       c.drone?.stop();
       return;
     }
@@ -1289,7 +1291,6 @@ function updateMarshals(dt: number) {
     if (past > stern + 20 && c.through === 0) {
       c.through = 1;
       c.t = 0;
-      c.rift!.flash();
       c.drone?.stop(0.15);
       c.drone = null;
       riftClose();
@@ -2369,7 +2370,7 @@ function updateSpace(dt: number) {
     ...drifters.map((d): Blip => ({ position: d.model.root.position, color: '#ffd166', kind: 'cargo' })),
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
-  if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#b98cff', kind: 'station' });
+  if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#cfe0ff', kind: 'station' });
   // Near a rift, contacts jitter about on the scanner.
   const noise = state === 'flying' ? riftInterference() : 0;
   if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
@@ -2407,7 +2408,7 @@ function updateMarkers() {
   }));
   markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
   markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
-  if (carrier?.rift) markers.push({ position: carrier.rift.group.position, color: '#b98cff', radius: carrier.rift.radius, label: `Rift ${km(carrier.rift.group.position)}` });
+  if (carrier?.rift) markers.push({ position: carrier.rift.group.position, color: '#cfe0ff', radius: carrier.rift.radius, label: `Rift ${km(carrier.rift.group.position)}` });
   for (const m of missiles) if (m.target === player) markers.push({ position: m.position, color: '#ff4d6d', radius: 6, label: `MISSILE ${km(m.position)}` });
   const view = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
   updateIndicators(camera, view, markers);
@@ -2566,6 +2567,7 @@ async function launch() {
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
   locked = null;
+  scheduleMarshals(); // still wanted? they'll be back
   setView('front');
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
@@ -2752,6 +2754,7 @@ function die() {
       }
     }
     saveCommander(c);
+    marshalsStandDown();
     enterDocked();
     flash(message, 5);
   }, 5000);
