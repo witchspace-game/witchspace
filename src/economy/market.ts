@@ -24,6 +24,8 @@ export interface MarketState {
   visit?: number;
   /** Modern rules: recent trades here, newest last, for the price history. */
   trades?: MarketTrade[];
+  /** NPC deliveries that never arrived: the trader carrying them was destroyed. */
+  lost?: { id: string; t: number; qty: number }[];
 }
 
 export interface MarketTrade {
@@ -169,7 +171,7 @@ export interface MarketEvent {
   t: number;
   side: 'buy' | 'sell';
   qty: number;
-  by: 'npc' | 'you';
+  by: 'npc' | 'you' | 'lost';
   /** Credits per unit, roughly, for NPC trades; exact for yours. */
   price: number;
 }
@@ -234,19 +236,78 @@ function npcDeviation(system: StarSystem, id: string, t: number): number {
   return d;
 }
 
-/** Prices for a living (Modern) market, as of `state.updated`. `stock` includes other traders' activity. */
+// --- Supply chains ------------------------------------------------------------------
+//
+// Some goods are made from others. Where a world makes an output, a shortage
+// of its input slows production and the output's stock falls with it; a glut
+// of the input does the reverse, a little. Disrupt one link and the shortage
+// spreads down the chain.
+
+export const CHAIN_INPUTS: Record<string, string[]> = {
+  alloys: ['minerals'],
+  electronics: ['minerals'],
+  computers: ['electronics'],
+  machinery: ['alloys'],
+  firearms: ['alloys'],
+  hydrogen: ['water'],
+  medicine: ['hydrogen'],
+};
+const CHAIN = 0.5; // how much of an input's shortage, as a share, passes to the output
+
+/** Effects on the stock from outside your own trading: other traders, lost deliveries and the supply chain. */
+function external(system: StarSystem, state: MarketState, id: string, t: number, live: boolean): number {
+  return npcDeviation(system, id, t) + lostDeviation(state, id, t) + chainDeviation(system, state, id, t, live);
+}
+
+/**
+ * A commodity's stock at time `t`. Live (`t` is now) it starts from the
+ * station's own stock after your trades; for history it rebuilds that from
+ * the trade log.
+ */
+function stockOf(system: StarSystem, state: MarketState, id: string, t: number, live: boolean): number {
+  const i = COMMODITIES.findIndex((c) => c.id === id);
+  const eq = equilibriumStock(system, COMMODITIES[i], i);
+  const own = live ? (state.stock[id] ?? eq) : eq + yourDeviation(state, id, t);
+  return own + external(system, state, id, t, live);
+}
+
+/** Deliveries that were destroyed on the way: the stock they would have added never arrived. */
+function lostDeviation(state: MarketState, id: string, t: number): number {
+  let d = 0;
+  for (const l of state.lost ?? []) if (l.id === id && l.t <= t) d -= l.qty * npcDecay(t - l.t);
+  return d;
+}
+
+function chainDeviation(system: StarSystem, state: MarketState, id: string, t: number, live: boolean): number {
+  const inputs = CHAIN_INPUTS[id];
+  const making = tradeBalance(system, id);
+  if (!inputs || making <= 0.1) return 0;
+  const i = COMMODITIES.findIndex((c) => c.id === id);
+  const eq = equilibriumStock(system, COMMODITIES[i], i);
+  let d = 0;
+  for (const input of inputs) {
+    const k = COMMODITIES.findIndex((c) => c.id === input);
+    const eqIn = equilibriumStock(system, COMMODITIES[k], k);
+    if (eqIn <= 0) continue;
+    const share = Math.max(-1, Math.min(0.5, (stockOf(system, state, input, t, live) - eqIn) / eqIn));
+    d += CHAIN * making * eq * share;
+  }
+  return d;
+}
+
+/** Prices for a living (Modern) market, as of `state.updated`. `stock` includes other traders, lost deliveries and supply chains. */
 export function quoteModern(system: StarSystem, state: MarketState): Quote[] {
   return COMMODITIES.map((c, i) => {
     const eqStock = equilibriumStock(system, c, i);
-    const stock = (state.stock[c.id] ?? eqStock) + npcDeviation(system, c.id, state.updated);
+    const stock = stockOf(system, state, c.id, state.updated, true);
     const price = equilibriumPrice(system, c, i) * drift(system, c, i, state.updated) * pressure(eqStock, stock);
     return { commodity: c, price: round1(price), stock: Math.max(0, Math.round(stock)) };
   });
 }
 
-/** Units of one commodity a station has to sell right now, other traders included. */
+/** Units of one commodity a station has to sell right now, everything included. */
 export function stockFor(system: StarSystem, state: MarketState, id: string): number {
-  return quoteModern(system, state).find((q) => q.commodity.id === id)!.stock;
+  return Math.max(0, Math.round(stockOf(system, state, id, state.updated, true)));
 }
 
 /** Your trades' push on the stock at time `t`, from the market's trade log. */
@@ -256,18 +317,12 @@ function yourDeviation(state: MarketState, id: string, t: number): number {
   return d;
 }
 
-/** Price at time `t` given the NPC trades in the window before it (oldest first). */
-function priceWith(system: StarSystem, state: MarketState, c: Commodity, i: number, t: number, npc: MarketEvent[]): number {
-  let d = yourDeviation(state, c.id, t) - npcFlowMean(system, c, i);
-  for (const e of npc) if (e.t <= t && e.t > t - IMPACT_MEMORY) d += signed(e) * npcDecay(t - e.t);
-  const eq = equilibriumStock(system, c, i);
-  return equilibriumPrice(system, c, i) * drift(system, c, i, t) * pressure(eq, eq + d);
-}
-
 /** A living market's price for one commodity at any moment up to now (unrounded). */
 export function priceAt(system: StarSystem, state: MarketState, id: string, t: number): number {
   const i = COMMODITIES.findIndex((c) => c.id === id);
-  return priceWith(system, state, COMMODITIES[i], i, t, npcTrades(system, id, t - IMPACT_MEMORY, t));
+  const c = COMMODITIES[i];
+  const eq = equilibriumStock(system, c, i);
+  return equilibriumPrice(system, c, i) * drift(system, c, i, t) * pressure(eq, stockOf(system, state, id, t, false));
 }
 
 export interface Candle {
@@ -283,16 +338,15 @@ export interface Candle {
 /** `count` candles of `interval` ms each, the last one ending at `now`, sampled from the price history. */
 export function candles(system: StarSystem, state: MarketState, id: string, now: number, interval: number, count: number): Candle[] {
   const SAMPLES = 12;
-  const i = COMMODITIES.findIndex((c) => c.id === id);
-  const c = COMMODITIES[i];
   const start = now - interval * count;
-  const npc = npcTrades(system, id, start - IMPACT_MEMORY, now);
+  const lost = new Set((state.lost ?? []).filter((l) => l.id === id).map((l) => l.t));
+  const npc = npcTrades(system, id, start, now).filter((e) => !lost.has(e.t));
   const yours = (state.trades ?? []).filter((t) => t.id === id);
   const out: Candle[] = [];
   for (let k = 0; k < count; k++) {
     const t0 = start + k * interval;
     const ps: number[] = [];
-    for (let j = 0; j <= SAMPLES; j++) ps.push(priceWith(system, state, c, i, t0 + (interval * j) / SAMPLES, npc));
+    for (let j = 0; j <= SAMPLES; j++) ps.push(priceAt(system, state, id, t0 + (interval * j) / SAMPLES));
     const inCandle = (t: number) => t >= t0 && t < t0 + interval;
     const volume = npc.filter((e) => inCandle(e.t)).reduce((n, e) => n + e.qty, 0) + yours.filter((e) => inCandle(e.t)).reduce((n, e) => n + e.qty, 0);
     out.push({ t: t0, open: ps[0], high: Math.max(...ps), low: Math.min(...ps), close: ps[ps.length - 1], volume });
@@ -302,16 +356,30 @@ export function candles(system: StarSystem, state: MarketState, id: string, now:
 
 /** The latest trades in a commodity, everyone's, newest first. */
 export function recentTrades(system: StarSystem, state: MarketState, id: string, now: number, limit: number): MarketEvent[] {
-  const i = COMMODITIES.findIndex((c) => c.id === id);
-  const c = COMMODITIES[i];
   const from = now - 3 * 3600_000;
-  const npc = npcTrades(system, id, from - IMPACT_MEMORY, now);
-  const events: MarketEvent[] = npc
-    .filter((e) => e.t >= from)
+  const lost = new Map((state.lost ?? []).filter((l) => l.id === id).map((l) => [l.t, l]));
+  const events: MarketEvent[] = npcTrades(system, id, from, now)
     .slice(-limit)
-    .map((e) => ({ ...e, price: priceWith(system, state, c, i, e.t, npc) }));
+    .map((e) => (lost.has(e.t) ? { ...e, by: 'lost' as const, price: 0 } : { ...e, price: priceAt(system, state, id, e.t) }));
   for (const t of state.trades ?? []) if (t.id === id && t.t >= from) events.push({ t: t.t, side: t.side, qty: t.qty, by: 'you', price: t.total / t.qty });
   return events.sort((a, b) => b.t - a.t).slice(0, limit);
+}
+
+/** NPC deliveries due between `from` and `to` (ms), across all goods: what inbound traders are carrying. */
+export function upcomingDeliveries(system: StarSystem, state: MarketState, from: number, to: number): { id: string; t: number; qty: number }[] {
+  const out: { id: string; t: number; qty: number }[] = [];
+  for (const c of COMMODITIES) {
+    for (const e of npcTrades(system, c.id, from, to)) {
+      if (e.side === 'sell' && !(state.lost ?? []).some((l) => l.id === c.id && l.t === e.t)) out.push({ id: c.id, t: e.t, qty: e.qty });
+    }
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+
+/** A delivery's trader was destroyed before it arrived: the goods never reach the market. */
+export function loseDelivery(state: MarketState, delivery: { id: string; t: number; qty: number }, now: number) {
+  if (delivery.t <= now) return; // already delivered
+  state.lost = [...(state.lost ?? []).filter((l) => l.t > now - IMPACT_MEMORY), { ...delivery }];
 }
 
 /** Below this share of its usual stock a station is short, and posts an order to restock. */
@@ -393,11 +461,10 @@ function round1(n: number) {
   return Math.max(0.1, Math.round(n * 10) / 10);
 }
 
-/** One commodity's posted price when its own stock (before other traders) is `own`. Same as quoteModern's. */
-function unitPrice(system: StarSystem, state: MarketState, c: Commodity, i: number, own: number): number {
+/** One commodity's posted price when its own stock is `own` and outside effects add `outside`. Same as quoteModern's. */
+function unitPrice(system: StarSystem, state: MarketState, c: Commodity, i: number, own: number, outside: number): number {
   const eq = equilibriumStock(system, c, i);
-  const price = equilibriumPrice(system, c, i) * drift(system, c, i, state.updated) * pressure(eq, own + npcDeviation(system, c.id, state.updated));
-  return round1(price);
+  return round1(equilibriumPrice(system, c, i) * drift(system, c, i, state.updated) * pressure(eq, own + outside));
 }
 
 /** Total paid for selling `qty` one at a time into a living market (price falls as stock rises). */
@@ -407,7 +474,8 @@ export function proceedsToSell(system: StarSystem, state: MarketState, id: strin
   let total = 0;
   // Each unit sold adds to the stock first, so buying and selling back the
   // same goods comes out even, never at a profit.
-  for (let n = 1; n <= qty; n++) total += unitPrice(system, state, COMMODITIES[i], i, own + n);
+  const outside = external(system, state, id, state.updated, true);
+  for (let n = 1; n <= qty; n++) total += unitPrice(system, state, COMMODITIES[i], i, own + n, outside);
   return Math.round(total * 10) / 10;
 }
 
@@ -416,6 +484,7 @@ export function costToBuy(system: StarSystem, state: MarketState, id: string, qt
   const i = COMMODITIES.findIndex((c) => c.id === id);
   const own = state.stock[id] ?? equilibriumStock(system, COMMODITIES[i], i);
   let total = 0;
-  for (let n = 0; n < qty; n++) total += unitPrice(system, state, COMMODITIES[i], i, own - n);
+  const outside = external(system, state, id, state.updated, true);
+  for (let n = 0; n < qty; n++) total += unitPrice(system, state, COMMODITIES[i], i, own - n, outside);
   return Math.round(total * 10) / 10;
 }

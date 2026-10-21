@@ -8,8 +8,8 @@ import type { PlayerShip } from './playerShip';
 // - Police patrol the station, chase the player if wanted here, and attack
 //   pirates in range. Pirates are always fair game.
 // - Traders fly their route. Shot at, they run from whoever fired.
-// - Pirates hunt the nearest trader or the player, fight back when shot at,
-//   and run when badly hurt.
+// - Pirates hunt traders or the player, fight back when shot at, and run
+//   when badly hurt. They scan holds: a rich cargo is worth flying further for.
 
 export interface World {
   player: PlayerShip;
@@ -18,6 +18,8 @@ export interface World {
   /** Whether the local police want the player. */
   playerWanted: boolean;
   npcs: NpcShip[];
+  /** What a ship's hold is worth here, in credits, as a pirate's scanner reads it. */
+  cargoValue?: (ship: PlayerShip) => number;
 }
 
 export const POLICE_RANGE = 6000; // metres: police respond to pirates this close
@@ -33,6 +35,27 @@ function nearest(from: THREE.Vector3, ships: PlayerShip[], range: number): Playe
     if (d < bestD) {
       best = s;
       bestD = d;
+    }
+  }
+  return best;
+}
+
+/**
+ * The best prey in range: near and rich. A hold worth 500 Cr counts as
+ * twice as close as an empty one, so pirates go out of their way for
+ * valuable cargo.
+ */
+function richest(from: THREE.Vector3, ships: PlayerShip[], range: number, value?: (s: PlayerShip) => number): PlayerShip | null {
+  if (!value) return nearest(from, ships, range);
+  let best: PlayerShip | null = null;
+  let bestScore = Infinity;
+  for (const s of ships) {
+    const d = s.obj.position.distanceTo(from);
+    if (d > range) continue;
+    const score = d / (1 + value(s) / 500);
+    if (score < bestScore) {
+      best = s;
+      bestScore = score;
     }
   }
   return best;
@@ -90,7 +113,7 @@ export function think(npc: NpcShip, world: World) {
       }
       const prey = others.filter((n) => n.role === 'trader').map((n) => n.ship);
       if (world.playerPresent) prey.push(player);
-      const target = nearest(at, prey, PIRATE_RANGE);
+      const target = richest(at, prey, PIRATE_RANGE, world.cargoValue);
       return target ? attack(target) : cruise();
     }
   }

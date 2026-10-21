@@ -345,8 +345,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const events = recentTrades(ctx.system, marketState(ctx), selected, ctx.now, 14);
     $('.ex-feed-list').innerHTML = events.length
       ? `<table><thead><tr><th>Price (Cr)</th><th class="num">Qty (${u})</th><th class="num">Time</th></tr></thead><tbody>${events
-          .map(
-            (e) => `<tr class="${e.by === 'you' ? 'you' : ''}"><td class="${e.side === 'buy' ? 'up' : 'down'}">${fmt(e.price, 2)}</td>
+          .map((e) =>
+            e.by === 'lost'
+              ? `<tr class="lost" title="The trader carrying this delivery was destroyed"><td>Lost</td><td class="num">${e.qty.toLocaleString()} <em>destroyed</em></td><td class="num">${clock(e.t)}</td></tr>`
+              : `<tr class="${e.by === 'you' ? 'you' : ''}"><td class="${e.side === 'buy' ? 'up' : 'down'}">${fmt(e.price, 2)}</td>
             <td class="num">${e.qty.toLocaleString()}${e.by === 'you' ? ' <em>you</em>' : ''}</td><td class="num">${clock(e.t)}</td></tr>`,
           )
           .join('')}</tbody></table>`

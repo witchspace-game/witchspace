@@ -150,7 +150,7 @@ In systems where the law is weak or for sale (anarchies, feudal worlds, dictator
 
 ## 5. Building it in stages
 
-*(Built so far, part of stage 1: the four new goods; each world produces or imports each good, so NPC traders mostly buy at producers and deliver to importers, and without them importers would run short; when a station is short or overstocked it posts its own buy or sell order on the book, which deliveries fill down. Still to come in stage 1: supply chains with inputs, and NPC traders as ships carrying real cargo on routes.)*
+*(Built so far, stage 1: the four new goods; each world produces or imports each good, so NPC traders mostly buy at producers and deliver to importers, and without them importers would run short; when a station is short or overstocked it posts its own buy or sell order on the book, which deliveries fill down. Supply chains: where a world makes alloys, electronics, computers, machinery, firearms, hydrogen or medicine, a shortage of the input cuts the output's stock. Inbound NPC traders in flight carry the market's real upcoming deliveries; destroy one and those goods never arrive (the trades feed shows them as lost), and its cargo spills for scooping. Ships' holds can be scanned within 2 km, and pirates do the same, preferring valuable cargo, yours included. Departures from other systems are still abstract.)*
 
 | Stage | What |
 |---|---|

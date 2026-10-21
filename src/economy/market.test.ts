@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy, systemAt } from '../galaxy/generate';
 import { cargoTonnage, COMMODITIES } from './commodities';
-import { candles, costToBuy, drift, equilibriumStock, freshMarket, npcTrades, orderBook, priceAt, quoteClassic, quoteModern, recentTrades, recover, stationOrder, stockFor, tradeBalance } from './market';
+import { candles, costToBuy, drift, equilibriumStock, freshMarket, loseDelivery, npcTrades, orderBook, priceAt, quoteClassic, quoteModern, recentTrades, recover, stationOrder, stockFor, tradeBalance, upcomingDeliveries } from './market';
 
 const price = (q: ReturnType<typeof quoteModern>, id: string) => q.find((x) => x.commodity.id === id)!.price;
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -196,5 +196,47 @@ describe('supply and demand', () => {
     const lave = systemAt(0, 7);
     expect(quoteClassic(lave, 1).some((q) => q.commodity.modernOnly)).toBe(false);
     expect(quoteModern(lave, freshMarket(lave, NOW)).some((q) => q.commodity.id === 'medicine')).toBe(true);
+  });
+});
+
+describe('supply chains and deliveries', () => {
+  const NOW = 1_800_000_000_000;
+  const systems = galaxy(0);
+
+  it('passes a shortage of an input down to what is made from it', () => {
+    const works = systems.find((s) => tradeBalance(s, 'computers') > 0.4 && equilibriumStock(s, COMMODITIES[7], 7) > 0)!;
+    const state = freshMarket(works, NOW);
+    const before = stockFor(works, state, 'computers');
+    state.stock.electronics = 0; // electronics bought out
+    expect(stockFor(works, state, 'computers')).toBeLessThan(before);
+    expect(priceAt(works, state, 'computers', NOW)).toBeGreaterThanOrEqual(priceAt(works, freshMarket(works, NOW), 'computers', NOW));
+  });
+
+  it('leaves goods a world only imports untouched by its inputs', () => {
+    const farm = systems.find((s) => tradeBalance(s, 'computers') < -0.3)!;
+    const state = freshMarket(farm, NOW);
+    const before = stockFor(farm, state, 'computers');
+    state.stock.electronics = 0;
+    expect(stockFor(farm, state, 'computers')).toBe(before);
+  });
+
+  it('knows which deliveries inbound traders carry, and a lost one never arrives', () => {
+    const works = systems.find((s) => tradeBalance(s, 'food') < -0.5)!;
+    const state = freshMarket(works, NOW);
+    const [next] = upcomingDeliveries(works, state, NOW, NOW + 3600_000);
+    expect(next).toBeDefined();
+    const after = (s: typeof state) => stockFor(works, { ...s, updated: next.t + 1 }, next.id);
+    const withIt = after(state);
+    loseDelivery(state, next, NOW);
+    expect(after(state)).toBe(withIt - next.qty);
+    expect(upcomingDeliveries(works, state, NOW, NOW + 3600_000)).not.toContainEqual(next);
+    expect(recentTrades(works, state, next.id, next.t + 1, 30).find((e) => e.t === next.t)?.by).toBe('lost');
+  });
+
+  it("can't undo a delivery that has already arrived", () => {
+    const lave = systemAt(0, 7);
+    const state = freshMarket(lave, NOW);
+    loseDelivery(state, { id: 'food', t: NOW - 1000, qty: 4 }, NOW);
+    expect(state.lost ?? []).toHaveLength(0);
   });
 });

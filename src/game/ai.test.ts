@@ -33,6 +33,15 @@ describe('who fights whom', () => {
     expect(cop.hostile).toBe(false);
   });
 
+  it('pirates go out of their way for a rich hold', () => {
+    const pirate = fakeNpc('pirate', 0);
+    const empty = fakeNpc('trader', 1000);
+    const laden = fakeNpc('trader', 2500);
+    const w = { ...world([pirate, empty, laden], fakeShip(7000)), cargoValue: (s: PlayerShip) => (s === laden.ship ? 3000 : 0) };
+    think(pirate, w);
+    expect(pirate.target).toBe(laden.ship);
+  });
+
   it('pirates hunt the nearest prey, the player included', () => {
     const pirate = fakeNpc('pirate', 0);
     const trader = fakeNpc('trader', 4000);
