@@ -166,6 +166,7 @@ What happens when a heavily armed veteran arrives somewhere poor and low-tech? *
 
 - **Military-grade weapons must be licensed** in lawful systems. Your transponder declares what you carry; unlicensed heavy weapons are an offence on arrival. Low-tech lawful worlds may ban some weapon classes outright; corrupt ones take bribes.
 - **No-fire zones around stations:** firing near a station brings its own defences into play, which hurt even top-end ships.
+  *(Built so far: hitting a station brings one warning and an Offender record, then Fugitive if you keep firing. Under Modern rules a line-of-fire safety holds your lasers when the station is in the way, unless you hold the trigger for 1.5 seconds; under both rules lasers are locked while the docking computer flies.)*
 
 ### Protected starter systems
 
