@@ -59,6 +59,7 @@ const FLIGHT_KEYS = new Set([
 ]);
 
 addEventListener('keydown', (e) => {
+  if ((e.target as HTMLElement).closest?.('input, textarea')) return; // typing, not flying
   if (!held.has(e.code)) held.set(e.code, performance.now());
   if (FLIGHT_KEYS.has(e.code)) e.preventDefault();
 });
