@@ -1058,19 +1058,35 @@ function muzzles(): THREE.Vector3[] {
   }
 }
 
+// Stray shots at the station are easy to make while lining up the slot.
+// Under Modern rules the ship's computer holds fire when the station is in the
+// line of fire, unless you hold the trigger to override it; under both rules
+// the lasers are locked while the docking computer flies, and the station
+// warns you before it calls you a Fugitive.
+const FIRE_OVERRIDE = 1.5; // seconds holding fire to override the safety
+const STATION_GRACE = 1.5; // seconds after a warning to take your finger off the trigger
+const STATION_WARNING_MEMORY = 12; // seconds a station remembers its warning
+let fireHeld = 0;
+let lastSafetyFlash = -Infinity;
+let stationWarnedAt = -Infinity;
+
+function safetyFlash(text: string) {
+  if (elapsed - lastSafetyFlash < 2) return;
+  lastSafetyFlash = elapsed;
+  flash(text, 1.6);
+}
+
 function firePlayerLaser() {
-  if (surrenderTimer !== null) breakSurrender();
   const laser = mountLaser();
   if (!laser) {
     laserCooldown = 0.6;
     flash(`No ${view} laser fitted`, 1.2);
     return;
   }
-  laserCooldown = laser.interval;
-  laserHeat += laser.heat;
-  if (laserHeat >= 100) {
-    overheated = true;
-    flash('Laser overheated', 1.2);
+  if (autopilot) {
+    laserCooldown = 0.3;
+    safetyFlash('Lasers locked · docking computer flying');
+    return;
   }
   const dir = laserDirection();
   const origin = player.obj.position.clone().addScaledVector(dir, 5);
@@ -1080,6 +1096,18 @@ function firePlayerLaser() {
     { value: { kind: 'station' as const }, position: station.root.position, radius: 90 },
   ];
   const hit = rayHit(origin, dir, laser.range, targets);
+  if (hit?.target.value.kind === 'station' && cmdr().difficulty === 'modern' && fireHeld < FIRE_OVERRIDE && !isFugitive()) {
+    laserCooldown = 0.1;
+    safetyFlash('Safety on · station in line of fire · hold fire to override');
+    return;
+  }
+  if (surrenderTimer !== null) breakSurrender();
+  laserCooldown = laser.interval;
+  laserHeat += laser.heat;
+  if (laserHeat >= 100) {
+    overheated = true;
+    flash('Laser overheated', 1.2);
+  }
   const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
   for (const muzzle of muzzles()) beams.fire(muzzle, end, laser.color);
   sfx.laser();
@@ -1089,15 +1117,9 @@ function firePlayerLaser() {
     sfx.hit();
     playerHitNpc(shot.npc, gimballed() ? laser.damage * GIMBAL_DAMAGE : laser.damage);
   } else if (shot.kind === 'station') {
-    // Coriolis stations shrug off lasers, but firing on one is a serious
-    // crime: you're a Fugitive at once and the police launch immediately.
     stationFlash = 0.25;
     sfx.hit();
-    if (!isFugitive() || !cmdr().warrant) {
-      becomeFugitive(true);
-      flash('Station under attack · Police launching', 2.5);
-    }
-    if (ofRole('police').length < MAX_POLICE && reinforceTimer > 1) reinforceTimer = 0.5;
+    playerHitStation();
   } else if (shot.kind === 'drifter') {
     const d = shot.drifter;
     const flare = new Explosion(d.model.def, d.model.root, d.velocity);
@@ -1108,9 +1130,32 @@ function firePlayerLaser() {
   }
 }
 
+/**
+ * Coriolis stations shrug off lasers, but firing on one is a crime. The first
+ * hit brings a warning and makes you an Offender; keep firing after that and
+ * it's a serious crime: you're a Fugitive and the police launch at once.
+ */
+function playerHitStation() {
+  if (!hasLaw(currentSystem())) return;
+  const sinceWarning = elapsed - stationWarnedAt;
+  if (!isFugitive() && sinceWarning > STATION_WARNING_MEMORY) {
+    stationWarnedAt = elapsed;
+    recordCrime(cmdr(), 'offender');
+    flash('Cease fire, Commander · this is your only warning · you are an OFFENDER', 3);
+    return;
+  }
+  if (!isFugitive() && sinceWarning < STATION_GRACE) return; // time to let go of the trigger
+  if (!isFugitive() || !cmdr().warrant) {
+    becomeFugitive(true);
+    flash('Station under attack · Police launching', 2.5);
+  }
+  if (ofRole('police').length < MAX_POLICE && reinforceTimer > 1) reinforceTimer = 0.5;
+}
+
 function updateCombat(dt: number, input: { fire: boolean } | null) {
   const alive = state === 'flying';
   beams.update(dt);
+  fireHeld = alive && input?.fire ? fireHeld + dt : 0;
 
   if (alive && input) {
     laserCooldown -= dt;
