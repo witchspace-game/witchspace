@@ -1,4 +1,4 @@
-import { isRetro } from '../render/renderer';
+import { fitRetroCanvas, isRetro, retroSize } from '../render/renderer';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#tunnel')!;
 const whiteout = document.querySelector<HTMLElement>('#whiteout')!;
@@ -15,8 +15,11 @@ export function playTunnel(seconds = 1.6, style: 'dock' | 'hyperspace' = 'dock')
 
 /** Size the canvas to the view. Only resizes when needed, since resizing clears it. */
 function sizeCanvas(retro: boolean) {
-  const w = retro ? 256 : innerWidth;
-  const h = retro ? 192 : innerHeight;
+  const r = retroSize();
+  const w = retro ? r.w : innerWidth;
+  const h = retro ? r.h : innerHeight;
+  if (retro) fitRetroCanvas(canvas);
+  else canvas.style.width = canvas.style.height = '';
   if (canvas.width !== w) canvas.width = w;
   if (canvas.height !== h) canvas.height = h;
   return { w, h };

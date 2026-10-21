@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
 import type { ShipDef } from '../content/types';
-import { disposeObject, neoLines, registerParts, unregisterParts } from './wire';
+import { disposeObject, neoLines, RETRO_DOT, registerParts, unregisterParts } from './wire';
 
 const DURATION = 4.5; // seconds
 
@@ -107,7 +107,7 @@ export class Explosion {
     const retroGeo = new THREE.BufferGeometry();
     retroGeo.setAttribute('position', geo.getAttribute('position'));
     retroGeo.setDrawRange(0, 120);
-    const retro = new THREE.Points(retroGeo, new THREE.PointsMaterial({ size: 1, sizeAttenuation: false, color: 0xffffff }));
+    const retro = new THREE.Points(retroGeo, new THREE.PointsMaterial({ size: RETRO_DOT, sizeAttenuation: false, color: 0xffffff }));
     return { neo, retro, velocities };
   }
 

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { ShipDef, Vec3 } from '../content/types';
-import { neoLines, retroLines } from './wire';
+import { neoLines, RETRO_DOT, retroLines } from './wire';
 
 // Police livery: alternating blue/red beacons on the wingtips and a band
 // around the hull. It is applied by the game to ships in the police role and
@@ -52,7 +52,7 @@ export function applyPoliceLivery(def: ShipDef, root: THREE.Group): { neo: THREE
     neo.position.set(p[0] * 1.04, p[1] + 1, p[2]);
     const retro = new THREE.Points(
       new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute([p[0], p[1] + 1, p[2]], 3)),
-      new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false }),
+      new THREE.PointsMaterial({ color: 0xffffff, size: 2 * RETRO_DOT, sizeAttenuation: false }),
     );
     // Alternate the two sides, blinking by wall-clock time wherever the ship is drawn.
     const blink = (obj: THREE.Object3D) => {
@@ -72,5 +72,5 @@ export function applyPoliceLivery(def: ShipDef, root: THREE.Group): { neo: THREE
   return { neo: [neoStripe, ...beacons.map((b) => b.neo)], retro: [retroStripe, ...beacons.map((b) => b.retro)] };
 }
 
-const retroOn = new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false });
-const retroOff = new THREE.PointsMaterial({ color: 0x000000, size: 2, sizeAttenuation: false });
+const retroOn = new THREE.PointsMaterial({ color: 0xffffff, size: 2 * RETRO_DOT, sizeAttenuation: false });
+const retroOff = new THREE.PointsMaterial({ color: 0x000000, size: 2 * RETRO_DOT, sizeAttenuation: false });
