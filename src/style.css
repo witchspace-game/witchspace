@@ -213,6 +213,8 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
 #rules button { text-align: left; padding: 12px 14px; line-height: 1.35; }
 #rules button b { display: block; font-size: 18px; letter-spacing: 0.1em; }
 #rules button small { display: block; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; }
+#rules button strong { display: block; margin: 2px 0 4px; font-weight: normal; font-size: 13px; color: var(--accent); letter-spacing: 0.04em; }
+#new-button.armed { border-color: var(--amber); color: var(--amber); }
 #rules button em { font-style: normal; font-size: 11px; color: var(--accent); letter-spacing: 0.15em; }
 
 /* --- Flight HUD ----------------------------------------------------------- */
@@ -569,7 +571,7 @@ body.retro #indicators .bracket i, body.retro #indicators .edge i, body.retro #h
 body.retro #hit-dir { border-top-color: #fff; }
 body.retro .prompt { font-size: 12px; }
 body.retro #rules button b { font-size: 16px; }
-body.retro #rules button small, body.retro #rules button em { font-size: 12px; line-height: 1.5; }
+body.retro #rules button small, body.retro #rules button strong, body.retro #rules button em { font-size: 12px; line-height: 1.5; }
 body.retro #equip li > button, body.retro .fuel-row button { width: 200px; font-size: 8px; }
 body.retro #equip .mounts button { min-width: 0; font-size: 8px; }
 body.retro .fuel-row, body.retro .tabs button, body.retro #target-info, body.retro #mouse-prompt { font-size: 12px; }

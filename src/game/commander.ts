@@ -2,13 +2,15 @@
 
 export type Difficulty = 'classic' | 'modern';
 
-export const DIFFICULTIES: Record<Difficulty, { name: string; blurb: string }> = {
+export const DIFFICULTIES: Record<Difficulty, { name: string; tagline: string; blurb: string }> = {
   classic: {
     name: 'Classic',
+    tagline: 'Single-player, as in 1984',
     blurb: 'As it was in 1984. Touch the station and you die. Without an escape pod it is GAME OVER and your commander starts again from scratch.',
   },
   modern: {
     name: 'Modern',
+    tagline: 'The rules of the shared galaxy, when multiplayer arrives',
     blurb: 'Scrapes cost shields and hull instead of your life. If you are destroyed, your insurers replace the ship and its equipment, less an excess, but they won\'t pay for a Fugitive. Your cargo is still lost to space.',
   },
 };

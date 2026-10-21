@@ -10,7 +10,7 @@ Witchspace keeps the soul of the original (crisp vector ships, hidden-line wiref
 
 ## Status
 
-🚧 **Early but playable.** Launch from a Coriolis station, fly the Cobra Mk III, and try to dock, by hand or with the docking computer and its waltz. Choose **Classic** rules (one life, as in 1984) or **Modern** rules (forgiving, insured, but crime doesn't pay). Trading, combat and multiplayer are next. See the [roadmap](#roadmap).
+🚧 **Early but playable.** Launch from a Coriolis station, fly the Cobra Mk III, and try to dock, by hand or with the docking computer and its waltz. Choose **Classic** rules (single-player, one life, as in 1984) or **Modern** rules (forgiving, insured, but crime doesn't pay; the rules for the shared galaxy when multiplayer arrives). The choice belongs to your commander and can't be switched later. Trading, combat and multiplayer are next. See the [roadmap](#roadmap).
 
 ## Play it now
 
@@ -54,7 +54,7 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **F1** 
 
 | Key | Action |
 | --- | --- |
-| Y / N | Load your commander / start a new one |
+| Y / N | Load your commander / start a new one (press N twice: it replaces your current commander) |
 | L | Launch from the station |
 | T | Market: buy and sell goods (when docked) |
 | C | Docking computer (once you've bought one) |
