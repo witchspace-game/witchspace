@@ -339,10 +339,11 @@ function startCommander(difficulty: Difficulty) {
   if (signedIn() && commander.name !== currentAccount()?.callsign) {
     const wanted = commander.name;
     claimCallsign(wanted).catch((e: Error) => {
-      // Taken by someone else: keep the account's callsign.
-      commander!.name = currentAccount()?.callsign ?? 'Jameson';
+      // Taken or reserved: keep the account's callsign, if it has one.
+      const kept = currentAccount()?.callsign;
+      commander!.name = kept ?? 'Jameson';
       saveCommander(commander!);
-      flash(`${e.message} · you're CMDR ${commander!.name}`, 4);
+      flash(kept ? `${e.message} · you're CMDR ${kept}` : `${e.message} · choose a callsign at the station`, 4);
     });
   }
   saveCommander(commander);

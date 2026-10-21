@@ -8,7 +8,7 @@
 // Deleting your account removes all of it.
 
 import { DurableObject } from 'cloudflare:workers';
-import { cleanName } from './protocol';
+import { cleanName, isReservedName } from './protocol';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
 
 export interface AccountsEnv {
@@ -158,6 +158,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const body = (await request.json().catch(() => null)) as { callsign?: unknown } | null;
     const callsign = cleanName(body?.callsign);
     if (callsign.length < 2) return json({ error: 'Callsigns need at least two letters' }, 400);
+    if (isReservedName(callsign)) return json({ error: `CMDR ${callsign} is reserved: try another` }, 409);
     const key = callsign.toLowerCase();
     const taken = this.sql.exec('SELECT id FROM accounts WHERE callsign_key = ? AND id != ?', key, account.id).toArray()[0];
     if (taken) return json({ error: `CMDR ${callsign} is already taken: try another` }, 409);
