@@ -32,6 +32,23 @@ const BREAKOFF_TIME = 2.6; // seconds before coming round again
 const AIM_SPREAD = THREE.MathUtils.degToRad(0.7); // so they don't hit with every shot
 const CRUISE = 0.6; // fraction of top speed when travelling
 
+/**
+ * Pitch, yaw and roll commands that turn a ship towards a world point,
+ * banking into turns and levelling out otherwise. Shared by NPCs and the
+ * player's combat computer, so both fly the same way.
+ */
+export function steerTowards(obj: THREE.Object3D, target: THREE.Vector3): Pick<FlightInput, 'pitch' | 'yaw' | 'roll'> {
+  const local = target.clone().sub(obj.position);
+  local.applyQuaternion(obj.quaternion.clone().invert());
+  const right = Math.atan2(-local.x, local.z);
+  const up = Math.atan2(local.y, Math.hypot(local.x, local.z));
+  const yaw = THREE.MathUtils.clamp(STEER_GAIN * right, -1, 1);
+  const pitch = THREE.MathUtils.clamp(STEER_GAIN * up, -1, 1);
+  const level = obj.localToWorld(new THREE.Vector3(-1, 0, 0)).sub(obj.position).y;
+  const roll = THREE.MathUtils.clamp(yaw * 0.6 + level * 0.5, -1, 1);
+  return { pitch, yaw, roll };
+}
+
 export interface Patrol {
   centre: THREE.Vector3;
   radius: number;
@@ -117,17 +134,8 @@ export class NpcShip {
   }
 
   /** Steer towards a world point with pitch and yaw, banking for looks. */
-  private steerTo(target: THREE.Vector3): Pick<FlightInput, 'pitch' | 'yaw' | 'roll'> {
-    const local = target.clone().sub(this.obj.position);
-    local.applyQuaternion(this.obj.quaternion.clone().invert());
-    const right = Math.atan2(-local.x, local.z);
-    const up = Math.atan2(local.y, Math.hypot(local.x, local.z));
-    const yaw = THREE.MathUtils.clamp(STEER_GAIN * right, -1, 1);
-    const pitch = THREE.MathUtils.clamp(STEER_GAIN * up, -1, 1);
-    // Bank into turns, and level out gently otherwise.
-    const level = this.obj.localToWorld(new THREE.Vector3(-1, 0, 0)).sub(this.obj.position).y;
-    const roll = THREE.MathUtils.clamp(yaw * 0.6 + level * 0.5, -1, 1);
-    return { pitch, yaw, roll };
+  private steerTo(target: THREE.Vector3) {
+    return steerTowards(this.obj, target);
   }
 
   /**
