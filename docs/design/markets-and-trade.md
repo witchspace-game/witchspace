@@ -150,6 +150,8 @@ In systems where the law is weak or for sale (anarchies, feudal worlds, dictator
 
 ## 5. Building it in stages
 
+*(Built so far, part of stage 1: the four new goods; each world produces or imports each good, so NPC traders mostly buy at producers and deliver to importers, and without them importers would run short; when a station is short or overstocked it posts its own buy or sell order on the book, which deliveries fill down. Still to come in stage 1: supply chains with inputs, and NPC traders as ships carrying real cargo on routes.)*
+
 | Stage | What |
 |---|---|
 | **1. Supply and demand** | The four new goods; production and consumption, with inputs; station buy and sell orders in the book; deliveries fill orders first; NPC traders running routes on a deterministic schedule |
