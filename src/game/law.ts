@@ -81,10 +81,15 @@ export interface Settlement {
  * caught (disabled by police, a later stage) costs more. If you
  * can't pay, your equipment is impounded at this station until you do.
  */
+/** What the law here would fine you for your record (and any warrant), before contraband. */
+export function fineDue(c: Commander): number {
+  const status = legalStatus(c);
+  return (status === 'clean' ? 0 : FINES[status]) + (c.warrant ? FINES.warrant : 0);
+}
+
 export function settle(c: Commander, caught = false): Settlement {
   const status = legalStatus(c);
-  let fine = status === 'clean' ? 0 : FINES[status];
-  if (c.warrant) fine += FINES.warrant;
+  let fine = fineDue(c);
   if (caught) fine = Math.round(fine * 1.5); // handing yourself in is treated more leniently
 
   const confiscated = contraband(c);

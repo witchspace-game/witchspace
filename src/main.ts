@@ -31,6 +31,7 @@ import {
   carriesContraband,
   checksClearance,
   coolRecords,
+  fineDue,
   hasLaw,
   legalStatus,
   recordCrime,
@@ -623,13 +624,20 @@ function renderDocked() {
     ['Ship', player.def.name],
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t`],
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
-    ['Legal status', legalLabel()],
+    ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here: a clean record in this system, any warrant lifted, contraband confiscated">Settle · ${fineDue(c).toLocaleString()} Cr</button>` : ''}`],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', combatRating(c.kills)],
     ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited`],
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   $('#cmdr .rename').addEventListener('click', () => startRename());
+  document.querySelector('#cmdr .settle')?.addEventListener('click', () => {
+    const settlement = settle(c);
+    saveCommander(c);
+    sfx.beep();
+    renderDocked();
+    flash(settlementMessage(settlement, 'Settled with the law'), 5);
+  });
 
   // Fuel: top up to a full tank at the station.
   const missing = Math.round((FUEL_CAPACITY - c.fuel) * 10) / 10;
@@ -902,6 +910,9 @@ let scanned = false; // once per visit to a system
 let scanProgress = 0;
 
 const isFugitive = () => Boolean(commander) && legalStatus(cmdr()) === 'fugitive';
+
+/** Wanted here, you can pay your way clean at the station rather than launch into the police. */
+const canSettle = (c: Commander) => hasLaw(currentSystem()) && legalStatus(c) !== 'clean';
 
 function legalLabel() {
   const c = cmdr();
@@ -3097,7 +3108,7 @@ function die() {
     } else {
       const claim = claimInsurance(c);
       if (claim.kind === 'void') {
-        message = 'Insurance void: you were a Fugitive · the Co-operative has issued you a bare Cobra';
+        message = 'Insurance void: you were a Fugitive · the Co-operative has issued you a bare Cobra · settle with the law before you launch';
       } else {
         message = `${claim.pod ? 'Picked up. ' : ''}Insurance paid out · excess ${claim.excess.toLocaleString()} Cr`;
         if (claim.owed > 0) message += ` · couldn't pay ${claim.owed.toLocaleString()} Cr · equipment impounded`;
