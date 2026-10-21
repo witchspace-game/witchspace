@@ -526,7 +526,7 @@ function renderDocked() {
       const fit = document.createElement('button');
       const fitted = old === laser.id;
       fit.classList.toggle('fitted', fitted);
-      fit.textContent = fitted ? `✓ ${mount}` : mount;
+      fit.textContent = mount;
       if (fitted) {
         // Fitted this visit: put back what was there and refund the swap.
         // Otherwise take it off for half price.
@@ -601,7 +601,7 @@ function renderDocked() {
       };
       // The hold can't shrink below what's in it.
       const full = item.id === 'large-cargo-bay' && cargoTonnes(c) > player.def.stats.cargo;
-      buy.textContent = undo ? `✓ Undo · +${back.toLocaleString()} Cr` : `✓ Sell · +${back.toLocaleString()} Cr`;
+      buy.textContent = undo ? `Undo · +${back.toLocaleString()} Cr` : `Sell · +${back.toLocaleString()} Cr`;
       buy.classList.add('fitted');
       buy.disabled = full;
       buy.title = full ? 'Sell cargo first: it would not fit in the smaller hold' : undo ? 'Bought here: full refund' : 'Sells for half price';

@@ -4,7 +4,7 @@ Guidance for AI assistants (Claude, ChatGPT, Grok, Cursor, Copilot and others) w
 
 ## What this project is
 
-Witchspace is an open-source, browser-based space trading game and a tribute to *Elite* (1984). It is written in TypeScript with three.js and Vite. Its signature look is **neo-vector**: glowing wireframe ships with hidden-line removal, plus a switchable authentic **1984 mode** (256×192, white on black).
+Witchspace is an open-source, browser-based space trading game and a tribute to *Elite* (1984). It is written in TypeScript with three.js and Vite. Its signature look is **neo-vector**: glowing wireframe ships with hidden-line removal, plus a switchable authentic **1984 mode** (white on black with hard pixels, drawn at about three times the original 256×192 for comfort; `?pixels` gives the original resolution).
 
 Most contributions are **content files** (JSON validated by JSON Schema), not code.
 

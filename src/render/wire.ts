@@ -11,6 +11,11 @@ interface Parts {
   retro: THREE.Object3D[];
 }
 
+/** ?pixels in the address: draw 1984 mode at the original 256x192. */
+export const ORIGINAL_PIXELS = typeof location !== 'undefined' && new URLSearchParams(location.search).has('pixels');
+/** Size of a dot (star, spark, beacon) in 1984 mode, in its own pixels. */
+export const RETRO_DOT = ORIGINAL_PIXELS ? 1 : 2;
+
 const registry: Parts[] = [];
 let retro = false;
 

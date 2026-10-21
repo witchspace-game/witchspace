@@ -3,11 +3,33 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { registerParts, setLineResolution, setRetroParts } from './wire';
+import { ORIGINAL_PIXELS, RETRO_DOT, registerParts, setLineResolution, setRetroParts } from './wire';
 
-// The original BBC Micro space view was 256x192 pixels.
-const RETRO_W = 256;
-const RETRO_H = 192;
+// 1984 mode: white lines on black with hard pixels, letterboxed to 4:3. The
+// original BBC Micro view was 256x192, which is tiring to look at blown up on
+// a modern screen, so we draw about three times finer. ?pixels in the address
+// gives the original resolution. Either way every pixel covers a whole number
+// of screen pixels, so lines step evenly instead of shimmering.
+const DETAIL = ORIGINAL_PIXELS ? 256 : 768; // pixels across, roughly
+
+/** The 1984 view's resolution, and its size on screen in CSS pixels. */
+export function retroSize() {
+  const dpr = devicePixelRatio || 1;
+  // The largest 4:3 box that fits the window, in device pixels.
+  const boxW = Math.floor(Math.min(innerWidth, (innerHeight * 4) / 3) * dpr);
+  const boxH = Math.floor((boxW * 3) / 4);
+  const scale = ORIGINAL_PIXELS ? Math.max(1, Math.floor(boxW / 256)) : Math.max(1, Math.round(boxW / DETAIL));
+  const w = ORIGINAL_PIXELS ? 256 : Math.floor(boxW / scale);
+  const h = ORIGINAL_PIXELS ? 192 : Math.floor(boxH / scale);
+  return { w, h, cssW: (w * scale) / dpr, cssH: (h * scale) / dpr };
+}
+
+/** Size a 1984-mode canvas on screen to match retroSize(). */
+export function fitRetroCanvas(canvas: HTMLCanvasElement) {
+  const { cssW, cssH } = retroSize();
+  canvas.style.width = `${cssW}px`;
+  canvas.style.height = `${cssH}px`;
+}
 
 const neoCanvas = document.querySelector<HTMLCanvasElement>('#neo')!;
 const retroCanvas = document.querySelector<HTMLCanvasElement>('#retro')!;
@@ -16,7 +38,6 @@ const neoRenderer = new THREE.WebGLRenderer({ canvas: neoCanvas, antialias: true
 neoRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 const retroRenderer = new THREE.WebGLRenderer({ canvas: retroCanvas, antialias: false });
 retroRenderer.setPixelRatio(1);
-retroRenderer.setSize(RETRO_W, RETRO_H, false);
 
 export const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 1, 120000);
 
@@ -48,8 +69,11 @@ export function render(scene: THREE.Scene) {
 }
 
 function resize() {
-  camera.aspect = retro ? RETRO_W / RETRO_H : innerWidth / innerHeight;
+  const r = retroSize();
+  camera.aspect = retro ? r.w / r.h : innerWidth / innerHeight;
   camera.updateProjectionMatrix();
+  retroRenderer.setSize(r.w, r.h, false);
+  fitRetroCanvas(retroCanvas);
   neoRenderer.setSize(innerWidth, innerHeight, false);
   composer.setSize(innerWidth, innerHeight);
   setLineResolution(neoRenderer.getDrawingBufferSize(new THREE.Vector2()));
@@ -99,7 +123,7 @@ export function makeSpace(): Space {
 
   const stars = new THREE.Group();
   const neo = starfield(2500, 1.2, true);
-  const old = starfield(70, 1, false);
+  const old = starfield(70, RETRO_DOT, false);
   stars.add(neo, old);
   registerParts({ neo: [neo], retro: [old] });
   scene.add(stars);

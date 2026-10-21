@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { registerParts } from './wire';
+import { registerParts, RETRO_DOT } from './wire';
 
 const COUNT = 220;
 const HALF = 450; // particles live in a cube this far either side of the camera
@@ -33,7 +33,7 @@ export class SpaceDust {
     const dotGeo = new THREE.BufferGeometry();
     dotGeo.setAttribute('position', new THREE.BufferAttribute(this.points, 3));
     dotGeo.setDrawRange(0, 80);
-    this.dots = new THREE.Points(dotGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1, sizeAttenuation: false }));
+    this.dots = new THREE.Points(dotGeo, new THREE.PointsMaterial({ color: 0xffffff, size: RETRO_DOT, sizeAttenuation: false }));
     this.dots.frustumCulled = false;
 
     this.group.add(this.streaks, this.dots);

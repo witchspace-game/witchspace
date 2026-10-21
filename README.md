@@ -4,7 +4,7 @@
 
 Start with a Cobra Mk III and 100 credits. Trade, fight, mine, smuggle or hunt bounties across a procedurally generated galaxy, together with your friends, right in your browser.
 
-Witchspace keeps the soul of the original (crisp vector ships, hidden-line wireframes, that impossible first docking) and renders it the way a BBC Micro never could: glowing neon lines at 144fps on any screen. Press **M** at any time to drop back to authentic 1984 mode, 256×192 pixels in white on black.
+Witchspace keeps the soul of the original (crisp vector ships, hidden-line wireframes, that impossible first docking) and renders it the way a BBC Micro never could: glowing neon lines at 144fps on any screen. Press **M** at any time to drop back to 1984 mode: white on black, hard pixels and the pixel font, sharpened for modern screens. Add `?pixels` to the address for the original 256×192.
 
 > Witchspace is an unofficial fan tribute. It is not affiliated with or endorsed by Frontier Developments, who own the *Elite* trademark. See [CREDITS.md](CREDITS.md).
 
