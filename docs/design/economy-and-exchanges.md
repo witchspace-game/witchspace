@@ -17,6 +17,8 @@ Witchspace's economy should feel like a **real market**: prices that rise and fa
 
 ## 1. Living markets (trading milestone)
 
+*Supply and demand, world events and the black market are designed in detail in [markets and trade](markets-and-trade.md).*
+
 Each station has a market for the classic commodity list: food, textiles, radioactives, slaves, liquor and wines, luxuries, narcotics, computers, machinery, alloys, firearms, furs, minerals, gold, platinum, gem-stones and alien items. Illegal goods are marked as such.
 
 - **Production and consumption** depend on the system's **economy** (industrial ↔ agricultural), **tech level** and **government**. Agricultural worlds produce food and want machinery; industrial worlds the reverse.
