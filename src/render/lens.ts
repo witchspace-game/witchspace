@@ -52,7 +52,8 @@ const LensShader = {
       float x = r / radius;
       // Light near the rim is pulled in towards the centre (so the view there
       // is magnified), falling away to nothing a few radii out.
-      float pull = strength / (1.0 + x * x) * smoothstep(4.5, 1.0, x);
+      // Kept gentle, and none inside the rim, so the rim itself stays whole.
+      float pull = strength / (1.0 + x * x) * smoothstep(4.5, 1.2, x) * smoothstep(1.0, 1.3, x);
       // And the whole region swirls, most strongly at the rim.
       float a = twist * exp(-(x - 1.0) * (x - 1.0) * 0.8);
       float c = cos(a), s = sin(a);
@@ -99,8 +100,8 @@ export class LensPass extends ShaderPass {
     const u = this.uniforms;
     u.center.value.set((p.x + 1) / 2, (p.y + 1) / 2);
     u.radius.value = radius / (2 * -view.z * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
-    u.strength.value = 0.55 * strength;
-    u.twist.value = 0.9 * strength;
+    u.strength.value = 0.35 * strength;
+    u.twist.value = 0.4 * strength;
     u.aspect.value = camera.aspect;
     this.enabled = true;
   }
