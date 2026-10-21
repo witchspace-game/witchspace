@@ -1,0 +1,173 @@
+import * as THREE from 'three';
+import type { ClientMessage, Commander, ServerMessage } from '../../server/src/protocol';
+
+// Shared space (stage 1, Modern rules, opt-in): other commanders in your
+// star system, flying their own ships. One WebSocket to that system's server
+// (server/), which checks moves and passes them on. We send our position
+// about ten times a second and draw everyone else slightly in the past,
+// between the two updates either side, so they move smoothly however the
+// network behaves. Hyperspace is the handover: leave one system, join the next.
+
+const SEND_INTERVAL = 0.1; // seconds
+const DELAY = 0.15; // seconds: draw others this far behind, to interpolate
+const KEEP = 1.5; // seconds of history kept per commander
+const RETRY = 5; // seconds before reconnecting after losing the server
+
+/** The shared space servers: local in development (cd server && npm run dev), ours in production. */
+export const SPACE_URL: string = import.meta.env.VITE_SPACE_URL ?? (import.meta.env.DEV ? 'ws://127.0.0.1:8787' : 'wss://space.witchspace.org.uk');
+
+interface Snapshot {
+  t: number; // seconds, our clock, when it arrived
+  p: THREE.Vector3;
+  q: THREE.Quaternion;
+  f: boolean;
+}
+
+export interface Remote {
+  id: string;
+  name: string;
+  ship: string;
+  /** Where to draw them now (interpolated). */
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+  firing: boolean;
+  history: Snapshot[];
+}
+
+export type SpaceEvent = { kind: 'joined'; remote: Remote } | { kind: 'left'; remote: Remote } | { kind: 'connected'; others: number } | { kind: 'lost' };
+
+const toV = (a: [number, number, number]) => new THREE.Vector3(...a);
+const toQ = (a: [number, number, number, number]) => new THREE.Quaternion(...a);
+const round = (n: number) => Math.round(n * 10) / 10;
+
+export class SharedSpace {
+  readonly remotes = new Map<string, Remote>();
+  private ws: WebSocket | null = null;
+  private system = '';
+  private sendTimer = 0;
+  private clock = 0;
+  private correction: THREE.Vector3 | null = null;
+  private retryAt = 0;
+  private lostReported = false;
+
+  constructor(private readonly onEvent: (e: SpaceEvent) => void) {}
+
+  get connected() {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  /** Be in this system's shared space (or none). Reconnects only when it changes. */
+  join(galaxy: number, system: number, name: string, ship: string) {
+    const key = `${galaxy}/${system}`;
+    if (key === this.system && this.ws) return;
+    if (this.clock < this.retryAt) return;
+    this.leave();
+    this.system = key;
+    const ws = new WebSocket(`${SPACE_URL}/system/${key}`);
+    this.ws = ws;
+    ws.onopen = () => this.send({ type: 'hello', name, ship });
+    ws.onmessage = (e) => this.receive(JSON.parse(e.data as string) as ServerMessage);
+    ws.onclose = () => {
+      if (this.ws !== ws) return; // a deliberate leave
+      this.ws = null;
+      this.system = '';
+      this.clearRemotes();
+      this.retryAt = this.clock + RETRY;
+      if (!this.lostReported) this.onEvent({ kind: 'lost' });
+      this.lostReported = true;
+    };
+  }
+
+  leave() {
+    const ws = this.ws;
+    this.ws = null;
+    this.system = '';
+    ws?.close();
+    this.clearRemotes();
+  }
+
+  /** The server refused a move: where to put the ship back, once. */
+  takeCorrection(): THREE.Vector3 | null {
+    const c = this.correction;
+    this.correction = null;
+    return c;
+  }
+
+  /** Each frame: send our state now and then, and move everyone else along. */
+  update(dt: number, me: { position: THREE.Vector3; quaternion: THREE.Quaternion; speed: number; firing: boolean }) {
+    this.clock += dt;
+    this.sendTimer -= dt;
+    if (this.connected && this.sendTimer <= 0) {
+      this.sendTimer = SEND_INTERVAL;
+      const p = me.position;
+      const q = me.quaternion;
+      this.send({ type: 'state', p: [round(p.x), round(p.y), round(p.z)], q: [q.x, q.y, q.z, q.w], s: round(me.speed), f: me.firing });
+    }
+    const at = this.clock - DELAY;
+    for (const r of this.remotes.values()) interpolate(r, at);
+  }
+
+  private receive(msg: ServerMessage) {
+    switch (msg.type) {
+      case 'welcome':
+        this.lostReported = false;
+        for (const c of msg.others) this.add(c);
+        this.onEvent({ kind: 'connected', others: msg.others.length });
+        break;
+      case 'join':
+        this.onEvent({ kind: 'joined', remote: this.add(msg.commander) });
+        break;
+      case 'state': {
+        const r = this.remotes.get(msg.id);
+        if (!r) break;
+        r.history.push({ t: this.clock, p: toV(msg.p), q: toQ(msg.q), f: msg.f });
+        while (r.history.length > 2 && r.history[1].t < this.clock - KEEP) r.history.shift();
+        break;
+      }
+      case 'leave': {
+        const r = this.remotes.get(msg.id);
+        if (!r) break;
+        this.remotes.delete(msg.id);
+        this.onEvent({ kind: 'left', remote: r });
+        break;
+      }
+      case 'correct':
+        this.correction = toV(msg.p);
+        break;
+    }
+  }
+
+  private add(c: Commander): Remote {
+    const r: Remote = { id: c.id, name: c.name, ship: c.ship, position: toV(c.p), quaternion: toQ(c.q), firing: c.f, history: [{ t: this.clock, p: toV(c.p), q: toQ(c.q), f: c.f }] };
+    this.remotes.set(c.id, r);
+    return r;
+  }
+
+  private clearRemotes() {
+    for (const r of this.remotes.values()) this.onEvent({ kind: 'left', remote: r });
+    this.remotes.clear();
+  }
+
+  private send(msg: ClientMessage) {
+    if (this.connected) this.ws!.send(JSON.stringify(msg));
+  }
+}
+
+/** Where a commander was at time `at`, between the two snapshots either side. */
+export function interpolate(r: Remote, at: number) {
+  const h = r.history;
+  let i = h.length - 1;
+  while (i > 0 && h[i - 1].t > at) i--;
+  const b = h[i];
+  const a = h[Math.max(0, i - 1)];
+  if (a === b || at >= b.t) {
+    r.position.copy(b.p);
+    r.quaternion.copy(b.q);
+    r.firing = b.f;
+    return;
+  }
+  const k = THREE.MathUtils.clamp((at - a.t) / (b.t - a.t), 0, 1);
+  r.position.lerpVectors(a.p, b.p, k);
+  r.quaternion.slerpQuaternions(a.q, b.q, k);
+  r.firing = k < 0.5 ? a.f : b.f;
+}

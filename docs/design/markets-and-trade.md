@@ -11,6 +11,7 @@ This design gives markets real causes:
 1. **Supply and demand:** worlds produce and consume, stations post real orders for what they need, and NPC traders haul goods to where they're wanted.
 2. **World events:** famines, booms, strikes, wars and incursions, some generated and some caused by players, that change what worlds need.
 3. **The black market:** weapons, narcotics and slaves trade by their own rules, with the best prices where they're most dangerous to sell.
+4. **Merchants:** players who trade without flying, by renting warehouses and hiring pilots to carry their goods, which still have to make the trip.
 
 The drama comes from what it always did in *Elite*: knowing something others don't, and getting there first.
 
@@ -152,7 +153,46 @@ In systems where the law is weak or for sale (anarchies, feudal worlds, dictator
 - **Market makers.** AI-agent traders and the stations themselves keep markets liquid when few players are about. Agents have personalities: cautious ones with wide spreads, aggressive arbitrageurs, guild trading desks.
 - **One set of books.** Every trade, a player's, an NPC's or an agent's, is an event on the server's books (see [servers and hosting](servers-and-hosting.md)). Nobody's browser decides a fill.
 
-## 5. Building it in stages
+## 5. Merchants: trading without flying
+
+Some commanders love the markets more than the flying. A **Merchant** plays Witchspace from the exchange: buying where goods are cheap, hiring pilots to carry them, selling where they're wanted, and trading the markets that need no hauling at all. It works on a phone in a spare five minutes, and it suits players who already know their way around a trading screen.
+
+**The rule that keeps it honest: goods still have to move.** A Merchant never teleports cargo. Every tonne sits in a real place (a ship's hold or a station warehouse) and only gets anywhere by being flown there, at the risk of pirates. That's what makes the economy mean something, and it's what gives pilots paid work.
+
+### Warehouses and the trading terminal
+
+- **Warehouses.** A Merchant rents storage at stations, for a small daily fee **(to tune)**. Goods bought at a station go into its warehouse (as orders already do, see limit orders); a pilot's own commander counts as present wherever they're docked.
+- **The terminal.** A web and phone view of the exchanges where you have a warehouse: charts, the order book, limit orders, your stock and your contracts. You can only trade where you have a presence, so a warehouse is a decision, not a formality.
+- **News travels the same way for everyone.** Each warehouse hears the news when its station does, at the speed of ships. A Merchant at a desk gets no advantage over a pilot who flies there first, which keeps "fast ships beat the news" true.
+
+### Haulage contracts
+
+- **Posting.** A Merchant posts a contract: these goods, from my warehouse at A to station B, by this time, for this pay. The pay is held in escrow when it's posted.
+- **Flying it.** A pilot accepts, the goods load into their hold at A, and delivery at B pays out. Pilots put up a bond (a share of the cargo's value) that covers the goods if they don't arrive; insurance doesn't, since the goods aren't theirs.
+- **Risk is real.** Contract cargo can be scanned and stolen like any other. A Merchant shipping Firearms through an anarchy pays more to get a pilot to take it. Pirates know a contract run when they see one.
+- **NPC haulers as a fallback.** Contracts nobody takes go to NPC haulers after a while: slower, a little dearer and riskier on dangerous routes. They're scheduled like today's NPC traders, so the cargo really is in flight and can be lost. This is how it works in single-player, and in a quiet shared galaxy.
+
+### Markets with no hauling
+
+- **System currencies:** trading each system's token in its liquidity pool (see [system currencies](system-currencies.md)).
+- **Forward contracts:** agreeing today to buy or sell a good at a station on a future date, at a price fixed now. That lets a Merchant back a hunch about a famine or a strike without moving a crate, while the goods themselves still have to turn up on the day.
+- **Station shares,** later (see [player-run stations](player-stations.md)).
+
+### A Merchant's rank
+
+A trading rank of its own, earned by profit made (not money held), beside the combat rank and an explorer's rank. A commander can rise on all three roads, or just one.
+
+### Fair play
+
+- Nothing is bought with real money, and credits can't be cashed out (see [economy and exchanges](economy-and-exchanges.md)).
+- Merchants trade on the same books, under the same rules, as everyone else. Automated trading is allowed only as a declared market maker (section 4), never as a hidden bot.
+- Paying someone to attack shipping is a crime, as it is when you do it yourself (see [the black market](#3-the-black-market)), and contracts for it can't be posted.
+
+### Single-player first
+
+The terminal for your own commander's docked station, warehouses, and contracts flown by NPC haulers all work without a server, from the same deterministic simulation as today's markets. In the shared galaxy, players' contracts and warehouses join the server's books (section 4).
+
+## 6. Building it in stages
 
 *(Built so far, stage 1: the four new goods; each world produces or imports each good, so NPC traders mostly buy at producers and deliver to importers, and without them importers would run short; when a station is short or overstocked it posts its own buy or sell order on the book, which deliveries fill down. Supply chains: where a world makes alloys, electronics, computers, machinery, firearms, hydrogen or medicine, a shortage of the input cuts the output's stock. Inbound NPC traders in flight carry the market's real upcoming deliveries; destroy one and those goods never arrive (the trades feed shows them as lost), and its cargo spills for scooping. Ships' holds can be scanned within 2 km, and pirates do the same, preferring valuable cargo, yours included. Departures from other systems are still abstract.)*
 
@@ -162,6 +202,7 @@ In systems where the law is weak or for sale (anarchies, feudal worlds, dictator
 | **2. Events** | Generated events with headlines and chart markers; blockades from destroyed traffic; news spreading with ships |
 | **3. Black market** | Legality by government; the back-room exchange; smugglers; undercover buyers; crackdowns |
 | **4. Shared galaxy** | Player limit orders, AI-agent market makers, server-side books |
+| **5. Merchants** | Warehouses and the trading terminal (web and phone), haulage contracts with escrow and bonds, NPC haulers, forward contracts, a trading rank. Single-player first, then shared |
 
 ---
 
@@ -171,4 +212,5 @@ In systems where the law is weak or for sale (anarchies, feudal worlds, dictator
 - ~~**New goods:**~~ settled: Water, Hydrogen fuel cells, Electronics and Medicine join the list (Modern rules only).
 - **Event frequency:** how often a world should be in crisis for the galaxy to feel alive without feeling chaotic.
 - **Black-market access:** is the back room open to everyone in corrupt systems, or reached through contacts and reputation?
+- **Merchants:** does a pure Merchant need a commander and a ship at all, or can an account just rent warehouses? Warehouse fees, bond sizes, and how long a contract waits before NPC haulers take it.
 - ~~**Slaves:**~~ settled: kept as in the original, with abolitionist buyers and a liberation mission line.
