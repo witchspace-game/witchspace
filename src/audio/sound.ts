@@ -94,6 +94,11 @@ export const sfx = {
     noise(3.4, 'bandpass', 160, 2600, 0.28);
     zap(55, 220, 3.2, 0.06, 'sine');
   },
+  /** A camera shutter: two quick clicks. */
+  shutter: () => {
+    noise(0.04, 'highpass', 4000, 3000, 0.35);
+    setTimeout(() => noise(0.05, 'highpass', 3000, 2000, 0.25), 70);
+  },
   jump: () => noise(0.7, 'bandpass', 4000, 300, 0.4),
   tick: () => zap(1200, 1100, 0.05, 0.05, 'square'),
   explosion: () => noise(2.2, 'lowpass', 1800, 40, 1),

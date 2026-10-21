@@ -72,6 +72,7 @@ import { camera, isRetro, lens, makeSpace, render, setRetro } from './render/ren
 import { buildShip, disposeShip, heatShip, type ShipModel } from './render/shipModel';
 import { buildHangar } from './render/hangar';
 import { stationName } from './galaxy/stationNames';
+import { takePhoto } from './ui/photo';
 import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
@@ -685,7 +686,8 @@ function renderDocked() {
           renderDocked();
         };
         if (undo) fit.addEventListener('click', remove);
-        else confirmSale(fit, `Sell · +${back.toLocaleString()} Cr?`, remove);
+        // Selling the only laser leaves the ship unarmed: say so.
+        else confirmSale(fit, Object.values(c.lasers).filter(Boolean).length === 1 ? `Your only laser! Sell · +${back.toLocaleString()} Cr?` : `Sell · +${back.toLocaleString()} Cr?`, remove);
         mounts.append(fit);
         continue;
       }
@@ -1169,7 +1171,7 @@ function riftPull(c: Carrier, dt: number) {
   if (d > reach) return;
   const k = r.open * (1 - d / reach) ** 2;
   player.obj.position.addScaledVector(to.normalize(), RIFT_PULL * k * dt);
-  shake = Math.max(shake, 0.6 * k);
+  shake = Math.max(shake, 0.3 * k); // a tremor, not enough to fight the controls
   if (!c.pullWarned) {
     c.pullWarned = true;
     flash('Gravitational shear · the rift is pulling you in', 3);
@@ -2516,6 +2518,7 @@ function renderControlsCard() {
     .concat([
       ['C', 'Docking computer'],
       ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
+      ['P', 'Take a photo of the view, without the HUD (saved, or shared on phones)'],
       ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
       ['T', 'Lock a missile onto the ship in your sights (again with nothing in sight: disarm)'],
       ['X', 'Launch the locked missile'],
@@ -2758,6 +2761,22 @@ function die() {
     enterDocked();
     flash(message, 5);
   }, 5000);
+}
+
+// --- Photos -----------------------------------------------------------------
+
+let photoPending = false;
+
+/** P: copy the frame just drawn, with a shutter flash, then save or share it. */
+function snapPhoto() {
+  const canvas = $<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo');
+  const saving = takePhoto(canvas, isRetro());
+  sfx.shutter();
+  const el = $('#photo-flash');
+  el.classList.remove('on');
+  void el.offsetWidth; // restart the CSS animation
+  el.classList.add('on');
+  void saving.then((message) => flash(message, 2.5));
 }
 
 // --- Input ------------------------------------------------------------------
@@ -3034,6 +3053,10 @@ function handleKey(code: string) {
     if (state === 'docked' && dockTab === 'market') renderMarket(); // exchange or 1984 price list
     return;
   }
+  if (code === 'KeyP' && state !== 'newgame') {
+    photoPending = true; // taken right after the next frame is drawn
+    return;
+  }
   if (code === 'KeyN' && state !== 'title') {
     const mode = cycleSoundMode();
     flash(mode === 'full' ? 'Sound: full' : mode === 'effects' ? 'Sound: effects only (no engine hum)' : 'Sound: off', 1.6);
@@ -3140,6 +3163,10 @@ function frame(now?: number) {
     lens.aim(camera, null, 0, 0);
     updateShowroom(dt);
     render(showroom.scene);
+  }
+  if (photoPending) {
+    photoPending = false;
+    snapPhoto();
   }
   requestAnimationFrame(frame);
 }

@@ -1027,3 +1027,8 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   .ex-canvas { min-height: 220px; }
   .panel.docked.exchange { top: 8px; }
 }
+
+/* P: the shutter flash for a photo. */
+#photo-flash { position: fixed; inset: 0; z-index: 50; pointer-events: none; background: #fff; opacity: 0; }
+#photo-flash.on { animation: photo-flash 0.45s ease-out; }
+@keyframes photo-flash { from { opacity: 0.55; } to { opacity: 0; } }

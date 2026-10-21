@@ -1,70 +1,91 @@
-<!-- {"path": "/press/", "title": "Press kit · Witchspace", "description": "Facts, screenshots, a trailer and words about Witchspace, a free, open-source space trading game in the browser and a tribute to Elite (1984)."} -->
-<section class="section doc">
-  <h1>Press kit</h1>
-  <p class="lede">Everything you need to write about Witchspace: the facts, a trailer, screenshots and a few words about it. Use any of it freely.</p>
-
-  <h2>The short version</h2>
-  <p>
-    <strong>Witchspace</strong> is a free, open-source space trading and combat game that runs in the browser: a love letter to <em>Elite</em> (1984). Fly a Cobra Mk III across eight galaxies of glowing vector space, trade on living markets, fight pirates, dodge the law, and switch to an authentic 1984 look with one key.
-  </p>
-
-  <h2>Fact sheet</h2>
-  <table>
-    <tbody>
-      <tr><th>Name</th><td>Witchspace</td></tr>
-      <tr><th>Play</th><td><a href="/play/">witchspace.org.uk/play</a>: no download, no account</td></tr>
-      <tr><th>Platforms</th><td>Any modern browser: desktop, laptop, tablet and phone. Mouse and keyboard, the classic keyboard scheme, gamepad, or touch and tilt</td></tr>
-      <tr><th>Price</th><td>Free. Nothing can be bought with real money</td></tr>
-      <tr><th>Status</th><td>Early but playable single-player; multiplayer is designed and on the roadmap</td></tr>
-      <tr><th>Source</th><td><a href="https://github.com/witchspace-game/witchspace">github.com/witchspace-game/witchspace</a>. Code GPL-3.0, content CC BY-SA 4.0</td></tr>
-      <tr><th>Built with</th><td>TypeScript, three.js and Vite, with AI assistance, in the open</td></tr>
-      <tr><th>Contact</th><td><a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a></td></tr>
-    </tbody>
-  </table>
-
-  <h2>Trailer</h2>
-  <p><video controls preload="metadata" poster="/media/trailer-poster.jpg" style="width: 100%; border-radius: 12px; border: 1px solid var(--border)"><source src="/media/witchspace-trailer.mp4" type="video/mp4" /></video></p>
-  <p class="muted"><a href="/media/witchspace-trailer.mp4" download>Download the trailer</a> (MP4, 1280×720, 53 seconds, 24 MB). The music is <em>The Blue Danube</em>, performed by the United States Marine Band and in the public domain.</p>
-
-  <h3>The Marshals arrive</h3>
-  <p><video controls muted loop playsinline preload="metadata" poster="/media/marshals-poster.jpg" style="width: 100%; border-radius: 12px; border: 1px solid var(--border)"><source src="/media/witchspace-marshals.mp4" type="video/mp4" /></video></p>
-  <p class="muted"><a href="/media/witchspace-marshals.mp4" download>Download the clip</a> (MP4, 1280×720, 9 seconds, 4 MB, silent). A Co-operative Marshals carrier comes through a witchspace rift: made for social posts.</p>
-
-  <h2>Screenshots</h2>
-  <div class="grid">
-    <a class="card link" href="/screens/exchange.jpg"><img src="/screens/exchange.jpg" alt="The station market as a trading exchange: pairs, a candlestick chart, the order book and the trade form" style="width: 100%; border-radius: 8px" loading="lazy" /><p>The exchange</p></a>
-    <a class="card link" href="/screens/marshals.jpg"><img src="/screens/marshals.jpg" alt="A Co-operative Marshals carrier sliding out of a witchspace rift as it closes" style="width: 100%; border-radius: 8px" loading="lazy" /><p>The Marshals</p></a>
-    <a class="card link" href="/screens/combat.jpg"><img src="/screens/combat.jpg" alt="Military lasers firing at pirates in front of a planet" style="width: 100%; border-radius: 8px" loading="lazy" /><p>Combat</p></a>
-    <a class="card link" href="/screens/neo.jpg"><img src="/screens/neo.jpg" alt="A Coriolis station and planet in neo-vector mode" style="width: 100%; border-radius: 8px" loading="lazy" /><p>Neo-vector</p></a>
-    <a class="card link" href="/screens/retro.jpg"><img src="/screens/retro.jpg" alt="The same scene in 1984 mode" style="width: 100%; border-radius: 8px" loading="lazy" /><p>1984 mode</p></a>
-    <a class="card link" href="/screens/map.jpg"><img src="/screens/map.jpg" alt="The galactic chart" style="width: 100%; border-radius: 8px" loading="lazy" /><p>The galactic chart</p></a>
-    <a class="card link" href="/screens/hangar.jpg"><img src="/screens/hangar.jpg" alt="The hangar and equipment shop" style="width: 100%; border-radius: 8px" loading="lazy" /><p>The hangar</p></a>
+<!-- {"path": "/press/", "title": "Press kit · Witchspace", "description": "Screenshots, video, facts and words about Witchspace: a free, open-source space trading and combat game in the browser, and a tribute to Elite (1984).", "scripts": ["/src/site/press.ts"], "bodyClass": "press"} -->
+<section class="press-hero" style="--hero: url('{{media:dogfight:large}}')">
+  <div class="press-hero-inner">
+    <p class="kicker">Press kit</p>
+    <h1>Witchspace</h1>
+    <p class="lede">A free, open-source space trading and combat game that runs in the browser: a love letter to <em>Elite</em> (1984). Everything here is free to use when you write about it.</p>
+    <div class="actions">
+      <button type="button" class="button primary" data-open="trailer">Watch the trailer</button>
+      <a class="button" href="#gallery">Screenshots and video</a>
+      <button type="button" class="button ghost" data-share data-share-url="/press/" data-share-title="Witchspace press kit">Share the press kit</button>
+    </div>
   </div>
-
-  <h2>What's in it</h2>
-  <ul>
-    <li>Eight galaxies of 2,048 star systems, generated just where they were in 1984</li>
-    <li>Flight with the original's feel: pitch, roll and no drift, with the docking computer and its waltz</li>
-    <li>Combat against pirates and police, with lasers on four mounts, missiles, ECM and a combat rating from Harmless to Elite</li>
-    <li>Living markets shown as a modern trading exchange: candlestick charts, an order book, limit orders, NPC traders who move prices, supply chains and stations that post their own orders</li>
-    <li>World events (famines, strikes, wars, blockades) and news that travels at the speed of ships</li>
-    <li>The law: local records, police scans, fines, surrender, and a black market where the stricter the law, the better it pays</li>
-    <li>The Co-operative Marshals: commit a serious crime and their carrier tears its way in through a witchspace rift, with half a minute's warning as space bends around it, then launches its interceptors</li>
-    <li>Fuel scoops: skim a star for fuel and scoop cargo from wrecks, including deliveries pirates never let arrive</li>
-    <li>A 1984 mode, one keypress away: white lines on black, sharpened for modern screens</li>
-    <li>Classic rules (one life, as in 1984) or Modern rules (insurance, flight assists)</li>
-  </ul>
-
-  <h2>Longer description</h2>
-  <p>
-    In 1984 Ian Bell and David Braben fitted eight galaxies, wireframe space flight and an open-ended trading game into about 22 KB of a BBC Micro, and invented a genre. Witchspace is a fan's tribute: an open-source game that keeps the soul of the original (the crisp vector ships, the galaxy you remember, that heart-in-mouth docking) and builds the parts a 1984 computer never could around it.
-  </p>
-  <p>
-    It runs in any browser. The neo-vector look brings glowing lines and shattering explosions; one key drops you back to 1984. The markets are a real exchange, with prices moved by NPC traders, supply chains and world events, and news that travels at the speed of ships, so the commander who hears first can profit. Everything is designed in the open, and the community can add ships, worlds, events and missions as data files.
-  </p>
-
-  <h2>About the name and the tribute</h2>
-  <p>
-    Witchspace is an unofficial, non-commercial tribute to <em>Elite</em> (1984) by Ian Bell and David Braben. It is not affiliated with or endorsed by Frontier Developments, Ian Bell or David Braben. <em>Elite</em> is a trademark of Frontier Developments plc. The ship names are a deliberate tribute; the code, ship designs, text and art were made from scratch for this project.
-  </p>
 </section>
+
+<section class="section facts" aria-label="Quick facts">
+  <div class="fact"><strong>Free</strong><span>No download, no account, nothing to buy</span></div>
+  <div class="fact"><strong>Any browser</strong><span>Desktop, tablet and phone: mouse, keyboard, gamepad or touch</span></div>
+  <div class="fact"><strong>8 galaxies</strong><span>2,048 systems each, just where they were in 1984</span></div>
+  <div class="fact"><strong>Open source</strong><span>Code GPL-3.0, content CC BY-SA 4.0</span></div>
+</section>
+
+<section class="section" id="gallery">
+  <div class="section-head">
+    <h2>Screenshots and video</h2>
+    <p class="lede">Open any of them full size, download the original, or share it: every image has its own link that unfurls with that picture.</p>
+  </div>
+  <!-- press:gallery -->
+</section>
+
+<section class="section words" id="words">
+  <div class="section-head">
+    <h2>Words to use</h2>
+    <p class="lede">Copy, paste and edit as you like.</p>
+  </div>
+  <div class="copy-blocks">
+    <div class="copy-block">
+      <div class="copy-head"><h3>One line</h3><button type="button" class="button small" data-copy-from="#copy-line">Copy</button></div>
+      <p id="copy-line">Witchspace: trade, fight and explore eight galaxies of glowing vector space, free in your browser. An open-source tribute to Elite (1984).</p>
+    </div>
+    <div class="copy-block">
+      <div class="copy-head"><h3>Short</h3><button type="button" class="button small" data-copy-from="#copy-short">Copy</button></div>
+      <p id="copy-short"><strong>Witchspace</strong> is a free, open-source space trading and combat game that runs in the browser: a love letter to <em>Elite</em> (1984). Fly a Cobra Mk III across eight galaxies of glowing vector space, trade on living markets, fight pirates, dodge the law, and switch to an authentic 1984 look with one key.</p>
+    </div>
+    <div class="copy-block wide">
+      <div class="copy-head"><h3>Longer</h3><button type="button" class="button small" data-copy-from="#copy-long">Copy</button></div>
+      <div id="copy-long">
+        <p>In 1984 Ian Bell and David Braben fitted eight galaxies, wireframe space flight and an open-ended trading game into about 22 KB of a BBC Micro, and invented a genre. Witchspace is a fan's tribute: an open-source game that keeps the soul of the original (the crisp vector ships, the galaxy you remember, that heart-in-mouth docking) and builds the parts a 1984 computer never could around it.</p>
+        <p>It runs in any browser. The neo-vector look brings glowing lines and shattering explosions; one key drops you back to 1984. The markets are a real exchange, with prices moved by NPC traders, supply chains and world events, and news that travels at the speed of ships, so the commander who hears first can profit. Break the law badly enough and the Co-operative Marshals come for you through a witchspace rift. Everything is designed in the open, and the community can add ships, worlds, events and missions as data files.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section split" id="features">
+  <div>
+    <h2>What's in it</h2>
+    <ul class="ticks">
+      <li>Eight galaxies of 2,048 star systems, generated just where they were in 1984</li>
+      <li>Flight with the original's feel: pitch, roll and no drift, with the docking computer and its waltz</li>
+      <li>Combat against pirates and police, with lasers on four mounts, missiles, ECM and a combat rating from Harmless to Elite</li>
+      <li>Living markets as a trading exchange: candlestick charts, an order book, limit orders, NPC traders who move prices and supply chains</li>
+      <li>World events (famines, strikes, wars, blockades) and news that travels at the speed of ships</li>
+      <li>The law: local records, police scans, fines, surrender, and a black market where the stricter the law, the better it pays</li>
+      <li>The Co-operative Marshals: commit a serious crime and their carrier tears its way in through a witchspace rift</li>
+      <li>Fuel scoops: skim a star for fuel and scoop cargo from wrecks</li>
+      <li>A 1984 mode, one keypress away: white lines on black, sharpened for modern screens</li>
+      <li>Photos: press P for a clean shot of the view without the HUD, saved or shared straight from your phone</li>
+      <li>Classic rules (one life, as in 1984) or Modern rules (insurance, flight assists)</li>
+    </ul>
+  </div>
+  <div>
+    <h2>Fact sheet</h2>
+    <dl class="factsheet">
+      <dt>Name</dt><dd>Witchspace</dd>
+      <dt>Play</dt><dd><a href="/play/">witchspace.org.uk/play</a></dd>
+      <dt>Platforms</dt><dd>Any modern browser, on desktop, tablet or phone</dd>
+      <dt>Price</dt><dd>Free. Nothing can be bought with real money</dd>
+      <dt>Status</dt><dd>Early but playable single-player; multiplayer is designed and on the roadmap</dd>
+      <dt>Source</dt><dd><a href="https://github.com/witchspace-game/witchspace">github.com/witchspace-game/witchspace</a></dd>
+      <dt>Licences</dt><dd>Code GPL-3.0, content CC BY-SA 4.0</dd>
+      <dt>Built with</dt><dd>TypeScript, three.js and Vite, with AI assistance, in the open</dd>
+      <dt>Contact</dt><dd><a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a></dd>
+    </dl>
+  </div>
+</section>
+
+<section class="section doc tribute">
+  <h2>About the name and the tribute</h2>
+  <p>Witchspace is an unofficial, non-commercial tribute to <em>Elite</em> (1984) by Ian Bell and David Braben. It is not affiliated with or endorsed by Frontier Developments, Ian Bell or David Braben. <em>Elite</em> is a trademark of Frontier Developments plc. The ship names are a deliberate tribute; the code, ship designs, text and art were made from scratch for this project.</p>
+</section>
+<!-- press:data -->
