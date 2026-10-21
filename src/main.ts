@@ -2558,16 +2558,17 @@ function toggleControlsCard(show = $('#controls-card').hidden) {
   $('#controls-card').hidden = !show;
 }
 
+/** First flight: a nudge towards the controls card, rather than opening it over the view. */
 function showControlsCardOnce() {
   renderControlsCard();
-  if (isTouch) return; // the card lists keys; touch has its own on-screen controls
+  if (isTouch) return; // touch has its own on-screen controls
   try {
     if (localStorage.getItem('witchspace.seenControls')) return;
     localStorage.setItem('witchspace.seenControls', '1');
   } catch {
-    // Storage blocked: show it anyway.
+    // Storage blocked: a nudge every launch is harmless.
   }
-  toggleControlsCard(true);
+  setTimeout(() => state === 'flying' && flash('Press F1 for the controls', 4), 1500);
 }
 
 async function launch() {

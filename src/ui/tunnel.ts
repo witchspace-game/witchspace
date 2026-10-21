@@ -5,7 +5,8 @@ const whiteout = document.querySelector<HTMLElement>('#whiteout')!;
 
 /**
  * Transition sequences. Each resolves when its animation finishes.
- * - 'dock': the original's launch/docking tunnel of rushing rectangles.
+ * - 'dock': launching or docking. In 1984 mode, the original's tunnel of
+ *   rushing rectangles; in neo-vector, a flight down the lit docking bay.
  * - 'hyperspace': stars stretch into streaks, accelerate into a tunnel of
  *   light, converge, and white out. Call fadeFromWhite() after arriving.
  */
@@ -34,19 +35,8 @@ function playDock(seconds: number): Promise<void> {
     const frame = (now: number) => {
       const t = (now - start) / 1000;
       const { w, h } = sizeCanvas(retro);
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, w, h);
-      ctx.strokeStyle = retro ? '#fff' : '#3dffb0';
-      ctx.lineWidth = retro ? 1 : 2;
-      ctx.shadowColor = '#3dffb0';
-      ctx.shadowBlur = retro ? 0 : 14;
-      // Rectangles grow exponentially, so they appear to rush towards you.
-      for (let i = 0; i < 12; i++) {
-        const k = ((i / 12 + t * 1.4) % 1) ** 3;
-        const rw = (w / 2) * k * 1.4;
-        const rh = (h / 2) * k * 1.4;
-        ctx.strokeRect(w / 2 - rw, h / 2 - rh, rw * 2, rh * 2);
-      }
+      if (retro) drawRectangles(ctx, w, h, t);
+      else drawBay(ctx, w, h, t, seconds);
       if (t < seconds) requestAnimationFrame(frame);
       else {
         canvas.hidden = true;
@@ -55,6 +45,82 @@ function playDock(seconds: number): Promise<void> {
     };
     requestAnimationFrame(frame);
   });
+}
+
+/** 1984 mode: the original's tunnel of white rectangles rushing towards you. */
+function drawRectangles(ctx: CanvasRenderingContext2D, w: number, h: number, t: number) {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  ctx.shadowBlur = 0;
+  // Rectangles grow exponentially, so they appear to rush towards you.
+  for (let i = 0; i < 12; i++) {
+    const k = ((i / 12 + t * 1.4) % 1) ** 3;
+    const rw = (w / 2) * k * 1.4;
+    const rh = (h / 2) * k * 1.4;
+    ctx.strokeRect(w / 2 - rw, h / 2 - rh, rw * 2, rh * 2);
+  }
+}
+
+// Neo-vector: flying down the station's docking bay. Rows of warm lights set
+// into the walls stream past towards a vanishing point, fading in from black
+// and out again at the end.
+const BAY_ROWS = 9; // rows of lights along the bay
+const BAY_SPEED = 0.9; // the bay's length passed per second
+const BAY_LIGHTS: [number, number][] = [
+  // [across, up] on the bay's walls, in units of its half-width and half-height.
+  [-1, -0.55], [-1, 0], [-1, 0.55], [1, -0.55], [1, 0], [1, 0.55],
+  [-0.5, 1], [0, 1], [0.5, 1], [-0.5, -1], [0, -1], [0.5, -1],
+];
+
+function drawBay(ctx: CanvasRenderingContext2D, w: number, h: number, t: number, seconds: number) {
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(2, 4, 8, 0.85)'; // a trace of the last frame stays: a little motion blur
+  ctx.fillRect(0, 0, w, h);
+  const cx = w / 2;
+  const cy = h / 2;
+  const fx = w * 0.42; // perspective scale
+  const fy = h * 0.42;
+  const fade = Math.min(1, t / 0.25, (seconds - t) / 0.35);
+  // The bay's four long edges, faint, running away to the far end.
+  ctx.strokeStyle = `rgba(150, 175, 205, ${0.16 * fade})`;
+  ctx.lineWidth = 1;
+  for (const [ax, ay] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + (ax * fx) / 0.03, cy + (ay * fy) / 0.03);
+    ctx.lineTo(cx + (ax * fx) / 3, cy + (ay * fy) / 3);
+    ctx.stroke();
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.lineCap = 'round';
+  for (let i = 0; i < BAY_ROWS; i++) {
+    // Depth runs from far (1) to near (0); each row cycles towards you.
+    const z = 1 - ((i / BAY_ROWS + t * BAY_SPEED) % 1);
+    const near = Math.max(0.035, z * 3);
+    const nearer = Math.max(0.03, near * 0.86); // a short dash, not a ray
+    const glow = (1 - z) ** 1.5 * fade;
+    for (const [ax, ay] of BAY_LIGHTS) {
+      const x0 = cx + (ax * fx) / near;
+      const y0 = cy + (ay * fy) / near;
+      const x1 = cx + (ax * fx) / nearer;
+      const y1 = cy + (ay * fy) / nearer;
+      ctx.strokeStyle = `rgba(255, 196, 120, ${0.85 * glow})`;
+      ctx.lineWidth = 1 + 5 * (1 - z);
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    }
+  }
+  // The far end of the bay: a soft glow where you're heading.
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(w, h) * 0.08);
+  g.addColorStop(0, `rgba(255, 226, 180, ${0.22 * fade})`);
+  g.addColorStop(1, 'rgba(255, 226, 180, 0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+  ctx.globalCompositeOperation = 'source-over';
 }
 
 const smooth = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x));
