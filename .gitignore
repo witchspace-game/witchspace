@@ -8,4 +8,8 @@ dist/
 /index.html
 /about/
 /get-involved/
+/press/
 /design/
+
+# Launch drafts (posts, emails): kept local until they're approved and posted
+/launch/
