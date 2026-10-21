@@ -83,6 +83,18 @@ export function clearFlash() {
   banner.hidden = true;
 }
 
+let interference = 0;
+/** Sensor interference (0..1), as near a witchspace rift: static on the scanner. */
+export function setInterference(level: number) {
+  interference = level;
+}
+
+/** Speckles of static across the scanner, thicker the worse the interference. */
+function drawStatic(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  ctx.fillStyle = isRetro() ? '#ffffff' : 'rgba(207,224,255,0.75)';
+  for (let i = 0; i < interference * 260; i++) ctx.fillRect(Math.random() * w, Math.random() * h, 2, 1);
+}
+
 function drawScanner(ship: PlayerShip, blips: Blip[]) {
   const ctx = scanner.getContext('2d')!;
   const { width: w, height: h } = scanner;
@@ -190,6 +202,7 @@ function drawScanner(ship: PlayerShip, blips: Blip[]) {
       ctx.globalAlpha = 1;
     }
   }
+  if (interference > 0) drawStatic(ctx, w, h);
 }
 
 function drawCompass(ship: PlayerShip, target: THREE.Vector3) {

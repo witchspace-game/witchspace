@@ -10,7 +10,11 @@ import type { Laser } from './weapons';
 // module only flies the ship; deciding who to fight or flee is done by the
 // caller, which sets `mode`, `target` and `destination`.
 
-export type NpcRole = 'police' | 'trader' | 'pirate';
+export type NpcRole = 'police' | 'marshal' | 'trader' | 'pirate';
+
+/** Police and Marshals are on the same side. */
+export const LAW: NpcRole[] = ['police', 'marshal'];
+export const allies = (a: NpcRole, b: NpcRole) => a === b || (LAW.includes(a) && LAW.includes(b));
 
 /**
  * - patrol: circle the station
@@ -56,10 +60,13 @@ export class NpcShip {
   /** Missiles left, and whether an ECM is fitted to destroy incoming ones. */
   missiles: number;
   ecm = false;
+  /** Carriers launch fighters rather than fighting themselves. */
+  fights = true;
   private cooldown = Math.random();
   private flash = 0;
   private breakTimer = 0;
   private readonly breakDir = new THREE.Vector3();
+  private readonly box: THREE.Box3;
 
   constructor(
     readonly def: ShipDef,
@@ -70,6 +77,7 @@ export class NpcShip {
     this.ship = new PlayerShip(def);
     this.missiles = def.stats.missiles ?? 0;
     this.model = buildShip(def);
+    this.box = new THREE.Box3().setFromPoints(def.geometry.vertices.map((v) => new THREE.Vector3(...v)));
     this.ship.obj.add(this.model.root);
   }
 
@@ -79,6 +87,12 @@ export class NpcShip {
 
   get radius() {
     return this.model.radius;
+  }
+
+  /** Whether a world point is within `margin` metres of the hull's bounding box. */
+  touches(point: THREE.Vector3, margin: number): boolean {
+    const local = this.obj.worldToLocal(point.clone());
+    return this.box.distanceToPoint(local) < margin;
   }
 
   /** Returns true if this hit destroyed the ship. */

@@ -17,7 +17,7 @@
     "manufacturer": { "type": "string", "maxLength": 60 },
     "role": {
       "description": "What the ship is for. Drives AI behaviour and where it spawns.",
-      "enum": ["trader", "fighter", "multirole", "police", "pirate", "miner", "freighter", "alien", "station", "missile", "cargo", "debris"]
+      "enum": ["trader", "fighter", "multirole", "police", "marshal", "pirate", "miner", "freighter", "alien", "station", "missile", "cargo", "debris"]
     },
     "description": { "description": "One or two sentences of in-universe flavour text.", "type": "string", "minLength": 1, "maxLength": 400 },
     "credits": {
