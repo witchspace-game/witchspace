@@ -897,6 +897,27 @@ body.touch #banner { top: 30%; font-size: clamp(14px, 4.5vw, 24px); letter-spaci
   .ex-trades { grid-template-columns: minmax(0, 1fr); }
 }
 
+/* The back room: darker, plainer, a little furtive. */
+.ex-backroom-toggle { margin: 8px 10px 2px; padding: 6px 10px; border: 1px dashed rgba(246, 70, 93, 0.5); border-radius: 4px; background: rgba(246, 70, 93, 0.08); color: #ff8a9a; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-align: left; }
+.ex-back { --ex-dim: #848e9c; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; letter-spacing: 0; color: #d9d2c8; background: #0d0a0b; border: 1px solid #2a1c1f; border-radius: 6px; padding: 14px 16px; }
+.ex-back header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
+.ex-back h3 { margin: 0; font-size: 20px; color: #ff8a9a; letter-spacing: 0; text-transform: none; }
+.ex-back header span { color: var(--ex-dim); }
+.ex-back .ex-heat { margin-left: auto; color: #f7a600; }
+.ex-back button { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: 12px; padding: 4px 9px; border-radius: 4px; }
+.ex-back-close { border-color: #2a1c1f; }
+.ex-back table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.ex-back th { text-align: left; color: var(--ex-dim); font-weight: 400; font-size: 11.5px; padding: 4px 6px; }
+.ex-back th.num, .ex-back td.num { text-align: right; }
+.ex-back td { padding: 6px; border-top: 1px solid #2a1c1f; }
+.ex-back td small { margin-left: 6px; color: var(--ex-dim); font-size: 11px; }
+.ex-back-actions { display: flex; gap: 4px; justify-content: flex-end; }
+.ex-back-msg { min-height: 1.4em; margin: 10px 0 0; color: #f7a600; }
+.ex-back-msg.caught { color: #f6465d; font-weight: 600; }
+.ex-abolition { margin-top: 14px; padding: 12px 14px; border-left: 3px solid #2ebd85; background: rgba(46, 189, 133, 0.07); }
+.ex-abolition h4 { margin: 0 0 4px; color: #2ebd85; font-size: 14px; letter-spacing: 0; text-transform: none; }
+.ex-abolition p { margin: 0 0 8px; color: #c8d6cf; }
+
 /* Narrow screens: one column, the pairs as a strip along the top. */
 @media (max-width: 900px), (max-height: 500px) {
   .panel.docked.exchange { width: auto; }

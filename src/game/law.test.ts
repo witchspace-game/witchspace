@@ -83,7 +83,7 @@ describe('the law', () => {
     const c = newCommander('modern');
     const low = Array.from({ length: 256 }, (_, i) => systemAt(0, i)).find((s) => s.techLevel < 5)!;
     const high = Array.from({ length: 256 }, (_, i) => systemAt(0, i)).find((s) => s.techLevel >= 7)!;
-    expect(equipmentForSale(c, low)).toEqual([]);
+    expect(equipmentForSale(c, low).map((e) => e.id)).toEqual(['weapons-licence']); // paperwork, sold everywhere
     expect(equipmentForSale(c, high).map((e) => e.id)).toContain('gimbal-mount');
   });
 });

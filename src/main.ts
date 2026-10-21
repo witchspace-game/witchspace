@@ -29,7 +29,6 @@ import {
   checksClearance,
   coolRecords,
   hasLaw,
-  inspectsHolds,
   legalStatus,
   recordCrime,
   redeemImpound,
@@ -76,6 +75,7 @@ import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
 import { activeEvent, EVENT_KINDS, newsAt, newsOf } from './economy/events';
+import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
 import { initTouch, updateTouch } from './ui/touch';
@@ -427,6 +427,15 @@ const exchange = mountExchange($('#exchange'), {
       sfx.beep();
     }
     renderMarket(result.message);
+  },
+  dealt(result) {
+    if (result.ok) saveCommander(cmdr());
+    if (result.caught) {
+      recordCrime(cmdr(), 'offender');
+      saveCommander(cmdr());
+      sfx.explosion();
+    } else if (result.ok) sfx.beep();
+    renderMarket();
   },
 });
 const useExchange = () => cmdr().difficulty === 'modern' && !isRetro();
@@ -2168,11 +2177,15 @@ async function dock() {
   c.visits += 1; // Classic markets change with each visit
   // Offenders are fined on arrival; lawful stations also inspect the hold.
   const sys = currentSystem();
-  const due = checksClearance(sys) && (legalStatus(c) === 'offender' || (inspectsHolds(sys) && carriesContraband(c)));
+  // Inspections are certain under Classic rules and likely, not certain, under Modern.
+  const smuggling = carriesContraband(c);
+  const inspected = smuggling && Math.random() < inspectionChance(c, sys);
+  const due = checksClearance(sys) && (legalStatus(c) === 'offender' || inspected);
   const settlement = due ? settle(c) : null;
   saveCommander(c);
   enterDocked();
-  if (settlement) flash(settlementMessage(settlement, 'Fined on arrival'), 5);
+  if (settlement) flash(settlementMessage(settlement, inspected ? 'Hold inspected' : 'Fined on arrival'), 5);
+  else if (smuggling && inspectionChance(c, sys) > 0) flash('Docked · your hold was not inspected this time', 3);
 }
 
 function settlementMessage(s: Settlement, lead: string) {

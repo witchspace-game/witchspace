@@ -14,6 +14,7 @@ import {
   type UTCTimestamp,
 } from 'lightweight-charts';
 import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
+import { abolitionistPrice, backRoomQuotes, freeSlaves, hasAbolitionists, hasBackRoom, stingChance, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
 import { activeEvent, eventsAt, EVENT_KINDS } from '../economy/events';
 import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
@@ -32,6 +33,8 @@ export interface ExchangeDeps {
   context(): TradeContext;
   /** A trade went through: save, play a sound, refresh the rest of the screen. */
   traded(result: TradeResult): void;
+  /** A back-room deal went through, or turned out to be a sting. */
+  dealt(result: BackRoomResult): void;
 }
 
 const TICKERS: Record<string, string> = {
@@ -60,8 +63,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   let timer = 0;
 
   root.innerHTML = `
+    <section class="ex-back" hidden></section>
     <div class="ex">
       <aside class="ex-pairs" aria-label="Markets">
+        <button class="ex-backroom-toggle" hidden>Back room ›</button>
         <div class="ex-pairs-head"><span>Pair</span><span>Price</span><span>1h</span></div>
         <div class="ex-pairs-list"></div>
       </aside>
@@ -383,9 +388,60 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       : '<p class="ex-empty">No trades at this station yet.</p>';
   }
 
+  // --- The back room -------------------------------------------------------------------
+
+  let backOpen = false;
+  let backMessage = '';
+  let backCaught = false;
+
+  function renderBackRoom(ctx: TradeContext) {
+    const c = ctx.commander;
+    const room = hasBackRoom(c, ctx.system);
+    const quotesHere = room ? backRoomQuotes(c, ctx.system, marketState(ctx), ctx.now) : [];
+    const abolition = hasAbolitionists(c, ctx.system);
+    const toggle = $<HTMLButtonElement>('.ex-backroom-toggle');
+    toggle.hidden = !quotesHere.length && !(abolition && (c.cargo.slaves ?? 0) > 0);
+    if (!backOpen) return;
+    const risk = stingChance(ctx.system, 1);
+    const rows = quotesHere
+      .map((q) => {
+        const good = commodityById(q.id)!;
+        const u = unitLabel(good);
+        const held = c.cargo[q.id] ?? 0;
+        return `<tr><td><b>${good.name}</b><small>${ticker(q.id)}</small></td><td class="num">${fmt(q.ask)}</td><td class="num">${fmt(q.bid)}</td>
+          <td class="num">${q.stock.toLocaleString()} ${u}</td><td class="num">${held.toLocaleString()} ${u}</td>
+          <td class="ex-back-actions">
+            <button data-back="buy" data-good="${q.id}" data-n="1" ${q.stock >= 1 ? '' : 'disabled'}>Buy 1</button>
+            <button data-back="buy" data-good="${q.id}" data-n="5" ${q.stock >= 5 ? '' : 'disabled'}>Buy 5</button>
+            <button data-back="sell" data-good="${q.id}" data-n="1" ${held >= 1 ? '' : 'disabled'}>Sell 1</button>
+            <button data-back="sell" data-good="${q.id}" data-n="${held}" ${held >= 1 ? '' : 'disabled'}>Sell all</button>
+          </td></tr>`;
+      })
+      .join('');
+    const slaves = c.cargo.slaves ?? 0;
+    const abolitionists = abolition
+      ? `<div class="ex-abolition"><h4>Abolitionist Society</h4>
+          <p>They buy slaves to set them free: ${fmt(abolitionistPrice(ctx.system, ctx.now))} Cr each, about half what the back room pays. Legal, and no questions about where they came from.${c.freed ? ` You've freed ${c.freed.toLocaleString()} people.` : ''}</p>
+          <button data-free="${slaves}" ${slaves ? '' : 'disabled'}>${slaves ? `Free ${slaves.toLocaleString()}` : 'No slaves aboard'}</button></div>`
+      : '';
+    $('.ex-back').innerHTML = `
+      <header><button class="ex-back-close">‹ Exchange</button><h3>Back room</h3><span>No questions asked</span>
+        ${quotesHere.length ? `<span class="ex-heat" title="The chance any one deal is with undercover police. Bigger deals draw more attention.">Undercover risk ${(risk * 100).toFixed(0)}% a deal, more for big ones</span>` : ''}</header>
+      ${quotesHere.length ? `<table><thead><tr><th>Goods</th><th class="num">They sell</th><th class="num">They buy</th><th class="num">Their stock</th><th class="num">Your hold</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="ex-empty">Nothing here is against the law.</p>'}
+      <p class="ex-back-msg${backCaught ? ' caught' : ''}" aria-live="polite">${backMessage}</p>
+      ${abolitionists}`;
+  }
+
+  function setBackOpen(open: boolean) {
+    backOpen = open;
+    $('.ex-back').hidden = !open;
+    $('.ex').hidden = open;
+  }
+
   function render(newMessage?: string) {
     if (newMessage !== undefined) message = newMessage;
     const ctx = deps.context();
+    renderBackRoom(ctx);
     renderPairs(ctx);
     renderHead(ctx);
     renderChart(ctx);
@@ -401,7 +457,26 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const el = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!el) return;
     el.blur();
-    if (el.dataset.id) {
+    if (el.classList.contains('ex-backroom-toggle')) {
+      backMessage = '';
+      setBackOpen(true);
+    } else if (el.classList.contains('ex-back-close')) {
+      setBackOpen(false);
+    } else if (el.dataset.back) {
+      const ctx = deps.context();
+      const result = backRoomTrade(ctx.commander, ctx.system, marketState(ctx), el.dataset.good!, el.dataset.back as 'buy' | 'sell', Number(el.dataset.n), ctx.capacity, ctx.now);
+      backMessage = result.message;
+      backCaught = result.caught;
+      deps.dealt(result);
+      return;
+    } else if (el.dataset.free) {
+      const ctx = deps.context();
+      const result = freeSlaves(ctx.commander, ctx.system, Number(el.dataset.free), ctx.now);
+      backMessage = result.message;
+      backCaught = false;
+      deps.dealt(result);
+      return;
+    } else if (el.dataset.id) {
       selected = el.dataset.id;
       message = '';
       qtyInput.value = '';
@@ -457,6 +532,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       timer = window.setInterval(() => {
         if (root.offsetParent && !document.hidden) {
           const ctx = deps.context();
+          renderBackRoom(ctx);
           renderPairs(ctx);
           renderHead(ctx);
           renderChart(ctx);

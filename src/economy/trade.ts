@@ -1,6 +1,7 @@
 import type { Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
 import { commodityById, cargoTonnage, UNITS_PER_TONNE } from './commodities';
+import { stationTrades } from './legality';
 import { costToBuy, freshMarket, proceedsToSell, quoteClassic, quoteModern, recover, TRADE_MEMORY, type MarketState, type Quote } from './market';
 
 // Buying and selling at the station you're docked at. Pure functions over the
@@ -59,10 +60,9 @@ export function quotes(ctx: TradeContext): Quote[] {
 }
 
 /** Confederacies, democracies and corporate states don't trade illegal goods. */
-export const isLawful = (s: StarSystem) => s.government >= 5;
-
+/** Whether the station's own exchange trades a good with you (see legality.ts). */
 export function tradesHere(ctx: TradeContext, id: string): boolean {
-  return !(commodityById(id)?.legality === 'illegal' && isLawful(ctx.system));
+  return stationTrades(ctx.commander, ctx.system, id);
 }
 
 export function freeTonnes(ctx: TradeContext): number {
@@ -98,7 +98,7 @@ export function maxBuyable(ctx: TradeContext, id: string): number {
 export function buy(ctx: TradeContext, id: string, qty: number): TradeResult {
   const c = commodityById(id);
   if (!c || qty <= 0) return { ok: false, message: 'Nothing to buy' };
-  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} can't be traded at a lawful station` };
+  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} isn't traded openly here` };
   const state = marketState(ctx);
   if (quotes(ctx).find((q) => q.commodity.id === id)!.stock < qty) return { ok: false, message: `Not enough ${c.name} in stock` };
   if (qty / UNITS_PER_TONNE[c.unit] > freeTonnes(ctx) + 1e-9) return { ok: false, message: 'Not enough room in the hold' };
@@ -115,7 +115,7 @@ export function sell(ctx: TradeContext, id: string, qty: number): TradeResult {
   const c = commodityById(id);
   const held = ctx.commander.cargo[id] ?? 0;
   if (!c || qty <= 0 || held < qty) return { ok: false, message: 'Nothing to sell' };
-  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} can't be traded at a lawful station` };
+  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} isn't traded openly here` };
   const proceeds = price(ctx, id, qty, false);
   ctx.commander.credits = Math.round((ctx.commander.credits + proceeds) * 10) / 10;
   const state = marketState(ctx);
