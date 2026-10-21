@@ -38,8 +38,10 @@ export type ServerMessage =
   | { type: 'hit'; by: string; damage: number; shields: number; hull: number }
   /** Your shot hit this commander. */
   | { type: 'hitconfirm'; id: string }
-  /** A commander was destroyed, and by whom. */
-  | { type: 'destroyed'; id: string; by: string };
+  /** You collided with a commander: the damage, what you have left, and which way you were pushed. */
+  | { type: 'bump'; with: string; damage: number; shields: number; hull: number; push: Vec3 }
+  /** A commander was destroyed, and by whom (none for a collision). */
+  | { type: 'destroyed'; id: string; by: string; cause?: 'laser' | 'collision' };
 
 /** The ships commanders can fly in shared space (stage 1: the Cobra). Must match content/ships. */
 export const SHIPS: Record<string, { maxSpeed: number; shields: number; hull: number; radius: number }> = {
@@ -57,6 +59,8 @@ export const SHIELD_RECHARGE = 6; // per second, as in the game
 export const GIMBAL_DAMAGE = 0.8; // shots well off the nose are gimballed or turret shots: a little weaker
 export const REWIND = 0.2; // seconds: hits are judged where the shooter saw the target
 export const SPREAD = 0.006; // radians: every laser's own scatter
+export const COLLIDE = 0.75; // of a ship's radius: how close counts as touching
+export const BUMP_COOLDOWN = 1000; // ms: one contact between two ships only hurts once
 
 /** How far apart two state messages may put you: speed with some slack, plus an in-system jump. */
 export const JUMP = 10_500; // metres: the J jump

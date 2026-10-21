@@ -45,8 +45,10 @@ export type SpaceEvent =
   | { kind: 'hit'; by: Remote | null; damage: number; shields: number; hull: number }
   /** Our shot hit them. */
   | { kind: 'hitconfirm'; remote: Remote }
-  /** Someone was destroyed: us (`me`), or a commander we can see. */
-  | { kind: 'destroyed'; me: boolean; remote: Remote | null; by: Remote | null; byMe: boolean };
+  /** We collided with a commander: the damage, what we have left, and which way to move apart. */
+  | { kind: 'bump'; with: Remote | null; damage: number; shields: number; hull: number; push: THREE.Vector3 }
+  /** Someone was destroyed: us (`me`), or a commander we can see; by a laser, or in a collision. */
+  | { kind: 'destroyed'; me: boolean; remote: Remote | null; by: Remote | null; byMe: boolean; collision: boolean };
 
 const HOSTILE_FOR = 15; // seconds a commander who shot at you stays marked hostile
 
@@ -170,8 +172,18 @@ export class SharedSpace {
         if (r) this.onEvent({ kind: 'hitconfirm', remote: r });
         break;
       }
+      case 'bump':
+        this.onEvent({ kind: 'bump', with: this.remotes.get(msg.with) ?? null, damage: msg.damage, shields: msg.shields, hull: msg.hull, push: toV(msg.push) });
+        break;
       case 'destroyed':
-        this.onEvent({ kind: 'destroyed', me: msg.id === this.myId, remote: this.remotes.get(msg.id) ?? null, by: this.remotes.get(msg.by) ?? null, byMe: msg.by === this.myId });
+        this.onEvent({
+          kind: 'destroyed',
+          me: msg.id === this.myId,
+          remote: this.remotes.get(msg.id) ?? null,
+          by: this.remotes.get(msg.by) ?? null,
+          byMe: Boolean(msg.by) && msg.by === this.myId,
+          collision: msg.cause === 'collision',
+        });
         break;
     }
   }

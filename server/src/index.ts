@@ -5,8 +5,8 @@
 // See docs/design/servers-and-hosting.md.
 
 import { DurableObject } from 'cloudflare:workers';
-import { cleanName, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
-import { canFire, checkMove, positionAt, recharge, reportHealth, resolveShot, takeHit, type Health, type Sample, type Track } from './rules';
+import { BUMP_COOLDOWN, cleanName, COLLIDE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
+import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, takeHit, type Health, type Sample, type Track } from './rules';
 
 export interface Env {
   SYSTEMS: DurableObjectNamespace<SystemRoom>;
@@ -60,6 +60,8 @@ const HISTORY_MS = 1200;
 
 export class SystemRoom extends DurableObject<Env> {
   private readonly combat = new Map<string, Combatant>();
+  /** When each pair of commanders last collided (ms), so one contact only hurts once. */
+  private readonly bumps = new Map<string, number>();
 
   async fetch(): Promise<Response> {
     if (this.ctx.getWebSockets().length >= MAX_PER_SYSTEM) return new Response('This system is full', { status: 503 });
@@ -109,6 +111,7 @@ export class SystemRoom extends DurableObject<Env> {
         return;
       }
       const first = !a.track;
+      const from = a.track ? { p: a.track.p, t: a.track.t } : null;
       a.track = { p: msg.p, t: now, jumpedAt: verdict === 'jump' ? now : (a.track?.jumpedAt ?? 0) };
       Object.assign(a.commander, { p: msg.p, q: msg.q, s: msg.s, f: Boolean(msg.f) });
       ws.serializeAttachment(a);
@@ -117,6 +120,7 @@ export class SystemRoom extends DurableObject<Env> {
         me.history.push({ t: now, p: msg.p });
         while (me.history.length > 2 && me.history[0].t < now - HISTORY_MS) me.history.shift();
         me.health = reportHealth(me.health, msg.h, SHIPS[a.commander.ship].shields, now);
+        if (from && verdict === 'ok') this.collide(ws, a.commander, from, now);
       }
       // The first accepted position is when everyone else sees you arrive.
       if (first) this.broadcast(ws, { type: 'join', commander: a.commander });
@@ -158,8 +162,51 @@ export class SystemRoom extends DurableObject<Env> {
     this.send(ws, { type: 'hitconfirm', id: hitId });
     if (destroyed) {
       victim.destroyed = true;
-      const text: ServerMessage = { type: 'destroyed', id: hitId, by: shooter.id };
+      const text: ServerMessage = { type: 'destroyed', id: hitId, by: shooter.id, cause: 'laser' };
       for (const s of this.ctx.getWebSockets()) this.send(s, text);
+    }
+  }
+
+  /** Did this move bring the ship into contact with another? Both are damaged and pushed apart. */
+  private collide(ws: WebSocket, mover: Commander, from: { p: Vec3; t: number }, now: number) {
+    const me = this.combat.get(mover.id);
+    if (!me || me.destroyed) return;
+    const dt = Math.max(0.05, (now - from.t) / 1000);
+    const velocity: Vec3 = [(mover.p[0] - from.p[0]) / dt, (mover.p[1] - from.p[1]) / dt, (mover.p[2] - from.p[2]) / dt];
+    for (const [id, other] of this.combat) {
+      if (id === mover.id || other.destroyed || !other.history.length) continue;
+      const them = this.commanderById(id);
+      if (!them) continue;
+      const at = other.history[other.history.length - 1].p;
+      const touch = (SHIPS[mover.ship].radius + SHIPS[them.ship].radius) * COLLIDE;
+      if (closestApproach(from.p, mover.p, at) > touch) continue;
+      const pair = [mover.id, id].sort().join(':');
+      if (now - (this.bumps.get(pair) ?? 0) < BUMP_COOLDOWN) continue;
+      this.bumps.set(pair, now);
+      if (this.bumps.size > 256) for (const [k, t] of this.bumps) if (now - t > BUMP_COOLDOWN) this.bumps.delete(k);
+      // How fast they met: each ship's speed along its nose (checked against its top
+      // speed), which network timing can't skew the way positions over time can.
+      const ours = rotate([0, 0, 1], mover.q);
+      const theirs = rotate([0, 0, 1], them.q);
+      const closing = Math.hypot(ours[0] * mover.s - theirs[0] * them.s, ours[1] * mover.s - theirs[1] * them.s, ours[2] * mover.s - theirs[2] * them.s);
+      const damage = collisionDamage(closing);
+      let apart: Vec3 = [mover.p[0] - at[0], mover.p[1] - at[1], mover.p[2] - at[2]];
+      const len = Math.hypot(...apart);
+      apart = len > 0.01 ? [apart[0] / len, apart[1] / len, apart[2] / len] : [-velocity[0] / (Math.hypot(...velocity) || 1), -velocity[1] / (Math.hypot(...velocity) || 1), -velocity[2] / (Math.hypot(...velocity) || 1)];
+      const sides: [Commander, Combatant, WebSocket | null, Vec3, string][] = [
+        [mover, me, ws, apart, id],
+        [them, other, this.socketOf(id), [-apart[0], -apart[1], -apart[2]], mover.id],
+      ];
+      for (const [c, combatant, socket, push, withId] of sides) {
+        const { health, destroyed } = takeHit(recharge(combatant.health, SHIPS[c.ship].shields, now), damage);
+        combatant.health = health;
+        if (socket) this.send(socket, { type: 'bump', with: withId, damage, shields: Math.max(0, health.shields), hull: Math.max(0, health.hull), push });
+        if (destroyed) {
+          combatant.destroyed = true;
+          const text: ServerMessage = { type: 'destroyed', id: c.id, by: '', cause: 'collision' };
+          for (const s of this.ctx.getWebSockets()) this.send(s, text);
+        }
+      }
     }
   }
 

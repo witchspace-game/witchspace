@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cleanName, JUMP } from './protocol';
-import { canFire, checkMove, positionAt, recharge, reportHealth, resolveShot, takeHit, type Track } from './rules';
+import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, takeHit, type Track } from './rules';
 
 const at = (z: number, t: number, jumpedAt = -1e9): Track => ({ p: [0, 0, z], t, jumpedAt });
 
@@ -72,5 +72,23 @@ describe('shared space: lasers, refereed by the server', () => {
     expect(recharge(h, 100, 5000).shields).toBe(30); // 6 per second
     expect(reportHealth(h, [100, 150], 100, 0)).toMatchObject({ shields: 0, hull: 130 }); // can't heal by saying so
     expect(reportHealth(h, [0, 90], 100, 0)).toMatchObject({ hull: 90 }); // NPC damage counts
+  });
+});
+
+describe('shared space: collisions', () => {
+  it('catches ships passing through each other between updates', () => {
+    // 60 m in one update, straight through a ship sitting at the midpoint.
+    expect(closestApproach([0, 0, 0], [0, 0, 60], [0, 0, 30])).toBe(0);
+    expect(closestApproach([0, 0, 0], [0, 0, 60], [10, 0, 30])).toBeCloseTo(10);
+    // Beyond either end, it's the distance from the nearer end.
+    expect(closestApproach([0, 0, 0], [0, 0, 60], [0, 0, 100])).toBeCloseTo(40);
+    expect(closestApproach([0, 0, 0], [0, 0, 0], [3, 4, 0])).toBeCloseTo(5); // didn't move
+  });
+
+  it('hurts more the faster ships meet', () => {
+    expect(collisionDamage(0)).toBe(10);
+    expect(collisionDamage(150)).toBe(25);
+    expect(collisionDamage(560)).toBe(66); // two Cobras head on at full speed
+    expect(collisionDamage(-5)).toBe(10);
   });
 });
