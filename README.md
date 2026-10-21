@@ -60,6 +60,7 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **F1** 
 | C | Docking computer (once you've bought one) |
 | H | Hyperspace to your chosen destination (10 second countdown; H again cancels) |
 | J | In-system jump: leap about 10 km ahead, unless ships, the station or the planet are too close |
+| R | Scanner range: 4 km for dogfights, 12 km for traffic. Ships are bars, cargo boxes, missiles darts; the ship in your sights is bracketed, and contacts beyond range show as arrows on the rim |
 | G | Galaxy map. Tab switches galactic and local charts; arrows or click select; Enter sets your destination |
 | I | Invert pitch (remembered) |
 | M | Toggle neo-vector / 1984 mode |
