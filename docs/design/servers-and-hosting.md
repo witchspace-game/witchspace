@@ -112,9 +112,16 @@ Costs are covered by **transparent donations** (GitHub Sponsors or Open Collecti
 
 ---
 
+### Stage 1, as built
+
+- **Hosting:** Cloudflare Workers with **one Durable Object per star system** (`server/`), at `space.witchspace.org.uk`. Durable Objects use hibernating WebSockets, so a system with nobody in it costs nothing, and the SQLite-backed kind runs on the free Workers plan.
+- **What it does:** the game opens one WebSocket to its system and sends its position about ten times a second. The server refuses impossible moves: speeding, teleporting (the in-system jump is allowed, with a cooldown) and positions far outside the system. Refused moves put you back where you were. Everything else is passed to the other commanders there, whose browsers draw each ship slightly in the past, between updates, so it moves smoothly.
+- **In the game:** opt-in from the title screen (**S · Shared space (beta)**), Modern rules only. Other commanders fly Cobras in a white commander colour, with name labels and scanner contacts, and their lasers are drawn. Hyperspace is the handover between system servers.
+- **Not yet:** lasers that hit other players (server-checked, with lag compensation), accounts and anything saved, chat. Those are the next steps.
+
 ## Open questions
 
-- **Hosting provider and region:** a European budget host is the likely start, but should a second region follow for players further away?
+- ~~**Hosting provider and region:**~~ settled: Cloudflare Durable Objects (one per system), which run close to wherever the first commander in a system is.
 - **Signing in:** email magic links, GitHub, or both?
 - **Update rate:** 10 or 20 updates a second? Decide by testing what feels right in a dogfight.
 - **Crowded systems:** the closely-simulated ship cap per system, and whether to split crowded systems into copies at all.

@@ -1,0 +1,19 @@
+# Witchspace shared space: one Durable Object per star system.
+name = "witchspace-space"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+# Served at our own address; Cloudflare adds the DNS record on deploy.
+routes = [{ pattern = "space.witchspace.org.uk", custom_domain = true }]
+
+[[durable_objects.bindings]]
+name = "SYSTEMS"
+class_name = "SystemRoom"
+
+# SQLite-backed Durable Objects, which the free Workers plan supports.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SystemRoom"]
+
+[observability]
+enabled = true

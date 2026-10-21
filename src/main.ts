@@ -56,6 +56,7 @@ import {
 import { MouseAim } from './game/mouseAim';
 import { allies, NpcShip, type NpcRole } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
+import { SharedSpace, type SpaceEvent } from './net/space';
 import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
@@ -99,6 +100,7 @@ function setState(next: State) {
   if (next !== 'flying') {
     countdown = null; // leaving flight cancels a hyperspace countdown
     combatComputer = null;
+    sharedSpace.leave(); // back in when flying again, wherever that is
     // Overlays that only make sense in flight; they're updated each frame while flying.
     for (const id of ['#mouse-prompt', '#reticle', '#target-info', '#countdown']) $(id).hidden = true;
   }
@@ -281,6 +283,7 @@ function showTitle() {
   load.hidden = !saved;
   if (saved) load.textContent = `Y · Load ${saved.name} (${DIFFICULTIES[saved.difficulty].name})`;
   $('#new-button').classList.toggle('primary', !saved);
+  updateSharedButton();
   disarmNewCommander();
   setState('title');
 }
@@ -2348,6 +2351,7 @@ function updateSpace(dt: number) {
   }
 
   updateCombat(dt, input);
+  updateSharedSpace(dt, input);
   if (state === 'flying') {
     updateClearance();
     updateSurrender(dt);
@@ -2385,6 +2389,7 @@ function updateSpace(dt: number) {
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
   if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#cfe0ff', kind: 'station' });
+  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: COMMANDER_COLOUR, kind: 'ship' });
   // Near a rift, contacts jitter about on the scanner.
   const noise = state === 'flying' ? riftInterference() : 0;
   if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
@@ -2422,6 +2427,7 @@ function updateMarkers() {
   }));
   markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
   markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
+  for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: COMMANDER_COLOUR, radius: 30, label: `${r.name} ${km(r.position)}` });
   if (carrier?.rift) markers.push({ position: carrier.rift.group.position, color: '#cfe0ff', radius: carrier.rift.radius, label: `Rift ${km(carrier.rift.group.position)}` });
   for (const m of missiles) if (m.target === player) markers.push({ position: m.position, color: '#ff4d6d', radius: 6, label: `MISSILE ${km(m.position)}` });
   const view = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
@@ -2777,6 +2783,92 @@ function die() {
   }, 5000);
 }
 
+// --- Shared space (stage 1) ------------------------------------------------
+// Opt-in, Modern rules: other commanders in your system, from its server
+// (see net/space.ts and server/). Stage 1 is look and fly together: their
+// lasers are drawn but don't hit anyone yet, and nothing is saved.
+
+const COMMANDER_COLOUR = '#dfe9ff';
+const remoteModels = new Map<string, { model: ShipModel; fireCooldown: number }>();
+const sharedSpace = new SharedSpace(onSpaceEvent);
+
+function sharedSpaceWanted(): boolean {
+  try {
+    return localStorage.getItem('witchspace.shared') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function toggleSharedSpace() {
+  const on = !sharedSpaceWanted();
+  try {
+    localStorage.setItem('witchspace.shared', on ? '1' : '0');
+  } catch {
+    // Not saved; it still applies until the page is closed.
+  }
+  updateSharedButton();
+  flash(on ? 'Shared space (beta) on: fly with other commanders · Modern rules only' : 'Shared space off: single-player', 2.5);
+}
+
+function updateSharedButton() {
+  $('#shared-button').textContent = `S · Shared space (beta): ${sharedSpaceWanted() ? 'on' : 'off'}`;
+}
+
+function onSpaceEvent(e: SpaceEvent) {
+  switch (e.kind) {
+    case 'connected':
+      flash(e.others ? `Shared space · ${e.others} other commander${e.others === 1 ? '' : 's'} in ${currentSystem().name}` : `Shared space · nobody else in ${currentSystem().name} yet`, 3);
+      break;
+    case 'joined':
+      flash(`Commander ${e.remote.name} has arrived`, 2.5);
+      break;
+    case 'left': {
+      const m = remoteModels.get(e.remote.id);
+      if (m) disposeShip(m.model);
+      remoteModels.delete(e.remote.id);
+      break;
+    }
+    case 'lost':
+      if (state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
+      break;
+  }
+}
+
+function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
+  const share = state === 'flying' && Boolean(commander) && cmdr().difficulty === 'modern' && sharedSpaceWanted();
+  if (!share) {
+    if (sharedSpace.connected) sharedSpace.leave();
+    return;
+  }
+  const here = currentSystem();
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3');
+  const back = sharedSpace.takeCorrection();
+  if (back) player.obj.position.copy(back);
+  sharedSpace.update(dt, { position: player.obj.position, quaternion: player.obj.quaternion, speed: player.speed, firing: Boolean(input?.fire) && !overheated });
+  for (const r of sharedSpace.remotes.values()) {
+    let m = remoteModels.get(r.id);
+    if (!m) {
+      // Other commanders' ships in their own colour, so you can tell them from NPCs.
+      const def = shipById(r.ship) ?? shipById('cobra-mk3')!;
+      const model = buildShip({ ...def, style: { ...def.style, lineColor: COMMANDER_COLOUR } });
+      space.scene.add(model.root);
+      m = { model, fireCooldown: 0 };
+      remoteModels.set(r.id, m);
+    }
+    m.model.root.position.copy(r.position);
+    m.model.root.quaternion.copy(r.quaternion);
+    // Their lasers, drawn straight ahead; they don't hit anything yet.
+    m.fireCooldown -= dt;
+    if (r.firing && m.fireCooldown <= 0) {
+      m.fireCooldown = 0.25;
+      const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(r.quaternion);
+      const origin = r.position.clone().addScaledVector(fwd, 20);
+      beams.fire(origin, origin.clone().addScaledVector(fwd, 2000), COMMANDER_COLOUR);
+    }
+  }
+}
+
 // --- The combat computer ----------------------------------------------------
 // Modern rules: it flies the ship in a fight (see game/combatPilot.ts) while
 // you man a turret or the gimballed front laser. Touch any flight control
@@ -3127,6 +3219,8 @@ function handleKey(code: string) {
         const saved = loadCommander();
         if (saved && !newCommanderArmed) armNewCommander(saved);
         else showNewGame();
+      } else if (code === 'KeyS') {
+        toggleSharedSpace();
       }
       if (code !== 'KeyN' && newCommanderArmed) disarmNewCommander();
       break;

@@ -13,3 +13,6 @@ dist/
 
 # Launch drafts (posts, emails): kept local until they're approved and posted
 /launch/
+
+# Local state from wrangler dev (the shared space server)
+.wrangler/
