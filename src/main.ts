@@ -2927,6 +2927,34 @@ function showControlsCardOnce() {
   setTimeout(() => state === 'flying' && flash('Press F1 for the controls', 4), 1500);
 }
 
+// --- Full screen on phones ---------------------------------------------------
+// Android can go full screen from the page. iPhone Safari can't: its bars only
+// go when the game is added to the Home Screen (manifest + apple meta in
+// play/index.html), so we say how, once.
+
+const standalone = () =>
+  (navigator as Navigator & { standalone?: boolean }).standalone === true || matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
+const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1);
+
+function needsHomeScreenTip(): boolean {
+  if (!isTouch || !isIos || standalone()) return false;
+  try {
+    if (localStorage.getItem('witchspace.homeScreenTip')) return false;
+    localStorage.setItem('witchspace.homeScreenTip', '1');
+  } catch {
+    // Storage blocked: the tip shows each session, which is harmless.
+  }
+  return true;
+}
+
+if (isTouch && !isIos) {
+  addEventListener(
+    'touchend',
+    () => void document.documentElement.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {}),
+    { once: true },
+  );
+}
+
 async function launch() {
   ensureSystemScene();
   setState('transition');
@@ -2947,6 +2975,8 @@ async function launch() {
   if (isTouch && innerHeight > innerWidth && !portraitTipShown) {
     portraitTipShown = true;
     setTimeout(() => flash('Tip: turn your phone sideways for the best view', 3), 2600);
+  } else if (needsHomeScreenTip()) {
+    setTimeout(() => flash('Tip: for full screen, tap Share · Add to Home Screen, then play from the icon', 6), 2600);
   }
   flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
   if (recordVisit(cmdr(), currentSystem())) saveCommander(cmdr()); // where you started counts
