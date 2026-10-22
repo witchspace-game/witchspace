@@ -1,5 +1,7 @@
 import { systemAt, type StarSystem } from '../galaxy/generate';
 import { contrabandAt, stolenAt } from '../economy/legality';
+import { bannedSpecial, objectionableTonnes, shieldedTonnes } from './compartment';
+import { addStanding, cargoName, finish, logContract } from './contracts';
 import { EQUIPMENT, STAKE, removeEquipment, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
 
 // The law, as set out in docs/design/law-and-travel.md:
@@ -79,9 +81,14 @@ const contraband = (c: Commander, system: StarSystem = here(c)) => contrabandAt(
 export const illegalEquipment = (c: Commander, system: StarSystem = here(c)): EquipmentId[] =>
   scansCargo(system) ? c.equipment.filter((id) => EQUIPMENT.find((e) => e.id === id)?.illegal) : [];
 
-/** Anything the police would object to: contraband, stolen goods, or illegal equipment. */
+const objectionable = (c: Commander, system: StarSystem) => objectionableTonnes(c, system, [...new Set([...contraband(c, system), ...stolenAt(c, system)])]);
+
+/** What a search would find: contraband, stolen goods and banned company cargo beyond what a shielded compartment hides, or illegal equipment. */
 export const carriesContraband = (c: Commander, system: StarSystem = here(c)) =>
-  contraband(c, system).length > 0 || stolenAt(c, system).length > 0 || illegalEquipment(c, system).length > 0;
+  objectionable(c, system) > shieldedTonnes(c) || illegalEquipment(c, system).length > 0;
+
+/** Something the law objects to, hidden in a shielded compartment: what a weighbridge could give away. */
+export const hidingSomething = (c: Commander, system: StarSystem = here(c)) => shieldedTonnes(c) > 0 && objectionable(c, system) > 0;
 
 
 export interface Settlement {
@@ -112,14 +119,23 @@ export function settle(c: Commander, caught = false): Settlement {
   const status = legalStatus(c);
   let fine = fullFine(c);
 
-  const confiscated = contraband(c);
+  // A shielded compartment that holds everything keeps it: nobody looked inside.
+  const searched = objectionable(c, here(c)) > shieldedTonnes(c);
+  const confiscated = searched ? contraband(c) : [];
   for (const id of confiscated) delete c.cargo[id];
   // Stolen goods go back to their owners; the rest of the hold stays yours.
-  for (const id of stolenAt(c, here(c))) {
+  for (const id of searched ? stolenAt(c, here(c)) : []) {
     removeStolen(c, id, Infinity);
     if (!confiscated.includes(id)) confiscated.push(id);
   }
   tidyStolen(c);
+  // A company's cargo the law here bans is seized, and the company remembers.
+  for (const a of searched ? (c.contracts ?? []).filter((x) => !x.adrift && bannedSpecial(x, here(c))) : []) {
+    finish(c, a.id);
+    addStanding(c, a.company, -2);
+    logContract(c, a.company, 'failed');
+    confiscated.push(cargoName(a));
+  }
   for (const id of illegalEquipment(c)) {
     removeEquipment(c, id);
     confiscated.push(id);

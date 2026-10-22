@@ -211,6 +211,8 @@ export interface Commander {
   favours?: Partial<Record<CompanyId, number>>;
   /** World events you caused (a case opened, or fallen): yours, and the galaxy's now. */
   caused?: WorldEvent[];
+  /** A shielded compartment a company fitted for a special assignment (game/compartment.ts). */
+  compartment?: { company: CompanyId; tonnes: number };
   /** Special cargo adrift where your ship was lost, waiting to be recovered. */
   adrift?: AdriftCase[];
   /** Missiles on the rails. */

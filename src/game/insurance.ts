@@ -30,6 +30,8 @@ export type Claim =
 export function claimInsurance(c: Commander): Claim {
   const pod = c.equipment.includes('escape-pod');
   c.fuel = FUEL_CAPACITY;
+  // A shielded compartment isn't on the ship's papers, so the insurers don't replace it.
+  delete c.compartment;
   if (legalStatus(c) === 'fugitive' && !pod) {
     const bare = newCommander(c.difficulty);
     c.equipment = [];

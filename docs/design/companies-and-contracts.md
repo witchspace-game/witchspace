@@ -217,9 +217,9 @@ The same courtesy runs through the whole law: **warn first, escalate on defiance
 
 How the police look at you today (Modern rules): a Viper scans a ship that stays within about 1.2 km of it for 3 seconds, once per visit, anywhere above Feudal. Docking, a ship carrying nothing illegal is never inspected; one that is faces a chance by government (Communist 60 %, Confederacy 50 %, Democracy 65 %, Corporate State 80 %). Salvage (from a pirate, or someone else's kill) is legal; cargo from a trader you destroyed is stolen and a scan finds it.
 
-**The gap:** a company's consignment is kept apart from your own hold, so scans never see it, and Vorg's ticking crates pass straight through a Corporate State. They shouldn't.
+**The gap** *(closed by shielded compartments)*: a company's consignment was kept apart from your own hold, so scans never saw it, and Vorg's ticking crates passed straight through a Corporate State.
 
-### Shielded compartments *(next, after running dark)*
+### Shielded compartments *(built, October 2026)*
 
 *Mark's idea.* For a special assignment whose cargo wouldn't pass a scan, the company fits your ship with a **shielded compartment** before you leave, and **you keep it**.
 
@@ -229,6 +229,7 @@ How the police look at you today (Modern rules): a Viper scans a ship that stays
 - **How it fools a scan** *(Mark's question: wouldn't a 35 t ship carrying 31 t look odd, or weigh wrong?)*. A part-empty hold isn't suspicious; the papers and the mass are what could give it away, so the company covers both. **On paper**, it re-registers your hold: the Cobra's registration now reads 31 t of hold plus "structural reinforcement", so a scan sees a normal 31 t hold. **By mass**, the compartment is built as shielded bulkhead, and what's in it reads as ballast. A flight scan reads the hold, not the ship's weight, so it can't tell. The station shows your hold as *31 t + 4 t shielded*.
 - **Not foolproof: the weighbridge.** The strict stations (Corporate States and Democracies) weigh ships at inspection. If the weight doesn't match the papers, they open the bulkhead: about 1 in 5 inspections there. Everything in it is confiscated, the compartment too, and you're an Offender. Players know where the risk is: a weighbridge, not luck.
 - **The company knows.** It goes in your file (*"Fitted: one compartment, our pattern"*). Fall out with that company and it's leverage, which fits the blackmail thread (2c).
+- **As built** (`src/game/compartment.ts`): banned where Vorg's crates meet any police scan (government 2 and up), Wexley-Yorozu's samples from Communist up (4+), Hexon's biologicals in Democracies (corporate states don't ask); the Mutual's never. Fitted on taking a special from Hexon, Vorg or Wexley-Yorozu, one per ship. Settling or surrendering doesn't open it. Weighbridges at Democracies and Corporate States: 1 in 5 when it holds something, then the hold is searched as usual and banned company cargo is seized (standing −2). The insurers don't replace it if the ship is lost.
 - **It pairs with running dark:** the transponder hides **who** you are; the compartment hides **what** you carry.
 
 ## 4b. Building worlds
@@ -267,7 +268,7 @@ Wexley-Yorozu builds stations where they're needed, from what's there (the full 
 |---|---|
 | **1. Companies and contracts** | The four companies and their presence by system; a **Contracts** tab at the station (the first trading screen a new commander sees); haulage and rush contracts with consigned cargo, deadlines in jumps and pay; standing with each company; NPC traders in company colours with their marks. *Smallest slice that makes sense; supply runs, bonds and perks follow once it plays well* |
 | **2. The law beyond the station** *(built, October 2026)* | Station space and witnesses; the distress call and police response time; running dark; the police challenge; the transponder as damageable equipment; the distress jammer |
-| **2b. Shielded compartments** *(next)* | Company cargo visible to scans where its contents are illegal; compartments fitted for special assignments and kept afterwards; re-registered holds; the weighbridge at strict stations |
+| **2b. Shielded compartments** *(built, October 2026)* | Company cargo visible to scans where its contents are illegal; compartments fitted for special assignments and kept afterwards; re-registered holds; the weighbridge at strict stations |
 | **3. Fleets and conflict** | Escort and recovery contracts; company security ships; rivalry events (a company war as a world event, with blockades and premiums) |
 | **3b. Building worlds** | Wexley-Yorozu yards by moons: the Titanoboa constructor, ore haulers, and a station rising through its stages (spine, frame, plating, spin-up) over days for everyone; partly built stations buying what the moon can't supply; construction contracts; opening day. In the shared galaxy, every commander's deliveries speed the build: a community goal that costs a counter on the server |
 | **4. Shared galaxy** | Claiming contracts on the server; player witnesses; player-run companies posting contracts |
