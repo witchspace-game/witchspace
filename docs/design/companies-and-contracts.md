@@ -90,6 +90,37 @@ Standing is its own record, beside the combat rating and the explorer's rank, an
 - **The same everywhere.** Whether an assignment is waiting depends only on your callsign, your standing and the clock (`assignmentWaiting`), so the notification server can tell when to get in touch without knowing anything else.
 - **Notifications** (next): a switch to let the companies contact you; a phone notification (Home Screen app on iPhone, any browser elsewhere) or an email when an assignment is waiting. Opt-in, in character, at most a couple a week.
 
+## 2c. When things go wrong
+
+What happens to a special cargo when the ship carrying it is lost, and how a company can use that against you.
+
+### 1. The package survives *(building)*
+
+- **Company special cargo is built to survive.** When your ship is destroyed, the case spills as its own canister, in the company's colours, with a **beacon**: it shows on the scanner and the screen to anyone in the system, e.g. `W-Y property · sealed`.
+- **It holds station** for 24 hours (real time, so logging off overnight doesn't cost you it), then begins to fall towards the planet.
+- **The contract isn't lost yet.** It's marked *adrift*, still counting jumps. Fly back, slow down within about 60 m, and the case answers your transponder and comes aboard, no fuel scoops needed. The contract carries on.
+- **Rival buyers.** Any special cargo can be sold to a rival instead of delivered: Wexley-Yorozu's to Hexon, Hexon's to Vorg, Vorg's to Hexon. About half as much again as the delivery pays, a big standing boost with the buyer and a bigger fall with the owner. The Mutual's relief supplies have no buyer: some things aren't for sale.
+- **In the shared galaxy** (later), a lost case is a small event on the system's server: everyone sees the beacon, a recovery contract goes up for anyone, and whoever scoops it holds stolen company property.
+
+### 2. The fall *(next)*
+
+If nobody recovers it, the case falls planetward, and unlike an ordinary canister it **survives re-entry**. What follows depends on what was inside:
+
+- **An outbreak:** a plague on that world, a real world event with headlines, medicine prices through the roof, a crisis premium for relief. Hexon's medicine is already on the way. It always is.
+- **Something takes root:** a terraforming organism. A strange bloom over the southern continent; within weeks a Wexley-Yorozu yard, a "cleanup" fleet and a new claim on the world.
+- **Quarantine:** the Co-operative seals the system; police turn traffic back, the station refuses docking, and blockade runners find work.
+
+**You caused it, and your file says so:** *"Subject's vessel was lost above Leesti 2 days before the outbreak."* Put it right (haul relief, run the blockade, help the Mutual) and the file gets a kinder line. Rare and fair: only Hexon's and Wexley-Yorozu's special cargo, only if it's really left to fall. In single-player the event belongs to your galaxy (kept in your save); in the shared galaxy it's one event on the server, limited to one per region at a time, lasting days not weeks.
+
+### 3. Page 214 *(later)*
+
+Sometimes it isn't an accident. For commanders with **Trusted** standing who've taken special assignments, at most once in a long while:
+
+- **The setup.** The "pirates" who jump you are too well equipped, run dark, and their hulls are off-white with yellow markings. Your file gains a redacted line.
+- **The message.** *"Wexley-Yorozu regrets the loss of company property valued at 40,000 Cr. Under clause 214 of your agreement, the liability is yours. There is, of course, another way to settle the matter."*
+- **The squeeze** is leverage, not money (losing a ship never ruins anyone): no Wexley-Yorozu work, and your file passed to Hexon, until you settle with a chain of darker jobs: sealed samples into a quarantined colony, a passenger who mustn't be scanned, a Mutual hauler that mustn't reach port.
+- **Ways out**, as the law always gives: **comply** (paid, clean slate, and a file that now says *suitable for special orders*); **blow the whistle** to the Mutual or the Co-operative Marshals (Wexley-Yorozu hostile, the Mutual and the Marshals take you in: perhaps the start of a Marshals career); or **sell them out** to Hexon.
+
 ## 3. Company ships, and intercepting them
 
 ### The fleets

@@ -133,7 +133,7 @@ import type { MarketState } from '../economy/market';
 import type { LaserId } from './weapons';
 import type { ExploreRecord } from './explore';
 import type { ActiveContract, CompanyLog } from './contracts';
-import type { Message } from './assignments';
+import type { AdriftCase, Message } from './assignments';
 import type { CompanyId } from './companies';
 
 export interface Commander {
@@ -179,6 +179,8 @@ export interface Commander {
   companyLog?: Partial<Record<CompanyId, CompanyLog>>;
   /** Messages from the companies, newest first. */
   messages?: Message[];
+  /** Special cargo adrift where your ship was lost, waiting to be recovered. */
+  adrift?: AdriftCase[];
   /** Missiles on the rails. */
   missiles: number;
   /** The laser fitted to each mount, if any. */
@@ -263,7 +265,7 @@ export function deleteCommander() {
 
 /** Tonnes used in the hold (gold counts by the kilogram, gems by the gram). */
 /** Tonnes of company cargo carried under contract. */
-export const consignedTonnes = (c: Commander) => (c.contracts ?? []).reduce((t, a) => t + a.qty, 0);
+export const consignedTonnes = (c: Commander) => (c.contracts ?? []).reduce((t, a) => t + (a.adrift ? 0 : a.qty), 0);
 
 /** Tonnes used in the hold, company cargo included. */
 export const cargoTonnes = (c: Commander) => cargoTonnage(c.cargo, c.difficulty === 'classic') + consignedTonnes(c);

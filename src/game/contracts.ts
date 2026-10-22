@@ -38,6 +38,8 @@ export interface Contract {
 /** A contract you've taken, counting down. */
 export interface ActiveContract extends Contract {
   jumpsLeft: number;
+  /** Special cargo that survived your ship and is adrift, waiting to be recovered (game/assignments.ts). */
+  adrift?: boolean;
 }
 
 /** A new board every half hour. */
@@ -172,7 +174,7 @@ export function logContract(c: Commander, id: CompanyId, what: keyof CompanyLog)
 /** What the cargo is called on screen. */
 export const cargoName = (a: Contract) => a.label ?? commodityById(a.good)?.name ?? a.good;
 
-function addStanding(c: Commander, id: CompanyId, points: number) {
+export function addStanding(c: Commander, id: CompanyId, points: number) {
   c.standing = { ...c.standing, [id]: Math.max(-20, standing(c, id) + points) };
 }
 
@@ -192,7 +194,7 @@ export function take(c: Commander, o: Contract, freeTonnes: number): string | nu
   return null;
 }
 
-function finish(c: Commander, id: string) {
+export function finish(c: Commander, id: string) {
   c.contracts = (c.contracts ?? []).filter((a) => a.id !== id);
   c.contractsDone = [...(c.contractsDone ?? []), id].slice(-60);
 }
@@ -241,9 +243,9 @@ export function deliver(c: Commander, here: StarSystem): string[] {
   return notes;
 }
 
-/** Ship lost: the company's cargo with it. */
+/** Ship lost: the company's cargo with it. Special cargo survives, adrift (see game/assignments.ts). */
 export function loseContracts(c: Commander): string[] {
-  const lost = c.contracts ?? [];
+  const lost = (c.contracts ?? []).filter((a) => !a.special);
   for (const a of lost) {
     finish(c, a.id);
     addStanding(c, a.company, -2);

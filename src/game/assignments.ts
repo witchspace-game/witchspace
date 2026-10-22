@@ -2,8 +2,8 @@ import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/ge
 import { EVENT_KINDS, eventsAt } from '../economy/events';
 import { DANGER_PREMIUM } from '../economy/market';
 import type { Commander } from './commander';
-import { COMPANY_IDS, presence, standingName, type CompanyId } from './companies';
-import { jumpsBetween, logOf, standing, type Contract } from './contracts';
+import { COMPANIES, COMPANY_IDS, presence, standingName, type CompanyId } from './companies';
+import { addStanding, finish, jumpsBetween, logContract, logOf, standing, type Contract } from './contracts';
 import { exploreOf } from './explore';
 import { ASSIGNMENT_OPEN, ASSIGNMENT_SLOT, assignmentId, assignmentWaiting, roll, slotOf } from '../../server/src/contact';
 import { legalStatus } from './law';
@@ -164,4 +164,85 @@ export function fileOn(c: Commander, company: CompanyId, here: StarSystem, now: 
       lines.push({ text: 'Page 214:' }, { text: 'Subject is suitable for special orders.', redacted: true });
       return { title: 'Wexley-Yorozu · Science Division · Personnel suitability', lines };
   }
+}
+
+// --- When things go wrong (docs/design/companies-and-contracts.md, section 2c) ------
+
+/** Special cargo that survived its ship: where it is, and when it was lost. */
+export interface AdriftCase {
+  contract: string;
+  company: CompanyId;
+  label: string;
+  galaxy: number;
+  system: number;
+  position: [number, number, number];
+  lost: number;
+}
+
+/** It holds station this long (real time, so a night away doesn't cost you it), then falls. */
+export const ADRIFT_HOLD = 24 * 3600_000;
+/** Once it starts falling, about this long until it's gone. */
+export const ADRIFT_FALL = 20 * 60_000;
+
+/** Ship lost with special cargo aboard: the cases survive, adrift where you were. */
+export function setAdrift(c: Commander, here: StarSystem, position: [number, number, number], now: number): AdriftCase[] {
+  const cases: AdriftCase[] = [];
+  for (const a of c.contracts ?? []) {
+    if (!a.special || a.adrift) continue;
+    a.adrift = true;
+    cases.push({ contract: a.id, company: a.company, label: a.label ?? 'Sealed case', galaxy: here.galaxy, system: here.index, position, lost: now });
+  }
+  c.adrift = [...(c.adrift ?? []), ...cases];
+  return cases;
+}
+
+/** Brought back aboard: the contract carries on. */
+export function recoverCase(c: Commander, contract: string): string {
+  const a = c.contracts?.find((x) => x.id === contract);
+  c.adrift = (c.adrift ?? []).filter((x) => x.contract !== contract);
+  if (!a) return '';
+  a.adrift = false;
+  return `${a.label ?? 'Case'} recovered: it answered your transponder · contract back on`;
+}
+
+/** Cases whose time has run out while you were elsewhere: gone, and the contract with them. */
+export function expireCases(c: Commander, now: number, inScene: (contract: string) => boolean): string[] {
+  const notes: string[] = [];
+  for (const k of [...(c.adrift ?? [])]) {
+    if (now - k.lost < ADRIFT_HOLD + ADRIFT_FALL || inScene(k.contract)) continue;
+    notes.push(caseLost(c, k.contract));
+  }
+  return notes;
+}
+
+/** A case fell into the planet (the consequences come later: section 2c, step 2). */
+export function caseLost(c: Commander, contract: string): string {
+  const k = c.adrift?.find((x) => x.contract === contract);
+  c.adrift = (c.adrift ?? []).filter((x) => x.contract !== contract);
+  const a = c.contracts?.find((x) => x.id === contract);
+  if (!a) return '';
+  finish(c, a.id);
+  addStanding(c, a.company, -4);
+  logContract(c, a.company, 'failed');
+  return `${COMPANIES[a.company].name}'s ${a.label ?? 'case'} fell towards ${k ? systemAt(k.galaxy, k.system).name : 'the planet'}: contract failed`;
+}
+
+/** Who would buy whose secrets. The Mutual's relief supplies aren't for sale. */
+export const RIVAL: Partial<Record<CompanyId, CompanyId>> = { wy: 'hexon', hexon: 'vorg', vorg: 'hexon' };
+
+/** What a rival pays for another company's special cargo. */
+export const rivalPrice = (a: Contract) => Math.round(a.pay * 1.5);
+
+/** Sell a special cargo to the owner's rival instead of delivering it. */
+export function sellToRival(c: Commander, contract: string, here: StarSystem): string | null {
+  const a = c.contracts?.find((x) => x.id === contract);
+  const buyer = a && RIVAL[a.company];
+  if (!a || !buyer || a.adrift || !companyHere(buyer, here)) return null;
+  const price = rivalPrice(a);
+  c.credits = Math.round((c.credits + price) * 10) / 10;
+  finish(c, a.id);
+  addStanding(c, a.company, -10);
+  addStanding(c, buyer, 3);
+  logContract(c, a.company, 'failed');
+  return `${COMPANIES[buyer].name} paid ${price.toLocaleString()} Cr for ${COMPANIES[a.company].name}'s ${a.label ?? 'cargo'}. ${COMPANIES[a.company].name} will find out.`;
 }

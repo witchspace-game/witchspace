@@ -74,7 +74,7 @@ import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
 import { abandon, afterJump, board, cannotTake, cargoName, deliver, destinationOf, loseContracts, standing, take, type Contract } from './game/contracts';
-import { assignmentFor, checkMessages, companyHere, fileOn, thanksFrom } from './game/assignments';
+import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, companyHere, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
 import { bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, sellData, SURVEY, worldOf, type Body, type Poi } from './game/explore';
@@ -520,10 +520,17 @@ function renderContracts() {
   const mine = (c.contracts ?? [])
     .map((a) => {
       const to = destinationOf(a);
-      const left = a.jumpsLeft >= 0 ? `${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'} left` : `<span class="late">late: half pay</span>`;
+      const k = c.adrift?.find((x) => x.contract === a.id);
+      const falls = k ? Math.max(0, Math.round((k.lost + ADRIFT_HOLD - now) / 3600_000)) : 0;
+      const where = k ? systemAt(k.galaxy, k.system) : null;
+      const left =
+        (k ? `<span class="late">Adrift near ${escapeHtml(where!.name)}, beaconing: ${falls ? `${falls} h before it starts to fall` : 'falling'}</span> · ` : '') +
+        (a.jumpsLeft >= 0 ? `${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'} left` : `<span class="late">late: half pay</span>`);
+      const rival = RIVAL[a.company];
+      const sale = a.special && !k && rival && companyHere(rival, here) ? `<button data-rival="${a.id}" title="${escapeHtml(COMPANIES[a.company].name)} will find out">Offer to ${escapeHtml(COMPANIES[rival].name)} · ${rivalPrice(a).toLocaleString()} Cr</button>` : '';
       const course = c.target === to.index ? '<span class="on-course">On course</span>' : `<button data-course="${to.index}">Set course</button>`;
       return `<li${a.special ? ' class="special"' : ''}>${companyMark(a.company)} · ${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>
-        <span class="actions">${course}<button data-abandon="${a.id}" title="The company takes its cargo back, and remembers">Abandon</button></span></li>`;
+        <span class="actions">${k && where!.index !== here.index ? `<button data-course="${where!.index}">Set course</button>` : course}${sale}<button data-abandon="${a.id}" title="The company takes its cargo back, and remembers">Abandon</button></span></li>`;
     })
     .join('');
   const offers = board(c, here, Date.now())
@@ -565,6 +572,9 @@ $('#contracts').addEventListener('click', (e) => {
     }
   } else if (b.dataset.abandon) {
     contractMessage = abandon(c, b.dataset.abandon);
+  } else if (b.dataset.rival) {
+    contractMessage = sellToRival(c, b.dataset.rival, currentSystem()) ?? '';
+    sfx.beep();
   } else if (b.dataset.file) {
     openFile = b.dataset.file as CompanyId;
   } else if (b.dataset.closeFile !== undefined) {
@@ -1606,6 +1616,7 @@ function buildSystemScene(sys: StarSystem) {
   scanned = false;
   scanProgress = 0;
   buildExploreScene(sys);
+  restoreAdrift();
 }
 
 /** Make sure the scene matches where the commander is. */
@@ -2506,8 +2517,11 @@ interface Drifter {
   contents: { id: string; qty: number } | null;
   /** From a clean ship you destroyed: whoever scoops it is holding stolen goods. */
   stolen?: boolean;
+  /** A company's special cargo that survived its ship: it holds station, beacons, and answers your transponder. */
+  special?: AdriftCase;
 }
 const drifters: Drifter[] = [];
+const RECOVER_RANGE = 60; // metres: close enough for a lost case to answer your transponder
 const MAX_DRIFTERS = 40;
 // Pull at the station's distance is about 0.05 m/s², so debris lingers for
 // several minutes (a window for scavengers) before falling in.
@@ -2548,7 +2562,43 @@ function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, cargo: Record<st
       stolen,
     });
   }
-  while (drifters.length > MAX_DRIFTERS) disposeShip(drifters.shift()!.model);
+  while (drifters.length > MAX_DRIFTERS) evictDrifter();
+}
+
+/** Make room, oldest first, but never a company's lost case. */
+function evictDrifter() {
+  const i = drifters.findIndex((d) => !d.special);
+  if (i < 0) return;
+  disposeShip(drifters[i].model);
+  drifters.splice(i, 1);
+}
+
+/** A company's lost case, in its colours, holding station where it was lost. */
+function spillSpecial(k: AdriftCase) {
+  const def = shipById('cargo-canister');
+  if (!def || drifters.some((d) => d.special?.contract === k.contract)) return;
+  const model = buildShip(def);
+  applyCompanyBand(model, COMPANIES[k.company].colour);
+  model.root.position.set(...k.position);
+  model.root.quaternion.random();
+  space.scene.add(model.root);
+  drifters.push({ model, velocity: new THREE.Vector3(), axis: new THREE.Vector3().randomDirection(), spinRate: 0.4, burn: 0, contents: null, special: k });
+  while (drifters.length > MAX_DRIFTERS) evictDrifter();
+}
+
+/** Back in a system where you lost a case: it's still there. */
+function restoreAdrift() {
+  if (!commander) return;
+  const here = currentSystem();
+  for (const k of cmdr().adrift ?? []) if (k.galaxy === here.galaxy && k.system === here.index) spillSpecial(k);
+}
+
+/** Cases whose time ran out elsewhere: tell the commander. */
+function checkAdrift() {
+  if (!commander) return [];
+  const notes = expireCases(cmdr(), Date.now(), (id) => drifters.some((d) => d.special?.contract === id));
+  if (notes.length) saveCommander(cmdr());
+  return notes;
 }
 
 // --- Fuel scoops: canisters and sun-skimming ----------------------------------------
@@ -2561,6 +2611,32 @@ const SKIM_RATE = 0.12; // light years per second at full speed
 let cabinTemp = 0; // 0..100+, over 100 the hull starts to burn
 let lastHeatWarning = 0;
 let skimming = false;
+
+/** A lost case answers its own contract's transponder: no scoops needed, just come in slow. */
+function recoverCaseNear(d: Drifter): boolean {
+  if (!d.special || d.model.root.position.distanceTo(player.obj.position) > RECOVER_RANGE) return false;
+  const c = cmdr();
+  const a = c.contracts?.find((x) => x.id === d.special!.contract);
+  if (!a) return false;
+  if (player.speed > player.maxSpeed * SCOOP_SPEED) {
+    if (elapsed - lastScoopWarning > 3) {
+      lastScoopWarning = elapsed;
+      flash(`${a.label ?? 'Case'} · slow to under ${Math.round(SCOOP_SPEED * 100)}% speed to take it aboard`, 2);
+    }
+    return false;
+  }
+  if (freeTonnes(tradeContext()) < a.qty - 1e-9) {
+    if (elapsed - lastHoldFullWarning > 3) {
+      lastHoldFullWarning = elapsed;
+      flash(`No room for the ${a.label ?? 'case'}: ${a.qty} t needed`, 2);
+    }
+    return false;
+  }
+  flash(recoverCase(c, a.id), 3);
+  saveCommander(c);
+  sfx.beep();
+  return true;
+}
 
 /** Scoop a canister if it's close, we're slow and the scoops work. Returns true if it went in the hold. */
 function tryScoop(d: Drifter): boolean {
@@ -2643,6 +2719,18 @@ function updateDrifters(dt: number) {
     toPlanet.copy(planetPos).sub(root.position);
     const r = toPlanet.length();
     toPlanet.normalize();
+    if (d.special && state === 'flying' && recoverCaseNear(d)) {
+      disposeShip(d.model);
+      drifters.splice(i, 1);
+      continue;
+    }
+    if (d.special && Date.now() - d.special.lost < ADRIFT_HOLD) {
+      // Holding station on its own thrusters until containment runs down.
+      d.velocity.multiplyScalar(Math.exp(-dt));
+      root.position.addScaledVector(d.velocity, dt);
+      root.rotateOnAxis(d.axis, d.spinRate * dt);
+      continue;
+    }
     d.velocity.addScaledVector(toPlanet, (planetGM / (r * r)) * dt);
     // Sideways and outward drift slowly dies away; the fall itself doesn't.
     // Without this, wrecks at speed would fling canisters off into deep space.
@@ -2659,7 +2747,7 @@ function updateDrifters(dt: number) {
     root.position.addScaledVector(d.velocity, dt);
     root.rotateOnAxis(d.axis, d.spinRate * dt);
 
-    if (state === 'flying' && tryScoop(d)) {
+    if (state === 'flying' && !d.special && tryScoop(d)) {
       disposeShip(d.model);
       drifters.splice(i, 1);
       continue;
@@ -2670,7 +2758,11 @@ function updateDrifters(dt: number) {
       space.scene.add(flare.group);
       explosions.push(flare);
     }
-    if (d.burn >= BURN_TIME || r < planetRadius || r > LOST_IN_SPACE) {
+    if (d.burn >= BURN_TIME || r < planetRadius || (r > LOST_IN_SPACE && !d.special)) {
+      if (d.special && commander) {
+        flash(caseLost(cmdr(), d.special.contract), 4);
+        saveCommander(cmdr());
+      }
       disposeShip(d.model);
       drifters.splice(i, 1);
     }
@@ -2920,6 +3012,12 @@ function updateMarkers() {
   markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
   markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
   markers.push(...exploreMarkers(km));
+  // Lost company cases beacon to anyone in the system.
+  for (const d of drifters) {
+    if (!d.special) continue;
+    const short = { hexon: 'Hexon', vorg: 'Vorg', mutual: 'Mutual', wy: 'W-Y' }[d.special.company];
+    markers.push({ position: d.model.root.position, color: COMPANIES[d.special.company].colour, radius: 6, label: `${short} property · sealed ${km(d.model.root.position)}` });
+  }
   for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, radius: 30, label: callsignTag(r, km(r.position)) });
   if (carrier?.rift) markers.push({ position: carrier.rift.group.position, color: '#cfe0ff', radius: carrier.rift.radius, label: `Rift ${km(carrier.rift.group.position)}` });
   for (const m of missiles) if (m.target === player) markers.push({ position: m.position, color: '#ff4d6d', radius: 6, label: `MISSILE ${km(m.position)}` });
@@ -3144,11 +3242,13 @@ async function dock() {
   const specialsDue = (c.contracts ?? []).filter((a) => a.special && a.to.system === sys.index && a.to.galaxy === sys.galaxy && a.jumpsLeft >= 0).map((a) => a.company);
   const delivered = deliver(c, sys);
   const news = checkMessages(c, sys, Date.now());
+  const gone = checkAdrift();
   saveCommander(c);
   enterDocked();
   markInbox(c);
   if (settlement) flash(settlementMessage(settlement, inspected ? 'Hold inspected' : 'Fined on arrival'), 5);
   else if (delivered.length) flash([...delivered, ...specialsDue.map(thanksFrom)].join(' · '), 6);
+  else if (gone.length) flash(gone.join(' · '), 5);
   else if (news.length) flash(`New message from ${COMPANIES[news[0].company].name}: ${news[0].subject}`, 5);
   else if (smuggling && inspectionChance(c, sys) > 0) flash('Docked · your hold was not inspected this time', 3);
 }
@@ -3256,6 +3356,11 @@ function die() {
   // Whatever was in the hold is now floating free for anyone with fuel scoops.
   spillCargo(player.obj.position, velocity, c.cargo);
   c.cargo = {};
+  // A company's special cargo is built to survive: it holds station here, beaconing.
+  if (c.difficulty === 'modern') {
+    const p = player.obj.position;
+    for (const k of setAdrift(c, currentSystem(), [p.x, p.y, p.z], Date.now())) spillSpecial(k);
+  }
   c.stolen = {};
   // Classic, as in 1984: a new ship is a clean slate and the police lose
   // interest. Under Modern rules your record stands (see claimInsurance).
@@ -3298,7 +3403,8 @@ function die() {
       message = 'Picked up. Your insurers have replaced the ship.';
     } else {
       const lost = loseContracts(c);
-      if (lost.length) setTimeout(() => flash(lost.join(' · '), 4), 5500);
+      const adrift = (c.adrift ?? []).filter((k) => Date.now() - k.lost < 10_000).map((k) => `The ${k.label} survived: it's adrift, beaconing. Recover it within 24 hours`);
+      if (lost.length || adrift.length) setTimeout(() => flash([...lost, ...adrift].join(' · '), 6), 5500);
       const claim = claimInsurance(c);
       if (claim.kind === 'void') {
         message = 'Insurance void: you were a Fugitive · the Co-operative has issued you a bare Cobra';
@@ -3733,7 +3839,7 @@ async function hyperspace() {
   c.visits += 1; // Classic markets are set on arrival in a system, as in 1984
   // Records stay in the system where the crime happened, and cool as you travel.
   coolRecords(c);
-  const contractNotes = afterJump(c);
+  const contractNotes = [...afterJump(c), ...checkAdrift()];
   if (contractNotes.length) setTimeout(() => state === 'flying' && flash(contractNotes.join(' · '), 4), 9000);
   surrenderTimer = null;
   saveCommander(c);
