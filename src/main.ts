@@ -149,11 +149,47 @@ function setState(next: State) {
 function layoutForScreen() {
   const controls = [...document.querySelectorAll<HTMLElement>('nav.controls')].find((el) => !el.hidden);
   document.documentElement.style.setProperty('--controls-h', `${controls?.offsetHeight ?? 0}px`);
+  fitDashboard();
+}
+
+/**
+ * On a touch screen in landscape the dashboard sits at the top, between the
+ * flight buttons on the left and the readouts on the right: size it to fit
+ * that gap, so nothing covers the scanner on any phone.
+ */
+function fitDashboard() {
+  const dash = document.querySelector<HTMLElement>('.dash');
+  const actions = document.querySelector<HTMLElement>('#touch .touch-actions');
+  if (!dash || !document.body.classList.contains('touch')) return;
+  const natural = dash.offsetWidth; // unscaled: transforms don't change offsetWidth
+  if (!natural) return;
+  const landscape = innerHeight < 500;
+  const left = landscape && actions ? actions.getBoundingClientRect().right + 10 : 10;
+  const room = innerWidth - 2 * left; // centred, so the same margin both sides
+  const most = landscape ? 0.62 : 0.72;
+  document.documentElement.style.setProperty('--dash-scale', String(Math.max(0.4, Math.min(most, room / natural))));
 }
 addEventListener('resize', layoutForScreen);
+
+// Coming back to the app (or turning the phone), iPhone can leave the page
+// shifted, so what you tap isn't what you see. Put everything back.
+function realign() {
+  window.scrollTo(0, 0);
+  // Some resizes land a moment late; lay out again once they have.
+  setTimeout(() => {
+    window.scrollTo(0, 0);
+    dispatchEvent(new Event('resize'));
+  }, 350);
+}
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && realign());
+addEventListener('pageshow', realign);
+addEventListener('orientationchange', realign);
+visualViewport?.addEventListener('resize', realign);
 // The row also changes height when its buttons change or fonts load, so watch it.
 const controlsWatch = new ResizeObserver(layoutForScreen);
 for (const nav of document.querySelectorAll<HTMLElement>('nav.controls')) controlsWatch.observe(nav);
+// The dashboard and flight buttons appear on launch: fit them then too.
+for (const el of document.querySelectorAll<HTMLElement>('.dash, #touch .touch-actions')) controlsWatch.observe(el);
 
 let portraitTipShown = false;
 
