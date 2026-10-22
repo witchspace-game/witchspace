@@ -151,10 +151,12 @@ export function board(c: Commander, here: StarSystem, now: number): Contract[] {
     const pool = importers.length ? importers : dests;
     const { s: dest, n: minJumps } = pool[Math.floor(r(3, k) * pool.length)];
     const rush = r(4, k) < 0.25;
-    const qty = 3 + Math.floor(r(5, k) * 14);
+    let qty = 3 + Math.floor(r(5, k) * 14);
     const gi = COMMODITIES.findIndex((x) => x.id === good);
     const priceHere = equilibriumPrice(here, COMMODITIES[gi], gi);
     const priceThere = equilibriumPrice(dest, COMMODITIES[gi], gi);
+    // Every company keeps a starter job on the board: its first offer here is small enough for anyone.
+    if (!offers.some((o) => o.company === company && o.needs === 'Casual')) qty = Math.max(1, Math.min(qty, Math.floor(399 / priceHere)));
     const ly = distanceLy(here, dest);
     // About two thirds of what an independent would make on the run, plus a
     // carriage fee by distance: you risk none of your own money.
@@ -206,7 +208,7 @@ export function addStanding(c: Commander, id: CompanyId, points: number) {
 export function cannotTake(c: Commander, o: Contract, freeTonnes: number): string | null {
   if (c.difficulty !== 'modern') return 'Contracts are for Modern rules';
   if ((c.contracts?.length ?? 0) >= MAX_ACTIVE) return `You can carry ${MAX_ACTIVE} contracts at once`;
-  if (standing(c, o.company) < standingAt(o.needs)) return `Needs ${o.needs} standing with ${COMPANIES[o.company].name}`;
+  if (standing(c, o.company) < standingAt(o.needs)) return `Needs ${o.needs} standing with ${COMPANIES[o.company].name} (you're ${standingName(standing(c, o.company))})`;
   if (o.qty > freeTonnes + 1e-9) return `Needs ${o.qty} t free in the hold`;
   return null;
 }
