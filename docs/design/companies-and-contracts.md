@@ -107,7 +107,15 @@ What happens to a special cargo when the ship carrying it is lost, and how a com
 - **Rival buyers.** Any special cargo can be sold to a rival instead of delivered: Wexley-Yorozu's to Hexon, Hexon's to Vorg, Vorg's to Hexon. About half as much again as the delivery pays, a big standing boost with the buyer and a bigger fall with the owner. The Mutual's relief supplies have no buyer: some things aren't for sale.
 - **In the shared galaxy** (later), a lost case is a small event on the system's server: everyone sees the beacon, a recovery contract goes up for anyone, and whoever scoops it holds stolen company property.
 
-### 2. The fall *(next)*
+### 2. What was inside *(built)*
+
+Every special cargo has **hidden contents**, fixed when it's offered and revealed only if it's opened or falls: Hexon's are usually harmless, sometimes a pathogen, rarely a specimen; Wexley-Yorozu's are often a specimen, sometimes a pathogen; Vorg's are munitions; the Mutual's are what they say.
+
+- **Opened on a station** (the police open it): a **pathogen** starts an outbreak in that system (a plague, 36 hours) and locks the station down (6 hours, docking refused); a **specimen** gets loose aboard (lockdown, 8 hours). Hexon's medicine is already on the way, and Wexley-Yorozu's Science Division asks you to *remain where you are*.
+- **Fallen to the planet**: a **pathogen** means an outbreak (48 hours); a **specimen** takes root as a **strange bloom** (72 hours: farms overrun, food and water short).
+- They're real world events: headlines in the news, crisis prices, the station closed. They're kept in your save (yours, and your galaxy's now), one at a time per world, and your file remembers: redacted by everyone but the Mutual.
+
+### The fall *(the original plan)*
 
 If nobody recovers it, the case falls planetward, and unlike an ordinary canister it **survives re-entry**. What follows depends on what was inside:
 

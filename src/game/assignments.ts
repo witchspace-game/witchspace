@@ -1,5 +1,5 @@
 import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
-import { EVENT_KINDS, eventsAt } from '../economy/events';
+import { EVENT_KINDS, eventsAt, setCausedEvents, type EventType, type WorldEvent } from '../economy/events';
 import { DANGER_PREMIUM } from '../economy/market';
 import type { Commander } from './commander';
 import { COMPANIES, COMPANY_IDS, presence, standingName, type CompanyId } from './companies';
@@ -153,6 +153,12 @@ export function fileOn(c: Commander, company: CompanyId, here: StarSystem, now: 
       break;
     }
   }
+  // What you caused, as the company noticed it.
+  const lastCaused = (c.caused ?? []).slice(-1)[0];
+  if (lastCaused) {
+    const s = systemAt(lastCaused.galaxy, lastCaused.system);
+    lines.push({ text: `Subject's ${lastCaused.caused} before the ${EVENT_KINDS[lastCaused.type].name.toLowerCase()} at ${s.name}.`, redacted: company !== 'mutual' });
+  }
   switch (company) {
     case 'hexon':
       lines.push({ text: 'Bureau of Continuity interest: noted.', redacted: true });
@@ -300,11 +306,72 @@ export function collectHeld(c: Commander, here: StarSystem): string[] {
 }
 
 /** A case fell into the planet (the consequences come later: section 2c, step 2). */
-export function caseLost(c: Commander, contract: string): string {
+export function caseLost(c: Commander, contract: string, now = Date.now()): string {
   const k = c.adrift?.find((x) => x.contract === contract);
   const a = failCase(c, contract, -4);
   if (!a) return '';
-  return `${COMPANIES[a.company].name}'s ${a.label ?? 'case'} fell towards ${k ? systemAt(k.galaxy, k.system).name : 'the planet'}: contract failed`;
+  const where = k ? systemAt(k.galaxy, k.system) : null;
+  const after = where ? consequence(c, a, 'planet', where, now) : null;
+  return `${COMPANIES[a.company].name}'s ${a.label ?? 'case'} fell towards ${where?.name ?? 'the planet'}: contract failed${after ? ` · ${after}` : ''}`;
+}
+
+// --- What was really inside (section 2c, step 2) -------------------------------------
+
+export type Contents = 'benign' | 'pathogen' | 'specimen' | 'munitions';
+
+/** What a special cargo really holds: fixed when it's offered, revealed only if it's opened or falls. */
+export function contentsOf(a: { id: string; company: CompanyId }): Contents {
+  const r = roll(a.id, 'contents');
+  switch (a.company) {
+    case 'hexon':
+      return r < 0.4 ? 'pathogen' : r < 0.5 ? 'specimen' : 'benign';
+    case 'wy':
+      return r < 0.35 ? 'specimen' : r < 0.6 ? 'pathogen' : 'benign';
+    case 'vorg':
+      return 'munitions';
+    default:
+      return 'benign';
+  }
+}
+
+const HOUR = 3600_000;
+
+/** Record an event you caused, unless one of yours is already under way there. */
+function cause(c: Commander, type: EventType, s: StarSystem, hours: number, why: string, now: number, alongside = false): boolean {
+  const caused = (c.caused ?? []).filter((e) => e.end > now - 7 * 24 * HOUR);
+  if (!alongside && caused.some((e) => e.galaxy === s.galaxy && e.system === s.index && e.end > now)) return false;
+  const e: WorldEvent = { type, galaxy: s.galaxy, system: s.index, start: now, end: now + hours * HOUR, caused: why };
+  c.caused = [...caused, e];
+  setCausedEvents(c.caused);
+  return true;
+}
+
+/**
+ * The case was opened on a station, or fell to a planet: what was inside
+ * decides what happens next. Returns what the commander hears, or null if
+ * it was harmless.
+ */
+export function consequence(c: Commander, a: Contract, where: 'station' | 'planet', s: StarSystem, now: number): string | null {
+  const contents = contentsOf(a);
+  const label = a.label ?? 'case';
+  const name = s.name;
+  const msg = (company: CompanyId, from: string, subject: string, body: string) =>
+    tell(c, { id: `${a.id}:after`, company, from, subject, body }, now);
+  if (contents === 'pathogen') {
+    if (!cause(c, 'plague', s, where === 'station' ? 36 : 48, `${label} ${where === 'station' ? `opened at ${name} station` : `fell on ${name}`}`, now)) return null;
+    if (where === 'station') cause(c, 'lockdown', s, 6, `${label} opened at ${name} station`, now, true);
+    msg('hexon', 'Hexon Holdings', 'Continuity of care', `Hexon Holdings has dispatched medical supplies to ${name}. We trust you will be discreet about the circumstances.`);
+    return where === 'station' ? `It was a pathogen. ${name} station is in lockdown, and an outbreak is spreading` : `It was a pathogen. Outbreak on ${name}`;
+  }
+  if (contents === 'specimen') {
+    const ok = where === 'station' ? cause(c, 'lockdown', s, 8, `${label} opened at ${name} station`, now) : cause(c, 'bloom', s, 72, `${label} fell on ${name}`, now);
+    if (!ok) return null;
+    msg('wy', 'Wexley-Yorozu Science Division', 'We are aware of the incident', where === 'station'
+      ? `We are aware of the incident aboard ${name} station. A recovery team is on its way. Please remain where you are.`
+      : `Our survey of ${name} will begin shortly. Your cooperation under clause 214 is appreciated.`);
+    return where === 'station' ? `Something got loose aboard ${name} station: lockdown, docking suspended` : `Something has taken root on ${name}: a strange bloom is spreading`;
+  }
+  return null;
 }
 
 // --- Incidents: the choices a lost case puts to you ---------------------------------
@@ -353,7 +420,8 @@ export function decide(c: Commander, contract: string, choice: Choice, here: Sta
       failCase(c, contract, -6);
       const crime = a.company === 'vorg';
       if (crime) recordCrime(c, 'offender');
-      return `They opened it. ${crime ? 'The crates were armed: you are an OFFENDER here. ' : ''}You're free to go; ${firm} is not pleased.`;
+      const after = consequence(c, a, 'station', here, Date.now());
+      return `They opened it. ${crime ? 'The crates were armed: you are an OFFENDER here. ' : ''}${after ?? `You're free to go; ${firm} is not pleased.`}`;
     }
     if (choice === 'refuse') {
       failCase(c, contract, 1);
