@@ -4159,6 +4159,13 @@ function toggleGalaxyMap() {
     range: c.fuel,
     target: c.courseTo != null ? systemAt(here.galaxy, c.courseTo) : c.target === null ? null : systemAt(here.galaxy, c.target),
     news: newsLine,
+    // Contracts in hand, so you can see where they're going once you've launched.
+    contracts: (c.contracts ?? []).map((a) => {
+      const to = destinationOf(a);
+      const left = a.jumpsLeft >= 0 ? `${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'} left` : 'late: half pay';
+      const adrift = a.adrift ? ' · adrift: see Contracts when docked' : '';
+      return { to, colour: COMPANIES[a.company].colour, line: `${a.qty} t ${cargoName(a)} → ${to.name} · ${left} · ${a.pay.toLocaleString()} Cr · ${COMPANIES[a.company].name}${adrift}` };
+    }),
     explored: (s) => {
       const e = exploreOf(c);
       if (!e.visited.includes(`${s.galaxy}:${s.index}`)) return { visited: false, line: 'Not yet' };

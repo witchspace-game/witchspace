@@ -23,6 +23,8 @@ interface Options {
   news?: (s: StarSystem) => string | null;
   /** Your record of a system: whether you've been, and a line on what you surveyed and found. */
   explored?: (s: StarSystem) => { visited: boolean; line: string };
+  /** Contracts in hand: where to, in the company's colour, and a line about each. */
+  contracts?: { to: StarSystem; colour: string; line: string }[];
 }
 
 const root = document.querySelector<HTMLElement>('#galaxy-map')!;
@@ -37,6 +39,15 @@ const findList = findForm.querySelector<HTMLUListElement>('ul')!;
 let mode: ChartMode = 'galactic';
 let opts: Options | null = null;
 let cursor: StarSystem | null = null;
+// The local chart can be dragged around: how far its centre is from you, in chart units.
+let panX = 0;
+let panY = 0;
+const homeButton = document.createElement('button');
+homeButton.className = 'map-home';
+homeButton.type = 'button';
+homeButton.textContent = '◎ Centre on me';
+homeButton.hidden = true;
+root.append(homeButton);
 
 export const isMapOpen = () => !root.hidden;
 
@@ -44,6 +55,7 @@ export function openMap(o: Options, startMode: ChartMode = small() ? 'local' : '
   opts = o;
   // On a phone the whole galaxy is too small to tap: start close in, as Elite's short-range chart did.
   mode = startMode;
+  panX = panY = 0;
   cursor = o.target ?? o.current;
   root.hidden = false;
   draw();
@@ -75,9 +87,9 @@ function findSystem(s: StarSystem) {
   if (!opts) return;
   cursor = s;
   if (mode === 'local') {
-    const { toScreen, area } = view();
-    const [x, y] = toScreen(s);
-    if (x < area.left || x > area.right || y < area.top || y > area.bottom) mode = 'galactic';
+    // Scroll the local chart to it.
+    panX = s.x - opts.current.x;
+    panY = s.y - opts.current.y;
   }
   findInput.value = '';
   findList.innerHTML = '';
@@ -115,6 +127,11 @@ export function focusFind() {
 
 export function toggleMapMode() {
   mode = mode === 'galactic' ? 'local' : 'galactic';
+  // Into the local chart: centred on whatever you've picked, so a system found in the galaxy view is right there.
+  if (mode === 'local' && opts && cursor) {
+    panX = cursor.x - opts.current.x;
+    panY = cursor.y - opts.current.y;
+  }
   draw();
 }
 
@@ -197,7 +214,7 @@ function view() {
   return {
     scale,
     area: a,
-    toScreen: (s: StarSystem) => [cx + (s.x - cur.x) * scale, cy + ((s.y - cur.y) / 2) * scale] as const,
+    toScreen: (s: StarSystem) => [cx + (s.x - cur.x - panX) * scale, cy + ((s.y - cur.y - panY) / 2) * scale] as const,
   };
 }
 
@@ -300,12 +317,28 @@ function draw() {
       ctx.fill();
     }
   }
+  // Contract destinations, ringed in the company's colour.
+  for (const k of opts.contracts ?? []) {
+    const [x, y] = toScreen(k.to);
+    ctx.strokeStyle = retro ? '#fff' : k.colour;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(x, y, 15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   mark(cur, colours.current, 7, false);
   if (opts.target) mark(opts.target, colours.target, 9, false);
   if (cursor) mark(cursor, colours.cursor, 12, true);
 
   title.textContent = mode === 'galactic' ? `Galactic chart · Galaxy ${cur.galaxy + 1}` : `Local chart · ${cur.name}`;
   modeButton.textContent = mode === 'galactic' ? 'Local chart' : 'Whole galaxy';
+  homeButton.hidden = mode !== 'local' || (panX === 0 && panY === 0);
+  // At the bottom of the chart itself, clear of the info panel.
+  homeButton.style.top = `${area.bottom - 40}px`;
+  homeButton.style.left = `${area.left + 4}px`;
+  homeButton.style.bottom = 'auto';
 }
 
 function renderInfo() {
@@ -329,14 +362,57 @@ function renderInfo() {
   if (explored) rows.push(['Explored', explored.line]);
   const isTarget = opts.target === s;
   // Station names are community content, so everything is escaped.
+  const contracts = opts.contracts ?? [];
   info.innerHTML = `<h3>${escapeHtml(s.name)}${isTarget ? ' <em>Destination</em>' : ''}</h3><dl>${rows
     .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`)
-    .join('')}</dl>`;
+    .join('')}</dl>${
+    contracts.length
+      ? `<h4>Your contracts</h4><ul class="map-contracts">${contracts
+          .map((k) => `<li><button type="button" data-goto="${k.to.index}" style="--company:${k.colour}">${escapeHtml(k.line)}</button></li>`)
+          .join('')}</ul>`
+      : ''
+  }`;
 }
 
 // Click a system to select it; click it again to set it as the destination.
+// Drag the local chart to look around; a drag isn't a tap.
+let drag: { x: number; y: number; px: number; py: number; moved: boolean } | null = null;
+let dragged = false;
+canvas.addEventListener('pointerdown', (e) => {
+  if (mode !== 'local') return;
+  drag = { x: e.clientX, y: e.clientY, px: panX, py: panY, moved: false };
+});
+addEventListener('pointermove', (e) => {
+  if (!drag || !opts) return;
+  const dx = e.clientX - drag.x;
+  const dy = e.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) < 8) return;
+  drag.moved = true;
+  const { scale } = view();
+  panX = drag.px - dx / scale;
+  panY = drag.py - (dy * 2) / scale; // vertical chart distances count double
+  draw();
+});
+addEventListener('pointerup', () => {
+  dragged = drag?.moved ?? false;
+  drag = null;
+});
+homeButton.addEventListener('click', () => {
+  homeButton.blur();
+  panX = panY = 0;
+  draw();
+});
+info.addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-goto]');
+  if (b && opts) findSystem(galaxy(opts.current.galaxy)[Number(b.dataset.goto)]);
+});
+
 canvas.addEventListener('click', (e) => {
   if (!opts) return;
+  if (dragged) {
+    dragged = false;
+    return;
+  }
   const rect = canvas.getBoundingClientRect();
   const px = e.clientX - rect.left;
   const py = e.clientY - rect.top;
