@@ -132,7 +132,8 @@ import { cargoTonnage } from '../economy/commodities';
 import type { MarketState } from '../economy/market';
 import type { LaserId } from './weapons';
 import type { ExploreRecord } from './explore';
-import type { ActiveContract } from './contracts';
+import type { ActiveContract, CompanyLog } from './contracts';
+import type { Message } from './assignments';
 import type { CompanyId } from './companies';
 
 export interface Commander {
@@ -174,6 +175,10 @@ export interface Commander {
   contractsDone?: string[];
   /** Standing with each trading company, in points. */
   standing?: Partial<Record<CompanyId, number>>;
+  /** Each company's record of your work for it (for its file on you). */
+  companyLog?: Partial<Record<CompanyId, CompanyLog>>;
+  /** Messages from the companies, newest first. */
+  messages?: Message[];
   /** Missiles on the rails. */
   missiles: number;
   /** The laser fitted to each mount, if any. */

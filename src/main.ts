@@ -73,7 +73,8 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
-import { abandon, afterJump, board, cannotTake, deliver, destinationOf, loseContracts, standing, take } from './game/contracts';
+import { abandon, afterJump, board, cannotTake, cargoName, deliver, destinationOf, loseContracts, standing, take, type Contract } from './game/contracts';
+import { assignmentFor, checkMessages, companyHere, fileOn, thanksFrom } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
 import { bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, sellData, SURVEY, worldOf, type Body, type Poi } from './game/explore';
@@ -366,6 +367,9 @@ function enterDocked() {
   inSpace = false;
   player.repair();
   showShip(cobraIndex);
+  // The companies may have been in touch while you were away.
+  if (checkMessages(cmdr(), currentSystem(), Date.now()).length) saveCommander(cmdr());
+  markInbox(cmdr());
   renderDocked();
   setState('docked');
 }
@@ -467,19 +471,58 @@ function attackNews(here: StarSystem, now: number) {
 const companyMark = (id: CompanyId) => `<b class="company" style="--company:${COMPANIES[id].colour}">${escapeHtml(COMPANIES[id].name)}</b>`;
 const riskTag = (s: StarSystem) => (s.government <= 1 ? ` <em class="risk high">${GOVERNMENTS[s.government]} · pirates</em>` : s.government <= 3 ? ` <em class="risk">${GOVERNMENTS[s.government]}</em>` : '');
 let contractMessage = '';
+let openFile: CompanyId | null = null;
+
+/** Special assignments you could take at this station now. */
+const specialsHere = (c: Commander, here: StarSystem, now: number) =>
+  COMPANY_IDS.filter((id) => companyHere(id, here))
+    .map((id) => assignmentFor(c, id, here, now))
+    .filter((o): o is Contract & { expires: number } => o !== null);
+
+/** Unread messages, on the Contracts tab's button. */
+function markInbox(c: Commander) {
+  const unread = (c.messages ?? []).filter((m) => !m.read).length;
+  $('.tabs [data-tab="contracts"]').textContent = unread ? `Contracts · ${unread} new` : 'Contracts';
+}
 
 function renderContracts() {
   const c = cmdr();
   const here = currentSystem();
+  const now = Date.now();
   const free = cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c);
+  const hoursLeft = (t: number) => Math.max(1, Math.round((t - now) / 3600_000));
   const goodName = (id: string) => escapeHtml(commodityById(id)?.name ?? id);
   const place = (s: StarSystem) => `${escapeHtml(s.name)} <small>${distanceLy(here, s).toFixed(1)} LY</small>${riskTag(s)}`;
+  const messages = (c.messages ?? [])
+    .slice(0, 5)
+    .map((m) => `<li class="message${m.read ? '' : ' unread'}">${companyMark(m.company)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small></li>`)
+    .join('');
+  for (const m of c.messages ?? []) m.read = true;
+  markInbox(c);
+  const specials = specialsHere(c, here, now)
+    .map((o) => {
+      const to = destinationOf(o);
+      const why = cannotTake(c, o, free);
+      return `<li class="special">${companyMark(o.company)} <em class="risk">Special assignment</em> · ${o.qty} t ${escapeHtml(cargoName(o))} → ${place(to)}<br>
+        <small>within ${o.jumps} jumps · <b class="pay">${o.pay.toLocaleString()} Cr</b> · offer closes in ${hoursLeft(o.expires)} h</small>
+        <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span></li>`;
+    })
+    .join('');
+  const file = openFile ? fileOn(c, openFile, here, now) : null;
+  const fileHtml = file
+    ? `<div class="file" style="--company:${COMPANIES[openFile!].colour}"><h4>${escapeHtml(file.title)}</h4>${file.lines
+        .map((l) => (l.redacted ? `<p><span class="redacted" title="Redacted">${'█'.repeat(Math.min(40, l.text.length))}</span></p>` : `<p>${escapeHtml(l.text)}</p>`))
+        .join('')}<button data-close-file>Close file</button></div>`
+    : '';
+  const fileButtons = COMPANY_IDS.filter((id) => standing(c, id) > 0)
+    .map((id) => `<button data-file="${id}">${escapeHtml(COMPANIES[id].name)}: your file</button>`)
+    .join('');
   const mine = (c.contracts ?? [])
     .map((a) => {
       const to = destinationOf(a);
       const left = a.jumpsLeft >= 0 ? `${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'} left` : `<span class="late">late: half pay</span>`;
       const course = c.target === to.index ? '<span class="on-course">On course</span>' : `<button data-course="${to.index}">Set course</button>`;
-      return `<li>${companyMark(a.company)} · ${a.qty} t ${goodName(a.good)} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>
+      return `<li${a.special ? ' class="special"' : ''}>${companyMark(a.company)} · ${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>
         <span class="actions">${course}<button data-abandon="${a.id}" title="The company takes its cargo back, and remembers">Abandon</button></span></li>`;
     })
     .join('');
@@ -496,9 +539,11 @@ function renderContracts() {
     .map((id) => `${companyMark(id)} ${standingName(standing(c, id))}`)
     .join(' · ');
   $('#contracts').innerHTML = `
+    ${messages ? `<h3>Messages</h3><ul class="contracts">${messages}</ul>` : ''}
     ${mine ? `<h3>Your contracts</h3><ul class="contracts">${mine}</ul>` : ''}
     <h3>On offer at ${escapeHtml(stationName(here).name)}</h3>
-    ${offers ? `<ul class="contracts">${offers}</ul>` : '<p class="meta">Nothing on the board. New work is posted every half hour.</p>'}
+    ${specials || offers ? `<ul class="contracts">${specials}${offers}</ul>` : '<p class="meta">Nothing on the board. New work is posted every half hour.</p>'}
+    ${fileHtml || (fileButtons ? `<p class="files">${fileButtons}</p>` : '')}
     <p class="meta">Hold: ${+(free).toFixed(1)} t free · new work every half hour${standings ? `<br>Standing: ${standings}` : ''}</p>
     <p class="market-message" aria-live="polite">${escapeHtml(contractMessage)}</p>`;
 }
@@ -509,16 +554,21 @@ $('#contracts').addEventListener('click', (e) => {
   b.blur();
   const c = cmdr();
   if (b.dataset.take) {
-    const offer = board(c, currentSystem(), Date.now()).find((o) => o.id === b.dataset.take);
+    const now = Date.now();
+    const offer = [...specialsHere(c, currentSystem(), now), ...board(c, currentSystem(), now)].find((o) => o.id === b.dataset.take);
     if (!offer) return;
     const why = take(c, offer, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
-    contractMessage = why ?? `Contract taken: ${offer.qty} t ${commodityById(offer.good)?.name} for ${destinationOf(offer).name}, loaded`;
+    contractMessage = why ?? `Contract taken: ${offer.qty} t ${cargoName(offer)} for ${destinationOf(offer).name}, loaded`;
     if (!why) {
       if (c.target === null) c.target = offer.to.system; // a sensible default course
       sfx.beep();
     }
   } else if (b.dataset.abandon) {
     contractMessage = abandon(c, b.dataset.abandon);
+  } else if (b.dataset.file) {
+    openFile = b.dataset.file as CompanyId;
+  } else if (b.dataset.closeFile !== undefined) {
+    openFile = null;
   } else if (b.dataset.course) {
     c.target = Number(b.dataset.course);
     contractMessage = `Course set: ${systemAt(currentSystem().galaxy, c.target).name}`;
@@ -3091,11 +3141,15 @@ async function dock() {
   const inspected = smuggling && Math.random() < inspectionChance(c, sys);
   const due = checksClearance(sys) && (legalStatus(c) === 'offender' || inspected);
   const settlement = due ? settle(c) : null;
+  const specialsDue = (c.contracts ?? []).filter((a) => a.special && a.to.system === sys.index && a.to.galaxy === sys.galaxy && a.jumpsLeft >= 0).map((a) => a.company);
   const delivered = deliver(c, sys);
+  const news = checkMessages(c, sys, Date.now());
   saveCommander(c);
   enterDocked();
+  markInbox(c);
   if (settlement) flash(settlementMessage(settlement, inspected ? 'Hold inspected' : 'Fined on arrival'), 5);
-  else if (delivered.length) flash(delivered.join(' · '), 5);
+  else if (delivered.length) flash([...delivered, ...specialsDue.map(thanksFrom)].join(' · '), 6);
+  else if (news.length) flash(`New message from ${COMPANIES[news[0].company].name}: ${news[0].subject}`, 5);
   else if (smuggling && inspectionChance(c, sys) > 0) flash('Docked · your hold was not inspected this time', 3);
 }
 

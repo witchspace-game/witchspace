@@ -1156,3 +1156,14 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 }
 body.retro .contracts li { font-size: 12px; border-radius: 0; }
 body.retro .contracts li small, body.retro .risk { font-size: 8px; }
+.contracts li.special { border-left-color: var(--company, var(--amber)); background: rgba(255, 179, 71, 0.06); }
+.contracts li.message { border-left-color: var(--dim); }
+.contracts li.message.unread { border-left-color: var(--amber); background: rgba(255, 179, 71, 0.08); }
+.files { display: flex; flex-wrap: wrap; gap: 6px; }
+.files button { font-size: 12px; padding: 4px 10px; }
+.file { margin: 8px 0; padding: 12px 14px; border: 1px solid var(--company, var(--edge)); background: rgba(0, 0, 0, 0.5); font-family: 'Courier New', monospace; font-size: 13px; letter-spacing: 0; }
+.file h4 { margin: 0 0 8px; color: var(--company, var(--accent)); font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; }
+.file p { margin: 3px 0; }
+.file .redacted { background: #000; color: #000; border: 1px solid #333; user-select: none; }
+.file button { margin-top: 8px; font-size: 12px; padding: 4px 10px; }
+body.retro .file { font-family: inherit; font-size: 8px; }
