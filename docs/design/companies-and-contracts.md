@@ -231,7 +231,7 @@ Wexley-Yorozu builds stations where they're needed, from what's there (the full 
 | Stage | What |
 |---|---|
 | **1. Companies and contracts** | The four companies and their presence by system; a **Contracts** tab at the station (the first trading screen a new commander sees); haulage and rush contracts with consigned cargo, deadlines in jumps and pay; standing with each company; NPC traders in company colours with their marks. *Smallest slice that makes sense; supply runs, bonds and perks follow once it plays well* |
-| **2. The law beyond the station** | Station space and witnesses; the distress call and police response time; running dark; the police challenge; the transponder as damageable equipment; the distress jammer |
+| **2. The law beyond the station** *(in progress, October 2026)* | Station space and witnesses; the distress call and police response time; running dark; the police challenge; the transponder as damageable equipment; the distress jammer |
 | **3. Fleets and conflict** | Escort and recovery contracts; company security ships; rivalry events (a company war as a world event, with blockades and premiums) |
 | **3b. Building worlds** | Wexley-Yorozu yards by moons: the Titanoboa constructor, ore haulers, and a station rising through its stages (spine, frame, plating, spin-up) over days for everyone; partly built stations buying what the moon can't supply; construction contracts; opening day. In the shared galaxy, every commander's deliveries speed the build: a community goal that costs a counter on the server |
 | **4. Shared galaxy** | Claiming contracts on the server; player witnesses; player-run companies posting contracts |
