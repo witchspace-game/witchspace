@@ -1,6 +1,6 @@
 # The trading companies
 
-*Worldbuilding for the three outfits in [companies and contracts](design/companies-and-contracts.md). Proposed; change by pull request. Tone as in the [worldbuilding bible](worldbuilding.md): dry, terse, let the player imagine the rest.*
+*Worldbuilding for the four outfits in [companies and contracts](design/companies-and-contracts.md). Proposed; change by pull request. Tone as in the [worldbuilding bible](worldbuilding.md): dry, terse, let the player imagine the rest.*
 
 **A rule for this page:** the companies are inspired by real-world types (the chartered trading houses of history, the corporations of science fiction, the co-operative movement) with plenty of poetic licence, but **none of them is a real company, and no real company, person or agency is portrayed**. Rumours in the game stay rumours: never confirmed, never quite denied.
 
@@ -146,8 +146,57 @@ Named for the garter snake: common, harmless and everywhere. *(Original class.)*
 
 ---
 
+## Wexley-Yorozu
+
+> *Better worlds, built to order.*
+
+**The villain with a twenty-year plan.** Terraformers and shipwrights: they build the stations, the colony ships and, given time, the worlds. *(A nod to the terraforming company of* Aliens*, and to the company towns and colonial land companies of history.)*
+
+### Where it came from
+
+**Edmund Wexley** built atmosphere processors: towers the height of mountains that turn a poison sky breathable over twenty years. **Haruki Yorozu** built the ships and stations to carry them. Neither could afford a world on his own. Together they found a way to make the worlds pay for themselves: the colonists.
+
+A Wexley-Yorozu colony is free to join. The passage, the prefab housing, the air: all on credit, at fair rates, repaid from the colony's work over a generation. Most colonies repay it. Some are still repaying it four generations on. A few stopped answering, and Wexley-Yorozu sent a ship to see why. The ships came back. The reports were sealed.
+
+### What it does
+
+- **Builds things.** Atmosphere processors on half-finished worlds, Coriolis stations under licence, and the heavy ships that carry both.
+- **Hauls heavy.** Station modules, processor parts, machinery and colonists to the edge of settled space, often through Vorg's frontier.
+- **Buys knowledge.** Its **Science Division** pays more than anyone for survey data, especially from worlds no one has charted, and pays most of all for anything unusual found out there.
+
+### What people say
+
+- The Science Division has standing **special orders**: certain finds are to be brought back intact, whatever the cost to the crew. Nobody admits to having seen one.
+- Wexley-Yorozu knew about the Thargoids before anyone. Its oldest survey files have pages missing.
+- Every colony charter has a clause on page 214. Nobody has read page 214.
+
+### Mark and livery
+
+- **Insignia:** a W whose arms rise like wings over a planet's horizon arc, with a small Y set into the base of the W.
+- **Livery:** off-white and pale grey, construction-yellow markings, the W on the bow; working ships scuffed and patched, like heavy plant.
+- **Logo prompt:**
+  > Corporate logo: a stylised capital W with arms rising like wings above a curved planetary horizon line, a small Y set into the base of the W. Clean monoline vector, white on dark slate blue, optimistic 1970s space-age corporate style with something cold underneath, vector-display style, no text.
+
+### Its ship: the Bullsnake
+
+Named for the bullsnake: big, heavy, and loud when it's annoyed. *(Original class.)*
+
+- A slow, enormous construction tug that carries station modules and processor sections slung beneath its spine.
+- Barely armed and hard to stop; drones and tractor booms instead of guns.
+- A frequent sight at Wexley-Yorozu worlds, where a half-built station or an atmosphere processor stands in orbit (a point of interest for explorers).
+- **Concept prompt:**
+  > Wireframe spaceship, enormous slow construction tug with a long spine, a huge station module slung underneath, tractor booms and work lights, off-white hull with construction-yellow markings, industrial and functional, vector-display style.
+
+### Story hooks
+
+- A colony has gone quiet. Wexley-Yorozu wants a commander to fly out, look, and report to the Science Division only. The pay is generous. The contract has a page 214.
+- A Bullsnake is hauling an atmosphere processor through Vorg space. Vorg would like it to arrive late. Hexon would like it not to arrive at all.
+
+---
+
 ## Between them
 
 - **Hexon and Vorg** need each other: Hexon's worlds buy Vorg's weapons, and Vorg's frontier buys Hexon's medicine. In public they despise each other.
 - **The Mutual** carries for both when it has to, and trusts neither.
+- **Wexley-Yorozu** builds the worlds the others trade with, and owns the debts of the people on them. Hexon sells its colonies medicine; Vorg sells them protection; the Mutual carries for them at cost and asks awkward questions.
 - **The Bureau of Continuity** sits on Hexon's board, buys from Vorg, and chartered the Mutual. Nobody is quite sure whose side it's on. That's how it likes it.

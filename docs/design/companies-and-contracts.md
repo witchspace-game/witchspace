@@ -16,13 +16,14 @@ All of it runs the way Elite's galaxy did: **worked out from each system's seed 
 
 ## 1. The companies
 
-Three to start, each with a character, a home ground and a rival. Their backstories, insignia, liveries, logo prompts and signature ships (the Coral, the Gaboon and the Garter) are in **[the trading companies](../companies.md)**. Inspired by real-world types with poetic licence; no real company is portrayed.
+Four to start, each with a character, a home ground and a rival. Their backstories, insignia, liveries, logo prompts and signature ships (the Coral, the Gaboon, the Garter and the Bullsnake) are in **[the trading companies](../companies.md)**. Inspired by real-world types with poetic licence; no real company is portrayed.
 
 | Company | Character | Home ground | Pays | Wants |
 |---|---|---|---|---|
 | **Hexon Holdings** | The corporate giant, and a nod to the films' sinister corporations. Punctual, polite, unforgiving of lateness. Its medicine contracts pay suspiciously well, and nobody asks what's in the sealed containers. | Corporate States, Democracies, Confederacies | Steady, on time; small danger bonuses | Reliability. The best-paying first employer, if you don't ask questions. |
 | **Vorg Industries** | A frontier conglomerate that makes everything and sells it to everyone; a nod to Zorg Industries. Asks no questions about your past. | Anarchies, Feudal and Multi-Government worlds | High, with big danger bonuses | Nerve. Later, some of its cargo is "irregular". |
 | **The Carriers' Mutual** | A Co-operative-chartered mutual of independent haulers. Fair, a little bureaucratic. | Everywhere with a government | Fair; members get benefits | Members. Standing here is membership. |
+| **Wexley-Yorozu** | Terraformers and shipwrights; a nod to the terraforming company of *Aliens*. Builds atmosphere processors, stations and the ships that carry them; its Science Division buys survey data and has standing special orders. | Frontier colonies and half-finished worlds, wherever it's terraforming | Heavy haulage; the best price for survey data | Explorers and heavy haulers. Ties trade to [exploration](../ideas.md#exploration) |
 
 - **Insignia.** Each company's ships carry its mark on the hull, drawn in lines like everything else. **Hexon Holdings: a double H**, two H's back to back sharing one upright, on black-banded hulls. Vorg: a heavy bladed V crossed like a gunsight. The Mutual: a carrick bend knot in a ring of 28 dots.
 - **Presence by system.** Each system has a mix of the three, from its government and its seed: Hexon Holdings dominates the safe core, Vorg the frontier, the Mutual a little of everywhere. The mix sets who posts contracts there and whose ships you see.
@@ -157,7 +158,7 @@ The same courtesy runs through the whole law: **warn first, escalate on defiance
 
 ## Open questions
 
-1. **Company names and characters.** Hexon Holdings agreed; Vorg Industries and the Carriers' Mutual proposed. Backstories in [the trading companies](../companies.md).
+1. **Company names and characters.** Hexon Holdings and Wexley-Yorozu agreed; Vorg Industries and the Carriers' Mutual proposed. Backstories in [the trading companies](../companies.md).
 2. **Deadlines in jumps** rather than real time: agreed?
 3. **The exchange for new commanders:** always available (proposed), or unlocked once you've done a few contracts?
 4. **The trade computer:** kept as the independent's tool (proposed).
