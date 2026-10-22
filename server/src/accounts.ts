@@ -3,7 +3,10 @@
 // One Durable Object holds them all in its own SQLite database.
 //
 // Privacy: we keep your email address, your callsign and your save, and
-// nothing else about you. Sign-in links and sessions are stored only as
+// nothing else about you (plus, only if you ask for them, the address your
+// browser gives us for notifications and whether we may email you).
+// Notifications are in character: the trading companies get in touch when
+// a special assignment is waiting (contact.ts). Sign-in links and sessions are stored only as
 // hashes, so a copy of the database can't be used to sign in as anyone.
 // Deleting your account removes all of it.
 
@@ -11,12 +14,17 @@ import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
 import { NAMES, nameKey, nameRule } from './names';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
+import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES } from './contact';
+import { isPushEndpoint, sendPush } from './push';
 
 export interface AccountsEnv {
   /** Resend, for sign-in emails. Without it (local development) the link is returned instead of sent. */
   RESEND_API_KEY?: string;
   TURNSTILE_SECRET?: string;
   ADMIN_KEY?: string;
+  /** Web Push (VAPID): the public key (a var) and the private key as a P-256 JWK (a secret). */
+  VAPID_PUBLIC?: string;
+  VAPID_PRIVATE?: string;
 }
 
 export interface Account {
@@ -47,6 +55,10 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE TABLE IF NOT EXISTS sends (email TEXT NOT NULL, net TEXT NOT NULL, t INTEGER NOT NULL)');
     // Protected callsigns released to one person (names.ts): only that email's account may claim them.
     this.sql.exec('CREATE TABLE IF NOT EXISTS releases (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, created INTEGER NOT NULL)');
+    // Letting the companies get in touch: opt-in, per account.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS contact (
+      account TEXT PRIMARY KEY, push TEXT, push_hash TEXT, email INTEGER NOT NULL DEFAULT 0, stop TEXT NOT NULL,
+      sent TEXT NOT NULL DEFAULT '[]', title TEXT, body TEXT)`);
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -56,6 +68,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'POST' && path === '/auth/request') return this.requestLink(request);
     if (m === 'POST' && path === '/auth/verify') return this.verify(request);
     if (path.startsWith('/admin/')) return this.admin(request, path);
+    if (m === 'GET' && path === '/contact/key') return json({ key: this.env.VAPID_PUBLIC ?? null });
+    if (m === 'GET' && path === '/push/latest') return this.latest(url);
+    if (m === 'GET' && path === '/contact/stop') return this.stop(url);
 
     const account = await this.sessionAccount(request);
     if (!account) return json({ error: 'Please sign in' }, 401);
@@ -65,6 +80,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'PUT' && path === '/me/save') return this.putSave(request, account);
     if (m === 'POST' && path === '/auth/signout') return this.signOut(request);
     if (m === 'DELETE' && path === '/me') return this.deleteAccount(account);
+    if (m === 'GET' && path === '/me/contact') return this.getContact(account);
+    if (m === 'PUT' && path === '/me/contact') return this.putContact(request, account);
     return json({ error: 'Not found' }, 404);
   }
 
@@ -189,6 +206,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
       const releases = this.sql.exec('SELECT name, email, created FROM releases ORDER BY created').toArray();
       return json({ rules: NAMES, releases });
     }
+    // Run the companies' hourly check now (testing), and see how many have asked to be contacted.
+    if (request.method === 'POST' && path === '/admin/contact/run') {
+      await this.alarm();
+      const n = this.sql.exec('SELECT COUNT(*) AS n FROM contact WHERE push IS NOT NULL OR email = 1').one().n;
+      return json({ ran: true, contactable: n });
+    }
     const body = (await request.json().catch(() => null)) as { name?: unknown; email?: unknown } | null;
     const name = cleanName(body?.name);
     if (request.method === 'POST' && path === '/admin/names/release') {
@@ -243,12 +266,148 @@ export class Accounts extends DurableObject<AccountsEnv> {
     return json({ updated });
   }
 
+  // --- The companies get in touch (opt-in) ------------------------------------------
+
+  private contactRow(id: string): ContactRow | null {
+    return (this.sql.exec('SELECT account, push, email, stop, sent FROM contact WHERE account = ?', id).toArray()[0] as unknown as ContactRow | undefined) ?? null;
+  }
+
+  private getContact(account: Account): Response {
+    const row = this.contactRow(account.id);
+    return json({ push: Boolean(row?.push), email: Boolean(row?.email), key: this.env.VAPID_PUBLIC ?? null });
+  }
+
+  /** PUT /me/contact {push?: subscription | null, email?: boolean}. */
+  private async putContact(request: Request, account: Account): Promise<Response> {
+    const body = (await request.json().catch(() => null)) as { push?: { endpoint?: unknown } | null; email?: unknown } | null;
+    if (!body) return json({ error: 'Nothing to change' }, 400);
+    const row = this.contactRow(account.id);
+    let push = row?.push ?? null;
+    if (body.push === null) push = null;
+    else if (body.push !== undefined) {
+      if (!isPushEndpoint(body.push.endpoint)) return json({ error: 'That isn’t a browser’s notification address' }, 400);
+      push = JSON.stringify({ endpoint: body.push.endpoint });
+    }
+    const email = body.email === undefined ? (row?.email ?? 0) : body.email ? 1 : 0;
+    const hash = push ? await sha256((JSON.parse(push) as { endpoint: string }).endpoint) : null;
+    this.sql.exec(
+      `INSERT INTO contact (account, push, push_hash, email, stop) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(account) DO UPDATE SET push = excluded.push, push_hash = excluded.push_hash, email = excluded.email`,
+      account.id, push, hash, email, row?.stop ?? randomToken(),
+    );
+    if ((push || email) && !(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + 60_000);
+    return json({ push: Boolean(push), email: Boolean(email) });
+  }
+
+  /** For the service worker: the latest message for its push address. */
+  private latest(url: URL): Response {
+    const row = this.sql.exec('SELECT title, body FROM contact WHERE push_hash = ?', url.searchParams.get('e') ?? '').toArray()[0];
+    return json(row?.title ? { title: row.title, body: row.body, url: `${SITE}/play/` } : { title: 'Witchspace', body: 'Someone would like a word, Commander.', url: `${SITE}/play/` });
+  }
+
+  /** One click from an email: no more contact. */
+  private stop(url: URL): Response {
+    const done = this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL, email = 0 WHERE stop = ?', url.searchParams.get('t') ?? '').rowsWritten;
+    const html = `<!doctype html><meta name="viewport" content="width=device-width"><body style="background:#05070d;color:#eaf0f6;font-family:Arial,sans-serif;padding:40px;text-align:center">
+      <h1 style="color:#3dffb0">${done ? 'Understood, Commander.' : 'Nothing to stop.'}</h1><p>${done ? 'The companies won’t contact you again. You can change this in the game, under A · Account.' : 'That link has already been used.'}</p>
+      <p><a style="color:#3dffb0" href="${SITE}/play/">Back to Witchspace</a></p></body>`;
+    return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  }
+
+  /** Every hour: anyone with an assignment waiting hears from the company. */
+  async alarm(): Promise<void> {
+    const rows = this.sql.exec('SELECT account, push, email, stop, sent FROM contact WHERE push IS NOT NULL OR email = 1').toArray() as unknown as ContactRow[];
+    const now = Date.now();
+    for (const row of rows) {
+      try {
+        await this.contactOne(row, now);
+      } catch (e) {
+        console.error('contact failed', row.account, e);
+      }
+    }
+    if (rows.length) await this.ctx.storage.setAlarm(now + CONTACT_EVERY);
+  }
+
+  private async contactOne(row: ContactRow, now: number) {
+    const save = this.sql.exec('SELECT data FROM saves WHERE account = ?', row.account).toArray()[0];
+    if (!save) return;
+    const c = JSON.parse(save.data as string) as {
+      name?: string; difficulty?: string; standing?: Record<string, number>; contracts?: { id: string }[]; contractsDone?: string[]; messages?: { id: string }[];
+    };
+    if (c.difficulty !== 'modern' || !c.name) return;
+    const sent = JSON.parse(row.sent) as { id: string; t: number }[];
+    const week = sent.filter((s) => now - s.t < 7 * 86_400_000);
+    if (week.length >= CONTACT_PER_WEEK) return;
+    const company = CONTACT_COMPANIES.find((id) => {
+      if (!assignmentWaiting(c.name!, id, c.standing?.[id] ?? 0, now)) return false;
+      const aid = assignmentId(id, now);
+      // Not if you've already seen it in the game, taken it, or been told.
+      return ![...(c.contracts ?? []), ...(c.messages ?? [])].some((x) => x.id === aid) && !c.contractsDone?.includes(aid) && !sent.some((s) => s.id === aid);
+    });
+    if (!company) return;
+    const { name, subject } = CONTACT[company];
+    const title = name;
+    const body = `${subject}. An assignment is waiting: report to any ${name} station within 48 hours.`;
+    let told = false;
+    if (row.push && this.env.VAPID_PUBLIC && this.env.VAPID_PRIVATE) {
+      this.sql.exec('UPDATE contact SET title = ?, body = ? WHERE account = ?', title, body, row.account);
+      const result = await sendPush((JSON.parse(row.push) as { endpoint: string }).endpoint, { publicKey: this.env.VAPID_PUBLIC, privateJwk: this.env.VAPID_PRIVATE });
+      if (result === 'gone') this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL WHERE account = ?', row.account);
+      told = result === 'sent';
+    }
+    if (!told && row.email && this.env.RESEND_API_KEY) told = await this.contactEmail(row, name, subject, body);
+    if (told) this.sql.exec('UPDATE contact SET sent = ? WHERE account = ?', JSON.stringify([...week, { id: assignmentId(company, now), t: now }]), row.account);
+  }
+
+  private async contactEmail(row: ContactRow, name: string, subject: string, body: string): Promise<boolean> {
+    const email = this.sql.exec('SELECT email FROM accounts WHERE id = ?', row.account).toArray()[0]?.email as string | undefined;
+    if (!email) return false;
+    const stop = `https://space.witchspace.org.uk/contact/stop?t=${encodeURIComponent(row.stop)}`;
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: `${name} via Witchspace <contact@witchspace.org.uk>`,
+        to: [email],
+        subject: `${name}: ${subject}`,
+        text: `${subject}.\n\nAn assignment is waiting: report to any ${name} station within 48 hours.\n\n${SITE}/play/\n\nYou asked the companies in Witchspace to contact you. To stop: ${stop}`,
+        html: contactHtml(name, body, stop),
+        headers: { 'List-Unsubscribe': `<${stop}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
+      }),
+    });
+    return res.ok;
+  }
+
   private deleteAccount(account: Account): Response {
-    for (const table of ['saves', 'sessions']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
+    for (const table of ['saves', 'sessions', 'contact']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM accounts WHERE id = ?', account.id);
     return json({ deleted: true });
   }
+}
+
+// --- The companies get in touch ----------------------------------------------------
+
+const CONTACT_EVERY = 3600_000; // how often to look for waiting assignments
+const CONTACT_PER_WEEK = 2;
+
+interface ContactRow {
+  account: string;
+  push: string | null;
+  email: number;
+  stop: string;
+  sent: string;
+}
+
+function contactHtml(name: string, body: string, stop: string): string {
+  return `<!doctype html><html><body style="margin:0;background:#05070d;font-family:Arial,Helvetica,sans-serif;color:#eaf0f6">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
+<table role="presentation" width="100%" style="max-width:480px;background:#0b111c;border:1px solid #1f2a3a;border-radius:16px" cellpadding="0" cellspacing="0"><tr><td style="padding:32px">
+<p style="margin:0 0 6px;font-size:13px;letter-spacing:4px;color:#3dffb0">${name.toUpperCase()}</p>
+<p style="margin:0 0 24px;font-size:17px;line-height:1.5;color:#eaf0f6">${body}</p>
+<p style="margin:0 0 24px"><a href="${SITE}/play/" style="display:inline-block;padding:13px 26px;border-radius:999px;background:#3dffb0;color:#03140e;font-weight:bold;text-decoration:none">Open Witchspace</a></p>
+<p style="margin:0;font-size:12px;line-height:1.5;color:#95a3b8">You asked the companies in Witchspace to contact you. <a href="${stop}" style="color:#95a3b8">Stop these messages</a>.</p>
+</td></tr></table></td></tr></table></body></html>`;
 }
 
 function emailHtml(link: string): string {

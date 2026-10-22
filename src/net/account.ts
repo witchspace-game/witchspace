@@ -155,3 +155,12 @@ export function queueSave(c: Commander, onConflict: () => void) {
     }
   }, SAVE_DELAY);
 }
+
+/** Whether the companies may contact you: notifications on some device, and email. */
+export function getContact() {
+  return call<{ push: boolean; email: boolean; key: string | null }>('/me/contact');
+}
+
+export function setContact(change: { push?: { endpoint: string } | null; email?: boolean }) {
+  return call<{ push: boolean; email: boolean }>('/me/contact', { method: 'PUT', body: JSON.stringify(change) });
+}
