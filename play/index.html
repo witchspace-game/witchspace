@@ -41,6 +41,12 @@
       <p id="ship-desc" class="desc"></p>
       <dl id="ship-stats"></dl>
       <p id="ship-credits" class="credits"></p>
+      <!-- Play full screen: add the game to the Home Screen (main.ts showInstall). -->
+      <div id="install" class="install" hidden>
+        <p><b>Play full screen.</b> <span id="install-how"></span></p>
+        <button id="install-go" class="primary" hidden>Install</button>
+        <button id="install-later">Not now</button>
+      </div>
     </section>
     <p class="prompt" data-screen="title">Load New Commander (Y/N)?</p>
     <nav class="controls" data-screen="title">
@@ -195,6 +201,8 @@
       <button class="map-galactic primary" data-key="KeyY" hidden></button>
     </section>
     <p id="banner" hidden></p>
+    <!-- Which way up, on a phone (main.ts updateTurnHint). -->
+    <p id="turn" class="turn" hidden aria-live="polite"></p>
     <canvas id="tunnel" hidden></canvas>
     <div id="whiteout" hidden></div>
 

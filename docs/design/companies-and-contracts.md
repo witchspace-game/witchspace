@@ -90,7 +90,21 @@ Standing is its own record, beside the combat rating and the explorer's rank, an
 - **The companies keep files.** Once you have any standing with a company, the Contracts tab offers *your file*: your contracts delivered, late and failed, your combat rating, your legal standing, where you were last seen, and a line or two **redacted**: things the company noticed that you didn't (a crisis you passed through, the Bureau of Continuity's interest). Each company's file is in its own voice: Hexon's dossier, Vorg's one-line assessment, the Mutual's membership card, Wexley-Yorozu's page 214.
 - **Special assignments.** With **Contractor** standing or better, a company may get in touch: a chance every three days, the offer open for 48 hours. It arrives as a **message** in its own voice ("A matter requiring discretion, Commander") and appears on the board at any station where the company does business: a small, unusual cargo (Hexon's sealed class-4 biologicals, Vorg's crates that tick, the Mutual's relief supplies, Wexley-Yorozu's sample case), two to four jumps out, paying several times a normal contract and +3 standing. Once taken, it counts in jumps like any contract.
 - **The same everywhere.** Whether an assignment is waiting depends only on your callsign, your standing and the clock (`assignmentWaiting`), so the notification server can tell when to get in touch without knowing anything else.
-- **Notifications** (next): a switch to let the companies contact you; a phone notification (Home Screen app on iPhone, any browser elsewhere) or an email when an assignment is waiting. Opt-in, in character, at most a couple a week.
+- **Notifications** *(built, October 2026)*: see below.
+
+### Contracts by notification
+
+A special assignment can reach you away from the game, so a company's offer is a reason to come back.
+
+- **Opt in, in the game.** Under **A · Account** (signed in), *Let the companies contact me* has two switches: *Notifications* on this device, and *Email* to your sign-in address. Both are off until you turn them on, and either can be turned off there again; every email also has a one-click *Stop these messages* link.
+- **Which devices.** Notifications use the browser's own Web Push (no third-party service): any modern browser on a computer or Android, and on an **iPhone only when the game has been added to the Home Screen** (iOS 16.4 or later). That's one reason the title screen asks iPhone players to add it (*Play full screen*). Email works anywhere.
+- **What starts one.** Every hour the server (`Accounts` alarm in `server/src/accounts.ts`) looks at each opted-in commander's cloud save. If a company has an assignment waiting (`assignmentWaiting` in `server/src/contact.ts`, the same function the game uses, so the offer is really on the board) and you haven't seen it in the game, taken it, or been told already, the company gets in touch: a notification if this device has them on, otherwise an email.
+- **Who qualifies.** Modern rules, a signed-in commander with a cloud save, and **Contractor** standing (5 points) or better with that company. Each company has a chance (40 %) of an assignment every three days, open for 48 hours.
+- **How often.** At most **two a week** in all, whatever your standing with the four companies.
+- **In character.** The notification is from the company, in its own voice ("Hexon Holdings: A matter requiring discretion, Commander"); the email uses the company's colours and banner (`server/src/emails.ts`). Opening it takes you to the game, where the offer is waiting in **Messages** and on the board at any station the company works.
+- **What's kept.** Only what's needed to reach you: the push subscription, whether email is on, and which assignments you've been told about (see the privacy page).
+
+Later: the same channel for things that happen while you're away (a contract running late, an adrift case found, a Marshals invitation), each its own switch.
 
 ## 2c. When things go wrong
 
