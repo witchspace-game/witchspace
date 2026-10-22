@@ -593,7 +593,7 @@ function renderContracts() {
       const why = cannotTake(c, o, free);
       return `<li class="special">${companyMark(o.company)} <em class="risk">Special assignment</em> · ${o.qty} t ${escapeHtml(cargoName(o))} → ${place(to)}<br>
         <small>within ${o.jumps} jumps · <b class="pay">${o.pay.toLocaleString()} Cr</b> · offer closes in ${hoursLeft(o.expires)} h</small>
-        <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span></li>`;
+        <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}</li>`;
     })
     .join('');
   // Lost cases that put a choice to you: the police, a blackmailer, pirates.
@@ -647,7 +647,7 @@ function renderContracts() {
       const why = cannotTake(c, o, free);
       return `<li>${companyMark(o.company)}${o.rush ? ' <em class="risk">Rush</em>' : ''} · ${o.qty} t ${goodName(o.good)} → ${place(to)}<br>
         <small>within ${o.jumps} jump${o.jumps === 1 ? '' : 's'} · <b class="pay">${o.pay.toLocaleString()} Cr</b>${o.danger ? ` (${o.danger} danger bonus)` : ''}${o.needs !== 'Casual' ? ` · needs ${o.needs}` : ''}</small>
-        <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span></li>`;
+        <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}</li>`;
     })
     .join('');
   const standings = COMPANY_IDS.filter((id) => (c.standing?.[id] ?? 0) !== 0)

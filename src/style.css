@@ -1228,3 +1228,5 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 @media (max-width: 700px), (max-height: 520px) {
   #galaxy-map .map-home { bottom: 40px; left: 10px; font-size: 12px; }
 }
+.contracts .why { display: block; margin-top: 4px; color: var(--amber); font-size: 12px; }
+.contracts .why { display: block; margin-top: 4px; color: var(--amber); font-size: 12px; }
