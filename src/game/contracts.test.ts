@@ -58,6 +58,8 @@ describe('company contracts', () => {
     for (let i = 0; i <= o.jumps + LATE_GRACE; i++) afterJump(d);
     expect(d.contracts).toHaveLength(0);
     expect(standing(d, o.company)).toBeLessThan(0);
+    // The company says so, in Messages, at each step.
+    expect(d.messages!.map((m) => m.subject)).toEqual(['Cargo reclaimed', 'Running late', 'One jump left']);
   });
 
   it('losing your ship or giving up costs standing, not money', () => {
