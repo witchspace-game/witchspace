@@ -10,6 +10,8 @@
 }
 
 * { box-sizing: border-box; }
+/* iPhone enlarges small text in Home Screen apps unless told not to; ours is sized on purpose. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
 html, body {
   margin: 0;
@@ -759,9 +761,11 @@ body.touch #banner { top: 64px; font-size: 15px; padding: 7px 12px; }
 
 @media (max-width: 700px) {
   .keys { display: none; }
-  .title { top: 14px; }
+  /* The look switch keeps the top right; the title goes below it. */
+  #look { top: 10px; right: 10px; }
+  .title { top: 54px; }
   .title h1 { letter-spacing: 0.25em; }
-  .prompt { top: 92px; font-size: 14px; letter-spacing: 0.12em; }
+  .prompt { top: 128px; font-size: 14px; letter-spacing: 0.12em; }
   .controls { left: 12px; right: 12px; bottom: 40px; justify-content: center; gap: 6px; }
   .controls button { padding: 7px 10px; font-size: 13px; }
   .panel { left: 12px; right: 12px; width: auto; bottom: calc(var(--controls-h, 48px) + 50px); padding: 12px 14px; }
