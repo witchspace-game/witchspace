@@ -179,6 +179,8 @@ export interface Commander {
   companyLog?: Partial<Record<CompanyId, CompanyLog>>;
   /** Messages from the companies, newest first. */
   messages?: Message[];
+  /** Favours you owe each company (a lawyer here, a word there): leverage for later. */
+  favours?: Partial<Record<CompanyId, number>>;
   /** Special cargo adrift where your ship was lost, waiting to be recovered. */
   adrift?: AdriftCase[];
   /** Missiles on the rails. */

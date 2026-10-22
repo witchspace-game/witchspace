@@ -73,6 +73,10 @@ export class NpcShip {
   attackedAgo = Infinity;
   /** Cargo carried, by commodity id; spilled if destroyed. */
   cargo: Record<string, number> = {};
+  /** On an errand that matters more than prey (pirates after a lost case): fly to the destination, fight only if attacked. */
+  errand?: boolean;
+  /** A lost company case this ship has taken aboard (contract id). */
+  carrying?: string;
   /** The trading company a trader flies for, if any. */
   company?: CompanyId;
   /** Credits paid for destroying this ship (pirates). */

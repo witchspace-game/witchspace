@@ -74,7 +74,7 @@ import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
 import { abandon, afterJump, board, cannotTake, cargoName, deliver, destinationOf, loseContracts, standing, take, type Contract } from './game/contracts';
-import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, STATION_CREW_RANGE, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
+import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
 import { bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, sellData, SURVEY, worldOf, type Body, type Poi } from './game/explore';
@@ -495,7 +495,7 @@ function renderContracts() {
   const place = (s: StarSystem) => `${escapeHtml(s.name)} <small>${distanceLy(here, s).toFixed(1)} LY</small>${riskTag(s)}`;
   const messages = (c.messages ?? [])
     .slice(0, 5)
-    .map((m) => `<li class="message${m.read ? '' : ' unread'}">${companyMark(m.company)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small></li>`)
+    .map((m) => `<li class="message${m.read ? '' : ' unread'}">${m.from ? `<b class="company">${escapeHtml(m.from)}</b>` : companyMark(m.company)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small></li>`)
     .join('');
   for (const m of c.messages ?? []) m.read = true;
   markInbox(c);
@@ -506,6 +506,22 @@ function renderContracts() {
       return `<li class="special">${companyMark(o.company)} <em class="risk">Special assignment</em> · ${o.qty} t ${escapeHtml(cargoName(o))} → ${place(to)}<br>
         <small>within ${o.jumps} jumps · <b class="pay">${o.pay.toLocaleString()} Cr</b> · offer closes in ${hoursLeft(o.expires)} h</small>
         <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span></li>`;
+    })
+    .join('');
+  // Lost cases that put a choice to you: the police, a blackmailer, pirates.
+  const incidents = (c.adrift ?? [])
+    .filter((k) => k.fate && k.fate !== 'honest')
+    .map((k) => {
+      const a = c.contracts?.find((x) => x.id === k.contract);
+      if (!a) return '';
+      const there = k.galaxy === here.galaxy && k.system === here.index;
+      const station = systemAt(k.galaxy, k.system).name;
+      const title = { police: `${station} station police: a word about your ${k.label}`, blackmail: `Someone at ${station} station has your ${k.label}`, ransom: `Pirates have your ${k.label}` }[k.fate as 'police'];
+      const needsStation = (ch: Choice) => (k.fate === 'police' || ch === 'find') && !there;
+      const buttons = incidentChoices(k, a.pay)
+        .map((o) => `<button data-incident="${k.contract}" data-choice="${o.choice}" ${needsStation(o.choice) || (o.cost && c.credits < o.cost) ? 'disabled' : ''} ${needsStation(o.choice) ? `title="At ${escapeHtml(station)} station"` : ''}>${escapeHtml(o.label)}</button>`)
+        .join('');
+      return `<li class="special">${companyMark(a.company)} · <b>${escapeHtml(title)}</b>${k.fate === 'police' && !there ? `<br><small>Report to ${escapeHtml(station)} station</small>` : ''}<span class="actions incident">${buttons}</span></li>`;
     })
     .join('');
   const file = openFile ? fileOn(c, openFile, here, now) : null;
@@ -550,6 +566,7 @@ function renderContracts() {
     .map((id) => `${companyMark(id)} ${standingName(standing(c, id))}`)
     .join(' · ');
   $('#contracts').innerHTML = `
+    ${incidents ? `<h3>Incidents</h3><ul class="contracts">${incidents}</ul>` : ''}
     ${messages ? `<h3>Messages</h3><ul class="contracts">${messages}</ul>` : ''}
     ${mine ? `<h3>Your contracts</h3><ul class="contracts">${mine}</ul>` : ''}
     <h3>On offer at ${escapeHtml(stationName(here).name)}</h3>
@@ -576,6 +593,9 @@ $('#contracts').addEventListener('click', (e) => {
     }
   } else if (b.dataset.abandon) {
     contractMessage = abandon(c, b.dataset.abandon);
+  } else if (b.dataset.incident) {
+    contractMessage = decide(c, b.dataset.incident, b.dataset.choice as Choice, currentSystem()) ?? '';
+    sfx.beep();
   } else if (b.dataset.rival) {
     contractMessage = sellToRival(c, b.dataset.rival, currentSystem()) ?? '';
     sfx.beep();
@@ -1893,6 +1913,18 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   space.scene.add(boom.group);
   explosions.push(boom);
   boomAt(npc.obj.position, 2.2, 1600, 1.6);
+  // A pirate carrying your lost case drops it again.
+  if (npc.carrying && commander) {
+    const k = cmdr().adrift?.find((x) => x.contract === npc.carrying);
+    if (k) {
+      const p = npc.obj.position;
+      k.position = [p.x, p.y, p.z];
+      delete k.fate;
+      saveCommander(cmdr());
+      spillSpecial(k);
+      flash(`The ${k.label} is adrift again`, 2.5);
+    }
+  }
   // Cargo from a clean ship you destroyed is stolen; from a pirate, or someone else's kill, it's salvage.
   if (Object.keys(npc.cargo).length) spillCargo(npc.obj.position, velocity, npc.cargo, killer === player.obj && npc.role !== 'pirate');
   const lost = deliveries.get(npc);
@@ -2590,11 +2622,64 @@ function spillSpecial(k: AdriftCase) {
   while (drifters.length > MAX_DRIFTERS) evictDrifter();
 }
 
+// --- Pirates after a lost case -----------------------------------------------------
+// A beaconing case is an advert. A while after you arrive, pirates come for it;
+// get there first and it's yours. If they take it and get away, they want paying.
+
+const RAID_DELAY = 75; // seconds in the system before the pirates turn up
+const PIRATES_ESCAPE = 22000; // metres from the station: a pirate this far out with your case has got away
+let raidClock = 0;
+const raided = new Set<string>();
+
+function updateCaseRaid(dt: number) {
+  if (!commander || state !== 'flying') return;
+  const c = cmdr();
+  // The pirates arrive.
+  raidClock += dt;
+  for (const d of drifters) {
+    if (!d.special || raided.has(d.special.contract) || raidClock < RAID_DELAY) continue;
+    raided.add(d.special.contract);
+    const at = d.model.root.position;
+    const from = at.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(6000));
+    for (let i = 0; i < 2; i++) {
+      const def = i === 0 ? 'mamba' : 'sidewinder';
+      const npc = addNpc(def, 'pirate', from.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(250)), at);
+      npc.errand = true;
+      npc.destination = at.clone();
+      npc.obj.lookAt(at);
+      npc.ship.speed = npc.ship.maxSpeed * 0.6;
+      npc.bounty = BOUNTIES[def] ?? 40;
+    }
+    flash(`Pirates inbound for the ${d.special.label}`, 3);
+  }
+  // A pirate reaches the case and takes it aboard, then runs for deep space.
+  for (const npc of npcs) {
+    if (!npc.errand || npc.carrying) continue;
+    const d = drifters.find((x) => x.special && x.model.root.position.distanceTo(npc.obj.position) < 70);
+    if (!d) continue;
+    npc.carrying = d.special!.contract;
+    npc.destination = station.root.position.clone().addScaledVector(npc.obj.position.clone().sub(station.root.position).normalize(), PIRATES_ESCAPE + 2000);
+    disposeShip(d.model);
+    drifters.splice(drifters.indexOf(d), 1);
+    flash(`Pirates have taken the ${d.special!.label}: stop them before they get away`, 3.5);
+  }
+  // One that gets away holds it for ransom.
+  for (const npc of [...npcs]) {
+    if (!npc.carrying || npc.obj.position.distanceTo(station.root.position) < PIRATES_ESCAPE) continue;
+    const note = takenByPirates(c, npc.carrying, Date.now());
+    saveCommander(c);
+    removeNpc(npc);
+    if (note) flash(`${note} · see Contracts`, 4);
+  }
+}
+
 /** Back in a system where you lost a case: it's still there. */
 function restoreAdrift() {
+  raidClock = 0;
+  raided.clear();
   if (!commander) return;
   const here = currentSystem();
-  for (const k of cmdr().adrift ?? []) if (!k.held && k.galaxy === here.galaxy && k.system === here.index) spillSpecial(k);
+  for (const k of cmdr().adrift ?? []) if (!k.held && !k.fate && k.galaxy === here.galaxy && k.system === here.index) spillSpecial(k);
 }
 
 /** Cases whose time ran out elsewhere: tell the commander. */
@@ -2856,6 +2941,7 @@ function updateSpace(dt: number) {
   elapsed += dt;
   station.update(dt);
   updateDrifters(dt);
+  updateCaseRaid(dt);
   for (let i = explosions.length - 1; i >= 0; i--) if (!explosions[i].update(dt)) explosions.splice(i, 1);
   updateMarshals(dt);
 
@@ -3215,6 +3301,7 @@ async function launch() {
   cabinTemp = 0;
   locked = null;
   scheduleMarshals(); // still wanted? they'll be back
+  raidClock = 0;
   setView('front');
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
@@ -3853,6 +3940,8 @@ async function hyperspace() {
   surrenderTimer = null;
   saveCommander(c);
   const slipped = carrier !== null && (carrier.phase === 'arriving' || carrier.phase === 'emerging');
+  // Pirates who had your case when you left have got away with it.
+  for (const npc of npcs) if (npc.carrying) takenByPirates(c, npc.carrying, Date.now());
   buildSystemScene(dest);
 
   // Arrive some way out, off to one side of the station-planet line, so the

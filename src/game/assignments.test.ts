@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
 import { cargoTonnes, newCommander } from './commander';
-import { ADRIFT_FALL, ADRIFT_HOLD, ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, checkMessages, collectHeld, expireCases, fileOn, recoverCase, rivalPrice, sellToRival, setAdrift } from './assignments';
+import { ADRIFT_FALL, ADRIFT_HOLD, ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, blackmailPrice, checkMessages, collectHeld, decide, expireCases, PIRATES_FIND, ransomPrice, fileOn, recoverCase, rivalPrice, sellToRival, setAdrift } from './assignments';
 import { deliver, destinationOf, loseContracts, logOf, standing, take } from './contracts';
+import { legalStatus } from './law';
 
 const lave = systemAt(0, 7);
 const T0 = Date.UTC(2026, 9, 22, 12);
@@ -77,10 +78,14 @@ describe('special assignments', () => {
     expect(cargoTonnes(c)).toBe(offer.qty);
 
     setAdrift(c, lave, [1, 2, 3], t);
-    expect(expireCases(c, t + ADRIFT_HOLD, () => false)).toHaveLength(0); // still holding
-    expect(expireCases(c, t + ADRIFT_HOLD + ADRIFT_FALL + 1, () => false)[0]).toMatch(/failed/);
-    expect(c.contracts).toHaveLength(0);
-    expect(standing(c, 'hexon')).toBeLessThan(6);
+    expect(expireCases(c, t + PIRATES_FIND - 1, () => false)).toHaveLength(0); // still holding
+    // Later, pirates find it, or it falls.
+    const note = [...expireCases(c, t + PIRATES_FIND + 1, () => false), ...expireCases(c, t + ADRIFT_HOLD + ADRIFT_FALL + 1, () => false)][0];
+    expect(note).toMatch(/Pirates|failed/);
+    if (/failed/.test(note)) {
+      expect(c.contracts).toHaveLength(0);
+      expect(standing(c, 'hexon')).toBeLessThan(6);
+    }
   });
 
   it('rivals will buy what the owner is carrying, and the owner finds out', () => {
@@ -106,11 +111,67 @@ describe('special assignments', () => {
     take(c, offer, 20);
     const [k] = setAdrift(c, lave, [0, 0, 0], t, true);
     expect(k.held).toBe(true);
+    k.fate = 'honest';
     expect(expireCases(c, t + 10 * ADRIFT_HOLD, () => false)).toHaveLength(0); // the crew keeps it safe
     expect(collectHeld(c, systemAt(0, 8))).toHaveLength(0); // only at that station
     expect(collectHeld(c, lave)[0]).toMatch(/station crew/);
     expect(c.credits).toBe(1000 - Math.round(offer.pay / 10));
     expect(c.contracts![0].adrift).toBe(false);
+  });
+
+  /** A commander holding a lost Vorg case at Lave's station, with the given fate. */
+  function lostWith(fate: 'police' | 'blackmail' | 'ransom') {
+    const c = newCommander('modern');
+    c.standing = { vorg: 6 };
+    c.credits = 5000;
+    const t = waitingTime(c.name);
+    let offer = null;
+    for (let k = 0; !offer && k < 30; k++) offer = assignmentFor(c, 'vorg', lave, t + k * ASSIGNMENT_SLOT);
+    take(c, offer!, 20);
+    const [k] = setAdrift(c, lave, [0, 0, 0], t, true);
+    k.fate = fate;
+    k.held = fate !== 'ransom';
+    return { c, offer: offer!, k };
+  }
+
+  it('the station police want a word: open it, refuse, or call the company', () => {
+    const open = lostWith('police');
+    expect(decide(open.c, open.offer.id, 'open', systemAt(0, 8))).toBeNull(); // only at their station
+    expect(decide(open.c, open.offer.id, 'open', lave)).toMatch(/OFFENDER/); // Vorg's crates were armed
+    expect(legalStatus(open.c, lave)).toBe('offender');
+    expect(open.c.contracts).toHaveLength(0);
+
+    const call = lostWith('police');
+    expect(decide(call.c, call.offer.id, 'call', lave)).toMatch(/lawyers/);
+    expect(call.c.contracts![0].adrift).toBe(false);
+    expect(call.c.favours?.vorg).toBe(1);
+  });
+
+  it('a blackmailer wants paying; pirates want a ransom', () => {
+    const b = lostWith('blackmail');
+    decide(b.c, b.offer.id, 'pay', lave);
+    expect(b.c.credits).toBe(5000 - blackmailPrice(b.offer.pay) - Math.round(b.offer.pay / 10));
+    expect(b.c.contracts![0].adrift).toBe(false);
+
+    const r = lostWith('ransom');
+    expect(decide(r.c, r.offer.id, 'refuse', lave)).toMatch(/fence/);
+    expect(r.c.contracts).toHaveLength(0);
+    const p = lostWith('ransom');
+    decide(p.c, p.offer.id, 'pay', systemAt(0, 8));
+    expect(p.c.credits).toBe(5000 - ransomPrice(p.offer.pay));
+    expect(p.c.adrift![0].held).toBe(true); // waiting at the station
+  });
+
+  it('left in the lanes too long, pirates may find it first', () => {
+    const c = newCommander('modern');
+    c.standing = { hexon: 6 };
+    const t = waitingTime(c.name);
+    take(c, assignmentFor(c, 'hexon', lave, t)!, 20);
+    setAdrift(c, lave, [5000, 0, 0], t);
+    const notes = expireCases(c, t + PIRATES_FIND + 1, () => false);
+    const k = c.adrift?.[0];
+    // Either the pirates have it, or it's still out there (and falls later).
+    if (k) expect(k.fate === 'ransom' || notes.length === 0).toBe(true);
   });
 });
 
