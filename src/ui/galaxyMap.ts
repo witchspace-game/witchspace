@@ -29,6 +29,7 @@ const root = document.querySelector<HTMLElement>('#galaxy-map')!;
 const canvas = root.querySelector<HTMLCanvasElement>('canvas')!;
 const title = root.querySelector<HTMLElement>('.map-title')!;
 const info = root.querySelector<HTMLElement>('.map-info')!;
+const modeButton = root.querySelector<HTMLButtonElement>('.map-mode')!;
 
 let mode: ChartMode = 'galactic';
 let opts: Options | null = null;
@@ -36,8 +37,9 @@ let cursor: StarSystem | null = null;
 
 export const isMapOpen = () => !root.hidden;
 
-export function openMap(o: Options, startMode: ChartMode = 'galactic') {
+export function openMap(o: Options, startMode: ChartMode = small() ? 'local' : 'galactic') {
   opts = o;
+  // On a phone the whole galaxy is too small to tap: start close in, as Elite's short-range chart did.
   mode = startMode;
   cursor = o.target ?? o.current;
   root.hidden = false;
@@ -94,28 +96,52 @@ export function chooseCursor() {
 
 // --- Drawing -------------------------------------------------------------------
 
-function view() {
+/** A phone-sized screen: the chart has to share it with the info panel. */
+const small = () => innerHeight < 520 || innerWidth < 700;
+
+/**
+ * The part of the screen the chart can use. On a desktop, the margins the
+ * layout always had. On a phone, everything between the title and the hint,
+ * beside (landscape) or above (portrait) the info panel.
+ */
+function chartArea() {
   const w = root.clientWidth;
   const h = root.clientHeight;
+  if (!small()) return { left: 40, top: 90, right: w - 40, bottom: h - 150 };
+  let right = w - 12;
+  let bottom = h - 34;
+  const r = info.getBoundingClientRect();
+  if (r.width && r.left > w * 0.45) right = r.left - 12;
+  else if (r.height && r.top > h * 0.35) bottom = r.top - 8;
+  return { left: 12, top: w < 700 ? 84 : 52, right, bottom };
+}
+
+function view() {
   const cur = opts!.current;
+  const a = chartArea();
+  const aw = a.right - a.left;
+  const ah = a.bottom - a.top;
   if (mode === 'galactic') {
-    // Whole galaxy: 256 × 128 chart units, fitted with a margin.
-    const scale = Math.min((w - 80) / 256, (h - 240) / 128);
-    const ox = (w - 256 * scale) / 2;
-    const oy = 90 + (h - 240 - 128 * scale) / 2;
-    return { scale, toScreen: (s: StarSystem) => [ox + s.x * scale, oy + (s.y / 2) * scale] as const };
+    // Whole galaxy: 256 × 128 chart units, fitted to the space.
+    const scale = Math.min(aw / 256, ah / 128);
+    const ox = a.left + (aw - 256 * scale) / 2;
+    const oy = a.top + (ah - 128 * scale) / 2;
+    return { scale, area: a, toScreen: (s: StarSystem) => [ox + s.x * scale, oy + (s.y / 2) * scale] as const };
   }
-  const scale = Math.min(w - 80, h - 240) / LOCAL_SPAN;
-  const cx = w / 2;
-  const cy = 90 + (h - 240) / 2;
+  // Local: about a tank and a half of fuel each way, centred on you, names on everything.
+  const scale = Math.min(aw, ah * 2) / LOCAL_SPAN;
+  const cx = a.left + aw / 2;
+  const cy = a.top + ah / 2;
   return {
     scale,
+    area: a,
     toScreen: (s: StarSystem) => [cx + (s.x - cur.x) * scale, cy + ((s.y - cur.y) / 2) * scale] as const,
   };
 }
 
 function draw() {
   if (!opts) return;
+  renderInfo(); // first, so the chart knows how much room the panel takes
   const retro = isRetro();
   const dpr = Math.min(devicePixelRatio, 2);
   const w = root.clientWidth;
@@ -132,7 +158,7 @@ function draw() {
     ? { star: '#fff', dim: '#fff', current: '#fff', range: '#fff', target: '#fff', cursor: '#fff', text: '#fff' }
     : { star: '#9fd8c4', dim: '#3c6a5c', current: '#3dffb0', range: 'rgba(61,255,176,0.45)', target: '#ffb347', cursor: '#ffffff', text: '#d7fff0' };
   const font = retro ? '10px "Press Start 2P", monospace' : '14px Rajdhani, sans-serif';
-  const { scale, toScreen } = view();
+  const { scale, toScreen, area } = view();
   const cur = opts.current;
 
   // Jump range circle around the current system.
@@ -148,7 +174,7 @@ function draw() {
   ctx.textBaseline = 'middle';
   for (const s of galaxy(cur.galaxy)) {
     const [x, y] = toScreen(s);
-    if (x < -20 || y < 60 || x > w + 20 || y > h - 130) continue;
+    if (x < area.left - 4 || y < area.top - 4 || x > area.right + 4 || y > area.bottom + 4) continue;
     const reachable = distanceLy(cur, s) <= opts.range;
     const size = mode === 'galactic' ? 1.5 + s.techLevel / 6 : 2.5 + s.techLevel / 4;
     ctx.fillStyle = reachable || retro ? colours.star : colours.dim;
@@ -217,7 +243,7 @@ function draw() {
   if (cursor) mark(cursor, colours.cursor, 12, true);
 
   title.textContent = mode === 'galactic' ? `Galactic chart · Galaxy ${cur.galaxy + 1}` : `Local chart · ${cur.name}`;
-  renderInfo();
+  modeButton.textContent = mode === 'galactic' ? 'Local chart' : 'Whole galaxy';
 }
 
 function renderInfo() {
@@ -269,6 +295,11 @@ canvas.addEventListener('click', (e) => {
     cursor = best;
     draw();
   }
+});
+
+modeButton.addEventListener('click', () => {
+  modeButton.blur();
+  toggleMapMode();
 });
 
 addEventListener('resize', () => {

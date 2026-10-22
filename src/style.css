@@ -1176,3 +1176,11 @@ body.retro .file { font-family: inherit; font-size: 8px; }
 body.touch .account-close .small { display: none; }
 /* The 1984 "Load New Commander (Y/N)?" prompt is for keyboards; on touch the buttons do it. */
 body.touch .prompt { display: none; }
+#galaxy-map .map-mode { position: absolute; top: 16px; left: 16px; font-size: 13px; padding: 6px 12px; z-index: 1; }
+@media (max-width: 700px), (max-height: 520px) {
+  #galaxy-map .map-mode { top: 10px; left: 10px; font-size: 12px; padding: 5px 10px; }
+  #galaxy-map .map-close { top: 8px; right: 10px; }
+}
+@media (max-width: 700px) {
+  #galaxy-map .map-title { top: 52px; padding: 0 12px; }
+}
