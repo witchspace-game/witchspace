@@ -19,7 +19,7 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; tagline: string; b
 export type EquipmentId =
   | 'docking-computer' | 'combat-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm'
   | 'large-cargo-bay' | 'extra-energy' | 'energy-bomb' | 'galactic-hyperdrive' | 'weapons-licence'
-  | 'transponder' | 'distress-jammer';
+  | 'transponder' | 'distress-jammer' | 'long-range-tanks' | 'survey-scanner';
 
 export type Mount = 'front' | 'rear' | 'left' | 'right';
 
@@ -130,6 +130,23 @@ export const EQUIPMENT: Equipment[] = [
     modernOnly: true,
     minTech: 1,
     undamageable: true,
+  },
+  {
+    id: 'long-range-tanks',
+    name: 'Long-Range Fuel Tanks',
+    price: 2200,
+    blurb: 'Ten light years in the tank instead of seven: the explorer\'s first upgrade.',
+    modernOnly: true,
+    minTech: 8,
+    undamageable: true,
+  },
+  {
+    id: 'survey-scanner',
+    name: 'Deep Survey Scanner',
+    price: 1800,
+    blurb: 'Surveys from twice as far in half the time, and picks up signals from four times as far.',
+    modernOnly: true,
+    minTech: 7,
   },
   {
     id: 'transponder',
@@ -258,6 +275,10 @@ export const cargoCapacity = (c: Commander, hullCargo: number) =>
   hullCargo + (hasEquipment(c, 'large-cargo-bay') ? LARGE_CARGO_BAY : 0);
 
 export const FUEL_CAPACITY = 7; // light years
+/** Long-range tanks hold this much more. */
+export const LONG_RANGE_EXTRA = 3;
+/** What this ship's tanks hold. */
+export const fuelCapacity = (c: Commander) => FUEL_CAPACITY + (c.equipment.includes('long-range-tanks') ? LONG_RANGE_EXTRA : 0);
 export const FUEL_PRICE = 2; // credits per light year
 export const MISSILE_PRICE = 30;
 
@@ -333,6 +354,7 @@ export function rollEquipmentDamage(c: Commander, random = Math.random): Equipme
 export function removeEquipment(c: Commander, id: EquipmentId) {
   c.equipment = c.equipment.filter((e) => e !== id);
   c.damaged = c.damaged.filter((e) => e !== id);
+  c.fuel = Math.min(c.fuel, fuelCapacity(c)); // smaller tanks
 }
 
 // --- Stolen goods -------------------------------------------------------------------

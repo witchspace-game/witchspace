@@ -9,8 +9,8 @@ import {
   DIFFICULTIES,
   deleteCommander,
   EQUIPMENT,
-  FUEL_CAPACITY,
   FUEL_PRICE,
+  fuelCapacity,
   MISSILE_PRICE,
   hasEquipment,
   isWorking,
@@ -76,11 +76,11 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
-import { abandon, afterJump, amendsCost, board, SIGNING_BONUS, welcome, cannotTake, cargoName, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, standing, take, type Contract } from './game/contracts';
+import { abandon, addStanding, afterJump, amendsCost, board, SIGNING_BONUS, welcome, cannotTake, cargoName, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
-import { bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, sellData, SURVEY, worldOf, type Body, type Poi } from './game/explore';
+import { advanceTrail, bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi } from './game/explore';
 import { SpaceDust } from './render/dust';
 import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
@@ -718,7 +718,10 @@ function renderContracts() {
       const rival = RIVAL[a.company];
       const sale = a.special && !k && rival && companyHere(rival, here) ? `<button data-rival="${a.id}" title="${escapeHtml(COMPANIES[a.company].name)} will find out">Offer to ${escapeHtml(COMPANIES[rival].name)} · ${rivalPrice(a).toLocaleString()} Cr</button>` : '';
       const course = c.target === to.index ? '<span class="on-course">On course</span>' : `<button data-course="${to.index}">Set course</button>`;
-      return `<li class="${a.special ? 'special' : ''}${a.id === justTaken ? ' fresh' : ''}">${companyMark(a.company)} · ${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>
+      const what = a.survey
+        ? `Survey the moons of ${place(to)}<br><small>${left} · ${worldOf(to).moons.filter((_, i) => isSurveyed(c, to, `moon${i}`)).length} of ${worldOf(to).moons.length} surveyed${surveyDone(c, a) ? ' · hand in at any Wexley-Yorozu station' : ''} · ${a.pay.toLocaleString()} Cr</small>`
+        : `${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>`;
+      return `<li class="${a.special ? 'special' : ''}${a.id === justTaken ? ' fresh' : ''}">${companyMark(a.company)} · ${what}
         <span class="actions">${k && where!.index !== here.index ? `<button data-course="${where!.index}">Set course</button>` : course}${sale}<button data-abandon="${a.id}" title="The company takes its cargo back, and remembers">Abandon</button></span></li>`;
     })
     .join('');
@@ -726,7 +729,7 @@ function renderContracts() {
     .map((o) => {
       const to = destinationOf(o);
       const why = cannotTake(c, o, free);
-      return `<li>${companyMark(o.company)}${o.rush ? ' <em class="risk">Rush</em>' : ''} · ${o.qty} t ${goodName(o.good)} → ${place(to)}<br>
+      return `<li>${companyMark(o.company)}${o.rush ? ' <em class="risk">Rush</em>' : ''} · ${o.survey ? `Survey the moons of ${place(to)} <small>(${worldOf(to).moons.length}) · data to any Wexley-Yorozu station</small>` : `${o.qty} t ${goodName(o.good)} → ${place(to)}`}<br>
         <small>within ${o.jumps} jump${o.jumps === 1 ? '' : 's'} · <b class="pay">${o.pay.toLocaleString()} Cr</b>${o.danger ? ` (${o.danger} danger bonus)` : ''}${o.needs !== 'Casual' ? ` · needs ${o.needs}` : ''}</small>
         <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}</li>`;
     })
@@ -771,7 +774,7 @@ $('#contracts').addEventListener('click', (e) => {
     if (offer && offer.id === hello?.id) recruiter = null; // welcomed
     if (!offer) return;
     const why = take(c, offer, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
-    contractMessage = why ?? `Contract taken: ${offer.qty} t ${cargoName(offer)} for ${destinationOf(offer).name}, loaded`;
+    contractMessage = why ?? (offer.survey ? `Survey contract taken: the moons of ${destinationOf(offer).name}, data to any Wexley-Yorozu station` : `Contract taken: ${offer.qty} t ${cargoName(offer)} for ${destinationOf(offer).name}, loaded`);
     if (!why) {
       const fitted = fitCompartment(c, offer);
       if (fitted) contractMessage += ` · ${fitted}`;
@@ -996,6 +999,7 @@ function renderDocked() {
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', combatRating(c.kills)],
     ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited`],
+    ...trailsUnderWay(c, here.galaxy).map((t): [string, string] => ['Trail', `${escapeHtml(t.title)} · ${t.found} of ${t.of} found · the clue points to ${escapeHtml(t.next)}`]),
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   $('#cmdr .rename').addEventListener('click', () => startRename());
@@ -1008,10 +1012,10 @@ function renderDocked() {
   });
 
   // Fuel: top up to a full tank at the station.
-  const missing = Math.round((FUEL_CAPACITY - c.fuel) * 10) / 10;
+  const missing = Math.round((fuelCapacity(c) - c.fuel) * 10) / 10;
   const fuelCost = Math.round(missing * FUEL_PRICE * 10) / 10;
   const affordable = Math.min(missing, Math.floor((c.credits / FUEL_PRICE) * 10) / 10);
-  $('#fuel').innerHTML = `<span>Fuel <b>${c.fuel.toFixed(1)} / ${FUEL_CAPACITY} LY</b></span>`;
+  $('#fuel').innerHTML = `<span>Fuel <b>${c.fuel.toFixed(1)} / ${fuelCapacity(c)} LY</b></span>`;
   const refuel = document.createElement('button');
   refuel.textContent = missing <= 0 ? 'Full' : affordable < missing ? `${affordable.toFixed(1)} LY · ${(affordable * FUEL_PRICE).toFixed(1)} Cr` : `Refuel · ${fuelCost.toFixed(1)} Cr`;
   refuel.disabled = missing <= 0 || affordable <= 0;
@@ -1030,20 +1034,40 @@ function renderDocked() {
   const data = exploreOf(c).data;
   dataRow.hidden = c.difficulty !== 'modern';
   if (!dataRow.hidden) {
-    const worth = data.reduce((sum, d) => sum + dataValue(d, here), 0);
-    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b></span>`;
-    dataRow.title = data.length ? data.map((d) => `${d.name}: ${dataValue(d, here)} Cr`).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
+    // Wexley-Yorozu pays best, and is the only one the Science Division's report goes to.
+    const wy = wyWorks(here);
+    const sellable = data.filter((d) => wy || !d.report);
+    const worth = sellable.reduce((sum, d) => sum + dataValue(d, here, wy), 0);
+    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${wy && data.length ? ' <small>Wexley-Yorozu pays a quarter more</small>' : ''}</span>`;
+    dataRow.title = data.length ? data.map((d) => `${d.name}: ${dataValue(d, here, wy)} Cr`).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
     const sell = document.createElement('button');
-    sell.textContent = data.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
-    sell.disabled = !data.length;
+    sell.textContent = sellable.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
+    sell.disabled = !sellable.length;
+    if (wy && data.some((d) => d.report)) sell.title = `Includes the Ninefold report: the Science Division pays ${REPORT_PRICE.wy.toLocaleString()} Cr, and remembers you kindly`;
     sell.addEventListener('click', () => {
-      const paid = sellData(c, here);
+      const { credits, reports } = sellData(c, here, wy);
+      if (reports) addStanding(c, 'wy', 3);
       saveCommander(c);
       sfx.beep();
-      flash(`Survey data sold · ${paid.toLocaleString()} Cr`, 2);
+      flash(reports ? `The Science Division takes the Ninefold report · ${credits.toLocaleString()} Cr with your data · Wexley-Yorozu is grateful` : `Survey data sold · ${credits.toLocaleString()} Cr`, 4);
       renderDocked();
     });
     dataRow.append(sell);
+    // The report, anywhere else: publish it, and live with it.
+    if (!wy && data.some((d) => d.report)) {
+      const publish = document.createElement('button');
+      publish.textContent = `Publish the Ninefold report · ${REPORT_PRICE.published} Cr`;
+      publish.title = "The Mutual's newsletter pays, the colonists' families learn what happened, and Wexley-Yorozu will remember. Or keep it for a Wexley-Yorozu station.";
+      confirmSale(publish, 'Publish it? Wexley-Yorozu will remember', () => {
+        const paid = publishReports(c);
+        addStanding(c, 'wy', -3);
+        saveCommander(c);
+        sfx.beep();
+        flash(`The Ninefold report is published · ${paid} Cr · Wexley-Yorozu will remember`, 4);
+        renderDocked();
+      });
+      dataRow.append(publish);
+    }
   }
 
   // Missiles: top up the rails.
@@ -1924,13 +1948,14 @@ function buildExploreScene(sys: StarSystem) {
   });
   if (!c || c.difficulty !== 'modern') return;
   const planetDone = isSurveyed(c, sys, 'planet');
-  for (const poi of poisOf(sys)) {
+  for (const poi of [...poisOf(sys), ...trailPoisOf(c, sys)]) {
     const dir = new THREE.Vector3(...poi.direction);
     // Near enough that salvage isn't lost to space, and clear of the moons.
     const position = dir.clone().multiplyScalar(Math.min(poi.distance * planetRadius, 30000)).add(planetPos);
     for (const b of sceneBodies) if (b.body.kind === 'moon' && position.distanceTo(b.centre) < b.radius * 3) position.addScaledVector(dir, b.radius * 4);
     const found = isFound(c, sys, poi.id);
-    const sp: ScenePoi = { poi, position, revealed: planetDone || found, models: [], beacon: null };
+    // A trail's later steps are where its clue said: on the scanner from arrival.
+    const sp: ScenePoi = { poi, position, revealed: planetDone || found || (poi.trail?.step ?? 0) > 0, models: [], beacon: null };
     if (poi.kind === 'beacon') {
       sp.beacon = buildBeacon();
       sp.beacon.position.copy(position);
@@ -1965,16 +1990,18 @@ function updateExplore(dt: number): boolean {
   const here = currentSystem();
 
   // Surveying: hold close to something you haven't surveyed yet.
-  const near = sceneBodies.find((b) => pos.distanceTo(b.centre) - b.radius < b.range && !isSurveyed(c, here, b.body.id));
+  const deep = isWorking(c, 'survey-scanner'); // twice the range, half the time
+  const near = sceneBodies.find((b) => pos.distanceTo(b.centre) - b.radius < b.range * (deep ? 2 : 1) && !isSurveyed(c, here, b.body.id));
   if (near && survey?.target !== near) survey = { target: near, progress: 0 };
   if (survey) {
-    survey.progress = THREE.MathUtils.clamp(survey.progress + (near === survey.target ? dt : -dt * 0.5), 0, survey.target.body.time);
+    survey.progress = THREE.MathUtils.clamp(survey.progress + (near === survey.target ? dt * (deep ? 2 : 1) : -dt * 0.5), 0, survey.target.body.time);
     if (survey.progress >= survey.target.body.time) {
       const done = survey.target.body;
       recordSurvey(c, here, done);
       saveCommander(c);
       sfx.beep();
-      flash(`Survey complete · ${done.name} · data worth ${dataValue(exploreOf(c).data.at(-1)!, here)} Cr here, more further away`, 3.5);
+      const grade = done.grade ? ` · ${done.grade === 'Candidate' ? 'terraforming CANDIDATE: Wexley-Yorozu will want this' : done.grade.toLowerCase()}` : '';
+      flash(`Survey complete · ${done.name}${grade} · data worth ${dataValue(exploreOf(c).data.at(-1)!, here)} Cr here, more further away`, 4);
       survey = null;
       if (done.id === 'planet') {
         const hidden = scenePois.filter((p) => !p.revealed);
@@ -1994,7 +2021,7 @@ function updateExplore(dt: number): boolean {
   for (const p of scenePois) {
     if (isFound(c, here, p.poi.id)) continue;
     const d = pos.distanceTo(p.position);
-    if (!p.revealed && d < SIGNAL_DETECT) {
+    if (!p.revealed && d < SIGNAL_DETECT * (deep ? 4 : 1)) {
       p.revealed = true;
       flash('Unidentified signal nearby', 2.5);
     }
@@ -2012,9 +2039,14 @@ function discover(p: ScenePoi) {
     for (const s of p.poi.salvage) cargo[s.id] = (cargo[s.id] ?? 0) + s.qty * UNITS_PER_TONNE[commodityById(s.id)?.unit ?? 't'];
     spillCargo(p.position, new THREE.Vector3(), cargo);
   }
+  // A trail step: the clue points on, and the course is plotted for you.
+  const next = advanceTrail(c, p.poi);
+  let trailNote = '';
+  if (next) trailNote = ` · the trail leads to ${next.name}${next.index !== currentSystem().index ? ` · ${plotCourse(c, next.index)}` : ''}`;
+  else if (p.poi.trail?.last) trailNote = ' · the end of the trail';
   saveCommander(c);
   sfx.beep();
-  flash(`Discovered: ${p.poi.name}${p.poi.salvage.length ? ' · cargo drifting free' : ''}`, 3);
+  flash(`Discovered: ${p.poi.name}${p.poi.salvage.length ? ' · cargo drifting free' : ''}${trailNote}`, trailNote ? 5 : 3);
   showPoiLog(p.poi);
 }
 
@@ -3267,18 +3299,18 @@ function updateSun(dt: number): boolean {
 
   const c = cmdr();
   const canSkim = altitude < SKIM_RANGE && isWorking(c, 'fuel-scoops') && player.speed > player.maxSpeed * 0.2;
-  if (canSkim && c.fuel < FUEL_CAPACITY) {
+  if (canSkim && c.fuel < fuelCapacity(c)) {
     if (!skimming) flash('Fuel scooping', 1.5);
-    c.fuel = Math.min(FUEL_CAPACITY, c.fuel + SKIM_RATE * (player.speed / player.maxSpeed) * dt);
-    if (c.fuel >= FUEL_CAPACITY) {
-      c.fuel = FUEL_CAPACITY;
+    c.fuel = Math.min(fuelCapacity(c), c.fuel + SKIM_RATE * (player.speed / player.maxSpeed) * dt);
+    if (c.fuel >= fuelCapacity(c)) {
+      c.fuel = fuelCapacity(c);
       flash('Fuel tanks full', 1.5);
     }
   } else if (skimming) {
     c.fuel = Math.round(c.fuel * 10) / 10;
     saveCommander(c);
   }
-  skimming = canSkim && c.fuel < FUEL_CAPACITY;
+  skimming = canSkim && c.fuel < fuelCapacity(c);
   return false;
 }
 
@@ -4422,7 +4454,7 @@ function toggleHyperspace() {
 
 function updateTravel(dt: number) {
   jumpCooldown = Math.max(0, jumpCooldown - dt);
-  $('#g-fuel').style.setProperty('--v', String(cmdr().fuel / FUEL_CAPACITY));
+  $('#g-fuel').style.setProperty('--v', String(cmdr().fuel / fuelCapacity(cmdr())));
   const el = $('#countdown');
   if (countdown === null) {
     el.hidden = true;
@@ -4599,7 +4631,7 @@ function toggleGalaxyMap() {
     },
     onTarget: (s) => {
       // Within a jump: straight there. Further: plot the route, a hop at a time.
-      const route = distanceLy(here, s) > FUEL_CAPACITY ? plotCourse(c, s.index) : '';
+      const route = distanceLy(here, s) > fuelCapacity(c) ? plotCourse(c, s.index) : '';
       if (!route) {
         c.target = s.index;
         c.courseTo = null;
@@ -4794,7 +4826,7 @@ if (import.meta.env.DEV) {
       /** Hyperspace straight to a system in this galaxy, fuel or not. */
       jumpTo(index: number) {
         cmdr().target = index;
-        cmdr().fuel = FUEL_CAPACITY;
+        cmdr().fuel = fuelCapacity(cmdr());
         void hyperspace();
       },
     },

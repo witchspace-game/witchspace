@@ -26,7 +26,7 @@ describe('company contracts', () => {
 
   it('loads the cargo into the hold, and pays on delivery with standing', () => {
     const c = newCommander('modern');
-    const o = board(c, lave, NOW).find((x) => x.needs === 'Casual')!;
+    const o = board(c, lave, NOW).find((x) => x.needs === 'Casual' && !x.survey)!;
     expect(take(c, o, 20)).toBeNull();
     expect(cargoTonnes(c)).toBe(o.qty);
     expect(board(c, lave, NOW).some((x) => x.id === o.id)).toBe(false);
@@ -39,14 +39,14 @@ describe('company contracts', () => {
   });
 
   it('needs room in the hold, and Modern rules', () => {
-    const o = board(newCommander('modern'), lave, NOW).find((x) => x.needs === 'Casual')!;
+    const o = board(newCommander('modern'), lave, NOW).find((x) => x.needs === 'Casual' && !x.survey)!;
     expect(take(newCommander('modern'), o, o.qty - 1)).toMatch(/hold/);
     expect(take(newCommander('classic'), o, 20)).toMatch(/Modern/);
   });
 
   it('counts down in jumps: late pays half, and long overdue fails', () => {
     const c = newCommander('modern');
-    const o = board(c, lave, NOW).find((x) => x.needs === 'Casual')!;
+    const o = board(c, lave, NOW).find((x) => x.needs === 'Casual' && !x.survey)!;
     take(c, o, 20);
     for (let i = 0; i <= o.jumps; i++) afterJump(c);
     const credits = c.credits;
@@ -64,7 +64,7 @@ describe('company contracts', () => {
 
   it('losing your ship or giving up costs standing, not money', () => {
     const c = newCommander('modern');
-    const o = board(c, lave, NOW).find((x) => x.needs === 'Casual')!;
+    const o = board(c, lave, NOW).find((x) => x.needs === 'Casual' && !x.survey)!;
     take(c, o, 20);
     expect(loseContracts(c)).toHaveLength(1);
     expect(c.credits).toBe(100);
@@ -100,7 +100,7 @@ describe('company contracts', () => {
     expect(standingName(-3)).toBe('Unreliable');
     expect(standingName(-7)).toBe('Distrusted');
     expect(standingName(-12)).toBe('Blacklisted');
-    const o = board(newCommander('modern'), lave, NOW).find((x) => x.needs === 'Casual')!;
+    const o = board(newCommander('modern'), lave, NOW).find((x) => x.needs === 'Casual' && !x.survey)!;
     const c = newCommander('modern');
     c.standing = { [o.company]: -7 };
     expect(cannotTake(c, o, 20)).toBeNull();

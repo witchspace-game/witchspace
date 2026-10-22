@@ -1,7 +1,7 @@
 // Exploring: worlds worth visiting, surveys that sell, places worth finding,
 // and a record of where you've been. Everything here comes from each system's
 // seed, so every commander finds the same rings, moons and derelicts in the
-// same places, alone or in shared space. See docs/ideas.md#exploration.
+// same places, alone or in shared space. See docs/design/exploration.md.
 //
 // The rules (Modern only, as they pay):
 //   - Fly close to a body and hold there: the survey fills, and the data goes
@@ -14,8 +14,11 @@
 //     have cargo aboard.
 //   - Visits, surveys and discoveries earn explorer points and an explorer's
 //     rank, separate from the combat rating.
+//   - Moons are graded for terraforming; a Candidate's data is worth more.
+//   - Trails: a log that points to the next system, and the next, to an end
+//     worth the trip.
 
-import { distanceLy, systemAt, type StarSystem } from '../galaxy/generate';
+import { distanceLy, systemAt, systemsWithin, type StarSystem } from '../galaxy/generate';
 import type { Commander } from './commander';
 
 // --- Seeded numbers ---------------------------------------------------------------
@@ -84,6 +87,18 @@ export function describeWorld(w: World): string {
 
 export type BodyKind = 'planet' | 'moon' | 'star';
 
+/** What Wexley-Yorozu makes of a moon: worth terraforming, or not. */
+export type MoonGrade = 'Barren' | 'Marginal' | 'Candidate';
+/** A terraforming Candidate's data is worth this many times a plain moon's. */
+export const CANDIDATE_VALUE = 4;
+
+/** Graded from the seed: about one moon in six is a Candidate, bigger moons more often. */
+export function moonGrade(sys: StarSystem, i: number, size: number): MoonGrade {
+  const bonus = ((size - 0.12) / 0.16) * 0.12;
+  const r = roll(sys, 40, i);
+  return r < 0.11 + bonus ? 'Candidate' : r < 0.44 + bonus ? 'Marginal' : 'Barren';
+}
+
 export interface Body {
   /** 'planet', 'star', 'moon0', 'moon1'. */
   id: string;
@@ -93,6 +108,8 @@ export interface Body {
   value: number;
   /** Seconds in range to complete a survey. */
   time: number;
+  /** Moons: the terraforming grade, which the survey reveals. */
+  grade?: MoonGrade;
 }
 
 export const SURVEY = {
@@ -106,7 +123,10 @@ export function bodiesOf(sys: StarSystem): Body[] {
   return [
     { id: 'planet', kind: 'planet', name: sys.name, value: SURVEY.planet.value + (w.rings ? 25 : 0), time: SURVEY.planet.time },
     { id: 'star', kind: 'star', name: `${sys.name}’s star`, value: SURVEY.star.value, time: SURVEY.star.time },
-    ...w.moons.map((_, i): Body => ({ id: `moon${i}`, kind: 'moon', name: `${sys.name} ${MOON_ORDINALS[i]}`, value: SURVEY.moon.value, time: SURVEY.moon.time })),
+    ...w.moons.map((m, i): Body => {
+      const grade = moonGrade(sys, i, m.size);
+      return { id: `moon${i}`, kind: 'moon', name: `${sys.name} ${MOON_ORDINALS[i]}`, value: SURVEY.moon.value * (grade === 'Candidate' ? CANDIDATE_VALUE : 1), time: SURVEY.moon.time, grade };
+    }),
   ];
 }
 
@@ -128,6 +148,12 @@ export interface Poi {
   salvage: { id: string; qty: number }[];
   /** What you find: a few lines, ours (no original prose). */
   log: string;
+  /** A step on a trail: which, and where the clue points next. */
+  trail?: { id: string; step: number; last: boolean; next?: number };
+  /** What its data fetches where found, if not the usual. */
+  dataValue?: number;
+  /** A report you choose who to give (the Ninefold report). */
+  report?: 'ninefold';
 }
 
 const HULLS = [
@@ -205,6 +231,179 @@ export function poisOf(sys: StarSystem): Poi[] {
   return out;
 }
 
+// --- Trails ------------------------------------------------------------------------
+// Sixteen a galaxy, each three to five systems a jump apart. The first step is
+// a signal in its starting system; each later one appears once you've found
+// the one before. Finding a step plots your course to the next.
+
+export const TRAILS_PER_GALAXY = 16;
+export const TRAIL_END_POINTS = 25;
+
+type StoryId = 'colony' | 'home' | 'survey' | 'debt';
+
+interface Story {
+  title: string;
+  /** Opening, middle steps (in turn), and the end. Each a kind, a name and a log. */
+  steps: { first: Step; middle: Step[]; last: Step };
+  end: { salvage: { id: string; qty: number }[]; value: number; report?: 'ninefold' };
+}
+interface Step {
+  kind: PoiKind;
+  ship?: string;
+  name: string;
+  log: (t: { here: string; next: string; first: string }) => string;
+}
+
+const STORIES: Record<StoryId, Story> = {
+  colony: {
+    title: 'The colony that stopped answering',
+    steps: {
+      first: { kind: 'beacon', name: 'Wexley-Yorozu relay beacon', log: (t) => `Still repeating its last packet: colony ship Ninefold, outbound for ${t.next}. All well. All well. All well. The timestamp is eleven years old.` },
+      middle: [
+        { kind: 'derelict', ship: 'cobra-mk3', name: 'Survey tender “Patience”', log: (t) => `Powered down neatly, as if the crew meant to come back. Last course laid in: ${t.next}. The manifest lists “atmosphere seed, class 4”, and nothing else.` },
+        { kind: 'derelict', ship: 'sidewinder', name: 'Colony tug “Hold Fast”', log: (t) => `The tow cable is cut clean. The pilot’s last entry: “Ninefold called for a tow at ${t.next}. We were told not to answer. I answered.”` },
+        { kind: 'beacon', name: 'Quarantine buoy', log: (t) => `Wexley-Yorozu livery, no registration. It warns every ship off ${t.here} in a pleasant voice, then gives the course to ${t.next} anyway.` },
+      ],
+      last: { kind: 'derelict', ship: 'cobra-mk3', name: 'Colony ship “Ninefold”', log: () => `A parking orbit nobody uses. Lights on. Air good. Nobody aboard. On the bridge, a sealed report addressed to the Science Division, and a hand-written note pinned over it: “Read it. Then decide who you give it to.”` },
+    },
+    end: { salvage: [{ id: 'medicine', qty: 1 }, { id: 'computers', qty: 1 }], value: 0, report: 'ninefold' },
+  },
+  home: {
+    title: 'The long way home',
+    steps: {
+      first: { kind: 'derelict', ship: 'cobra-mk3', name: 'Derelict Cobra Mk III “Far Horizon”', log: (t) => `Her captain’s log is a letter home, one entry for every system. The last line you can read: “Tomorrow, ${t.next}. Nearly there, love.”` },
+      middle: [
+        { kind: 'beacon', name: 'Nav buoy with a letter', log: (t) => `Someone has tucked a letter into the buoy’s maintenance hatch: “Still running. The ship’s old and the money’s older. Next stop ${t.next}.”` },
+        { kind: 'derelict', ship: 'sidewinder', name: 'Derelict Sidewinder “Small Hours”', log: (t) => `The Far Horizon’s escort, by the markings. Her pilot gave up the chase here. His last entry: “She’s gone on to ${t.next} without me. Good luck to her.”` },
+      ],
+      last: { kind: 'derelict', ship: 'cobra-mk3', name: 'Derelict Cobra Mk III “Homeward”', log: (t) => `The Far Horizon’s sister ship, stripped and waiting in the dark off ${t.here}. The hold is sealed with the captain’s mark, and everything she was carrying home is still inside.` },
+    },
+    end: { salvage: [{ id: 'gems', qty: 1 }, { id: 'gold', qty: 1 }, { id: 'platinum', qty: 1 }, { id: 'luxuries', qty: 1 }], value: 250 },
+  },
+  survey: {
+    title: 'The lost survey',
+    steps: {
+      first: { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `An old survey beacon, marked with a sign you haven’t seen before: a compass rose with one point missing. Its data ends with a single system: ${t.next}.` },
+      middle: [
+        { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `Another of hers. The charts are corrected by hand, in a small neat script. The missing point of the compass rose aims at ${t.next}.` },
+        { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `The handwriting is shakier here. A note in the margin: “${t.first} to here, every star where I said it was. One more, then ${t.next}.”` },
+      ],
+      last: { kind: 'beacon', name: 'Cartographer’s last beacon', log: () => `The full chart: every system she visited, corrected by hand, and the compass rose complete at last. The Science Division would pay well for this. So would anyone.` },
+    },
+    end: { salvage: [], value: 400 },
+  },
+  debt: {
+    title: 'A debt unpaid',
+    steps: {
+      first: { kind: 'beacon', name: 'Painted marker buoy', log: (t) => `A pirate’s marker, painted over twice. Under the paint: a tally of ships, scratched in fives, and one name: ${t.next}.` },
+      middle: [
+        { kind: 'derelict', ship: 'mamba', name: 'Gutted Mamba', log: (t) => `Left here as a warning. Scratched into the hull: “Paid in full. ${t.next} owes next.”` },
+        { kind: 'wrecks', ship: 'sidewinder', name: 'Ambush site', log: (t) => `Three Sidewinders, close together, all shot from behind. Whoever did it went on to ${t.next}, and didn’t hurry.` },
+      ],
+      last: { kind: 'derelict', ship: 'mamba', name: 'Hidden cache', log: () => `Wired to an old mine that failed years ago. Whoever left this never came back to collect. Some of what’s inside the police would very much like to see.` },
+    },
+    end: { salvage: [{ id: 'firearms', qty: 1 }, { id: 'narcotics', qty: 1 }, { id: 'gold', qty: 1 }], value: 250 },
+  },
+};
+const STORY_ORDER: StoryId[] = ['colony', 'home', 'survey', 'debt'];
+
+export interface Trail {
+  /** "galaxy.n" */
+  id: string;
+  story: StoryId;
+  title: string;
+  galaxy: number;
+  /** System indices, first to last. */
+  systems: number[];
+}
+
+const trailCache = new Map<number, Trail[]>();
+
+/** The trails in a galaxy, from its seed. */
+export function trailsOf(galaxy: number): Trail[] {
+  const cached = trailCache.get(galaxy);
+  if (cached) return cached;
+  const used = new Set<number>();
+  const trails: Trail[] = [];
+  const seedSys = systemAt(galaxy, 0);
+  for (let t = 0; trails.length < TRAILS_PER_GALAXY && t < TRAILS_PER_GALAXY * 3; t++) {
+    let cur = systemAt(galaxy, Math.floor(roll(seedSys, 50, t) * 256));
+    if (used.has(cur.index)) continue;
+    const length = 3 + Math.floor(roll(seedSys, 51, t) * 3);
+    const systems = [cur.index];
+    while (systems.length < length) {
+      const options = systemsWithin(cur, 7).filter((s) => !systems.includes(s.index) && !used.has(s.index) && distanceLy(cur, s) > 2);
+      if (!options.length) break;
+      cur = pick(options, roll(cur, 52, t * 8 + systems.length));
+      systems.push(cur.index);
+    }
+    if (systems.length < 3) continue;
+    for (const i of systems) used.add(i);
+    const story = STORY_ORDER[trails.length % STORY_ORDER.length];
+    trails.push({ id: `${galaxy}.${trails.length}`, story, title: STORIES[story].title, galaxy, systems });
+  }
+  trailCache.set(galaxy, trails);
+  return trails;
+}
+
+/** Steps of a trail you've found. */
+export const trailProgress = (c: Commander, id: string) => exploreOf(c).trails?.[id] ?? 0;
+
+/** One step of a trail, as a signal in its system. */
+function trailPoi(t: Trail, step: number): Poi {
+  const story = STORIES[t.story];
+  const last = step === t.systems.length - 1;
+  const s = last ? story.steps.last : step === 0 ? story.steps.first : story.steps.middle[(step - 1) % story.steps.middle.length];
+  const sys = systemAt(t.galaxy, t.systems[step]);
+  const salt = 60 + Number(t.id.split('.')[1]);
+  const lon = roll(sys, salt, step) * Math.PI * 2;
+  const lat = (roll(sys, salt + 100, step) - 0.5) * 0.8;
+  const next = last ? undefined : t.systems[step + 1];
+  return {
+    id: `trail:${t.id}:${step}`,
+    kind: s.kind,
+    name: s.name,
+    direction: [Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon)],
+    distance: 2.5 + roll(sys, salt + 200, step) * 2.5,
+    ...(s.ship ? { ship: s.ship } : {}),
+    salvage: last ? story.end.salvage : [],
+    log: s.log({ here: sys.name, next: next === undefined ? '' : systemAt(t.galaxy, next).name, first: systemAt(t.galaxy, t.systems[0]).name }),
+    trail: { id: t.id, step, last, ...(next === undefined ? {} : { next }) },
+    ...(last && story.end.value ? { dataValue: story.end.value } : {}),
+    ...(last && story.end.report ? { report: story.end.report } : {}),
+  };
+}
+
+/** The trail signals in a system for this commander: steps reached so far (Modern only). */
+export function trailPoisOf(c: Commander, sys: StarSystem): Poi[] {
+  if (c.difficulty !== 'modern') return [];
+  const out: Poi[] = [];
+  for (const t of trailsOf(sys.galaxy)) {
+    const step = t.systems.indexOf(sys.index);
+    if (step >= 0 && step <= trailProgress(c, t.id)) out.push(trailPoi(t, step));
+  }
+  return out;
+}
+
+/** A trail step found: the next one appears. Returns where the clue points, if anywhere. */
+export function advanceTrail(c: Commander, poi: Poi): StarSystem | null {
+  if (!poi.trail) return null;
+  const e = exploreOf(c);
+  const { id, step, last, next } = poi.trail;
+  if ((e.trails?.[id] ?? 0) > step) return null; // found before
+  e.trails = { ...e.trails, [id]: step + 1 };
+  if (last) e.points += TRAIL_END_POINTS;
+  const galaxy = Number(id.split('.')[0]);
+  return next === undefined ? null : systemAt(galaxy, next);
+}
+
+/** Trails under way, for the Station tab. */
+export function trailsUnderWay(c: Commander, galaxy: number): { title: string; found: number; of: number; next: string }[] {
+  return trailsOf(galaxy)
+    .filter((t) => trailProgress(c, t.id) > 0 && trailProgress(c, t.id) < t.systems.length)
+    .map((t) => ({ title: t.title, found: trailProgress(c, t.id), of: t.systems.length, next: systemAt(t.galaxy, t.systems[trailProgress(c, t.id)]).name }));
+}
+
 // --- The explorer's record ----------------------------------------------------------
 
 export interface SurveyData {
@@ -213,6 +412,10 @@ export interface SurveyData {
   body: string;
   name: string;
   value: number;
+  /** A moon's terraforming grade. */
+  grade?: MoonGrade;
+  /** A report you choose who to give: it doesn't sell with the rest. */
+  report?: 'ninefold';
 }
 
 export interface ExploreRecord {
@@ -227,6 +430,8 @@ export interface ExploreRecord {
   points: number;
   /** Credits earned from data, for the record. */
   earned: number;
+  /** Trails: steps found, by trail id. */
+  trails?: Record<string, number>;
 }
 
 export const POINTS = { visit: 1, discovery: 5 } as const;
@@ -257,7 +462,7 @@ export function recordSurvey(c: Commander, s: StarSystem, body: Body) {
   if (e.surveyed.includes(key)) return;
   e.surveyed.push(key);
   e.points += SURVEY[body.kind].points;
-  e.data.push({ galaxy: s.galaxy, system: s.index, body: body.id, name: body.name, value: body.value });
+  e.data.push({ galaxy: s.galaxy, system: s.index, body: body.id, name: body.grade ? `${body.name} (${body.grade.toLowerCase()})` : body.name, value: body.value, ...(body.grade ? { grade: body.grade } : {}) });
 }
 
 /** A signal found: its log goes in the hold as data too. */
@@ -267,23 +472,52 @@ export function recordDiscovery(c: Commander, s: StarSystem, poi: Poi) {
   if (e.found.includes(key)) return;
   e.found.push(key);
   e.points += POINTS.discovery;
-  e.data.push({ galaxy: s.galaxy, system: s.index, body: poi.id, name: poi.name, value: poi.kind === 'beacon' ? 60 : 50 });
+  e.data.push({
+    galaxy: s.galaxy,
+    system: s.index,
+    body: poi.id,
+    name: poi.report ? 'The Ninefold report' : poi.name,
+    value: poi.dataValue ?? (poi.kind === 'beacon' ? 60 : 50),
+    ...(poi.report ? { report: poi.report } : {}),
+  });
 }
+
+/** Wexley-Yorozu pays best for data: this much more at any of its stations. */
+export const WY_DATA_BONUS = 1.25;
+/** The Ninefold report: what the Science Division pays, and what publishing it elsewhere fetches. */
+export const REPORT_PRICE = { wy: 1200, published: 300 } as const;
 
 /** What a survey fetches at a station: half where it was gathered, rising with distance, up to five times. */
-export function dataValue(d: SurveyData, here: StarSystem): number {
+export function dataValue(d: SurveyData, here: StarSystem, wyHere = false): number {
+  if (d.report) return wyHere ? REPORT_PRICE.wy : REPORT_PRICE.published;
   const ly = d.galaxy === here.galaxy ? distanceLy(systemAt(d.galaxy, d.system), here) : 60;
-  return Math.round(d.value * Math.min(5, 0.5 + ly / 8));
+  return Math.round(d.value * Math.min(5, 0.5 + ly / 8) * (wyHere ? WY_DATA_BONUS : 1));
 }
 
-/** Sell all the data in the hold. Returns the credits earned. */
-export function sellData(c: Commander, here: StarSystem): number {
+/**
+ * Sell the data in the hold. A report goes only to Wexley-Yorozu (at one of
+ * its stations); elsewhere it stays aboard until you publish it. Returns the
+ * credits, and how many reports went to the Science Division.
+ */
+export function sellData(c: Commander, here: StarSystem, wyHere = false): { credits: number; reports: number } {
   const e = exploreOf(c);
-  const total = e.data.reduce((sum, d) => sum + dataValue(d, here), 0);
-  c.credits += total;
-  e.earned += total;
-  e.data = [];
-  return total;
+  const sold = e.data.filter((d) => wyHere || !d.report);
+  const credits = sold.reduce((sum, d) => sum + dataValue(d, here, wyHere), 0);
+  c.credits += credits;
+  e.earned += credits;
+  e.data = e.data.filter((d) => !sold.includes(d));
+  return { credits, reports: sold.filter((d) => d.report).length };
+}
+
+/** Publish a report anywhere but Wexley-Yorozu: the Mutual's newsletter pays. Returns the credits. */
+export function publishReports(c: Commander): number {
+  const e = exploreOf(c);
+  const reports = e.data.filter((d) => d.report);
+  const credits = reports.length * REPORT_PRICE.published;
+  c.credits += credits;
+  e.earned += credits;
+  e.data = e.data.filter((d) => !d.report);
+  return credits;
 }
 
 // --- Explorer's rank ----------------------------------------------------------------
