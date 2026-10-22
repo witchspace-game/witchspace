@@ -154,6 +154,8 @@ Haulers arrive from witchspace **14 to 22 km out** and fly in; outbound ones fly
 
 Today any crime in a system with law is known at once, wherever it happens. That's neither realistic nor much fun. Instead: **close to the station the law sees everything; further out, it needs a witness.**
 
+*(Built, part 1, October 2026, Modern rules: station space 10 km; witnesses are police within 8 km or other ships within 6 km; a victim that docks, jumps or is still alive when you leave reports you; distress calls bring two Vipers to the scene after 10 s + 1 s per 200 m beyond station space. Running dark and the police hail come next.)*
+
 ### Station space
 
 Within about **10 km** of the station, its sensors see everything. A crime there is recorded at once, and police launch straight away (as now).
