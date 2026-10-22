@@ -130,6 +130,16 @@ Lawful police don't shoot an unidentified ship on sight. A transponder can be da
 
 The same courtesy runs through the whole law: **warn first, escalate on defiance**, as the station already does when you fire near it.
 
+## 4b. Building worlds
+
+Wexley-Yorozu is building somewhere at any moment (see [the trading companies](../companies.md#the-fleet-the-titanoboa-and-the-yards)).
+
+- **Construction yards** hang over some planets: a half-finished Coriolis in its scaffold, hulls on the slips, a corporate fleet working around it. A system with a yard is a destination in itself.
+- **A partly built station** docks a few ships and trades mostly building materials (alloys, machinery, minerals), at good prices. Its progress, from bare frame to working station, follows the seed and the clock, so every commander sees the same stage.
+- **Station tows.** Now and then a Titanoboa arrives through a rift with a whole Coriolis beneath it, and a new station opens in a system that had none. That's news across the region, with premiums for the first traders in.
+- **Construction contracts:** haul the materials a yard needs. In the shared galaxy every commander's deliveries add to the build, so a station opens sooner when players pitch in: a community goal that costs one counter on the server.
+- **Later:** player-built stations (see [player-run stations](player-stations.md)) are built the same way, by Wexley-Yorozu under contract.
+
 ## 5. How it feels
 
 - **A new commander** docks, opens **Contracts**, takes a small Hexon Holdings run with no bond, and is earning in their first five minutes. No exchange needed.
@@ -154,6 +164,7 @@ The same courtesy runs through the whole law: **warn first, escalate on defiance
 | **1. Companies and contracts** | The three companies and their presence by system; a **Contracts** tab at the station (the first trading screen a new commander sees); haulage, rush and supply contracts with consigned cargo, deadlines in jumps, pay and bonds; standing with each company; NPC traders in company livery |
 | **2. The law beyond the station** | Station space and witnesses; the distress call and police response time; running dark; the police challenge; the transponder as damageable equipment; the distress jammer |
 | **3. Fleets and conflict** | Escort and recovery contracts; company security ships; rivalry events (a company war as a world event, with blockades and premiums) |
+| **3b. Building worlds** | Wexley-Yorozu construction yards: partly built stations that trade building materials and dock a few ships, progressing over days for everyone; Titanoboa station tows arriving through a rift; the corporate fleet around them; construction contracts. In the shared galaxy, every commander's deliveries speed the build: a community goal that costs a counter on the server |
 | **4. Shared galaxy** | Claiming contracts on the server; player witnesses; player-run companies posting contracts |
 
 ## Open questions

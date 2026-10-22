@@ -187,6 +187,17 @@ Named for the bullsnake: big, heavy, and loud when it's annoyed. *(Original clas
 - **Concept prompt:**
   > Wireframe spaceship, enormous slow construction tug with a long spine, a huge station module slung underneath, tractor booms and work lights, off-white hull with construction-yellow markings, industrial and functional, vector-display style.
 
+### The fleet: the Titanoboa and the yards
+
+Named for *Titanoboa*, the largest snake that ever lived. *(Original class.)*
+
+- **The Titanoboa** is a station tug: a capital ship kilometres long, the biggest thing most commanders will ever see. It **tows Coriolis stations into position**, whole, through witchspace, arriving through a rift as the Marshals' Bastion does, with the station hanging beneath it in a web of cables.
+- **The yards.** Where Wexley-Yorozu is building, an **orbital construction yard** hangs above the planet: a half-finished Coriolis inside its scaffold, ship hulls on the slips, Bullsnakes and work drones crawling over it all, welding light flickering along the frame.
+- **The fleet.** Around every yard and every tow, a corporate fleet: Bullsnakes hauling modules, Garter-sized tenders, survey ships, and a security wing that doesn't like visitors. When Wexley-Yorozu moves into a system, you see it arrive.
+- **Partly built stations.** A station under construction docks a few ships and trades a few goods (mostly building materials, at good prices) until it's finished. Construction moves on over days, the same for every commander, from the seed and the clock.
+- **Concept prompt:**
+  > Wireframe capital ship, kilometres long, a colossal station tug with a long armoured spine and huge tow cradles, a complete rotating Coriolis space station hanging beneath it in a web of cables, emerging from a dark circular rift in space, off-white hull with construction-yellow markings and work lights, awe-inspiring scale, vector-display style.
+
 ### Story hooks
 
 - A colony has gone quiet. Wexley-Yorozu wants a commander to fly out, look, and report to the Science Division only. The pay is generous. The contract has a page 214.
