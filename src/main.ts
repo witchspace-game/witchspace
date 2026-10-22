@@ -33,6 +33,7 @@ import {
   coolRecords,
   fineDue,
   hasLaw,
+  illegalEquipment,
   legalStatus,
   recordCrime,
   redeemImpound,
@@ -118,7 +119,7 @@ function setState(next: State) {
     for (const n of netMissiles.values()) n.missile.dispose();
     netMissiles.clear();
     // Overlays that only make sense in flight; they're updated each frame while flying.
-    for (const id of ['#mouse-prompt', '#reticle', '#target-info', '#countdown']) $(id).hidden = true;
+    for (const id of ['#mouse-prompt', '#reticle', '#target-info', '#countdown', '#hail']) $(id).hidden = true;
   }
   if (isMapOpen()) {
     closeMap();
@@ -1165,17 +1166,19 @@ function renderDocked() {
     const li = document.createElement('li');
     const owned = hasEquipment(c, item.id);
     const damaged = c.damaged.includes(item.id);
+    if (item.standard && !damaged) continue; // fitted to every ship: listed only when it needs repair
     const repairCost = Math.round(item.price * REPAIR_FRACTION);
-    const sold = here.techLevel >= item.minTech;
+    const banned = Boolean(item.illegal) && scansCargo(here); // illegal here: not sold
+    const sold = here.techLevel >= item.minTech && !banned;
     li.innerHTML = `<span>${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${item.blurb}</small>`;
     const buy = document.createElement('button');
     if (damaged) {
       buy.textContent = `Repair · ${repairCost.toLocaleString()} Cr`;
       buy.disabled = c.credits < repairCost;
     } else if (!owned && !sold) {
-      // High-tech gear needs a high-tech world.
-      buy.textContent = `Needs tech level ${item.minTech}`;
-      buy.title = `${here.name} is tech level ${here.techLevel}`;
+      // High-tech gear needs a high-tech world; illegal gear, a lawless one.
+      buy.textContent = banned ? 'Illegal here' : `Needs tech level ${item.minTech}`;
+      buy.title = banned ? 'Sold only where police don\'t scan: anarchies and feudal worlds' : `${here.name} is tech level ${here.techLevel}`;
       buy.disabled = true;
     } else if (owned) {
       const undo = boughtHere.equipment.has(item.id);
@@ -1835,6 +1838,8 @@ function buildSystemScene(sys: StarSystem) {
   encounterTimer = 12 + Math.random() * 10;
   scanned = false;
   scanProgress = 0;
+  unpinned = hail = null;
+  hullChecked = defiedPolice = false;
   buildExploreScene(sys);
   restoreAdrift();
 }
@@ -2083,6 +2088,12 @@ function damagePlayer(amount: number): boolean {
 function becomeFugitive(serious = false) {
   const c = cmdr();
   if (!hasLaw(currentSystem())) return;
+  if (!identified()) {
+    // Running dark: seen, not known. Police who saw it come after the ship anyway.
+    unpinnedCrime('fugitive', serious);
+    if (ofRole('police').some((p) => p.obj.position.distanceTo(player.obj.position) < POLICE_SEE)) defiedPolice = true;
+    return;
+  }
   const hadWarrant = c.warrant;
   const was = isFugitive();
   recordCrime(c, 'fugitive', serious);
@@ -2096,7 +2107,8 @@ function becomeFugitive(serious = false) {
   if (!c.warrant || hadWarrant) flash('You are now a FUGITIVE', 2.5);
 }
 
-function becomeOffender(message: string) {
+function becomeOffender(message: string, unknown = !identified()) {
+  if (unknown) return unpinnedCrime('offender', false);
   if (legalStatus(cmdr()) !== 'clean') return;
   recordCrime(cmdr(), 'offender');
   flash(message, 3);
@@ -2196,6 +2208,7 @@ function playerHitNpc(npc: NpcShip, damage: number) {
     else {
       // Nobody saw. The trader knows, though, and it's calling for help.
       npc.unreported = true;
+      npc.seenDark = !identified();
       mayday(npc);
     }
   }
@@ -2229,6 +2242,7 @@ const responses: { at: number; where: THREE.Vector3 }[] = [];
 function mayday(npc: NpcShip) {
   if (npc.maydayCalled || !hasLaw(currentSystem())) return;
   npc.maydayCalled = true;
+  if (isWorking(cmdr(), 'distress-jammer')) return flash(`Distress call jammed · the ${npc.def.name} can't reach the police`, 2.5);
   const where = npc.obj.position.clone();
   const delay = Math.max(10, 10 + (where.distanceTo(station.root.position) - STATION_SPACE) / 200);
   responses.push({ at: elapsed + delay, where });
@@ -2259,8 +2273,123 @@ function updateResponses() {
 function reportedBy(npc: NpcShip) {
   if (!npc.unreported || !commander) return;
   npc.unreported = false;
-  becomeOffender('The trader you attacked got away, and reported you · you are an OFFENDER');
+  becomeOffender('The trader you attacked got away, and reported you · you are an OFFENDER', npc.seenDark);
 }
+
+// --- Running dark and the police hail (section 4, Modern rules) -------------
+// Switch the transponder off (0) and a witness sees only "an unidentified
+// Cobra Mk III": the crime waits for a suspect, and switching back on near
+// the law soon after makes you it. Close up (2 km) or in station space your
+// hull still gives you away. Lawful stations won't dock a dark ship, and
+// police hail one: switch on within 15 s or, if it's broken, cut your speed
+// and let a Viper read your hull. Ignore them and they come after you.
+
+const HULL_READ = 2000; // metres: close enough to read a hull registration, dark or not
+const HAIL_TIME = 15; // seconds to answer a police hail
+const HAIL_SLOW = 0.2; // fraction of top speed: slow enough for a Viper to read your hull
+const SUSPECT_TIME = 180; // seconds after a crime that switching on near the law makes you the suspect
+
+let transponderOff = false;
+/** A crime seen but not pinned on you. Forgotten when you leave the system. */
+let unpinned: { status: 'offender' | 'fugitive'; serious: boolean; at: number } | null = null;
+let hail: { by: NpcShip; until: number } | null = null;
+/** Police have read your hull this visit (a broken transponder): no more hails. */
+let hullChecked = false;
+/** You ignored a hail, or fired on police, while dark: they're after you, whoever you are. */
+let defiedPolice = false;
+
+const transponderBroken = () => commander !== null && cmdr().damaged.includes('transponder');
+/** Nobody can read who you are from afar. */
+const dark = () => commander !== null && cmdr().difficulty === 'modern' && (transponderOff || transponderBroken());
+
+/** Whether the law knows it's you: transponder on, or the station or a police ship close enough to read your hull. */
+function identified(): boolean {
+  if (!dark()) return true;
+  if (player.obj.position.distanceTo(station.root.position) < STATION_SPACE) return true;
+  return npcs.some((n) => (n.role === 'police' || n.role === 'marshal') && n.obj.position.distanceTo(player.obj.position) < HULL_READ);
+}
+
+function unpinnedCrime(status: 'offender' | 'fugitive', serious: boolean) {
+  unpinned = { status: unpinned?.status === 'fugitive' ? 'fugitive' : status, serious: serious || Boolean(unpinned?.serious), at: elapsed };
+  flash(`Seen, but not identified · an unidentified ${player.def.name}`, 2.5);
+}
+
+/** 0: switch the transponder off (run dark), or on again. */
+function toggleTransponder() {
+  if (cmdr().difficulty !== 'modern') return flash('Classic rules: the transponder stays on', 1.5);
+  if (transponderBroken()) return flash('Transponder damaged · repair it at a station', 2);
+  transponderOff = !transponderOff;
+  showTransponder();
+  if (transponderOff) return flash(hasLaw(currentSystem()) ? 'Transponder off · running dark' : 'Transponder off · nobody here cares', 2);
+  // Back on where the law can see, soon after a crime nobody pinned on you: you're the suspect.
+  const watched =
+    player.obj.position.distanceTo(station.root.position) < STATION_SPACE ||
+    ofRole('police').some((p) => p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
+  const crime = unpinned && elapsed - unpinned.at < SUSPECT_TIME ? unpinned : null;
+  unpinned = null; // switched on quietly, or too late: the trail goes cold
+  if (watched && (crime || defiedPolice)) {
+    defiedPolice = false;
+    if (crime?.status === 'fugitive') becomeFugitive(crime.serious);
+    else becomeOffender(crime ? 'Transponder on, near the scene · you are the suspect · OFFENDER' : 'Transponder on · you ignored a police hail · OFFENDER');
+    return;
+  }
+  flash(hail ? 'Transponder read · thank you, Commander' : 'Transponder on', 2);
+}
+
+function showTransponder() {
+  const on = dark();
+  $('#dark-light').classList.toggle('on', on);
+  $('#touch .dark-button').classList.toggle('armed', transponderOff);
+}
+
+/** Each frame in flight: police hail a dark ship they can see. */
+function updateHail() {
+  showTransponder();
+  const box = $('#hail');
+  if (hail && !npcs.includes(hail.by)) hail = null; // the Viper's gone; another may ask
+  if (!dark() || !hasLaw(currentSystem()) || defiedPolice || (hullChecked && !transponderOff)) {
+    hail = null;
+    box.hidden = true;
+    return;
+  }
+  if (!hail) {
+    const by = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
+    if (!by) return;
+    hail = { by, until: elapsed + HAIL_TIME };
+    sfx.beep();
+    flash(`Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, 4);
+  }
+  // The Viper that hailed you comes to look.
+  hail.by.patrol.centre.copy(player.obj.position);
+  hail.by.patrol.radius = 400;
+  const broken = transponderBroken() && !transponderOff;
+  if (broken && player.speed <= player.maxSpeed * HAIL_SLOW) {
+    hail.until = Math.max(hail.until, elapsed + 5); // holding still for them: the clock waits
+    if (hail.by.obj.position.distanceTo(player.obj.position) < HULL_READ) {
+      hail = null;
+      hullChecked = true;
+      box.hidden = true;
+      flash(isFugitive() ? 'Hull read · you are wanted here' : 'Hull read · clean · get that transponder seen to at the next station', 3);
+      return;
+    }
+  }
+  if (elapsed > hail.until) {
+    hail = null;
+    defiedPolice = true;
+    box.hidden = true;
+    sfx.beep();
+    flash('No answer · police are treating you as hostile', 3);
+    return;
+  }
+  box.hidden = false;
+  const left = Math.ceil(hail.until - elapsed);
+  box.textContent = broken
+    ? `Police hail · transponder damaged: cut your speed and let the Viper read your hull · ${left} s`
+    : `Police hail · switch on your transponder (${document.body.classList.contains('touch') ? 'Dark' : '0'}) · ${left} s`;
+}
+
+/** Lawful stations won't dock a ship that has switched its transponder off. */
+const darkRefused = () => transponderOff && checksClearance(currentSystem());
 
 type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' } | { kind: 'commander' };
 
@@ -2438,7 +2567,8 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     const world = {
       player,
       playerPresent: alive,
-      playerWanted: isFugitive(),
+      // Wanted here and known, or a dark ship that defied them.
+      playerWanted: (isFugitive() && identified()) || defiedPolice,
       npcs,
       inSafeZone: (at: THREE.Vector3) => cmdr().difficulty === 'classic' && inSafeZone(at),
       cargoValue: (ship: PlayerShip) => (ship === player ? (commander ? holdValue(cmdr().cargo) : 0) : holdValue(npcs.find((n) => n.ship === ship)?.cargo ?? {})),
@@ -2524,7 +2654,8 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     scanProgress = scanner ? scanProgress + dt : Math.max(0, scanProgress - dt);
     if (scanProgress >= SCAN_TIME) {
       scanned = true;
-      if (carriesContraband(cmdr())) becomeOffender('Scanned by police · contraband found · you are an OFFENDER');
+      if (illegalEquipment(cmdr()).length) becomeOffender('Scanned by police · distress jammer found · you are an OFFENDER');
+      else if (carriesContraband(cmdr())) becomeOffender('Scanned by police · contraband found · you are an OFFENDER');
       else flash('Scanned by police · clean', 1.5);
     }
   }
@@ -3231,6 +3362,7 @@ function updateSpace(dt: number) {
   updateDrifters(dt);
   updateCaseRaid(dt);
   updateResponses();
+  updateHail();
   updateMissileButton();
   for (let i = explosions.length - 1; i >= 0; i--) if (!explosions[i].update(dt)) explosions.splice(i, 1);
   updateMarshals(dt);
@@ -3299,6 +3431,11 @@ function updateSpace(dt: number) {
       sfx.thud();
       setAutopilot(false);
       flash('Docking refused · station in lockdown · containment breach', 3);
+    } else if (contact?.kind === 'docked' && darkRefused()) {
+      station.turnAway(player);
+      sfx.thud();
+      setAutopilot(false);
+      flash('Docking refused · unidentified ship · switch on your transponder (0)', 3);
     } else if (contact?.kind === 'docked' && clearanceRefused()) {
       station.turnAway(player);
       sfx.thud();
@@ -3524,6 +3661,7 @@ function renderControlsCard() {
       ['B', 'Energy bomb: destroy every ship within 6 km (single use)'],
       ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
       ['U', 'Surrender to the police: slow down and hold still (fine, record cleared)'],
+      ...(commander?.difficulty === 'modern' ? [['0', 'Transponder off / on: run dark, unidentified (lawful stations won\'t dock you, and police will hail)']] : []),
       ['Scoop', `Fly slowly (under ${Math.round(SCOOP_SPEED * 100)}% speed) straight into a cargo canister, a yellow dot on the scanner (needs Fuel Scoops)`],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
       ['K', 'Switch control scheme'],
@@ -3665,7 +3803,7 @@ async function dock() {
 
 function settlementMessage(s: Settlement, lead: string) {
   const parts = [`${lead} · ${s.fine.toLocaleString()} Cr`];
-  if (s.confiscated.length) parts.push(`${s.confiscated.map((id) => commodityById(id)?.name ?? id).join(', ')} confiscated`);
+  if (s.confiscated.length) parts.push(`${s.confiscated.map((id) => commodityById(id)?.name ?? EQUIPMENT.find((e) => e.id === id)?.name ?? id).join(', ')} confiscated`);
   if (s.owed > 0) parts.push(`couldn't pay ${s.owed.toLocaleString()} Cr · equipment impounded`);
   return parts.join(' · ');
 }
@@ -3688,6 +3826,7 @@ function updateClearance() {
   const name = stationName(currentSystem()).name;
   if (lockedDown()) flash(`${name} · Lockdown: containment breach · docking suspended`, 4);
   else if (clearanceRefused()) flash(`${name} · Docking refused: you are a Fugitive · U to surrender`, 4);
+  else if (darkRefused()) flash(`${name} · Unidentified ship: switch on your transponder to dock`, 4);
   else if (checksClearance(currentSystem())) flash(`${name} · Transponder checked · Docking clearance granted`, 2.5);
   else flash(`${name} · No questions asked`, 2.5);
 }
@@ -4493,6 +4632,8 @@ function handleKey(code: string) {
         energyBomb();
       } else if (code === 'KeyV') {
         setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]);
+      } else if (code === 'Digit0') {
+        toggleTransponder();
       } else if (/^Digit[1-4]$/.test(code)) {
         setView(VIEWS[Number(code.slice(5)) - 1]);
       } else if (code === 'KeyY') {

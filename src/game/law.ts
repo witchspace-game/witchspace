@@ -1,6 +1,6 @@
 import { systemAt, type StarSystem } from '../galaxy/generate';
 import { contrabandAt, stolenAt } from '../economy/legality';
-import { EQUIPMENT, STAKE, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
+import { EQUIPMENT, STAKE, removeEquipment, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
 
 // The law, as set out in docs/design/law-and-travel.md:
 // - ordinary crimes are local: your record belongs to the system where it happened;
@@ -75,8 +75,13 @@ export function affordableFine(c: Commander, fine: number): number {
 
 const contraband = (c: Commander, system: StarSystem = here(c)) => contrabandAt(c, system);
 
-/** Anything the police would object to: contraband, or stolen goods. */
-export const carriesContraband = (c: Commander, system: StarSystem = here(c)) => contraband(c, system).length > 0 || stolenAt(c, system).length > 0;
+/** Illegal equipment fitted (a distress jammer), where police would object to it. */
+export const illegalEquipment = (c: Commander, system: StarSystem = here(c)): EquipmentId[] =>
+  scansCargo(system) ? c.equipment.filter((id) => EQUIPMENT.find((e) => e.id === id)?.illegal) : [];
+
+/** Anything the police would object to: contraband, stolen goods, or illegal equipment. */
+export const carriesContraband = (c: Commander, system: StarSystem = here(c)) =>
+  contraband(c, system).length > 0 || stolenAt(c, system).length > 0 || illegalEquipment(c, system).length > 0;
 
 
 export interface Settlement {
@@ -115,6 +120,10 @@ export function settle(c: Commander, caught = false): Settlement {
     if (!confiscated.includes(id)) confiscated.push(id);
   }
   tidyStolen(c);
+  for (const id of illegalEquipment(c)) {
+    removeEquipment(c, id);
+    confiscated.push(id);
+  }
   if (confiscated.length && status === 'clean') fine = FINES.offender; // caught at inspection
   // Handing yourself in is treated more leniently, and to your means; being caught isn't.
   fine = caught ? Math.round(fine * 1.5) : affordableFine(c, fine);
@@ -155,6 +164,11 @@ export function redeemImpound(c: Commander): boolean {
 /** Equipment for sale here: high-tech gear needs a high-tech world. */
 export function equipmentForSale(c: Commander, s: StarSystem) {
   return EQUIPMENT.filter(
-    (e) => !(e.classicOnly && c.difficulty !== 'classic') && !(e.modernOnly && c.difficulty !== 'modern') && s.techLevel >= e.minTech,
+    (e) =>
+      !(e.classicOnly && c.difficulty !== 'classic') &&
+      !(e.modernOnly && c.difficulty !== 'modern') &&
+      !e.standard &&
+      !(e.illegal && scansCargo(s)) &&
+      s.techLevel >= e.minTech,
   );
 }

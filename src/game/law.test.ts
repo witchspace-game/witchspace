@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
 import { STAKE, newCommander } from './commander';
-import { coolRecords, equipmentForSale, legalStatus, recordCrime, redeemImpound, settle, fineDue, charge, FINES } from './law';
+import { carriesContraband, coolRecords, equipmentForSale, legalStatus, recordCrime, redeemImpound, settle, fineDue, charge, FINES } from './law';
 
 const LAVE = systemAt(0, 7);
 
@@ -118,5 +118,23 @@ describe('the law', () => {
     const high = Array.from({ length: 256 }, (_, i) => systemAt(0, i)).find((s) => s.techLevel >= 7)!;
     expect(equipmentForSale(c, low).map((e) => e.id)).toEqual(['weapons-licence']); // paperwork, sold everywhere
     expect(equipmentForSale(c, high).map((e) => e.id)).toContain('gimbal-mount');
+  });
+
+  it('sells a distress jammer only where police do not scan, and confiscates it where they do', () => {
+    const c = newCommander('modern');
+    const all = Array.from({ length: 256 }, (_, i) => systemAt(0, i));
+    const lawless = all.find((s) => s.government < 2 && s.techLevel >= 6)!;
+    const lawful = all.find((s) => s.government >= 2 && s.techLevel >= 6)!;
+    expect(equipmentForSale(c, lawless).some((e) => e.id === 'distress-jammer')).toBe(true);
+    expect(equipmentForSale(c, lawful).some((e) => e.id === 'distress-jammer')).toBe(false);
+    // The transponder is fitted as standard: never for sale.
+    expect(equipmentForSale(c, lawful).some((e) => e.id === 'transponder')).toBe(false);
+    c.equipment.push('distress-jammer');
+    expect(carriesContraband(c, lawless)).toBe(false);
+    expect(carriesContraband(c, lawful)).toBe(true);
+    c.location = { galaxy: 0, system: lawful.index };
+    const s = settle(c, true);
+    expect(s.confiscated).toContain('distress-jammer');
+    expect(c.equipment).not.toContain('distress-jammer');
   });
 });

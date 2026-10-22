@@ -18,7 +18,8 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; tagline: string; b
 
 export type EquipmentId =
   | 'docking-computer' | 'combat-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm'
-  | 'large-cargo-bay' | 'extra-energy' | 'energy-bomb' | 'galactic-hyperdrive' | 'weapons-licence';
+  | 'large-cargo-bay' | 'extra-energy' | 'energy-bomb' | 'galactic-hyperdrive' | 'weapons-licence'
+  | 'transponder' | 'distress-jammer';
 
 export type Mount = 'front' | 'rear' | 'left' | 'right';
 
@@ -39,6 +40,10 @@ export interface Equipment {
   undamageable?: boolean;
   /** Used up when used; buy another afterwards. */
   consumable?: boolean;
+  /** Fitted to every ship (Modern rules): never sold, only repaired. */
+  standard?: boolean;
+  /** Against the law wherever police scan: sold only where they don't, and confiscated if found. */
+  illegal?: boolean;
 }
 
 export const EQUIPMENT: Equipment[] = [
@@ -125,6 +130,24 @@ export const EQUIPMENT: Equipment[] = [
     modernOnly: true,
     minTech: 1,
     undamageable: true,
+  },
+  {
+    id: 'transponder',
+    name: 'Transponder',
+    price: 300,
+    blurb: 'Tells police and stations who you are. Every ship has one. Press 0 to switch it off and run dark.',
+    modernOnly: true,
+    minTech: 1,
+    standard: true,
+  },
+  {
+    id: 'distress-jammer',
+    name: 'Distress Jammer',
+    price: 800,
+    blurb: "A ship you attack can't call the police. Illegal wherever police scan: they'll confiscate it and fine you.",
+    modernOnly: true,
+    minTech: 6,
+    illegal: true,
   },
 ];
 
@@ -295,7 +318,9 @@ const EQUIPMENT_HIT_CHANCE = 1 / 12;
 /** Returns the affected item, if any, after a hull hit. */
 export function rollEquipmentDamage(c: Commander, random = Math.random): Equipment | null {
   if (random() >= EQUIPMENT_HIT_CHANCE) return null;
-  const candidates = c.equipment.filter((id) => !c.damaged.includes(id) && !EQUIPMENT.find((e) => e.id === id)?.undamageable);
+  // Under Modern rules every ship has a transponder, and it can be hit too.
+  const fitted: EquipmentId[] = c.difficulty === 'modern' ? [...c.equipment, 'transponder'] : c.equipment;
+  const candidates = fitted.filter((id) => !c.damaged.includes(id) && !EQUIPMENT.find((e) => e.id === id)?.undamageable);
   if (!candidates.length) return null;
   const id = candidates[Math.floor(random() * candidates.length)];
   if (c.difficulty === 'classic') removeEquipment(c, id);
