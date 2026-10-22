@@ -88,7 +88,12 @@ export function pickCompany(s: StarSystem, r: number): CompanyId {
 
 // --- Standing ------------------------------------------------------------------
 
+// Below zero: you've let the company down. Starter (Casual) work stays open
+// so you can earn your way back, until you're Blacklisted.
 export const STANDINGS = [
+  { name: 'Blacklisted', at: -Infinity },
+  { name: 'Distrusted', at: -9 },
+  { name: 'Unreliable', at: -5 },
   { name: 'Casual', at: 0 },
   { name: 'Contractor', at: 5 },
   { name: 'Trusted', at: 15 },
@@ -99,10 +104,13 @@ export const STANDINGS = [
 export type StandingName = (typeof STANDINGS)[number]['name'];
 
 export function standingName(points: number): StandingName {
-  let name: StandingName = 'Casual';
+  let name: StandingName = 'Blacklisted';
   for (const s of STANDINGS) if (points >= s.at) name = s.name;
   return name;
 }
 
 /** Points needed for a standing name. */
 export const standingAt = (name: StandingName) => STANDINGS.find((s) => s.name === name)!.at;
+
+/** Points needed to take work that asks for this standing: starter work is open to all but the blacklisted. */
+export const workNeeds = (name: StandingName) => (name === 'Casual' ? standingAt('Distrusted') : standingAt(name));

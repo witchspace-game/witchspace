@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { distanceLy, systemAt } from '../galaxy/generate';
 import { cargoTonnes, newCommander } from './commander';
-import { abandon, afterJump, board, deliver, destinationOf, jumpsBetween, LATE_GRACE, loseContracts, nextHop, standing, take } from './contracts';
-import { presence } from './companies';
+import { abandon, afterJump, board, cannotTake, deliver, destinationOf, jumpsBetween, LATE_GRACE, loseContracts, nextHop, standing, take } from './contracts';
+import { presence, standingName } from './companies';
 
 const lave = systemAt(0, 7);
 const NOW = Date.UTC(2026, 9, 22, 12);
@@ -94,6 +94,18 @@ describe('company contracts', () => {
     }
     expect(at).toBe(far);
     expect(nextHop(far, far)).toBeNull();
+  });
+
+  it('letting a company down shows, but starter work stays open until you are blacklisted', () => {
+    expect(standingName(-3)).toBe('Unreliable');
+    expect(standingName(-7)).toBe('Distrusted');
+    expect(standingName(-12)).toBe('Blacklisted');
+    const o = board(newCommander('modern'), lave, NOW).find((x) => x.needs === 'Casual')!;
+    const c = newCommander('modern');
+    c.standing = { [o.company]: -7 };
+    expect(cannotTake(c, o, 20)).toBeNull();
+    c.standing = { [o.company]: -12 };
+    expect(cannotTake(c, o, 20)).toMatch(/Blacklisted/);
   });
 });
 
