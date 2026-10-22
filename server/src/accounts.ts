@@ -14,7 +14,8 @@ import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
 import { NAMES, nameKey, nameRule } from './names';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
-import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES } from './contact';
+import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES, type CompanyId } from './contact';
+import { companyEmail, signInEmail } from './emails';
 import { isPushEndpoint, sendPush } from './push';
 
 export interface AccountsEnv {
@@ -136,9 +137,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
       body: JSON.stringify({
         from: 'Witchspace <signin@witchspace.org.uk>',
         to: [email],
-        subject: 'Your Witchspace sign-in link',
-        text: `Right on, Commander.\n\nSign in to Witchspace with this link (it works once, for ${LINK_MINUTES} minutes):\n\n${link}\n\nOr enter this code in the game: ${code}\n\nIf you didn't ask for this, you can ignore this email.\n\nWitchspace · ${SITE}`,
-        html: emailHtml(link, code),
+        ...signInEmail(link, code, LINK_MINUTES),
       }),
     });
     if (!sent.ok) return json({ error: 'The email couldn’t be sent just now: please try again' }, 502);
@@ -416,11 +415,11 @@ export class Accounts extends DurableObject<AccountsEnv> {
       if (result === 'gone') this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL WHERE account = ?', row.account);
       told = result === 'sent';
     }
-    if (!told && row.email && this.env.RESEND_API_KEY) told = await this.contactEmail(row, name, subject, body);
+    if (!told && row.email && this.env.RESEND_API_KEY) told = await this.contactEmail(row, company, name, subject);
     if (told) this.sql.exec('UPDATE contact SET sent = ? WHERE account = ?', JSON.stringify([...week, { id: assignmentId(company, now), t: now }]), row.account);
   }
 
-  private async contactEmail(row: ContactRow, name: string, subject: string, body: string): Promise<boolean> {
+  private async contactEmail(row: ContactRow, company: CompanyId, name: string, subject: string): Promise<boolean> {
     const email = this.sql.exec('SELECT email FROM accounts WHERE id = ?', row.account).toArray()[0]?.email as string | undefined;
     if (!email) return false;
     const stop = `https://space.witchspace.org.uk/contact/stop?t=${encodeURIComponent(row.stop)}`;
@@ -430,9 +429,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
       body: JSON.stringify({
         from: `${name} via Witchspace <contact@witchspace.org.uk>`,
         to: [email],
-        subject: `${name}: ${subject}`,
-        text: `${subject}.\n\nAn assignment is waiting: report to any ${name} station within 48 hours.\n\n${SITE}/play/\n\nYou asked the companies in Witchspace to contact you. To stop: ${stop}`,
-        html: contactHtml(name, body, stop),
+        ...companyEmail(company, name, subject, `An assignment is waiting for you, Commander. Report to any ${name} station within 48 hours.`, stop),
         headers: { 'List-Unsubscribe': `<${stop}>`, 'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click' },
       }),
     });
@@ -459,31 +456,4 @@ interface ContactRow {
   email: number;
   stop: string;
   sent: string;
-}
-
-function contactHtml(name: string, body: string, stop: string): string {
-  return `<!doctype html><html><body style="margin:0;background:#05070d;font-family:Arial,Helvetica,sans-serif;color:#eaf0f6">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
-<table role="presentation" width="100%" style="max-width:480px;background:#0b111c;border:1px solid #1f2a3a;border-radius:16px" cellpadding="0" cellspacing="0"><tr><td style="padding:32px">
-<p style="margin:0 0 6px;font-size:13px;letter-spacing:4px;color:#3dffb0">${name.toUpperCase()}</p>
-<p style="margin:0 0 24px;font-size:17px;line-height:1.5;color:#eaf0f6">${body}</p>
-<p style="margin:0 0 24px"><a href="${SITE}/play/" style="display:inline-block;padding:13px 26px;border-radius:999px;background:#3dffb0;color:#03140e;font-weight:bold;text-decoration:none">Open Witchspace</a></p>
-<p style="margin:0;font-size:12px;line-height:1.5;color:#95a3b8">You asked the companies in Witchspace to contact you. <a href="${stop}" style="color:#95a3b8">Stop these messages</a>.</p>
-</td></tr></table></td></tr></table></body></html>`;
-}
-
-function emailHtml(link: string, code: string): string {
-  return `<!doctype html><html><body style="margin:0;background:#05070d;font-family:Arial,Helvetica,sans-serif;color:#eaf0f6">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
-<table role="presentation" width="100%" style="max-width:480px;background:#0b111c;border:1px solid #1f2a3a;border-radius:16px" cellpadding="0" cellspacing="0"><tr><td style="padding:32px">
-<p style="margin:0 0 6px;font-size:13px;letter-spacing:4px;color:#3dffb0">WITCHSPACE</p>
-<h1 style="margin:0 0 14px;font-size:24px;color:#eaf0f6">Right on, Commander.</h1>
-<p style="margin:0 0 24px;font-size:16px;line-height:1.5;color:#c2cddb">Here's your link to sign in. It works once, for ${LINK_MINUTES} minutes.</p>
-<p style="margin:0 0 24px"><a href="${link}" style="display:inline-block;padding:13px 26px;border-radius:999px;background:#3dffb0;color:#03140e;font-weight:bold;text-decoration:none">Sign in to Witchspace</a></p>
-<p style="margin:0 0 8px;font-size:14px;color:#c2cddb">Playing from your Home Screen? Enter this code in the game instead:</p>
-<p style="margin:0 0 24px;font-size:30px;letter-spacing:8px;font-weight:bold;color:#3dffb0;font-family:'Courier New',monospace">${code}</p>
-<p style="margin:0;font-size:13px;line-height:1.5;color:#95a3b8">If you didn't ask for this, you can ignore this email: nobody can sign in without the link or the code.</p>
-</td></tr></table>
-<p style="margin:18px 0 0;font-size:12px;color:#5d6b80">witchspace.org.uk · a free, open-source tribute to Elite (1984)</p>
-</td></tr></table></body></html>`;
 }
