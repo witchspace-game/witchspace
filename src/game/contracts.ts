@@ -29,6 +29,10 @@ export interface Contract {
   rush: boolean;
   /** Standing with the company needed to take it. */
   needs: StandingName;
+  /** What the cargo is called, when it isn't a trade good (special assignments). */
+  label?: string;
+  /** A special assignment (game/assignments.ts). */
+  special?: boolean;
 }
 
 /** A contract you've taken, counting down. */
@@ -150,6 +154,24 @@ export function board(c: Commander, here: StarSystem, now: number): Contract[] {
 
 export const standing = (c: Commander, id: CompanyId) => c.standing?.[id] ?? 0;
 
+export interface CompanyLog {
+  delivered: number;
+  late: number;
+  failed: number;
+  special: number;
+}
+
+export const logOf = (c: Commander, id: CompanyId): CompanyLog => c.companyLog?.[id] ?? { delivered: 0, late: 0, failed: 0, special: 0 };
+
+export function logContract(c: Commander, id: CompanyId, what: keyof CompanyLog) {
+  const log = { ...logOf(c, id) };
+  log[what] += 1;
+  c.companyLog = { ...c.companyLog, [id]: log };
+}
+
+/** What the cargo is called on screen. */
+export const cargoName = (a: Contract) => a.label ?? commodityById(a.good)?.name ?? a.good;
+
 function addStanding(c: Commander, id: CompanyId, points: number) {
   c.standing = { ...c.standing, [id]: Math.max(-20, standing(c, id) + points) };
 }
@@ -181,6 +203,7 @@ export function abandon(c: Commander, id: string): string {
   if (!a) return '';
   finish(c, id);
   addStanding(c, a.company, -3);
+  logContract(c, a.company, 'failed');
   return `Contract abandoned · ${COMPANIES[a.company].name} will remember`;
 }
 
@@ -189,11 +212,12 @@ export function afterJump(c: Commander): string[] {
   const notes: string[] = [];
   for (const a of [...(c.contracts ?? [])]) {
     a.jumpsLeft -= 1;
-    if (a.jumpsLeft === 0) notes.push(`${commodityById(a.good)?.name} for ${placeOf(a.to).name}: last jump`);
+    if (a.jumpsLeft === 0) notes.push(`${cargoName(a)} for ${placeOf(a.to).name}: last jump`);
     if (a.jumpsLeft < -LATE_GRACE) {
       finish(c, a.id);
       addStanding(c, a.company, -3);
-      notes.push(`${COMPANIES[a.company].name} has reclaimed its ${commodityById(a.good)?.name}: contract failed`);
+      logContract(c, a.company, 'failed');
+      notes.push(`${COMPANIES[a.company].name} has reclaimed its ${cargoName(a)}: contract failed`);
     }
   }
   return notes;
@@ -208,10 +232,11 @@ export function deliver(c: Commander, here: StarSystem): string[] {
     const pay = late ? Math.round(a.pay / 2) : a.pay;
     c.credits = Math.round((c.credits + pay) * 10) / 10;
     const before = standingName(standing(c, a.company));
-    addStanding(c, a.company, late ? 0 : 1 + (a.rush || a.danger > 0 ? 1 : 0));
+    addStanding(c, a.company, late ? 0 : a.special ? 3 : 1 + (a.rush || a.danger > 0 ? 1 : 0));
+    logContract(c, a.company, late ? 'late' : a.special ? 'special' : 'delivered');
     finish(c, a.id);
     const after = standingName(standing(c, a.company));
-    notes.push(`${COMPANIES[a.company].name} · ${a.qty} t ${commodityById(a.good)?.name} delivered${late ? ' late' : ''} · ${pay.toLocaleString()} Cr` + (after !== before ? ` · now ${after}` : ''));
+    notes.push(`${COMPANIES[a.company].name} · ${a.qty} t ${cargoName(a)} delivered${late ? ' late' : ''} · ${pay.toLocaleString()} Cr` + (after !== before ? ` · now ${after}` : ''));
   }
   return notes;
 }
@@ -222,8 +247,9 @@ export function loseContracts(c: Commander): string[] {
   for (const a of lost) {
     finish(c, a.id);
     addStanding(c, a.company, -2);
+    logContract(c, a.company, 'failed');
   }
-  return lost.map((a) => `${COMPANIES[a.company].name}'s ${commodityById(a.good)?.name} lost with your ship`);
+  return lost.map((a) => `${COMPANIES[a.company].name}'s ${cargoName(a)} lost with your ship`);
 }
 
 export const destinationOf = (a: Contract) => placeOf(a.to);

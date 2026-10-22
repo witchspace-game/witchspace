@@ -81,6 +81,15 @@ Standing is its own record, beside the combat rating and the explorer's rank, an
 - **Lost** (ship destroyed, cargo taken or jettisoned): no pay, the bond is forfeit, standing drops. Your savings and your ship's insurance are untouched; the company insured its own cargo.
 - **Stolen by you** (sold to a fence): the company knows. Standing with it falls to the floor, and the cargo is reported stolen everywhere it trades.
 
+## 2b. Files, messages and special assignments
+
+**Built (October 2026, `src/game/assignments.ts`).**
+
+- **The companies keep files.** Once you have any standing with a company, the Contracts tab offers *your file*: your contracts delivered, late and failed, your combat rating, your legal standing, where you were last seen, and a line or two **redacted**: things the company noticed that you didn't (a crisis you passed through, the Bureau of Continuity's interest). Each company's file is in its own voice: Hexon's dossier, Vorg's one-line assessment, the Mutual's membership card, Wexley-Yorozu's page 214.
+- **Special assignments.** With **Contractor** standing or better, a company may get in touch: a chance every three days, the offer open for 48 hours. It arrives as a **message** in its own voice ("A matter requiring discretion, Commander") and appears on the board at any station where the company does business: a small, unusual cargo (Hexon's sealed class-4 biologicals, Vorg's crates that tick, the Mutual's relief supplies, Wexley-Yorozu's sample case), two to four jumps out, paying several times a normal contract and +3 standing. Once taken, it counts in jumps like any contract.
+- **The same everywhere.** Whether an assignment is waiting depends only on your callsign, your standing and the clock (`assignmentWaiting`), so the notification server can tell when to get in touch without knowing anything else.
+- **Notifications** (next): a switch to let the companies contact you; a phone notification (Home Screen app on iPhone, any browser elsewhere) or an email when an assignment is waiting. Opt-in, in character, at most a couple a week.
+
 ## 3. Company ships, and intercepting them
 
 ### The fleets
