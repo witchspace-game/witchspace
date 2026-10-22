@@ -8,7 +8,7 @@ const root = join(import.meta.dirname, '..', 'dist');
 const config = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'vercel.json'), 'utf8'));
 const headers: { key: string; value: string }[] = config.headers[0].headers;
 const types: Record<string, string> = {
-  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml',
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json',
   '.json': 'application/json', '.txt': 'text/plain; charset=utf-8', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.png': 'image/png',
 };
 const port = Number(process.argv[2] ?? 4173);
