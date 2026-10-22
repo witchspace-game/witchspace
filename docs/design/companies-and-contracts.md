@@ -14,6 +14,15 @@ All of it runs the way Elite's galaxy did: **worked out from each system's seed 
 
 ---
 
+## Growing with use
+
+**Start small, make sense, grow as players arrive.** Every piece here works with one commander and no server, and gets richer as more people play, without anything having to be rebuilt.
+
+- **The baseline is free.** Companies, their fleets, contracts and yards all come from the seed and the clock. One commander or a thousand, the galaxy costs the same to run: nothing.
+- **Players add to it, and that's what costs a little.** Contracts claimed, crimes witnessed, deliveries to a yard: each is a few bytes on the server, so the bill grows only with the number of players.
+- **The galaxy responds to where players go.** Later, companies expand where players carry their freight, yards open where deliveries flow, and quiet routes stay quiet. A busy region visibly develops; that's the reward for a growing community, and it can't happen faster than the community grows.
+- **Each stage is complete on its own.** Stage 1 is a game you'd want to play even if stage 2 never came: take contracts, build standing, see company ships. Nothing is half-built waiting for later.
+
 ## 1. The companies
 
 Four to start, each with a character, a home ground and a rival. Their backstories, insignia, liveries, logo prompts and signature ships (the Coral, the Gaboon, the Garter and the Bullsnake) are in **[the trading companies](../companies.md)**. Inspired by real-world types with poetic licence; no real company is portrayed.
@@ -164,7 +173,7 @@ Wexley-Yorozu builds stations where they're needed, from what's there (the full 
 
 | Stage | What |
 |---|---|
-| **1. Companies and contracts** | The three companies and their presence by system; a **Contracts** tab at the station (the first trading screen a new commander sees); haulage, rush and supply contracts with consigned cargo, deadlines in jumps, pay and bonds; standing with each company; NPC traders in company livery |
+| **1. Companies and contracts** | The four companies and their presence by system; a **Contracts** tab at the station (the first trading screen a new commander sees); haulage and rush contracts with consigned cargo, deadlines in jumps and pay; standing with each company; NPC traders in company colours with their marks. *Smallest slice that makes sense; supply runs, bonds and perks follow once it plays well* |
 | **2. The law beyond the station** | Station space and witnesses; the distress call and police response time; running dark; the police challenge; the transponder as damageable equipment; the distress jammer |
 | **3. Fleets and conflict** | Escort and recovery contracts; company security ships; rivalry events (a company war as a world event, with blockades and premiums) |
 | **3b. Building worlds** | Wexley-Yorozu yards by moons: the Titanoboa constructor, ore haulers, and a station rising through its stages (spine, frame, plating, spin-up) over days for everyone; partly built stations buying what the moon can't supply; construction contracts; opening day. In the shared galaxy, every commander's deliveries speed the build: a community goal that costs a counter on the server |
