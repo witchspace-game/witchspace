@@ -168,7 +168,7 @@ function render() {
       html += `<p><button type="button" data-again>Use a different email</button></p>`;
     } else {
       html += `<p class="meta">Sign in to keep your callsign, and carry on from any device. No password: we email you a link.</p>
-        <form class="account-form"><input type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email" />
+        <form class="account-form"><input type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email" value="${escapeHtml(lastEmail())}" />
         <div class="turnstile"></div><button type="submit" class="primary">Email me a link</button></form>`;
     }
     html += `<p class="small"><a href="/privacy/" target="_blank" rel="noopener">How we use your email</a></p>`;
@@ -192,6 +192,7 @@ function wire() {
     try {
       const r = await acct.requestLink(email, turnstileToken);
       sentTo = email;
+      rememberEmail(email);
       devLink = r.devLink ?? '';
       devCode = r.devCode ?? '';
       view = 'sent';
@@ -305,6 +306,23 @@ function contactSection(): string {
     <p class="meta">When Hexon Holdings or the others have a special assignment for you, they'll get in touch. At most a couple of times a week, and always in character.</p>
     <label class="contact-option"><input type="checkbox" data-contact="push" ${contact.push ? 'checked' : ''} ${pushSupported() || contact.push ? '' : 'disabled'} /> Notifications <small>${pushNote}</small></label>
     <label class="contact-option"><input type="checkbox" data-contact="email" ${contact.email ? 'checked' : ''} /> Email <small>To your sign-in address, with a one-click stop.</small></label>`;
+}
+
+// The last email you signed in with on this device, so you needn't type it again.
+const LAST_EMAIL = 'witchspace.lastEmail';
+function lastEmail(): string {
+  try {
+    return localStorage.getItem(LAST_EMAIL) ?? '';
+  } catch {
+    return '';
+  }
+}
+function rememberEmail(email: string) {
+  try {
+    localStorage.setItem(LAST_EMAIL, email);
+  } catch {
+    // Storage blocked: type it next time.
+  }
 }
 
 /** The human check on the email form, when it's showing. */
