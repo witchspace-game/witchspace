@@ -17,6 +17,10 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  /* Pinned: iPhone can otherwise shift the page when an app comes back from the background, so taps land below where buttons are drawn. */
+  position: fixed;
+  inset: 0;
+  overscroll-behavior: none;
   background: #000;
   color: var(--fg);
   font-family: var(--font);
@@ -746,13 +750,13 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
 #touch .fire.active { background: rgba(255, 77, 109, 0.35); box-shadow: 0 0 20px var(--danger); }
 #touch .touch-actions {
   position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: calc(max(16px, env(safe-area-inset-bottom)) + 186px);
-  display: grid; grid-template-columns: repeat(2, 72px); gap: 6px;
+  display: grid; grid-template-columns: repeat(2, 72px); gap: 8px;
 }
-#touch .touch-actions button { padding: 7px 4px; font-size: 12px; background: rgba(0, 10, 6, 0.55); }
+#touch .touch-actions button { min-height: 44px; padding: 4px; font-size: 12px; background: rgba(0, 10, 6, 0.55); }
 #touch .touch-actions button.on { border-color: var(--accent); color: #000; background: var(--accent); }
 /* In flight on a touch screen, the dashboard moves to the top, out of your thumbs' way. */
 body.touch .keys { display: none; }
-body.touch .dash { top: 6px; bottom: auto; transform: translateX(-50%) scale(0.72); transform-origin: top center; }
+body.touch .dash { top: 6px; bottom: auto; transform: translateX(-50%) scale(var(--dash-scale, 0.72)); transform-origin: top center; }
 body.touch #dock-aid { top: 128px; right: 12px; transform: scale(0.8); transform-origin: top right; }
 body.touch #target-info { top: 110px; }
 body.touch #banner { top: 64px; font-size: 15px; padding: 7px 12px; }
@@ -804,10 +808,12 @@ body.touch #banner { top: 64px; font-size: 15px; padding: 7px 12px; }
   .controls { bottom: 26px; }
   .showroom-hint { display: none; }
   .tribute { bottom: 4px; font-size: 9px; }
-  body.touch .dash { transform: translateX(-50%) scale(0.58); }
+  body.touch .dash { transform: translateX(-50%) scale(var(--dash-scale, 0.58)); }
   body.touch #touch .speed { height: 110px; }
   body.touch #touch .fire { width: 76px; height: 76px; }
-  body.touch #touch .touch-actions { right: auto; left: max(12px, env(safe-area-inset-left)); bottom: auto; top: 10px; grid-template-columns: repeat(3, 64px); }
+  /* Touch targets at the recommended size: 44 px tall (Apple), 8 px apart (Google). */
+  body.touch #touch .touch-actions { right: auto; left: max(10px, env(safe-area-inset-left)); bottom: auto; top: 8px; grid-template-columns: repeat(3, 56px); gap: 8px; }
+  body.touch #touch .touch-actions button { min-height: 44px; padding: 4px 2px; font-size: 11px; }
   body.touch #touch .aim-pad span { bottom: 16px; }
   #galaxy-map .map-info { left: auto; right: 12px; width: min(280px, 40vw); bottom: 36px; max-height: calc(100vh - 100px); overflow-y: auto; padding: 8px 12px; }
   #galaxy-map .map-info dl { font-size: 12px; }
