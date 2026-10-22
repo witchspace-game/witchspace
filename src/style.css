@@ -1131,3 +1131,5 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .ex-routes td.up { color: #2ebd85; font-weight: 600; }
 .ex-routes .ex-back-actions { display: flex; gap: 4px; justify-content: flex-end; align-items: center; }
 .ex-on-course { color: #f7a600; font-size: 12px; padding: 4px 6px; }
+.ex-risk { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font-style: normal; font-size: 10.5px; color: #f7a600; background: rgba(247, 166, 0, 0.1); }
+.ex-risk.high { color: #f6465d; background: rgba(246, 70, 93, 0.12); }

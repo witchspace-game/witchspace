@@ -82,7 +82,29 @@ export function drift(system: StarSystem, c: Commodity, i: number, t: number): n
 /** Midpoint of the economy scale, so average worlds sit at the base price. */
 const MID = 3.5;
 
+// Risk pays. Fewer traders brave lawless space, so there imports run short
+// and exports pile up: buy cheap, sell dear, if you survive the pirates. The
+// premium is a share of the price for a good the world fully imports (or
+// fully exports), by government: anarchy, feudal, multi-government, dictatorship.
+export const DANGER_PREMIUM = [0.45, 0.32, 0.16, 0.07, 0, 0, 0, 0];
+
+/** A living market's usual price: the world's own, with the danger premium. */
 export function equilibriumPrice(system: StarSystem, c: Commodity, i: number): number {
+  return classicPrice(system, c, i) * (1 - DANGER_PREMIUM[system.government] * tradeBalance(system, c.id));
+}
+
+// Crises pay too: a world in a famine pays well over the odds for food, on
+// top of what the shortage itself does to the price, until traders arrive.
+const CRISIS = 0.9;
+
+/** The extra a crisis (a world event here, or its echo nearby) puts on a good's price at time `t`. */
+function crisis(system: StarSystem, id: string, t: number): number {
+  const short = -eventShare(system, id, t, tradeBalance(system, id) < -0.2);
+  return short > 0 ? 1 + CRISIS * short : 1;
+}
+
+/** A world's usual price for a good, without risk: Classic's, and the base of every living price. */
+function classicPrice(system: StarSystem, c: Commodity, i: number): number {
   const econ = 1 + c.economyBias * (system.economy - MID);
   // High-tech worlds make advanced goods a little cheaper.
   const tech = c.economyBias > 0 ? 1 - (system.techLevel - 7) * 0.012 : 1;
@@ -320,7 +342,7 @@ export function quoteModern(system: StarSystem, state: MarketState): Quote[] {
   return COMMODITIES.map((c, i) => {
     const eqStock = equilibriumStock(system, c, i);
     const stock = stockOf(system, state, c.id, state.updated, true);
-    const price = equilibriumPrice(system, c, i) * drift(system, c, i, state.updated) * pressure(eqStock, stock);
+    const price = equilibriumPrice(system, c, i) * drift(system, c, i, state.updated) * crisis(system, c.id, state.updated) * pressure(eqStock, stock);
     return { commodity: c, price: round1(price), stock: Math.max(0, Math.round(stock)) };
   });
 }
@@ -342,7 +364,7 @@ export function priceAt(system: StarSystem, state: MarketState, id: string, t: n
   const i = COMMODITIES.findIndex((c) => c.id === id);
   const c = COMMODITIES[i];
   const eq = equilibriumStock(system, c, i);
-  return equilibriumPrice(system, c, i) * drift(system, c, i, t) * pressure(eq, stockOf(system, state, id, t, false));
+  return equilibriumPrice(system, c, i) * drift(system, c, i, t) * crisis(system, id, t) * pressure(eq, stockOf(system, state, id, t, false));
 }
 
 export interface Candle {
@@ -471,7 +493,7 @@ export function quoteClassic(system: StarSystem, visit: number): Quote[] {
     const stockSwing = 0.8 + hash(system, 200 + visit, i) * 0.4;
     return {
       commodity: c,
-      price: round1(equilibriumPrice(system, c, i) * swing),
+      price: round1(classicPrice(system, c, i) * swing),
       stock: Math.round(classicStock(system, c, i) * stockSwing),
     };
   });
@@ -484,7 +506,7 @@ function round1(n: number) {
 /** One commodity's posted price when its own stock is `own` and outside effects add `outside`. Same as quoteModern's. */
 function unitPrice(system: StarSystem, state: MarketState, c: Commodity, i: number, own: number, outside: number): number {
   const eq = equilibriumStock(system, c, i);
-  return round1(equilibriumPrice(system, c, i) * drift(system, c, i, state.updated) * pressure(eq, own + outside));
+  return round1(equilibriumPrice(system, c, i) * drift(system, c, i, state.updated) * crisis(system, c.id, state.updated) * pressure(eq, own + outside));
 }
 
 /** Total paid for selling `qty` one at a time into a living market (price falls as stock rises). */
