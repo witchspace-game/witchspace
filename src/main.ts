@@ -624,7 +624,7 @@ function renderDocked() {
     ['Ship', player.def.name],
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t`],
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
-    ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here: a clean record in this system, any warrant lifted, contraband confiscated">Settle · ${fineDue(c).toLocaleString()} Cr</button>` : ''}`],
+    ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half your credits): a clean record in this system, any warrant lifted, contraband confiscated">Settle · ${fineDue(c).toLocaleString()} Cr</button>` : ''}`],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', combatRating(c.kills)],
     ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited`],
