@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
 import { cargoTonnes, newCommander } from './commander';
-import { ADRIFT_FALL, ADRIFT_HOLD, ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, checkMessages, expireCases, fileOn, recoverCase, rivalPrice, sellToRival, setAdrift } from './assignments';
+import { ADRIFT_FALL, ADRIFT_HOLD, ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, checkMessages, collectHeld, expireCases, fileOn, recoverCase, rivalPrice, sellToRival, setAdrift } from './assignments';
 import { deliver, destinationOf, loseContracts, logOf, standing, take } from './contracts';
 
 const lave = systemAt(0, 7);
@@ -95,6 +95,22 @@ describe('special assignments', () => {
     expect(c.credits).toBe(credits + rivalPrice(offer));
     expect(standing(c, 'hexon')).toBe(-4);
     expect(standing(c, 'vorg')).toBe(3);
+  });
+
+  it('lost at the station mouth, the station crew picks it up, for a fee', () => {
+    const c = newCommander('modern');
+    c.standing = { hexon: 6 };
+    c.credits = 1000;
+    const t = waitingTime(c.name);
+    const offer = assignmentFor(c, 'hexon', lave, t)!;
+    take(c, offer, 20);
+    const [k] = setAdrift(c, lave, [0, 0, 0], t, true);
+    expect(k.held).toBe(true);
+    expect(expireCases(c, t + 10 * ADRIFT_HOLD, () => false)).toHaveLength(0); // the crew keeps it safe
+    expect(collectHeld(c, systemAt(0, 8))).toHaveLength(0); // only at that station
+    expect(collectHeld(c, lave)[0]).toMatch(/station crew/);
+    expect(c.credits).toBe(1000 - Math.round(offer.pay / 10));
+    expect(c.contracts![0].adrift).toBe(false);
   });
 });
 

@@ -177,20 +177,28 @@ export interface AdriftCase {
   system: number;
   position: [number, number, number];
   lost: number;
+  /** Lost close to the station: its crew picked the case up, and holds it for you. */
+  held?: boolean;
 }
+
+/** Lost within this distance of the station (metres), the station crew recovers the case. */
+export const STATION_CREW_RANGE = 3000;
+
+/** The crew's salvage fee: a tenth of the contract's pay, never more than half your spare credits. */
+export const salvageFee = (pay: number, credits: number) => Math.min(Math.round(pay / 10), Math.floor(Math.max(0, credits - 100) / 2));
 
 /** It holds station this long (real time, so a night away doesn't cost you it), then falls. */
 export const ADRIFT_HOLD = 24 * 3600_000;
 /** Once it starts falling, about this long until it's gone. */
 export const ADRIFT_FALL = 20 * 60_000;
 
-/** Ship lost with special cargo aboard: the cases survive, adrift where you were. */
-export function setAdrift(c: Commander, here: StarSystem, position: [number, number, number], now: number): AdriftCase[] {
+/** Ship lost with special cargo aboard: the cases survive, adrift where you were (or with the station crew, if close). */
+export function setAdrift(c: Commander, here: StarSystem, position: [number, number, number], now: number, nearStation = false): AdriftCase[] {
   const cases: AdriftCase[] = [];
   for (const a of c.contracts ?? []) {
     if (!a.special || a.adrift) continue;
     a.adrift = true;
-    cases.push({ contract: a.id, company: a.company, label: a.label ?? 'Sealed case', galaxy: here.galaxy, system: here.index, position, lost: now });
+    cases.push({ contract: a.id, company: a.company, label: a.label ?? 'Sealed case', galaxy: here.galaxy, system: here.index, position, lost: now, ...(nearStation ? { held: true } : {}) });
   }
   c.adrift = [...(c.adrift ?? []), ...cases];
   return cases;
@@ -209,8 +217,22 @@ export function recoverCase(c: Commander, contract: string): string {
 export function expireCases(c: Commander, now: number, inScene: (contract: string) => boolean): string[] {
   const notes: string[] = [];
   for (const k of [...(c.adrift ?? [])]) {
-    if (now - k.lost < ADRIFT_HOLD + ADRIFT_FALL || inScene(k.contract)) continue;
+    if (k.held || now - k.lost < ADRIFT_HOLD + ADRIFT_FALL || inScene(k.contract)) continue;
     notes.push(caseLost(c, k.contract));
+  }
+  return notes;
+}
+
+/** Docked where the station crew is holding your case: it's handed back, for a salvage fee. */
+export function collectHeld(c: Commander, here: StarSystem): string[] {
+  const notes: string[] = [];
+  for (const k of [...(c.adrift ?? [])]) {
+    if (!k.held || k.galaxy !== here.galaxy || k.system !== here.index) continue;
+    const a = c.contracts?.find((x) => x.id === k.contract);
+    const fee = a ? salvageFee(a.pay, c.credits) : 0;
+    c.credits = Math.round((c.credits - fee) * 10) / 10;
+    recoverCase(c, k.contract);
+    notes.push(`The station crew recovered your ${k.label}${fee ? ` · salvage fee ${fee} Cr` : ''} · contract back on`);
   }
   return notes;
 }

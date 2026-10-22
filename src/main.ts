@@ -74,7 +74,7 @@ import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
 import { abandon, afterJump, board, cannotTake, cargoName, deliver, destinationOf, loseContracts, standing, take, type Contract } from './game/contracts';
-import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, companyHere, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
+import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, STATION_CREW_RANGE, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
 import { bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, sellData, SURVEY, worldOf, type Body, type Poi } from './game/explore';
@@ -524,7 +524,11 @@ function renderContracts() {
       const falls = k ? Math.max(0, Math.round((k.lost + ADRIFT_HOLD - now) / 3600_000)) : 0;
       const where = k ? systemAt(k.galaxy, k.system) : null;
       const left =
-        (k ? `<span class="late">Adrift near ${escapeHtml(where!.name)}, beaconing: ${falls ? `${falls} h before it starts to fall` : 'falling'}</span> · ` : '') +
+        (k?.held
+          ? `<span class="late">Held by the station crew at ${escapeHtml(where!.name)}: dock there to collect it</span> · `
+          : k
+            ? `<span class="late">Adrift near ${escapeHtml(where!.name)}, beaconing: ${falls ? `${falls} h before it starts to fall` : 'falling'}</span> · `
+            : '') +
         (a.jumpsLeft >= 0 ? `${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'} left` : `<span class="late">late: half pay</span>`);
       const rival = RIVAL[a.company];
       const sale = a.special && !k && rival && companyHere(rival, here) ? `<button data-rival="${a.id}" title="${escapeHtml(COMPANIES[a.company].name)} will find out">Offer to ${escapeHtml(COMPANIES[rival].name)} · ${rivalPrice(a).toLocaleString()} Cr</button>` : '';
@@ -2590,7 +2594,7 @@ function spillSpecial(k: AdriftCase) {
 function restoreAdrift() {
   if (!commander) return;
   const here = currentSystem();
-  for (const k of cmdr().adrift ?? []) if (k.galaxy === here.galaxy && k.system === here.index) spillSpecial(k);
+  for (const k of cmdr().adrift ?? []) if (!k.held && k.galaxy === here.galaxy && k.system === here.index) spillSpecial(k);
 }
 
 /** Cases whose time ran out elsewhere: tell the commander. */
@@ -3242,7 +3246,7 @@ async function dock() {
   const specialsDue = (c.contracts ?? []).filter((a) => a.special && a.to.system === sys.index && a.to.galaxy === sys.galaxy && a.jumpsLeft >= 0).map((a) => a.company);
   const delivered = deliver(c, sys);
   const news = checkMessages(c, sys, Date.now());
-  const gone = checkAdrift();
+  const gone = [...collectHeld(c, sys), ...checkAdrift()];
   saveCommander(c);
   enterDocked();
   markInbox(c);
@@ -3359,7 +3363,8 @@ function die() {
   // A company's special cargo is built to survive: it holds station here, beaconing.
   if (c.difficulty === 'modern') {
     const p = player.obj.position;
-    for (const k of setAdrift(c, currentSystem(), [p.x, p.y, p.z], Date.now())) spillSpecial(k);
+    const nearStation = p.distanceTo(station.root.position) < STATION_CREW_RANGE;
+    for (const k of setAdrift(c, currentSystem(), [p.x, p.y, p.z], Date.now(), nearStation)) if (!k.held) spillSpecial(k);
   }
   c.stolen = {};
   // Classic, as in 1984: a new ship is a clean slate and the police lose
@@ -3403,8 +3408,12 @@ function die() {
       message = 'Picked up. Your insurers have replaced the ship.';
     } else {
       const lost = loseContracts(c);
-      const adrift = (c.adrift ?? []).filter((k) => Date.now() - k.lost < 10_000).map((k) => `The ${k.label} survived: it's adrift, beaconing. Recover it within 24 hours`);
-      if (lost.length || adrift.length) setTimeout(() => flash([...lost, ...adrift].join(' · '), 6), 5500);
+      const adrift = (c.adrift ?? [])
+        .filter((k) => Date.now() - k.lost < 10_000)
+        .map((k) => (k.held ? `The ${k.label} survived: the station crew picked it up` : `The ${k.label} survived: it's adrift, beaconing. Recover it within 24 hours`));
+      // You wake at this system's station: if its crew picked your case up, it's handed back here.
+      const returned = collectHeld(c, currentSystem());
+      if (lost.length || adrift.length || returned.length) setTimeout(() => flash([...lost, ...(returned.length ? returned : adrift)].join(' · '), 6), 5500);
       const claim = claimInsurance(c);
       if (claim.kind === 'void') {
         message = 'Insurance void: you were a Fugitive · the Co-operative has issued you a bare Cobra';
