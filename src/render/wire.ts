@@ -19,6 +19,11 @@ export const RETRO_DOT = ORIGINAL_PIXELS ? 1 : 2;
 const registry: Parts[] = [];
 let retro = false;
 
+/** Show the right half of a ship's parts for the current look (call after adding parts to a registered set). */
+export function applyParts(p: Parts) {
+  apply(p);
+}
+
 function apply(p: Parts) {
   for (const o of p.neo) o.visible = !retro;
   for (const o of p.retro) o.visible = retro;

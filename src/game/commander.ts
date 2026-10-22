@@ -132,6 +132,8 @@ import { cargoTonnage } from '../economy/commodities';
 import type { MarketState } from '../economy/market';
 import type { LaserId } from './weapons';
 import type { ExploreRecord } from './explore';
+import type { ActiveContract } from './contracts';
+import type { CompanyId } from './companies';
 
 export interface Commander {
   name: string;
@@ -166,6 +168,12 @@ export interface Commander {
   freed?: number;
   /** Of the cargo, how much of each good is stolen: scooped from a clean ship you destroyed. */
   stolen?: Record<string, number>;
+  /** Company contracts in hand (Modern rules); their cargo is in the hold. */
+  contracts?: ActiveContract[];
+  /** Contracts finished or given up recently, so a board doesn't offer them again. */
+  contractsDone?: string[];
+  /** Standing with each trading company, in points. */
+  standing?: Partial<Record<CompanyId, number>>;
   /** Missiles on the rails. */
   missiles: number;
   /** The laser fitted to each mount, if any. */
@@ -249,7 +257,11 @@ export function deleteCommander() {
 }
 
 /** Tonnes used in the hold (gold counts by the kilogram, gems by the gram). */
-export const cargoTonnes = (c: Commander) => cargoTonnage(c.cargo, c.difficulty === 'classic');
+/** Tonnes of company cargo carried under contract. */
+export const consignedTonnes = (c: Commander) => (c.contracts ?? []).reduce((t, a) => t + a.qty, 0);
+
+/** Tonnes used in the hold, company cargo included. */
+export const cargoTonnes = (c: Commander) => cargoTonnage(c.cargo, c.difficulty === 'classic') + consignedTonnes(c);
 
 export const hasEquipment = (c: Commander, id: EquipmentId) => c.equipment.includes(id);
 

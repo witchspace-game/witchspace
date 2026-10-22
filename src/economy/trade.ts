@@ -1,6 +1,6 @@
-import { cleanQty, stolenQty, tidyStolen, type Commander } from '../game/commander';
+import { cargoTonnes, cleanQty, stolenQty, tidyStolen, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
-import { commodityById, cargoTonnage, inSafe, SAFE_LIMIT, UNITS_PER_TONNE } from './commodities';
+import { commodityById, inSafe, SAFE_LIMIT, UNITS_PER_TONNE } from './commodities';
 import { stationTrades } from './legality';
 import { checkOrders } from './orders';
 import { costToBuy, freshMarket, proceedsToSell, quoteClassic, quoteModern, recover, TRADE_MEMORY, type MarketState, type Quote } from './market';
@@ -69,7 +69,7 @@ export function tradesHere(ctx: TradeContext, id: string): boolean {
 }
 
 export function freeTonnes(ctx: TradeContext): number {
-  return ctx.capacity - cargoTonnage(ctx.commander.cargo, ctx.commander.difficulty === 'classic');
+  return ctx.capacity - cargoTonnes(ctx.commander);
 }
 
 function price(ctx: TradeContext, id: string, qty: number, buying: boolean): number {

@@ -1,6 +1,6 @@
-import { cleanQty, type Commander } from '../game/commander';
+import { cargoTonnes, cleanQty, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
-import { cargoTonnage, commodityById, UNITS_PER_TONNE } from './commodities';
+import { commodityById, UNITS_PER_TONNE } from './commodities';
 import { priceAt, RECOVERY_MINUTES, TRADE_MEMORY, type MarketState } from './market';
 
 // Limit orders on a station's exchange (Modern rules). A buy order holds your
@@ -129,7 +129,7 @@ export function collect(c: Commander, state: OrderState, capacity: number): Reco
   const moved: Record<string, number> = {};
   for (const [id, qty] of Object.entries(state.storage ?? {})) {
     const perTonne = UNITS_PER_TONNE[commodityById(id)?.unit ?? 't'];
-    const room = Math.floor((capacity - cargoTonnage(c.cargo)) * perTonne + 1e-9);
+    const room = Math.floor((capacity - cargoTonnes(c)) * perTonne + 1e-9);
     const n = Math.min(qty, room);
     if (n <= 0) continue;
     c.cargo[id] = (c.cargo[id] ?? 0) + n;

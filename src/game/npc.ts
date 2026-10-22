@@ -1,3 +1,4 @@
+import type { CompanyId } from './companies';
 import * as THREE from 'three';
 import type { ShipDef } from '../content/types';
 import { buildShip, disposeShip, heatShip, type ShipModel } from '../render/shipModel';
@@ -72,6 +73,8 @@ export class NpcShip {
   attackedAgo = Infinity;
   /** Cargo carried, by commodity id; spilled if destroyed. */
   cargo: Record<string, number> = {};
+  /** The trading company a trader flies for, if any. */
+  company?: CompanyId;
   /** Credits paid for destroying this ship (pirates). */
   bounty = 0;
   /** Missiles left, and whether an ECM is fitted to destroy incoming ones. */

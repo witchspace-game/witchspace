@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { ShipDef, Vec3 } from '../content/types';
-import { neoLines, retroLines } from './wire';
+import { applyParts, neoLines, retroLines } from './wire';
+import type { ShipModel } from './shipModel';
 
 // Liveries the law wears. Police: alternating blue/red light strips at the
 // wingtips and a white band around the hull. Co-operative Marshals: a gold
@@ -116,3 +117,21 @@ export function applyLivery(def: ShipDef, root: THREE.Group, kind: Livery): { ne
   return { neo: [neoStripe, ...beacons.map((b) => b.neo)], retro: [retroStripe, ...beacons.map((b) => b.retro)] };
 }
 
+/**
+ * A trading company's colours: a single band around the hull, in the
+ * company's colour, added to a ship already built. No lights: only the law
+ * wears lights.
+ */
+export function applyCompanyBand(model: ShipModel, colour: string) {
+  const zs = model.def.geometry.vertices.map((v) => v[2]);
+  const zMin = Math.min(...zs);
+  const zMax = Math.max(...zs);
+  const at = zMin + (zMax - zMin) * 0.36;
+  const band = [...hullBand(model.def, at, 1.03), ...hullBand(model.def, at + (zMax - zMin) * 0.04, 1.03)];
+  const neo = neoLines(band, new THREE.Color(colour).multiplyScalar(1.4), 1.6);
+  const retro = retroLines(band);
+  model.root.add(neo, retro);
+  model.parts.neo.push(neo);
+  model.parts.retro.push(retro);
+  applyParts(model.parts);
+}

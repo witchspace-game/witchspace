@@ -1137,3 +1137,22 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .ex-on-course { color: #f7a600; font-size: 12px; padding: 4px 6px; }
 .ex-risk { display: inline-block; margin-left: 6px; padding: 0 5px; border-radius: 3px; font-style: normal; font-size: 10.5px; color: #f7a600; background: rgba(247, 166, 0, 0.1); }
 .ex-risk.high { color: #f6465d; background: rgba(246, 70, 93, 0.12); }
+
+/* Company contracts */
+.contracts { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+.contracts li { position: relative; padding: 8px 10px; padding-right: 150px; border-left: 2px solid var(--edge); background: rgba(61, 255, 176, 0.04); line-height: 1.35; }
+.contracts li small { color: var(--dim); font-size: 13px; }
+.contracts .actions { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; gap: 6px; }
+.contracts .actions button { font-size: 12px; padding: 4px 10px; }
+.contracts .pay { color: var(--accent); font-weight: 600; }
+.contracts .late { color: var(--danger); }
+.contracts .on-course { color: var(--amber); font-size: 12px; align-self: center; }
+.company { color: var(--company, var(--accent)); font-weight: 600; }
+.risk { font-style: normal; font-size: 11px; padding: 0 5px; border-radius: 3px; color: var(--amber); background: rgba(255, 179, 71, 0.1); }
+.risk.high { color: var(--danger); background: rgba(255, 77, 109, 0.12); }
+@media (max-width: 700px) {
+  .contracts li { padding-right: 10px; }
+  .contracts .actions { position: static; transform: none; margin-top: 6px; justify-content: flex-end; }
+}
+body.retro .contracts li { font-size: 12px; border-radius: 0; }
+body.retro .contracts li small, body.retro .risk { font-size: 8px; }

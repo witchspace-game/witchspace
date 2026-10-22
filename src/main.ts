@@ -73,6 +73,9 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
+import { abandon, afterJump, board, cannotTake, deliver, destinationOf, loseContracts, standing, take } from './game/contracts';
+import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
+import { applyCompanyBand } from './render/livery';
 import { bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, sellData, SURVEY, worldOf, type Body, type Poi } from './game/explore';
 import { SpaceDust } from './render/dust';
 import { Explosion } from './render/explosion';
@@ -391,7 +394,7 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'market' | 'news';
+type DockTab = 'station' | 'contracts' | 'market' | 'news';
 let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
@@ -400,7 +403,9 @@ function setDockTab(tab: DockTab) {
   $('#tab-station').hidden = tab !== 'station';
   $('#tab-market').hidden = tab !== 'market';
   $('#tab-news').hidden = tab !== 'news';
+  $('#tab-contracts').hidden = tab !== 'contracts';
   if (tab === 'news') renderNews();
+  if (tab === 'contracts') renderContracts();
   if (tab === 'market') {
     exchange.selectHeld(cmdr().cargo);
     renderMarket();
@@ -409,6 +414,7 @@ function setDockTab(tab: DockTab) {
     document.body.classList.remove('exchange-open');
     exchange.stop();
   }
+  if (tab === 'contracts') $('.panel.docked').classList.add('wide');
 }
 document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) =>
   b.addEventListener('click', () => {
@@ -455,6 +461,72 @@ function attackNews(here: StarSystem, now: number) {
   }
   return out;
 }
+
+// --- Company contracts (Modern) -----------------------------------------------------
+
+const companyMark = (id: CompanyId) => `<b class="company" style="--company:${COMPANIES[id].colour}">${escapeHtml(COMPANIES[id].name)}</b>`;
+const riskTag = (s: StarSystem) => (s.government <= 1 ? ` <em class="risk high">${GOVERNMENTS[s.government]} · pirates</em>` : s.government <= 3 ? ` <em class="risk">${GOVERNMENTS[s.government]}</em>` : '');
+let contractMessage = '';
+
+function renderContracts() {
+  const c = cmdr();
+  const here = currentSystem();
+  const free = cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c);
+  const goodName = (id: string) => escapeHtml(commodityById(id)?.name ?? id);
+  const place = (s: StarSystem) => `${escapeHtml(s.name)} <small>${distanceLy(here, s).toFixed(1)} LY</small>${riskTag(s)}`;
+  const mine = (c.contracts ?? [])
+    .map((a) => {
+      const to = destinationOf(a);
+      const left = a.jumpsLeft >= 0 ? `${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'} left` : `<span class="late">late: half pay</span>`;
+      const course = c.target === to.index ? '<span class="on-course">On course</span>' : `<button data-course="${to.index}">Set course</button>`;
+      return `<li>${companyMark(a.company)} · ${a.qty} t ${goodName(a.good)} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>
+        <span class="actions">${course}<button data-abandon="${a.id}" title="The company takes its cargo back, and remembers">Abandon</button></span></li>`;
+    })
+    .join('');
+  const offers = board(c, here, Date.now())
+    .map((o) => {
+      const to = destinationOf(o);
+      const why = cannotTake(c, o, free);
+      return `<li>${companyMark(o.company)}${o.rush ? ' <em class="risk">Rush</em>' : ''} · ${o.qty} t ${goodName(o.good)} → ${place(to)}<br>
+        <small>within ${o.jumps} jump${o.jumps === 1 ? '' : 's'} · <b class="pay">${o.pay.toLocaleString()} Cr</b>${o.danger ? ` (${o.danger} danger bonus)` : ''}${o.needs !== 'Casual' ? ` · needs ${o.needs}` : ''}</small>
+        <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span></li>`;
+    })
+    .join('');
+  const standings = COMPANY_IDS.filter((id) => (c.standing?.[id] ?? 0) !== 0)
+    .map((id) => `${companyMark(id)} ${standingName(standing(c, id))}`)
+    .join(' · ');
+  $('#contracts').innerHTML = `
+    ${mine ? `<h3>Your contracts</h3><ul class="contracts">${mine}</ul>` : ''}
+    <h3>On offer at ${escapeHtml(stationName(here).name)}</h3>
+    ${offers ? `<ul class="contracts">${offers}</ul>` : '<p class="meta">Nothing on the board. New work is posted every half hour.</p>'}
+    <p class="meta">Hold: ${+(free).toFixed(1)} t free · new work every half hour${standings ? `<br>Standing: ${standings}` : ''}</p>
+    <p class="market-message" aria-live="polite">${escapeHtml(contractMessage)}</p>`;
+}
+
+$('#contracts').addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
+  if (!b) return;
+  b.blur();
+  const c = cmdr();
+  if (b.dataset.take) {
+    const offer = board(c, currentSystem(), Date.now()).find((o) => o.id === b.dataset.take);
+    if (!offer) return;
+    const why = take(c, offer, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
+    contractMessage = why ?? `Contract taken: ${offer.qty} t ${commodityById(offer.good)?.name} for ${destinationOf(offer).name}, loaded`;
+    if (!why) {
+      if (c.target === null) c.target = offer.to.system; // a sensible default course
+      sfx.beep();
+    }
+  } else if (b.dataset.abandon) {
+    contractMessage = abandon(c, b.dataset.abandon);
+  } else if (b.dataset.course) {
+    c.target = Number(b.dataset.course);
+    contractMessage = `Course set: ${systemAt(currentSystem().galaxy, c.target).name}`;
+    sfx.beep();
+  }
+  saveCommander(c);
+  renderContracts();
+});
 
 function renderNews() {
   const here = currentSystem();
@@ -624,6 +696,9 @@ function renderDocked() {
   const st = stationName(here);
   $('#dock-location').textContent = `${st.name} · ${here.name}`;
   $('#dock-location').title = st.honours ? `Named for ${st.honours}` : '';
+  // Company contracts are Modern work; Classic stays as 1984.
+  $('.tabs [data-tab="contracts"]').hidden = c.difficulty !== 'modern';
+  if (dockTab === 'contracts') renderContracts();
   if (dockTab === 'market') renderMarket();
   if (dockTab === 'news') renderNews();
   const rows: [string, string][] = [
@@ -1026,11 +1101,19 @@ function addNpc(def: string, role: NpcRole, at: THREE.Vector3, patrolCentre = st
   return npc;
 }
 
+/** Under Modern rules, most traders fly for one of the companies working this system, in its colours. */
+function flyForCompany(npc: NpcShip) {
+  if (!commander || cmdr().difficulty !== 'modern' || Math.random() < 0.2) return;
+  npc.company = pickCompany(currentSystem(), Math.random());
+  applyCompanyBand(npc.model, COMPANIES[npc.company].colour);
+}
+
 /** A trader either arriving from witchspace and heading in, or launching and heading out. */
 function spawnTrader(arriving: boolean, distance = 14000 + Math.random() * 8000) {
   if (arriving) {
     const at = station.root.position.clone().addScaledVector(awayFromPlanet(), distance);
     const npc = addNpc('cobra-mk3', 'trader', at);
+    flyForCompany(npc);
     npc.obj.lookAt(station.root.position);
     npc.ship.speed = npc.ship.maxSpeed * 0.5;
     npc.destination = onSlotAxis(900);
@@ -1038,6 +1121,7 @@ function spawnTrader(arriving: boolean, distance = 14000 + Math.random() * 8000)
     if (!loadDeliveries(npc)) npc.cargo = randomCargo();
   } else {
     const npc = addNpc('cobra-mk3', 'trader', station.root.position);
+    flyForCompany(npc);
     station.placeForLaunch(npc.ship);
     npc.ship.speed = 120;
     npc.destination = station.root.position.clone().addScaledVector(awayFromPlanet(), 22000);
@@ -2824,7 +2908,8 @@ function updateCombatHud() {
     // The transponder: type, role, condition and standing.
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
     const standing = best.role === 'pirate' ? 'WANTED' : best.role === 'police' ? 'POLICE' : best.role === 'marshal' ? 'MARSHALS' : 'CLEAN';
-    targetInfo.textContent = `${best.def.name} · ${best.role.toUpperCase()} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === locked ? ' · LOCKED' : ''}`;
+    const owner = best.company ? COMPANIES[best.company].name.toUpperCase() : best.role.toUpperCase();
+    targetInfo.textContent = `${best.def.name} · ${owner} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === locked ? ' · LOCKED' : ''}`;
     // Close enough, the scanner reads the hold.
     if (best.obj.position.distanceTo(player.obj.position) < CARGO_SCAN_RANGE && best.role !== 'police' && best.role !== 'marshal') {
       const hold = Object.entries(best.cargo)
@@ -3006,9 +3091,11 @@ async function dock() {
   const inspected = smuggling && Math.random() < inspectionChance(c, sys);
   const due = checksClearance(sys) && (legalStatus(c) === 'offender' || inspected);
   const settlement = due ? settle(c) : null;
+  const delivered = deliver(c, sys);
   saveCommander(c);
   enterDocked();
   if (settlement) flash(settlementMessage(settlement, inspected ? 'Hold inspected' : 'Fined on arrival'), 5);
+  else if (delivered.length) flash(delivered.join(' · '), 5);
   else if (smuggling && inspectionChance(c, sys) > 0) flash('Docked · your hold was not inspected this time', 3);
 }
 
@@ -3156,6 +3243,8 @@ function die() {
       removeEquipment(c, 'escape-pod');
       message = 'Picked up. Your insurers have replaced the ship.';
     } else {
+      const lost = loseContracts(c);
+      if (lost.length) setTimeout(() => flash(lost.join(' · '), 4), 5500);
       const claim = claimInsurance(c);
       if (claim.kind === 'void') {
         message = 'Insurance void: you were a Fugitive · the Co-operative has issued you a bare Cobra';
@@ -3590,6 +3679,8 @@ async function hyperspace() {
   c.visits += 1; // Classic markets are set on arrival in a system, as in 1984
   // Records stay in the system where the crime happened, and cool as you travel.
   coolRecords(c);
+  const contractNotes = afterJump(c);
+  if (contractNotes.length) setTimeout(() => state === 'flying' && flash(contractNotes.join(' · '), 4), 9000);
   surrenderTimer = null;
   saveCommander(c);
   const slipped = carrier !== null && (carrier.phase === 'arriving' || carrier.phase === 'emerging');

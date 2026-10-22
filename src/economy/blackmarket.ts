@@ -1,6 +1,6 @@
-import { removeStolen, stolenQty, type Commander } from '../game/commander';
+import { cargoTonnes, removeStolen, stolenQty, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
-import { COMMODITIES, UNITS_PER_TONNE, cargoTonnage } from './commodities';
+import { COMMODITIES, UNITS_PER_TONNE } from './commodities';
 import { eventShare } from './events';
 import { hasLicence, legalityAt } from './legality';
 import { drift, equilibriumPrice, npcTrades, priceAt, type MarketState } from './market';
@@ -131,7 +131,7 @@ export function backRoomTrade(
   const total = backRoomTotal(s, state, id, qty, side, now);
   if (side === 'buy') {
     if (quote.stock < qty) return { ok: false, caught: false, message: `They haven't got that much ${good.name}` };
-    if (cargoTonnage(c.cargo) + qty / UNITS_PER_TONNE[good.unit] > capacity + 1e-9) return { ok: false, caught: false, message: 'Not enough room in the hold' };
+    if (cargoTonnes(c) + qty / UNITS_PER_TONNE[good.unit] > capacity + 1e-9) return { ok: false, caught: false, message: 'Not enough room in the hold' };
     if (total > c.credits) return { ok: false, caught: false, message: 'Not enough credits' };
   } else if ((c.cargo[id] ?? 0) < qty) return { ok: false, caught: false, message: `You haven't got that much ${good.name}` };
 
