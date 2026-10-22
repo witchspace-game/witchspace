@@ -147,6 +147,9 @@ function layoutForScreen() {
   document.documentElement.style.setProperty('--controls-h', `${controls?.offsetHeight ?? 0}px`);
 }
 addEventListener('resize', layoutForScreen);
+// The row also changes height when its buttons change or fonts load, so watch it.
+const controlsWatch = new ResizeObserver(layoutForScreen);
+for (const nav of document.querySelectorAll<HTMLElement>('nav.controls')) controlsWatch.observe(nav);
 
 let portraitTipShown = false;
 
