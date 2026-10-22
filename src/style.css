@@ -1174,3 +1174,5 @@ body.retro .file { font-family: inherit; font-size: 8px; }
 .account-close { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; }
 .account-close .small { margin: 0; }
 body.touch .account-close .small { display: none; }
+/* The 1984 "Load New Commander (Y/N)?" prompt is for keyboards; on touch the buttons do it. */
+body.touch .prompt { display: none; }
