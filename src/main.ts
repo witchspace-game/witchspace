@@ -151,6 +151,7 @@ function layoutForScreen() {
   const controls = [...document.querySelectorAll<HTMLElement>('nav.controls')].find((el) => !el.hidden);
   document.documentElement.style.setProperty('--controls-h', `${controls?.offsetHeight ?? 0}px`);
   fitDashboard();
+  updateTurnHint();
 }
 
 /**
@@ -192,7 +193,32 @@ for (const nav of document.querySelectorAll<HTMLElement>('nav.controls')) contro
 // The dashboard and flight buttons appear on launch: fit them then too.
 for (const el of document.querySelectorAll<HTMLElement>('.dash, #touch .touch-actions')) controlsWatch.observe(el);
 
-let portraitTipShown = false;
+// --- Which way up --------------------------------------------------------------
+// On a phone the title and station screens are laid out upright, and flight
+// sideways. Safari can't turn the screen for us, so when it's the wrong way
+// round we say so: once per screen, for a few seconds or until it's turned.
+
+let turnSeen = '';
+let turnTimer: ReturnType<typeof setTimeout> | undefined;
+
+function updateTurnHint() {
+  const hint = $('#turn');
+  const phone = document.body.classList.contains('touch') && Math.min(innerWidth, innerHeight) < 500;
+  const upright = innerHeight > innerWidth;
+  const want = state === 'flying' ? 'sideways' : state === 'title' || state === 'docked' ? 'upright' : null;
+  if (!phone || !want || upright === (want === 'upright')) {
+    hint.hidden = true;
+    turnSeen = '';
+    return;
+  }
+  if (turnSeen === state) return; // already said, for this screen
+  turnSeen = state;
+  hint.className = `turn ${want}`;
+  hint.textContent = state === 'flying' ? 'Turn your phone sideways to fly' : state === 'docked' ? 'Turn your phone upright in the station' : 'Best upright here · sideways to fly';
+  hint.hidden = false;
+  clearTimeout(turnTimer);
+  turnTimer = setTimeout(() => (hint.hidden = true), 5000);
+}
 
 let commander: Commander | null = null;
 const cmdr = () => commander!;
@@ -3531,22 +3557,52 @@ function showControlsCardOnce() {
 // --- Full screen on phones ---------------------------------------------------
 // Android can go full screen from the page. iPhone Safari can't: its bars only
 // go when the game is added to the Home Screen (manifest + apple meta in
-// play/index.html), so we say how, once.
+// play/index.html), and only then can the companies reach an iPhone. So the
+// title screen says how, until it's done or put off for a few days.
 
 const standalone = () =>
   (navigator as Navigator & { standalone?: boolean }).standalone === true || matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches;
 const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.userAgent.includes('Macintosh') && navigator.maxTouchPoints > 1);
 
-function needsHomeScreenTip(): boolean {
-  if (!isTouch || !isIos || standalone()) return false;
+const INSTALL_LATER = 'witchspace.installLater';
+const INSTALL_PAUSE = 3 * 86_400_000; // "Not now" holds for three days
+/** Chrome's own install prompt, kept for our button (Android). */
+let installPrompt: (Event & { prompt(): Promise<void> }) | null = null;
+
+function showInstall() {
+  let later = 0;
   try {
-    if (localStorage.getItem('witchspace.homeScreenTip')) return false;
-    localStorage.setItem('witchspace.homeScreenTip', '1');
+    later = Number(localStorage.getItem(INSTALL_LATER) ?? 0);
   } catch {
-    // Storage blocked: the tip shows each session, which is harmless.
+    // Storage blocked: offer it each visit, which is harmless.
   }
-  return true;
+  const offer = isTouch && !standalone() && (isIos || installPrompt !== null) && Date.now() - later > INSTALL_PAUSE;
+  $('#install').hidden = !offer;
+  if (!offer) return;
+  $('#install-go').hidden = !installPrompt;
+  $('#install-how').innerHTML = installPrompt
+    ? 'Install Witchspace and play from its icon, like an app.'
+    : 'Tap <b>Share</b> (under <b>•••</b> on newer iPhones), then <b>Add to Home Screen</b>, and play from the icon.<span class="install-why"> The companies can only send notifications to an iPhone that way.</span>';
 }
+addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e as typeof installPrompt;
+  showInstall();
+});
+$('#install-go').addEventListener('click', async () => {
+  await installPrompt?.prompt();
+  installPrompt = null;
+  showInstall();
+});
+$('#install-later').addEventListener('click', () => {
+  try {
+    localStorage.setItem(INSTALL_LATER, String(Date.now()));
+  } catch {
+    // Storage blocked: it's back next visit.
+  }
+  $('#install').hidden = true;
+});
+showInstall();
 
 if (isTouch && !isIos) {
   addEventListener(
@@ -3574,12 +3630,6 @@ async function launch() {
   setView('front');
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
-  if (isTouch && innerHeight > innerWidth && !portraitTipShown) {
-    portraitTipShown = true;
-    setTimeout(() => flash('Tip: turn your phone sideways for the best view', 3), 2600);
-  } else if (needsHomeScreenTip()) {
-    setTimeout(() => flash('Tip: for full screen, tap Share · Add to Home Screen, then play from the icon', 6), 2600);
-  }
   flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
   if (recordVisit(cmdr(), currentSystem())) saveCommander(cmdr()); // where you started counts
   announceEvent(currentSystem(), 2800);

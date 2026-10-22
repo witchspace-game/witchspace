@@ -1248,3 +1248,24 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 #touch .missile.armed { border-color: var(--danger); color: #fff; background: rgba(255, 77, 109, 0.55); box-shadow: 0 0 14px var(--danger); }
 #touch .missile.empty { opacity: 0.45; }
 @media (max-height: 500px) { body.touch #touch .missile { min-width: 76px; font-size: 12px; } }
+
+/* Play full screen: the title screen's Home Screen card (main.ts showInstall). */
+.install { clear: both; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 12px 0 0; padding: 10px 12px; border: 1px solid var(--edge); border-left: 3px solid var(--accent); background: rgba(61, 255, 176, 0.06); }
+.install[hidden] { display: none; }
+.install p { flex: 1 1 100%; margin: 0; font-size: 13.5px; line-height: 1.45; }
+.install button { min-height: 36px; padding: 6px 14px; font-size: 12px; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .panel[data-screen='title']:has(.install:not([hidden])) :is(.desc, #ship-meta) { display: none; }
+  .install { margin-top: 8px; padding: 8px 10px; }
+  .install p { font-size: 12.5px; }
+  .install-why { display: none; }
+  /* Over the ship, clear of the column. */
+  body[data-state='title'] .turn { left: calc(var(--column-left) + var(--column) + (100vw - var(--column-left) - var(--column)) / 2); top: 24%; }
+}
+
+/* Which way up (main.ts updateTurnHint): a little phone that turns round. */
+.turn { position: fixed; z-index: 30; left: 50%; top: 42%; transform: translate(-50%, -50%); width: max-content; max-width: calc(100vw - 32px); margin: 0; display: flex; align-items: center; gap: 14px; padding: 12px 18px; border: 1px solid var(--edge); border-left: 3px solid var(--accent); background: rgba(0, 10, 6, 0.88); font-size: 15px; letter-spacing: 0.04em; pointer-events: none; }
+.turn[hidden] { display: none; }
+.turn::before { content: ''; flex: none; width: 14px; height: 24px; border: 2px solid var(--accent); border-radius: 4px; animation: turn-phone 1.4s ease-in-out infinite alternate; }
+.turn.upright::before { animation-direction: alternate-reverse; }
+@keyframes turn-phone { 0%, 25% { transform: rotate(0deg); } 75%, 100% { transform: rotate(-90deg); } }
