@@ -820,6 +820,18 @@ body.touch #banner { top: 64px; font-size: 15px; padding: 7px 12px; }
   #galaxy-map .map-info h3 { font-size: 18px; }
 }
 
+/* Phones on their side, title screen: the title, the ship card and the
+   buttons share a column on the left, and the ship flies in the space on
+   the right (frameShipInSpace in main.ts). */
+@media (max-height: 500px) and (orientation: landscape) {
+  body[data-state='title'] { --column: min(380px, 46vw); --column-left: max(12px, env(safe-area-inset-left)); }
+  body[data-state='title'] .title { left: var(--column-left); right: auto; width: var(--column); top: 12px; }
+  body[data-state='title'] .panel[data-screen='title'],
+  body[data-state='title'] nav.controls[data-screen='title'] { box-sizing: border-box; left: var(--column-left); right: auto; width: var(--column); }
+  .panel[data-screen='title'] .desc { display: block; margin: 6px 0 0; font-size: 13px; line-height: 1.45; }
+  body[data-state='title'] .tribute { left: var(--column); }
+}
+
 /* --- The market as an exchange (Modern rules, neo-vector mode) ----------- */
 
 /* The exchange takes the whole screen; its own top bar replaces the

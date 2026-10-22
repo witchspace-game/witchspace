@@ -3,6 +3,8 @@
   "folder": "witchspace/press",
   "groups": [
     "Combat",
+    "Companies and contracts",
+    "On your phone",
     "The Marshals",
     "Trade and travel",
     "The 1984 look"
@@ -211,6 +213,97 @@
       "width": 1440,
       "height": 1080,
       "bytes": 65547
+    },
+    {
+      "id": "contracts",
+      "kind": "image",
+      "group": "Companies and contracts",
+      "file": "public/screens/contracts.jpg",
+      "title": "Company work",
+      "caption": "The Contracts board at Lave: Vorg Industries, the Carriers' Mutual and Wexley-Yorozu each have a special assignment waiting. They supply the cargo; you fly it there within so many jumps.",
+      "width": 1920,
+      "height": 1080,
+      "hash": "1b0bcae359623ac48af0a93ab023ffdaf7f68757",
+      "version": 1792686423,
+      "bytes": 235579
+    },
+    {
+      "id": "trade-computer",
+      "kind": "image",
+      "group": "Trade and travel",
+      "file": "public/screens/trade-computer.jpg",
+      "title": "The trade computer",
+      "caption": "The ship's computer ranks the best trade runs from where you're docked, so you can see what to carry and where.",
+      "width": 1920,
+      "height": 1080,
+      "hash": "541cedcd6ab1617d6dc6a95eedc453df330edef7",
+      "version": 1792686423,
+      "bytes": 157477
+    },
+    {
+      "id": "local-chart",
+      "kind": "image",
+      "group": "Trade and travel",
+      "file": "public/screens/local-chart.jpg",
+      "title": "Local chart",
+      "caption": "Lave and its neighbours inside the fuel circle, with Diso selected: average agricultural, democracy, home of the Black Furry Felines.",
+      "width": 1920,
+      "height": 1080,
+      "hash": "8ace3a08454e91081c6e190b14eace69e703a5bb",
+      "version": 1792686424,
+      "bytes": 64365
+    },
+    {
+      "id": "phone-title",
+      "kind": "image",
+      "group": "On your phone",
+      "file": "public/screens/phone-title.jpg",
+      "title": "On an iPhone",
+      "caption": "The title screen on an iPhone. Add Witchspace to your Home Screen and it plays full screen, like an app.",
+      "width": 1170,
+      "height": 2532,
+      "hash": "1a3559b4048fe114dc691ae2f7c439573f7fb7d8",
+      "version": 1792686425,
+      "bytes": 197984
+    },
+    {
+      "id": "phone-contracts",
+      "kind": "image",
+      "group": "On your phone",
+      "file": "public/screens/phone-contracts.jpg",
+      "title": "Contracts on a phone",
+      "caption": "Messages from the companies and the work on offer, docked at Lave, upright on a phone.",
+      "width": 1170,
+      "height": 2532,
+      "hash": "7ee08119fbcd52950ce54a9d716ccbea2e743c52",
+      "version": 1792686427,
+      "bytes": 342680
+    },
+    {
+      "id": "phone-chart",
+      "kind": "image",
+      "group": "On your phone",
+      "file": "public/screens/phone-chart.jpg",
+      "title": "The chart on a phone",
+      "caption": "The local chart on a phone: drag to look around, tap a system to read about it, tap again to set your course.",
+      "width": 1170,
+      "height": 2532,
+      "hash": "50817fc934a025892e90ea924b5751494c0913b6",
+      "version": 1792686428,
+      "bytes": 166809
+    },
+    {
+      "id": "phone-flight",
+      "kind": "image",
+      "group": "On your phone",
+      "file": "public/screens/phone-flight.jpg",
+      "title": "Flying on a phone",
+      "caption": "In flight on a phone held sideways: drag to aim, tilt to steer if you like, and the missile button turns red once it has locked on a pirate.",
+      "width": 2532,
+      "height": 1170,
+      "hash": "ca5ae3d5c5a0f271fc42728f9ed942c636e04673",
+      "version": 1792686429,
+      "bytes": 225647
     }
   ]
 }

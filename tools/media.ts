@@ -47,10 +47,12 @@ export function links(media: Media, item: MediaItem) {
     if (!up) return local(item.kind === 'video' ? item.poster! : item.file);
     return item.kind === 'video' ? `${base}/so_${item.posterOffset ?? 1},${t}/${path}.jpg` : `${base}/${t}/${path}.jpg`;
   };
+  // Wide frames: crop a phone screenshot taken upright and it's mostly gone, so pad it with space instead.
+  const fit = (item.height ?? 0) > (item.width ?? 0) ? 'c_pad,b_rgb:05070d' : 'c_fill,g_auto';
   return {
-    thumb: (w: number) => still(`c_fill,g_auto,w_${w},h_${Math.round((w * 9) / 16)},q_auto,f_auto`),
+    thumb: (w: number) => still(`${fit},w_${w},h_${Math.round((w * 9) / 16)},q_auto,f_auto`),
     large: still('c_limit,w_2400,q_auto:good,f_auto'),
-    og: still('c_fill,g_auto,w_1200,h_630,q_auto,f_jpg'),
+    og: still(`${fit},w_1200,h_630,q_auto,f_jpg`),
     video: item.kind === 'video' ? (up ? `${base}/q_auto/${path}.mp4` : local(item.file)) : undefined,
     /** The original file, as a download. */
     download: up ? `${base}/fl_attachment:witchspace-${item.id}/${path}.${item.kind === 'video' ? 'mp4' : 'jpg'}` : local(item.file),
