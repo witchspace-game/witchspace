@@ -6,6 +6,8 @@ Guidance for AI assistants (Claude, ChatGPT, Grok, Cursor, Copilot and others) w
 
 Witchspace is an open-source, browser-based space trading game and a tribute to *Elite* (1984). It is written in TypeScript with three.js and Vite. Its signature look is **neo-vector**: glowing wireframe ships with hidden-line removal, plus a switchable authentic **1984 mode** (white on black with hard pixels, drawn at about three times the original 256×192 for comfort; `?pixels` gives the original resolution).
 
+**Rules:** Modern rules are the game and get all new work. Classic rules (the 1984 rules, single-player) are **frozen**: fix bugs, but don't add Classic features or Classic variants of new features. The 1984 *look* (M) is separate and stays supported under both rules.
+
 Most contributions are **content files** (JSON validated by JSON Schema), not code.
 
 ## Repository map

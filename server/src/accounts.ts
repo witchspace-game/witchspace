@@ -57,6 +57,10 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE TABLE IF NOT EXISTS sends (email TEXT NOT NULL, net TEXT NOT NULL, t INTEGER NOT NULL)');
     // Protected callsigns released to one person (names.ts): only that email's account may claim them.
     this.sql.exec('CREATE TABLE IF NOT EXISTS releases (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, created INTEGER NOT NULL)');
+    // Anonymous daily totals (which rules, which look), to decide Classic's future. Nothing per person:
+    // `pings` only stops a network being counted twice in a day, by a salted one-way hash.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS stats (day TEXT NOT NULL, key TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (day, key))');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS pings (day TEXT NOT NULL, net TEXT NOT NULL, PRIMARY KEY (day, net))');
     // Letting the companies get in touch: opt-in, per account.
     this.sql.exec(`CREATE TABLE IF NOT EXISTS contact (
       account TEXT PRIMARY KEY, push TEXT, push_hash TEXT, email INTEGER NOT NULL DEFAULT 0, stop TEXT NOT NULL,
@@ -71,6 +75,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'POST' && path === '/auth/verify') return this.verify(request);
     if (path.startsWith('/admin/')) return this.admin(request, path);
     if (m === 'GET' && path === '/contact/key') return json({ key: this.env.VAPID_PUBLIC ?? null });
+    if (m === 'POST' && path === '/stats/ping') return this.ping(request);
     if (m === 'GET' && path === '/push/latest') return this.latest(url);
     if (m === 'GET' && path === '/contact/stop') return this.stop(url);
 
@@ -231,6 +236,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
       const releases = this.sql.exec('SELECT name, email, created FROM releases ORDER BY created').toArray();
       return json({ rules: NAMES, releases });
     }
+    // Anonymous totals: daily pings over the last 30 days, and the rules of every cloud save.
+    if (request.method === 'GET' && path === '/admin/stats') {
+      const since = new Date(Date.now() - 30 * 86_400_000).toISOString().slice(0, 10);
+      const days = this.sql.exec('SELECT day, key, n FROM stats WHERE day >= ? ORDER BY day', since).toArray();
+      const saves: Record<string, number> = {};
+      for (const row of this.sql.exec('SELECT data FROM saves').toArray()) {
+        const rules = (JSON.parse(row.data as string) as { difficulty?: string }).difficulty ?? 'unknown';
+        saves[rules] = (saves[rules] ?? 0) + 1;
+      }
+      return json({ days, saves, accounts: this.sql.exec('SELECT COUNT(*) AS n FROM accounts').one().n });
+    }
     // Run the companies' hourly check now (testing), and see how many have asked to be contacted.
     if (request.method === 'POST' && path === '/admin/contact/run') {
       await this.alarm();
@@ -289,6 +305,26 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const updated = Math.max(body.updated, (current ?? 0) + 1);
     this.sql.exec('INSERT OR REPLACE INTO saves (account, data, updated) VALUES (?, ?, ?)', account.id, JSON.stringify(body.data), updated);
     return json({ updated });
+  }
+
+  // --- Anonymous totals ----------------------------------------------------------------
+
+  /** POST /stats/ping {rules, look, event?}: add one to today's totals. Counted once a day per network. */
+  private async ping(request: Request): Promise<Response> {
+    const body = (await request.json().catch(() => null)) as { rules?: unknown; look?: unknown; event?: unknown } | null;
+    const rules = ['modern', 'classic', 'none'].includes(body?.rules as string) ? (body!.rules as string) : null;
+    const look = ['neo', '1984'].includes(body?.look as string) ? (body!.look as string) : null;
+    if (!rules || !look) return json({ error: 'Not a ping' }, 400);
+    const day = new Date().toISOString().slice(0, 10);
+    const keys = body?.event === 'new' ? [`new:${rules}`] : [`rules:${rules}`, `look:${look}`, 'devices'];
+    if (body?.event !== 'new') {
+      const net = await networkOf(request, (this.env.ADMIN_KEY ?? 'witchspace') + ':stats');
+      this.sql.exec('DELETE FROM pings WHERE day < ?', day);
+      if (this.sql.exec('SELECT 1 FROM pings WHERE day = ? AND net = ?', day, net).toArray().length) return json({ counted: false });
+      this.sql.exec('INSERT INTO pings (day, net) VALUES (?, ?)', day, net);
+    }
+    for (const key of keys) this.sql.exec('INSERT INTO stats (day, key, n) VALUES (?, ?, 1) ON CONFLICT(day, key) DO UPDATE SET n = n + 1', day, key);
+    return json({ counted: true });
   }
 
   // --- The companies get in touch (opt-in) ------------------------------------------
