@@ -204,6 +204,33 @@ export function addStanding(c: Commander, id: CompanyId, points: number) {
   c.standing = { ...c.standing, [id]: Math.max(-20, standing(c, id) + points) };
 }
 
+const DAY = 24 * 3600_000;
+
+/** Companies forget, slowly: standing below zero creeps back a point a day. */
+export function forgive(c: Commander, now: number) {
+  if (c.forgiven === undefined) {
+    c.forgiven = now;
+    return;
+  }
+  const days = Math.floor((now - c.forgiven) / DAY);
+  if (days < 1) return;
+  c.forgiven += days * DAY;
+  for (const [id, points] of Object.entries(c.standing ?? {})) if (points < 0) c.standing![id as CompanyId] = Math.min(0, points + days);
+}
+
+/** What it costs to be taken back as Unreliable: 150 Cr for each point below that. */
+export const amendsCost = (points: number) => (points < -5 ? 150 * (-5 - points) : 0);
+
+/** Pay compensation: back to Unreliable, to earn the rest. Returns what happened, or why not. */
+export function makeAmends(c: Commander, id: CompanyId): string {
+  const cost = amendsCost(standing(c, id));
+  if (!cost) return '';
+  if (c.credits < cost) return `${COMPANIES[id].name} wants ${cost.toLocaleString()} Cr in compensation`;
+  c.credits = Math.round((c.credits - cost) * 10) / 10;
+  c.standing = { ...c.standing, [id]: -5 };
+  return `${COMPANIES[id].name} accepts your ${cost.toLocaleString()} Cr. You're Unreliable now: deliver on time and they'll come round.`;
+}
+
 /** Why you can't take a contract, or null if you can. */
 export function cannotTake(c: Commander, o: Contract, freeTonnes: number): string | null {
   if (c.difficulty !== 'modern') return 'Contracts are for Modern rules';

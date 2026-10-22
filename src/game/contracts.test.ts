@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { distanceLy, systemAt } from '../galaxy/generate';
 import { cargoTonnes, newCommander } from './commander';
-import { abandon, afterJump, board, cannotTake, deliver, destinationOf, jumpsBetween, LATE_GRACE, loseContracts, nextHop, standing, take } from './contracts';
+import { abandon, afterJump, amendsCost, board, cannotTake, forgive, makeAmends, deliver, destinationOf, jumpsBetween, LATE_GRACE, loseContracts, nextHop, standing, take } from './contracts';
 import { presence, standingName } from './companies';
 
 const lave = systemAt(0, 7);
@@ -106,6 +106,21 @@ describe('company contracts', () => {
     expect(cannotTake(c, o, 20)).toBeNull();
     c.standing = { [o.company]: -12 };
     expect(cannotTake(c, o, 20)).toMatch(/Blacklisted/);
+  });
+
+  it('the way back from the blacklist: make amends, or wait', () => {
+    const c = newCommander('modern');
+    c.credits = 2000;
+    c.standing = { wy: -10 };
+    expect(amendsCost(-10)).toBe(750);
+    expect(makeAmends(c, 'wy')).toMatch(/Unreliable/);
+    expect(c.credits).toBe(1250);
+    expect(standing(c, 'wy')).toBe(-5);
+    const d = newCommander('modern');
+    d.standing = { wy: -10 };
+    forgive(d, NOW);
+    forgive(d, NOW + 4 * 24 * 3600_000);
+    expect(standing(d, 'wy')).toBe(-6);
   });
 });
 

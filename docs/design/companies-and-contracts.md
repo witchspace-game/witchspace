@@ -73,6 +73,8 @@ Each company keeps your **standing**, earned by contracts delivered and lost by 
 | **Preferred** | The best-paid runs, escorts (later), first call in a crisis |
 | **Partner** | Company perks: Hexon's docking priority, Vorg's friendly fences, the Mutual's lower insurance excess |
 
+**Below zero** (letting a company down): **Unreliable** (−1 to −5), **Distrusted** (−6 to −9), **Blacklisted** (−10 and below). Starter work stays open until you're Blacklisted. Two ways back, since every hard situation needs one: **make amends** at any station the company works (150 Cr for each point below Unreliable, which takes you back to Unreliable), or **wait**: companies forget, a point a day. *(Built.)*
+
 Standing is its own record, beside the combat rating and the explorer's rank, and is the first half of the Merchant's **trading rank** in [markets and trade](markets-and-trade.md#a-merchants-rank).
 
 ### Failing a contract

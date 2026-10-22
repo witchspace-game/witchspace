@@ -73,7 +73,7 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
-import { abandon, afterJump, board, cannotTake, cargoName, deliver, destinationOf, jumpsBetween, loseContracts, nextHop, standing, take, type Contract } from './game/contracts';
+import { abandon, afterJump, amendsCost, board, cannotTake, cargoName, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, standing, take, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
@@ -439,6 +439,7 @@ function enterDocked() {
   inSpace = false;
   player.repair();
   showShip(cobraIndex);
+  forgive(cmdr(), Date.now());
   // The companies may have been in touch while you were away.
   if (checkMessages(cmdr(), currentSystem(), Date.now()).length) saveCommander(cmdr());
   markInbox(cmdr());
@@ -651,7 +652,12 @@ function renderContracts() {
     })
     .join('');
   const standings = COMPANY_IDS.filter((id) => (c.standing?.[id] ?? 0) !== 0)
-    .map((id) => `${companyMark(id)} ${standingName(standing(c, id))}`)
+    .map((id) => {
+      const cost = amendsCost(standing(c, id));
+      // Badly out of favour with a company that works here: you can pay to be taken back.
+      const amends = cost && companyHere(id, here) ? ` <button data-amends="${id}" ${c.credits < cost ? 'disabled' : ''}>Make amends · ${cost.toLocaleString()} Cr</button>` : '';
+      return `${companyMark(id)} ${standingName(standing(c, id))}${amends}`;
+    })
     .join(' · ');
   $('#contracts').innerHTML = `
     ${incidents ? `<h3>Incidents</h3><ul class="contracts">${incidents}</ul>` : ''}
@@ -693,6 +699,9 @@ $('#contracts').addEventListener('click', (e) => {
     contractMessage = abandon(c, b.dataset.abandon);
   } else if (b.dataset.incident) {
     contractMessage = decide(c, b.dataset.incident, b.dataset.choice as Choice, currentSystem()) ?? '';
+    sfx.beep();
+  } else if (b.dataset.amends) {
+    contractMessage = makeAmends(c, b.dataset.amends as CompanyId);
     sfx.beep();
   } else if (b.dataset.rival) {
     contractMessage = sellToRival(c, b.dataset.rival, currentSystem()) ?? '';

@@ -178,6 +178,8 @@ export interface Commander {
   contractsDone?: string[];
   /** Standing with each trading company, in points. */
   standing?: Partial<Record<CompanyId, number>>;
+  /** When companies last forgave a day of bad standing (see contracts.forgive). */
+  forgiven?: number;
   /** Each company's record of your work for it (for its file on you). */
   companyLog?: Partial<Record<CompanyId, CompanyLog>>;
   /** Messages from the companies, newest first. */
