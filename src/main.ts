@@ -645,7 +645,7 @@ $('#contracts').addEventListener('click', (e) => {
     sfx.beep();
   }
   saveCommander(c);
-  renderContracts();
+  renderDocked(); // the hold, credits and standing all change with a contract
 });
 
 function renderNews() {
@@ -809,6 +809,16 @@ function startRename() {
   });
 }
 
+/** What's in the hold, company cargo included, for the Station tab. */
+function holdList(c: Commander): string {
+  const own = Object.entries(c.cargo)
+    .filter(([, q]) => q > 0)
+    .map(([id, q]) => `${q}${commodityById(id)?.unit === 't' ? ' t' : ' ' + commodityById(id)?.unit} ${escapeHtml(commodityById(id)?.name ?? id)}`);
+  const company = (c.contracts ?? []).filter((a) => !a.adrift).map((a) => `${a.qty} t ${escapeHtml(cargoName(a))} <small>(${escapeHtml(COMPANIES[a.company].name)}, for ${escapeHtml(destinationOf(a).name)})</small>`);
+  const all = [...own, ...company];
+  return all.length ? `<br><small class="hold-list">${all.join(' · ')}</small>` : '';
+}
+
 function renderDocked() {
   const c = cmdr();
   showFittings(c);
@@ -826,7 +836,7 @@ function renderDocked() {
     ['Rules', DIFFICULTIES[c.difficulty].name],
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ['Ship', player.def.name],
-    ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t`],
+    ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${holdList(c)}`],
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
     ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],

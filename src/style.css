@@ -1198,3 +1198,4 @@ body.touch nav.controls[data-screen='title'] #load-button small { opacity: 0.7; 
 body.touch nav.controls[data-screen='title'] #new-button.primary { grid-column: 1 / -1; padding: 12px; font-size: 17px; }
 body.touch nav.controls[data-screen='title'] button:not(#load-button):not(#new-button.primary) { font-size: 12px; padding: 7px 4px; }
 body.touch nav.controls[data-screen='title'] #new-button.armed { grid-column: 1 / -1; }
+#cmdr .hold-list { color: var(--dim); font-size: 12px; line-height: 1.4; }
