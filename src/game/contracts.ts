@@ -4,7 +4,7 @@ import { stationTrades } from '../economy/legality';
 import { DANGER_PREMIUM, equilibriumPrice, tradeBalance } from '../economy/market';
 import { hash } from '../economy/seed';
 import { FUEL_CAPACITY, type Commander } from './commander';
-import { COMPANIES, pickCompany, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
+import { COMPANIES, COMPANY_IDS, pickCompany, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
 
 // Company contracts (Modern rules), as set out in
 // docs/design/companies-and-contracts.md: carry the company's cargo from here
@@ -136,48 +136,60 @@ export function board(c: Commander, here: StarSystem, now: number): Contract[] {
   const count = 4 + Math.floor(r(0, 0) * 3);
   for (let k = 0; k < count; k++) {
     const company = pickCompany(here, r(1, k));
-    const firm = COMPANIES[company];
-    // A good the company carries, that this world makes and the station trades openly.
-    const carries = (g: string) => commodityById(g)?.unit === 't' && stationTrades(c, here, g);
-    let goods = firm.goods.filter((g) => carries(g) && tradeBalance(here, g) > -0.2);
-    // Where its usual goods aren't made, a company carries whatever the world exports.
-    if (!goods.length) goods = COMMODITIES.filter((x) => !x.modernOnly || c.difficulty === 'modern').map((x) => x.id).filter((g) => carries(g) && tradeBalance(here, g) > 0.2);
-    if (!goods.length) continue;
-    const good = goods[Math.floor(r(2, k) * goods.length)];
-    // Somewhere that needs it, preferring importers.
-    const dests = near.filter(({ s }) => stationTrades(c, s, good));
-    if (!dests.length) continue;
-    const importers = dests.filter(({ s }) => tradeBalance(s, good) < -0.1);
-    const pool = importers.length ? importers : dests;
-    const { s: dest, n: minJumps } = pool[Math.floor(r(3, k) * pool.length)];
-    const rush = r(4, k) < 0.25;
-    let qty = 3 + Math.floor(r(5, k) * 14);
-    const gi = COMMODITIES.findIndex((x) => x.id === good);
-    const priceHere = equilibriumPrice(here, COMMODITIES[gi], gi);
-    const priceThere = equilibriumPrice(dest, COMMODITIES[gi], gi);
     // Every company keeps a starter job on the board: its first offer here is small enough for anyone.
-    if (!offers.some((o) => o.company === company && o.needs === 'Casual')) qty = Math.max(1, Math.min(qty, Math.floor(399 / priceHere)));
-    const ly = distanceLy(here, dest);
-    // About two thirds of what an independent would make on the run, plus a
-    // carriage fee by distance: you risk none of your own money.
-    const base = Math.max(30, qty * (Math.max(0, priceThere - priceHere) * 0.65 + 3 + ly * 0.6));
-    const danger = Math.round(base * DANGER_PREMIUM[dest.government] * 1.5);
-    const pay = Math.round(base * (rush ? 1.4 : 1)) + danger;
-    offers.push({
-      id: `${here.galaxy}:${here.index}:${slot}:${k}`,
-      company,
-      good,
-      qty,
-      from: at(here),
-      to: at(dest),
-      jumps: minJumps + (rush ? 0 : 2),
-      pay,
-      danger,
-      rush,
-      needs: needsFor(qty * priceHere),
-    });
+    const starter = !offers.some((o) => o.company === company && o.needs === 'Casual');
+    const o = offerFrom(c, here, near, company, (salt) => r(salt, k), starter, `${here.galaxy}:${here.index}:${slot}:${k}`);
+    if (o) offers.push(o);
   }
   return offers.filter((o) => !c.contracts?.some((a) => a.id === o.id) && !c.contractsDone?.includes(o.id)).sort((a, b) => b.pay - a.pay);
+}
+
+/** On top of the pay for a commander's first job with the company that recruited them. */
+export const SIGNING_BONUS = 60;
+
+/**
+ * A company's welcome: a starter job from it at this station, whether or not
+ * it's on the board, for a commander who came in answer to its advert
+ * (witchspace.org.uk/careers/, /play/?company=…). One per board.
+ */
+export function welcome(c: Commander, here: StarSystem, company: CompanyId, now: number): Contract | null {
+  const slot = Math.floor(now / BOARD_SLOT);
+  const id = `welcome:${company}:${here.galaxy}:${here.index}:${slot}`;
+  if (c.contracts?.some((a) => a.id === id) || c.contractsDone?.includes(id)) return null;
+  const o = offerFrom(c, here, withinJumps(here, 3), company, (salt) => hash(here, 9500 + (slot % 100_000) * 7 + salt, COMPANY_IDS.indexOf(company)), true, id);
+  // Not a rush job, and a signing bonus on top.
+  return o && { ...o, rush: false, jumps: o.jumps + (o.rush ? 2 : 0), pay: o.pay + SIGNING_BONUS };
+}
+
+/** One offer from a company at this station, or null if it has nothing to carry from here. */
+function offerFrom(c: Commander, here: StarSystem, near: { s: StarSystem; n: number }[], company: CompanyId, r: (salt: number) => number, starter: boolean, id: string): Contract | null {
+  const firm = COMPANIES[company];
+  // A good the company carries, that this world makes and the station trades openly.
+  const carries = (g: string) => commodityById(g)?.unit === 't' && stationTrades(c, here, g);
+  let goods = firm.goods.filter((g) => carries(g) && tradeBalance(here, g) > -0.2);
+  // Where its usual goods aren't made, a company carries whatever the world exports.
+  if (!goods.length) goods = COMMODITIES.filter((x) => !x.modernOnly || c.difficulty === 'modern').map((x) => x.id).filter((g) => carries(g) && tradeBalance(here, g) > 0.2);
+  if (!goods.length) return null;
+  const good = goods[Math.floor(r(2) * goods.length)];
+  // Somewhere that needs it, preferring importers.
+  const dests = near.filter(({ s }) => stationTrades(c, s, good));
+  if (!dests.length) return null;
+  const importers = dests.filter(({ s }) => tradeBalance(s, good) < -0.1);
+  const pool = importers.length ? importers : dests;
+  const { s: dest, n: minJumps } = pool[Math.floor(r(3) * pool.length)];
+  const rush = r(4) < 0.25;
+  let qty = 3 + Math.floor(r(5) * 14);
+  const gi = COMMODITIES.findIndex((x) => x.id === good);
+  const priceHere = equilibriumPrice(here, COMMODITIES[gi], gi);
+  const priceThere = equilibriumPrice(dest, COMMODITIES[gi], gi);
+  if (starter) qty = Math.max(1, Math.min(qty, Math.floor(399 / priceHere)));
+  const ly = distanceLy(here, dest);
+  // About two thirds of what an independent would make on the run, plus a
+  // carriage fee by distance: you risk none of your own money.
+  const base = Math.max(30, qty * (Math.max(0, priceThere - priceHere) * 0.65 + 3 + ly * 0.6));
+  const danger = Math.round(base * DANGER_PREMIUM[dest.government] * 1.5);
+  const pay = Math.round(base * (rush ? 1.4 : 1)) + danger;
+  return { id, company, good, qty, from: at(here), to: at(dest), jumps: minJumps + (rush ? 0 : 2), pay, danger, rush, needs: needsFor(qty * priceHere) };
 }
 
 export const standing = (c: Commander, id: CompanyId) => c.standing?.[id] ?? 0;
