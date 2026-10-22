@@ -178,7 +178,7 @@ function render() {
     html += contactSection();
     html += `<p class="account-actions"><button type="button" data-signout>Sign out</button> <button type="button" data-delete class="${deleteArmed ? 'danger' : ''}">${deleteArmed ? 'Press again to delete everything' : 'Delete account'}</button></p>`;
   }
-  html += `<p class="small muted">Esc or A to close</p>`;
+  html += `<p class="account-close"><button type="button" data-close>Close</button><span class="small muted">or press Esc or A</span></p>`;
   panel.innerHTML = html;
   wire();
 }
@@ -214,6 +214,7 @@ function wire() {
       hooks.flash((err as Error).message, 3);
     }
   });
+  panel.querySelector('[data-close]')?.addEventListener('click', () => toggleAccountPanel(false));
   panel.querySelector('[data-again]')?.addEventListener('click', () => {
     view = 'main';
     render();

@@ -1171,3 +1171,6 @@ body.retro .file { font-family: inherit; font-size: 8px; }
 .contact-option { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin: 6px 0; font-size: 15px; }
 .contact-option small { flex-basis: 100%; margin-left: 24px; color: var(--dim); font-size: 12px; }
 .contracts .actions.incident { position: static; transform: none; margin-top: 6px; flex-wrap: wrap; justify-content: flex-start; }
+.account-close { display: flex; align-items: center; gap: 10px; margin: 12px 0 0; }
+.account-close .small { margin: 0; }
+body.touch .account-close .small { display: none; }
