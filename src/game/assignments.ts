@@ -5,6 +5,7 @@ import type { Commander } from './commander';
 import { COMPANY_IDS, presence, standingName, type CompanyId } from './companies';
 import { jumpsBetween, logOf, standing, type Contract } from './contracts';
 import { exploreOf } from './explore';
+import { ASSIGNMENT_OPEN, ASSIGNMENT_SLOT, assignmentId, assignmentWaiting, roll, slotOf } from '../../server/src/contact';
 import { legalStatus } from './law';
 import { combatRating } from './rating';
 
@@ -14,12 +15,7 @@ import { combatRating } from './rating';
 // the commander, the company and the clock, so the game and the notification
 // server agree on when one is waiting.
 
-/** A new chance of an assignment from each company every three days. */
-export const ASSIGNMENT_SLOT = 72 * 3600_000;
-/** An offer stands for two days. Once taken, it counts in jumps like any contract. */
-export const ASSIGNMENT_OPEN = 48 * 3600_000;
-/** Standing points a company wants before it trusts you with one. */
-export const ASSIGNMENT_STANDING = 5;
+export { ASSIGNMENT_OPEN, ASSIGNMENT_SLOT, ASSIGNMENT_STANDING, assignmentWaiting } from '../../server/src/contact';
 
 export interface Message {
   id: string;
@@ -66,34 +62,14 @@ const VOICES: Record<CompanyId, Voice> = {
 
 export const thanksFrom = (id: CompanyId) => VOICES[id].thanks;
 
-/** A small stable hash of a string. */
-function strHash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-const roll = (...parts: (string | number)[]) => (strHash(parts.join('|')) % 100_000) / 100_000;
-
-const slotOf = (now: number) => Math.floor(now / ASSIGNMENT_SLOT);
-
-/**
- * Whether a company has an assignment waiting for this commander now: the
- * standing is there, this window's dice say yes, and it's still open. Shared
- * with the notification server (server/src/notify.ts), which only needs the
- * callsign, the standing and the time.
- */
-export function assignmentWaiting(callsign: string, company: CompanyId, points: number, now: number): boolean {
-  if (points < ASSIGNMENT_STANDING) return false;
-  const slot = slotOf(now);
-  if (now - slot * ASSIGNMENT_SLOT > ASSIGNMENT_OPEN) return false;
-  return roll(callsign, company, slot, 'offer') < 0.4;
-}
+// The file number: a stable hash of the callsign.
+const fileNumber = (name: string) => Math.floor(roll(name, 'file') * 0xffffffff).toString(16).toUpperCase();
 
 /** The assignment a company has for you now, if any, starting from where you are. */
 export function assignmentFor(c: Commander, company: CompanyId, here: StarSystem, now: number): (Contract & { expires: number }) | null {
   if (c.difficulty !== 'modern' || !assignmentWaiting(c.name, company, standing(c, company), now)) return null;
   const slot = slotOf(now);
-  const id = `special:${company}:${slot}`;
+  const id = assignmentId(company, now);
   if (c.contracts?.some((a) => a.id === id) || c.contractsDone?.includes(id)) return null;
   // Somewhere two to four jumps out; Vorg's go where the law is thin.
   const r = (salt: string) => roll(c.name, company, slot, salt);
@@ -177,7 +153,7 @@ export function fileOn(c: Commander, company: CompanyId, here: StarSystem, now: 
   switch (company) {
     case 'hexon':
       lines.push({ text: 'Bureau of Continuity interest: noted.', redacted: true });
-      return { title: `Hexon Holdings · Continuity of care · File ${strHash(c.name).toString(16).toUpperCase()}`, lines };
+      return { title: `Hexon Holdings · Continuity of care · File ${fileNumber(c.name)}`, lines };
     case 'vorg':
       lines.push({ text: `Assessment: ${log.delivered + log.special >= 5 ? 'Useful.' : 'Not yet useful.'}` });
       return { title: 'Vorg Industries · Personnel', lines: lines.slice(0, 1).concat(lines.slice(-1)) };

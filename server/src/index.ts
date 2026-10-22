@@ -43,9 +43,11 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
+    // A link in an email, so no Origin: stop the companies getting in touch.
+    if (url.pathname === '/contact/stop') return accountsOf(env).fetch(request);
     // The ideas board (/ideas…) and accounts (/auth…, /me…, /admin…), called from our pages and tools.
     const ideas = url.pathname === '/ideas' || url.pathname.startsWith('/ideas/');
-    const accounts = url.pathname.startsWith('/auth/') || url.pathname === '/me' || url.pathname.startsWith('/me/') || url.pathname.startsWith('/admin/');
+    const accounts = ['/auth/', '/me/', '/admin/', '/contact/', '/push/'].some((p) => url.pathname.startsWith(p)) || url.pathname === '/me';
     if (ideas || accounts) {
       const origin = request.headers.get('Origin') ?? '';
       const allowed = ORIGINS.some((o) => o.test(origin));

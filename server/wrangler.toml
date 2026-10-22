@@ -35,3 +35,7 @@ new_sqlite_classes = ["Accounts"]
 
 [observability]
 enabled = true
+
+# Web Push: our public VAPID key (the private half is the VAPID_PRIVATE secret).
+[vars]
+VAPID_PUBLIC = "BP_XT0JNJawtLj0b04I8YbX-D_I-_NO15h0-VYBtEst8HbPzMNu6JCfNK1YpjTH73DRxl_2_uHBoB61CU-JBuJY"

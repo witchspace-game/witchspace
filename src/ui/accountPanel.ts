@@ -5,6 +5,7 @@
 
 import { loadCommander, saveCommander, type Commander } from '../game/commander';
 import * as acct from '../net/account';
+import { disablePush, enablePush, getContact, needsHomeScreen, pushSupported, setEmailContact } from '../net/notify';
 import { escapeHtml } from './escape';
 
 /** Turnstile's public site key (the same widget as the ideas board). */
@@ -23,6 +24,8 @@ let sentTo = '';
 let devLink = '';
 let choice: { local: Commander; cloud: Commander; updated: number } | null = null;
 let deleteArmed = false;
+/** Whether the companies may contact you (loaded when the panel opens). */
+let contact: { push: boolean; email: boolean } | null = null;
 let turnstileToken = '';
 let turnstileWidget: string | undefined;
 
@@ -76,7 +79,7 @@ function updateButton() {
 
 // --- Keeping this device and the account in step -------------------------------------
 
-const describe = (c: Commander) => `CMDR ${escapeHtml(c.name)} · ${c.credits.toLocaleString()} Cr · ${c.kills} kills`;
+const describe = (c: Commander) => `CMDR ${escapeHtml(c.name ?? '?')} · ${(c.credits ?? 0).toLocaleString()} Cr · ${c.kills ?? 0} kills`;
 
 async function afterSignIn() {
   const a = acct.currentAccount()!;
@@ -169,6 +172,7 @@ function render() {
   } else {
     html += `<dl><dt>Signed in</dt><dd>${escapeHtml(a.email)}</dd><dt>Callsign</dt><dd>${a.callsign ? `CMDR ${escapeHtml(a.callsign)}` : '<i>not claimed yet</i>'}</dd><dt>Cloud save</dt><dd>${acct.syncedAt() ? 'On: your commander saves to your account' : 'Waiting for your first save'}</dd></dl>`;
     if (!a.callsign) html += `<form class="callsign-form"><input maxlength="24" placeholder="Your callsign" aria-label="Callsign" /> <button type="submit">Claim</button></form>`;
+    html += contactSection();
     html += `<p class="account-actions"><button type="button" data-signout>Sign out</button> <button type="button" data-delete class="${deleteArmed ? 'danger' : ''}">${deleteArmed ? 'Press again to delete everything' : 'Delete account'}</button></p>`;
   }
   html += `<p class="small muted">Esc or A to close</p>`;
@@ -214,8 +218,31 @@ function wire() {
       hooks.flash((err as Error).message, 3);
     }
   });
+  panel.querySelector<HTMLInputElement>('[data-contact="push"]')?.addEventListener('change', async (e) => {
+    const box = e.target as HTMLInputElement;
+    box.disabled = true;
+    try {
+      if (box.checked) await enablePush();
+      else await disablePush();
+      contact = { email: contact?.email ?? false, push: box.checked };
+      hooks.flash(box.checked ? 'The companies can reach you on this device' : 'No more notifications', 3);
+    } catch (err) {
+      hooks.flash((err as Error).message, 4);
+    }
+    render();
+  });
+  panel.querySelector<HTMLInputElement>('[data-contact="email"]')?.addEventListener('change', async (e) => {
+    const box = e.target as HTMLInputElement;
+    try {
+      contact = await setEmailContact(box.checked);
+    } catch (err) {
+      hooks.flash((err as Error).message, 4);
+    }
+    render();
+  });
   panel.querySelector('[data-signout]')?.addEventListener('click', async () => {
     await acct.signOut();
+    contact = null;
     hooks.flash('Signed out. Your commander stays on this device.', 3);
     updateButton();
     render();
@@ -237,6 +264,31 @@ function wire() {
     render();
   });
   mountTurnstile();
+}
+
+/**
+ * Let the trading companies get in touch when a special assignment is
+ * waiting (Modern rules): a notification on this device, or an email.
+ */
+function contactSection(): string {
+  if (!contact) {
+    void getContact()
+      .then((c) => {
+        contact = c;
+        if (!panel.hidden) render();
+      })
+      .catch(() => {});
+    return '';
+  }
+  const pushNote = needsHomeScreen()
+    ? 'On iPhone: add Witchspace to your Home Screen (Share, then Add to Home Screen), open it from there, and switch this on.'
+    : pushSupported()
+      ? 'A notification on this device.'
+      : 'This browser can’t show notifications.';
+  return `<h3>Let the companies contact me</h3>
+    <p class="meta">When Hexon Holdings or the others have a special assignment for you, they'll get in touch. At most a couple of times a week, and always in character.</p>
+    <label class="contact-option"><input type="checkbox" data-contact="push" ${contact.push ? 'checked' : ''} ${pushSupported() || contact.push ? '' : 'disabled'} /> Notifications <small>${pushNote}</small></label>
+    <label class="contact-option"><input type="checkbox" data-contact="email" ${contact.email ? 'checked' : ''} /> Email <small>To your sign-in address, with a one-click stop.</small></label>`;
 }
 
 /** The human check on the email form, when it's showing. */
