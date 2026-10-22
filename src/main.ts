@@ -89,7 +89,7 @@ import { stationName } from './galaxy/stationNames';
 import { takePhoto } from './ui/photo';
 import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
-import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
+import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
@@ -4157,7 +4157,7 @@ function toggleGalaxyMap() {
   openMap({
     current: here,
     range: c.fuel,
-    target: c.target === null ? null : systemAt(here.galaxy, c.target),
+    target: c.courseTo != null ? systemAt(here.galaxy, c.courseTo) : c.target === null ? null : systemAt(here.galaxy, c.target),
     news: newsLine,
     explored: (s) => {
       const e = exploreOf(c);
@@ -4168,8 +4168,12 @@ function toggleGalaxyMap() {
       return { visited: true, line: `Visited · surveyed ${surveyed} of ${bodiesOf(s).length}${found ? ` · ${found} signal${found === 1 ? '' : 's'} found` : ''}` };
     },
     onTarget: (s) => {
-      c.target = s.index;
-      c.courseTo = null; // chosen by hand: no plotted route
+      // Within a jump: straight there. Further: plot the route, a hop at a time.
+      const route = distanceLy(here, s) > FUEL_CAPACITY ? plotCourse(c, s.index) : '';
+      if (!route) {
+        c.target = s.index;
+        c.courseTo = null;
+      } else flash(route, 3);
       saveCommander(c);
       sfx.beep();
       if (state === 'docked') renderDocked();
@@ -4188,6 +4192,7 @@ function handleMapKey(code: string): boolean {
   if (!isMapOpen()) return false;
   if (code === 'KeyG' || code === 'Escape') toggleGalaxyMap();
   else if (code === 'Tab') toggleMapMode();
+  else if (code === 'KeyF') setTimeout(focusFind); // after this key, so the F isn't typed into the box
   else if (code === 'ArrowLeft') moveCursor(-1, 0);
   else if (code === 'ArrowRight') moveCursor(1, 0);
   else if (code === 'ArrowUp') moveCursor(0, -1);

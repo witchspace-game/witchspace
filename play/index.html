@@ -185,9 +185,11 @@
       <canvas></canvas>
       <p class="map-title"></p>
       <div class="map-info"></div>
-      <p class="map-keys"><span class="desk-only">Tab galactic / local · Arrows or click to select · Enter or click again to set destination · G or Esc to close</span><span class="touch-only">Tap a system to select it · tap it again to set your destination</span></p>
+      <p class="map-keys"><span class="desk-only">Tab galactic / local · F find · Arrows or click to select · Enter or click again to set destination · G or Esc to close</span><span class="touch-only">Tap a system to select it · tap it again to set your destination</span></p>
       <button class="map-close" data-key="KeyG" aria-label="Close the chart">✕</button>
       <button class="map-mode" type="button"></button>
+      <!-- Find a system by name, as the original's F key did on the charts. -->
+      <form class="map-find" role="search"><input type="search" placeholder="Find a system" aria-label="Find a system" autocomplete="off" spellcheck="false" enterkeyhint="go" /><ul></ul></form>
       <button class="map-galactic primary" data-key="KeyY" hidden></button>
     </section>
     <p id="banner" hidden></p>
