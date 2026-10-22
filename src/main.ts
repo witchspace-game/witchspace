@@ -73,7 +73,7 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
-import { abandon, afterJump, board, cannotTake, cargoName, deliver, destinationOf, loseContracts, standing, take, type Contract } from './game/contracts';
+import { abandon, afterJump, board, cannotTake, cargoName, deliver, destinationOf, jumpsBetween, loseContracts, nextHop, standing, take, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
@@ -507,6 +507,22 @@ function attackNews(here: StarSystem, now: number) {
 const companyMark = (id: CompanyId) => `<b class="company" style="--company:${COMPANIES[id].colour}">${escapeHtml(COMPANIES[id].name)}</b>`;
 const riskTag = (s: StarSystem) => (s.government <= 1 ? ` <em class="risk high">${GOVERNMENTS[s.government]} · pirates</em>` : s.government <= 3 ? ` <em class="risk">${GOVERNMENTS[s.government]}</em>` : '');
 let contractMessage = '';
+let justTaken: string | null = null; // after taking a contract, show it at the top, highlighted
+
+/**
+ * Set a course to a system, however many jumps away: the first hop now, the
+ * next after each jump (see hyperspace). Returns what to tell the commander.
+ */
+function plotCourse(c: Commander, system: number): string {
+  const here = currentSystem();
+  const end = systemAt(here.galaxy, system);
+  const hop = nextHop(here, end);
+  if (!hop) return `${end.name} is out of reach from here`;
+  c.target = hop.index;
+  c.courseTo = hop === end ? null : end.index;
+  const jumps = jumpsBetween(here, end);
+  return hop === end ? `Course set: ${end.name}` : `Course plotted to ${end.name}: ${jumps} jumps, first ${hop.name}${distanceLy(here, hop) > c.fuel ? ' (refuel first)' : ''}`;
+}
 let openFile: CompanyId | null = null;
 
 /** Special assignments you could take at this station now. */
@@ -585,7 +601,7 @@ function renderContracts() {
       const rival = RIVAL[a.company];
       const sale = a.special && !k && rival && companyHere(rival, here) ? `<button data-rival="${a.id}" title="${escapeHtml(COMPANIES[a.company].name)} will find out">Offer to ${escapeHtml(COMPANIES[rival].name)} · ${rivalPrice(a).toLocaleString()} Cr</button>` : '';
       const course = c.target === to.index ? '<span class="on-course">On course</span>' : `<button data-course="${to.index}">Set course</button>`;
-      return `<li${a.special ? ' class="special"' : ''}>${companyMark(a.company)} · ${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>
+      return `<li class="${a.special ? 'special' : ''}${a.id === justTaken ? ' fresh' : ''}">${companyMark(a.company)} · ${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>
         <span class="actions">${k && where!.index !== here.index ? `<button data-course="${where!.index}">Set course</button>` : course}${sale}<button data-abandon="${a.id}" title="The company takes its cargo back, and remembers">Abandon</button></span></li>`;
     })
     .join('');
@@ -610,6 +626,15 @@ function renderContracts() {
     ${fileHtml || (fileButtons ? `<p class="files">${fileButtons}</p>` : '')}
     <p class="meta">Hold: ${+(free).toFixed(1)} t free · new work every half hour${standings ? `<br>Standing: ${standings}` : ''}</p>
     <p class="market-message" aria-live="polite">${escapeHtml(contractMessage)}</p>`;
+  if (justTaken) {
+    // Bring the contract you just took into view, with what happened.
+    const fresh = $('#contracts').querySelector<HTMLElement>('li.fresh');
+    const note = $('#contracts').querySelector<HTMLElement>('.market-message');
+    if (fresh && note) fresh.after(Object.assign(document.createElement('p'), { className: 'market-message', textContent: contractMessage }));
+    note?.remove();
+    fresh?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    justTaken = null;
+  }
 }
 
 $('#contracts').addEventListener('click', (e) => {
@@ -624,7 +649,8 @@ $('#contracts').addEventListener('click', (e) => {
     const why = take(c, offer, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
     contractMessage = why ?? `Contract taken: ${offer.qty} t ${cargoName(offer)} for ${destinationOf(offer).name}, loaded`;
     if (!why) {
-      if (c.target === null) c.target = offer.to.system; // a sensible default course
+      contractMessage += ` · ${plotCourse(c, offer.to.system)}`;
+      justTaken = offer.id;
       sfx.beep();
     }
   } else if (b.dataset.abandon) {
@@ -640,8 +666,7 @@ $('#contracts').addEventListener('click', (e) => {
   } else if (b.dataset.closeFile !== undefined) {
     openFile = null;
   } else if (b.dataset.course) {
-    c.target = Number(b.dataset.course);
-    contractMessage = `Course set: ${systemAt(currentSystem().galaxy, c.target).name}`;
+    contractMessage = plotCourse(c, Number(b.dataset.course));
     sfx.beep();
   }
   saveCommander(c);
@@ -3986,11 +4011,21 @@ async function hyperspace() {
   else c.fuel = Math.max(0, Math.round((c.fuel - distanceLy(from, dest)) * 10) / 10);
   c.location = { galaxy: dest.galaxy, system: dest.index };
   c.target = null;
+  // On a plotted route: the next hop, or arrived.
+  let routeNote = '';
+  if (c.courseTo !== null && c.courseTo !== undefined) {
+    const end = systemAt(dest.galaxy, c.courseTo);
+    const hop = nextHop(dest, end);
+    if (hop) {
+      c.target = hop.index;
+      routeNote = `Next jump plotted: ${hop.name}${hop === end ? '' : ` (on the way to ${end.name})`}${distanceLy(dest, hop) > c.fuel ? ' · refuel first' : ''}`;
+    } else c.courseTo = null;
+  }
   c.visits += 1; // Classic markets are set on arrival in a system, as in 1984
   // Records stay in the system where the crime happened, and cool as you travel.
   coolRecords(c);
   const contractNotes = [...afterJump(c), ...checkAdrift()];
-  if (contractNotes.length) setTimeout(() => state === 'flying' && flash(contractNotes.join(' · '), 4), 9000);
+  if (contractNotes.length || routeNote) setTimeout(() => state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
   surrenderTimer = null;
   saveCommander(c);
   const slipped = carrier !== null && (carrier.phase === 'arriving' || carrier.phase === 'emerging');
@@ -4098,6 +4133,7 @@ function toggleGalaxyMap() {
     },
     onTarget: (s) => {
       c.target = s.index;
+      c.courseTo = null; // chosen by hand: no plotted route
       saveCommander(c);
       sfx.beep();
       if (state === 'docked') renderDocked();

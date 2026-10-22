@@ -156,6 +156,8 @@ export interface Commander {
   location: { galaxy: number; system: number };
   /** Chosen hyperspace destination (system index in the current galaxy), if any. */
   target: number | null;
+  /** A destination more than one jump away: the next hop is plotted after each jump. */
+  courseTo?: number | null;
   /** Market state per system ("galaxy:index") you've traded at. */
   markets: Record<string, MarketState>;
   /** Number of times you've docked; Classic prices change with each visit. */

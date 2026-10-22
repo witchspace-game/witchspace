@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { systemAt } from '../galaxy/generate';
+import { distanceLy, systemAt } from '../galaxy/generate';
 import { cargoTonnes, newCommander } from './commander';
-import { abandon, afterJump, board, deliver, destinationOf, jumpsBetween, LATE_GRACE, loseContracts, standing, take } from './contracts';
+import { abandon, afterJump, board, deliver, destinationOf, jumpsBetween, LATE_GRACE, loseContracts, nextHop, standing, take } from './contracts';
 import { presence } from './companies';
 
 const lave = systemAt(0, 7);
@@ -81,4 +81,17 @@ describe('company contracts', () => {
     expect(presence(corporate).vorg).toBe(0);
     expect(presence(anarchy).vorg).toBeGreaterThan(presence(anarchy).mutual);
   });
+
+  it('plots a route a hop at a time, each within a tank', () => {
+    const far = Array.from({ length: 256 }, (_, i) => systemAt(0, i)).find((s) => jumpsBetween(lave, s) === 3)!;
+    let at = lave;
+    for (let n = 0; n < 3; n++) {
+      const hop = nextHop(at, far)!;
+      expect(distanceLy(at, hop)).toBeLessThanOrEqual(7);
+      at = hop;
+    }
+    expect(at).toBe(far);
+    expect(nextHop(far, far)).toBeNull();
+  });
 });
+

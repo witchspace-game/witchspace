@@ -1199,3 +1199,5 @@ body.touch nav.controls[data-screen='title'] #new-button.primary { grid-column: 
 body.touch nav.controls[data-screen='title'] button:not(#load-button):not(#new-button.primary) { font-size: 12px; padding: 7px 4px; }
 body.touch nav.controls[data-screen='title'] #new-button.armed { grid-column: 1 / -1; }
 #cmdr .hold-list { color: var(--dim); font-size: 12px; line-height: 1.4; }
+.contracts li.fresh { border-left-color: var(--accent); background: rgba(61, 255, 176, 0.1); animation: fresh-glow 1.6s ease-out; }
+@keyframes fresh-glow { from { box-shadow: 0 0 0 2px var(--accent); } to { box-shadow: 0 0 0 0 transparent; } }

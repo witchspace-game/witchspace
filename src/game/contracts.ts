@@ -71,6 +71,30 @@ export function jumpsBetween(a: StarSystem, b: StarSystem, limit = 6): number {
   return Infinity;
 }
 
+/**
+ * The first jump on the shortest route from `a` to `b` (each hop within a
+ * full tank), or null if `b` is here or out of reach. Among equally short
+ * routes, the one with the shortest first hop, so fuel lasts.
+ */
+export function nextHop(a: StarSystem, b: StarSystem): StarSystem | null {
+  if (a === b) return null;
+  const first = new Map<number, StarSystem>([[a.index, a]]);
+  let frontier = [a];
+  for (let n = 1; n <= 12 && frontier.length; n++) {
+    const next: StarSystem[] = [];
+    for (const s of frontier) {
+      for (const t of systemsWithin(s, ROUTE_HOP)) {
+        if (first.has(t.index)) continue;
+        first.set(t.index, n === 1 ? t : first.get(s.index)!);
+        if (t === b) return first.get(t.index)!;
+        next.push(t);
+      }
+    }
+    frontier = next;
+  }
+  return null;
+}
+
 /** Systems from 1 to `max` jumps away, with their jump counts. */
 function withinJumps(from: StarSystem, max: number): { s: StarSystem; n: number }[] {
   const out: { s: StarSystem; n: number }[] = [];
