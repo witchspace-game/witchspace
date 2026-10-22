@@ -484,6 +484,12 @@ function renderNews() {
 // mode keep the plain price list.
 const exchange = mountExchange($('#exchange'), {
   context: tradeContext,
+  setCourse(dest) {
+    cmdr().target = dest.index;
+    saveCommander(cmdr());
+    sfx.beep();
+    flash(`Course set: ${dest.name} · ${distanceLy(currentSystem(), dest).toFixed(1)} LY`, 2);
+  },
   traded(result) {
     if (result.ok) {
       saveCommander(cmdr());
