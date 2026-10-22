@@ -20,12 +20,13 @@ Three to start, each with a character, a home ground and a rival. Names follow t
 
 | Company | Character | Home ground | Pays | Wants |
 |---|---|---|---|---|
-| **Halden & Vey** | An old corporate house. Punctual, polite, unforgiving of lateness. Never carries contraband. | Corporate States, Democracies, Confederacies | Steady, on time; small danger bonuses | Reliability. The best first employer. |
+| **Hexon Holdings** | The corporate giant, and a nod to the films' sinister corporations. Punctual, polite, unforgiving of lateness. Its medicine contracts pay suspiciously well, and nobody asks what's in the sealed containers. | Corporate States, Democracies, Confederacies | Steady, on time; small danger bonuses | Reliability. The best-paying first employer, if you don't ask questions. |
 | **Brackwater Freight** | A frontier outfit that runs where others won't. Asks no questions about your past. | Anarchies, Feudal and Multi-Government worlds | High, with big danger bonuses | Nerve. Later, some of its cargo is "irregular". |
 | **The Carriers' Mutual** | A Co-operative-chartered mutual of independent haulers. Fair, a little bureaucratic. | Everywhere with a government | Fair; members get benefits | Members. Standing here is membership. |
 
-- **Presence by system.** Each system has a mix of the three, from its government and its seed: Halden & Vey dominate the safe core, Brackwater the frontier, the Mutual a little of everywhere. The mix sets who posts contracts there and whose ships you see.
-- **Rivals.** Halden & Vey and Brackwater compete for the worlds between. Helping one doesn't hurt you with the other, but attacking one's ships does (section 3).
+- **Insignia.** Each company's ships carry its mark on the hull, drawn in lines like everything else. **Hexon Holdings: a double H**, two H's back to back sharing one upright, on black-banded hulls. *(Brackwater's and the Mutual's marks to design.)*
+- **Presence by system.** Each system has a mix of the three, from its government and its seed: Hexon Holdings dominates the safe core, Brackwater the frontier, the Mutual a little of everywhere. The mix sets who posts contracts there and whose ships you see.
+- **Rivals.** Hexon and Brackwater compete for the worlds between. Helping one doesn't hurt you with the other, but attacking one's ships does (section 3).
 - **They're the market makers.** A company's contracts come from the same market model as the exchange. A famine at Esbiza means a food contract to Esbiza, paying a crisis premium; a glut means cheap cargo to move out. The companies are how the market reaches a new commander.
 
 ## 2. Contracts
@@ -58,7 +59,7 @@ Each company keeps your **standing**, earned by contracts delivered and lost by 
 | **Contractor** | Bigger cargoes, rush contracts |
 | **Trusted** | Valuable cargo, dangerous routes, supply runs |
 | **Preferred** | The best-paid runs, escorts (later), first call in a crisis |
-| **Partner** | Company perks: Halden & Vey's docking priority, Brackwater's friendly fences, the Mutual's lower insurance excess |
+| **Partner** | Company perks: Hexon's docking priority, Brackwater's friendly fences, the Mutual's lower insurance excess |
 
 Standing is its own record, beside the combat rating and the explorer's rank, and is the first half of the Merchant's **trading rank** in [markets and trade](markets-and-trade.md#a-merchants-rank).
 
@@ -130,7 +131,7 @@ The same courtesy runs through the whole law: **warn first, escalate on defiance
 
 ## 5. How it feels
 
-- **A new commander** docks, opens **Contracts**, takes a small Halden & Vey run with no bond, and is earning in their first five minutes. No exchange needed.
+- **A new commander** docks, opens **Contracts**, takes a small Hexon Holdings run with no bond, and is earning in their first five minutes. No exchange needed.
 - **A steady hauler** builds standing, takes bigger runs, and joins the Mutual for its insurance perk.
 - **A risk-taker** works for Brackwater through the frontier, for danger bonuses, with pirates waiting in the lanes.
 - **An independent** ignores the companies, uses the trade computer, buys low, sells high, and keeps every credit (and every loss).
@@ -156,7 +157,7 @@ The same courtesy runs through the whole law: **warn first, escalate on defiance
 
 ## Open questions
 
-1. **Company names and characters.** Proposed above; happy to change.
+1. **Company names and characters.** Hexon Holdings agreed. Brackwater Freight (or **Vorg**, a nod to Zorg Industries) and the Carriers' Mutual still proposed.
 2. **Deadlines in jumps** rather than real time: agreed?
 3. **The exchange for new commanders:** always available (proposed), or unlocked once you've done a few contracts?
 4. **The trade computer:** kept as the independent's tool (proposed).
