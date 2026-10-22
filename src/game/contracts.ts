@@ -4,7 +4,7 @@ import { stationTrades } from '../economy/legality';
 import { DANGER_PREMIUM, equilibriumPrice, tradeBalance } from '../economy/market';
 import { hash } from '../economy/seed';
 import { FUEL_CAPACITY, type Commander } from './commander';
-import { COMPANIES, pickCompany, standingAt, standingName, type CompanyId, type StandingName } from './companies';
+import { COMPANIES, pickCompany, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
 
 // Company contracts (Modern rules), as set out in
 // docs/design/companies-and-contracts.md: carry the company's cargo from here
@@ -208,7 +208,9 @@ export function addStanding(c: Commander, id: CompanyId, points: number) {
 export function cannotTake(c: Commander, o: Contract, freeTonnes: number): string | null {
   if (c.difficulty !== 'modern') return 'Contracts are for Modern rules';
   if ((c.contracts?.length ?? 0) >= MAX_ACTIVE) return `You can carry ${MAX_ACTIVE} contracts at once`;
-  if (standing(c, o.company) < standingAt(o.needs)) return `Needs ${o.needs} standing with ${COMPANIES[o.company].name} (you're ${standingName(standing(c, o.company))})`;
+  const points = standing(c, o.company);
+  if (points < workNeeds(o.needs))
+    return standingName(points) === 'Blacklisted' ? `${COMPANIES[o.company].name} won't work with you: you're Blacklisted` : `Needs ${o.needs} standing with ${COMPANIES[o.company].name} (you're ${standingName(points)})`;
   if (o.qty > freeTonnes + 1e-9) return `Needs ${o.qty} t free in the hold`;
   return null;
 }
