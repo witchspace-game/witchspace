@@ -200,6 +200,7 @@ You can switch your transponder off (designed in [law and travel](law-and-travel
 - **Your ship is evidence.** A common Cobra blends in; something rare is recognised from the description alone.
 - **Lawful stations won't let a dark ship dock.** You'll need to switch back on, and doing it where police or a station can see you, soon after a raid nearby, makes you the suspect. The smart move is to jump first, or switch on somewhere quiet.
 - **In anarchies none of it matters.** There's no law to hide from.
+- **The ship remembers for you** *(built)*. Going dark is always your choice; switching back on is looked after, so forgetting isn't punished. The transponder comes back on after a hyperspace jump (a new system, a cold trail), and on approach to a lawful station (at clearance range, or when you press C). Not if that would make you the suspect: then the computer says so, the **DARK** light counts down to when it's safe (*DARK 2:14*), and it switches on by itself once the coast is clear. A police hail has its own **Switch on** button.
 
 ### The police challenge: warn first
 

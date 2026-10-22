@@ -2314,11 +2314,47 @@ function unpinnedCrime(status: 'offender' | 'fugitive', serious: boolean) {
   flash(`Seen, but not identified · an unidentified ${player.def.name}`, 2.5);
 }
 
+// The ship's computer switches it back on for you when that's safe and
+// needed: arriving in a new system, and approaching a lawful station to dock.
+// Not when it would make you the suspect: then it says why, counts down on
+// the DARK light, and switches on when the coast is clear.
+
+/** Seconds until switching on here is safe; 0 if it is now (Infinity: you defied the police here). */
+function suspectFor(): number {
+  if (defiedPolice) return Infinity;
+  return unpinned ? Math.max(0, SUSPECT_TIME - (elapsed - unpinned.at)) : 0;
+}
+
+/** Waiting for the coast to clear before switching on to dock. */
+let switchOnWhenClear = false;
+
+const clock = (secs: number) => {
+  const t = Math.ceil(secs);
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+};
+
+/** Switch on for docking if it's safe; otherwise say why not. Returns whether it's on. */
+function transponderOnToDock(): boolean {
+  if (!transponderOff) return true;
+  const wait = suspectFor();
+  if (wait > 0) {
+    switchOnWhenClear = wait !== Infinity;
+    flash(`Transponder left dark: switching on here would make you the suspect · ${wait === Infinity ? 'you ignored a police hail' : clock(wait)} · or jump out`, 4);
+    return false;
+  }
+  switchOnWhenClear = false;
+  transponderOff = false;
+  showTransponder();
+  flash('Transponder on for docking', 2);
+  return true;
+}
+
 /** 0: switch the transponder off (run dark), or on again. */
 function toggleTransponder() {
   if (cmdr().difficulty !== 'modern') return flash('Classic rules: the transponder stays on', 1.5);
   if (transponderBroken()) return flash('Transponder damaged · repair it at a station', 2);
   transponderOff = !transponderOff;
+  switchOnWhenClear = false;
   showTransponder();
   if (transponderOff) return flash(hasLaw(currentSystem()) ? 'Transponder off · running dark' : 'Transponder off · nobody here cares', 2);
   // Back on where the law can see, soon after a crime nobody pinned on you: you're the suspect.
@@ -2338,8 +2374,21 @@ function toggleTransponder() {
 
 function showTransponder() {
   const on = dark();
-  $('#dark-light').classList.toggle('on', on);
-  $('#touch .dark-button').classList.toggle('armed', transponderOff);
+  // While a crime here is fresh, the light counts down to when switching on is safe.
+  const wait = transponderOff ? suspectFor() : 0;
+  const timer = wait > 0 && wait !== Infinity ? ` ${clock(wait)}` : '';
+  const light = $('#dark-light');
+  light.classList.toggle('on', on);
+  if (light.textContent !== `DARK${timer}`) light.textContent = `DARK${timer}`;
+  const button = $('#touch .dark-button');
+  button.classList.toggle('armed', transponderOff);
+  if (button.textContent !== `Dark${timer}`) button.textContent = `Dark${timer}`;
+  // Waiting to dock and the coast is now clear: on it goes.
+  if (switchOnWhenClear && transponderOff && wait === 0 && player.obj.position.distanceTo(station.root.position) < CLEARANCE_RANGE) {
+    switchOnWhenClear = false;
+    transponderOff = false;
+    flash('Coast clear · transponder on for docking', 2.5);
+  }
 }
 
 /** Each frame in flight: police hail a dark ship they can see. */
@@ -2383,13 +2432,22 @@ function updateHail() {
   }
   box.hidden = false;
   const left = Math.ceil(hail.until - elapsed);
-  box.textContent = broken
+  const text = broken
     ? `Police hail · transponder damaged: cut your speed and let the Viper read your hull · ${left} s`
-    : `Police hail · switch on your transponder (${document.body.classList.contains('touch') ? 'Dark' : '0'}) · ${left} s`;
+    : `Police hail · switch on your transponder${document.body.classList.contains('touch') ? '' : ' (0)'} · ${left} s`;
+  const span = box.querySelector('span')!;
+  if (span.textContent !== text) span.textContent = text;
+  box.querySelector('button')!.hidden = broken;
 }
 
 /** Lawful stations won't dock a ship that has switched its transponder off. */
 const darkRefused = () => transponderOff && checksClearance(currentSystem());
+
+// The hail's own button: answer it in one tap.
+$('#hail .hail-on').addEventListener('click', (e) => {
+  (e.currentTarget as HTMLButtonElement).blur();
+  if (transponderOff) toggleTransponder();
+});
 
 type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' } | { kind: 'commander' };
 
@@ -3661,7 +3719,7 @@ function renderControlsCard() {
       ['B', 'Energy bomb: destroy every ship within 6 km (single use)'],
       ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
       ['U', 'Surrender to the police: slow down and hold still (fine, record cleared)'],
-      ...(commander?.difficulty === 'modern' ? [['0', 'Transponder off / on: run dark, unidentified (lawful stations won\'t dock you, and police will hail)']] : []),
+      ...(commander?.difficulty === 'modern' ? [['0', 'Transponder off / on: run dark, unidentified (police will hail you; it switches back on after a jump, or to dock when it\'s safe)']] : []),
       ['Scoop', `Fly slowly (under ${Math.round(SCOOP_SPEED * 100)}% speed) straight into a cargo canister, a yellow dot on the scanner (needs Fuel Scoops)`],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
       ['K', 'Switch control scheme'],
@@ -3824,6 +3882,8 @@ function updateClearance() {
   if (clearanceAnnounced || d > CLEARANCE_RANGE) return;
   clearanceAnnounced = true;
   const name = stationName(currentSystem()).name;
+  // Running dark into a lawful station: switch on to dock, if that's safe.
+  if (darkRefused() && !lockedDown() && !clearanceRefused() && !transponderOnToDock()) return;
   if (lockedDown()) flash(`${name} · Lockdown: containment breach · docking suspended`, 4);
   else if (clearanceRefused()) flash(`${name} · Docking refused: you are a Fugitive · U to surrender`, 4);
   else if (darkRefused()) flash(`${name} · Unidentified ship: switch on your transponder to dock`, 4);
@@ -4408,6 +4468,12 @@ async function hyperspace() {
   c.visits += 1; // Classic markets are set on arrival in a system, as in 1984
   // Records stay in the system where the crime happened, and cool as you travel.
   coolRecords(c);
+  // A new system, a cold trail: the computer switches the transponder back on.
+  if (transponderOff) {
+    transponderOff = false;
+    switchOnWhenClear = false;
+    setTimeout(() => state === 'flying' && flash('Transponder on · new system (0 to run dark again)', 3), 6500);
+  }
   const contractNotes = [...afterJump(c), ...checkAdrift()];
   if (contractNotes.length || routeNote) setTimeout(() => state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
   surrenderTimer = null;
@@ -4652,7 +4718,7 @@ function handleKey(code: string) {
         else if (!hasEquipment(cmdr(), 'docking-computer')) flash('Docking computer not fitted', 2);
         else if (!isWorking(cmdr(), 'docking-computer')) flash('Docking computer damaged · repair at a station', 2);
         else if (player.obj.position.distanceTo(station.root.position) > 10000) flash('Too far from the station', 2);
-        else setAutopilot(true, 'Docking computer on');
+        else if (!darkRefused() || transponderOnToDock()) setAutopilot(true, 'Docking computer on');
       }
       break;
   }
