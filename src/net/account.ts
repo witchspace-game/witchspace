@@ -65,10 +65,20 @@ function forget() {
 
 /** Ask for a sign-in link. In local development the link comes back instead of an email. */
 export function requestLink(email: string, turnstile: string) {
-  return call<{ sent: boolean; devLink?: string }>('/auth/request', { method: 'POST', body: JSON.stringify({ email, turnstile }) });
+  return call<{ sent: boolean; devLink?: string; devCode?: string }>('/auth/request', { method: 'POST', body: JSON.stringify({ email, turnstile }) });
 }
 
 /** If the page was opened from a sign-in link, finish signing in. Returns the account, or null. */
+/** Sign in with the 6-digit code from the email (for a Home Screen app the link can't open in). */
+export async function signInWithCode(email: string, code: string): Promise<Account> {
+  const r = await call<{ session: string; account: Account }>('/auth/verify', { method: 'POST', body: JSON.stringify({ email, code }) });
+  session = r.session;
+  account = r.account;
+  store.set(SESSION_KEY, session);
+  store.set(SYNC_KEY, null); // a new device: nothing synced yet
+  return account;
+}
+
 export async function completeSignInFromUrl(): Promise<Account | null> {
   const url = new URL(location.href);
   const token = url.searchParams.get('signin');

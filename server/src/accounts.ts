@@ -50,6 +50,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS accounts (
       id TEXT PRIMARY KEY, email TEXT NOT NULL UNIQUE, callsign TEXT, callsign_key TEXT UNIQUE, created INTEGER NOT NULL)`);
     this.sql.exec('CREATE TABLE IF NOT EXISTS links (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL)');
+    // The same sign-in as a 6-digit code, for apps the link can't open in (an iPhone Home Screen app).
+    this.sql.exec('CREATE TABLE IF NOT EXISTS codes (email TEXT PRIMARY KEY, hash TEXT NOT NULL, expires INTEGER NOT NULL, tries INTEGER NOT NULL DEFAULT 0)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, account TEXT NOT NULL, expires INTEGER NOT NULL)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS saves (account TEXT PRIMARY KEY, data TEXT NOT NULL, updated INTEGER NOT NULL)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS sends (email TEXT NOT NULL, net TEXT NOT NULL, t INTEGER NOT NULL)');
@@ -115,10 +117,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const origin = request.headers.get('Origin') ?? SITE;
     const site = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ? origin : SITE;
     const link = `${site}/play/?signin=${token}`;
+    const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0');
+    this.sql.exec('INSERT OR REPLACE INTO codes (email, hash, expires, tries) VALUES (?, ?, ?, 0)', email, await sha256(`${email}:${code}`), Date.now() + LINK_MINUTES * 60_000);
 
     if (!this.env.RESEND_API_KEY) {
       // Local development: no email service, so hand the link back to be shown.
-      if (site !== SITE) return json({ sent: false, devLink: link });
+      if (site !== SITE) return json({ sent: false, devLink: link, devCode: code });
       return json({ error: 'Sign-in email isn’t set up yet' }, 503);
     }
     const sent = await fetch('https://api.resend.com/emails', {
@@ -128,8 +132,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
         from: 'Witchspace <signin@witchspace.org.uk>',
         to: [email],
         subject: 'Your Witchspace sign-in link',
-        text: `Right on, Commander.\n\nSign in to Witchspace with this link (it works once, for ${LINK_MINUTES} minutes):\n\n${link}\n\nIf you didn't ask for this, you can ignore this email.\n\nWitchspace · ${SITE}`,
-        html: emailHtml(link),
+        text: `Right on, Commander.\n\nSign in to Witchspace with this link (it works once, for ${LINK_MINUTES} minutes):\n\n${link}\n\nOr enter this code in the game: ${code}\n\nIf you didn't ask for this, you can ignore this email.\n\nWitchspace · ${SITE}`,
+        html: emailHtml(link, code),
       }),
     });
     if (!sent.ok) return json({ error: 'The email couldn’t be sent just now: please try again' }, 502);
@@ -137,14 +141,29 @@ export class Accounts extends DurableObject<AccountsEnv> {
   }
 
   private async verify(request: Request): Promise<Response> {
-    const body = (await request.json().catch(() => null)) as { token?: unknown } | null;
-    if (typeof body?.token !== 'string') return json({ error: 'No sign-in link' }, 400);
-    const hash = await sha256(body.token);
-    const link = this.sql.exec('SELECT email, expires FROM links WHERE hash = ?', hash).toArray()[0];
-    // A link works once.
-    this.sql.exec('DELETE FROM links WHERE hash = ?', hash);
-    if (!link || (link.expires as number) < Date.now()) return json({ error: 'That sign-in link has expired or been used: ask for a new one' }, 400);
-    const email = link.email as string;
+    const body = (await request.json().catch(() => null)) as { token?: unknown; email?: unknown; code?: unknown } | null;
+    let email: string;
+    if (typeof body?.code === 'string' && typeof body.email === 'string') {
+      // The code: five tries, then it's spent.
+      const address = body.email.trim().toLowerCase();
+      const row = this.sql.exec('SELECT hash, expires, tries FROM codes WHERE email = ?', address).toArray()[0];
+      if (!row || (row.expires as number) < Date.now() || (row.tries as number) >= 5) return json({ error: 'That code has expired: ask for a new one' }, 400);
+      if (row.hash !== (await sha256(`${address}:${body.code.trim()}`))) {
+        this.sql.exec('UPDATE codes SET tries = tries + 1 WHERE email = ?', address);
+        return json({ error: 'That code isn’t right: check the email and try again' }, 400);
+      }
+      this.sql.exec('DELETE FROM codes WHERE email = ?', address);
+      email = address;
+    } else {
+      if (typeof body?.token !== 'string') return json({ error: 'No sign-in link' }, 400);
+      const hash = await sha256(body.token);
+      const link = this.sql.exec('SELECT email, expires FROM links WHERE hash = ?', hash).toArray()[0];
+      // A link works once.
+      this.sql.exec('DELETE FROM links WHERE hash = ?', hash);
+      if (!link || (link.expires as number) < Date.now()) return json({ error: 'That sign-in link has expired or been used: ask for a new one' }, 400);
+      email = link.email as string;
+      this.sql.exec('DELETE FROM codes WHERE email = ?', email);
+    }
     let account = this.sql.exec('SELECT id, email, callsign FROM accounts WHERE email = ?', email).toArray()[0];
     if (!account) {
       const id = crypto.randomUUID();
@@ -381,6 +400,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
   private deleteAccount(account: Account): Response {
     for (const table of ['saves', 'sessions', 'contact']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
+    this.sql.exec('DELETE FROM codes WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM accounts WHERE id = ?', account.id);
     return json({ deleted: true });
   }
@@ -410,7 +430,7 @@ function contactHtml(name: string, body: string, stop: string): string {
 </td></tr></table></td></tr></table></body></html>`;
 }
 
-function emailHtml(link: string): string {
+function emailHtml(link: string, code: string): string {
   return `<!doctype html><html><body style="margin:0;background:#05070d;font-family:Arial,Helvetica,sans-serif;color:#eaf0f6">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px">
 <table role="presentation" width="100%" style="max-width:480px;background:#0b111c;border:1px solid #1f2a3a;border-radius:16px" cellpadding="0" cellspacing="0"><tr><td style="padding:32px">
@@ -418,7 +438,9 @@ function emailHtml(link: string): string {
 <h1 style="margin:0 0 14px;font-size:24px;color:#eaf0f6">Right on, Commander.</h1>
 <p style="margin:0 0 24px;font-size:16px;line-height:1.5;color:#c2cddb">Here's your link to sign in. It works once, for ${LINK_MINUTES} minutes.</p>
 <p style="margin:0 0 24px"><a href="${link}" style="display:inline-block;padding:13px 26px;border-radius:999px;background:#3dffb0;color:#03140e;font-weight:bold;text-decoration:none">Sign in to Witchspace</a></p>
-<p style="margin:0;font-size:13px;line-height:1.5;color:#95a3b8">If you didn't ask for this, you can ignore this email: nobody can sign in without the link.</p>
+<p style="margin:0 0 8px;font-size:14px;color:#c2cddb">Playing from your Home Screen? Enter this code in the game instead:</p>
+<p style="margin:0 0 24px;font-size:30px;letter-spacing:8px;font-weight:bold;color:#3dffb0;font-family:'Courier New',monospace">${code}</p>
+<p style="margin:0;font-size:13px;line-height:1.5;color:#95a3b8">If you didn't ask for this, you can ignore this email: nobody can sign in without the link or the code.</p>
 </td></tr></table>
 <p style="margin:18px 0 0;font-size:12px;color:#5d6b80">witchspace.org.uk · a free, open-source tribute to Elite (1984)</p>
 </td></tr></table></body></html>`;

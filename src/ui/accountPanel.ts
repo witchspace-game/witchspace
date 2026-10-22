@@ -22,6 +22,7 @@ let hooks: AccountHooks;
 let view: 'main' | 'sent' | 'choose' = 'main';
 let sentTo = '';
 let devLink = '';
+let devCode = '';
 let choice: { local: Commander; cloud: Commander; updated: number } | null = null;
 let deleteArmed = false;
 /** Whether the companies may contact you (loaded when the panel opens). */
@@ -160,8 +161,10 @@ function render() {
       </div>`;
   } else if (!a) {
     if (view === 'sent') {
-      html += `<p class="meta">Check your email: we've sent a sign-in link to <b>${escapeHtml(sentTo)}</b>. It works once, for 20 minutes.</p>`;
-      if (devLink) html += `<p class="meta">Development: <a href="${escapeHtml(devLink)}">open the sign-in link</a></p>`;
+      html += `<p class="meta">Check your email: we've sent a sign-in link to <b>${escapeHtml(sentTo)}</b>. It works once, for 20 minutes.</p>
+        <p class="meta">Playing from your Home Screen? The link opens in your browser instead, so type the code from the email here:</p>
+        <form class="code-form"><input inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" aria-label="Sign-in code" /> <button type="submit" class="primary">Sign in</button></form>`;
+      if (devLink) html += `<p class="meta">Development: <a href="${escapeHtml(devLink)}">open the sign-in link</a> or use code ${escapeHtml(devCode)}</p>`;
       html += `<p><button type="button" data-again>Use a different email</button></p>`;
     } else {
       html += `<p class="meta">Sign in to keep your callsign, and carry on from any device. No password: we email you a link.</p>
@@ -190,11 +193,24 @@ function wire() {
       const r = await acct.requestLink(email, turnstileToken);
       sentTo = email;
       devLink = r.devLink ?? '';
+      devCode = r.devCode ?? '';
       view = 'sent';
       render();
     } catch (err) {
       hooks.flash((err as Error).message, 3);
       button.disabled = false;
+    }
+  });
+  panel.querySelector('.code-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const code = panel.querySelector<HTMLInputElement>('.code-form input')!.value.replace(/\D/g, '');
+    try {
+      await acct.signInWithCode(sentTo, code);
+      view = 'main';
+      await afterSignIn();
+      render();
+    } catch (err) {
+      hooks.flash((err as Error).message, 3);
     }
   });
   panel.querySelector('[data-again]')?.addEventListener('click', () => {
