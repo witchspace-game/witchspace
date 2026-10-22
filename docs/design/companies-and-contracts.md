@@ -16,24 +16,24 @@ All of it runs the way Elite's galaxy did: **worked out from each system's seed 
 
 ## 1. The companies
 
-Three to start, each with a character, a home ground and a rival. Names follow the [worldbuilding](../worldbuilding.md) style: slightly old-fashioned, often two surnames. **(Names proposed.)**
+Three to start, each with a character, a home ground and a rival. Their backstories, insignia, liveries, logo prompts and signature ships (the Coral, the Gaboon and the Garter) are in **[the trading companies](../companies.md)**. Inspired by real-world types with poetic licence; no real company is portrayed.
 
 | Company | Character | Home ground | Pays | Wants |
 |---|---|---|---|---|
 | **Hexon Holdings** | The corporate giant, and a nod to the films' sinister corporations. Punctual, polite, unforgiving of lateness. Its medicine contracts pay suspiciously well, and nobody asks what's in the sealed containers. | Corporate States, Democracies, Confederacies | Steady, on time; small danger bonuses | Reliability. The best-paying first employer, if you don't ask questions. |
-| **Brackwater Freight** | A frontier outfit that runs where others won't. Asks no questions about your past. | Anarchies, Feudal and Multi-Government worlds | High, with big danger bonuses | Nerve. Later, some of its cargo is "irregular". |
+| **Vorg Industries** | A frontier conglomerate that makes everything and sells it to everyone; a nod to Zorg Industries. Asks no questions about your past. | Anarchies, Feudal and Multi-Government worlds | High, with big danger bonuses | Nerve. Later, some of its cargo is "irregular". |
 | **The Carriers' Mutual** | A Co-operative-chartered mutual of independent haulers. Fair, a little bureaucratic. | Everywhere with a government | Fair; members get benefits | Members. Standing here is membership. |
 
-- **Insignia.** Each company's ships carry its mark on the hull, drawn in lines like everything else. **Hexon Holdings: a double H**, two H's back to back sharing one upright, on black-banded hulls. *(Brackwater's and the Mutual's marks to design.)*
-- **Presence by system.** Each system has a mix of the three, from its government and its seed: Hexon Holdings dominates the safe core, Brackwater the frontier, the Mutual a little of everywhere. The mix sets who posts contracts there and whose ships you see.
-- **Rivals.** Hexon and Brackwater compete for the worlds between. Helping one doesn't hurt you with the other, but attacking one's ships does (section 3).
+- **Insignia.** Each company's ships carry its mark on the hull, drawn in lines like everything else. **Hexon Holdings: a double H**, two H's back to back sharing one upright, on black-banded hulls. Vorg: a heavy bladed V crossed like a gunsight. The Mutual: a carrick bend knot in a ring of 28 dots.
+- **Presence by system.** Each system has a mix of the three, from its government and its seed: Hexon Holdings dominates the safe core, Vorg the frontier, the Mutual a little of everywhere. The mix sets who posts contracts there and whose ships you see.
+- **Rivals.** Hexon and Vorg compete for the worlds between. Helping one doesn't hurt you with the other, but attacking one's ships does (section 3).
 - **They're the market makers.** A company's contracts come from the same market model as the exchange. A famine at Esbiza means a food contract to Esbiza, paying a crisis premium; a glut means cheap cargo to move out. The companies are how the market reaches a new commander.
 
 ## 2. Contracts
 
 ### What a contract is
 
-`Carry 12 t Medicine · Leesti → Riedquat (6.8 LY, Feudal) · within 3 jumps · 340 Cr + 120 danger bonus · Brackwater Freight`
+`Carry 12 t Medicine · Leesti → Riedquat (6.8 LY, Feudal) · within 3 jumps · 340 Cr + 120 danger bonus · Vorg Industries`
 
 - **The company supplies the cargo.** You need a ship and a hold, not money, so a new commander, or one who has just lost everything, can start earning at once.
 - **The cargo is consigned, not yours.** It shows in your hold marked with the company's name. You can't sell it on the open market; a fence will take it, as stolen goods (section 3).
@@ -59,7 +59,7 @@ Each company keeps your **standing**, earned by contracts delivered and lost by 
 | **Contractor** | Bigger cargoes, rush contracts |
 | **Trusted** | Valuable cargo, dangerous routes, supply runs |
 | **Preferred** | The best-paid runs, escorts (later), first call in a crisis |
-| **Partner** | Company perks: Hexon's docking priority, Brackwater's friendly fences, the Mutual's lower insurance excess |
+| **Partner** | Company perks: Hexon's docking priority, Vorg's friendly fences, the Mutual's lower insurance excess |
 
 Standing is its own record, beside the combat rating and the explorer's rank, and is the first half of the Merchant's **trading rank** in [markets and trade](markets-and-trade.md#a-merchants-rank).
 
@@ -133,7 +133,7 @@ The same courtesy runs through the whole law: **warn first, escalate on defiance
 
 - **A new commander** docks, opens **Contracts**, takes a small Hexon Holdings run with no bond, and is earning in their first five minutes. No exchange needed.
 - **A steady hauler** builds standing, takes bigger runs, and joins the Mutual for its insurance perk.
-- **A risk-taker** works for Brackwater through the frontier, for danger bonuses, with pirates waiting in the lanes.
+- **A risk-taker** works for Vorg through the frontier, for danger bonuses, with pirates waiting in the lanes.
 - **An independent** ignores the companies, uses the trade computer, buys low, sells high, and keeps every credit (and every loss).
 - **A pirate** goes dark in the lanes, picks off haulers before the police arrive, sells to fences, and stays out of station space. Every Viper hail is a choice: bluff, or run.
 - **An escort**, later, is paid to stop that pirate.
@@ -157,7 +157,7 @@ The same courtesy runs through the whole law: **warn first, escalate on defiance
 
 ## Open questions
 
-1. **Company names and characters.** Hexon Holdings agreed. Brackwater Freight (or **Vorg**, a nod to Zorg Industries) and the Carriers' Mutual still proposed.
+1. **Company names and characters.** Hexon Holdings agreed; Vorg Industries and the Carriers' Mutual proposed. Backstories in [the trading companies](../companies.md).
 2. **Deadlines in jumps** rather than real time: agreed?
 3. **The exchange for new commanders:** always available (proposed), or unlocked once you've done a few contracts?
 4. **The trade computer:** kept as the independent's tool (proposed).
