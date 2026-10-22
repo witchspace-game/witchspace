@@ -234,19 +234,35 @@ export function abandon(c: Commander, id: string): string {
 }
 
 /** After a hyperspace jump: deadlines count down; long-overdue cargo is reclaimed. */
-export function afterJump(c: Commander): string[] {
+export function afterJump(c: Commander, now = Date.now()): string[] {
   const notes: string[] = [];
   for (const a of [...(c.contracts ?? [])]) {
     a.jumpsLeft -= 1;
-    if (a.jumpsLeft === 0) notes.push(`${cargoName(a)} for ${placeOf(a.to).name}: last jump`);
+    const to = placeOf(a.to).name;
+    if (a.jumpsLeft === 0) {
+      notes.push(`${cargoName(a)} for ${to}: last jump`);
+      notice(c, a, 'last', 'One jump left', `Your ${a.qty} t ${cargoName(a)} is due at ${to} by your next jump. After that it's late, for half pay.`, now);
+    }
+    if (a.jumpsLeft === -1) notice(c, a, 'late', 'Running late', `Your ${cargoName(a)} for ${to} is late: half pay on delivery. In ${LATE_GRACE} more jumps we take it back.`, now);
     if (a.jumpsLeft < -LATE_GRACE) {
       finish(c, a.id);
       addStanding(c, a.company, -3);
       logContract(c, a.company, 'failed');
       notes.push(`${COMPANIES[a.company].name} has reclaimed its ${cargoName(a)}: contract failed`);
+      notice(c, a, 'reclaimed', 'Cargo reclaimed', `You were ${LATE_GRACE} jumps past the deadline, so we've taken back our ${a.qty} t ${cargoName(a)} for ${to}. Contract cancelled.`, now);
     }
   }
   return notes;
+}
+
+/**
+ * A note from the company that lasts: it goes in the Messages on the
+ * Contracts tab, so it isn't missed mid-flight.
+ */
+function notice(c: Commander, a: Contract, kind: string, subject: string, body: string, now: number) {
+  const id = `${a.id}:${kind}`;
+  if (c.messages?.some((m) => m.id === id)) return;
+  c.messages = [{ id, company: a.company, subject, body, at: now }, ...(c.messages ?? [])].slice(0, 20);
 }
 
 /** Docked: deliver whatever is due here. Returns what happened, for the player. */
@@ -274,6 +290,7 @@ export function loseContracts(c: Commander): string[] {
     finish(c, a.id);
     addStanding(c, a.company, -2);
     logContract(c, a.company, 'failed');
+    notice(c, a, 'lost', 'Cargo lost', `Our ${a.qty} t ${cargoName(a)} for ${placeOf(a.to).name} was lost with your ship. Contract cancelled.`, Date.now());
   }
   return lost.map((a) => `${COMPANIES[a.company].name}'s ${cargoName(a)} lost with your ship`);
 }
