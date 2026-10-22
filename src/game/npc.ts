@@ -75,6 +75,10 @@ export class NpcShip {
   cargo: Record<string, number> = {};
   /** On an errand that matters more than prey (pirates after a lost case): fly to the destination, fight only if attacked. */
   errand?: boolean;
+  /** Attacked by the player where nobody saw: it will report it if it gets away. */
+  unreported?: boolean;
+  /** Has called for help (once). */
+  maydayCalled?: boolean;
   /** A lost company case this ship has taken aboard (contract id). */
   carrying?: string;
   /** The trading company a trader flies for, if any. */

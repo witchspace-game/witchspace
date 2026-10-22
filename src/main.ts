@@ -1401,8 +1401,10 @@ function updateTraffic(dt: number) {
       legs.set(npc, 'docking');
       npc.destination = onSlotAxis(-SLOT.z); // the station's centre, down the slot
     } else if (leg === 'docking' && station.toLocal(npc.obj.position).z < SLOT.z) {
+      reportedBy(npc);
       removeNpc(npc); // safely inside
     } else if (leg === 'outbound' && npc.obj.position.distanceTo(npc.destination!) < 600) {
+      reportedBy(npc);
       removeNpc(npc); // gone to witchspace
     }
   }
@@ -2110,8 +2112,13 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   } else {
     flash(`${npc.def.name} destroyed`, 1.5);
     // Killing police or an innocent trader is a serious crime. Under Classic
-    // rules, as in 1984, a trader only counts if the station sees it happen.
-    if (npc.role !== 'trader' || c.difficulty !== 'classic' || inSafeZone(npc.obj.position)) becomeFugitive(true);
+    // rules, as in 1984, a trader only counts if the station sees it happen;
+    // under Modern, only if anyone saw (the victim can't tell anyone now).
+    if (npc.role !== 'trader') becomeFugitive(true);
+    else if (c.difficulty === 'classic') {
+      if (inSafeZone(npc.obj.position)) becomeFugitive(true);
+    } else if (witnessed(npc.obj.position, npc)) becomeFugitive(true);
+    else flash('No witnesses · but its cargo is stolen goods', 3);
   }
   // As in 1984, every 256th kill earns the old salute.
   if (Math.floor(c.kills / 256) > Math.floor((c.kills - (combatComputer ? 0.5 : 1)) / 256)) setTimeout(() => flash('Right On Commander!', 3), 1200);
@@ -2148,8 +2155,75 @@ const inSafeZone = (at: THREE.Vector3) => commander !== null && at.distanceTo(st
 /** The player shot or rammed a ship. Pirates are fair game; anyone else is a crime. */
 function playerHitNpc(npc: NpcShip, damage: number) {
   if (npc.role === 'police' || npc.role === 'marshal') becomeFugitive();
-  else if (npc.role === 'trader') becomeOffender('Firing on a trader · you are an OFFENDER');
+  else if (npc.role === 'trader') {
+    if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on a trader · you are an OFFENDER');
+    else {
+      // Nobody saw. The trader knows, though, and it's calling for help.
+      npc.unreported = true;
+      mayday(npc);
+    }
+  }
   if (npc.hit(damage, player)) destroyNpc(npc, player.obj);
+}
+
+// --- The law beyond the station (docs/design/companies-and-contracts.md, section 4) ----
+// Within station space the station sees everything. Out in the lanes, a crime
+// needs a witness: police in sight, another ship, or a victim who gets away.
+// Under Classic rules (frozen) every crime counts, as before.
+
+const STATION_SPACE = 10000; // metres: the station sees everything inside this
+const POLICE_SEE = 8000; // metres: a police ship witnesses anything this close
+const SHIPS_SEE = 6000; // metres: another ship sees a crime this close (and lives to tell)
+
+/** Would anyone see a crime here? (The victim doesn't count: it reports only if it gets away.) */
+function witnessed(at: THREE.Vector3, victim: NpcShip | null): boolean {
+  if (!commander || cmdr().difficulty !== 'modern') return true;
+  if (at.distanceTo(station.root.position) < STATION_SPACE) return true;
+  return npcs.some((n) => {
+    if (n === victim || n.role === 'pirate') return false;
+    const d = n.obj.position.distanceTo(at);
+    return n.role === 'police' || n.role === 'marshal' ? d < POLICE_SEE : d < SHIPS_SEE;
+  });
+}
+
+// A distress call: police launch from the station and fly to the scene. The
+// further out, the longer they take: about 20 s at 12 km, a minute at 20 km.
+const responses: { at: number; where: THREE.Vector3 }[] = [];
+
+function mayday(npc: NpcShip) {
+  if (npc.maydayCalled || !hasLaw(currentSystem())) return;
+  npc.maydayCalled = true;
+  const where = npc.obj.position.clone();
+  const delay = Math.max(10, 10 + (where.distanceTo(station.root.position) - STATION_SPACE) / 200);
+  responses.push({ at: elapsed + delay, where });
+  flash(`Mayday from the ${npc.company ? COMPANIES[npc.company].name : ''} ${npc.def.name}`.replace('  ', ' ') + ` · police about ${Math.round(delay)} s away`, 3);
+}
+
+function updateResponses() {
+  for (let i = responses.length - 1; i >= 0; i--) {
+    if (elapsed < responses[i].at) continue;
+    const { where } = responses.splice(i, 1)[0];
+    // Two Vipers come out and patrol where the call came from: witnesses now, if anything's still going on.
+    // The wait was their flight out: they arrive now, from the station's side.
+    const fromStation = station.root.position.clone().sub(where).setLength(1800);
+    for (let k = 0; k < 2 && ofRole('police').length < MAX_POLICE; k++) {
+      spawnViper(false);
+      const cop = npcs[npcs.length - 1];
+      cop.patrol.centre.copy(where);
+      cop.patrol.radius = 500 + k * 300;
+      cop.obj.position.copy(where).add(fromStation).add(new THREE.Vector3().randomDirection().multiplyScalar(200));
+      cop.obj.lookAt(where);
+      cop.ship.speed = cop.ship.maxSpeed * 0.6;
+    }
+    flash('Police arriving · answering a distress call', 2);
+  }
+}
+
+/** A trader you attacked, getting away: it reports you (in the system where it happened). */
+function reportedBy(npc: NpcShip) {
+  if (!npc.unreported || !commander) return;
+  npc.unreported = false;
+  becomeOffender('The trader you attacked got away, and reported you · you are an OFFENDER');
 }
 
 type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' } | { kind: 'commander' };
@@ -3100,6 +3174,7 @@ function updateSpace(dt: number) {
   station.update(dt);
   updateDrifters(dt);
   updateCaseRaid(dt);
+  updateResponses();
   for (let i = explosions.length - 1; i >= 0; i--) if (!explosions[i].update(dt)) explosions.splice(i, 1);
   updateMarshals(dt);
 
@@ -4094,6 +4169,8 @@ async function hyperspace() {
   sfx.hyperspace();
   await playTunnel(3.2, 'hyperspace');
 
+  // Traders you attacked unseen, still alive as you leave: they report it, in the system you're leaving.
+  for (const npc of npcs) if (npc.unreported) reportedBy(npc);
   if (galactic) removeEquipment(c, 'galactic-hyperdrive');
   else c.fuel = Math.max(0, Math.round((c.fuel - distanceLy(from, dest)) * 10) / 10);
   c.location = { galaxy: dest.galaxy, system: dest.index };
@@ -4118,6 +4195,7 @@ async function hyperspace() {
   const slipped = carrier !== null && (carrier.phase === 'arriving' || carrier.phase === 'emerging');
   // Pirates who had your case when you left have got away with it.
   for (const npc of npcs) if (npc.carrying) takenByPirates(c, npc.carrying, Date.now());
+  responses.length = 0;
   buildSystemScene(dest);
 
   // Arrive some way out, off to one side of the station-planet line, so the
