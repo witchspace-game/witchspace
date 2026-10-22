@@ -75,7 +75,7 @@ function updateButton() {
   const b = document.querySelector<HTMLElement>('#account-button');
   if (!b) return;
   const a = acct.currentAccount();
-  b.textContent = a ? `A · ${a.callsign ? `CMDR ${a.callsign}` : 'Account'} ✓` : 'A · Sign in';
+  b.innerHTML = `<span class="key">A · </span>${a ? `${a.callsign ? `CMDR ${escapeHtml(a.callsign)}` : 'Account'} ✓` : 'Sign in'}`;
 }
 
 // --- Keeping this device and the account in step -------------------------------------

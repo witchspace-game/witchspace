@@ -334,7 +334,7 @@ function showTitle() {
   const saved = loadCommander();
   const load = $<HTMLButtonElement>('#load-button');
   load.hidden = !saved;
-  if (saved) load.textContent = `Y · Load ${saved.name} (${DIFFICULTIES[saved.difficulty].name})`;
+  if (saved) load.innerHTML = `<span class="key">Y · Load </span><span class="touch-word">Play as CMDR </span>${escapeHtml(saved.name)} <small>(${DIFFICULTIES[saved.difficulty].name})</small>`;
   $('#new-button').classList.toggle('primary', !saved);
   updateSharedButton();
   disarmNewCommander();
@@ -349,14 +349,14 @@ function armNewCommander(saved: Commander) {
   newCommanderArmed = true;
   const b = $('#new-button');
   b.classList.add('armed');
-  b.textContent = `N again · delete ${saved.name} (${DIFFICULTIES[saved.difficulty].name} · ${saved.credits.toLocaleString()} Cr · ${combatRating(saved.kills)})`;
+  b.innerHTML = `<span class="key">N again · </span><span class="touch-word">Tap again to </span>delete ${escapeHtml(saved.name)} (${DIFFICULTIES[saved.difficulty].name} · ${saved.credits.toLocaleString()} Cr · ${combatRating(saved.kills)})`;
 }
 
 function disarmNewCommander() {
   newCommanderArmed = false;
   const b = $('#new-button');
   b.classList.remove('armed');
-  b.textContent = 'N · New commander';
+  b.innerHTML = '<span class="key">N · </span>New commander';
 }
 
 /** Classic is the natural default for anyone playing in 1984 mode. */
@@ -3595,7 +3595,7 @@ function toggleSharedSpace() {
 }
 
 function updateSharedButton() {
-  $('#shared-button').textContent = `S · Shared space (beta): ${sharedSpaceWanted() ? 'on' : 'off'}`;
+  $('#shared-button').innerHTML = `<span class="key">S · </span>Shared space (beta): ${sharedSpaceWanted() ? 'on' : 'off'}`;
 }
 
 function onSpaceEvent(e: SpaceEvent) {
