@@ -139,6 +139,7 @@ export function fileOn(c: Commander, company: CompanyId, here: StarSystem, now: 
     { text: `Subject: CMDR ${c.name}. Standing: ${standingName(standing(c, company))}.` },
     { text: `Contracts: ${log.delivered} delivered, ${log.late} late, ${log.failed} failed.${log.special ? ` Special assignments: ${log.special}.` : ''}` },
     ...(c.favours?.[company] ? [{ text: `Favours owed: ${c.favours[company]}.` }] : []),
+    ...(c.compartment?.company === company ? [{ text: `Fitted: one compartment, our pattern (${c.compartment.tonnes} t).`, redacted: company === 'hexon' }] : []),
     { text: `Combat rating: ${combatRating(c.kills)}. Legal standing here: ${status === 'clean' ? 'clean' : status}${c.warrant ? ', Marshals warrant' : ''}.` },
     { text: `Travel: ${visited.length} systems. Last seen: ${here.name}.` },
   ];

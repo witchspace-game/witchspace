@@ -27,12 +27,14 @@ import {
   type Difficulty,
 } from './game/commander';
 import { DockingComputer } from './game/dockingComputer';
+import { fitCompartment, weighsShips, WEIGHBRIDGE_CHANCE } from './game/compartment';
 import {
   carriesContraband,
   checksClearance,
   coolRecords,
   fineDue,
   hasLaw,
+  hidingSomething,
   illegalEquipment,
   legalStatus,
   recordCrime,
@@ -669,7 +671,8 @@ function renderContracts() {
     .map((o) => {
       const to = destinationOf(o);
       const why = cannotTake(c, o, free);
-      return `<li class="special">${companyMark(o.company)} <em class="risk">Special assignment</em> · ${o.qty} t ${escapeHtml(cargoName(o))} → ${place(to)}<br>
+      const compartment = o.company !== 'mutual' && !c.compartment ? ' <em class="risk" title="Hides up to 4 t from police scans. Yours to keep.">Shielded compartment fitted</em>' : '';
+      return `<li class="special">${companyMark(o.company)} <em class="risk">Special assignment</em>${compartment} · ${o.qty} t ${escapeHtml(cargoName(o))} → ${place(to)}<br>
         <small>within ${o.jumps} jumps · <b class="pay">${o.pay.toLocaleString()} Cr</b> · offer closes in ${hoursLeft(o.expires)} h</small>
         <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}</li>`;
     })
@@ -770,6 +773,8 @@ $('#contracts').addEventListener('click', (e) => {
     const why = take(c, offer, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
     contractMessage = why ?? `Contract taken: ${offer.qty} t ${cargoName(offer)} for ${destinationOf(offer).name}, loaded`;
     if (!why) {
+      const fitted = fitCompartment(c, offer);
+      if (fitted) contractMessage += ` · ${fitted}`;
       contractMessage += ` · ${plotCourse(c, offer.to.system)}`;
       justTaken = offer.id;
       sfx.beep();
@@ -985,7 +990,7 @@ function renderDocked() {
     ['Rules', DIFFICULTIES[c.difficulty].name],
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ['Ship', player.def.name],
-    ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${holdList(c)}`],
+    ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
     ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
@@ -3843,7 +3848,10 @@ async function dock() {
   // Inspections are certain under Classic rules and likely, not certain, under Modern.
   const smuggling = carriesContraband(c);
   const inspected = smuggling && Math.random() < inspectionChance(c, sys);
-  const due = checksClearance(sys) && (legalStatus(c) === 'offender' || inspected);
+  // Strict stations weigh ships: one heavier than its papers gets its hidden compartment opened.
+  const weighed = !smuggling && checksClearance(sys) && weighsShips(sys) && hidingSomething(c, sys) && Math.random() < WEIGHBRIDGE_CHANCE;
+  if (weighed) delete c.compartment;
+  const due = checksClearance(sys) && (legalStatus(c) === 'offender' || inspected || weighed);
   const settlement = due ? settle(c) : null;
   const specialsDue = (c.contracts ?? []).filter((a) => a.special && a.to.system === sys.index && a.to.galaxy === sys.galaxy && a.jumpsLeft >= 0).map((a) => a.company);
   const delivered = deliver(c, sys);
@@ -3852,7 +3860,7 @@ async function dock() {
   saveCommander(c);
   enterDocked();
   markInbox(c);
-  if (settlement) flash(settlementMessage(settlement, inspected ? 'Hold inspected' : 'Fined on arrival'), 5);
+  if (settlement) flash(settlementMessage(settlement, weighed ? 'Weighbridge: heavier than your papers · hidden compartment opened' : inspected ? 'Hold inspected' : 'Fined on arrival'), 6);
   else if (delivered.length) flash([...delivered, ...specialsDue.map(thanksFrom)].join(' · '), 6);
   else if (gone.length) flash(gone.join(' · '), 5);
   else if (news.length) flash(`New message from ${COMPANIES[news[0].company].name}: ${news[0].subject}`, 5);
