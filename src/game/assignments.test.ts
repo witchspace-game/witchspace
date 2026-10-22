@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
-import { newCommander } from './commander';
-import { ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, checkMessages, fileOn } from './assignments';
-import { deliver, destinationOf, logOf, standing, take } from './contracts';
+import { cargoTonnes, newCommander } from './commander';
+import { ADRIFT_FALL, ADRIFT_HOLD, ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, checkMessages, expireCases, fileOn, recoverCase, rivalPrice, sellToRival, setAdrift } from './assignments';
+import { deliver, destinationOf, loseContracts, logOf, standing, take } from './contracts';
 
 const lave = systemAt(0, 7);
 const T0 = Date.UTC(2026, 9, 22, 12);
@@ -63,4 +63,38 @@ describe('special assignments', () => {
     c.standing = { hexon: 50 };
     expect(checkMessages(c, lave, waitingTime(c.name))).toHaveLength(0);
   });
+
+  it('survives the ship: adrift, recoverable, and gone if left too long', () => {
+    const c = newCommander('modern');
+    c.standing = { wy: 6, hexon: 6 };
+    const t = waitingTime(c.name);
+    const offer = assignmentFor(c, 'hexon', lave, t)!;
+    take(c, offer, 20);
+    expect(setAdrift(c, lave, [1, 2, 3], t)).toHaveLength(1);
+    expect(loseContracts(c)).toHaveLength(0); // the special one isn't lost with the ship
+    expect(cargoTonnes(c)).toBe(0); // it's out there, not in the hold
+    expect(recoverCase(c, offer.id)).toMatch(/recovered/);
+    expect(cargoTonnes(c)).toBe(offer.qty);
+
+    setAdrift(c, lave, [1, 2, 3], t);
+    expect(expireCases(c, t + ADRIFT_HOLD, () => false)).toHaveLength(0); // still holding
+    expect(expireCases(c, t + ADRIFT_HOLD + ADRIFT_FALL + 1, () => false)[0]).toMatch(/failed/);
+    expect(c.contracts).toHaveLength(0);
+    expect(standing(c, 'hexon')).toBeLessThan(6);
+  });
+
+  it('rivals will buy what the owner is carrying, and the owner finds out', () => {
+    const c = newCommander('modern');
+    c.standing = { hexon: 6 };
+    const t = waitingTime(c.name);
+    const offer = assignmentFor(c, 'hexon', lave, t)!;
+    take(c, offer, 20);
+    const vorgWorld = Array.from({ length: 256 }, (_, i) => systemAt(0, i)).find((s) => s.government === 0)!;
+    const credits = c.credits;
+    expect(sellToRival(c, offer.id, vorgWorld)).toMatch(/Vorg/);
+    expect(c.credits).toBe(credits + rivalPrice(offer));
+    expect(standing(c, 'hexon')).toBe(-4);
+    expect(standing(c, 'vorg')).toBe(3);
+  });
 });
+
