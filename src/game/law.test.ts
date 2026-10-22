@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
-import { newCommander } from './commander';
-import { coolRecords, equipmentForSale, legalStatus, recordCrime, redeemImpound, settle, fineDue, FINES } from './law';
+import { FUEL_CAPACITY, FUEL_PRICE, newCommander } from './commander';
+import { coolRecords, equipmentForSale, legalStatus, recordCrime, redeemImpound, settle, fineDue, charge, FINES } from './law';
 
 const LAVE = systemAt(0, 7);
 
@@ -74,19 +74,39 @@ describe('the law', () => {
     expect(fineDue(c)).toBe(0);
   });
 
-  it('impounds equipment when you cannot pay, until you do', () => {
+  it('fines are cut to your means, and leave you a tank of fuel', () => {
+    const c = newCommander('modern');
+    c.credits = 100;
+    recordCrime(c, 'fugitive', true);
+    const s = settle(c);
+    expect(s.fine).toBe(Math.floor((100 - FUEL_CAPACITY * FUEL_PRICE) / 2));
+    expect(s.owed).toBe(0);
+    expect(c.credits).toBeGreaterThanOrEqual(FUEL_CAPACITY * FUEL_PRICE);
+    expect(legalStatus(c)).toBe('clean');
+  });
+
+  it('impounds equipment when you are caught and cannot pay, until you do', () => {
     const c = newCommander('modern');
     c.credits = 50;
     c.equipment = ['docking-computer'];
     recordCrime(c, 'fugitive');
-    const s = settle(c);
-    expect(s.owed).toBe(FINES.fugitive - 50);
+    const s = settle(c, true);
+    const fine = FINES.fugitive * 1.5;
+    expect(s.owed).toBe(fine - 50);
     expect(c.equipment).toEqual([]);
     expect(redeemImpound(c)).toBe(false);
     c.credits = 1000;
     expect(redeemImpound(c)).toBe(true);
     expect(c.equipment).toEqual(['docking-computer']);
-    expect(c.credits).toBe(1000 - (FINES.fugitive - 50));
+    expect(c.credits).toBe(1000 - (fine - 50));
+  });
+
+  it('writes off what you cannot pay when there is nothing to hold', () => {
+    const c = newCommander('modern');
+    c.credits = 20;
+    c.equipment = [];
+    expect(charge(c, 500)).toEqual({ paid: 20, owed: 0, impounded: [] });
+    expect(c.impound).toBeNull();
   });
 
   it('sells high-tech gear only at high-tech worlds', () => {

@@ -211,7 +211,9 @@ export function loadCommander(): Commander | null {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const { legal: _old, ...saved } = JSON.parse(raw); // pre-records saves had one global status
-      return { ...newCommander('modern'), ...saved };
+      const c: Commander = { ...newCommander('modern'), ...saved };
+      if (c.impound && !c.impound.items.length) c.impound = null; // a debt with nothing held is written off
+      return c;
     }
   } catch {
     // Private mode or blocked storage: play without saving.

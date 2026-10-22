@@ -1,6 +1,6 @@
 import { systemAt, type StarSystem } from '../galaxy/generate';
 import { contrabandAt, stolenAt } from '../economy/legality';
-import { EQUIPMENT, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
+import { EQUIPMENT, FUEL_CAPACITY, FUEL_PRICE, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
 
 // The law, as set out in docs/design/law-and-travel.md:
 // - ordinary crimes are local: your record belongs to the system where it happened;
@@ -61,6 +61,16 @@ export function coolRecords(c: Commander) {
 
 export const FINES = { offender: 100, fugitive: 500, warrant: 1000 };
 
+/**
+ * Fines are cut to your means: never more than half the credits you hold,
+ * after a full tank's worth. A rich criminal pays the lot; one who's just
+ * lost everything pays little, and is never stranded without fuel.
+ */
+export function affordableFine(c: Commander, fine: number): number {
+  const spare = Math.max(0, c.credits - FUEL_CAPACITY * FUEL_PRICE);
+  return Math.min(fine, Math.floor(spare / 2));
+}
+
 const contraband = (c: Commander, system: StarSystem = here(c)) => contrabandAt(c, system);
 
 /** Anything the police would object to: contraband, or stolen goods. */
@@ -78,19 +88,22 @@ export interface Settlement {
 /**
  * Settle your account with the law in the current system: pay the fine, lose
  * the contraband and get a clean record here (and lose any warrant). Being
- * caught (disabled by police, a later stage) costs more. If you
+ * caught (disabled by police, a later stage) costs more, whatever your means. If you
  * can't pay, your equipment is impounded at this station until you do.
  */
 /** What the law here would fine you for your record (and any warrant), before contraband. */
 export function fineDue(c: Commander): number {
+  return affordableFine(c, fullFine(c));
+}
+
+const fullFine = (c: Commander) => {
   const status = legalStatus(c);
   return (status === 'clean' ? 0 : FINES[status]) + (c.warrant ? FINES.warrant : 0);
-}
+};
 
 export function settle(c: Commander, caught = false): Settlement {
   const status = legalStatus(c);
-  let fine = fineDue(c);
-  if (caught) fine = Math.round(fine * 1.5); // handing yourself in is treated more leniently
+  let fine = fullFine(c);
 
   const confiscated = contraband(c);
   for (const id of confiscated) delete c.cargo[id];
@@ -101,6 +114,8 @@ export function settle(c: Commander, caught = false): Settlement {
   }
   tidyStolen(c);
   if (confiscated.length && status === 'clean') fine = FINES.offender; // caught at inspection
+  // Handing yourself in is treated more leniently, and to your means; being caught isn't.
+  fine = caught ? Math.round(fine * 1.5) : affordableFine(c, fine);
 
   const { paid, owed, impounded } = charge(c, fine);
   clearRecord(c);
@@ -112,13 +127,14 @@ export function settle(c: Commander, caught = false): Settlement {
 export function charge(c: Commander, amount: number): { paid: number; owed: number; impounded: EquipmentId[] } {
   const paid = Math.min(amount, c.credits);
   c.credits = Math.round((c.credits - paid) * 10) / 10;
-  const owed = Math.round((amount - paid) * 10) / 10;
+  const prev = c.impound && c.impound.at === systemKey(here(c)) ? c.impound : null;
+  // With nothing to hold, the station writes off what you couldn't pay.
+  const owed = c.equipment.length || prev ? Math.round((amount - paid) * 10) / 10 : 0;
   let impounded: EquipmentId[] = [];
   if (owed > 0) {
     impounded = [...c.equipment];
     c.equipment = [];
     c.damaged = [];
-    const prev = c.impound && c.impound.at === systemKey(here(c)) ? c.impound : null;
     c.impound = { at: systemKey(here(c)), items: [...(prev?.items ?? []), ...impounded], owed: owed + (prev?.owed ?? 0) };
   }
   return { paid, owed, impounded };
