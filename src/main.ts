@@ -94,7 +94,7 @@ import { distanceLy, ECONOMIES, GOVERNMENTS, nearestTo, systemAt, type StarSyste
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
-import { activeEvent, EVENT_KINDS, newsArrives, newsAt, newsOf } from './economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsOf, setCausedEvents } from './economy/events';
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
@@ -343,6 +343,7 @@ function showNewGame() {
 
 function startCommander(difficulty: Difficulty) {
   commander = newCommander(difficulty);
+  setCausedEvents([]);
   // Your callsign: what other commanders see. Blank keeps your account's, or the original's Jameson.
   const typed = $<HTMLInputElement>('#callsign').value.trim();
   commander.name = cleanName(typed || currentAccount()?.callsign || commander.name);
@@ -3004,7 +3005,12 @@ function updateSpace(dt: number) {
     }
 
     const contact = station.contact(player, prev, cmdr().difficulty === 'classic');
-    if (contact?.kind === 'docked' && clearanceRefused()) {
+    if (contact?.kind === 'docked' && lockedDown()) {
+      station.turnAway(player);
+      sfx.thud();
+      setAutopilot(false);
+      flash('Docking refused · station in lockdown · containment breach', 3);
+    } else if (contact?.kind === 'docked' && clearanceRefused()) {
       station.turnAway(player);
       sfx.thud();
       setAutopilot(false);
@@ -3358,6 +3364,8 @@ let clearanceAnnounced = false;
 
 /** Fugitives are turned away by any station that checks; anarchies and feudal worlds don't. */
 const clearanceRefused = () => checksClearance(currentSystem()) && isFugitive();
+/** A station in lockdown (something got loose aboard) lets nobody in. */
+const lockedDown = () => eventsAt(currentSystem(), Date.now(), Date.now()).some((e) => e.type === 'lockdown');
 
 function updateClearance() {
   const d = player.obj.position.distanceTo(station.root.position);
@@ -3365,7 +3373,8 @@ function updateClearance() {
   if (clearanceAnnounced || d > CLEARANCE_RANGE) return;
   clearanceAnnounced = true;
   const name = stationName(currentSystem()).name;
-  if (clearanceRefused()) flash(`${name} · Docking refused: you are a Fugitive · U to surrender`, 4);
+  if (lockedDown()) flash(`${name} · Lockdown: containment breach · docking suspended`, 4);
+  else if (clearanceRefused()) flash(`${name} · Docking refused: you are a Fugitive · U to surrender`, 4);
   else if (checksClearance(currentSystem())) flash(`${name} · Transponder checked · Docking clearance granted`, 2.5);
   else flash(`${name} · No questions asked`, 2.5);
 }
@@ -4100,6 +4109,7 @@ function handleKey(code: string) {
       else if (code === 'ArrowLeft') showShip(shipIndex - 1);
       else if (code === 'KeyY' || code === 'Enter') {
         commander = loadCommander();
+        setCausedEvents(commander?.caused);
         if (commander) enterDocked();
         else showNewGame();
       } else if (code === 'KeyN') {
@@ -4245,6 +4255,7 @@ frame();
 
 // Accounts: every save also goes to the cloud when signed in; sign-in links land here.
 onSave(commanderSaved);
+onSave((c) => setCausedEvents(c.caused));
 void initAccount({
   flash,
   commanderReplaced: () => {

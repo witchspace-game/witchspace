@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
 import { cargoTonnes, newCommander } from './commander';
-import { ADRIFT_FALL, ADRIFT_HOLD, ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, blackmailPrice, checkMessages, collectHeld, decide, expireCases, PIRATES_FIND, ransomPrice, fileOn, recoverCase, rivalPrice, sellToRival, setAdrift } from './assignments';
+import { consequence, contentsOf, ADRIFT_FALL, ADRIFT_HOLD, ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, blackmailPrice, checkMessages, collectHeld, decide, expireCases, PIRATES_FIND, ransomPrice, fileOn, recoverCase, rivalPrice, sellToRival, setAdrift } from './assignments';
 import { deliver, destinationOf, loseContracts, logOf, standing, take } from './contracts';
 import { legalStatus } from './law';
+import { eventsAt, setCausedEvents } from '../economy/events';
 
 const lave = systemAt(0, 7);
 const T0 = Date.UTC(2026, 9, 22, 12);
@@ -172,6 +173,32 @@ describe('special assignments', () => {
     const k = c.adrift?.[0];
     // Either the pirates have it, or it's still out there (and falls later).
     if (k) expect(k.fate === 'ransom' || notes.length === 0).toBe(true);
+  });
+
+  it('what was inside decides what happens when it is opened or falls', () => {
+    const c = newCommander('modern');
+    const base = { company: 'hexon' as const, good: 'special', label: 'Sealed container', qty: 1, from: { galaxy: 0, system: 7 }, to: { galaxy: 0, system: 7 }, jumps: 3, pay: 800, danger: 0, rush: false, needs: 'Contractor' as const };
+    // Find a pathogen and a harmless one among Hexon's.
+    const ids = Array.from({ length: 200 }, (_, i) => `special:hexon:${i}`);
+    const pathogen = ids.find((id) => contentsOf({ id, company: 'hexon' }) === 'pathogen')!;
+    const benign = ids.find((id) => contentsOf({ id, company: 'hexon' }) === 'benign')!;
+    expect(contentsOf({ id: pathogen, company: 'hexon' })).toBe('pathogen'); // fixed, not random each time
+    expect(consequence(c, { ...base, id: benign }, 'station', lave, T0)).toBeNull();
+
+    expect(consequence(c, { ...base, id: pathogen }, 'station', lave, T0)).toMatch(/lockdown/);
+    const types = eventsAt(lave, T0 + 60_000, T0 + 60_000).map((e) => e.type);
+    expect(types).toContain('plague');
+    expect(types).toContain('lockdown');
+    expect(c.messages?.[0].from).toBe('Hexon Holdings'); // the medicine is already on its way
+    // One at a time per world.
+    expect(consequence(c, { ...base, id: pathogen + 'x' }, 'planet', lave, T0 + 1000)).toBeNull();
+    // A specimen falling to a planet takes root there.
+    const wy = Array.from({ length: 200 }, (_, i) => `special:wy:${i}`).find((id) => contentsOf({ id, company: 'wy' }) === 'specimen')!;
+    const leesti = systemAt(0, 129);
+    expect(consequence(c, { ...base, company: 'wy', id: wy }, 'planet', leesti, T0)).toMatch(/bloom/);
+    expect(eventsAt(leesti, T0 + 60_000, T0 + 60_000).some((e) => e.type === 'bloom')).toBe(true);
+    expect(fileOn(c, 'mutual', lave, T0).lines.some((l) => /bloom/.test(l.text) && !l.redacted)).toBe(true);
+    setCausedEvents([]);
   });
 });
 

@@ -134,6 +134,7 @@ import type { LaserId } from './weapons';
 import type { ExploreRecord } from './explore';
 import type { ActiveContract, CompanyLog } from './contracts';
 import type { AdriftCase, Message } from './assignments';
+import type { WorldEvent } from '../economy/events';
 import type { CompanyId } from './companies';
 
 export interface Commander {
@@ -181,6 +182,8 @@ export interface Commander {
   messages?: Message[];
   /** Favours you owe each company (a lawyer here, a word there): leverage for later. */
   favours?: Partial<Record<CompanyId, number>>;
+  /** World events you caused (a case opened, or fallen): yours, and the galaxy's now. */
+  caused?: WorldEvent[];
   /** Special cargo adrift where your ship was lost, waiting to be recovered. */
   adrift?: AdriftCase[];
   /** Missiles on the rails. */

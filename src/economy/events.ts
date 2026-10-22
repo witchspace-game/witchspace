@@ -9,7 +9,7 @@ import { hash } from './seed';
 // orders and spreads down supply chains. News of it travels at the speed of
 // ships: the further away you are, the later you hear.
 
-export type EventType = 'famine' | 'drought' | 'plague' | 'boom' | 'strike' | 'war' | 'blockade' | 'incursion' | 'crackdown';
+export type EventType = 'famine' | 'drought' | 'plague' | 'boom' | 'strike' | 'war' | 'blockade' | 'incursion' | 'crackdown' | 'lockdown' | 'bloom';
 
 interface EventKind {
   name: string;
@@ -89,6 +89,21 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     effects: { narcotics: -0.8, slaves: -0.7, firearms: -0.4 },
     weight: (s) => (s.government >= 1 && s.government <= 4 ? 0.8 : 0),
   },
+  // Only ever caused (a company's case opened, or fallen), never by chance.
+  lockdown: {
+    name: 'Station lockdown',
+    headline: (s) => `${s} station in lockdown: "containment breach", docking suspended`,
+    wanted: 'Nothing: the station is closed',
+    effects: { imports: -0.4, medicine: -0.4 },
+    weight: () => 0,
+  },
+  bloom: {
+    name: 'Strange bloom',
+    headline: (s) => `Strange bloom spreads across ${s}: crops overrun, scientists baffled`,
+    wanted: 'Food, Water',
+    effects: { food: -0.6, water: -0.3, textiles: -0.3 },
+    weight: () => 0,
+  },
 };
 
 const TYPES = Object.keys(EVENT_KINDS) as EventType[];
@@ -99,6 +114,14 @@ export interface WorldEvent {
   system: number;
   start: number; // ms
   end: number;
+  /** Caused by the commander (a company's case opened or fallen), not by chance. */
+  caused?: string;
+}
+
+// Events the commander caused: kept in their save and joined to the galaxy's own.
+let causedEvents: WorldEvent[] = [];
+export function setCausedEvents(events: WorldEvent[] | undefined) {
+  causedEvents = events ?? [];
 }
 
 const SLOT = 6 * 3600_000; // at most one event starts per system in each slot
@@ -127,7 +150,8 @@ export function eventsAt(s: StarSystem, from: number, to: number): WorldEvent[] 
     const end = start + (MIN_HOURS + hash(s, 63_000 + slot, 0) * (MAX_HOURS - MIN_HOURS)) * 3600_000;
     if (end >= from && start <= to) out.push({ type, galaxy: s.galaxy, system: s.index, start, end });
   }
-  return out;
+  for (const e of causedEvents) if (e.galaxy === s.galaxy && e.system === s.index && e.end >= from && e.start <= to) out.push(e);
+  return out.sort((a, b) => a.start - b.start);
 }
 
 /** The event happening at a system at time `t`, if any. */
