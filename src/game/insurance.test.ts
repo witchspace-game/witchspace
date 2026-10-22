@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newCommander } from './commander';
+import { FUEL_CAPACITY, STAKE, newCommander } from './commander';
 import { claimInsurance, EXCESS, excessFor } from './insurance';
 import { legalStatus, recordCrime } from './law';
 
@@ -22,7 +22,7 @@ describe('insurance (Modern rules)', () => {
     const c = kitted();
     c.damaged = ['ecm'];
     const claim = claimInsurance(c);
-    expect(claim).toMatchObject({ kind: 'paid', excess: 979, paid: 979, owed: 0 });
+    expect(claim).toMatchObject({ kind: 'paid', excess: 979, paid: 979 });
     expect(c.credits).toBe(10000 - 979);
     expect(c.equipment).toEqual(['fuel-scoops', 'ecm', 'extra-energy']);
     expect(c.damaged).toEqual(['ecm']); // wear and tear isn't covered
@@ -35,23 +35,34 @@ describe('insurance (Modern rules)', () => {
     expect(legalStatus(c)).toBe('offender');
   });
 
-  it('impounds the kit when you cannot pay the excess', () => {
+  it('never leaves you poorer than a new commander, and fills the tank', () => {
     const c = kitted();
-    c.credits = 100;
+    c.credits = 300;
+    c.fuel = 0;
     const claim = claimInsurance(c);
-    expect(claim).toMatchObject({ kind: 'paid', paid: 100, owed: 879 });
-    expect(c.equipment).toEqual([]);
-    expect(c.impound?.items).toEqual(['fuel-scoops', 'ecm', 'extra-energy']);
+    expect(claim).toMatchObject({ kind: 'paid', excess: 979, paid: 300 - STAKE });
+    expect(c.credits).toBe(STAKE);
+    expect(c.fuel).toBe(FUEL_CAPACITY);
+    expect(c.equipment).toEqual(['fuel-scoops', 'ecm', 'extra-energy']);
+    expect(c.impound).toBeNull();
   });
 
   it("won't pay for a Fugitive: a bare Cobra, and the record stands", () => {
     const c = kitted();
     recordCrime(c, 'fugitive', true);
-    expect(claimInsurance(c)).toEqual({ kind: 'void' });
+    expect(claimInsurance(c)).toEqual({ kind: 'void', stake: 0 });
     expect(c.equipment).toEqual([]);
     expect(c.lasers).toEqual({ front: 'pulse' });
     expect(c.credits).toBe(10000);
     expect(legalStatus(c)).toBe('fugitive');
+  });
+
+  it('stakes a penniless Fugitive enough to start again', () => {
+    const c = kitted();
+    c.credits = 12;
+    recordCrime(c, 'fugitive', true);
+    expect(claimInsurance(c)).toEqual({ kind: 'void', stake: STAKE - 12 });
+    expect(c.credits).toBe(STAKE);
   });
 
   it('lets an escape pod save a Fugitive\'s kit', () => {

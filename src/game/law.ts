@@ -1,6 +1,6 @@
 import { systemAt, type StarSystem } from '../galaxy/generate';
 import { contrabandAt, stolenAt } from '../economy/legality';
-import { EQUIPMENT, FUEL_CAPACITY, FUEL_PRICE, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
+import { EQUIPMENT, STAKE, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
 
 // The law, as set out in docs/design/law-and-travel.md:
 // - ordinary crimes are local: your record belongs to the system where it happened;
@@ -61,14 +61,16 @@ export function coolRecords(c: Commander) {
 
 export const FINES = { offender: 100, fugitive: 500, warrant: 1000 };
 
+/** Credits above a new commander's stake: all the law or the insurers will take from. */
+export const spareCredits = (c: Commander) => Math.max(0, c.credits - STAKE);
+
 /**
- * Fines are cut to your means: never more than half the credits you hold,
- * after a full tank's worth. A rich criminal pays the lot; one who's just
- * lost everything pays little, and is never stranded without fuel.
+ * Fines are cut to your means: never more than half your spare credits. A
+ * rich criminal pays the lot; one who's just lost everything pays little,
+ * and always keeps enough to start trading again.
  */
 export function affordableFine(c: Commander, fine: number): number {
-  const spare = Math.max(0, c.credits - FUEL_CAPACITY * FUEL_PRICE);
-  return Math.min(fine, Math.floor(spare / 2));
+  return Math.min(fine, Math.floor(spareCredits(c) / 2));
 }
 
 const contraband = (c: Commander, system: StarSystem = here(c)) => contrabandAt(c, system);

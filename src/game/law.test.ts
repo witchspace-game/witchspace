@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
-import { FUEL_CAPACITY, FUEL_PRICE, newCommander } from './commander';
+import { STAKE, newCommander } from './commander';
 import { coolRecords, equipmentForSale, legalStatus, recordCrime, redeemImpound, settle, fineDue, charge, FINES } from './law';
 
 const LAVE = systemAt(0, 7);
@@ -74,15 +74,18 @@ describe('the law', () => {
     expect(fineDue(c)).toBe(0);
   });
 
-  it('fines are cut to your means, and leave you a tank of fuel', () => {
+  it('fines are cut to your means, and never take your stake', () => {
     const c = newCommander('modern');
-    c.credits = 100;
+    c.credits = 300;
     recordCrime(c, 'fugitive', true);
     const s = settle(c);
-    expect(s.fine).toBe(Math.floor((100 - FUEL_CAPACITY * FUEL_PRICE) / 2));
+    expect(s.fine).toBe((300 - STAKE) / 2);
     expect(s.owed).toBe(0);
-    expect(c.credits).toBeGreaterThanOrEqual(FUEL_CAPACITY * FUEL_PRICE);
     expect(legalStatus(c)).toBe('clean');
+    recordCrime(c, 'fugitive', true);
+    c.credits = STAKE;
+    expect(settle(c).fine).toBe(0);
+    expect(c.credits).toBe(STAKE);
   });
 
   it('impounds equipment when you are caught and cannot pay, until you do', () => {

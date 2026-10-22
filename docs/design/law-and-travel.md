@@ -59,7 +59,7 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
 | **Run** | Jump to another system, ideally an anarchy | Fuel, time and danger |
 
 - **Surrender is the guaranteed way out. It always works in a lawful system, and it always hurts.**
-- *(Built, first pass: U surrenders anywhere with a government. Slow below 15% speed and hold still for 5 seconds; firing or speeding up breaks it and counts as a serious crime. You pay the fine, the contraband is confiscated and your record here is cleared. You can also settle the same way at the desk of any station that lets you dock. Fines are cut to your means: never more than half your credits after a full tank's worth, so a commander who has just lost everything isn't buried in debt. Being caught, a later stage, will cost the full fine, and impound your equipment if you can't pay. Docking as an Offender settles the fine automatically, and lawful stations inspect your hold. Fugitives are refused docking wherever transponders are checked, which means everywhere but anarchies and feudal worlds. Police in those systems scan nearby ships for contraband.)*
+- *(Built, first pass: U surrenders anywhere with a government. Slow below 15% speed and hold still for 5 seconds; firing or speeding up breaks it and counts as a serious crime. You pay the fine, the contraband is confiscated and your record here is cleared. You can also settle the same way at the desk of any station that lets you dock. Fines are cut to your means: never more than half your credits above a new commander's 100 Cr stake, so a commander who has just lost everything isn't buried in debt. Being caught, a later stage, will cost the full fine, and impound your equipment if you can't pay. Docking as an Offender settles the fine automatically, and lawful stations inspect your hold. Fugitives are refused docking wherever transponders are checked, which means everywhere but anarchies and feudal worlds. Police in those systems scan nearby ships for contraband.)*
 - **Surrender is not a free escape from a losing fight:** you're exposed until the police arrive.
 - **Firing after surrendering** pushes your record to its most serious level, and that system won't accept another surrender from you for a while.
 
@@ -105,7 +105,7 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
 
 ### Insurance is a product you buy
 
-*(Built so far: everyone is insured, with no premiums yet. A claim costs an excess of a tenth of the kit's value (at least 250 Cr), impounding the kit if you can't pay. Kit that was already damaged stays damaged, and your record stands. Fugitives aren't covered and get a bare Cobra (pulse laser, no upgrades), unless an escape pod saves their kit.)*
+*(Built so far: everyone is insured, with no premiums yet. A claim costs an excess of a tenth of the kit's value (at least 250 Cr), but never takes you below a new commander's 100 Cr stake: whatever you can't pay is written off. The new ship comes with a full tank. Kit that was already damaged stays damaged, and your record stands. Fugitives aren't covered and get a bare Cobra (pulse laser, no upgrades), unless an escape pod saves their kit; the Co-operative tops them up to the 100 Cr stake. Losing the hold is the real cost, and it's enough.)*
 
 - **Insured:** you pay a premium each time you launch; losing your ship costs only an excess.
 - **Premiums rise** with a poor record. **Fugitives can't get cover.**

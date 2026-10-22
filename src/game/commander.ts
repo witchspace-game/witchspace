@@ -176,11 +176,17 @@ export interface Commander {
 
 const KEY = 'witchspace.commander.v1';
 
+/**
+ * A new commander's 100 credits. Nothing the law or the insurers take leaves
+ * you with less, so you can always buy a hold of something and start again.
+ */
+export const STAKE = 100;
+
 // Every commander starts as in 1984: a Cobra, Lave and 100 credits.
 export const newCommander = (difficulty: Difficulty): Commander => ({
   name: 'Jameson',
   difficulty,
-  credits: 100,
+  credits: STAKE,
   equipment: [],
   cargo: {},
   records: {},
