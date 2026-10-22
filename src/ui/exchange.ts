@@ -21,7 +21,7 @@ import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, sta
 import { cancelOrder, collect, describeFill, placeOrder, type OrderState } from '../economy/orders';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
 import { bestOutlets, bestRoutes } from '../economy/routes';
-import { systemAt, type StarSystem } from '../galaxy/generate';
+import { GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
 
 // The station market as a trading exchange, in the style of today's crypto
 // exchanges: a list of pairs against the credit, a candlestick chart, the
@@ -532,8 +532,11 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     if (!routesOpen) return;
     const c = ctx.commander;
     const course = c.target;
+    // Lawless worlds pay a danger premium; say so, so the best runs are a real choice.
+    const risk = (s: StarSystem) =>
+      s.government <= 1 ? `<em class="ex-risk high">${GOVERNMENTS[s.government]} · pirates</em>` : s.government <= 3 ? `<em class="ex-risk">${GOVERNMENTS[s.government]}</em>` : '';
     const place = (s: StarSystem, ly: number, reachable = true) =>
-      `<b>${s.name}</b><small>${ly.toFixed(1)} LY${reachable ? '' : ' · refuel first'}</small>`;
+      `<b>${s.name}</b><small>${ly.toFixed(1)} LY${reachable ? '' : ' · refuel first'}</small>${risk(s)}`;
     const courseButton = (s: StarSystem) =>
       s.index === course ? '<span class="ex-on-course">On course</span>' : `<button data-course="${s.index}">Set course</button>`;
     const routes = bestRoutes(ctx);

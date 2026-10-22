@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy, systemAt } from '../galaxy/generate';
 import { cargoTonnage, COMMODITIES } from './commodities';
-import { candles, costToBuy, drift, equilibriumStock, freshMarket, loseDelivery, npcTrades, orderBook, priceAt, quoteClassic, quoteModern, recentTrades, recover, stationOrder, stockFor, tradeBalance, upcomingDeliveries } from './market';
+import { candles, costToBuy, drift, equilibriumPrice, equilibriumStock, freshMarket, loseDelivery, npcTrades, orderBook, priceAt, quoteClassic, quoteModern, recentTrades, recover, stationOrder, stockFor, tradeBalance, upcomingDeliveries } from './market';
 
 const price = (q: ReturnType<typeof quoteModern>, id: string) => q.find((x) => x.commodity.id === id)!.price;
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -238,5 +238,26 @@ describe('supply chains and deliveries', () => {
     const state = freshMarket(lave, NOW);
     loseDelivery(state, { id: 'food', t: NOW - 1000, qty: 4 }, NOW);
     expect(state.lost ?? []).toHaveLength(0);
+  });
+});
+
+describe('risk pays', () => {
+  const all = Array.from({ length: 256 }, (_, i) => systemAt(0, i));
+  const food = COMMODITIES.findIndex((c) => c.id === 'food');
+
+  it('lawless worlds pay more for what they import, and sell their exports for less', () => {
+    for (const s of all.filter((x) => x.government === 0)) {
+      const balance = tradeBalance(s, 'food');
+      const safe = { ...s, government: 7 };
+      const ratio = equilibriumPrice(s, COMMODITIES[food], food) / equilibriumPrice(safe, COMMODITIES[food], food);
+      if (balance < -0.1) expect(ratio).toBeGreaterThan(1);
+      if (balance > 0.1) expect(ratio).toBeLessThan(1);
+    }
+  });
+
+  it('safe worlds and Classic markets carry no premium', () => {
+    const s = all.find((x) => x.government >= 4)!;
+    const anarchy = { ...s, government: 0 };
+    expect(quoteClassic(anarchy, 1)[food].price).toBe(quoteClassic(s, 1)[food].price);
   });
 });

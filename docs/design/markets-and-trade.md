@@ -77,6 +77,14 @@ NPC traders' cargo is real. The traders you meet in flight are carrying it, and 
 
 Traders far from the player don't need to be simulated in flight. A deterministic schedule of departures, arrivals and losses, from the seed and the clock, is enough, as with today's NPC trade stream. When you're in a system, the traders you meet are the ones on that schedule.
 
+**Built (October 2026): deeper markets, the trade computer, and risk that pays.**
+
+- **Depth.** Living markets are six times deeper than 1984's (`MARKET_DEPTH`), and importers keep at least 35% of an average world's stock. One Cobra load moves a price a little; only a stream of traders moves it a lot. A new commander makes about 45 Cr a run, one with 1,000 Cr about 250 to 650.
+- **Trade computer** (Modern, on the exchange): live prices at every market within a tank of fuel, the best runs from here with the profit on a full load (your own price impact included), better markets for your hold, and Set course. Lawless destinations are tagged.
+- **Danger premium** (`DANGER_PREMIUM`): fewer traders brave lawless space, so imports cost more and exports less there: up to 45% in an anarchy, 32% feudal, 16% multi-government, 7% dictatorship. Runs into anarchies and feudal worlds pay about 1.6 times a safe run.
+- **Crisis premium** (`CRISIS`): a world in trouble pays over the odds for what it lacks, on top of the shortage itself: a famine about 2.4 times the usual price of food, a plague over 3 times for medicine.
+- Classic keeps 1984's prices and stock throughout.
+
 ## 2. World events
 
 *(Built so far: generated events (famine, drought, plague, boom, mining strike, civil war, pirate blockade, Thargoid incursion, police crackdown) from each system's seed and the clock, about one world in ten affected at any time, lasting two to eight hours. They shift the stock of the goods they touch, so prices move, stations post orders and shortages spread down supply chains. News travels at 10 minutes plus 12 minutes per light year, up to 25 light years: a News tab at stations, diamonds and a News line on the galaxy map, a banner on the exchange, markers on the chart, and a headline when you arrive somewhere in crisis. Once news of a shortage reaches a world, its traders start buying what's wanted, so a fast ship that gets there first buys cheaper. Player-made blockades and community-written event files are still to come.)*
