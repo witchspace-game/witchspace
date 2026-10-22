@@ -90,7 +90,7 @@ describe('the explorer’s record', () => {
     const poi = all.flatMap((s) => poisOf(s).map((p) => [s, p] as const))[0];
     recordDiscovery(c, poi[0], poi[1]);
     const before = c.credits;
-    const paid = sellData(c, lave);
+    const paid = sellData(c, lave).credits;
     expect(paid).toBeGreaterThan(0);
     expect(c.credits).toBe(before + paid);
     expect(exploreOf(c).data).toHaveLength(0);

@@ -4,7 +4,8 @@ import { stationTrades } from '../economy/legality';
 import { DANGER_PREMIUM, equilibriumPrice, tradeBalance } from '../economy/market';
 import { hash } from '../economy/seed';
 import { FUEL_CAPACITY, type Commander } from './commander';
-import { COMPANIES, COMPANY_IDS, pickCompany, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
+import { COMPANIES, COMPANY_IDS, pickCompany, presence, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
+import { exploreOf, isSurveyed, worldOf } from './explore';
 
 // Company contracts (Modern rules), as set out in
 // docs/design/companies-and-contracts.md: carry the company's cargo from here
@@ -33,6 +34,8 @@ export interface Contract {
   label?: string;
   /** A special assignment (game/assignments.ts). */
   special?: boolean;
+  /** A Wexley-Yorozu survey contract: survey the moons at `to`, hand the data in at any W-Y station. No cargo. */
+  survey?: boolean;
 }
 
 /** A contract you've taken, counting down. */
@@ -141,6 +144,11 @@ export function board(c: Commander, here: StarSystem, now: number): Contract[] {
     const o = offerFrom(c, here, near, company, (salt) => r(salt, k), starter, `${here.galaxy}:${here.index}:${slot}:${k}`);
     if (o) offers.push(o);
   }
+  // Wexley-Yorozu stations usually have a survey to offer too.
+  if (wyWorks(here) && r(10, 0) < 0.75) {
+    const o = surveyOffer(here, near, (salt) => r(salt, 0), `survey:${here.galaxy}:${here.index}:${slot}`);
+    if (o) offers.push(o);
+  }
   return offers.filter((o) => !c.contracts?.some((a) => a.id === o.id) && !c.contractsDone?.includes(o.id)).sort((a, b) => b.pay - a.pay);
 }
 
@@ -191,6 +199,44 @@ function offerFrom(c: Commander, here: StarSystem, near: { s: StarSystem; n: num
   const pay = Math.round(base * (rush ? 1.4 : 1)) + danger;
   return { id, company, good, qty, from: at(here), to: at(dest), jumps: minJumps + (rush ? 0 : 2), pay, danger, rush, needs: needsFor(qty * priceHere) };
 }
+
+/** Where Wexley-Yorozu does business: survey contracts are offered and handed in there. */
+export const wyWorks = (s: StarSystem) => presence(s).wy > 0.5;
+
+/** Survey pay: a base, per moon, and per jump out. */
+export const SURVEY_PAY = { base: 120, moon: 90, jump: 70 } as const;
+
+/** A survey of the moons of a system two or three jumps out. */
+function surveyOffer(here: StarSystem, near: { s: StarSystem; n: number }[], r: (salt: number) => number, id: string): Contract | null {
+  const targets = near.filter(({ s, n }) => n >= 2 && worldOf(s).moons.length > 0);
+  if (!targets.length) return null;
+  const { s: dest, n } = targets[Math.floor(r(11) * targets.length)];
+  const moons = worldOf(dest).moons.length;
+  return {
+    id,
+    company: 'wy',
+    good: 'survey',
+    label: moons === 1 ? 'Moon survey' : 'Moon surveys',
+    survey: true,
+    qty: 0,
+    from: at(here),
+    to: at(dest),
+    jumps: n + 2,
+    pay: SURVEY_PAY.base + SURVEY_PAY.moon * moons + SURVEY_PAY.jump * n,
+    danger: 0,
+    rush: false,
+    needs: 'Casual',
+  };
+}
+
+/** Have you surveyed every moon the contract asks for? */
+export function surveyDone(c: Commander, a: Contract): boolean {
+  const s = placeOf(a.to);
+  return worldOf(s).moons.every((_, i) => isSurveyed(c, s, `moon${i}`));
+}
+
+/** What a contract is, in a line: "4 t Food" or "Moon surveys of Riedquat". */
+export const contractWhat = (a: Contract) => (a.survey ? `${cargoName(a)} of ${placeOf(a.to).name}` : `${a.qty} t ${cargoName(a)}`);
 
 export const standing = (c: Commander, id: CompanyId) => c.standing?.[id] ?? 0;
 
@@ -284,15 +330,15 @@ export function afterJump(c: Commander, now = Date.now()): string[] {
     const to = placeOf(a.to).name;
     if (a.jumpsLeft === 0) {
       notes.push(`${cargoName(a)} for ${to}: last jump`);
-      notice(c, a, 'last', 'One jump left', `Your ${a.qty} t ${cargoName(a)} is due at ${to} by your next jump. After that it's late, for half pay.`, now);
+      notice(c, a, 'last', 'One jump left', `Your ${contractWhat(a)} is due ${a.survey ? 'at a Wexley-Yorozu station' : `at ${to}`} by your next jump. After that it's late, for half pay.`, now);
     }
-    if (a.jumpsLeft === -1) notice(c, a, 'late', 'Running late', `Your ${cargoName(a)} for ${to} is late: half pay on delivery. In ${LATE_GRACE} more jumps we take it back.`, now);
+    if (a.jumpsLeft === -1) notice(c, a, 'late', 'Running late', `Your ${contractWhat(a)} is late: half pay on delivery. In ${LATE_GRACE} more jumps we ${a.survey ? 'cancel it' : 'take it back'}.`, now);
     if (a.jumpsLeft < -LATE_GRACE) {
       finish(c, a.id);
       addStanding(c, a.company, -3);
       logContract(c, a.company, 'failed');
       notes.push(`${COMPANIES[a.company].name} has reclaimed its ${cargoName(a)}: contract failed`);
-      notice(c, a, 'reclaimed', 'Cargo reclaimed', `You were ${LATE_GRACE} jumps past the deadline, so we've taken back our ${a.qty} t ${cargoName(a)} for ${to}. Contract cancelled.`, now);
+      notice(c, a, 'reclaimed', a.survey ? 'Survey cancelled' : 'Cargo reclaimed', a.survey ? `You were ${LATE_GRACE} jumps past the deadline for our ${contractWhat(a)}. Contract cancelled.` : `You were ${LATE_GRACE} jumps past the deadline, so we've taken back our ${a.qty} t ${cargoName(a)} for ${to}. Contract cancelled.`, now);
     }
   }
   return notes;
@@ -312,7 +358,13 @@ function notice(c: Commander, a: Contract, kind: string, subject: string, body: 
 export function deliver(c: Commander, here: StarSystem): string[] {
   const notes: string[] = [];
   for (const a of [...(c.contracts ?? [])]) {
-    if (key(a.to) !== key(at(here))) continue;
+    if (a.survey) {
+      // Handed in at any Wexley-Yorozu station, once every moon is surveyed. W-Y keeps the data.
+      if (!wyWorks(here) || !surveyDone(c, a)) continue;
+      const target = placeOf(a.to);
+      const e = exploreOf(c);
+      e.data = e.data.filter((d) => !(d.galaxy === target.galaxy && d.system === target.index && d.body.startsWith('moon')));
+    } else if (key(a.to) !== key(at(here))) continue;
     const late = a.jumpsLeft < 0;
     const pay = late ? Math.round(a.pay / 2) : a.pay;
     c.credits = Math.round((c.credits + pay) * 10) / 10;
@@ -321,14 +373,14 @@ export function deliver(c: Commander, here: StarSystem): string[] {
     logContract(c, a.company, late ? 'late' : a.special ? 'special' : 'delivered');
     finish(c, a.id);
     const after = standingName(standing(c, a.company));
-    notes.push(`${COMPANIES[a.company].name} · ${a.qty} t ${cargoName(a)} delivered${late ? ' late' : ''} · ${pay.toLocaleString()} Cr` + (after !== before ? ` · now ${after}` : ''));
+    notes.push(`${COMPANIES[a.company].name} · ${contractWhat(a)} ${a.survey ? 'handed in' : 'delivered'}${late ? ' late' : ''} · ${pay.toLocaleString()} Cr` + (after !== before ? ` · now ${after}` : ''));
   }
   return notes;
 }
 
 /** Ship lost: the company's cargo with it. Special cargo survives, adrift (see game/assignments.ts). */
 export function loseContracts(c: Commander): string[] {
-  const lost = (c.contracts ?? []).filter((a) => !a.special);
+  const lost = (c.contracts ?? []).filter((a) => !a.special && !a.survey); // surveys aren't cargo
   for (const a of lost) {
     finish(c, a.id);
     addStanding(c, a.company, -2);
