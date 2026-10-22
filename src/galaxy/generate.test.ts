@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, HOME, systemAt, systemsWithin } from './generate';
+import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, HOME, nearestTo, systemAt, systemsWithin } from './generate';
 
 // Facts every Elite player knows. If these hold, the generator is faithful.
 describe('the first galaxy', () => {
@@ -59,5 +59,32 @@ describe('every galaxy', () => {
 
   it('is stable: the same every time', () => {
     expect(galaxy(3).map((s) => s.name)).toEqual(galaxy(3).map((s) => s.name));
+  });
+});
+
+describe('as the original reckons it', () => {
+  const g = galaxy(0);
+  const named = (n: string) => g.find((s) => s.name === n)!;
+  const lave = named('Lave');
+
+  it('measures distances in steps of 0.4 LY (TT111)', () => {
+    expect(distanceLy(lave, named('Tibedied'))).toBe(17.6); // the deep dive's worked example
+    expect(distanceLy(lave, named('Leesti'))).toBe(3.6);
+    expect(distanceLy(lave, named('Zaonce'))).toBe(5.6);
+    expect(distanceLy(lave, named('Riedquat'))).toBe(6.8);
+  });
+
+  it('lands a galactic jump at the system nearest the middle of the chart', () => {
+    const s = nearestTo(1, 96, 96);
+    for (const o of galaxy(1)) expect((Math.abs(o.x - 96) >> 1) + (Math.abs(o.y - 96) >> 1)).toBeGreaterThanOrEqual((Math.abs(s.x - 96) >> 1) + (Math.abs(s.y - 96) >> 1));
+  });
+
+  it('knows who lives there', () => {
+    expect(lave.species).toBe('Human Colonials');
+    expect(named('Diso').species).toBe('Black Furry Felines');
+    // The original can't make slimy humanoids or furry frogs.
+    const all = Array.from({ length: 8 }, (_, i) => galaxy(i)).flat().map((s) => s.species);
+    expect(all.some((x) => /Slimy Humanoids|Furry Frogs/.test(x))).toBe(false);
+    expect(all.some((x) => x !== 'Human Colonials')).toBe(true);
   });
 });

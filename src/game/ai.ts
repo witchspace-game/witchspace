@@ -21,6 +21,8 @@ export interface World {
   npcs: NpcShip[];
   /** What a ship's hold is worth here, in credits, as a pirate's scanner reads it. */
   cargoValue?: (ship: PlayerShip) => number;
+  /** Classic rules: inside the station's safe zone, pirates lose their nerve (as in 1984). */
+  inSafeZone?: (at: THREE.Vector3) => boolean;
 }
 
 export const POLICE_RANGE = 6000; // metres: police respond to pirates this close
@@ -109,6 +111,7 @@ export function think(npc: NpcShip, world: World) {
       }
       // Fight back against whoever is shooting, police included.
       if (recentAttacker) return attack(recentAttacker);
+      if (world.inSafeZone?.(at)) return cruise();
       // Keep after the current prey while it's still about.
       const current = npc.target;
       if ((npc.mode === 'attack' || npc.mode === 'breakoff') && valid(current) && current.obj.position.distanceTo(at) < PIRATE_RANGE * 1.5) {

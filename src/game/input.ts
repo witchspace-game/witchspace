@@ -253,8 +253,8 @@ export function flightInput(): FlightInput {
     kbRoll += keyRamp(now, 'KeyD') - keyRamp(now, 'KeyA');
     kbYaw = keyRamp(now, 'KeyE') - keyRamp(now, 'KeyQ');
   } else {
-    // Classic: W/S pitch (push forward to dive), X climbs as on the BBC.
-    kbPitch += keyRamp(now, 'KeyS', 'KeyX') - keyRamp(now, 'KeyW');
+    // Classic: W/S pitch (push forward to dive). X is the missile, so it doesn't climb too.
+    kbPitch += keyRamp(now, 'KeyS') - keyRamp(now, 'KeyW');
     kbRoll += keyRamp(now, 'KeyD') - keyRamp(now, 'KeyA');
   }
 

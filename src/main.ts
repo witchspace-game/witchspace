@@ -86,7 +86,7 @@ import { takePhoto } from './ui/photo';
 import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { closeMap, chooseCursor, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
-import { distanceLy, ECONOMIES, GOVERNMENTS, systemAt, type StarSystem } from './galaxy/generate';
+import { distanceLy, ECONOMIES, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
@@ -1761,8 +1761,12 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
     flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr`, 2.5);
   } else {
     flash(`${npc.def.name} destroyed`, 1.5);
-    becomeFugitive(true); // killing police or an innocent trader is a serious crime
+    // Killing police or an innocent trader is a serious crime. Under Classic
+    // rules, as in 1984, a trader only counts if the station sees it happen.
+    if (npc.role !== 'trader' || c.difficulty !== 'classic' || inSafeZone(npc.obj.position)) becomeFugitive(true);
   }
+  // As in 1984, every 256th kill earns the old salute.
+  if (Math.floor(c.kills / 256) > Math.floor((c.kills - (combatComputer ? 0.5 : 1)) / 256)) setTimeout(() => flash('Right On Commander!', 3), 1200);
   if (combatRating(c.kills) !== before) setTimeout(() => flash(`Combat rating: ${combatRating(c.kills)}`, 3), 2600);
   saveCommander(c);
 }
@@ -1788,6 +1792,10 @@ function bastionDestroyed(c: Carrier, velocity: THREE.Vector3, byPlayer: boolean
   cm.bastionsDestroyed = (cm.bastionsDestroyed ?? 0) + 1;
   setTimeout(() => flash(`Bastion carrier destroyed${aboard ? ` with ${aboard} Lancers aboard` : ''} · the Marshals will not forget`, 4), 1800);
 }
+
+/** The station's safe zone: close enough for its guns and its police to see. */
+const SAFE_ZONE = 5000; // metres
+const inSafeZone = (at: THREE.Vector3) => commander !== null && at.distanceTo(station.root.position) < SAFE_ZONE;
 
 /** The player shot or rammed a ship. Pirates are fair game; anyone else is a crime. */
 function playerHitNpc(npc: NpcShip, damage: number) {
@@ -1974,6 +1982,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       playerPresent: alive,
       playerWanted: isFugitive(),
       npcs,
+      inSafeZone: (at: THREE.Vector3) => cmdr().difficulty === 'classic' && inSafeZone(at),
       cargoValue: (ship: PlayerShip) => (ship === player ? (commander ? holdValue(cmdr().cargo) : 0) : holdValue(npcs.find((n) => n.ship === ship)?.cargo ?? {})),
     };
     for (const npc of npcs) think(npc, world);
@@ -2273,7 +2282,9 @@ function playerEcm() {
   ecmCooldown = ECM_COOLDOWN;
   sfx.ecm();
   hitFeedback(0.2);
-  const hits = missiles.filter((m) => m.position.distanceTo(player.obj.position) < ECM_RANGE);
+  // Classic, as in 1984: ECM destroys every missile in flight, wherever it is.
+  const range = cmdr().difficulty === 'classic' ? Infinity : ECM_RANGE;
+  const hits = missiles.filter((m) => m.position.distanceTo(player.obj.position) < range);
   for (const m of hits) explodeMissile(m);
   if (sharedSpace.connected) sharedSpace.ecm(); // the server clears commanders' missiles
   flash(hits.length ? `ECM · ${hits.length} missile${hits.length > 1 ? 's' : ''} destroyed` : 'ECM', 1.5);
@@ -2320,8 +2331,10 @@ function updateMissiles(dt: number) {
         return;
       }
     } else if (victim) {
-      if (m.owner === player) playerHitNpc(victim, MISSILE.damage);
-      else if (victim.hit(MISSILE.damage, m.owner)) destroyNpc(victim, m.owner.obj);
+      // Classic, as in 1984: a missile that reaches a ship destroys it outright.
+      const damage = cmdr().difficulty === 'classic' ? Infinity : MISSILE.damage;
+      if (m.owner === player) playerHitNpc(victim, damage);
+      else if (victim.hit(damage, m.owner)) destroyNpc(victim, m.owner.obj);
     }
   }
 
@@ -2665,7 +2678,7 @@ function updateSpace(dt: number) {
       flash('Altitude warning', 1.5);
     }
 
-    const contact = station.contact(player, prev);
+    const contact = station.contact(player, prev, cmdr().difficulty === 'classic');
     if (contact?.kind === 'docked' && clearanceRefused()) {
       station.turnAway(player);
       sfx.thud();
@@ -2947,7 +2960,6 @@ async function dock() {
   sfx.tunnel();
   await playTunnel();
   const c = cmdr();
-  c.visits += 1; // Classic markets change with each visit
   // Offenders are fined on arrival; lawful stations also inspect the hold.
   const sys = currentSystem();
   // Inspections are certain under Classic rules and likely, not certain, under Modern.
@@ -3043,7 +3055,6 @@ async function surrender() {
   sfx.tunnel();
   await playTunnel();
   const c = cmdr();
-  c.visits += 1;
   const settlement = settle(c);
   saveCommander(c);
   enterDocked();
@@ -3524,8 +3535,9 @@ async function hyperspace() {
   const from = currentSystem();
   const galactic = galacticJump;
   galacticJump = false;
-  // The galactic hyperdrive lands you in the same place in the next galaxy.
-  const dest = galactic ? systemAt((from.galaxy + 1) % 8, from.index) : destination();
+  // The galactic hyperdrive lands you near the middle of the next galaxy's
+  // chart, at the system nearest (96, 96), as in the original.
+  const dest = galactic ? nearestTo((from.galaxy + 1) % 8, 96, 96) : destination();
   if (!dest) return;
   setAutopilot(false);
   setState('transition');
@@ -3536,6 +3548,7 @@ async function hyperspace() {
   else c.fuel = Math.max(0, Math.round((c.fuel - distanceLy(from, dest)) * 10) / 10);
   c.location = { galaxy: dest.galaxy, system: dest.index };
   c.target = null;
+  c.visits += 1; // Classic markets are set on arrival in a system, as in 1984
   // Records stay in the system where the crime happened, and cool as you travel.
   coolRecords(c);
   surrenderTimer = null;

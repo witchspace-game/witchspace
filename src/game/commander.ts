@@ -249,7 +249,7 @@ export function deleteCommander() {
 }
 
 /** Tonnes used in the hold (gold counts by the kilogram, gems by the gram). */
-export const cargoTonnes = (c: Commander) => cargoTonnage(c.cargo);
+export const cargoTonnes = (c: Commander) => cargoTonnage(c.cargo, c.difficulty === 'classic');
 
 export const hasEquipment = (c: Commander, id: EquipmentId) => c.equipment.includes(id);
 
