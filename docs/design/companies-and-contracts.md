@@ -168,7 +168,7 @@ Haulers arrive from witchspace **14 to 22 km out** and fly in; outbound ones fly
 
 Today any crime in a system with law is known at once, wherever it happens. That's neither realistic nor much fun. Instead: **close to the station the law sees everything; further out, it needs a witness.**
 
-*(Built, part 1, October 2026, Modern rules: station space 10 km; witnesses are police within 8 km or other ships within 6 km; a victim that docks, jumps or is still alive when you leave reports you; distress calls bring two Vipers to the scene after 10 s + 1 s per 200 m beyond station space. Running dark and the police hail come next.)*
+*(Built, part 1, October 2026, Modern rules: station space 10 km; witnesses are police within 8 km or other ships within 6 km; a victim that docks, jumps or is still alive when you leave reports you; distress calls bring two Vipers to the scene after 10 s + 1 s per 200 m beyond station space. Part 2, also built: the transponder switch (0, or **Dark** on touch), unidentified crimes and the suspect rule (switching on within 3 minutes where police or the station can see), lawful stations refusing a dark ship, the 15 s police hail (a broken transponder: hold still and a Viper reads your hull at 2 km), the transponder as damageable equipment (repair 90 Cr), and the distress jammer (800 Cr, sold only in anarchies and feudal worlds, confiscated where police scan). Every ship flown is a Cobra Mk III for now, so the "rare hull is recognised" rule waits for more ships.)*
 
 ### Station space
 
@@ -212,6 +212,24 @@ Lawful police don't shoot an unidentified ship on sight. A transponder can be da
 
 The same courtesy runs through the whole law: **warn first, escalate on defiance**, as the station already does when you fire near it.
 
+### Scans and company cargo
+
+How the police look at you today (Modern rules): a Viper scans a ship that stays within about 1.2 km of it for 3 seconds, once per visit, anywhere above Feudal. Docking, a ship carrying nothing illegal is never inspected; one that is faces a chance by government (Communist 60 %, Confederacy 50 %, Democracy 65 %, Corporate State 80 %). Salvage (from a pirate, or someone else's kill) is legal; cargo from a trader you destroyed is stolen and a scan finds it.
+
+**The gap:** a company's consignment is kept apart from your own hold, so scans never see it, and Vorg's ticking crates pass straight through a Corporate State. They shouldn't.
+
+### Shielded compartments *(next, after running dark)*
+
+*Mark's idea.* For a special assignment whose cargo wouldn't pass a scan, the company fits your ship with a **shielded compartment** before you leave, and **you keep it**.
+
+- **Company cargo becomes visible.** Special consignments count as contraband where their contents are illegal (Vorg's crates that tick, Wexley-Yorozu's sample cases, Hexon's class-4 biologicals in the stricter systems). Ordinary contracts stay manifested and legal.
+- **The fitting.** Taking such an assignment fits a compartment of about **4 t** (part of the hold, not extra). The company's cargo rides in it, unseen by the flight scan and the docking inspection.
+- **The bonus.** After the job the compartment stays fitted. Up to 4 t of anything in it, narcotics or slaves included, fools the flight scan. It's quietly the best smuggling kit in the game, and you can't buy it: you earn it.
+- **How it fools a scan** *(Mark's question: wouldn't a 35 t ship carrying 31 t look odd, or weigh wrong?)*. A part-empty hold isn't suspicious; the papers and the mass are what could give it away, so the company covers both. **On paper**, it re-registers your hold: the Cobra's registration now reads 31 t of hold plus "structural reinforcement", so a scan sees a normal 31 t hold. **By mass**, the compartment is built as shielded bulkhead, and what's in it reads as ballast. A flight scan reads the hold, not the ship's weight, so it can't tell. The station shows your hold as *31 t + 4 t shielded*.
+- **Not foolproof: the weighbridge.** The strict stations (Corporate States and Democracies) weigh ships at inspection. If the weight doesn't match the papers, they open the bulkhead: about 1 in 5 inspections there. Everything in it is confiscated, the compartment too, and you're an Offender. Players know where the risk is: a weighbridge, not luck.
+- **The company knows.** It goes in your file (*"Fitted: one compartment, our pattern"*). Fall out with that company and it's leverage, which fits the blackmail thread (2c).
+- **It pairs with running dark:** the transponder hides **who** you are; the compartment hides **what** you carry.
+
 ## 4b. Building worlds
 
 Wexley-Yorozu builds stations where they're needed, from what's there (the full chain is in [the trading companies](../companies.md#the-fleet-the-titanoboa-and-the-yards)). Nobody tows a finished station between stars.
@@ -247,7 +265,8 @@ Wexley-Yorozu builds stations where they're needed, from what's there (the full 
 | Stage | What |
 |---|---|
 | **1. Companies and contracts** | The four companies and their presence by system; a **Contracts** tab at the station (the first trading screen a new commander sees); haulage and rush contracts with consigned cargo, deadlines in jumps and pay; standing with each company; NPC traders in company colours with their marks. *Smallest slice that makes sense; supply runs, bonds and perks follow once it plays well* |
-| **2. The law beyond the station** *(in progress, October 2026)* | Station space and witnesses; the distress call and police response time; running dark; the police challenge; the transponder as damageable equipment; the distress jammer |
+| **2. The law beyond the station** *(built, October 2026)* | Station space and witnesses; the distress call and police response time; running dark; the police challenge; the transponder as damageable equipment; the distress jammer |
+| **2b. Shielded compartments** *(next)* | Company cargo visible to scans where its contents are illegal; compartments fitted for special assignments and kept afterwards; re-registered holds; the weighbridge at strict stations |
 | **3. Fleets and conflict** | Escort and recovery contracts; company security ships; rivalry events (a company war as a world event, with blockades and premiums) |
 | **3b. Building worlds** | Wexley-Yorozu yards by moons: the Titanoboa constructor, ore haulers, and a station rising through its stages (spine, frame, plating, spin-up) over days for everyone; partly built stations buying what the moon can't supply; construction contracts; opening day. In the shared galaxy, every commander's deliveries speed the build: a community goal that costs a counter on the server |
 | **4. Shared galaxy** | Claiming contracts on the server; player witnesses; player-run companies posting contracts |

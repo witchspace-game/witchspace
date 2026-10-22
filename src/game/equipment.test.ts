@@ -34,6 +34,8 @@ describe('the equipment shop', () => {
   it('never knocks out the cargo bay in combat', () => {
     const c = newCommander('modern');
     c.equipment = ['large-cargo-bay'];
+    // Only the transponder, fitted to every Modern ship, can go; then nothing.
+    expect(rollEquipmentDamage(c, () => 0)?.id).toBe('transponder');
     for (let i = 0; i < 50; i++) expect(rollEquipmentDamage(c, () => 0)).toBeNull();
     c.equipment.push('ecm');
     expect(rollEquipmentDamage(c, () => 0)?.id).toBe('ecm');
@@ -43,5 +45,15 @@ describe('the equipment shop', () => {
     const tech = (id: string) => EQUIPMENT.find((e) => e.id === id)!.minTech;
     expect(tech('galactic-hyperdrive')).toBeGreaterThanOrEqual(10);
     expect(tech('large-cargo-bay')).toBeLessThanOrEqual(5); // a trader can get one early
+  });
+
+  it('knocks out the transponder under Modern rules only', () => {
+    const classic = newCommander('classic');
+    classic.equipment = [];
+    expect(rollEquipmentDamage(classic, () => 0)).toBeNull();
+    const modern = newCommander('modern');
+    modern.equipment = [];
+    expect(rollEquipmentDamage(modern, () => 0)?.id).toBe('transponder');
+    expect(modern.damaged).toEqual(['transponder']);
   });
 });

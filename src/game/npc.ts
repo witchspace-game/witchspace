@@ -79,6 +79,8 @@ export class NpcShip {
   unreported?: boolean;
   /** Has called for help (once). */
   maydayCalled?: boolean;
+  /** You were running dark when you attacked it: its report can't name you. */
+  seenDark?: boolean;
   /** A lost company case this ship has taken aboard (contract id). */
   carrying?: string;
   /** The trading company a trader flies for, if any. */

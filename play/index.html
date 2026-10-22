@@ -159,6 +159,7 @@
         <div class="dash-row">
           <canvas id="compass" width="44" height="44"></canvas>
           <span id="dc-light" title="Docking computer">AUTO</span>
+          <span id="dark-light" title="Transponder off: running dark (0)">DARK</span>
           <span id="missile-pips" title="Missiles (T lock, X fire)"></span>
         </div>
       </div>
@@ -178,6 +179,7 @@
         <button data-key="KeyU">Surrender</button>
         <button data-key="KeyB">Bomb</button>
         <button data-key="KeyV">View</button>
+        <button data-key="Digit0" class="dark-button" title="Transponder off / on: run dark">Dark</button>
         <button class="tilt" title="Steer by tilting the phone">Tilt</button>
       </div>
       <div class="touch-fly">
@@ -201,6 +203,8 @@
       <button class="map-galactic primary" data-key="KeyY" hidden></button>
     </section>
     <p id="banner" hidden></p>
+    <!-- A police hail and its countdown (main.ts updateHail). -->
+    <p id="hail" hidden></p>
     <!-- Which way up, on a phone (main.ts updateTurnHint). -->
     <p id="turn" class="turn" hidden aria-live="polite"></p>
     <canvas id="tunnel" hidden></canvas>
