@@ -15,11 +15,13 @@ import {
 } from 'lightweight-charts';
 import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
 import { abolitionistPrice, backRoomQuotes, fenceQuotes, fenceSell, freeSlaves, hasAbolitionists, hasBackRoom, stingChance, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
-import { cleanQty, stolenQty } from '../game/commander';
+import { cleanQty, FUEL_CAPACITY, stolenQty } from '../game/commander';
 import { activeEvent, eventsAt, EVENT_KINDS } from '../economy/events';
 import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
 import { cancelOrder, collect, describeFill, placeOrder, type OrderState } from '../economy/orders';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
+import { bestOutlets, bestRoutes } from '../economy/routes';
+import { systemAt, type StarSystem } from '../galaxy/generate';
 
 // The station market as a trading exchange, in the style of today's crypto
 // exchanges: a list of pairs against the credit, a candlestick chart, the
@@ -37,6 +39,8 @@ export interface ExchangeDeps {
   traded(result: TradeResult): void;
   /** A back-room deal went through, or turned out to be a sting. */
   dealt(result: BackRoomResult): void;
+  /** Set the hyperspace destination (the trade computer's "Set course"). */
+  setCourse(system: StarSystem): void;
 }
 
 const TICKERS: Record<string, string> = {
@@ -66,8 +70,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   root.innerHTML = `
     <section class="ex-back" hidden></section>
+    <section class="ex-routes" hidden></section>
     <div class="ex">
       <aside class="ex-pairs" aria-label="Markets">
+        <button class="ex-routes-toggle" title="Every market within a tank of fuel, live, and the best runs from here">Trade computer ›</button>
         <button class="ex-backroom-toggle" hidden>Back room ›</button>
         <div class="ex-pairs-head"><span>Pair</span><span>Price</span><span>1h</span></div>
         <div class="ex-pairs-list"></div>
@@ -515,7 +521,63 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   function setBackOpen(open: boolean) {
     backOpen = open;
     $('.ex-back').hidden = !open;
-    $('.ex').hidden = open;
+    $('.ex').hidden = open || routesOpen;
+  }
+
+  // --- Trade computer ----------------------------------------------------------------
+
+  let routesOpen = false;
+
+  function renderRoutes(ctx: TradeContext) {
+    if (!routesOpen) return;
+    const c = ctx.commander;
+    const course = c.target;
+    const place = (s: StarSystem, ly: number, reachable = true) =>
+      `<b>${s.name}</b><small>${ly.toFixed(1)} LY${reachable ? '' : ' · refuel first'}</small>`;
+    const courseButton = (s: StarSystem) =>
+      s.index === course ? '<span class="ex-on-course">On course</span>' : `<button data-course="${s.index}">Set course</button>`;
+    const routes = bestRoutes(ctx);
+    const outlets = bestOutlets(ctx).filter((o) => o.dest && o.proceeds > o.here);
+    const rows = routes
+      .map((r) => {
+        const good = commodityById(r.id)!;
+        const u = unitLabel(good);
+        return `<tr><td><b>${good.name}</b><small>${ticker(r.id)}</small></td>
+          <td class="num">${fmt(r.cost / r.qty)}</td><td>${place(r.dest, r.ly, r.reachable)}</td><td class="num">${fmt(r.proceeds / r.qty)}</td>
+          <td class="num">${r.qty.toLocaleString()} ${u}</td><td class="num up">+${fmt(r.profit)}</td>
+          <td class="ex-back-actions"><button data-route-buy="${r.id}">Buy</button>${courseButton(r.dest)}</td></tr>`;
+      })
+      .join('');
+    const held = outlets
+      .map((o) => {
+        const good = commodityById(o.id)!;
+        return `<tr><td><b>${good.name}</b><small>${o.held.toLocaleString()} ${unitLabel(good)}</small></td>
+          <td>${place(o.dest!, o.ly, o.ly <= c.fuel)}</td><td class="num">${fmt(o.proceeds)}</td><td class="num">${fmt(o.here)}</td><td class="num up">+${fmt(o.proceeds - o.here)}</td>
+          <td class="ex-back-actions">${courseButton(o.dest!)}</td></tr>`;
+      })
+      .join('');
+    $('.ex-routes').innerHTML = `
+      <header><button class="ex-routes-close">‹ Exchange</button><h3>Trade computer</h3>
+        <span>Live prices at every market within ${FUEL_CAPACITY} LY. They move while you travel: news and other traders get there too.</span></header>
+      <h4>Best runs from ${ctx.system.name}</h4>
+      ${
+        routes.length
+          ? `<table><thead><tr><th>Goods</th><th class="num">Buy here</th><th>Sell at</th><th class="num">Price there</th><th class="num">A full load</th><th class="num">Profit</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+             <p class="ex-note">A full load is as much as your credits, hold and the stock here allow. Prices include how much your own buying and selling moves them.</p>`
+          : '<p class="ex-empty">Nothing here sells for more within range. Try the news, or another station.</p>'
+      }
+      ${
+        held
+          ? `<h4>Your hold: better markets</h4><table><thead><tr><th>Goods</th><th>Best market</th><th class="num">It fetches there</th><th class="num">Here</th><th class="num">Gain</th><th></th></tr></thead><tbody>${held}</tbody></table>`
+          : ''
+      }`;
+  }
+
+  function setRoutesOpen(open: boolean) {
+    routesOpen = open;
+    $('.ex-routes').hidden = !open;
+    $('.ex').hidden = open || backOpen;
+    if (open) renderRoutes(deps.context());
   }
 
   function render(newMessage?: string) {
@@ -532,6 +594,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       return;
     }
     renderBackRoom(ctx);
+    renderRoutes(ctx);
     renderPairs(ctx);
     renderHead(ctx);
     renderChart(ctx);
@@ -547,7 +610,26 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const el = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!el) return;
     el.blur();
-    if (el.classList.contains('ex-backroom-toggle')) {
+    if (el.classList.contains('ex-routes-toggle')) {
+      setRoutesOpen(true);
+      return;
+    } else if (el.classList.contains('ex-routes-close')) {
+      setRoutesOpen(false);
+      return;
+    } else if (el.dataset.course) {
+      const ctx = deps.context();
+      deps.setCourse(systemAt(ctx.system.galaxy, Number(el.dataset.course)));
+      renderRoutes(deps.context());
+      return;
+    } else if (el.dataset.routeBuy) {
+      selected = el.dataset.routeBuy;
+      side = 'buy';
+      setRoutesOpen(false);
+      message = '';
+      qtyInput.value = '';
+      render();
+      return;
+    } else if (el.classList.contains('ex-backroom-toggle')) {
       backMessage = '';
       setBackOpen(true);
     } else if (el.classList.contains('ex-back-close')) {

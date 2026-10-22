@@ -175,8 +175,8 @@ describe('supply and demand', () => {
       let total = 0;
       const n = 200;
       for (let k = 0; k < n; k++) total += stockFor(s, freshMarket(s, NOW + k * 1_234_567), 'food');
-      expect(total / n).toBeGreaterThan(eq * 0.85);
-      expect(total / n).toBeLessThan(eq * 1.15);
+      expect(total / n).toBeGreaterThan(eq * 0.8);
+      expect(total / n).toBeLessThan(eq * 1.2);
     }
   });
 

@@ -94,6 +94,15 @@ export function equilibriumPrice(system: StarSystem, c: Commodity, i: number): n
 const production = (system: StarSystem, c: Commodity) => Math.min(3, Math.max(0.1, 1 - 4 * c.economyBias * (system.economy - MID)));
 
 /**
+ * How much deeper a living market is than a 1984 one. A whole world trades
+ * through its station, so one Cobra's hold shouldn't crash a price: selling
+ * a full load moves it a little, and only a stream of traders moves it a lot.
+ * Importers keep at least IMPORT_FLOOR of an average world's stock.
+ */
+export const MARKET_DEPTH = 6;
+const IMPORT_FLOOR = 0.35;
+
+/**
  * A world's trade balance in a good, from -1 (imports nearly all it uses)
  * to 1 (a big exporter). NPC traders mostly buy where it's positive and
  * mostly deliver where it's negative.
@@ -104,12 +113,21 @@ export function tradeBalance(system: StarSystem, id: string): number {
   return Math.max(-1, Math.min(1, Math.log2(production(system, c)) / 1.6));
 }
 
-export function equilibriumStock(system: StarSystem, c: Commodity, i: number): number {
+/** A 1984-sized market's usual stock: Classic's. */
+function classicStock(system: StarSystem, c: Commodity, i: number): number {
   if (c.baseSupply === 0) return 0;
   // Worlds stock more of what they produce (where it's cheap).
   const size = Math.sqrt(system.population / 2.5);
   const character = 0.75 + hash(system, 2, i) * 0.5;
   return Math.round(c.baseSupply * production(system, c) * size * character);
+}
+
+/** A living market's usual stock of a good. */
+export function equilibriumStock(system: StarSystem, c: Commodity, i: number): number {
+  if (c.baseSupply === 0) return 0;
+  const size = Math.sqrt(system.population / 2.5);
+  const character = 0.75 + hash(system, 2, i) * 0.5;
+  return Math.round(c.baseSupply * MARKET_DEPTH * Math.max(IMPORT_FLOOR, production(system, c)) * size * character);
 }
 
 export function freshMarket(system: StarSystem, now: number): MarketState {
@@ -454,7 +472,7 @@ export function quoteClassic(system: StarSystem, visit: number): Quote[] {
     return {
       commodity: c,
       price: round1(equilibriumPrice(system, c, i) * swing),
-      stock: Math.round(equilibriumStock(system, c, i) * stockSwing),
+      stock: Math.round(classicStock(system, c, i) * stockSwing),
     };
   });
 }
