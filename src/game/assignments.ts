@@ -6,7 +6,7 @@ import { COMPANIES, COMPANY_IDS, presence, standingName, type CompanyId } from '
 import { addStanding, finish, jumpsBetween, logContract, logOf, standing, type Contract } from './contracts';
 import { exploreOf } from './explore';
 import { ASSIGNMENT_OPEN, ASSIGNMENT_SLOT, assignmentId, assignmentWaiting, roll, slotOf } from '../../server/src/contact';
-import { legalStatus } from './law';
+import { legalStatus, recordCrime } from './law';
 import { combatRating } from './rating';
 
 // The companies keep files, and now and then they get in touch (Modern rules).
@@ -20,6 +20,8 @@ export { ASSIGNMENT_OPEN, ASSIGNMENT_SLOT, ASSIGNMENT_STANDING, assignmentWaitin
 export interface Message {
   id: string;
   company: CompanyId;
+  /** Who it's really from, when it isn't the company (the station police, a "friend", pirates). */
+  from?: string;
   subject: string;
   body: string;
   at: number;
@@ -136,6 +138,7 @@ export function fileOn(c: Commander, company: CompanyId, here: StarSystem, now: 
   const lines: FileLine[] = [
     { text: `Subject: CMDR ${c.name}. Standing: ${standingName(standing(c, company))}.` },
     { text: `Contracts: ${log.delivered} delivered, ${log.late} late, ${log.failed} failed.${log.special ? ` Special assignments: ${log.special}.` : ''}` },
+    ...(c.favours?.[company] ? [{ text: `Favours owed: ${c.favours[company]}.` }] : []),
     { text: `Combat rating: ${combatRating(c.kills)}. Legal standing here: ${status === 'clean' ? 'clean' : status}${c.warrant ? ', Marshals warrant' : ''}.` },
     { text: `Travel: ${visited.length} systems. Last seen: ${here.name}.` },
   ];
@@ -179,6 +182,12 @@ export interface AdriftCase {
   lost: number;
   /** Lost close to the station: its crew picked the case up, and holds it for you. */
   held?: boolean;
+  /**
+   * What became of it, once something did: an honest station crew, the station
+   * police wanting a word, a crew member holding it for blackmail, or pirates
+   * holding it for ransom.
+   */
+  fate?: 'honest' | 'police' | 'blackmail' | 'ransom';
 }
 
 /** Lost within this distance of the station (metres), the station crew recovers the case. */
@@ -191,6 +200,19 @@ export const salvageFee = (pay: number, credits: number) => Math.min(Math.round(
 export const ADRIFT_HOLD = 24 * 3600_000;
 /** Once it starts falling, about this long until it's gone. */
 export const ADRIFT_FALL = 20 * 60_000;
+/** Left in the lanes this long while you're elsewhere, pirates may find it first. */
+export const PIRATES_FIND = 6 * 3600_000;
+
+const caseRoll = (c: Commander, k: { contract: string }, salt: string) => roll(c.name, k.contract, salt);
+
+/** What a blackmailer asks, and what pirates ask, for a case. */
+export const blackmailPrice = (pay: number) => Math.max(200, Math.round(pay * 1.5));
+export const ransomPrice = (pay: number) => Math.max(150, Math.round(pay * 0.8));
+
+function tell(c: Commander, m: Omit<Message, 'at'>, now: number) {
+  if (c.messages?.some((x) => x.id === m.id)) return;
+  c.messages = [{ ...m, at: now }, ...(c.messages ?? [])].slice(0, 20);
+}
 
 /** Ship lost with special cargo aboard: the cases survive, adrift where you were (or with the station crew, if close). */
 export function setAdrift(c: Commander, here: StarSystem, position: [number, number, number], now: number, nearStation = false): AdriftCase[] {
@@ -198,7 +220,19 @@ export function setAdrift(c: Commander, here: StarSystem, position: [number, num
   for (const a of c.contracts ?? []) {
     if (!a.special || a.adrift) continue;
     a.adrift = true;
-    cases.push({ contract: a.id, company: a.company, label: a.label ?? 'Sealed case', galaxy: here.galaxy, system: here.index, position, lost: now, ...(nearStation ? { held: true } : {}) });
+    const k: AdriftCase = { contract: a.id, company: a.company, label: a.label ?? 'Sealed case', galaxy: here.galaxy, system: here.index, position, lost: now };
+    if (nearStation) {
+      // What the station does with it is a gamble: an honest crew, the police, or someone with an eye for leverage.
+      const r = caseRoll(c, k, 'station');
+      k.held = true;
+      k.fate = r < 0.25 ? 'honest' : r < 0.65 ? 'police' : 'blackmail';
+      const station = here.name;
+      if (k.fate === 'police')
+        tell(c, { id: `${k.contract}:police`, company: a.company, from: `${station} station police`, subject: 'A word, Commander', body: `Your ${k.label} was recovered by the station crew and handed to us. We'd like to discuss its contents. Report to ${station} station.` }, now);
+      if (k.fate === 'blackmail')
+        tell(c, { id: `${k.contract}:blackmail`, company: a.company, from: 'A friend at the station', subject: 'I have something of yours', body: `Your ${k.label} didn't reach the station office. ${blackmailPrice(a.pay).toLocaleString()} Cr and it's yours again. Otherwise ${COMPANIES[a.company].name} hears it was opened.` }, now);
+    }
+    cases.push(k);
   }
   c.adrift = [...(c.adrift ?? []), ...cases];
   return cases;
@@ -213,21 +247,49 @@ export function recoverCase(c: Commander, contract: string): string {
   return `${a.label ?? 'Case'} recovered: it answered your transponder · contract back on`;
 }
 
-/** Cases whose time has run out while you were elsewhere: gone, and the contract with them. */
+/** The case is gone for good: the contract fails, and the company remembers. */
+function failCase(c: Commander, contract: string, points: number) {
+  c.adrift = (c.adrift ?? []).filter((x) => x.contract !== contract);
+  const a = c.contracts?.find((x) => x.id === contract);
+  if (!a) return null;
+  finish(c, a.id);
+  addStanding(c, a.company, points);
+  logContract(c, a.company, 'failed');
+  return a;
+}
+
+/** Pirates have it: they want paying. */
+export function takenByPirates(c: Commander, contract: string, now: number): string {
+  const k = c.adrift?.find((x) => x.contract === contract);
+  const a = c.contracts?.find((x) => x.id === contract);
+  if (!k || !a) return '';
+  k.fate = 'ransom';
+  k.held = false;
+  tell(c, { id: `${contract}:ransom`, company: a.company, from: 'Pirates', subject: 'Nice crate', body: `We've got your ${k.label}. ${ransomPrice(a.pay).toLocaleString()} Cr and we'll leave it at ${systemAt(k.galaxy, k.system).name} station for you. No tricks.` }, now);
+  return `Pirates have your ${k.label}: they'll want paying`;
+}
+
+/** Cases whose time has run out while you were elsewhere: found by pirates, or fallen. */
 export function expireCases(c: Commander, now: number, inScene: (contract: string) => boolean): string[] {
   const notes: string[] = [];
   for (const k of [...(c.adrift ?? [])]) {
-    if (k.held || now - k.lost < ADRIFT_HOLD + ADRIFT_FALL || inScene(k.contract)) continue;
-    notes.push(caseLost(c, k.contract));
+    if (k.held || k.fate || inScene(k.contract)) continue;
+    if (now - k.lost > PIRATES_FIND && caseRoll(c, k, 'pirates') < 0.6) notes.push(takenByPirates(c, k.contract, now));
+    else if (now - k.lost > ADRIFT_HOLD + ADRIFT_FALL) notes.push(caseLost(c, k.contract));
   }
   return notes;
 }
 
-/** Docked where the station crew is holding your case: it's handed back, for a salvage fee. */
+/** Docked where the station crew is holding your case. An honest crew hands it back, for a salvage fee; otherwise, see the incidents. */
 export function collectHeld(c: Commander, here: StarSystem): string[] {
   const notes: string[] = [];
   for (const k of [...(c.adrift ?? [])]) {
     if (!k.held || k.galaxy !== here.galaxy || k.system !== here.index) continue;
+    if (k.fate === 'police') {
+      notes.push(`The station police would like a word about your ${k.label} · see Contracts`);
+      continue;
+    }
+    if (k.fate && k.fate !== 'honest') continue;
     const a = c.contracts?.find((x) => x.id === k.contract);
     const fee = a ? salvageFee(a.pay, c.credits) : 0;
     c.credits = Math.round((c.credits - fee) * 10) / 10;
@@ -240,13 +302,108 @@ export function collectHeld(c: Commander, here: StarSystem): string[] {
 /** A case fell into the planet (the consequences come later: section 2c, step 2). */
 export function caseLost(c: Commander, contract: string): string {
   const k = c.adrift?.find((x) => x.contract === contract);
-  c.adrift = (c.adrift ?? []).filter((x) => x.contract !== contract);
-  const a = c.contracts?.find((x) => x.id === contract);
+  const a = failCase(c, contract, -4);
   if (!a) return '';
-  finish(c, a.id);
-  addStanding(c, a.company, -4);
-  logContract(c, a.company, 'failed');
   return `${COMPANIES[a.company].name}'s ${a.label ?? 'case'} fell towards ${k ? systemAt(k.galaxy, k.system).name : 'the planet'}: contract failed`;
+}
+
+// --- Incidents: the choices a lost case puts to you ---------------------------------
+
+export type Choice = 'open' | 'refuse' | 'call' | 'pay' | 'find';
+
+/** What each incident asks of you, for the screen. */
+export function incidentChoices(k: AdriftCase, pay: number): { choice: Choice; label: string; cost?: number }[] {
+  const firm = COMPANIES[k.company].name;
+  switch (k.fate) {
+    case 'police':
+      return [
+        { choice: 'open', label: 'Let them open it' },
+        { choice: 'refuse', label: 'Refuse: company confidentiality' },
+        { choice: 'call', label: `Call ${firm}` },
+      ];
+    case 'blackmail':
+      return [
+        { choice: 'pay', label: `Pay ${blackmailPrice(pay).toLocaleString()} Cr`, cost: blackmailPrice(pay) },
+        { choice: 'refuse', label: 'Refuse' },
+        { choice: 'find', label: 'Find out who it is' },
+      ];
+    case 'ransom':
+      return [
+        { choice: 'pay', label: `Pay ${ransomPrice(pay).toLocaleString()} Cr`, cost: ransomPrice(pay) },
+        { choice: 'refuse', label: 'Refuse' },
+      ];
+    default:
+      return [];
+  }
+}
+
+/**
+ * Settle an incident. `here` is where you are docked: the police only talk to
+ * you at their station. Returns what happened, or null if that isn't a choice here.
+ */
+export function decide(c: Commander, contract: string, choice: Choice, here: StarSystem): string | null {
+  const k = c.adrift?.find((x) => x.contract === contract);
+  const a = c.contracts?.find((x) => x.id === contract);
+  if (!k || !a) return null;
+  const firm = COMPANIES[a.company].name;
+  const atStation = k.galaxy === here.galaxy && k.system === here.index;
+  if (k.fate === 'police') {
+    if (!atStation) return null;
+    if (choice === 'open') {
+      failCase(c, contract, -6);
+      const crime = a.company === 'vorg';
+      if (crime) recordCrime(c, 'offender');
+      return `They opened it. ${crime ? 'The crates were armed: you are an OFFENDER here. ' : ''}You're free to go; ${firm} is not pleased.`;
+    }
+    if (choice === 'refuse') {
+      failCase(c, contract, 1);
+      recordCrime(c, 'offender');
+      return `The police keep the case and mark you an OFFENDER for obstruction. ${firm} appreciates your silence.`;
+    }
+    if (choice === 'call') {
+      recoverCase(c, contract);
+      c.favours = { ...c.favours, [a.company]: (c.favours?.[a.company] ?? 0) + 1 };
+      return `${firm}'s lawyers arrive within the hour. The case is released to you. ${firm} will remember the favour.`;
+    }
+  }
+  if (k.fate === 'blackmail') {
+    if (choice === 'pay') {
+      const price = blackmailPrice(a.pay);
+      if (c.credits < price) return `You don't have ${price.toLocaleString()} Cr`;
+      c.credits = Math.round((c.credits - price) * 10) / 10;
+      k.fate = 'honest';
+      k.held = true;
+      return atStation ? collectHeld(c, here).join(' · ') || 'Paid.' : `Paid. The ${k.label} will be waiting at ${systemAt(k.galaxy, k.system).name} station`;
+    }
+    if (choice === 'refuse') {
+      failCase(c, contract, -6);
+      return `They told ${firm} the ${k.label} was opened. Contract cancelled.`;
+    }
+    if (choice === 'find') {
+      if (!atStation) return null;
+      if (caseRoll(c, k, 'find') < 0.6) {
+        recoverCase(c, contract);
+        return `A word in the back room, and a name. The ${k.label} is back aboard, and someone on the station crew is looking for a new job.`;
+      }
+      failCase(c, contract, -6);
+      return `They heard you were asking. They told ${firm} the ${k.label} was opened. Contract cancelled.`;
+    }
+  }
+  if (k.fate === 'ransom') {
+    if (choice === 'pay') {
+      const price = ransomPrice(a.pay);
+      if (c.credits < price) return `You don't have ${price.toLocaleString()} Cr`;
+      c.credits = Math.round((c.credits - price) * 10) / 10;
+      k.fate = 'honest';
+      k.held = true;
+      return atStation ? collectHeld(c, here).join(' · ') || 'Paid.' : `Paid. The pirates say the ${k.label} is waiting at ${systemAt(k.galaxy, k.system).name} station`;
+    }
+    if (choice === 'refuse') {
+      failCase(c, contract, -2);
+      return `The pirates keep the ${k.label}. It'll turn up at a fence somewhere. Contract failed.`;
+    }
+  }
+  return null;
 }
 
 /** Who would buy whose secrets. The Mutual's relief supplies aren't for sale. */

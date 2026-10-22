@@ -111,6 +111,7 @@ export function think(npc: NpcShip, world: World) {
       }
       // Fight back against whoever is shooting, police included.
       if (recentAttacker) return attack(recentAttacker);
+      if (npc.errand) return cruise();
       if (world.inSafeZone?.(at)) return cruise();
       // Keep after the current prey while it's still about.
       const current = npc.target;
