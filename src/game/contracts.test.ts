@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { distanceLy, systemAt } from '../galaxy/generate';
 import { cargoTonnes, newCommander } from './commander';
-import { abandon, afterJump, amendsCost, board, cannotTake, forgive, makeAmends, deliver, destinationOf, jumpsBetween, LATE_GRACE, loseContracts, nextHop, standing, take } from './contracts';
+import { abandon, afterJump, amendsCost, board, cannotTake, SIGNING_BONUS, welcome, forgive, makeAmends, deliver, destinationOf, jumpsBetween, LATE_GRACE, loseContracts, nextHop, standing, take } from './contracts';
 import { presence, standingName } from './companies';
 
 const lave = systemAt(0, 7);
@@ -121,6 +121,19 @@ describe('company contracts', () => {
     forgive(d, NOW);
     forgive(d, NOW + 4 * 24 * 3600_000);
     expect(standing(d, 'wy')).toBe(-6);
+  });
+
+  it('a company welcomes a recruit with a starter job, once a board', () => {
+    const c = newCommander('modern');
+    for (const id of ['hexon', 'vorg', 'mutual', 'wy'] as const) {
+      const w = welcome(c, lave, id, NOW)!;
+      expect(w.company).toBe(id);
+      expect(w.needs).toBe('Casual');
+      expect(w.rush).toBe(false);
+      expect(w.pay).toBeGreaterThan(SIGNING_BONUS);
+    }
+    take(c, welcome(c, lave, 'hexon', NOW)!, 20);
+    expect(welcome(c, lave, 'hexon', NOW)).toBeNull();
   });
 });
 

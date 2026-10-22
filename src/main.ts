@@ -73,7 +73,7 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
-import { abandon, afterJump, amendsCost, board, cannotTake, cargoName, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, standing, take, type Contract } from './game/contracts';
+import { abandon, afterJump, amendsCost, board, SIGNING_BONUS, welcome, cannotTake, cargoName, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, standing, take, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
@@ -438,6 +438,7 @@ function startCommander(difficulty: Difficulty) {
   saveCommander(commander);
   sfx.beep();
   enterDocked();
+  if (recruiter && difficulty === 'modern') setDockTab('contracts');
 }
 
 function enterDocked() {
@@ -553,6 +554,32 @@ const riskTag = (s: StarSystem) => (s.government <= 1 ? ` <em class="risk high">
 let contractMessage = '';
 let justTaken: string | null = null; // after taking a contract, show it at the top, highlighted
 
+// Arriving from a company's advert (witchspace.org.uk/careers/, /play/?company=hexon):
+// straight to the Contracts tab, with a starter job from that company at the top.
+let recruiter: CompanyId | null = null;
+
+function answerAdvert() {
+  const url = new URL(location.href);
+  const id = url.searchParams.get('company') as CompanyId | null;
+  if (!id || !COMPANY_IDS.includes(id)) return;
+  url.searchParams.delete('company');
+  history.replaceState(null, '', url.pathname + url.search + url.hash);
+  recruiter = id;
+  const saved = loadCommander();
+  if (saved && saved.difficulty !== 'modern') return; // Classic has no companies: just the title
+  if (!saved) {
+    showNewGame(); // pick a callsign; the welcome waits at the station
+    return;
+  }
+  commander = saved;
+  setCausedEvents(saved.caused);
+  enterDocked();
+  setDockTab('contracts');
+}
+
+/** The welcome job from the company whose advert brought you here, if it's still to be taken. */
+const welcomeHere = (c: Commander, here: StarSystem, now: number) => (recruiter && c.difficulty === 'modern' ? welcome(c, here, recruiter, now) : null);
+
 /**
  * Set a course to a system, however many jumps away: the first hop now, the
  * next after each jump (see hyperspace). Returns what to tell the commander.
@@ -595,6 +622,12 @@ function renderContracts() {
     .join('');
   for (const m of c.messages ?? []) m.read = true;
   markInbox(c);
+  const hello = welcomeHere(c, here, now);
+  const welcomeCard = hello
+    ? `<li class="special welcome" style="--company:${COMPANIES[hello.company].colour}">${companyMark(hello.company)} <em class="risk">Welcome aboard</em> · ${hello.qty} t ${escapeHtml(cargoName(hello))} → ${place(destinationOf(hello))}<br>
+        <small>${escapeHtml(COMPANIES[hello.company].motto)} Your first job with us, within ${hello.jumps} jumps · <b class="pay">${hello.pay.toLocaleString()} Cr</b>, including a ${SIGNING_BONUS} Cr signing bonus</small>
+        <span class="actions"><button data-take="${hello.id}" ${cannotTake(c, hello, free) ? 'disabled' : ''}>Take</button></span></li>`
+    : '';
   const specials = specialsHere(c, here, now)
     .map((o) => {
       const to = destinationOf(o);
@@ -671,7 +704,7 @@ function renderContracts() {
     ${messages ? `<h3>Messages</h3><ul class="contracts">${messages}</ul>` : ''}
     ${mine ? `<h3>Your contracts</h3><ul class="contracts">${mine}</ul>` : ''}
     <h3>On offer at ${escapeHtml(stationName(here).name)}</h3>
-    ${specials || offers ? `<ul class="contracts">${specials}${offers}</ul>` : '<p class="meta">Nothing on the board. New work is posted every half hour.</p>'}
+    ${welcomeCard || specials || offers ? `<ul class="contracts">${welcomeCard}${specials}${offers}</ul>` : '<p class="meta">Nothing on the board. New work is posted every half hour.</p>'}
     ${fileHtml || (fileButtons ? `<p class="files">${fileButtons}</p>` : '')}
     <p class="meta">Hold: ${+(free).toFixed(1)} t free · new work every half hour${standings ? `<br>Standing: ${standings}` : ''}</p>
     <p class="market-message" aria-live="polite">${escapeHtml(contractMessage)}</p>`;
@@ -693,7 +726,9 @@ $('#contracts').addEventListener('click', (e) => {
   const c = cmdr();
   if (b.dataset.take) {
     const now = Date.now();
-    const offer = [...specialsHere(c, currentSystem(), now), ...board(c, currentSystem(), now)].find((o) => o.id === b.dataset.take);
+    const hello = welcomeHere(c, currentSystem(), now);
+    const offer = [...(hello ? [hello] : []), ...specialsHere(c, currentSystem(), now), ...board(c, currentSystem(), now)].find((o) => o.id === b.dataset.take);
+    if (offer && offer.id === hello?.id) recruiter = null; // welcomed
     if (!offer) return;
     const why = take(c, offer, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
     contractMessage = why ?? `Contract taken: ${offer.qty} t ${cargoName(offer)} for ${destinationOf(offer).name}, loaded`;
@@ -4397,6 +4432,7 @@ updateModeLabel();
 initTouch();
 setDockTab('station');
 showTitle();
+answerAdvert();
 frame();
 
 // Accounts: every save also goes to the cloud when signed in; sign-in links land here.
