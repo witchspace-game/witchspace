@@ -1184,3 +1184,17 @@ body.touch .prompt { display: none; }
 @media (max-width: 700px) {
   #galaxy-map .map-title { top: 52px; padding: 0 12px; }
 }
+
+/* Title screen: keyboard letters for keyboards; on touch, one clear way in. */
+.touch-word, .ship-browse { display: none; }
+body.touch .key { display: none; }
+body.touch .touch-word { display: inline; }
+body.touch nav.controls[data-screen='title'] .prev-next { display: none; }
+body.touch .ship-browse { display: flex; gap: 6px; float: right; }
+body.touch .ship-browse button { padding: 2px 12px; font-size: 20px; line-height: 1.1; }
+body.touch nav.controls[data-screen='title'] { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+body.touch nav.controls[data-screen='title'] #load-button { grid-column: 1 / -1; padding: 12px; font-size: 17px; }
+body.touch nav.controls[data-screen='title'] #load-button small { opacity: 0.7; font-size: 12px; }
+body.touch nav.controls[data-screen='title'] #new-button.primary { grid-column: 1 / -1; padding: 12px; font-size: 17px; }
+body.touch nav.controls[data-screen='title'] button:not(#load-button):not(#new-button.primary) { font-size: 12px; padding: 7px 4px; }
+body.touch nav.controls[data-screen='title'] #new-button.armed { grid-column: 1 / -1; }
