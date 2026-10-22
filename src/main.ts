@@ -2611,6 +2611,26 @@ function sightedCommander(range: number): Remote | null {
   return best;
 }
 
+// On a touch screen, one missile button by FIRE: Lock, then (red) launch.
+const missileButton = $<HTMLButtonElement>('#touch .missile');
+missileButton.addEventListener('click', () => {
+  missileButton.blur();
+  if (locked || lockedCommander) fireMissile();
+  else toggleLock();
+  updateMissileButton();
+});
+
+/** Its label: how many missiles, and whether one is locked. */
+function updateMissileButton() {
+  if (!commander) return;
+  const n = cmdr().missiles;
+  const armed = Boolean(locked || lockedCommander);
+  missileButton.classList.toggle('armed', armed);
+  missileButton.classList.toggle('empty', n <= 0);
+  const label = n <= 0 ? 'No missiles' : armed ? `Missile ×${n}` : `Lock ×${n}`;
+  if (missileButton.textContent !== label) missileButton.textContent = label;
+}
+
 /** X: launch at the locked target. */
 function fireMissile() {
   const c = cmdr();
@@ -3175,6 +3195,7 @@ function updateSpace(dt: number) {
   updateDrifters(dt);
   updateCaseRaid(dt);
   updateResponses();
+  updateMissileButton();
   for (let i = explosions.length - 1; i >= 0; i--) if (!explosions[i].update(dt)) explosions.splice(i, 1);
   updateMarshals(dt);
 

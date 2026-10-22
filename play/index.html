@@ -163,8 +163,6 @@
     <section id="touch" data-screen="flying" hidden>
       <div class="aim-pad"><span>Drag to aim</span><i class="base"></i><i class="finger"></i></div>
       <div class="touch-actions">
-        <button data-key="KeyT">Lock</button>
-        <button data-key="KeyX">Missile</button>
         <button data-key="KeyZ">ECM</button>
         <button data-key="KeyJ">Jump</button>
         <button data-key="KeyH">Hyper</button>
@@ -178,7 +176,11 @@
       </div>
       <div class="touch-fly">
         <div class="speed" aria-label="Speed"><i></i><b>Speed</b></div>
-        <button class="fire" aria-label="Fire">Fire</button>
+        <div class="fire-stack">
+          <!-- One button for missiles: Lock, then (red) launch. -->
+          <button class="missile" type="button" aria-label="Lock a missile on the target in your sights">Lock</button>
+          <button class="fire" aria-label="Fire">Fire</button>
+        </div>
       </div>
     </section>
     <section id="galaxy-map" hidden>
