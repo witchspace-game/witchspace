@@ -45,7 +45,7 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **F1** 
 
 | Key | Action |
 | --- | --- |
-| W / S | Dive / climb (X also climbs, as on the BBC) |
+| W / S | Dive / climb |
 | A / D | Roll (`<` and `>` work too) |
 | Space / Shift | Throttle up / down |
 | F | Fire (fixed lasers, straight ahead, as in 1984) |

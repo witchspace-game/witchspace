@@ -97,4 +97,16 @@ describe('the law at the market', () => {
     lave.commander.credits = 1000;
     expect(buy(lave, 'narcotics', 1).ok).toBe(true);
   });
+
+  it('classic keeps gold, platinum and gems in the safe, 200 of each at most', () => {
+    const t = ctx('classic', 1_000_000);
+    t.commander.cargo = { food: t.capacity };
+    expect(maxBuyable(t, 'food')).toBe(0);
+    const gold = maxBuyable(t, 'gold');
+    expect(gold).toBeGreaterThan(0);
+    expect(gold).toBeLessThanOrEqual(200);
+    t.commander.cargo.gold = 200;
+    expect(maxBuyable(t, 'gold')).toBe(0);
+  });
 });
+

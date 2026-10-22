@@ -14,6 +14,10 @@ const HULL_RADIUS = 95;
 // its roll is the real test, just as it was in 1984.
 const MAX_HEADING_ERROR = THREE.MathUtils.degToRad(20);
 export const MAX_ROLL_ERROR = THREE.MathUtils.degToRad(15);
+// Classic keeps the 1984 tolerances from the original's ISDK checks: the
+// approach within about 26 degrees, and the slot up to 33.6 degrees off level.
+const CLASSIC_HEADING_ERROR = THREE.MathUtils.degToRad(26);
+const CLASSIC_ROLL_ERROR = THREE.MathUtils.degToRad(33.6);
 
 export type Contact =
   | { kind: 'docked' }
@@ -87,12 +91,14 @@ export class Station {
   }
 
   /** Call after moving the ship. `prevLocal` is its station-local position before the move. */
-  contact(ship: PlayerShip, prevLocal: THREE.Vector3): Contact | null {
+  contact(ship: PlayerShip, prevLocal: THREE.Vector3, classic = false): Contact | null {
     const p = this.toLocal(ship.obj.position);
     const inSlotXY = Math.abs(p.x) < SLOT.halfW && Math.abs(p.y) < SLOT.halfH;
 
     if (prevLocal.z > SLOT.z && p.z <= SLOT.z && inSlotXY) {
-      if (this.headingError(ship) <= MAX_HEADING_ERROR && Math.abs(this.rollError(ship)) <= MAX_ROLL_ERROR) {
+      const heading = classic ? CLASSIC_HEADING_ERROR : MAX_HEADING_ERROR;
+      const roll = classic ? CLASSIC_ROLL_ERROR : MAX_ROLL_ERROR;
+      if (this.headingError(ship) <= heading && Math.abs(this.rollError(ship)) <= roll) {
         return { kind: 'docked' };
       }
       // Clipped the slot edge. Bounce back out along the approach axis.

@@ -1,6 +1,6 @@
 import { cleanQty, stolenQty, tidyStolen, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
-import { commodityById, cargoTonnage, UNITS_PER_TONNE } from './commodities';
+import { commodityById, cargoTonnage, inSafe, SAFE_LIMIT, UNITS_PER_TONNE } from './commodities';
 import { stationTrades } from './legality';
 import { checkOrders } from './orders';
 import { costToBuy, freshMarket, proceedsToSell, quoteClassic, quoteModern, recover, TRADE_MEMORY, type MarketState, type Quote } from './market';
@@ -69,7 +69,7 @@ export function tradesHere(ctx: TradeContext, id: string): boolean {
 }
 
 export function freeTonnes(ctx: TradeContext): number {
-  return ctx.capacity - cargoTonnage(ctx.commander.cargo);
+  return ctx.capacity - cargoTonnage(ctx.commander.cargo, ctx.commander.difficulty === 'classic');
 }
 
 function price(ctx: TradeContext, id: string, qty: number, buying: boolean): number {
@@ -86,7 +86,9 @@ export function maxBuyable(ctx: TradeContext, id: string): number {
   if (!tradesHere(ctx, id)) return 0;
   const c = commodityById(id)!;
   const stock = quotes(ctx).find((q) => q.commodity.id === id)!.stock;
-  const bySpace = Math.floor(freeTonnes(ctx) * UNITS_PER_TONNE[c.unit] + 1e-9);
+  const bySpace = inSafe(c, ctx.commander.difficulty === 'classic')
+    ? Math.max(0, SAFE_LIMIT - (ctx.commander.cargo[id] ?? 0))
+    : Math.floor(freeTonnes(ctx) * UNITS_PER_TONNE[c.unit] + 1e-9);
   // Cost only rises with quantity, so find the most you can afford by halving.
   let lo = 0;
   let hi = Math.min(stock, bySpace);
@@ -104,7 +106,9 @@ export function buy(ctx: TradeContext, id: string, qty: number): TradeResult {
   if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} isn't traded openly here` };
   const state = marketState(ctx);
   if (quotes(ctx).find((q) => q.commodity.id === id)!.stock < qty) return { ok: false, message: `Not enough ${c.name} in stock` };
-  if (qty / UNITS_PER_TONNE[c.unit] > freeTonnes(ctx) + 1e-9) return { ok: false, message: 'Not enough room in the hold' };
+  if (inSafe(c, ctx.commander.difficulty === 'classic')) {
+    if ((ctx.commander.cargo[id] ?? 0) + qty > SAFE_LIMIT) return { ok: false, message: `The safe holds ${SAFE_LIMIT} ${c.unit} of ${c.name} at most` };
+  } else if (qty / UNITS_PER_TONNE[c.unit] > freeTonnes(ctx) + 1e-9) return { ok: false, message: 'Not enough room in the hold' };
   const cost = price(ctx, id, qty, true);
   if (cost > ctx.commander.credits) return { ok: false, message: 'Not enough credits' };
   ctx.commander.credits = Math.round((ctx.commander.credits - cost) * 10) / 10;

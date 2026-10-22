@@ -50,6 +50,8 @@ export interface StarSystem {
   productivity: number;
   /** Planet radius in km. */
   radius: number;
+  /** Who lives there, as the original's data screen says: "Human Colonials" or "Small Yellow Bony Lobsters". */
+  species: string;
   /** Bytes for anything else that should be stable per system (descriptions, markets). */
   extraSeed: [number, number, number, number];
 }
@@ -95,6 +97,7 @@ function makeSystem(s: Seed, galaxy: number, index: number): StarSystem {
   const radius = 256 * (((w2 >> 8) & 15) + 11) + x;
   const extraSeed: [number, number, number, number] = [lo(w1), hi(w1), lo(w2), hi(w2)];
   const longName = (w0 & 64) !== 0;
+  const species = speciesOf(w0, w1, w2);
 
   // Four syllables are always drawn, so every system advances the seed equally.
   const syllables: string[] = [];
@@ -118,8 +121,23 @@ function makeSystem(s: Seed, galaxy: number, index: number): StarSystem {
     population: populationUnits / 10,
     productivity,
     radius,
+    species,
     extraSeed,
   };
+}
+
+const SIZES = ['Large', 'Fierce', 'Small'];
+const COLOURS = ['Green', 'Red', 'Yellow', 'Blue', 'Black', 'Harmless'];
+const BODIES = ['Slimy', 'Bug-Eyed', 'Horned', 'Bony', 'Fat', 'Furry'];
+const KINDS = ['Rodents', 'Frogs', 'Lizards', 'Lobsters', 'Birds', 'Humanoids', 'Felines', 'Insects'];
+
+/** The species, from the seeds as the original's TT25 does it. Some pairings can't happen (no slimy humanoids). */
+function speciesOf(w0: number, w1: number, w2: number): string {
+  if (!(lo(w2) & 0x80)) return 'Human Colonials';
+  const s2hi = hi(w2);
+  const body = (hi(w0) ^ hi(w1)) & 7;
+  const words = [SIZES[(s2hi >> 2) & 7], COLOURS[(s2hi >> 5) & 7], BODIES[body], KINDS[((s2hi & 3) + body) & 7]];
+  return words.filter(Boolean).join(' ');
 }
 
 const cache = new Map<number, StarSystem[]>();
@@ -139,13 +157,33 @@ export function galaxy(n: number): StarSystem[] {
 export const systemAt = (g: number, i: number): StarSystem => galaxy(g)[i];
 
 /**
- * Distance in light years. The chart is twice as wide as it is tall in
- * light-year terms, so vertical distances count half, as in the original.
+ * Distance in light years, worked out as the original's TT111 does: halve the
+ * vertical difference (the chart is twice as wide as it is tall), take the
+ * whole-number square root, then times four. So every distance is a multiple
+ * of 0.4 LY, and Tibedied is 17.6 LY from Lave.
  */
 export function distanceLy(a: StarSystem, b: StarSystem): number {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  return Math.floor(4 * Math.sqrt(dx * dx + (dy * dy) / 4)) / 10;
+  const dx = Math.abs(a.x - b.x);
+  const dy = Math.abs(a.y - b.y) >> 1;
+  return (4 * Math.floor(Math.sqrt(dx * dx + dy * dy))) / 10;
+}
+
+/**
+ * The system nearest a point on a galaxy's chart, found as TT111 finds it:
+ * by half the sum of the horizontal and vertical differences, first found
+ * wins a tie.
+ */
+export function nearestTo(g: number, x: number, y: number): StarSystem {
+  let best = galaxy(g)[0];
+  let bestD = Infinity;
+  for (const s of galaxy(g)) {
+    const d = (Math.abs(s.x - x) >> 1) + (Math.abs(s.y - y) >> 1);
+    if (d < bestD) {
+      best = s;
+      bestD = d;
+    }
+  }
+  return best;
 }
 
 /** Systems within `ly` light years of `from`, nearest first (excluding `from`). */

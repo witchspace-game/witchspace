@@ -56,12 +56,19 @@ export const commodityById = (id: string) => COMMODITIES.find((c) => c.id === id
 /** How many units weigh one tonne in the hold. */
 export const UNITS_PER_TONNE: Record<Unit, number> = { t: 1, kg: 1000, g: 1_000_000 };
 
+/**
+ * Under Classic rules, as in 1984, gold, platinum and gem-stones go in the
+ * safe rather than the hold: they take no cargo space, up to 200 of each.
+ */
+export const SAFE_LIMIT = 200;
+export const inSafe = (c: Commodity, classic: boolean) => classic && c.unit !== 't';
+
 /** Tonnes taken up in the hold by a cargo manifest. */
-export function cargoTonnage(cargo: Record<string, number>): number {
+export function cargoTonnage(cargo: Record<string, number>, classic = false): number {
   let tonnes = 0;
   for (const [id, qty] of Object.entries(cargo)) {
     const c = commodityById(id);
-    if (c && qty > 0) tonnes += qty / UNITS_PER_TONNE[c.unit];
+    if (c && qty > 0 && !inSafe(c, classic)) tonnes += qty / UNITS_PER_TONNE[c.unit];
   }
   return tonnes;
 }

@@ -231,7 +231,7 @@ function renderInfo() {
     ['Economy', ECONOMIES[s.economy]],
     ['Government', GOVERNMENTS[s.government]],
     ['Tech level', String(s.techLevel)],
-    ['Population', `${s.population.toFixed(1)} billion`],
+    ['Population', `${s.population.toFixed(1)} billion (${s.species})`],
     ['Productivity', `${s.productivity.toLocaleString()} M Cr`],
     ['Average radius', `${s.radius.toLocaleString()} km`],
   ];

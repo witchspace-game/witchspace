@@ -25,7 +25,7 @@ A parking spot for good ideas that aren't designed yet. When one is picked up, i
 
 **Priority: Explore should be as good as Trade and Fight.** Trading now has a living exchange and fighting has the law, the Marshals and the combat computer. Commanders who'd rather wander the galaxy need the same depth: reasons to go somewhere new, things worth finding, and something to show for it.
 
-- **Worlds worth visiting.** Every system already has its 1984 description (its economy, government, species and the odd local custom). Bring that to life when you arrive: the planet's look from its seed (colour, bands, rings, moons), a short arrival card, and the occasional binary star, gas giant or ringed world. Rare systems become destinations.
+- **Worlds worth visiting.** Every system already has its 1984 facts (economy, government, species) and a description written fresh for Witchspace. Bring that to life when you arrive: the planet's look from its seed (colour, bands, rings, moons), a short arrival card, and the occasional binary star, gas giant or ringed world. Rare systems become destinations.
 - **Scan and survey.** Fly close to a planet, star or station and scan it; deep surveys take time and nerve (close orbits, sun skimming). Survey data sells at stations, more the further it is from where it was gathered, so explorers earn a living without trading or fighting.
 - **Points of interest.** Derelicts, wreck fields, abandoned stations, signal sources, nebulae and dead stars, placed from each system's seed so everyone finds the same things. Many are small stories: a log to read, a cargo to salvage, a clue that points to the next system.
 - **Legends,** already on the roadmap: the rare secret encounters. Exploration is how you find them.
