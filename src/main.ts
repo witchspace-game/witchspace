@@ -89,6 +89,7 @@ import { stationName } from './galaxy/stationNames';
 import { takePhoto } from './ui/photo';
 import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
+import { countDevice, countNewCommander } from './net/stats';
 import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
@@ -372,6 +373,7 @@ function showTitle() {
   load.hidden = !saved;
   if (saved) load.innerHTML = `<span class="key">Y · Load </span><span class="touch-word">Play as CMDR </span>${escapeHtml(saved.name)} <small>(${DIFFICULTIES[saved.difficulty].name})</small>`;
   $('#new-button').classList.toggle('primary', !saved);
+  countDevice(saved?.difficulty ?? 'none', isRetro() ? '1984' : 'neo');
   updateSharedButton();
   disarmNewCommander();
   setState('title');
@@ -395,13 +397,17 @@ function disarmNewCommander() {
   b.innerHTML = '<span class="key">N · </span>New commander';
 }
 
-/** Classic is the natural default for anyone playing in 1984 mode. */
-const defaultDifficulty = (): Difficulty => (isRetro() ? 'classic' : 'modern');
+/**
+ * Modern is Witchspace: the default for everyone. Classic (the 1984 rules) is
+ * kept as it was, but frozen: bug fixes only, no new features. The original
+ * itself is a click away for anyone who wants pure 1984.
+ */
+const defaultDifficulty = (): Difficulty => 'modern';
 
 function showNewGame() {
   const list = $('#rules');
   list.innerHTML = '';
-  (['classic', 'modern'] as Difficulty[]).forEach((d, i) => {
+  (['modern', 'classic'] as Difficulty[]).forEach((d, i) => {
     const b = document.createElement('button');
     const isDefault = d === defaultDifficulty();
     b.classList.toggle('primary', isDefault);
@@ -414,6 +420,7 @@ function showNewGame() {
 
 function startCommander(difficulty: Difficulty) {
   commander = newCommander(difficulty);
+  countNewCommander(difficulty, isRetro() ? '1984' : 'neo');
   setCausedEvents([]);
   // Your callsign: what other commanders see. Blank keeps your account's, or the original's Jameson.
   const typed = $<HTMLInputElement>('#callsign').value.trim();
@@ -4262,8 +4269,8 @@ function handleKey(code: string) {
       if (code !== 'KeyN' && newCommanderArmed) disarmNewCommander();
       break;
     case 'newgame':
-      if (code === 'Digit1') startCommander('classic');
-      else if (code === 'Digit2') startCommander('modern');
+      if (code === 'Digit1') startCommander('modern');
+      else if (code === 'Digit2') startCommander('classic');
       else if (code === 'Enter') startCommander(defaultDifficulty());
       else if (code === 'Escape') showTitle();
       break;

@@ -6,12 +6,12 @@ export type Difficulty = 'classic' | 'modern';
 export const DIFFICULTIES: Record<Difficulty, { name: string; tagline: string; blurb: string }> = {
   classic: {
     name: 'Classic',
-    tagline: 'Single-player, as in 1984',
-    blurb: 'As it was in 1984. Touch the station and you die. Without an escape pod it is GAME OVER and your commander starts again from scratch.',
+    tagline: 'The 1984 rules, kept as they were',
+    blurb: 'Single-player, as it was in 1984: no companies or contracts, no shared galaxy. Touch the station and you die; without an escape pod it is GAME OVER. Kept as it was, without new features.',
   },
   modern: {
     name: 'Modern',
-    tagline: 'The rules of the shared galaxy, when multiplayer arrives',
+    tagline: 'Witchspace: the shared galaxy, companies and contracts',
     blurb: 'Scrapes cost shields and hull instead of your life. If you are destroyed, your insurers replace the ship and its equipment, less an excess, but they won\'t pay for a Fugitive. Your cargo is still lost to space.',
   },
 };

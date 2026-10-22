@@ -47,7 +47,7 @@ export default {
     if (url.pathname === '/contact/stop') return accountsOf(env).fetch(request);
     // The ideas board (/ideas…) and accounts (/auth…, /me…, /admin…), called from our pages and tools.
     const ideas = url.pathname === '/ideas' || url.pathname.startsWith('/ideas/');
-    const accounts = ['/auth/', '/me/', '/admin/', '/contact/', '/push/'].some((p) => url.pathname.startsWith(p)) || url.pathname === '/me';
+    const accounts = ['/auth/', '/me/', '/admin/', '/contact/', '/push/', '/stats/'].some((p) => url.pathname.startsWith(p)) || url.pathname === '/me';
     if (ideas || accounts) {
       const origin = request.headers.get('Origin') ?? '';
       const allowed = ORIGINS.some((o) => o.test(origin));

@@ -21,6 +21,9 @@
   <h2>The ideas board</h2>
   <p>To give each idea one vote per person without accounts, your browser keeps a random id. To stop abuse we keep a one-way hash of your network address, never the address itself. What you post is public.</p>
 
+  <h2>Counting how it's played</h2>
+  <p>Once a day, the game tells us which rules your commander uses (Modern or Classic) and whether the 1984 look is on, and when a new commander is started, which rules they chose. We keep only the day's totals. To count each device once a day we keep a one-way hash of your network address for that day, never the address itself, and nothing else about you.</p>
+
   <h2>Who handles it</h2>
   <p>The website is hosted by Vercel. Shared space, the ideas board and accounts run on Cloudflare. Sign-in emails, and company messages if you ask for them, are sent by Resend. Notifications go through your browser's own push service (Apple, Google or Mozilla), which sees only that a message arrived, not what it says. Images and videos are served by Cloudinary. Cloudflare's Turnstile checks that you're a person when you sign in or post an idea. The website's fonts come from Google Fonts, which sees your browser's address when it loads them.</p>
 
