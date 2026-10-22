@@ -94,9 +94,10 @@ Standing is its own record, beside the combat rating and the explorer's rank, an
 
 What happens to a special cargo when the ship carrying it is lost, and how a company can use that against you.
 
-### 1. The package survives *(building)*
+### 1. The package survives *(built)*
 
 - **Company special cargo is built to survive.** When your ship is destroyed, the case spills as its own canister, in the company's colours, with a **beacon**: it shows on the scanner and the screen to anyone in the system, e.g. `W-Y property · sealed`.
+- **Lost at the station mouth** (within 3 km), the **station crew** picks the case up and holds it for you: dock there (or wake up there) to collect it, for a salvage fee of a tenth of the contract's pay, never more than half your spare credits.
 - **It holds station** for 24 hours (real time, so logging off overnight doesn't cost you it), then begins to fall towards the planet.
 - **The contract isn't lost yet.** It's marked *adrift*, still counting jumps. Fly back, slow down within about 60 m, and the case answers your transponder and comes aboard, no fuel scoops needed. The contract carries on.
 - **Rival buyers.** Any special cargo can be sold to a rival instead of delivered: Wexley-Yorozu's to Hexon, Hexon's to Vorg, Vorg's to Hexon. About half as much again as the delivery pays, a big standing boost with the buyer and a bigger fall with the owner. The Mutual's relief supplies have no buyer: some things aren't for sale.
