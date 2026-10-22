@@ -30,6 +30,9 @@ const canvas = root.querySelector<HTMLCanvasElement>('canvas')!;
 const title = root.querySelector<HTMLElement>('.map-title')!;
 const info = root.querySelector<HTMLElement>('.map-info')!;
 const modeButton = root.querySelector<HTMLButtonElement>('.map-mode')!;
+const findForm = root.querySelector<HTMLFormElement>('.map-find')!;
+const findInput = findForm.querySelector<HTMLInputElement>('input')!;
+const findList = findForm.querySelector<HTMLUListElement>('ul')!;
 
 let mode: ChartMode = 'galactic';
 let opts: Options | null = null;
@@ -49,6 +52,65 @@ export function openMap(o: Options, startMode: ChartMode = small() ? 'local' : '
 export function closeMap() {
   root.hidden = true;
   opts = null;
+  findInput.value = '';
+  findList.innerHTML = '';
+  findInput.blur();
+}
+
+// --- Find a system ---------------------------------------------------------------
+
+/** Systems in this galaxy whose names start with (then contain) what's typed, nearest first. */
+function matches(text: string): StarSystem[] {
+  const q = text.trim().toLowerCase();
+  if (!q || !opts) return [];
+  const all = galaxy(opts.current.galaxy);
+  const by = (s: StarSystem) => distanceLy(opts!.current, s);
+  const starts = all.filter((s) => s.name.toLowerCase().startsWith(q)).sort((a, b) => by(a) - by(b));
+  const inside = all.filter((s) => !starts.includes(s) && s.name.toLowerCase().includes(q)).sort((a, b) => by(a) - by(b));
+  return [...starts, ...inside].slice(0, 6);
+}
+
+/** Put the cursor on a system, showing the whole galaxy if it's off the local chart. */
+function findSystem(s: StarSystem) {
+  if (!opts) return;
+  cursor = s;
+  if (mode === 'local') {
+    const { toScreen, area } = view();
+    const [x, y] = toScreen(s);
+    if (x < area.left || x > area.right || y < area.top || y > area.bottom) mode = 'galactic';
+  }
+  findInput.value = '';
+  findList.innerHTML = '';
+  findInput.blur();
+  draw();
+}
+
+findInput.addEventListener('input', () => {
+  const found = matches(findInput.value);
+  findList.innerHTML = found
+    .map((s, i) => `<li><button type="button" data-find="${s.index}"${i === 0 ? ' class="first"' : ''}>${escapeHtml(s.name)} <small>${distanceLy(opts!.current, s).toFixed(1)} LY</small></button></li>`)
+    .join('');
+});
+findForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const first = matches(findInput.value)[0];
+  if (first) findSystem(first);
+});
+findList.addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-find]');
+  if (b && opts) findSystem(galaxy(opts.current.galaxy)[Number(b.dataset.find)]);
+});
+findInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    findInput.value = '';
+    findList.innerHTML = '';
+    findInput.blur();
+  }
+});
+
+/** F on the chart: start typing a name. */
+export function focusFind() {
+  findInput.focus();
 }
 
 export function toggleMapMode() {
