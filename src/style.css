@@ -1220,3 +1220,11 @@ body.touch nav.controls[data-screen='title'] #new-button.armed { grid-column: 1 
   #galaxy-map .map-find input { font-size: 16px; padding: 5px 8px; } /* 16px: iPhone won't zoom the page */
 }
 body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li button { font-size: 12px; border-radius: 0; }
+#galaxy-map canvas { touch-action: none; }
+#galaxy-map .map-home { position: absolute; bottom: 44px; left: 16px; z-index: 1; font-size: 13px; padding: 6px 12px; }
+#galaxy-map .map-info h4 { margin: 12px 0 4px; font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); }
+#galaxy-map .map-contracts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+#galaxy-map .map-contracts button { width: 100%; min-height: 36px; padding: 5px 8px; text-align: left; font-size: 13px; letter-spacing: 0; text-transform: none; line-height: 1.3; border-left: 3px solid var(--company, var(--accent)); }
+@media (max-width: 700px), (max-height: 520px) {
+  #galaxy-map .map-home { bottom: 40px; left: 10px; font-size: 12px; }
+}
