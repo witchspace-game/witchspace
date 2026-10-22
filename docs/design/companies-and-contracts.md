@@ -1,6 +1,8 @@
 # Design: trading companies, contracts, and the law beyond the station
 
-*Status: proposed, for discussion. Modern rules only; Classic stays as 1984. Builds on [markets and trade](markets-and-trade.md) (section 5, Merchants) and [law and travel](law-and-travel.md) (section 1, transponders).*
+*Status: agreed. **Stage 1 built (October 2026):** the four companies and their presence by system (`src/game/companies.ts`); a Contracts tab at the station with haulage and rush contracts, cargo supplied, deadlines in jumps, pay on delivery (half if late, reclaimed after three more jumps), standing with each company (`src/game/contracts.ts`); traders in company colours, named in the target readout. Still to come from stage 1: supply runs, bonds and perks.*
+
+*Originally: Modern rules only; Classic stays as 1984. Builds on [markets and trade](markets-and-trade.md) (section 5, Merchants) and [law and travel](law-and-travel.md) (section 1, transponders).*
 
 ## The idea
 
