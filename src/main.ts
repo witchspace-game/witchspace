@@ -236,12 +236,13 @@ function updateBerth(dt: number, model: ShipModel) {
 function updateShowroom(dt: number) {
   const model = showroomModels[shipIndex];
   if (state === 'docked') {
+    if (camera.view?.enabled) camera.clearViewOffset();
     updateBerth(dt, model);
     return;
   }
   hangar.visible = false;
   showroom.stars.visible = true;
-  const dist = (model.radius * 3.4) / zoom;
+  const dist = (portraitDistance(model.radius) ?? model.radius * 3.4) / zoom;
   flyIn = Math.min(1, flyIn + dt * 0.7);
   const ease = 1 - Math.pow(1 - flyIn, 3);
   model.root.position.set(0, 0, -dist * 12 * (1 - ease));
@@ -253,6 +254,40 @@ function updateShowroom(dt: number) {
   camera.position.set(0, model.radius * 0.35, dist);
   camera.lookAt(0, 0, 0);
   showroom.stars.position.copy(camera.position);
+  frameShipInSpace();
+}
+
+/** The space between the title and the title-screen panel, on a tall screen; null otherwise. */
+function portraitGap(): { top: number; bottom: number } | null {
+  const panel = document.querySelector<HTMLElement>('.panel[data-screen="title"]');
+  const title = document.querySelector<HTMLElement>('header.title');
+  if (innerHeight <= innerWidth || !panel || panel.hidden || !title) return null;
+  return { top: title.getBoundingClientRect().bottom, bottom: panel.getBoundingClientRect().top };
+}
+
+/** How far back the camera stands so the ship fits that space, side to side and top to bottom. */
+function portraitDistance(radius: number): number | null {
+  const gap = portraitGap();
+  if (!gap) return null;
+  const room = Math.min(gap.bottom - gap.top, innerWidth) * 0.85; // pixels for the ship's full width
+  const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
+  return (radius * 2 * innerHeight) / (room * 2 * Math.tan(halfFov));
+}
+
+/**
+ * On a tall phone screen the ship would sit behind the panel: shift the view
+ * so it's centred in the space between the title and the panel instead.
+ */
+function frameShipInSpace() {
+  const w = innerWidth;
+  const h = innerHeight;
+  const gap = portraitGap();
+  if (!gap) {
+    if (camera.view?.enabled) camera.clearViewOffset();
+    return;
+  }
+  const shift = h / 2 - (gap.top + gap.bottom) / 2; // how far up the ship should move, in pixels
+  camera.setViewOffset(w, h, 0, Math.round(shift), w, h);
 }
 
 // Inspect the ship on the title and docked screens: drag to rotate, scroll
@@ -4210,6 +4245,7 @@ function frame(now?: number) {
     if (code) handleKey(code);
   }
   if (inSpace) {
+    if (camera.view?.enabled) camera.clearViewOffset();
     if (state !== 'transition') updateSpace(dt);
     const rift = carrier?.rift;
     lens.aim(camera, rift ? rift.group.position : null, rift ? rift.radius * rift.open : 0, rift ? rift.open : 0);
