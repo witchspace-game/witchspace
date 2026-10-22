@@ -132,13 +132,16 @@ The same courtesy runs through the whole law: **warn first, escalate on defiance
 
 ## 4b. Building worlds
 
-Wexley-Yorozu is building somewhere at any moment (see [the trading companies](../companies.md#the-fleet-the-titanoboa-and-the-yards)).
+Wexley-Yorozu builds stations where they're needed, from what's there (the full chain is in [the trading companies](../companies.md#the-fleet-the-titanoboa-and-the-yards)). Nobody tows a finished station between stars.
 
-- **Construction yards** hang over some planets: a half-finished Coriolis in its scaffold, hulls on the slips, a corporate fleet working around it. A system with a yard is a destination in itself.
-- **A partly built station** docks a few ships and trades mostly building materials (alloys, machinery, minerals), at good prices. Its progress, from bare frame to working station, follows the seed and the clock, so every commander sees the same stage.
-- **Station tows.** Now and then a Titanoboa arrives through a rift with a whole Coriolis beneath it, and a new station opens in a system that had none. That's news across the region, with premiums for the first traders in.
-- **Construction contracts:** haul the materials a yard needs. In the shared galaxy every commander's deliveries add to the build, so a station opens sooner when players pitch in: a community goal that costs one counter on the server.
-- **Later:** player-built stations (see [player-run stations](player-stations.md)) are built the same way, by Wexley-Yorozu under contract.
+- **Where:** a system with a **moon** (or, later, an asteroid field) and no station, or too few berths. Moons are already in the game ([exploration](../ideas.md#exploration)), and they're the quarry.
+- **The yard:** the **Titanoboa** constructor in orbit by the moon, ore haulers running between them, and the station in its current stage: bare spine, frame, half-plated, spinning up. A corporate fleet works around it.
+- **Stages, for everyone:** each stage takes days, from the seed and the clock, so every commander sees the same yard at the same stage.
+- **A partly built station** docks a few ships once its first sections are sealed. It **buys** what can't be made from the moon (electronics, computers, machinery, medicine, food for the workers) at good prices, and **sells** what the refinery makes (alloys).
+- **Construction contracts:** haul the things on that list. In the shared galaxy every commander's deliveries move the build along, so a station opens sooner when players pitch in: a community goal that costs one counter on the server.
+- **Opening day:** spin-up, traffic control, a market, and news across the region, with premiums for the first traders in. The Titanoboa leaves through a rift.
+- **Later:** mining contracts (ore from the moon, once mining is built), and player-built stations (see [player-run stations](player-stations.md)) built the same way, by Wexley-Yorozu under contract.
+- **Moving a station** is a rare event: de-spun, with the constructor docked rigidly through the slot on its axis, pushing, in short slow jumps.
 
 ## 5. How it feels
 
@@ -164,7 +167,7 @@ Wexley-Yorozu is building somewhere at any moment (see [the trading companies](.
 | **1. Companies and contracts** | The three companies and their presence by system; a **Contracts** tab at the station (the first trading screen a new commander sees); haulage, rush and supply contracts with consigned cargo, deadlines in jumps, pay and bonds; standing with each company; NPC traders in company livery |
 | **2. The law beyond the station** | Station space and witnesses; the distress call and police response time; running dark; the police challenge; the transponder as damageable equipment; the distress jammer |
 | **3. Fleets and conflict** | Escort and recovery contracts; company security ships; rivalry events (a company war as a world event, with blockades and premiums) |
-| **3b. Building worlds** | Wexley-Yorozu construction yards: partly built stations that trade building materials and dock a few ships, progressing over days for everyone; Titanoboa station tows arriving through a rift; the corporate fleet around them; construction contracts. In the shared galaxy, every commander's deliveries speed the build: a community goal that costs a counter on the server |
+| **3b. Building worlds** | Wexley-Yorozu yards by moons: the Titanoboa constructor, ore haulers, and a station rising through its stages (spine, frame, plating, spin-up) over days for everyone; partly built stations buying what the moon can't supply; construction contracts; opening day. In the shared galaxy, every commander's deliveries speed the build: a community goal that costs a counter on the server |
 | **4. Shared galaxy** | Claiming contracts on the server; player witnesses; player-run companies posting contracts |
 
 ## Open questions
