@@ -180,10 +180,16 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const auth = request.headers.get('Authorization') ?? '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
     if (!token) return null;
+    const hash = await sha256(token);
+    const now = Date.now();
     const row = this.sql
-      .exec('SELECT a.id, a.email, a.callsign FROM sessions s JOIN accounts a ON a.id = s.account WHERE s.hash = ? AND s.expires > ?', await sha256(token), Date.now())
+      .exec('SELECT a.id, a.email, a.callsign, s.expires FROM sessions s JOIN accounts a ON a.id = s.account WHERE s.hash = ? AND s.expires > ?', hash, now)
       .toArray()[0];
-    return row ? { id: row.id as string, email: row.email as string, callsign: (row.callsign as string | null) ?? null } : null;
+    if (!row) return null;
+    // Playing keeps you signed in: the 30 days run from your last visit (renewed at most once a day).
+    const renewed = now + SESSION_DAYS * 86_400_000;
+    if (renewed - (row.expires as number) > 86_400_000) this.sql.exec('UPDATE sessions SET expires = ? WHERE hash = ?', renewed, hash);
+    return { id: row.id as string, email: row.email as string, callsign: (row.callsign as string | null) ?? null };
   }
 
   private async signOut(request: Request): Promise<Response> {
