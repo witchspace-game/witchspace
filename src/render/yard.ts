@@ -70,7 +70,7 @@ export function buildYard(
   titan.root.updateMatrixWorld();
   const boxes = partBoxes(defs.titan);
 
-  const stageDef = stationAtStage(defs.station, yard.stage);
+  const stageDef = stationAtStage(defs.station, yard.stage, yard.progress);
   const station = stageDef ? buildShip(stageDef) : null;
   const spin = stationSpin(yard, defs.station.stats.rollRate ?? 0.25);
   if (station) {
