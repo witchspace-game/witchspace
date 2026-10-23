@@ -73,6 +73,24 @@ Your commander keeps a small record per captain: meetings, what she took, how of
 - **You published the Ninefold report:** Bram lets you keep half. **You sold it to the Science Division:** she takes everything, and tells you why.
 - **You delivered for the Mutual, answered distress calls, never robbed a hauler:** they're warmer.
 
+## A Debt: the night the Falcon needs you
+
+The turning point of a Falcon's story: the Legend who hunted you, caught, and you the only one who hears.
+
+- **When:** only after you've met that captain at least three times, so he's someone to you by then. It can't come early, and it can't be bought.
+- **The call:** with a working comms array, you pick up a Mayday on a Carriers' Mutual channel nobody has used since Iver Solo's day. It's the Falcon. Wexley-Yorozu has been hunting the yard, and the Co-operative Marshals have caught her: a Bastion has come through its rift, her drive is damaged, and Lancers are closing.
+- **Three ways it can go:**
+  1. **Save her.** Keep the Lancers off her for 60 to 90 seconds while her drive comes back, then she's gone into witchspace. Firing on the Marshals is a serious crime (a Marshals warrant), unless you do it **running dark**, unidentified: then they're chasing a ship with no name. Skill and the transponder, not a menu choice.
+  2. **Turn her in.** Hold her for the Marshals: stay close and keep her from running until they board. Wexley-Yorozu pays very well (several times her bounty) and your standing with them and Hexon soars. Every Solo son in the eight galaxies learns your name, and none of them ever lets you go again.
+  3. **Fly away.** She gets out alone, barely, and remembers that you didn't come.
+- **Saving her, for good:**
+  - **She never attacks you again.** Met in the lanes, her captain hails you by name, and warmly.
+  - **She protects you.** Jumped by pirates anywhere on her circuit, there's a chance she drops out of witchspace, dark, and the hull read says *FALCON · she's on your side*. She fights for you and leaves without a word, **at most once a day**, so it stays a moment.
+  - **Never against the law.** She won't fight police or Marshals for you, and won't help if you started it. She has a code, and your crimes aren't hers.
+  - **His brothers hear.** Kit races you for fun instead of robbing you, Jory leaves your cargo alone, and even Tobin is civil, mostly.
+  - **The yard is open to you.** You're trusted with where the forty-one are, which opens the yard trail, and whether you ever betray them is the last choice in her story.
+- **What it's built from:** the Marshals and their rifts, running dark, the radio and the array, and the Falcon's memory of you. Nothing new but the story.
+
 ## Where it leads (later)
 
 - **The yard.** A trail across the Falcons' galaxies leads to the Solo yard and the forty-one, Sam Dray among them. Bring them something (Mira's yellow flowers, seed stock that works) and the Falcons spare you for good. Sell the yard's position to Wexley-Yorozu instead, and the Science Division comes in force, and every Falcon in the eight galaxies knows your name.
@@ -87,7 +105,8 @@ Your commander keeps a small record per captain: meetings, what she took, how of
 | **1** | One Falcon a galaxy on a seeded circuit, moving with the clock; bar talk and radio word; meetings only in her system; the hail and the price; the random roll removed. Bram first (galaxies 1 and 2), then his brothers. |
 | **2** | Fighting to disable: drifting, the beacon tow or the jury-rigged drive, her price taken, the calling card. She breaks off and escapes when beaten; the bounty that grows. |
 | **3** | Her memory of you: lines by meeting, by the Ninefold choice, by your record with the Mutual. |
-| **4** | The yard trail and its choice; company hunts; the shared galaxy. |
+| **4** | **A Debt**: the Mayday, the three ways it goes, the Falcon who protects you (or never lets you go). |
+| **5** | The yard trail and its choice; company hunts; the shared galaxy. |
 
 ## Numbers (to balance)
 
