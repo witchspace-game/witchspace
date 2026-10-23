@@ -158,6 +158,17 @@ Named for the garter snake: common, harmless and everywhere. *(Original class.)*
 
 A Wexley-Yorozu colony is free to join. The passage, the prefab housing, the air: all on credit, at fair rates, repaid from the colony's work over a generation. Most colonies repay it. Some are still repaying it four generations on. A few stopped answering, and Wexley-Yorozu sent a ship to see why. The ships came back. The reports were sealed.
 
+### What it wants, and the people inside it
+
+A company is people, and people are driven by feelings, not strategy. Wexley-Yorozu's plan is a twenty-year one (become the landlord of the frontier: clause 214 hands a defaulted colony, its world and its people to the company), but what makes it real is who carries it out, and why. *Glad, sad, mad, bad.*
+
+- **Glad.** The colonists who signed up. Free passage, a world of their own, and the first breathable morning. Most of them are glad still.
+- **Sad.** The families at home, listening to a relay that says "all well" because nobody has switched it off.
+- **Bad.** **Corwin Ashe**, Regional Director, Colonial Accounts: not a monster, just a man who writes "relief: 310,000 Cr; recovery: 40,000 Cr" and signs the cheaper one. He is promoted.
+- **Mad.** **Teodor Vasse**, administrator of the *Ninefold*, who sealed his bridge rather than hand his people over; **Sam Dray**, the tug pilot who was told not to answer and answered; **Dr L. Marsh**, the agronomist who warned them and was reassigned.
+
+The *Ninefold* is the first of these stories ([exploration](design/exploration.md#trails)): an untested seed, a failed harvest, a debt, and clause 214. The explorer who finds its report decides who learns the truth.
+
 ### What it does
 
 - **Builds things.** Atmosphere processors on half-finished worlds, Coriolis stations under licence, and the heavy ships that carry both.
@@ -215,7 +226,9 @@ Named for *Titanoboa*, the largest snake that ever lived. *(Original class.)*
 
 ### Story hooks
 
-- A colony has gone quiet. Wexley-Yorozu wants a commander to fly out, look, and report to the Science Division only. The pay is generous. The contract has a page 214.
+- A colony has gone quiet. Wexley-Yorozu wants a commander to fly out, look, and report to the Science Division only. The pay is generous. The contract has a page 214. *(Built as the Ninefold trail.)*
+- Where did Sam Dray take the forty? Who is looking for him, and who gets there first?
+- Corwin Ashe, promoted, has another colony running short.
 - A Bullsnake is hauling an atmosphere processor through Vorg space. Vorg would like it to arrive late. Hexon would like it not to arrive at all.
 
 ---

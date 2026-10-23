@@ -254,53 +254,59 @@ interface Step {
   log: (t: { here: string; next: string; first: string }) => string;
 }
 
+// Every trail is somebody's story, told in what they left behind: one person
+// at its heart, and a feeling that turns (glad, sad, mad, bad) along the way.
+// Middle steps play in order, so the first is the one every trail has.
 const STORIES: Record<StoryId, Story> = {
   colony: {
     title: 'The colony that stopped answering',
     steps: {
-      first: { kind: 'beacon', name: 'Wexley-Yorozu relay beacon', log: (t) => `Still repeating its last packet: colony ship Ninefold, outbound for ${t.next}. All well. All well. All well. The timestamp is eleven years old.` },
+      first: { kind: 'beacon', name: 'Wexley-Yorozu relay beacon', log: (t) => `Still repeating its last packet: colony ship Ninefold, outbound for ${t.next}. All well. All well. All well. The timestamp is eleven years old. Behind it in the queue, one message never sent: a girl asking her gran whether the yellow flowers came up this year.` },
       middle: [
-        { kind: 'derelict', ship: 'cobra-mk3', name: 'Survey tender “Patience”', log: (t) => `Powered down neatly, as if the crew meant to come back. Last course laid in: ${t.next}. The manifest lists “atmosphere seed, class 4”, and nothing else.` },
-        { kind: 'derelict', ship: 'sidewinder', name: 'Colony tug “Hold Fast”', log: (t) => `The tow cable is cut clean. The pilot’s last entry: “Ninefold called for a tow at ${t.next}. We were told not to answer. I answered.”` },
-        { kind: 'beacon', name: 'Quarantine buoy', log: (t) => `Wexley-Yorozu livery, no registration. It warns every ship off ${t.here} in a pleasant voice, then gives the course to ${t.next} anyway.` },
+        { kind: 'derelict', ship: 'sidewinder', name: 'Colony tug “Hold Fast”', log: (t) => `The tow cable is cut clean. Forty bunks rigged in the hold, empty now, and a child’s drawing taped to the console. Pilot Sam Dray’s last entry: “Ninefold called for help at ${t.next}. We were told not to answer. I answered. Mutual hauler picked us up here; the tug stays.”` },
+        { kind: 'derelict', ship: 'cobra-mk3', name: 'Survey tender “Patience”', log: (t) => `Powered down neatly. The manifest lists “atmosphere seed, class 4”. The agronomist’s notes: “Third sowing failed. The seed was never tested for this sky; testing was cut to save fourteen months. I have told them. Course for ${t.next}.”` },
+        { kind: 'beacon', name: 'Quarantine buoy', log: (t) => `Wexley-Yorozu livery, no registration. “Asset recovery in progress at ${t.next}. Please do not render assistance.” Someone has rewired it to give the course anyway.` },
       ],
-      last: { kind: 'derelict', ship: 'cobra-mk3', name: 'Colony ship “Ninefold”', log: () => `A parking orbit nobody uses. Lights on. Air good. Nobody aboard. On the bridge, a sealed report addressed to the Science Division, and a hand-written note pinned over it: “Read it. Then decide who you give it to.”` },
+      last: { kind: 'derelict', ship: 'cobra-mk3', name: 'Colony ship “Ninefold”', log: () => `A parking orbit nobody uses. Lights on. Air good. Two hundred bunks, made. Nobody aboard. On the bridge, a sealed report for the Science Division, and a note pinned over it in the administrator’s hand: “Read it. Then decide who you give it to. T. Vasse.”` },
     },
     end: { salvage: [{ id: 'medicine', qty: 1 }, { id: 'computers', qty: 1 }], value: 0, report: 'ninefold' },
   },
   home: {
     title: 'The long way home',
     steps: {
-      first: { kind: 'derelict', ship: 'cobra-mk3', name: 'Derelict Cobra Mk III “Far Horizon”', log: (t) => `Her captain’s log is a letter home, one entry for every system. The last line you can read: “Tomorrow, ${t.next}. Nearly there, love.”` },
+      first: { kind: 'beacon', name: 'Nav buoy with a letter', log: (t) => `Tucked into the maintenance hatch, a letter: “Noor. Nine years, and I’m coming home. The ship’s old and the money’s older, but there’s enough. Next stop ${t.next}. Ada.”` },
       middle: [
-        { kind: 'beacon', name: 'Nav buoy with a letter', log: (t) => `Someone has tucked a letter into the buoy’s maintenance hatch: “Still running. The ship’s old and the money’s older. Next stop ${t.next}.”` },
-        { kind: 'derelict', ship: 'sidewinder', name: 'Derelict Sidewinder “Small Hours”', log: (t) => `The Far Horizon’s escort, by the markings. Her pilot gave up the chase here. His last entry: “She’s gone on to ${t.next} without me. Good luck to her.”` },
+        { kind: 'derelict', ship: 'sidewinder', name: 'Derelict Sidewinder “Small Hours”', log: (t) => `Ada’s escort, paid to see her home. The escape pod is gone. His last entry: “Drive’s finished. Told her not to wait. She’s gone on to ${t.next}. She cried, which she’ll deny.”` },
+        { kind: 'beacon', name: 'Nav buoy with a letter', log: (t) => `Another letter: “I was angry for nine years about why I left. Somewhere back there I stopped. ${t.next} next. Put the kettle on.”` },
+        { kind: 'beacon', name: 'Nav buoy with a letter', log: (t) => `A short one, the writing hurried: “Fuel’s tight. If I’m late, I’m not lost, just slow. ${t.next}.”` },
       ],
-      last: { kind: 'derelict', ship: 'cobra-mk3', name: 'Derelict Cobra Mk III “Homeward”', log: (t) => `The Far Horizon’s sister ship, stripped and waiting in the dark off ${t.here}. The hold is sealed with the captain’s mark, and everything she was carrying home is still inside.` },
+      last: { kind: 'derelict', ship: 'cobra-mk3', name: 'Derelict Cobra Mk III “Far Horizon”', log: () => `Ada’s ship, out of fuel, one jump short. The escape pod is gone, aimed at home. The last letter is still in the printer: “If you find this before anyone finds me, sell what’s in the hold and send Noor the money. Tell her I was nearly there.”` },
     },
     end: { salvage: [{ id: 'gems', qty: 1 }, { id: 'gold', qty: 1 }, { id: 'platinum', qty: 1 }, { id: 'luxuries', qty: 1 }], value: 250 },
   },
   survey: {
     title: 'The lost survey',
     steps: {
-      first: { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `An old survey beacon, marked with a sign you haven’t seen before: a compass rose with one point missing. Its data ends with a single system: ${t.next}.` },
+      first: { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `An old survey beacon, signed “O. Fenn, chartmaker” beside a compass rose with one point missing. Its data ends with a single system: ${t.next}.` },
       middle: [
-        { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `Another of hers. The charts are corrected by hand, in a small neat script. The missing point of the compass rose aims at ${t.next}.` },
-        { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `The handwriting is shakier here. A note in the margin: “${t.first} to here, every star where I said it was. One more, then ${t.next}.”` },
+        { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `Her charts, corrected by hand in a small neat script. In the margin: “The doctors give me a year of good sight. Forty systems left. I can do forty.” The missing point aims at ${t.next}.` },
+        { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `The writing is bigger here, and shakier. “${t.first} to here, every star where I said it was. I fly by the big dials now. ${t.next}.”` },
+        { kind: 'beacon', name: 'Cartographer’s beacon', log: (t) => `No writing, only her voice: “Wexley-Yorozu offered to buy the chart unfinished. I said no. It goes to everyone or no one. ${t.next}.”` },
       ],
-      last: { kind: 'beacon', name: 'Cartographer’s last beacon', log: () => `The full chart: every system she visited, corrected by hand, and the compass rose complete at last. The Science Division would pay well for this. So would anyone.` },
+      last: { kind: 'beacon', name: 'Cartographer’s last beacon', log: () => `The full chart: every system she visited, every star where she said it was. The compass rose is complete, its last point drawn in big and crooked. Under it: “Done. For anyone who flies.”` },
     },
     end: { salvage: [], value: 400 },
   },
   debt: {
     title: 'A debt unpaid',
     steps: {
-      first: { kind: 'beacon', name: 'Painted marker buoy', log: (t) => `A pirate’s marker, painted over twice. Under the paint: a tally of ships, scratched in fives, and one name: ${t.next}.` },
+      first: { kind: 'beacon', name: 'Painted marker buoy', log: (t) => `A pirate’s marker, painted over twice. Under the paint, a tally scratched in fives: eleven marks, some crossed through. And one name: ${t.next}.` },
       middle: [
-        { kind: 'derelict', ship: 'mamba', name: 'Gutted Mamba', log: (t) => `Left here as a warning. Scratched into the hull: “Paid in full. ${t.next} owes next.”` },
-        { kind: 'wrecks', ship: 'sidewinder', name: 'Ambush site', log: (t) => `Three Sidewinders, close together, all shot from behind. Whoever did it went on to ${t.next}, and didn’t hurry.` },
+        { kind: 'derelict', ship: 'mamba', name: 'Gutted Mamba', log: (t) => `Left here as a warning. Its log shows a convoy’s route sold for 300 Cr. Scratched into the hull: “Paid in full. ${t.next} owes next.”` },
+        { kind: 'wrecks', ship: 'sidewinder', name: 'Ambush site', log: (t) => `Three Sidewinders, close together, all shot from behind: the way they took the convoy. Whoever did it went on to ${t.next}, and didn’t hurry.` },
+        { kind: 'beacon', name: 'Painted marker buoy', log: (t) => `A message for whoever’s following: “You think I’m a pirate. I was the twelfth hauler in that convoy. Eleven marks, one for each of mine. I’m crossing off the ones who sold us. Bel. ${t.next}.”` },
       ],
-      last: { kind: 'derelict', ship: 'mamba', name: 'Hidden cache', log: () => `Wired to an old mine that failed years ago. Whoever left this never came back to collect. Some of what’s inside the police would very much like to see.` },
+      last: { kind: 'derelict', ship: 'mamba', name: 'Bel’s cache', log: () => `Wired to an old mine that failed years ago. Under the guns and narcotics she took off them, eleven envelopes, one for each family, and a note: “If I don’t come back, the envelopes go to the Mutual. Keep the rest. Some of it the police would like to see.”` },
     },
     end: { salvage: [{ id: 'firearms', qty: 1 }, { id: 'narcotics', qty: 1 }, { id: 'gold', qty: 1 }], value: 250 },
   },
@@ -432,6 +438,8 @@ export interface ExploreRecord {
   earned: number;
   /** Trails: steps found, by trail id. */
   trails?: Record<string, number>;
+  /** Who you gave the Ninefold report to, once you have. */
+  ninefold?: 'wy' | 'published';
 }
 
 export const POINTS = { visit: 1, discovery: 5 } as const;
@@ -482,6 +490,19 @@ export function recordDiscovery(c: Commander, s: StarSystem, poi: Poi) {
   });
 }
 
+/** The Ninefold report, as you read it before deciding who gets it. */
+export const NINEFOLD_REPORT = {
+  title: 'Ninefold colony: closing report',
+  lines: [
+    'SCIENCE DIVISION. Colony: Ninefold. Status: closed. Distribution: Science Division only.',
+    'Agronomy (Dr L. Marsh): seed stock class 4 failed on the third sowing. It was never tested for this sky. Testing was deferred to save fourteen months. Dr Marsh has been reassigned.',
+    'Colonial Accounts (C. Ashe, Regional Director): the colony’s debt now exceeds its lifetime output. Relief would cost 310,000 Cr; recovery under clause 214, 40,000 Cr. Residents to be relocated to yard work until the balance is cleared. Keep the relay running: the families should not be alarmed.',
+    'Bridge log (T. Vasse, Administrator): “They call us assets. I have sealed the bridge. Two hundred people, air for ninety days. Anyone hearing this: please come.”',
+    'Recovery: 158 residents taken off for relocation. 41 missing, believed carried off by the unlicensed tug Hold Fast, pilot S. Dray; recommend he is found. Administrator Vasse stayed aboard so the tug could leave, and was recovered last.',
+    'Attached, from the relay queue, unsent: “Gran, did the yellow flowers come up? Ours didn’t. Dad says next year. Love, Mira.”',
+  ],
+} as const;
+
 /** Wexley-Yorozu pays best for data: this much more at any of its stations. */
 export const WY_DATA_BONUS = 1.25;
 /** The Ninefold report: what the Science Division pays, and what publishing it elsewhere fetches. */
@@ -506,7 +527,9 @@ export function sellData(c: Commander, here: StarSystem, wyHere = false): { cred
   c.credits += credits;
   e.earned += credits;
   e.data = e.data.filter((d) => !sold.includes(d));
-  return { credits, reports: sold.filter((d) => d.report).length };
+  const reports = sold.filter((d) => d.report).length;
+  if (reports) e.ninefold = 'wy';
+  return { credits, reports };
 }
 
 /** Publish a report anywhere but Wexley-Yorozu: the Mutual's newsletter pays. Returns the credits. */
@@ -517,6 +540,7 @@ export function publishReports(c: Commander): number {
   c.credits += credits;
   e.earned += credits;
   e.data = e.data.filter((d) => !d.report);
+  if (reports.length) e.ninefold = 'published';
   return credits;
 }
 

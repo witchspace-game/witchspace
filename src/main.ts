@@ -80,7 +80,7 @@ import { abandon, addStanding, afterJump, amendsCost, board, SIGNING_BONUS, welc
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
-import { advanceTrail, bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi } from './game/explore';
+import { advanceTrail, bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi } from './game/explore';
 import { SpaceDust } from './render/dust';
 import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
@@ -1043,27 +1043,38 @@ function renderDocked() {
     const sell = document.createElement('button');
     sell.textContent = sellable.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
     sell.disabled = !sellable.length;
-    if (wy && data.some((d) => d.report)) sell.title = `Includes the Ninefold report: the Science Division pays ${REPORT_PRICE.wy.toLocaleString()} Cr, and remembers you kindly`;
+    if (wy && data.some((d) => d.report)) sell.title = `Includes the Ninefold report: the Science Division pays ${REPORT_PRICE.wy.toLocaleString()} Cr, remembers you kindly, and goes looking for Sam Dray`;
     sell.addEventListener('click', () => {
       const { credits, reports } = sellData(c, here, wy);
       if (reports) addStanding(c, 'wy', 3);
       saveCommander(c);
       sfx.beep();
-      flash(reports ? `The Science Division takes the Ninefold report · ${credits.toLocaleString()} Cr with your data · Wexley-Yorozu is grateful` : `Survey data sold · ${credits.toLocaleString()} Cr`, 4);
+      flash(reports ? `The Science Division takes the Ninefold report · ${credits.toLocaleString()} Cr with your data · Wexley-Yorozu is grateful, and the relay keeps saying all well` : `Survey data sold · ${credits.toLocaleString()} Cr`, 4);
       renderDocked();
     });
     dataRow.append(sell);
+    // The report: read it before you decide who gets it.
+    if (data.some((d) => d.report)) {
+      const read = document.createElement('button');
+      read.className = 'read-report';
+      read.textContent = 'Read the Ninefold report';
+      read.addEventListener('click', () => {
+        sfx.beep();
+        showLog(NINEFOLD_REPORT.title, NINEFOLD_REPORT.lines.join('\n\n'), 60000);
+      });
+      dataRow.querySelector('span')!.append(read);
+    }
     // The report, anywhere else: publish it, and live with it.
     if (!wy && data.some((d) => d.report)) {
       const publish = document.createElement('button');
       publish.textContent = `Publish the Ninefold report · ${REPORT_PRICE.published} Cr`;
-      publish.title = "The Mutual's newsletter pays, the colonists' families learn what happened, and Wexley-Yorozu will remember. Or keep it for a Wexley-Yorozu station.";
+      publish.title = "The Mutual's newsletter pays, the families learn what happened to the Ninefold, and Mira's message reaches her gran. Wexley-Yorozu will remember. Or keep it for a Wexley-Yorozu station.";
       confirmSale(publish, 'Publish it? Wexley-Yorozu will remember', () => {
         const paid = publishReports(c);
         addStanding(c, 'wy', -3);
         saveCommander(c);
         sfx.beep();
-        flash(`The Ninefold report is published · ${paid} Cr · Wexley-Yorozu will remember`, 4);
+        flash(`The Ninefold report is published · ${paid} Cr · the families know now, and so does Wexley-Yorozu`, 5);
         renderDocked();
       });
       dataRow.append(publish);
@@ -2052,13 +2063,23 @@ function discover(p: ScenePoi) {
 
 let poiLogTimer = 0;
 function showPoiLog(poi: Poi) {
+  showLog(poi.name, poi.log, 14000);
+}
+
+/** A log, or a longer document, in the panel over the dashboard. */
+function showLog(title: string, text: string, ms: number) {
   const log = $('#poi-log');
-  log.querySelector('h3')!.textContent = poi.name;
-  log.querySelector('p')!.textContent = poi.log;
+  log.querySelector('h3')!.textContent = title;
+  log.querySelector('p')!.textContent = text;
   log.hidden = false;
   clearTimeout(poiLogTimer);
-  poiLogTimer = window.setTimeout(() => (log.hidden = true), 14000);
+  poiLogTimer = window.setTimeout(() => (log.hidden = true), ms);
 }
+$('#poi-log').addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).closest('p:first-of-type')) return; // scrolling a long report
+  clearTimeout(poiLogTimer);
+  $('#poi-log').hidden = true;
+});
 addEventListener('keydown', () => {
   const log = $('#poi-log');
   if (!log.hidden) {

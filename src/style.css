@@ -362,9 +362,12 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
   transform: translateX(-50%);
   width: min(520px, calc(100vw - 32px));
   border-color: rgba(201, 179, 255, 0.5);
+  z-index: 20;
 }
 #poi-log h3 { margin: 0 0 6px; color: #c9b3ff; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; }
 #poi-log p { margin: 0 0 6px; line-height: 1.45; }
+#data-row .read-report { display: block; margin-top: 4px; padding: 0; border: 0; background: none; color: #c9b3ff; font-size: 12px; text-decoration: underline; text-align: left; cursor: pointer; }
+#poi-log p:first-of-type { white-space: pre-line; max-height: 50vh; overflow-y: auto; }
 body.retro #survey { font-size: 8px; color: #fff; }
 body.retro #survey .survey-bar { background: #444; }
 body.retro #survey .survey-bar i { background: #fff; box-shadow: none; }
