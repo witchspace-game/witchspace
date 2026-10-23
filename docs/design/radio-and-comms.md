@@ -114,7 +114,7 @@ Ofcom publishes guidance and tools for small services. This is a list of what to
 - **The array is server-checked** like lasers and missiles are now: the server only lets a commander use System if the array is fitted and working, and decides when a hit damages it.
 - **Station mail and reports** live in the `Accounts` Durable Object, beside callsigns and firsts.
 - **NPC radio** (stage 0 and 1) is all in the client, from the seed and the game's own events, with no server at all.
-- **Controls:** **/** opens the radio to type, as in many games; Enter sends. On a phone, a **Radio** button opens the log with the quick phrases on top and the keyboard behind them.
+- **Controls:** **'** (apostrophe) opens the radio to type; Enter sends. Not **/**, which slows the ship down, as on the BBC. On a phone, a **Radio** button opens the log with the quick phrases on top and the keyboard behind them.
 
 ## Building it in stages
 
