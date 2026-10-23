@@ -45,6 +45,12 @@ export interface ActiveContract extends Contract {
   jumpsLeft: number;
   /** Special cargo that survived your ship and is adrift, waiting to be recovered (game/assignments.ts). */
   adrift?: boolean;
+  /**
+   * Accepted over the comms array, not yet collected: the cargo waits at the
+   * `from` station. While reserved, `jumpsLeft` counts the jumps left to
+   * collect it; on collection it becomes the delivery deadline.
+   */
+  reserved?: boolean;
 }
 
 /** A new board every half hour. */
@@ -101,7 +107,7 @@ export function nextHop(a: StarSystem, b: StarSystem): StarSystem | null {
 }
 
 /** Systems from 1 to `max` jumps away, with their jump counts. */
-function withinJumps(from: StarSystem, max: number): { s: StarSystem; n: number }[] {
+export function withinJumps(from: StarSystem, max: number): { s: StarSystem; n: number }[] {
   const out: { s: StarSystem; n: number }[] = [];
   let frontier = [from];
   const seen = new Set([from.index]);
@@ -340,6 +346,10 @@ export function afterJump(c: Commander, now = Date.now()): string[] {
   const notes: string[] = [];
   for (const a of [...(c.contracts ?? [])]) {
     a.jumpsLeft -= 1;
+    if (a.reserved) {
+      notes.push(...reservationAfterJump(c, a, now));
+      continue;
+    }
     const to = placeOf(a.to).name;
     if (a.jumpsLeft === 0) {
       notes.push(`${cargoName(a)} for ${to}: last jump`);
@@ -371,6 +381,7 @@ function notice(c: Commander, a: Contract, kind: string, subject: string, body: 
 export function deliver(c: Commander, here: StarSystem, now = Date.now()): string[] {
   const notes: string[] = [];
   for (const a of [...(c.contracts ?? [])]) {
+    if (a.reserved) continue; // still waiting to be collected
     if (a.survey) {
       // Handed in at any Wexley-Yorozu station, once every moon is surveyed. W-Y keeps the data.
       if (!wyWorks(here) || !surveyDone(c, a)) continue;
@@ -394,7 +405,7 @@ export function deliver(c: Commander, here: StarSystem, now = Date.now()): strin
 
 /** Ship lost: the company's cargo with it. Special cargo survives, adrift (see game/assignments.ts). */
 export function loseContracts(c: Commander): string[] {
-  const lost = (c.contracts ?? []).filter((a) => !a.special && !a.survey); // surveys aren't cargo
+  const lost = (c.contracts ?? []).filter((a) => !a.special && !a.survey && !a.reserved); // surveys aren't cargo, nor is cargo not yet loaded
   for (const a of lost) {
     finish(c, a.id);
     addStanding(c, a.company, -2);
@@ -405,3 +416,67 @@ export function loseContracts(c: Commander): string[] {
 }
 
 export const destinationOf = (a: Contract) => placeOf(a.to);
+
+// --- Accepted over the comms array (docs/design/radio-and-comms.md) -----------------
+//
+// With a working array, an offer can be accepted in flight. It's reserved:
+// yours, counting towards the three you can hold and needing the standing it
+// always needed, but the cargo waits at the station that posted it. Hold
+// space is checked when you collect it there. Collect it within
+// COLLECT_JUMPS jumps, or it counts as abandoned.
+
+/** Jumps you have to collect a reserved contract. */
+export const COLLECT_JUMPS = 2;
+
+/** Why you can't accept an offer over the array, or null if you can. Hold space waits for collection. */
+export const cannotReserve = (c: Commander, o: Contract): string | null => (o.survey || o.special ? 'Collect this one at the station' : cannotTake(c, o, Infinity));
+
+/** Accept an offer over the array. Returns why not, or null. */
+export function reserve(c: Commander, o: Contract): string | null {
+  const why = cannotReserve(c, o);
+  if (why) return why;
+  if (c.contracts?.some((a) => a.id === o.id) || c.contractsDone?.includes(o.id)) return 'Already taken';
+  c.contracts = [...(c.contracts ?? []), { ...o, jumpsLeft: COLLECT_JUMPS, reserved: true }];
+  return null;
+}
+
+/** Tonnes of reserved cargo waiting at stations: room you'll need when you collect it. */
+export const reservedTonnes = (c: Commander) => (c.contracts ?? []).reduce((t, a) => t + (a.reserved ? a.qty : 0), 0);
+
+/**
+ * Docked: load whatever is reserved for you here, if it fits. Returns what
+ * happened, for the player, including what didn't fit and how much room it needs.
+ */
+export function collect(c: Commander, here: StarSystem, freeTonnes: number, now = Date.now()): string[] {
+  const notes: string[] = [];
+  let free = freeTonnes;
+  for (const a of c.contracts ?? []) {
+    if (!a.reserved || key(a.from) !== key(at(here))) continue;
+    const name = COMPANIES[a.company].name;
+    if (a.qty > free + 1e-9) {
+      notes.push(`${name} is holding ${contractWhat(a)} for you: make ${+(a.qty - free).toFixed(1)} t more room to load it`);
+      continue;
+    }
+    free -= a.qty;
+    delete a.reserved;
+    a.jumpsLeft = a.jumps;
+    notes.push(`${name} · ${contractWhat(a)} loaded for ${placeOf(a.to).name} · ${a.jumps} jumps`);
+    notice(c, a, 'collected', 'Loaded, as agreed', `Your ${contractWhat(a)} is aboard. Deliver it to ${placeOf(a.to).name} within ${a.jumps} jumps.`, now);
+  }
+  return notes;
+}
+
+/** A jump with a contract still waiting to be collected: a warning, then it lapses. */
+function reservationAfterJump(c: Commander, a: ActiveContract, now: number): string[] {
+  const where = `${placeOf(a.from).name}`;
+  if (a.jumpsLeft === 0) {
+    notice(c, a, 'collect-last', 'Waiting for you', `We're holding ${contractWhat(a)} for you at ${where}. Collect it before your next jump, or we'll give the work to someone else.`, now);
+    return [`${contractWhat(a)} waiting at ${where}: collect it before your next jump`];
+  }
+  if (a.jumpsLeft >= 0) return [];
+  finish(c, a.id);
+  addStanding(c, a.company, -3);
+  logContract(c, a.company, 'failed');
+  notice(c, a, 'lapsed', 'Work given to someone else', `You never collected ${contractWhat(a)} at ${where}, so we gave it to another hauler. We'll count it as abandoned.`, now);
+  return [`${COMPANIES[a.company].name} gave your ${cargoName(a)} at ${where} to someone else: counted as abandoned`];
+}

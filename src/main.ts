@@ -20,6 +20,7 @@ import {
   REPAIR_FRACTION,
   type Mount,
   rollEquipmentDamage,
+  rollFragileDamage,
   newCommander,
   onSave,
   removeEquipment,
@@ -78,7 +79,7 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
-import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotTake, cargoName, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
+import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
@@ -97,7 +98,7 @@ import { clearIndicators, showHitDirection, updateIndicators, type Marker } from
 import { countDevice, countNewCommander } from './net/stats';
 import { claimFirsts, firstsIn, loadFirsts } from './net/firsts';
 import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
-import { distanceLy, ECONOMIES, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
+import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
@@ -106,7 +107,9 @@ import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
 import { closeDrawer, initTouch, onTap, updateTouch } from './ui/touch';
-import { COMPANY_SHORT, jobStrip, routeWork, type JobStep } from './game/jobs';
+import { COMPANY_SHORT, jobStrip, routeWork, workInReach, type JobStep } from './game/jobs';
+import { BEACON_CALLS, beacon, distressReward, hailReply, newBeacon, newsInReach, pirateAnswer, pirateThreat, RADIO_RANGE, type BeaconCall, type HailContext, type Speaker } from './game/radio';
+import { acceptLatest, clearRadio, initRadio, say, setRadioFight, toggleRadio, wakeRadio, type RadioAction, type RadioKind } from './ui/radio';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -127,7 +130,7 @@ function setState(next: State) {
     for (const n of netMissiles.values()) n.missile.dispose();
     netMissiles.clear();
     // Overlays that only make sense in flight; they're updated each frame while flying.
-    for (const id of ['#mouse-prompt', '#reticle', '#seeker', '#target-info', '#countdown', '#hail', '#job']) $(id).hidden = true;
+    for (const id of ['#mouse-prompt', '#reticle', '#seeker', '#target-info', '#countdown', '#hail', '#job', '#beacon']) $(id).hidden = true;
   }
   if (isMapOpen()) {
     closeMap();
@@ -465,6 +468,7 @@ function showNewGame() {
 
 function startCommander(difficulty: Difficulty) {
   commander = newCommander(difficulty);
+  clearRadio();
   countNewCommander(difficulty, isRetro() ? '1984' : 'neo');
   setCausedEvents([]);
   // Your callsign: what other commanders see. Blank keeps your account's, or the original's Jameson.
@@ -724,6 +728,16 @@ function renderContracts() {
       const rival = RIVAL[a.company];
       const sale = a.special && !k && rival && companyHere(rival, here) ? `<button data-rival="${a.id}" title="${escapeHtml(COMPANIES[a.company].name)} will find out">Offer to ${escapeHtml(COMPANIES[rival].name)} · ${rivalPrice(a).toLocaleString()} Cr</button>` : '';
       const course = c.target === to.index ? '<span class="on-course">On course</span>' : `<button data-course="${to.index}">Set course</button>`;
+      // Accepted over the comms array: waiting at its station to be collected.
+      if (a.reserved) {
+        const from = systemAt(a.from.galaxy, a.from.system);
+        const here_ = from === here;
+        const wait = a.jumpsLeft === 0 ? 'collect it before your next jump' : `collect within ${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'}`;
+        const fits = a.qty <= free + 1e-9;
+        return `<li class="${a.id === justTaken ? 'fresh' : ''}">${companyMark(a.company)} · ${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br>
+        <small>Reserved over the comms array · waiting at ${escapeHtml(stationName(from).name)}, ${escapeHtml(from.name)} · ${wait} · ${a.pay.toLocaleString()} Cr on delivery, ${a.jumps} jumps from loading</small>
+        <span class="actions">${here_ ? `<button data-collect="${a.id}" ${fits ? '' : `disabled title="Needs ${a.qty} t free"`}>Load · ${a.qty} t</button>` : c.target === from.index ? '<span class="on-course">On course</span>' : `<button data-course="${from.index}">Set course</button>`}<button data-abandon="${a.id}" title="The company gives it to someone else, and remembers">Abandon</button></span>${here_ && !fits ? `<small class="why">Make ${+(a.qty - free).toFixed(1)} t more room in the hold to load it</small>` : ''}</li>`;
+      }
       const what = a.survey
         ? `Survey the moons of ${place(to)}<br><small>${left} · ${worldOf(to).moons.filter((_, i) => isSurveyed(c, to, `moon${i}`)).length} of ${worldOf(to).moons.length} surveyed${surveyDone(c, a) ? ' · hand in at any Wexley-Yorozu station' : ''} · ${a.pay.toLocaleString()} Cr</small>`
         : `${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>`;
@@ -786,6 +800,15 @@ $('#contracts').addEventListener('click', (e) => {
       if (fitted) contractMessage += ` · ${fitted}`;
       contractMessage += ` · ${plotCourse(c, offer.to.system)}`;
       justTaken = offer.id;
+      sfx.beep();
+    }
+  } else if (b.dataset.collect) {
+    const notes = collect(c, currentSystem(), cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
+    contractMessage = notes.join(' · ');
+    const loaded = c.contracts?.find((a) => a.id === b.dataset.collect);
+    if (loaded && !loaded.reserved) {
+      contractMessage += ` · ${plotCourse(c, loaded.to.system)}`;
+      justTaken = loaded.id;
       sfx.beep();
     }
   } else if (b.dataset.abandon) {
@@ -2271,16 +2294,26 @@ const evading = () => commander?.difficulty === 'modern' && isWorking(commander,
  * Damage the player's ship. Shields soak hits first; once a hit reaches the
  * hull it may take out fitted equipment. Returns true if the ship is destroyed.
  */
-function damagePlayer(amount: number): boolean {
+function damagePlayer(amount: number, from?: NpcShip): boolean {
   const hullBefore = player.hull;
   const destroyed = player.damage(amount);
   const badlyHurt = player.hull < player.def.stats.hull * EQUIPMENT_RISK_HULL;
-  if (!destroyed && player.hull < hullBefore && badlyHurt && equipmentHitCooldown <= 0 && commander) {
-    const hit = rollEquipmentDamage(cmdr());
+  // Pirates aim for the comms array: it's how you'd call for help.
+  const aimed = from?.role === 'pirate';
+  if (!destroyed && player.hull < hullBefore && !badlyHurt && equipmentHitCooldown <= 0 && commander) {
+    const hit = rollFragileDamage(cmdr(), Math.random, aimed);
     if (hit) {
       equipmentHitCooldown = EQUIPMENT_HIT_GAP;
       sfx.scrape();
-      flash(cmdr().difficulty === 'classic' ? `${hit.name} destroyed!` : `${hit.name} damaged · repair at a station`, 2.5);
+      flash(`${hit.name} damaged · plain radio until it's repaired at a station`, 2.5);
+    }
+  }
+  if (!destroyed && player.hull < hullBefore && badlyHurt && equipmentHitCooldown <= 0 && commander) {
+    const hit = rollEquipmentDamage(cmdr(), Math.random, aimed ? 'comms-array' : undefined);
+    if (hit) {
+      equipmentHitCooldown = EQUIPMENT_HIT_GAP;
+      sfx.scrape();
+      flash(cmdr().difficulty === 'classic' ? `${hit.name} destroyed!` : hit.id === 'comms-array' ? `${hit.name} damaged · plain radio until it's repaired at a station` : `${hit.name} damaged · repair at a station`, 2.5);
       if (hit.id === 'docking-computer' && autopilot) setAutopilot(false);
     }
   }
@@ -2352,6 +2385,8 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
       setTimeout(() => flash(`Delivery lost · ${goods} won't reach ${currentSystem().name}`, 3), 1600);
     }
   }
+  // A trader that called for help, and didn't get it.
+  if (distresses.some((d) => d.trader === npc && d.heard) && state === 'flying') radio('mayday', traderName(npc), 'Signal lost', { colour: traderColour(npc) });
   removeNpc(npc);
   if (carrier?.npc === npc) bastionDestroyed(carrier, velocity, killer === player.obj);
   if (killer !== player.obj) return;
@@ -2409,6 +2444,8 @@ const inSafeZone = (at: THREE.Vector3) => commander !== null && at.distanceTo(st
 
 /** The player shot or rammed a ship. Pirates are fair game; anyone else is a crime. */
 function playerHitNpc(npc: NpcShip, damage: number) {
+  // Paid off, then shot at: the deal's off.
+  if (npc.paid) Object.assign(npc, { paid: false, fights: true });
   if (npc.role === 'police' || npc.role === 'marshal') becomeFugitive();
   else if (npc.role === 'trader') {
     if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on a trader · you are an OFFENDER');
@@ -2453,7 +2490,8 @@ function mayday(npc: NpcShip) {
   const where = npc.obj.position.clone();
   const delay = Math.max(10, 10 + (where.distanceTo(station.root.position) - STATION_SPACE) / 200);
   responses.push({ at: elapsed + delay, where });
-  flash(`Mayday from the ${npc.company ? COMPANIES[npc.company].name : ''} ${npc.def.name}`.replace('  ', ' ') + ` · police about ${Math.round(delay)} s away`, 3);
+  const line = `Mayday from the ${npc.company ? COMPANIES[npc.company].name : ''} ${npc.def.name}`.replace('  ', ' ') + ` · police about ${Math.round(delay)} s away`;
+  radio('mayday', traderName(npc), `Mayday! We're under attack · police about ${Math.round(delay)} s away`, { colour: traderColour(npc), flash: 3, urgent: true, line });
 }
 
 function updateResponses() {
@@ -2472,7 +2510,7 @@ function updateResponses() {
       cop.obj.lookAt(where);
       cop.ship.speed = cop.ship.maxSpeed * 0.6;
     }
-    flash('Police arriving · answering a distress call', 2);
+    radio('police', `${currentSystem().name} police`, 'Police arriving · answering a distress call', { flash: 2 });
   }
 }
 
@@ -2576,7 +2614,8 @@ function toggleTransponder() {
     else becomeOffender(crime ? 'Transponder on, near the scene · you are the suspect · OFFENDER' : 'Transponder on · you ignored a police hail · OFFENDER');
     return;
   }
-  flash(hail ? 'Transponder read · thank you, Commander' : 'Transponder on', 2);
+  if (hail) radio('police', `${currentSystem().name} police`, 'Transponder read · thank you, Commander', { flash: 2, urgent: true, line: 'Transponder read · thank you, Commander' });
+  else flash('Transponder on', 2);
 }
 
 function showTransponder() {
@@ -2618,7 +2657,7 @@ function updateHail() {
     if (!by) return;
     hail = { by, until: elapsed + HAIL_TIME };
     sfx.beep();
-    flash(`Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, 4);
+    radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.` });
   }
   // The Viper that hailed you comes to look.
   hail.by.patrol.centre.copy(player.obj.position);
@@ -2630,7 +2669,7 @@ function updateHail() {
       hail = null;
       hullChecked = true;
       box.hidden = true;
-      flash(isFugitive() ? 'Hull read · you are wanted here' : 'Hull read · clean · get that transponder seen to at the next station', 3);
+      radio('police', `${currentSystem().name} police`, isFugitive() ? 'Hull read · you are wanted here' : 'Hull read · clean · get that transponder seen to at the next station', { flash: 3, urgent: true, line: isFugitive() ? 'Hull read · you are wanted here' : 'Hull read · clean · get that transponder seen to at the next station' });
       return;
     }
   }
@@ -2639,7 +2678,7 @@ function updateHail() {
     defiedPolice = true;
     box.hidden = true;
     sfx.beep();
-    flash('No answer · police are treating you as hostile', 3);
+    radio('police', `${currentSystem().name} police`, 'No answer · police are treating you as hostile', { flash: 3, urgent: true, line: 'No answer · police are treating you as hostile' });
     return;
   }
   box.hidden = false;
@@ -2872,12 +2911,15 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       zapAt(origin, 700, 120, 0.15, 0.5);
       const struck = hit?.target.value;
       if (struck instanceof NpcShip) {
-        if (struck.hit(npc.laser.damage, npc.ship)) destroyNpc(struck, npc.obj);
+        // A trader calling for help puts everything into its shields, to last until help comes.
+        const calling = struck.role === 'trader' && npc.role === 'pirate' && modern();
+        if (calling) distressCall(struck, npc);
+        if (struck.hit(npc.laser.damage * (calling ? DISTRESS_SHIELDING : 1), npc.ship)) destroyNpc(struck, npc.obj);
       } else if (struck === 'player') {
         sfx.hit();
         hitFeedback(0.35);
         showHitDirection(camera, npc.obj.position);
-        if (damagePlayer(npc.laser.damage)) {
+        if (damagePlayer(npc.laser.damage, npc)) {
           die();
           return;
         }
@@ -2928,7 +2970,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       scanned = true;
       if (illegalEquipment(cmdr()).length) becomeOffender('Scanned by police · distress jammer found · you are an OFFENDER');
       else if (carriesContraband(cmdr())) becomeOffender('Scanned by police · contraband found · you are an OFFENDER');
-      else flash('Scanned by police · clean', 1.5);
+      else radio('police', `${currentSystem().name} police`, 'Scanned · clean', { flash: 1.5, line: 'Scanned by police · clean' });
     }
   }
 
@@ -3840,6 +3882,7 @@ function updateSpace(dt: number) {
     updateSurrender(dt);
     updateRouteAutopilot();
     updateIdentities();
+    updateRadio(dt);
   }
   if (stationFlash > 0) {
     stationFlash = Math.max(0, stationFlash - dt);
@@ -3915,11 +3958,13 @@ function updateMarkers() {
     const d = p.distanceTo(player.obj.position);
     return d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`;
   };
+  const calling = new Set(distresses.filter((d) => d.heard).map((d) => d.trader));
   const markers: Marker[] = npcs.map((npc) => ({
     position: npc.obj.position,
     color: npc === locked ? '#ff4d6d' : npcColour(npc),
     radius: npc.radius,
-    label: npc.hostile || npc.obj.position.distanceTo(player.obj.position) < 1500 ? km(npc.obj.position) : undefined,
+    // A trader's distress call gives its position away, wherever it is.
+    label: calling.has(npc) ? `MAYDAY ${km(npc.obj.position)}` : npc.hostile || npc.obj.position.distanceTo(player.obj.position) < 1500 ? km(npc.obj.position) : undefined,
   }));
   markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
   markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
@@ -4058,6 +4103,14 @@ function renderControlsCard() {
       ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
       ['U', 'Surrender to the police: the ship stops itself, then 5 seconds (fine, record cleared)'],
       ...(commander?.difficulty === 'modern' ? [['0', 'Transponder off / on: run dark, unidentified (police will hail you; it switches back on after a jump, or to dock when it\'s safe)']] : []),
+      ...(commander?.difficulty === 'modern'
+        ? [
+            ['L', 'Hail the ship in your sights (or the station, within 5 km; anywhere with a comms array)'],
+            ["'", 'Radio log: open / close'],
+            ['Enter', 'Accept the latest offer on the radio'],
+            ['`', 'Emergency beacon: Mayday, out of fuel, hull failing, request escort (1–4 to send)'],
+          ]
+        : []),
       ['Scoop', `Fly slowly (under ${Math.round(SCOOP_SPEED * 100)}% speed) straight into a cargo canister, a yellow dot on the scanner (needs Fuel Scoops)`],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
       ['K', 'Switch control scheme'],
@@ -4177,6 +4230,12 @@ async function launch() {
     flash(`${stationName(currentSystem()).name} · Transponder damaged · your hull is logged, police won't hail you here · repair it when you dock`, 4.5);
   } else flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
   if (recordVisit(cmdr(), currentSystem())) saveCommander(cmdr()); // where you started counts
+  // The radio (Modern): what was said while you were docked, and the array listening from the start.
+  for (const b of document.querySelectorAll<HTMLElement>('#touch .radio-button')) b.hidden = !modern();
+  wakeRadio();
+  arrayTimer = 6;
+  distresses.length = 0;
+  escort = null;
   announceEvent(currentSystem(), 2800);
 }
 
@@ -4216,16 +4275,20 @@ async function dock() {
   const settlement = due ? settle(c) : null;
   const specialsDue = (c.contracts ?? []).filter((a) => a.special && a.to.system === sys.index && a.to.galaxy === sys.galaxy && a.jumpsLeft >= 0).map((a) => a.company);
   const held = [...exploreOf(c).data];
+  const seen = messageIds();
   const delivered = deliver(c, sys);
+  // Work accepted over the comms array, waiting here: loaded if it fits.
+  const collected = collect(c, sys, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
   bringHome(held);
   void loadFirsts(sys.galaxy);
   const news = checkMessages(c, sys, Date.now());
   const gone = [...collectHeld(c, sys), ...checkAdrift()];
   saveCommander(c);
   enterDocked();
+  radioMessages(seen); // heard on the radio too, for the log when you launch
   markInbox(c);
   if (settlement) flash(settlementMessage(settlement, weighed ? 'Weighbridge: heavier than your papers · hidden compartment opened' : inspected ? 'Hold inspected' : 'Fined on arrival'), 6);
-  else if (delivered.length) flash([...delivered, ...specialsDue.map(thanksFrom)].join(' · '), 6);
+  else if (delivered.length || collected.length) flash([...delivered, ...specialsDue.map(thanksFrom), ...collected].join(' · '), 6);
   else if (gone.length) flash(gone.join(' · '), 5);
   else if (news.length) flash(`New message from ${COMPANIES[news[0].company].name}: ${news[0].subject}`, 5);
   else if (smuggling && inspectionChance(c, sys) > 0) flash('Docked · your hold was not inspected this time', 3);
@@ -4256,11 +4319,11 @@ function updateClearance() {
   const name = stationName(currentSystem()).name;
   // Running dark into a lawful station: switch on to dock, if that's safe.
   if (darkRefused() && !lockedDown() && !clearanceRefused() && !transponderOnToDock()) return;
-  if (lockedDown()) flash(`${name} · Lockdown: containment breach · docking suspended`, 4);
-  else if (clearanceRefused()) flash(`${name} · Docking refused: you are a Fugitive · U to surrender`, 4);
-  else if (darkRefused()) flash(`${name} · Unidentified ship: switch on your transponder to dock`, 4);
-  else if (checksClearance(currentSystem())) flash(`${name} · Transponder checked · Docking clearance granted`, 2.5);
-  else flash(`${name} · No questions asked`, 2.5);
+  if (lockedDown()) radio('station', name, 'Lockdown: containment breach · docking suspended', { flash: 4, urgent: true });
+  else if (clearanceRefused()) radio('station', name, 'Docking refused: you are a Fugitive · U to surrender', { flash: 4, urgent: true });
+  else if (darkRefused()) radio('station', name, 'Unidentified ship: switch on your transponder to dock', { flash: 4, urgent: true });
+  else if (checksClearance(currentSystem())) radio('station', name, 'Transponder checked · Docking clearance granted', { flash: 2.5 });
+  else radio('station', name, 'No questions asked', { flash: 2.5 });
   if (!lockedDown() && !clearanceRefused()) setTimeout(() => state === 'flying' && offerRouteWork(), 3000);
 }
 
@@ -4282,12 +4345,9 @@ function offerRouteWork() {
   routeWorkSaid.add(key);
   const o = fit.offer;
   const what = `${o.qty} t ${cargoName(o)} for ${destinationOf(o).name}`;
-  flash(`${stationName(here).name} · ${COMPANY_SHORT[o.company]} has ${what}, ${fit.why} · ${o.pay.toLocaleString()} Cr · dock to take it`, 5);
-  const id = `route:${o.id}`;
-  if (!c.messages?.some((m) => m.id === id)) {
-    c.messages = [{ id, company: o.company, subject: 'Work on your route', body: `${what} at ${stationName(here).name}, ${here.name}: ${fit.why}. ${o.pay.toLocaleString()} Cr on delivery. On the board until the half hour.`, at: now }, ...(c.messages ?? [])].slice(0, 20);
-    saveCommander(c);
-  }
+  radio('station', stationName(here).name, `${COMPANY_SHORT[o.company]} has ${what}, ${fit.why} · ${o.pay.toLocaleString()} Cr · dock to take it`, { flash: 5 });
+  routeMessage(o, here, fit.why);
+  saveCommander(c);
 }
 
 const jobBox = $('#job');
@@ -4306,17 +4366,19 @@ function updateJob(dt: number) {
     npcs.some((n) => n.hostile && n.obj.position.distanceTo(pos) < FIGHT_RANGE) ||
     [...sharedSpace.remotes.values()].some((r) => sharedSpace.isHostile(r) && r.position.distanceTo(pos) < FIGHT_RANGE);
   if (hostile) {
-    // A fight: the strip folds away to keep the screen clear.
+    // A fight: the strip folds away to keep the screen clear, and so does the radio log.
     if (!fight.on && jobOpen) {
       jobOpen = false;
       jobKey = '';
     }
+    if (!fight.on) setRadioFight(true);
     Object.assign(fight, { on: true, calm: 0 });
   }
   else if (fight.on && (fight.calm += dt) >= CALM_AFTER) {
     fight.on = false;
+    setRadioFight(false);
     const s = cmdr().difficulty === 'modern' ? jobStrip(cmdr(), currentSystem()) : null;
-    if (s) flash(`Back on course · ${s.step.line.split(' · ')[0]} · ${s.step.next}`, 4.5);
+    if (s) radio('company', COMPANIES[s.step.contract.company].name, `Back on course · ${s.step.line.split(' · ')[0]} · ${s.step.next}`, { colour: COMPANIES[s.step.contract.company].colour });
   }
   jobTimer -= dt;
   if (jobTimer > 0) return;
@@ -4372,6 +4434,453 @@ onTap($('#job .job-more'), () => {
   jobKey = '';
   renderJob();
 });
+
+// --- The radio (docs/design/radio-and-comms.md) -------------------------------------
+// Under Modern rules, everything said to you in flight goes in the radio log:
+// station traffic, police, pirates, traders and the companies, each in its
+// own colour. The few lines that matter this second still flash as well.
+// Classic keeps its flashes, as in 1984.
+
+const modern = () => commander !== null && cmdr().difficulty === 'modern';
+/** A working comms array: the companies reach you anywhere, and you hear further. */
+const hasArray = () => modern() && isWorking(cmdr(), 'comms-array');
+
+interface RadioOpts {
+  /** Seconds to flash it: always under Classic, and under Modern if it's urgent. */
+  flash?: number;
+  urgent?: boolean;
+  colour?: string;
+  action?: RadioAction;
+  /** The flashed text, when it isn't "from · text". */
+  line?: string;
+}
+
+function radio(kind: RadioKind, from: string, text: string, o: RadioOpts = {}) {
+  const line = o.line ?? `${from} · ${text}`;
+  if (!modern()) {
+    if (o.flash) flash(line, o.flash);
+    return;
+  }
+  say({ kind, from, text, colour: o.colour, action: o.action });
+  if (o.urgent && o.flash) flash(line, o.flash);
+}
+
+const companyVoice = (id: CompanyId) => ({ from: COMPANIES[id].name, colour: COMPANIES[id].colour });
+
+/** The companies' notes (the ones kept in Messages) are heard on the radio too. */
+const messageIds = () => new Set((cmdr().messages ?? []).map((m) => m.id));
+function radioMessages(seen: Set<string>) {
+  if (!modern()) return;
+  for (const m of [...(cmdr().messages ?? [])].reverse()) {
+    if (seen.has(m.id)) continue;
+    say({ kind: 'company', ...companyVoice(m.company), ...(m.from ? { from: m.from } : {}), text: `${m.subject}: ${m.body}` });
+  }
+}
+
+// Who's speaking, and what they know: a ship's serial and how often you've
+// hailed it pick the line (the station's, the minute).
+const serials = new WeakMap<NpcShip, number>();
+let nextSerial = 0;
+const serialOf = (n: NpcShip) => serials.get(n) ?? (serials.set(n, ++nextSerial), nextSerial);
+const minute = () => Math.floor(Date.now() / 60_000);
+const hailsOf = new WeakMap<NpcShip, number>();
+
+function speakerOf(npc: NpcShip): { who: Speaker; kind: RadioKind; from: string; colour?: string } {
+  if (!npcIdentified(npc)) return { who: npc.def.id === 'falcon' ? 'falcon' : npc.role === 'trader' ? 'trader' : 'pirate', kind: 'ship', from: `Unidentified ${npc.def.name}`, colour: UNIDENTIFIED_HEX };
+  if (npc.def.id === 'falcon') return { who: 'falcon', kind: 'pirate', from: 'Falcon' };
+  switch (npc.role) {
+    case 'police':
+      return { who: 'police', kind: 'police', from: `${currentSystem().name} police` };
+    case 'marshal':
+      return { who: 'marshal', kind: 'police', from: 'Co-operative Marshals', colour: '#ffd98a' };
+    case 'trader':
+      return { who: 'trader', kind: 'ship', from: npc.company ? `${COMPANIES[npc.company].name} ${npc.def.name}` : npc.def.name, colour: npc.company ? COMPANIES[npc.company].colour : '#9ef0c0' };
+    default:
+      return { who: 'pirate', kind: 'pirate', from: npc.def.name };
+  }
+}
+
+function hailContext(k: number, npc?: NpcShip): HailContext {
+  const sys = currentSystem();
+  return {
+    system: sys,
+    k,
+    status: legalStatus(cmdr()),
+    dark: dark() && !identified(),
+    scared: npc ? npc.attackedAgo < 12 : false,
+    wronged: npc ? npc.attacker === player && npc.attackedAgo < 120 : false,
+    company: npc?.company ? COMPANIES[npc.company].name : undefined,
+    lawless: !checksClearance(sys),
+  };
+}
+
+/** What's in your hold, as a pirate's scanner reads it. */
+function playerHoldValue(): number {
+  const prices = new Map(quotes(tradeContext()).map((q) => [q.commodity.id, q.price]));
+  return Object.entries(cmdr().cargo).reduce((v, [id, q]) => v + q * (prices.get(id) ?? 0), 0);
+}
+
+/** L: hail the ship in your sights (or your missile's target); with nothing there, the station. */
+function hailTarget() {
+  if (!modern()) return flash('Classic rules: only the station talks to you', 1.5);
+  const pos = player.obj.position;
+  const npc = (locked && npcs.includes(locked) ? locked : null) ?? sightedNpc(RADIO_RANGE, isTouch ? 14 : 8);
+  sfx.beep();
+  if (npc) {
+    const sp = speakerOf(npc);
+    const d = npc.obj.position.distanceTo(pos);
+    if (d > RADIO_RANGE) return radio('ship', 'Radio', `No answer from the ${npc.def.name}: ${(d / 1000).toFixed(1)} km, out of radio range`);
+    // Ask again and you may get another line; the same ship, asked the same number of times, says the same.
+    const asked = (hailsOf.get(npc) ?? 0) + 1;
+    hailsOf.set(npc, asked);
+    const ctx = hailContext(serialOf(npc) * 1000 + asked, npc);
+    if (npc.paid) return radio('pirate', sp.from, "We had a deal. Don't push it.");
+    if (sp.who === 'pirate' && npcIdentified(npc)) {
+      const r = pirateAnswer(ctx, playerHoldValue(), cmdr().credits);
+      return radio('pirate', sp.from, r.text, { colour: sp.colour, action: r.toll ? payOff(npc, r.toll) : undefined, flash: r.toll ? 4 : undefined, urgent: Boolean(r.toll) });
+    }
+    return radio(sp.kind, sp.from, hailReply(sp.who, ctx).text, { colour: sp.colour });
+  }
+  const d = pos.distanceTo(station.root.position);
+  const name = stationName(currentSystem()).name;
+  if (d > CLEARANCE_RANGE && !hasArray()) return radio('station', 'Radio', `Nothing in your sights, and ${name} is out of range: traffic control answers within ${CLEARANCE_RANGE / 1000} km`);
+  radio('station', name, hailReply('station', hailContext(minute())).text);
+}
+
+/** A pirate's price, on the radio: pay it, and the band leaves you be. */
+function payOff(npc: NpcShip, toll: number): RadioAction {
+  return {
+    label: `Pay ${toll} Cr`,
+    done: 'Paid',
+    until: Date.now() + 30_000,
+    run: () => {
+      const c = cmdr();
+      if (!npcs.includes(npc)) return { kind: 'pirate', from: npc.def.name, text: '...' };
+      if (c.credits < toll) return { kind: 'pirate', from: npc.def.name, text: "Can't pay? Then we'll take it." };
+      c.credits = Math.round((c.credits - toll) * 10) / 10;
+      saveCommander(c);
+      const away = npc.obj.position.clone().sub(player.obj.position).normalize();
+      for (const p of ofRole('pirate').filter((p) => p.obj.position.distanceTo(npc.obj.position) < 3000)) {
+        Object.assign(p, { paid: true, fights: false, hostile: false, target: null, mode: 'travel' });
+        p.destination = p.obj.position.clone().addScaledVector(away, 30000);
+      }
+      return { kind: 'pirate', from: npc.def.name, text: `Pleasure doing business. ${toll} Cr paid; we never saw you.` };
+    },
+  };
+}
+
+// Pirates say something before they open fire, if you're in range to hear.
+const threatened = new WeakSet<NpcShip>();
+let lastThreat = -Infinity;
+function pirateThreats() {
+  for (const p of ofRole('pirate')) {
+    if (!p.hostile || threatened.has(p)) continue;
+    threatened.add(p);
+    if (elapsed - lastThreat < 20 || !npcIdentified(p) || p.obj.position.distanceTo(player.obj.position) > RADIO_RANGE) continue;
+    lastThreat = elapsed;
+    radio('pirate', p.def.name, pirateThreat(hailContext(serialOf(p) * 1000 + (minute() % 1000), p)));
+  }
+  // Paid-off pirates, gone over the horizon.
+  for (const p of ofRole('pirate')) if (p.paid && p.obj.position.distanceTo(player.obj.position) > 25000) removeNpc(p);
+}
+
+// --- The comms array: the companies reach you anywhere ---------------------------------
+
+/** Offers already put to you over the array. */
+const offersHeard = new Set<string>();
+const newsHeard = new Set<string>();
+let arrayTimer = 0;
+
+/** Keep the company's note in Messages, as traffic control's mention does. */
+function routeMessage(o: Contract, at: StarSystem, why: string) {
+  const c = cmdr();
+  const id = `route:${o.id}`;
+  if (c.messages?.some((m) => m.id === id)) return;
+  const what = `${o.qty} t ${cargoName(o)} for ${destinationOf(o).name}`;
+  c.messages = [{ id, company: o.company, subject: 'Work on your route', body: `${what} at ${stationName(at).name}, ${at.name}: ${why}. ${o.pay.toLocaleString()} Cr on delivery. On the board until the half hour.`, at: Date.now() }, ...(c.messages ?? [])].slice(0, 20);
+}
+
+/** Work on your route from here and your next jump, with an Accept button. */
+function arrayOffers() {
+  const c = cmdr();
+  const here = currentSystem();
+  const now = Date.now();
+  const next = c.target !== null && c.target !== here.index ? systemAt(here.galaxy, c.target) : null;
+  const free = cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c) - reservedTonnes(c);
+  for (const { offer: o, why, at } of workInReach(c, here, next, now, free)) {
+    if (offersHeard.has(o.id) || cannotReserve(c, o)) continue;
+    offersHeard.add(o.id);
+    if (at === here) routeWorkSaid.add(`${here.galaxy}:${here.index}:${Math.floor(now / BOARD_SLOT)}`); // traffic control needn't say it again
+    routeMessage(o, at, why);
+    const where = at === here ? stationName(here).name : `${stationName(at).name}, ${at.name}`;
+    radio('company', COMPANIES[o.company].name, `Work on your route: ${o.qty} t ${cargoName(o)} for ${destinationOf(o).name}, ${why} · waiting at ${where} · ${o.pay.toLocaleString()} Cr`, {
+      colour: COMPANIES[o.company].colour,
+      action: acceptOffer(o, at),
+    });
+  }
+  saveCommander(c);
+}
+
+/** Accept over the array: reserved now, collected when you dock where it waits. */
+function acceptOffer(o: Contract, at: StarSystem): RadioAction {
+  const voice = { kind: 'company' as const, ...companyVoice(o.company) };
+  return {
+    label: 'Accept',
+    done: 'Accepted',
+    until: (Math.floor(Date.now() / BOARD_SLOT) + 1) * BOARD_SLOT,
+    run: () => {
+      const c = cmdr();
+      if (!isWorking(c, 'comms-array')) return { ...voice, text: "We can't hear you: your comms array is down. Dock and take it at the station." };
+      if (!board(c, at, Date.now()).some((x) => x.id === o.id)) return { ...voice, text: "Sorry, Commander: that one's gone to someone else." };
+      const why = reserve(c, o);
+      if (why) return { ...voice, text: why };
+      saveCommander(c);
+      sfx.beep();
+      jobKey = '';
+      renderJob();
+      return { ...voice, text: `Accepted: ${o.qty} t ${cargoName(o)} for ${destinationOf(o).name}. We'll hold it at ${stationName(at).name}, ${at.name}: collect it within ${COLLECT_JUMPS} jumps, and the clock starts when it's loaded.` };
+    },
+  };
+}
+
+/** Market news from a jump or two out, before the station's news has it. */
+function arrayNews() {
+  for (const n of newsInReach(currentSystem(), Date.now())) {
+    const key = `${n.where.galaxy}:${n.where.index}:${n.event.start}`;
+    if (newsHeard.has(key)) continue;
+    newsHeard.add(key);
+    radio('news', 'Comms array', n.line);
+  }
+}
+
+// --- Distress calls ---------------------------------------------------------------------
+// A trader under attack by pirates calls for help. You hear it within radio
+// range, or anywhere in the system with the array, which also picks up
+// attacks far out in the lanes. Get there while the pirates are still at it
+// and see them off (destroyed or running), and the trader's company pays a
+// little and remembers; the Carriers' Mutual remembers more.
+
+interface Distress {
+  trader: NpcShip;
+  pirates: Set<NpcShip>;
+  heard: boolean;
+  /** You got there while it was still going on. */
+  arrived: boolean;
+  until: number;
+}
+const distresses: Distress[] = [];
+const DISTRESS_ARRIVE = 5000; // metres: close enough to count as answering
+const DISTRESS_TIME = 240; // seconds a call stays open
+const DISTRESS_PIRATE_RANGE = 6000; // metres: pirates further than this from the trader have given up
+let distressTimer = 90;
+/** Damage a trader under attack takes while it calls for help: about a minute and a half against one pirate. */
+const DISTRESS_SHIELDING = 0.4;
+
+const traderName = (t: NpcShip) => (t.company ? `${COMPANIES[t.company].name} ${t.def.name}` : t.def.name);
+const traderColour = (t: NpcShip) => (t.company ? COMPANIES[t.company].colour : '#9ef0c0');
+
+function distressCall(trader: NpcShip, pirate: NpcShip) {
+  if (!modern()) return;
+  const known = distresses.find((x) => x.trader === trader);
+  if (known) {
+    known.pirates.add(pirate);
+    return;
+  }
+  const d = trader.obj.position.distanceTo(player.obj.position);
+  const heard = state === 'flying' && (d < RADIO_RANGE || hasArray());
+  distresses.push({ trader, pirates: new Set([pirate]), heard, arrived: false, until: elapsed + DISTRESS_TIME });
+  if (!heard) return;
+  sfx.beep();
+  radio('mayday', traderName(trader), `Mayday! Pirates on us, ${(d / 1000).toFixed(1)} km from you. Anyone?`, { colour: traderColour(trader), flash: 3.5, urgent: true });
+}
+
+function updateDistress() {
+  const pos = player.obj.position;
+  for (let i = distresses.length - 1; i >= 0; i--) {
+    const d = distresses[i];
+    const t = d.trader;
+    if (!npcs.includes(t) || elapsed > d.until) {
+      distresses.splice(i, 1);
+      continue;
+    }
+    const still = [...d.pirates].filter((p) => npcs.includes(p) && !p.paid && p.mode !== 'flee' && p.obj.position.distanceTo(t.obj.position) < DISTRESS_PIRATE_RANGE);
+    if (still.length && pos.distanceTo(t.obj.position) < DISTRESS_ARRIVE) d.arrived = true;
+    if (still.length) continue;
+    distresses.splice(i, 1);
+    if (d.arrived && state === 'flying') rescued(d);
+  }
+}
+
+function rescued(d: Distress) {
+  const c = cmdr();
+  const t = d.trader;
+  const r = distressReward(d.pirates.size, t.company);
+  c.credits = Math.round((c.credits + r.credits) * 10) / 10;
+  if (t.company) {
+    addStanding(c, t.company, r.standing);
+    const mutual = t.company === 'mutual';
+    c.messages = [
+      {
+        id: `rescue:${t.company}:${Date.now()}`,
+        company: t.company,
+        subject: mutual ? 'The Mutual remembers' : 'With thanks',
+        body: mutual
+          ? `You answered one of our crews' calls in ${currentSystem().name} and saw the pirates off. ${r.credits} Cr, and the Mutual's thanks. We look after those who look after us.`
+          : `You saw pirates off one of our ships in ${currentSystem().name}. ${r.credits} Cr, with our thanks.`,
+        at: Date.now(),
+      },
+      ...(c.messages ?? []),
+    ].slice(0, 20);
+  }
+  saveCommander(c);
+  sfx.beep();
+  radio('ship', traderName(t), `Thank you, Commander. ${r.credits} Cr, with our thanks${r.standing ? ` · ${COMPANIES[t.company!].name} standing +${r.standing}` : ''}`, { colour: traderColour(t), flash: 4, urgent: true });
+}
+
+/** With the array you hear attacks far out in the lanes: now and then, one starts somewhere you can't see. */
+function spawnDistress(): boolean {
+  const room = MAX_PIRATES - ofRole('pirate').filter((p) => !p.paid).length;
+  if (room < 1) return false;
+  for (let tries = 0; tries < 8; tries++) {
+    const at = player.obj.position.clone().addScaledVector(new THREE.Vector3().randomDirection(), 13000 + Math.random() * 7000);
+    if (at.distanceTo(station.root.position) < 7000 || at.distanceTo(planetPos) < planetRadius * 1.4) continue;
+    const trader = addNpc('cobra-mk3', 'trader', at);
+    flyForCompany(trader);
+    trader.cargo = randomCargo();
+    trader.obj.lookAt(station.root.position);
+    trader.ship.speed = trader.ship.maxSpeed * 0.5;
+    trader.destination = onSlotAxis(900);
+    legs.set(trader, 'inbound');
+    const band = Math.min(room, Math.random() < 0.4 ? 2 : 1);
+    for (let i = 0; i < band; i++) {
+      const def = Math.random() < 0.6 ? 'sidewinder' : 'mamba';
+      const p = addNpc(def, 'pirate', at.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(1500)), at);
+      p.obj.lookAt(at);
+      p.ship.speed = p.ship.maxSpeed * 0.5;
+      p.bounty = BOUNTIES[def] ?? 40;
+      Object.assign(p, { target: trader.ship, mode: 'attack' });
+    }
+    return true;
+  }
+  return false;
+}
+
+// --- The emergency beacon: fixed calls, from every ship --------------------------------
+
+const beaconState = newBeacon();
+let beaconOpen = false;
+let beaconTimer = 0;
+/** A Viper detailed to fly with you, and until when. */
+let escort: { npc: NpcShip; until: number } | null = null;
+
+function toggleBeacon(show = !beaconOpen) {
+  if (show && !modern()) return flash('Classic rules: no emergency beacon', 1.5);
+  beaconOpen = show;
+  $('#beacon').hidden = !show;
+  clearTimeout(beaconTimer);
+  if (show) beaconTimer = window.setTimeout(() => toggleBeacon(false), 8000);
+}
+
+$('#beacon .beacon-calls').innerHTML = BEACON_CALLS.map((b, i) => `<button type="button" data-call="${b.call}">${isTouch ? '' : `${i + 1} · `}${escapeHtml(b.label)}</button>`).join('');
+$('#beacon .beacon-calls')
+  .querySelectorAll<HTMLButtonElement>('button')
+  .forEach((b) => onTap(b, () => sendBeacon(b.dataset.call as BeaconCall)));
+
+function sendBeacon(call: BeaconCall) {
+  toggleBeacon(false);
+  if (state !== 'flying') return;
+  const c = cmdr();
+  const here = currentSystem();
+  const pos = player.obj.position;
+  const label = BEACON_CALLS.find((b) => b.call === call)!.label;
+  const police = `${here.name} police`;
+  const nearest = galaxy(here.galaxy)
+    .filter((s) => s !== here)
+    .reduce((a, b) => (distanceLy(here, a) <= distanceLy(here, b) ? a : b));
+  const out = beacon(beaconState, call, elapsed, {
+    lawful: hasLaw(here),
+    hostilesNear: npcs.some((n) => n.hostile && n.obj.position.distanceTo(pos) < FIGHT_RANGE) || [...sharedSpace.remotes.values()].some((r) => sharedSpace.isHostile(r) && r.position.distanceTo(pos) < FIGHT_RANGE),
+    hull: player.hull / player.def.stats.hull,
+    fuel: c.fuel,
+    nearestLy: distanceLy(here, nearest),
+    canDock: !clearanceRefused() && !lockedDown(),
+    system: `${here.galaxy}:${here.index}`,
+  });
+  if (out.kind === 'wait') return flash(`Beacon recharging · ${out.seconds} s`, 1.5);
+  sfx.beep();
+  radio('beacon', 'Beacon', `${label} sent`);
+  switch (out.kind) {
+    case 'police': {
+      if (isFugitive() && identified()) return radio('police', police, 'We know who you are, Commander. Surrender (U).', { flash: 3, urgent: true });
+      const delay = Math.round(Math.max(10, 10 + (pos.distanceTo(station.root.position) - STATION_SPACE) / 200));
+      responses.push({ at: elapsed + delay, where: pos.clone() });
+      // Any Viper already out comes too.
+      const near = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(pos) < 15000);
+      if (near) near.patrol.centre.copy(pos);
+      return radio('police', police, `Mayday received. Vipers on their way, about ${delay} s.`, { flash: 3, urgent: true });
+    }
+    case 'unanswered':
+      return radio('beacon', 'Beacon', "No answer: there's no law here to send help");
+    case 'false':
+      if (out.offence) {
+        radio('police', police, 'Second false alarm. Wasting police time is an offence, Commander.');
+        return becomeOffender('Wasting police time · you are an OFFENDER');
+      }
+      return radio('police', police, "Nothing on our scanner, Commander. Don't make a habit of it.", { flash: 3, urgent: true });
+    case 'escort': {
+      let npc = ofRole('police').filter((p) => !p.hostile).sort((a, b) => a.obj.position.distanceTo(pos) - b.obj.position.distanceTo(pos))[0];
+      if (!npc && ofRole('police').length < MAX_POLICE) {
+        spawnViper(true);
+        npc = npcs[npcs.length - 1];
+      }
+      if (npc) escort = { npc, until: elapsed + 150 };
+      return radio('police', police, call === 'hull' ? 'Emergency berth ready, Commander. A Viper will see you in.' : 'Escort on its way. Head for the station.', { flash: 3, urgent: true });
+    }
+    case 'fuel-ok':
+      return radio('station', stationName(here).name, `Your tanks read ${c.fuel.toFixed(1)} LY, and ${nearest.name} is ${distanceLy(here, nearest).toFixed(1)}. You'll make it.`);
+    case 'dock-for-fuel':
+      return radio('station', stationName(here).name, `Come in and fill up, Commander: ${FUEL_PRICE} Cr a light year at the pump.`);
+    case 'tender': {
+      const paid = Math.min(c.credits, out.cost);
+      c.credits = Math.round((c.credits - paid) * 10) / 10;
+      c.fuel = Math.min(fuelCapacity(c), Math.round((c.fuel + out.ly) * 10) / 10);
+      saveCommander(c);
+      return radio('company', "Carriers' Mutual", `Fuel tender alongside: ${out.ly.toFixed(1)} LY transferred · ${paid.toLocaleString()} Cr${paid < out.cost ? ', all you had' : ''}. Nobody gets stranded on our watch.`, { colour: COMPANIES.mutual.colour, flash: 4, urgent: true });
+    }
+    case 'tendered':
+      return radio('company', "Carriers' Mutual", "We've sent you one tender here already, Commander. Try a pair of fuel scoops.", { colour: COMPANIES.mutual.colour });
+  }
+}
+
+/** Each frame in flight (Modern): the radio's business. */
+function updateRadio(dt: number) {
+  if (!modern()) return;
+  pirateThreats();
+  updateDistress();
+  if (escort) {
+    const { npc, until } = escort;
+    if (!npcs.includes(npc) || npc.hostile || elapsed > until) {
+      if (npcs.includes(npc)) Object.assign(npc.patrol, { radius: 900 }).centre.copy(station.root.position);
+      escort = null;
+    } else {
+      npc.patrol.centre.copy(player.obj.position);
+      npc.patrol.radius = 350;
+    }
+  }
+  arrayTimer -= dt;
+  if (arrayTimer <= 0) {
+    arrayTimer = 20;
+    if (hasArray()) {
+      arrayOffers();
+      arrayNews();
+    }
+  }
+  distressTimer -= dt;
+  if (distressTimer <= 0) {
+    distressTimer = 100 + Math.random() * 120;
+    if (hasArray() && !distresses.length && ofRole('pirate').length < MAX_PIRATES - 1 && Math.random() < PIRATE_CHANCE[currentSystem().government] + 0.15) spawnDistress();
+  }
+}
 
 /** On a touch screen, the obvious next step comes out of the drawer by itself. */
 const contextButton = $<HTMLButtonElement>('#touch .context-button');
@@ -5093,8 +5602,17 @@ async function hyperspace() {
     routeJumpAt = elapsed + ROUTE_PAUSE;
     routeNote += ' · route autopilot jumps shortly (H to stop)';
   }
-  const contractNotes = [...afterJump(c), ...checkAdrift()];
+  const seen = messageIds();
+  const jumpNotes = afterJump(c);
+  const adriftNotes = checkAdrift();
+  // Under Modern rules the companies' notes come over the radio; the route is the ship's computer.
+  const contractNotes = modern() ? adriftNotes : [...jumpNotes, ...adriftNotes];
   if (contractNotes.length || routeNote) setTimeout(() => state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
+  setTimeout(() => state === 'flying' && radioMessages(seen), 9000);
+  distresses.length = 0;
+  escort = null;
+  arrayTimer = 12; // the array picks up the new system's boards once you're settled
+  distressTimer = 60 + Math.random() * 90;
   surrenderTimer = null;
   saveCommander(c);
   const slipped = carrier !== null && (carrier.phase === 'arriving' || carrier.phase === 'emerging');
@@ -5133,7 +5651,7 @@ async function hyperspace() {
 /** Arriving somewhere in the middle of a crisis: say so. */
 function announceEvent(sys: StarSystem, delay: number) {
   const e = activeEvent(sys, Date.now());
-  if (e) setTimeout(() => state === 'flying' && flash(EVENT_KINDS[e.type].headline(sys.name), 4), delay);
+  if (e) setTimeout(() => state === 'flying' && (modern() ? radio('news', `${sys.name} news`, EVENT_KINDS[e.type].headline(sys.name), { flash: 4, urgent: true, line: EVENT_KINDS[e.type].headline(sys.name) }) : flash(EVENT_KINDS[e.type].headline(sys.name), 4)), delay);
 }
 
 /** The original's J key: leap ahead when nothing is near enough to mass-lock you. */
@@ -5303,6 +5821,9 @@ function handleKey(code: string) {
       else if (code === 'KeyT') setDockTab(dockTab === 'market' ? 'station' : 'market');
       break;
     case 'flying':
+      // The beacon's calls, while its panel is open: 1-4 send, Esc or ` cancel.
+      if (beaconOpen && /^Digit[1-4]$/.test(code)) return sendBeacon(BEACON_CALLS[Number(code.slice(5)) - 1].call);
+      if (beaconOpen && code === 'Escape') return toggleBeacon(false);
       if (code === 'F1') {
         toggleControlsCard();
       } else if (code === 'KeyH') {
@@ -5327,6 +5848,14 @@ function handleKey(code: string) {
         toggleTransponder();
       } else if (/^Digit[1-4]$/.test(code)) {
         setView(VIEWS[Number(code.slice(5)) - 1]);
+      } else if (code === 'KeyL') {
+        hailTarget();
+      } else if (code === 'Quote') {
+        if (modern()) toggleRadio();
+      } else if (code === 'Backquote') {
+        toggleBeacon();
+      } else if (code === 'Enter') {
+        if (modern() && !acceptLatest()) flash('Nothing on the radio to accept', 1.2);
       } else if (code === 'KeyY') {
         toggleGalacticJump();
       } else if (code === 'KeyK') {
@@ -5407,7 +5936,7 @@ function frame(now?: number) {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier,
       get carrier() { return carrier; },
       get commander() { return commander; },
       get state() { return state; },
@@ -5426,6 +5955,7 @@ if (import.meta.env.DEV) {
 setRetro(false);
 updateModeLabel();
 initTouch();
+initRadio();
 setDockTab('station');
 showTitle();
 answerAdvert();

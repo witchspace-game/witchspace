@@ -1,7 +1,7 @@
 import { distanceLy, systemAt, type StarSystem } from '../galaxy/generate';
 import { stationName } from '../galaxy/stationNames';
 import type { Commander } from './commander';
-import { cannotTake, cargoName, contractWhat, destinationOf, jumpsBetween, nextHop, surveyDone, wyWorks, type ActiveContract, type Contract } from './contracts';
+import { board, cannotTake, cargoName, contractWhat, destinationOf, jumpsBetween, nextHop, surveyDone, wyWorks, type ActiveContract, type Contract } from './contracts';
 import type { CompanyId } from './companies';
 import { worldOf, isSurveyed } from './explore';
 
@@ -54,6 +54,14 @@ export function stepFor(c: Commander, here: StarSystem, a: ActiveContract): JobS
   const to = destinationOf(a);
   const urgency = a.jumpsLeft < 0 ? 'late' : a.jumpsLeft === 0 ? 'last' : 'ok';
   const who = COMPANY_SHORT[a.company];
+  if (a.reserved) {
+    // Accepted over the comms array: collect it first.
+    const from = systemAt(a.from.galaxy, a.from.system);
+    const left = a.jumpsLeft === 0 ? 'collect before you jump' : `${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'} to collect`;
+    const line = `Collect ${contractWhat(a)} at ${from.name} · ${left} · ${who}`;
+    if (from === here) return { contract: a, line, next: `Dock at ${stationName(here).name} to collect it`, urgency: a.jumpsLeft === 0 ? 'last' : 'ok', action: 'dock' };
+    return { contract: a, line, urgency: a.jumpsLeft === 0 ? 'last' : 'ok', ...routeStep(c, here, from, ' to collect it') };
+  }
   if (a.adrift) {
     const k = c.adrift?.find((x) => x.contract === a.id);
     const where = k ? systemAt(k.galaxy, k.system) : null;
@@ -84,7 +92,7 @@ const shortDeadline = (a: ActiveContract) => (a.jumpsLeft < 0 ? 'late' : a.jumps
 export function jobStrip(c: Commander, here: StarSystem): { step: JobStep; more: number; all: JobStep[] } | null {
   const contracts = byUrgency(c.contracts ?? []);
   if (!contracts.length) return null;
-  const all = contracts.map((a) => ({ ...stepFor(c, here, a), short: `${a.adrift ? 'Recover case' : destinationOf(a).name} · ${a.adrift ? 'adrift' : shortDeadline(a)}` }));
+  const all = contracts.map((a) => ({ ...stepFor(c, here, a), short: a.reserved ? `Collect · ${systemAt(a.from.galaxy, a.from.system).name}` : `${a.adrift ? 'Recover case' : destinationOf(a).name} · ${a.adrift ? 'adrift' : shortDeadline(a)}` }));
   return { step: all[0], more: all.length - 1, all };
 }
 
@@ -111,4 +119,18 @@ export function routeWork(c: Commander, here: StarSystem, offers: Contract[], fr
     if (why && (!best || o.pay > best.offer.pay)) best = { offer: o, why };
   }
   return best;
+}
+
+/**
+ * With a working comms array, the companies reach you in flight: work on
+ * your route from the station here and from the one at your next jump. One
+ * offer from each at most, with where it's waiting.
+ */
+export function workInReach(c: Commander, here: StarSystem, next: StarSystem | null, now: number, freeTonnes: number): { offer: Contract; why: string; at: StarSystem }[] {
+  const out: { offer: Contract; why: string; at: StarSystem }[] = [];
+  for (const at of next && next !== here ? [here, next] : [here]) {
+    const fit = routeWork(c, at, board(c, at, now), freeTonnes);
+    if (fit) out.push({ ...fit, at });
+  }
+  return out;
 }

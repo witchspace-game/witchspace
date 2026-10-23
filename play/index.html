@@ -132,6 +132,17 @@
       <span class="job-buttons"><button type="button" class="job-go" hidden></button><button type="button" class="job-more" hidden></button></span>
       <ul class="job-list" hidden></ul>
     </div>
+    <!-- The radio log: everything said to you in flight (docs/design/radio-and-comms.md, main.ts radio()). -->
+    <section id="radio" class="quiet" hidden aria-live="polite">
+      <button type="button" class="radio-pill" aria-label="Radio log"><span class="radio-label">Radio</span> <b class="radio-count"></b><span class="radio-ticker"></span></button>
+      <div class="radio-panel"><ul class="radio-list"></ul><button type="button" class="radio-close" aria-label="Close the radio log">✕</button></div>
+    </section>
+    <!-- The emergency beacon's fixed calls (main.ts sendBeacon). -->
+    <section id="beacon" class="panel" hidden>
+      <h3>Emergency beacon</h3>
+      <div class="beacon-calls"></div>
+      <p class="small muted"><span class="desk-only">1–4 to send · ` or Esc to cancel</span><span class="touch-only">Fixed calls only: police answer in lawful systems</span></p>
+    </section>
     <div id="survey" hidden><span class="survey-label"></span><span class="survey-bar"><i></i></span></div>
     <section id="poi-log" class="panel" hidden aria-live="polite"><h3></h3><p></p><p class="small muted">Press any key or tap to close</p></section>
     <p id="mouse-prompt" hidden>Click to fly with the mouse</p>
@@ -188,6 +199,8 @@
         <button data-key="KeyU">Surrender</button>
         <button data-key="KeyB">Bomb</button>
         <button data-key="KeyV">View</button>
+        <button data-key="KeyL" class="radio-button" title="Hail the ship in your sights, or the station">Hail</button>
+        <button data-key="Backquote" class="beacon-button radio-button" title="Emergency beacon: Mayday, out of fuel, hull failing, escort">Beacon</button>
         <button data-key="Digit9" class="survey-button" hidden title="Survey autopilot (9)">Survey</button>
         <button data-key="Digit0" class="dark-button" title="Transponder off / on: run dark">Dark</button>
         <button data-key="KeyN" title="Sound: full, effects only, off (N)">Sound</button>
