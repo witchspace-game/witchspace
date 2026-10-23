@@ -39,6 +39,10 @@ export const NAMES: NameRule[] = [
   // This project
   { name: 'Witchspace', rule: 'protected', within: true, why: 'This project' },
 
+  // Nods to the films we love: held back until the founder says who gets them
+  { name: 'Maverick', rule: 'protected', why: 'Film nod (Top Gun), held by the founder' },
+  { name: 'Top Gun', rule: 'protected', why: 'Film nod, held by the founder' },
+
   // Sounding official
   { name: 'Admin', rule: 'never', why: 'Sounds official' },
   { name: 'Administrator', rule: 'never', why: 'Sounds official' },
