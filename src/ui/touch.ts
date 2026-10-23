@@ -77,6 +77,23 @@ function capture(el: HTMLElement, id: number) {
   }
 }
 
+/**
+ * A button that works while another finger is down. iOS sends no click for a
+ * second finger's tap (say, Lock while you aim), but pointer events always
+ * arrive, so act on the touch and skip the click that may follow it.
+ */
+export function onTap(el: HTMLElement, action: () => void) {
+  let tapped = 0;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse') return;
+    tapped = performance.now();
+    action();
+  });
+  el.addEventListener('click', () => {
+    if (performance.now() - tapped > 800) action();
+  });
+}
+
 export function initTouch() {
   if (!isTouch) return;
   document.body.classList.add('touch');

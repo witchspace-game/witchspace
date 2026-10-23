@@ -105,7 +105,7 @@ import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsOf, setCau
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
-import { initTouch, updateTouch } from './ui/touch';
+import { initTouch, onTap, updateTouch } from './ui/touch';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -2967,6 +2967,7 @@ let ecmCooldown = 0;
 let incomingTimer = 0;
 const LOCK_RANGE = 5000; // metres: how far away you can lock on
 const LOCK_HOLD = 8000; // the lock breaks beyond this
+const LOCK_CONE = isTouch ? 14 : 6; // degrees off the sights a lock still takes (a thumb aims less finely than a mouse)
 const ECM_RANGE = 4000;
 const ECM_COOLDOWN = 4; // seconds
 const NPC_ECM_RANGE = 1500; // NPCs trigger their ECM when a missile gets this close
@@ -2974,10 +2975,10 @@ const NPC_MISSILE_RANGE = [600, 2500]; // NPCs only fire within this band
 const NPC_MISSILE_CHANCE = 0.015; // per decision tick (4 a second) while attacking in range
 
 /** Whatever is nearest to where the guns point, if it's close enough to name. */
-function sightedNpc(range = 5000): NpcShip | null {
+function sightedNpc(range = 5000, cone = 6): NpcShip | null {
   const fwd = laserDirection();
   let best: NpcShip | null = null;
-  let bestAngle = THREE.MathUtils.degToRad(6);
+  let bestAngle = THREE.MathUtils.degToRad(cone);
   for (const npc of npcs) {
     const to = npc.obj.position.clone().sub(player.obj.position);
     if (to.length() > range) continue;
@@ -3001,8 +3002,8 @@ function toggleLock() {
     flash('Lock failed · rift interference', 1.5);
     return;
   }
-  const target = sightedNpc(LOCK_RANGE);
-  const commanderTarget = target ? null : sightedCommander(LOCK_RANGE);
+  const target = sightedNpc(LOCK_RANGE, LOCK_CONE);
+  const commanderTarget = target ? null : sightedCommander(LOCK_RANGE, LOCK_CONE);
   if (commanderTarget) {
     locked = null;
     lockedCommander = commanderTarget;
@@ -3027,10 +3028,10 @@ function toggleLock() {
 }
 
 /** The commander nearest the middle of your sights, within range. */
-function sightedCommander(range: number): Remote | null {
+function sightedCommander(range: number, cone = 6): Remote | null {
   const fwd = laserDirection();
   let best: Remote | null = null;
-  let bestAngle = THREE.MathUtils.degToRad(6);
+  let bestAngle = THREE.MathUtils.degToRad(cone);
   for (const r of sharedSpace.remotes.values()) {
     const to = r.position.clone().sub(player.obj.position);
     if (to.length() > range) continue;
@@ -3045,7 +3046,7 @@ function sightedCommander(range: number): Remote | null {
 
 // On a touch screen, one missile button by FIRE: Lock, then (red) launch.
 const missileButton = $<HTMLButtonElement>('#touch .missile');
-missileButton.addEventListener('click', () => {
+onTap(missileButton, () => {
   missileButton.blur();
   if (locked || lockedCommander) fireMissile();
   else toggleLock();
@@ -5124,12 +5125,15 @@ $<HTMLInputElement>('#callsign').addEventListener('keydown', (e) => {
   (e.target as HTMLInputElement).blur();
   handleKey('Enter');
 });
-document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) =>
-  b.addEventListener('click', () => {
+document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) => {
+  const press = () => {
     b.blur(); // otherwise Space (throttle) would click it again
     handleKey(b.dataset.key!);
-  }),
-);
+  };
+  // The flight buttons are pressed mid-fight, with a finger on the aim pad.
+  if (b.closest('#touch')) onTap(b, press);
+  else b.addEventListener('click', press);
+});
 
 // --- Main loop --------------------------------------------------------------
 
