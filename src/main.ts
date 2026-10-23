@@ -2285,12 +2285,18 @@ const EQUIPMENT_RISK_HULL = 0.5; // fraction of full hull
 const EQUIPMENT_HIT_GAP = 10; // seconds between items lost
 let equipmentHitCooldown = 0;
 
-/** The lost courier's prototype, the Will-o'-the-Wisp: enemy lasers miss half the time, half the missiles are spoofed. */
+/**
+ * The lost courier's prototype, the Will-o'-the-Wisp: enemy lasers miss half
+ * the time, half the missiles are spoofed. Only while your lasers are cold:
+ * an explorer's way out, not armour for picking fights.
+ */
 const EVADE_LASERS = 0.5;
 const EVADE_MISSILES = 0.5;
 const EVADE_MISSILE_RANGE = 400; // metres: where it decides whether a missile is fooled
+const WISP_COLD = 10; // seconds since you last fired
+let lastPlayerShot = -Infinity;
 const evadeChecked = new WeakSet<object>();
-const evading = () => commander?.difficulty === 'modern' && isWorking(commander, 'wisp');
+const evading = () => commander?.difficulty === 'modern' && isWorking(commander, 'wisp') && elapsed - lastPlayerShot > WISP_COLD;
 
 /**
  * Damage the player's ship. Shields soak hits first; once a hit reaches the
@@ -2775,6 +2781,7 @@ function safetyFlash(text: string) {
 }
 
 function firePlayerLaser() {
+  lastPlayerShot = elapsed; // the Wisp goes quiet while you're shooting
   const laser = mountLaser();
   if (!laser) {
     laserCooldown = 0.6;
@@ -3235,12 +3242,20 @@ function launchMissile(from: PlayerShip, target: PlayerShip) {
   }
 }
 
+/** When each ship last fired a missile (elapsed seconds). */
+const npcMissileAt = new WeakMap<NpcShip, number>();
+const NPC_MISSILE_GAP = 20; // seconds between one ship's missiles (Modern)
+
 function maybeFireNpcMissile(npc: NpcShip) {
   if (npc.missiles <= 0 || npc.mode !== 'attack' || !npc.target || npc.role === 'trader') return;
   if (npc.target === player && state !== 'flying') return;
+  // Modern: no salvos. One missile homing on you at a time, and a pause between
+  // a ship's missiles, so each one is a fight you can win (break, or ECM).
+  if (modern() && npc.target === player && (missiles.some((m) => m.target === player) || elapsed - (npcMissileAt.get(npc) ?? -Infinity) < NPC_MISSILE_GAP)) return;
   const d = npc.obj.position.distanceTo(npc.target.obj.position);
   if (d < NPC_MISSILE_RANGE[0] || d > NPC_MISSILE_RANGE[1] || Math.random() > NPC_MISSILE_CHANCE) return;
   npc.missiles -= 1;
+  npcMissileAt.set(npc, elapsed);
   launchMissile(npc.ship, npc.target);
 }
 

@@ -81,8 +81,8 @@ describe('the explorer’s record', () => {
     const d = exploreOf(c).data[0];
     const far = galaxy(0).reduce((a, b) => (Math.hypot(b.x - lave.x, b.y - lave.y) > Math.hypot(a.x - lave.x, a.y - lave.y) ? b : a));
     expect(dataValue(d, lave)).toBe(Math.round(d.value * 0.5));
-    expect(dataValue(d, far)).toBe(d.value * 5);
-    expect(dataValue(d, systemAt(1, 7))).toBe(d.value * 5); // another galaxy entirely
+    expect(dataValue(d, far)).toBe(d.value * 3);
+    expect(dataValue(d, systemAt(1, 7))).toBe(d.value * 3); // another galaxy entirely
   });
 
   it('selling empties the hold and pays', () => {
@@ -99,6 +99,7 @@ describe('the explorer’s record', () => {
   it('ranks rise with points', () => {
     expect(explorerRank(0)).toBe('Homebody');
     expect(explorerRank(40)).toBe('Surveyor');
-    expect(explorerRank(10_000)).toBe('Voyager');
+    expect(explorerRank(10_000)).toBe('Pioneer');
+    expect(explorerRank(18_000)).toBe('Voyager');
   });
 });

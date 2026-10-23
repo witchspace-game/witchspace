@@ -16,7 +16,7 @@ This builds on the first slice (rings, moons, surveys, signals; see [ideas](../i
 ## What's there (the first slice)
 
 - **Worlds:** rings on about one planet in eight, up to two moons.
-- **Surveys:** hold low over the planet, close to a moon or hot by the star; the data sells at any station, half price where it was gathered and up to five times far away.
+- **Surveys:** hold low over the planet, close to a moon or hot by the star; the data sells at any station, half price where it was gathered and up to three times far away (five before the October 2026 rebalance).
 - **What's left to do, at a glance:** moons and the planet are bracketed in the explorer's lavender until surveyed, then turn grey with a ✓ after the name. Names show within 30 km of the surface. The docked screen lists the survey records you hold.
 - **Moons are solid:** in-system jumps stop 1.8 km short of a moon and moons mass-lock within 2 km, as the planet and the sun do.
 - **Signals:** derelicts, beacons and wreck fields with written logs and salvage, picked up by a planet survey or by flying near.
@@ -65,10 +65,10 @@ Exploring paid, but it didn't lead anywhere: the rank was only a word on the Sta
 
 | Rank | Points | What opens |
 |---|---|---|
-| Pathfinder | 100 | **Science Division special orders** at Wexley-Yorozu stations: surveys of systems with a terraforming Candidate, paid three quarters more than an ordinary survey. And the **Survey Autopilot** goes on sale. |
-| Trailblazer | 250 | **Trail tip-offs:** the Station tab names the nearest trail you haven't started, and where its first signal is. And the **lost courier** is out there to find (below). |
-| Pioneer | 600 | The **Route Autopilot** goes on sale. |
-| Voyager | 1,500 | The Legends, when they're built (stage 4): the first invitation goes to Voyagers. |
+| Pathfinder | 400 | **Science Division special orders** at Wexley-Yorozu stations: surveys of systems with a terraforming Candidate, paid three quarters more than an ordinary survey. And the **Survey Autopilot** goes on sale. |
+| Trailblazer | 1,000 | **Trail tip-offs:** the Station tab names the nearest trail you haven't started, and where its first signal is. |
+| Pioneer | 4,000 | The **Route Autopilot** goes on sale, and the **lost courier** is out there to find (below). |
+| Voyager | 18,000 | The Legends, when they're built (stage 4): the first invitation goes to Voyagers. |
 
 Reaching a rank says what it opened, there and then.
 
@@ -85,8 +85,8 @@ Both Modern only, and both can be knocked out in a fight like any other equipmen
 
 Somewhere in each galaxy a Science Division courier, the *Quiet Hand*, drifts with no crew and its bay sealed from the inside. In the rack is a prototype stamped **WILL-O'-THE-WISP**: the marsh light you chase and never catch. Its last order: "Under no circumstances let this fall into private hands."
 
-- **Found, never bought.** One courier a galaxy, placed from the seed. Its signal shows only to Trailblazers and up, found like any other (survey the planet, then fly to it). Within 20 light years, the Station tab carries **bar talk** of it ("a Science Division courier went dark within 15 light years of here"); in its system, "survey the planet and listen".
-- **What it does** (Modern): it jinks the ship out of the way, so **enemy lasers miss half the time**, and **half the missiles fired at you are spoofed** as they close. It can't be knocked out, and nobody will buy it from you. Hard to shoot down, not impossible: shields, hull and good flying still matter.
+- **Found, never bought.** One courier a galaxy, placed from the seed. Its signal shows only to Pioneers and up, found like any other (survey the planet, then fly to it). Within 20 light years, the Station tab carries **bar talk** of it ("a Science Division courier went dark within 15 light years of here"); in its system, "survey the planet and listen".
+- **What it does** (Modern): it jinks the ship out of the way, so **enemy lasers miss half the time**, and **half the missiles fired at you are spoofed** as they close, **while your lasers are cold** (none fired for 10 seconds): an explorer's way out of a fight, not armour for starting one. It can't be knocked out, and nobody will buy it from you. Hard to shoot down, not impossible: shields, hull and good flying still matter.
 - Finding it is worth 25 explorer points. Wexley-Yorozu will want it back (a thread for later).
 
 ### Your name on the galaxy
@@ -155,16 +155,16 @@ Firsts are prestige, not power, but if the only names on the galaxy are early na
 1. **Honest claims** *(built, October 2026)*: claims capped at a human pace (about 60 an hour an account), checked on the server against the seed (the moon or signal must exist in that system; the galaxy generator is plain TypeScript and runs in the Worker), and an admin tool to wipe one account's claims.
 2. **Firsts that renew:** *Latest survey* beside *Charted first by* on the chart (surveys go stale after a few weeks, and the Science Division pays again); deposits arrive in **survey seasons** (a few new ones a galaxy each month, from the clock); and above all, the galaxy grows with community content.
 
-**Pacing** *(proposed, not yet changed)*. Today Voyager takes about 12 hours and exploring pays 6,000–9,000 Cr an hour against 1,500–3,000 from contracts (median 167 Cr a run): too fast and too rich. Elite, at a kill every 3–6 minutes, is 300–600 hours. The proposal pairs each explorer rank with a combat rank of similar effort:
+**Pacing** *(built, October 2026)*. Before the rebalance Voyager took about 12 hours and exploring paid 6,000–9,000 Cr an hour against 1,500–3,000 from contracts (median 167 Cr a run): too fast and too rich. Elite, at a kill every 3–6 minutes, is 300–600 hours. Each explorer rank is now paired with a combat rank of similar effort:
 
-| Explorer rank | Points (now → proposed) | Time | Combat twin |
+| Explorer rank | Points (was → now) | Time | Combat twin |
 |---|---|---|---|
 | Pathfinder | 100 → 400 | about 3 hours | Average / Above Average |
 | Trailblazer | 250 → 1,000 | about 8 hours | Competent |
 | Pioneer | 600 → 4,000 | about 35 hours | Dangerous |
 | Voyager | 1,500 → 18,000 | about 150 hours (about 70% of the eight galaxies charted) | Deadly |
 
-With the data distance bonus capped at 3× instead of 5× (about 4,000–5,000 Cr an hour, level with good trading), and the Will-o'-the-Wisp moved to Pioneer and working only while your lasers are cold (none fired for 10 seconds): an escape tool for explorers, not armour for pirates. Elite stays above everything, earned in combat only. See [routes to Elite](combat-rating.md#routes-to-elite-explorer-first).
+The data distance bonus is capped at 3× instead of 5× (about 4,000–5,000 Cr an hour, level with good trading), and the Will-o'-the-Wisp is found at Pioneer and works only while your lasers are cold (none fired for 10 seconds): an escape tool for explorers, not armour for pirates. Commanders who passed a door under the old numbers keep what they bought or found; the rank shown follows the new table. Elite stays above everything, earned in combat only. See [routes to Elite](combat-rating.md#routes-to-elite-explorer-first).
 
 ## Numbers (stage 1)
 
