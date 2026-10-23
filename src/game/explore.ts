@@ -605,6 +605,23 @@ export function trailTip(c: Commander, here: StarSystem): { title: string; at: S
 
 export const COURIER_POINTS = 25;
 
+/**
+ * Is this a find the galaxy really has? The planet and star everywhere; a moon,
+ * signal, trail step or the courier only where the seed put it. The server
+ * checks first-discovery claims with this (server/src/firsts.ts).
+ */
+export function isRealFind(galaxy: number, system: number, body: string): boolean {
+  if (!Number.isInteger(galaxy) || galaxy < 0 || galaxy > 7 || !Number.isInteger(system) || system < 0 || system > 255) return false;
+  const sys = systemAt(galaxy, system);
+  if (body === 'planet' || body === 'star') return true;
+  if (/^moon\d$/.test(body)) return Number(body.slice(4)) < worldOf(sys).moons.length;
+  if (/^poi\d$/.test(body)) return poisOf(sys).some((p) => p.id === body);
+  if (body === 'courier') return courierSystem(galaxy) === sys;
+  const t = body.match(/^trail:(\d)\.(\d{1,2}):(\d)$/);
+  if (!t || Number(t[1]) !== galaxy) return false;
+  return trailsOf(galaxy).find((x) => x.id === `${t[1]}.${t[2]}`)?.systems[Number(t[3])] === system;
+}
+
 /** The system where a galaxy's lost courier drifts. */
 export function courierSystem(galaxy: number): StarSystem {
   const seed = systemAt(galaxy, 0);

@@ -13,7 +13,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
 import { NAMES, nameKey, nameRule } from './names';
-import { isClaim, MAX_CLAIMS } from './firsts';
+import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
 import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES, type CompanyId } from './contact';
 import { companyEmail, signInEmail } from './emails';
@@ -122,10 +122,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const claims = Array.isArray(body?.claims) ? body.claims.slice(0, MAX_CLAIMS) : [];
     const won: { galaxy: number; system: number; body: string }[] = [];
     const now = Date.now();
+    // At a human pace: what's over the allowance stays unclaimed, for whoever brings it home next.
+    const since = (ms: number) => this.sql.exec('SELECT COUNT(*) AS n FROM firsts WHERE account = ? AND at > ?', account.id, now - ms).one().n as number;
+    let left = allowance(since(3_600_000), since(86_400_000));
     for (const c of claims) {
-      if (!isClaim(c)) continue;
+      if (left <= 0) break;
+      if (!isRealClaim(c)) continue;
       const added = this.sql.exec('INSERT OR IGNORE INTO firsts (galaxy, system, body, account, at) VALUES (?, ?, ?, ?, ?)', c.galaxy, c.system, c.body, account.id, now).rowsWritten;
-      if (added) won.push({ galaxy: c.galaxy, system: c.system, body: c.body });
+      if (added) {
+        won.push({ galaxy: c.galaxy, system: c.system, body: c.body });
+        left--;
+      }
     }
     return json({ firsts: won });
   }
@@ -296,6 +303,27 @@ export class Accounts extends DurableObject<AccountsEnv> {
         saves[rules] = (saves[rules] ?? 0) + 1;
       }
       return json({ days, saves, accounts: this.sql.exec('SELECT COUNT(*) AS n FROM accounts').one().n });
+    }
+    // First discoveries: who's been claiming most lately, and wiping one account's claims (a cheat).
+    if (request.method === 'GET' && path === '/admin/firsts') {
+      const since = Date.now() - 7 * 86_400_000;
+      const rows = this.sql
+        .exec(
+          `SELECT a.callsign, a.email, COUNT(*) AS week, SUM(CASE WHEN f.at > ? THEN 1 ELSE 0 END) AS day, MAX(f.at) AS last
+           FROM firsts f JOIN accounts a ON a.id = f.account WHERE f.at > ? GROUP BY f.account ORDER BY week DESC LIMIT 25`,
+          Date.now() - 86_400_000,
+          since,
+        )
+        .toArray();
+      return json({ top: rows, total: this.sql.exec('SELECT COUNT(*) AS n FROM firsts').one().n });
+    }
+    if (request.method === 'POST' && path === '/admin/firsts/wipe') {
+      const body = (await request.json().catch(() => null)) as { callsign?: unknown } | null;
+      const key = typeof body?.callsign === 'string' ? body.callsign.trim().toLowerCase() : '';
+      const who = this.sql.exec('SELECT id, callsign FROM accounts WHERE callsign_key = ?', key).toArray()[0];
+      if (!who) return json({ error: 'No commander with that callsign' }, 404);
+      const wiped = this.sql.exec('DELETE FROM firsts WHERE account = ?', who.id).rowsWritten;
+      return json({ wiped, callsign: who.callsign });
     }
     // Run the companies' hourly check now (testing), and see how many have asked to be contacted.
     if (request.method === 'POST' && path === '/admin/contact/run') {

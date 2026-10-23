@@ -96,7 +96,7 @@ When you **sell or hand in data at a station while signed in** with a callsign, 
 - **The chart** shows it: *Charted first by CMDR Nova* for a system's planet, *Candidate charter: CMDR Nova* for a terraforming Candidate (your name on the colony charter, for stage 2), *Found first by …* for signals and trail steps.
 - **The Station tab** counts your firsts.
 - First come, first named: whoever reaches a station with the data first. Not signed in? The game works as before, and nobody's name goes down.
-- It costs one small record per body on the server (a table in the accounts object), read a galaxy at a time and cached. The client says what it surveyed and the server takes its word, as it does for saves; the claims are checked for shape and sense (real systems, body names the game uses, no more than a hold's worth at once).
+- It costs one small record per body on the server (a table in the accounts object), read a galaxy at a time and cached. The client says what it surveyed; the server checks every claim against the galaxy's seed (that moon, signal, trail step or courier really is in that system: `isRealFind` in explore.ts, which the Worker shares), takes at most a hold's worth at once, and lets one account win at most 60 firsts an hour and 300 a day. Anything over stays unclaimed for the next commander. It can't prove you flew there, so an admin tool (`npx tsx tools/firsts.ts list | wipe "<callsign>"`) shows who's claiming fastest and wipes a cheat's claims.
 
 ## Stage 2: worlds you can watch change
 
@@ -152,7 +152,7 @@ Measured from the game's own seed and prices (averages over all 2,048 systems): 
 
 Firsts are prestige, not power, but if the only names on the galaxy are early names, a new commander arrives to a finished map. So:
 
-1. **Honest claims** *(to build first)*: claims capped at a human pace (about 60 an hour an account), checked on the server against the seed (the moon or signal must exist in that system; the galaxy generator is plain TypeScript and runs in the Worker), and an admin tool to wipe one account's claims.
+1. **Honest claims** *(built, October 2026)*: claims capped at a human pace (about 60 an hour an account), checked on the server against the seed (the moon or signal must exist in that system; the galaxy generator is plain TypeScript and runs in the Worker), and an admin tool to wipe one account's claims.
 2. **Firsts that renew:** *Latest survey* beside *Charted first by* on the chart (surveys go stale after a few weeks, and the Science Division pays again); deposits arrive in **survey seasons** (a few new ones a galaxy each month, from the clock); and above all, the galaxy grows with community content.
 
 **Pacing** *(proposed, not yet changed)*. Today Voyager takes about 12 hours and exploring pays 6,000–9,000 Cr an hour against 1,500–3,000 from contracts (median 167 Cr a run): too fast and too rich. Elite, at a kill every 3–6 minutes, is 300–600 hours. The proposal pairs each explorer rank with a combat rank of similar effort:
