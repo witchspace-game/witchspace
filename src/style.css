@@ -1276,6 +1276,7 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 /* Running dark: the DARK light, the touch button, and a police hail (main.ts updateHail). */
 #dark-light { font-size: 12px; padding: 2px 6px; border: 1px solid var(--edge); color: var(--dim); }
 #dark-light.on { color: #000; background: var(--amber); box-shadow: 0 0 12px var(--amber); }
+body.touch #touch .survey-button.armed { border-color: #c9b3ff; color: #000; background: #c9b3ff; }
 body.touch #touch .dark-button.armed { border-color: var(--amber); color: #000; background: var(--amber); }
 #hail { position: fixed; z-index: 20; top: 128px; left: 50%; transform: translateX(-50%); width: max-content; max-width: min(560px, calc(100vw - 32px)); margin: 0; padding: 8px 14px; border: 1px solid rgba(127, 178, 255, 0.5); border-left: 3px solid #7fb2ff; background: rgba(4, 10, 24, 0.85); color: #dbe8ff; font-size: 15px; letter-spacing: 0.04em; text-align: center; pointer-events: none; }
 #hail[hidden] { display: none; }

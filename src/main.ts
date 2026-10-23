@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
 import { cycleSoundMode, danube, preloadRecording, sfx, unlockAudio } from './audio/sound';
 import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
 import { shipById, ships } from './content/ships';
@@ -80,7 +81,7 @@ import { abandon, addStanding, afterJump, amendsCost, board, SIGNING_BONUS, welc
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
-import { advanceTrail, bodiesOf, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi } from './game/explore';
+import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
 import { SpaceDust } from './render/dust';
 import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
@@ -93,6 +94,7 @@ import { takePhoto } from './ui/photo';
 import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { countDevice, countNewCommander } from './net/stats';
+import { claimFirsts, firstsIn, loadFirsts } from './net/firsts';
 import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
@@ -116,6 +118,8 @@ function setState(next: State) {
   if (next !== 'flying') {
     countdown = null; // leaving flight cancels a hyperspace countdown
     combatComputer = null;
+    surveyPilot = null;
+    routeJumpAt = null;
     sharedSpace.leave(); // back in when flying again, wherever that is
     lockedCommander = null;
     for (const n of netMissiles.values()) n.missile.dispose();
@@ -998,11 +1002,17 @@ function renderDocked() {
     ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
     ['Rating', combatRating(c.kills)],
-    ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited`],
+    ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited${myFirsts(here.galaxy) ? ` · ${myFirsts(here.galaxy)} first${myFirsts(here.galaxy) === 1 ? '' : 's'} on the chart` : ''}`],
     ...trailsUnderWay(c, here.galaxy).map((t): [string, string] => ['Trail', `${escapeHtml(t.title)} · ${t.found} of ${t.of} found · the clue points to ${escapeHtml(t.next)}`]),
+    ...explorerTips(c, here),
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   $('#cmdr .rename').addEventListener('click', () => startRename());
+  document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
+    flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);
+    saveCommander(c);
+    renderDocked();
+  });
   document.querySelector('#cmdr .settle')?.addEventListener('click', () => {
     const settlement = settle(c);
     saveCommander(c);
@@ -1045,7 +1055,9 @@ function renderDocked() {
     sell.disabled = !sellable.length;
     if (wy && data.some((d) => d.report)) sell.title = `Includes the Ninefold report: the Science Division pays ${REPORT_PRICE.wy.toLocaleString()} Cr, remembers you kindly, and goes looking for Sam Dray`;
     sell.addEventListener('click', () => {
+      const held = [...data];
       const { credits, reports } = sellData(c, here, wy);
+      bringHome(held);
       if (reports) addStanding(c, 'wy', 3);
       saveCommander(c);
       sfx.beep();
@@ -1070,7 +1082,9 @@ function renderDocked() {
       publish.textContent = `Publish the Ninefold report · ${REPORT_PRICE.published} Cr`;
       publish.title = "The Mutual's newsletter pays, the families learn what happened to the Ninefold, and Mira's message reaches her gran. Wexley-Yorozu will remember. Or keep it for a Wexley-Yorozu station.";
       confirmSale(publish, 'Publish it? Wexley-Yorozu will remember', () => {
+        const held = [...data];
         const paid = publishReports(c);
+        bringHome(held);
         addStanding(c, 'wy', -3);
         saveCommander(c);
         sfx.beep();
@@ -1207,19 +1221,29 @@ function renderDocked() {
     const owned = hasEquipment(c, item.id);
     const damaged = c.damaged.includes(item.id);
     if (item.standard && !damaged) continue; // fitted to every ship: listed only when it needs repair
+    if (item.found && !owned) continue; // never sold: found out there
     const repairCost = Math.round(item.price * REPAIR_FRACTION);
     const banned = Boolean(item.illegal) && scansCargo(here); // illegal here: not sold
-    const sold = here.techLevel >= item.minTech && !banned;
+    const unranked = Boolean(item.explorer) && exploreOf(c).points < item.explorer!; // explorers only
+    const sold = here.techLevel >= item.minTech && !banned && !unranked;
     li.innerHTML = `<span>${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${item.blurb}</small>`;
     const buy = document.createElement('button');
     if (damaged) {
       buy.textContent = `Repair · ${repairCost.toLocaleString()} Cr`;
       buy.disabled = c.credits < repairCost;
     } else if (!owned && !sold) {
-      // High-tech gear needs a high-tech world; illegal gear, a lawless one.
-      buy.textContent = banned ? 'Illegal here' : `Needs tech level ${item.minTech}`;
-      buy.title = banned ? 'Sold only where police don\'t scan: anarchies and feudal worlds' : `${here.name} is tech level ${here.techLevel}`;
+      // High-tech gear needs a high-tech world; illegal gear, a lawless one; explorer's gear, an explorer.
+      buy.textContent = unranked ? `Needs explorer rank ${explorerRank(item.explorer!)}` : banned ? 'Illegal here' : `Needs tech level ${item.minTech}`;
+      buy.title = unranked ? `You're ${explorerRank(exploreOf(c).points)}: survey, find signals and follow trails to rise` : banned ? 'Sold only where police don\'t scan: anarchies and feudal worlds' : `${here.name} is tech level ${here.techLevel}`;
       buy.disabled = true;
+    } else if (owned && item.found) {
+      buy.textContent = 'Fitted';
+      buy.classList.add('fitted');
+      buy.disabled = true;
+      buy.title = 'Found, not bought: nobody will buy it from you, and you would not want them to';
+      li.append(buy);
+      list.append(li);
+      continue;
     } else if (owned) {
       const undo = boughtHere.equipment.has(item.id);
       const back = undo ? item.price : Math.round(item.price / 2);
@@ -1959,7 +1983,8 @@ function buildExploreScene(sys: StarSystem) {
   });
   if (!c || c.difficulty !== 'modern') return;
   const planetDone = isSurveyed(c, sys, 'planet');
-  for (const poi of [...poisOf(sys), ...trailPoisOf(c, sys)]) {
+  const courier = courierPoiOf(c, sys);
+  for (const poi of [...poisOf(sys), ...trailPoisOf(c, sys), ...(courier ? [courier] : [])]) {
     const dir = new THREE.Vector3(...poi.direction);
     // Near enough that salvage isn't lost to space, and clear of the moons.
     const position = dir.clone().multiplyScalar(Math.min(poi.distance * planetRadius, 30000)).add(planetPos);
@@ -2008,7 +2033,9 @@ function updateExplore(dt: number): boolean {
     survey.progress = THREE.MathUtils.clamp(survey.progress + (near === survey.target ? dt * (deep ? 2 : 1) : -dt * 0.5), 0, survey.target.body.time);
     if (survey.progress >= survey.target.body.time) {
       const done = survey.target.body;
+      const before = exploreOf(c).points;
       recordSurvey(c, here, done);
+      noteExplorerRank(before);
       saveCommander(c);
       sfx.beep();
       const grade = done.grade ? ` · ${done.grade === 'Candidate' ? 'terraforming CANDIDATE: Wexley-Yorozu will want this' : done.grade.toLowerCase()}` : '';
@@ -2044,7 +2071,14 @@ const TUMBLE_AXIS = new THREE.Vector3(0.3, 1, 0.2).normalize();
 
 function discover(p: ScenePoi) {
   const c = cmdr();
+  const before = exploreOf(c).points;
   recordDiscovery(c, currentSystem(), p.poi);
+  // The lost courier's prototype: yours now.
+  if (p.poi.prize && !hasEquipment(c, p.poi.prize)) {
+    c.equipment.push(p.poi.prize);
+    exploreOf(c).points += COURIER_POINTS;
+    setTimeout(() => state === 'flying' && flash('Will-o’-the-Wisp fitted · enemy lasers miss half the time, half the missiles are spoofed · Wexley-Yorozu will want it back', 6), 5200);
+  }
   if (p.poi.salvage.length) {
     const cargo: Record<string, number> = {};
     for (const s of p.poi.salvage) cargo[s.id] = (cargo[s.id] ?? 0) + s.qty * UNITS_PER_TONNE[commodityById(s.id)?.unit ?? 't'];
@@ -2059,6 +2093,68 @@ function discover(p: ScenePoi) {
   sfx.beep();
   flash(`Discovered: ${p.poi.name}${p.poi.salvage.length ? ' · cargo drifting free' : ''}${trailNote}`, trailNote ? 5 : 3);
   showPoiLog(p.poi);
+  noteExplorerRank(before);
+}
+
+/**
+ * Data that has just left the hold at a station (sold, handed in, published):
+ * claim it for the chart. The first commander to bring each body home has
+ * their callsign on it (signed in only).
+ */
+function bringHome(held: SurveyData[]) {
+  const c = cmdr();
+  const gone = held.filter((d) => !exploreOf(c).data.includes(d));
+  if (c.difficulty !== 'modern' || !gone.length) return;
+  void claimFirsts(gone.map((d) => ({ galaxy: d.galaxy, system: d.system, body: d.body }))).then((won) => {
+    if (!won.length) return;
+    const one = gone.find((d) => d.galaxy === won[0].galaxy && d.system === won[0].system && d.body === won[0].body);
+    const what = won.length === 1 ? (one?.name ?? 'one find') : `${won.length} finds`;
+    setTimeout(() => flash(`First to bring it home · your callsign goes on the chart for ${what}`, 5), 2500);
+    if (state === 'docked') renderDocked();
+  });
+}
+
+/** The chart's line on who got somewhere first: names on the galaxy. */
+function firstsLine(s: StarSystem): string | null {
+  const firsts = firstsIn(s.galaxy, s.index);
+  if (!firsts.size) return null;
+  const bodies = bodiesOf(s);
+  const parts: string[] = [];
+  for (const [body, callsign] of firsts) {
+    const b = bodies.find((x) => x.id === body);
+    if (body === 'planet') parts.unshift(`Charted first by CMDR ${callsign}`);
+    else if (b?.grade === 'Candidate') parts.push(`${b.name} charter: CMDR ${callsign}`);
+    else if (b) parts.push(`${b.name}: CMDR ${callsign}`);
+    else parts.push(`${body === 'courier' ? 'The lost courier' : 'A signal'} found first by CMDR ${callsign}`);
+  }
+  return parts.join(' · ');
+}
+
+/** Firsts of yours in this galaxy (from the chart's last look). */
+function myFirsts(galaxy: number): number {
+  const mine = currentAccount()?.callsign;
+  if (!mine) return 0;
+  let n = 0;
+  for (let i = 0; i < 256; i++) for (const callsign of firstsIn(galaxy, i).values()) if (callsign === mine) n++;
+  return n;
+}
+
+/** What explorers hear at a station: the nearest trail not yet started (Trailblazers), and bar talk of the courier. */
+function explorerTips(c: Commander, here: StarSystem): [string, string][] {
+  const rows: [string, string][] = [];
+  const tip = trailTip(c, here);
+  if (tip) rows.push(['Tip', `${escapeHtml(tip.title)} starts at ${escapeHtml(tip.at.name)}${tip.at === here ? ' (here)' : `, ${tip.ly.toFixed(1)} LY`} · survey the planet to find its first signal${tip.at === here ? '' : ` <button type="button" class="tip-course" data-system="${tip.at.index}">Set course</button>`}`]);
+  const rumour = courierRumour(c, here);
+  if (rumour) rows.push(['Rumour', escapeHtml(rumour)]);
+  return rows;
+}
+
+/** Reaching an explorer rank: say what it opened. */
+function noteExplorerRank(before: number) {
+  const reached = rankReached(before, exploreOf(cmdr()).points);
+  if (!reached) return;
+  const news = RANK_NEWS[reached];
+  setTimeout(() => flash(`Explorer rank: ${reached.toUpperCase()}${news ? ` · ${news}` : ''}`, 7), 4000);
 }
 
 let poiLogTimer = 0;
@@ -2107,7 +2203,9 @@ function exploreMarkers(km: (p: THREE.Vector3) => string): Marker[] {
 
 /** On arriving anywhere: note the visit, and say what's special here. */
 function arrivalNote(sys: StarSystem): string {
+  const before = exploreOf(cmdr()).points;
   const first = recordVisit(cmdr(), sys);
+  noteExplorerRank(before);
   const world = describeWorld(worldOf(sys));
   return [world, first ? 'First visit' : ''].filter(Boolean).join(' · ');
 }
@@ -2117,6 +2215,13 @@ function arrivalNote(sys: StarSystem): string {
 const EQUIPMENT_RISK_HULL = 0.5; // fraction of full hull
 const EQUIPMENT_HIT_GAP = 10; // seconds between items lost
 let equipmentHitCooldown = 0;
+
+/** The lost courier's prototype, the Will-o'-the-Wisp: enemy lasers miss half the time, half the missiles are spoofed. */
+const EVADE_LASERS = 0.5;
+const EVADE_MISSILES = 0.5;
+const EVADE_MISSILE_RANGE = 400; // metres: where it decides whether a missile is fooled
+const evadeChecked = new WeakSet<object>();
+const evading = () => commander?.difficulty === 'modern' && isWorking(commander, 'wisp');
 
 /**
  * Damage the player's ship. Shields soak hits first; once a hit reaches the
@@ -2440,6 +2545,11 @@ function showTransponder() {
   if (light.textContent !== `DARK${timer}`) light.textContent = `DARK${timer}`;
   const button = $('#touch .dark-button');
   button.classList.toggle('armed', transponderOff);
+  // The survey autopilot's button, once there's one fitted.
+  const survey = $('#touch .survey-button');
+  const fitted = hasEquipment(cmdr(), 'survey-autopilot');
+  if (survey.hidden === fitted) survey.hidden = !fitted;
+  survey.classList.toggle('armed', Boolean(surveyPilot));
   if (button.textContent !== `Dark${timer}`) button.textContent = `Dark${timer}`;
   // Waiting to dock and the coast is now clear: on it goes.
   if (switchOnWhenClear && transponderOff && wait === 0 && player.obj.position.distanceTo(station.root.position) < CLEARANCE_RANGE) {
@@ -2710,7 +2820,8 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
         // Ships don't shoot their own side.
         ...npcs.filter((n) => n !== npc && !allies(n.role, npc.role)).map((n) => ({ value: n as Struck, position: n.obj.position, radius: n.radius * 0.75 })),
       ];
-      if (alive) targets.push({ value: 'player', position: player.obj.position, radius: 22 });
+      // The Will-o'-the-Wisp jinks the ship out of the way of half the shots.
+      if (alive && !(evading() && Math.random() < EVADE_LASERS)) targets.push({ value: 'player', position: player.obj.position, radius: 22 });
       const hit = rayHit(origin, shot, npc.laser.range, targets);
       beams.fire(origin, hit ? hit.point : origin.clone().addScaledVector(shot, npc.laser.range), npc.laser.color);
       zapAt(origin, 700, 120, 0.15, 0.5);
@@ -3040,6 +3151,17 @@ function updateMissiles(dt: number) {
       }
       explodeMissile(m);
       continue;
+    }
+
+    // The Will-o'-the-Wisp spoofs half the missiles fired at you, once each, close in.
+    if (m.target === player && evading() && !evadeChecked.has(m) && m.position.distanceTo(player.obj.position) < EVADE_MISSILE_RANGE) {
+      evadeChecked.add(m);
+      if (Math.random() < EVADE_MISSILES) {
+        sfx.ecm();
+        flash('Will-o’-the-Wisp · missile spoofed', 1.8);
+        explodeMissile(m);
+        continue;
+      }
     }
 
     const result = m.update(dt);
@@ -3456,6 +3578,7 @@ function rollAssistApplies() {
 function setAutopilot(on: boolean, message?: string) {
   autopilot = on;
   if (on) {
+    surveyPilot = null;
     dockingComputer.reset();
     danube.start(!isRetro());
   } else {
@@ -3488,6 +3611,7 @@ function updateSpace(dt: number) {
     const prev = station.toLocal(player.obj.position);
     input = flightInput();
     if (autopilot && input.active) setAutopilot(false, 'Docking computer off');
+    if (surveyPilot && input.active) stopSurveyPilot('Survey autopilot off · you have control');
     checkCombatComputer(input);
 
     // Mouse aim: steer the nose towards the reticle. Turning with keys or
@@ -3498,7 +3622,7 @@ function updateSpace(dt: number) {
       // The computer flies; the mouse (or aim pad) only aims the guns.
       aim.move(player, input.aimDx, input.aimDy);
       aim.clamp(player);
-    } else if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !keysTurning && view === 'front') {
+    } else if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !surveyPilot && !keysTurning && view === 'front') {
       aim.move(player, input.aimDx, input.aimDy);
       const s = aim.steer(player);
       input.pitch = s.pitch;
@@ -3507,10 +3631,10 @@ function updateSpace(dt: number) {
       aim.reset(player);
     }
 
-    rollAssist = !autopilot && !combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
+    rollAssist = !autopilot && !surveyPilot && !combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
     if (rollAssist) {
       input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
-    } else if (!autopilot && !combatComputer && controlScheme() === 'mouse' && input.roll === 0) {
+    } else if (!autopilot && !surveyPilot && !combatComputer && controlScheme() === 'mouse' && input.roll === 0) {
       // Flight assist: with no roll input, level the wings with the star
       // system's "up" so there's always a horizon. Weaker when pointing
       // steeply up or down, where "level" stops meaning much.
@@ -3520,7 +3644,8 @@ function updateSpace(dt: number) {
     if (autopilot) dockingComputer.update(dt, player, station);
     else if (combatComputer) {
       if (!combatComputer.fly(dt, player, npcs, locked, { centre: planetPos, radius: planetRadius })) stopCombatComputer('No hostiles · combat computer standing down · you have control');
-    } else player.steer(dt, input);
+    } else if (surveyPilot) flySurvey(dt, surveyPilot);
+    else player.steer(dt, input);
     player.move(dt);
     player.recharge(dt, isWorking(cmdr(), 'extra-energy') ? 2 : 1);
 
@@ -3576,6 +3701,7 @@ function updateSpace(dt: number) {
   if (state === 'flying') {
     updateClearance();
     updateSurrender(dt);
+    updateRouteAutopilot();
   }
   if (stationFlash > 0) {
     stationFlash = Math.max(0, stationFlash - dt);
@@ -3767,6 +3893,7 @@ function renderControlsCard() {
       ['C', 'Docking computer'],
       ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
       ['O', 'Combat computer: it flies, you man the turrets (needs one fitted; any flight control takes over)'],
+      ['9', 'Survey autopilot: flies to whatever is left to survey or find here, and holds you in range (explorers; any flight control takes over)'],
       ['P', 'Take a photo of the view, without the HUD (saved, or shared on phones)'],
       ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
       ['T', 'Lock a missile onto the ship in your sights (again with nothing in sight: disarm)'],
@@ -3907,7 +4034,10 @@ async function dock() {
   const due = checksClearance(sys) && (legalStatus(c) === 'offender' || inspected || weighed);
   const settlement = due ? settle(c) : null;
   const specialsDue = (c.contracts ?? []).filter((a) => a.special && a.to.system === sys.index && a.to.galaxy === sys.galaxy && a.jumpsLeft >= 0).map((a) => a.company);
+  const held = [...exploreOf(c).data];
   const delivered = deliver(c, sys);
+  bringHome(held);
+  void loadFirsts(sys.galaxy);
   const news = checkMessages(c, sys, Date.now());
   const gone = [...collectHeld(c, sys), ...checkAdrift()];
   saveCommander(c);
@@ -4331,6 +4461,95 @@ const COMBAT_COMPUTER_MIN_HULL = 0.25; // fraction of full hull: below this, you
 
 const hasTurret = () => (['rear', 'left', 'right'] as const).some((m) => Boolean(cmdr().lasers[m]));
 
+// --- The explorer's autopilots (docs/design/exploration.md, stage 1b) ------------
+
+let surveyPilot: SurveyPilot | null = null;
+const SURVEY_PILOT_HOSTILES = 5000; // metres: a hostile this close hands control back
+
+function toggleSurveyPilot() {
+  const c = cmdr();
+  if (surveyPilot) return stopSurveyPilot('Survey autopilot off · you have control');
+  if (!hasEquipment(c, 'survey-autopilot')) return flash(c.difficulty === 'modern' ? 'Survey autopilot not fitted · sold to Pathfinders' : 'No survey autopilot under Classic rules', 2);
+  if (!isWorking(c, 'survey-autopilot')) return flash('Survey autopilot damaged · repair at a station', 2);
+  const next = surveyGoal();
+  if (!next) return flash('Nothing left to survey or find here · the star is yours, if you want it', 3);
+  if (autopilot) setAutopilot(false);
+  stopCombatComputer();
+  surveyPilot = new SurveyPilot();
+  surveyGoalName = next.name;
+  sfx.lock();
+  flash(`Survey autopilot · ${next.name}`, 2.5);
+}
+
+/** Hand back control. Letting go on its own (not for your hands on the stick), it stops the ship first: never left coasting into a moon. */
+function stopSurveyPilot(message?: string, allStop = false) {
+  if (!surveyPilot) return;
+  surveyPilot = null;
+  if (allStop) player.speed = 0;
+  aim.reset(player);
+  if (message) flash(message, 2.5);
+}
+
+/** The nearest thing here still to survey or find: the planet, a moon, a detected signal. Never the star. */
+function surveyGoal(): { goal: SurveyGoal; name: string } | null {
+  const c = cmdr();
+  const here = currentSystem();
+  const pos = player.obj.position;
+  const options: { goal: SurveyGoal; name: string; d: number }[] = [];
+  for (const b of sceneBodies) {
+    if (b.body.kind === 'star' || isSurveyed(c, here, b.body.id)) continue;
+    // Hold halfway into survey range, on the near side.
+    const point = b.centre.clone().add(pos.clone().sub(b.centre).setLength(b.radius + b.range * 0.5));
+    options.push({ goal: { point, within: b.range * 0.3 }, name: b.body.name, d: pos.distanceTo(point) });
+  }
+  for (const p of scenePois) {
+    if (!p.revealed || isFound(c, here, p.poi.id)) continue;
+    options.push({ goal: { point: p.position, within: SIGNAL_REACH * 0.6 }, name: p.poi.name, d: pos.distanceTo(p.position) });
+  }
+  options.sort((a, b) => a.d - b.d);
+  return options[0] ?? null;
+}
+
+let surveyGoalName = '';
+function flySurvey(dt: number, pilot: SurveyPilot) {
+  if (!isWorking(cmdr(), 'survey-autopilot')) return stopSurveyPilot('Survey autopilot damaged · all stop · you have control', true);
+  if (npcs.some((n) => n.hostile && n.obj.position.distanceTo(player.obj.position) < SURVEY_PILOT_HOSTILES)) return stopSurveyPilot('Hostiles near · survey autopilot off · all stop · you have control', true);
+  const next = surveyGoal();
+  if (!next) return stopSurveyPilot('Survey autopilot · nothing left here to survey or find · all stop · the star is yours, if you want it', true);
+  if (next.name !== surveyGoalName) {
+    if (surveyGoalName) flash(`Survey autopilot · next: ${next.name}`, 2.5);
+    surveyGoalName = next.name;
+  }
+  const { left, lined } = pilot.update(dt, player, next.goal, { centre: planetPos, radius: planetRadius });
+  // A long straight run: jump most of it.
+  if (lined && left > J_DISTANCE + 3000) inSystemJump(true);
+}
+
+let routeJumpAt: number | null = null;
+const ROUTE_PAUSE = 12; // seconds after arriving (and after the arrival news) before the route autopilot jumps on
+const ROUTE_HOSTILES = 6000; // metres: hostiles this close hold the jump
+
+function updateRouteAutopilot() {
+  if (routeJumpAt === null || elapsed < routeJumpAt || countdown !== null) return;
+  const c = cmdr();
+  const dest = destination();
+  if (!dest || !isWorking(c, 'route-autopilot')) {
+    routeJumpAt = null;
+    return;
+  }
+  const d = distanceLy(currentSystem(), dest);
+  if (d > c.fuel) {
+    routeJumpAt = null;
+    return flash(`Route autopilot · not enough fuel for ${dest.name} (${d.toFixed(1)} LY) · refuel at the station`, 3.5);
+  }
+  if (npcs.some((n) => n.hostile && n.obj.position.distanceTo(player.obj.position) < ROUTE_HOSTILES)) {
+    routeJumpAt = elapsed + 5;
+    return flash('Route autopilot holding · hostiles near', 2);
+  }
+  routeJumpAt = null;
+  toggleHyperspace();
+}
+
 function toggleCombatComputer() {
   const c = cmdr();
   if (combatComputer) return stopCombatComputer('Combat computer off · you have control');
@@ -4340,6 +4559,7 @@ function toggleCombatComputer() {
   const target = chooseTarget(player.obj.position, npcs, locked);
   if (!target) return flash('No hostiles in range', 1.5);
   if (autopilot) setAutopilot(false);
+  surveyPilot = null;
   combatComputer = new CombatPilot();
   sfx.lock();
   flash(`Strap in, Commander · combat computer engaged · ${target.def.name} · you have the guns`, 3);
@@ -4535,6 +4755,11 @@ async function hyperspace() {
     switchOnWhenClear = false;
     setTimeout(() => state === 'flying' && flash('Transponder on · new system (0 to run dark again)', 3), 6500);
   }
+  // The Route Autopilot takes the next jump by itself, after a moment to look around.
+  if (routeNote && isWorking(c, 'route-autopilot') && c.target !== null && distanceLy(dest, systemAt(dest.galaxy, c.target)) <= c.fuel) {
+    routeJumpAt = elapsed + ROUTE_PAUSE;
+    routeNote += ' · route autopilot jumps shortly (H to stop)';
+  }
   const contractNotes = [...afterJump(c), ...checkAdrift()];
   if (contractNotes.length || routeNote) setTimeout(() => state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
   surrenderTimer = null;
@@ -4579,16 +4804,16 @@ function announceEvent(sys: StarSystem, delay: number) {
 }
 
 /** The original's J key: leap ahead when nothing is near enough to mass-lock you. */
-function inSystemJump() {
-  if (jumpCooldown > 0) return;
+function inSystemJump(quiet = false): boolean {
+  if (jumpCooldown > 0) return false;
   const pos = player.obj.position;
   const shipsNear = npcs.some((p) => p.obj.position.distanceTo(pos) < J_LOCK_SHIPS);
   const stationNear = pos.distanceTo(station.root.position) < J_LOCK_STATION;
   const planetNear = pos.distanceTo(planetPos) - planetRadius < J_LOCK_PLANET;
   const sunNear = pos.distanceTo(SUN_POS) - SUN_RADIUS < J_LOCK_SUN;
   if (shipsNear || stationNear || planetNear || sunNear) {
-    flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : 'sun'} too close`, 1.5);
-    return;
+    if (!quiet) flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : 'sun'} too close`, 1.5);
+    return false;
   }
   // Leap forward, but stop short of the station or the planet if they're ahead.
   const fwd = player.forward();
@@ -4604,14 +4829,15 @@ function inSystemJump() {
   limit(planetPos, planetRadius + J_LOCK_PLANET - 200);
   limit(SUN_POS, SUN_RADIUS + J_LOCK_SUN - 200);
   if (dist < 500) {
-    flash('Mass locked · too close ahead', 1.5);
-    return;
+    if (!quiet) flash('Mass locked · too close ahead', 1.5);
+    return false;
   }
   pos.addScaledVector(fwd, dist);
   jumpCooldown = 1.2;
   sfx.jump();
   hitFeedback(0.15);
   flash('Jump', 0.6);
+  return true;
 }
 
 // --- Where you are, and the galaxy charts ---------------------------------------
@@ -4629,6 +4855,7 @@ function toggleGalaxyMap() {
     return;
   }
   const c = cmdr();
+  if (c.difficulty === 'modern') void loadFirsts(currentSystem().galaxy); // fresh names for next time; cached for five minutes
   const here = currentSystem();
   openMap({
     current: here,
@@ -4642,6 +4869,7 @@ function toggleGalaxyMap() {
       const adrift = a.adrift ? ' · adrift: see Contracts when docked' : '';
       return { to, colour: COMPANIES[a.company].colour, line: `${a.qty} t ${cargoName(a)} → ${to.name} · ${left} · ${a.pay.toLocaleString()} Cr · ${COMPANIES[a.company].name}${adrift}` };
     }),
+    firsts: (s) => (c.difficulty === 'modern' ? firstsLine(s) : null),
     explored: (s) => {
       const e = exploreOf(c);
       if (!e.visited.includes(`${s.galaxy}:${s.index}`)) return { visited: false, line: 'Not yet' };
@@ -4773,6 +5001,8 @@ function handleKey(code: string) {
         flash(toggleInvertPitch() ? 'Pitch inverted' : 'Pitch normal', 2);
       } else if (code === 'KeyO') {
         toggleCombatComputer();
+      } else if (code === 'Digit9') {
+        toggleSurveyPilot();
       } else if (code === 'KeyC') {
         stopCombatComputer();
         if (autopilot) setAutopilot(false, 'Docking computer off');

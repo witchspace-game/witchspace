@@ -184,6 +184,8 @@ export function equipmentForSale(c: Commander, s: StarSystem) {
       !(e.classicOnly && c.difficulty !== 'classic') &&
       !(e.modernOnly && c.difficulty !== 'modern') &&
       !e.standard &&
+      !e.found &&
+      !(e.explorer && (c.explore?.points ?? 0) < e.explorer) &&
       !(e.illegal && scansCargo(s)) &&
       s.techLevel >= e.minTech,
   );

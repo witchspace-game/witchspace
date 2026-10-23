@@ -19,7 +19,8 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; tagline: string; b
 export type EquipmentId =
   | 'docking-computer' | 'combat-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm'
   | 'large-cargo-bay' | 'extra-energy' | 'energy-bomb' | 'galactic-hyperdrive' | 'weapons-licence'
-  | 'transponder' | 'distress-jammer' | 'long-range-tanks' | 'survey-scanner';
+  | 'transponder' | 'distress-jammer' | 'long-range-tanks' | 'survey-scanner'
+  | 'survey-autopilot' | 'route-autopilot' | 'wisp';
 
 export type Mount = 'front' | 'rear' | 'left' | 'right';
 
@@ -44,6 +45,10 @@ export interface Equipment {
   standard?: boolean;
   /** Against the law wherever police scan: sold only where they don't, and confiscated if found. */
   illegal?: boolean;
+  /** Sold only to explorers with at least this many explorer points (Modern). */
+  explorer?: number;
+  /** Never sold: found out there (the lost courier's prototype). Can't be sold on either. */
+  found?: boolean;
 }
 
 export const EQUIPMENT: Equipment[] = [
@@ -147,6 +152,34 @@ export const EQUIPMENT: Equipment[] = [
     blurb: 'Surveys from twice as far in half the time, and picks up signals from four times as far.',
     modernOnly: true,
     minTech: 7,
+  },
+  {
+    id: 'survey-autopilot',
+    name: 'Survey Autopilot',
+    price: 3000,
+    blurb: 'Press 9: it flies to whatever is left to survey or find here and holds you in range. It leaves the star to you. Sold to Pathfinders.',
+    modernOnly: true,
+    minTech: 8,
+    explorer: 100,
+  },
+  {
+    id: 'route-autopilot',
+    name: 'Route Autopilot',
+    price: 5000,
+    blurb: 'Starts each jump of a plotted course for you, when there is fuel and nothing hostile near. H stops it. Sold to Pioneers.',
+    modernOnly: true,
+    minTech: 10,
+    explorer: 600,
+  },
+  {
+    id: 'wisp',
+    name: 'Will-o’-the-Wisp',
+    price: 20000,
+    blurb: 'A Science Division prototype, never sold: the light you chase and never catch. It jinks you out of the way, so enemy lasers miss half the time and half the missiles fired at you are spoofed.',
+    modernOnly: true,
+    minTech: 99,
+    undamageable: true,
+    found: true,
   },
   {
     id: 'transponder',

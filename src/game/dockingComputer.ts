@@ -84,12 +84,7 @@ export class DockingComputer {
   /** Turn towards `this.aim` with eased angular velocity. */
   private steer(dt: number, ship: PlayerShip, matchSpin: boolean) {
     const q = ship.obj.quaternion;
-    const err = q.clone().invert().multiply(this.aim.quaternion);
-    if (err.w < 0) err.set(-err.x, -err.y, -err.z, -err.w);
-    const angle = 2 * Math.acos(Math.min(1, err.w));
-    const s = Math.sqrt(Math.max(0, 1 - err.w * err.w));
-    const desired = s > 1e-6 ? new THREE.Vector3(err.x / s, err.y / s, err.z / s) : new THREE.Vector3();
-    desired.multiplyScalar(Math.min(MAX_TURN_RATE, TURN_GAIN * angle));
+    const desired = turnRateTowards(ship, this.aim.quaternion);
 
     // Feed forward the target's own rotation (the station's spin on final
     // approach), so the roll keeps pace without lagging behind.
@@ -107,17 +102,28 @@ export class DockingComputer {
     }
     this.lastAim.copy(this.aim.quaternion);
     this.hasLastAim = true;
-
-    const change = desired.sub(this.angVel);
-    const maxChange = TURN_ACCEL * dt;
-    if (change.length() > maxChange) change.setLength(maxChange);
-    this.angVel.add(change);
-
-    const rate = this.angVel.length();
-    if (rate > 1e-6) {
-      q.multiply(new THREE.Quaternion().setFromAxisAngle(this.angVel.clone().divideScalar(rate), rate * dt));
-    }
-    // Let the dashboard gauges show what the computer is doing.
-    ship.showRates(-this.angVel.x, this.angVel.z);
+    turnAt(dt, ship, desired, this.angVel);
   }
+}
+
+/** The angular velocity (ship-local) that turns the ship towards `aim`, as a careful pilot would. */
+export function turnRateTowards(ship: PlayerShip, aim: THREE.Quaternion): THREE.Vector3 {
+  const err = ship.obj.quaternion.clone().invert().multiply(aim);
+  if (err.w < 0) err.set(-err.x, -err.y, -err.z, -err.w);
+  const angle = 2 * Math.acos(Math.min(1, err.w));
+  const s = Math.sqrt(Math.max(0, 1 - err.w * err.w));
+  const desired = s > 1e-6 ? new THREE.Vector3(err.x / s, err.y / s, err.z / s) : new THREE.Vector3();
+  return desired.multiplyScalar(Math.min(MAX_TURN_RATE, TURN_GAIN * angle));
+}
+
+/** Ease `angVel` towards `desired` (limited angular acceleration) and turn the ship by it. */
+export function turnAt(dt: number, ship: PlayerShip, desired: THREE.Vector3, angVel: THREE.Vector3) {
+  const change = desired.clone().sub(angVel);
+  const maxChange = TURN_ACCEL * dt;
+  if (change.length() > maxChange) change.setLength(maxChange);
+  angVel.add(change);
+  const rate = angVel.length();
+  if (rate > 1e-6) ship.obj.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(angVel.clone().divideScalar(rate), rate * dt));
+  // Let the dashboard gauges show what the computer is doing.
+  ship.showRates(-angVel.x, angVel.z);
 }

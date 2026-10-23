@@ -154,6 +154,8 @@ export interface Poi {
   dataValue?: number;
   /** A report you choose who to give (the Ninefold report). */
   report?: 'ninefold';
+  /** Equipment you take from it (the lost courier's prototype). */
+  prize?: 'wisp';
 }
 
 const HULLS = [
@@ -562,4 +564,81 @@ export function explorerRank(points: number): string {
   let rank = EXPLORER_RANKS[0][1];
   for (const [min, name] of EXPLORER_RANKS) if (points >= min) rank = name;
   return rank;
+}
+
+// --- The explorer's road: what the ranks open (docs/design/exploration.md, stage 1b) --------
+
+/** Explorer points each door needs. */
+export const EXPLORER_DOORS = { pathfinder: 100, trailblazer: 250, pioneer: 600, voyager: 1500 } as const;
+export const explorerAtLeast = (c: Commander, door: keyof typeof EXPLORER_DOORS) => c.difficulty === 'modern' && exploreOf(c).points >= EXPLORER_DOORS[door];
+
+/** What reaching a rank opens, said when you reach it. */
+export const RANK_NEWS: Record<string, string> = {
+  Pathfinder: 'The Science Division has special orders for you, and the Survey Autopilot is yours to buy',
+  Trailblazer: 'The Station tab now names the nearest trail you haven’t started, and the Science Division’s lost courier is out there to find',
+  Pioneer: 'The Route Autopilot is yours to buy',
+  Voyager: 'The Legends will find you first, when they come',
+};
+
+/** The rank you reached, if these points crossed into one. */
+export function rankReached(before: number, after: number): string | null {
+  const a = explorerRank(before);
+  const b = explorerRank(after);
+  return a === b ? null : b;
+}
+
+/** Trailblazers hear of the nearest trail they haven't started: its first system. */
+export function trailTip(c: Commander, here: StarSystem): { title: string; at: StarSystem; ly: number } | null {
+  if (!explorerAtLeast(c, 'trailblazer')) return null;
+  let best: { title: string; at: StarSystem; ly: number } | null = null;
+  for (const t of trailsOf(here.galaxy)) {
+    if (trailProgress(c, t.id) > 0) continue;
+    const at = systemAt(t.galaxy, t.systems[0]);
+    const ly = distanceLy(here, at);
+    if (!best || ly < best.ly) best = { title: t.title, at, ly };
+  }
+  return best;
+}
+
+// The Science Division's lost courier: one a galaxy, carrying a prototype the
+// company would rather nobody found. Found only by explorers (Trailblazer and up).
+
+export const COURIER_POINTS = 25;
+
+/** The system where a galaxy's lost courier drifts. */
+export function courierSystem(galaxy: number): StarSystem {
+  const seed = systemAt(galaxy, 0);
+  return systemAt(galaxy, Math.floor(roll(seed, 70) * 256));
+}
+
+/** The courier, as a signal (Modern, Trailblazer and up, until you've taken the prototype). */
+export function courierPoiOf(c: Commander, sys: StarSystem): Poi | null {
+  if (!explorerAtLeast(c, 'trailblazer') || courierSystem(sys.galaxy) !== sys) return null;
+  const lon = roll(sys, 71) * Math.PI * 2;
+  const lat = (roll(sys, 72) - 0.5) * 0.6;
+  return {
+    id: 'courier',
+    kind: 'derelict',
+    name: 'Science Division courier “Quiet Hand”',
+    direction: [Math.cos(lat) * Math.cos(lon), Math.sin(lat), Math.cos(lat) * Math.sin(lon)],
+    distance: 3 + roll(sys, 73) * 2,
+    ship: 'cobra-mk3',
+    salvage: [],
+    log: 'No crew, no name on the hull, and a cargo bay sealed from the inside. In the rack, still warm: a prototype stamped WILL-O’-THE-WISP, Science Division issue. It fits your ship. The courier’s last order: “Under no circumstances let this fall into private hands.”',
+    dataValue: 300,
+    prize: 'wisp',
+  };
+}
+
+/** Where the courier is, as rumour: within this many light years, Trailblazers hear of it. */
+export const COURIER_RUMOUR_LY = 20;
+
+/** Bar talk of the courier, if it's near and you haven't found it. */
+export function courierRumour(c: Commander, here: StarSystem): string | null {
+  if (!explorerAtLeast(c, 'trailblazer') || c.equipment.includes('wisp')) return null;
+  const at = courierSystem(here.galaxy);
+  if (isFound(c, at, 'courier')) return null;
+  if (at === here) return 'Bar talk: a Science Division courier went dark in this very system. Survey the planet and listen.';
+  const ly = distanceLy(here, at);
+  return ly <= COURIER_RUMOUR_LY ? `Bar talk: a Science Division courier went dark within ${Math.ceil(ly / 5) * 5} light years of here` : null;
 }

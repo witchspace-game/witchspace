@@ -54,12 +54,53 @@ Every system's planet is already home to someone, so Wexley-Yorozu looks at the 
 
 Both Modern only.
 
+## Stage 1b: the explorer's road *(built, October 2026)*
+
+Exploring paid, but it didn't lead anywhere: the rank was only a word on the Station tab. Trading buys a better ship; fighting climbs to Elite and the Marshals. Now the explorer's rank **opens doors**, and what you find **carries your name**. (Elite stays the combat rank: nobody reaches it by exploring.)
+
+### The rank opens doors
+
+| Rank | Points | What opens |
+|---|---|---|
+| Pathfinder | 100 | **Science Division special orders** at Wexley-Yorozu stations: surveys of systems with a terraforming Candidate, paid three quarters more than an ordinary survey. And the **Survey Autopilot** goes on sale. |
+| Trailblazer | 250 | **Trail tip-offs:** the Station tab names the nearest trail you haven't started, and where its first signal is. And the **lost courier** is out there to find (below). |
+| Pioneer | 600 | The **Route Autopilot** goes on sale. |
+| Voyager | 1,500 | The Legends, when they're built (stage 4): the first invitation goes to Voyagers. |
+
+Reaching a rank says what it opened, there and then.
+
+### Advanced autopilots
+
+The explorer's work is long flights and patient holding. The autopilots do the flying; you choose where.
+
+- **Survey Autopilot** (3,000 Cr, tech 8, Pathfinder and above). Press **9** (or the **Survey** button). It picks the nearest thing in the system still to survey or find (the planet, a moon, a signal you've detected), flies there, using in-system jumps when it can, steering wide of the planet, and holds you in survey range until it's done, then moves on to the next. It leaves the star to you: no autopilot flies into that heat. Any stick or throttle input, or 9 again, hands control back. A hostile ship coming close, damage, or nothing left to do also hands it back, but it brings the ship to a stop first: it never leaves you coasting into a moon.
+- **Route Autopilot** (5,000 Cr, tech 10, Pioneer and above). With a course plotted, it starts the next jump by itself about twelve seconds after you arrive in each system on the way, as long as there's fuel and nothing hostile nearby. Press H during the countdown to stop it. It never lands you anywhere you didn't plot.
+
+Both Modern only, and both can be knocked out in a fight like any other equipment.
+
+### The lost courier and the Will-o'-the-Wisp
+
+Somewhere in each galaxy a Science Division courier, the *Quiet Hand*, drifts with no crew and its bay sealed from the inside. In the rack is a prototype stamped **WILL-O'-THE-WISP**: the marsh light you chase and never catch. Its last order: "Under no circumstances let this fall into private hands."
+
+- **Found, never bought.** One courier a galaxy, placed from the seed. Its signal shows only to Trailblazers and up, found like any other (survey the planet, then fly to it). Within 20 light years, the Station tab carries **bar talk** of it ("a Science Division courier went dark within 15 light years of here"); in its system, "survey the planet and listen".
+- **What it does** (Modern): it jinks the ship out of the way, so **enemy lasers miss half the time**, and **half the missiles fired at you are spoofed** as they close. It can't be knocked out, and nobody will buy it from you. Hard to shoot down, not impossible: shields, hull and good flying still matter.
+- Finding it is worth 25 explorer points. Wexley-Yorozu will want it back (a thread for later).
+
+### Your name on the galaxy
+
+When you **sell or hand in data at a station while signed in** with a callsign, the shared galaxy records who got there first: one record per world, moon and signal, the first commander to bring its data home.
+
+- **The chart** shows it: *Charted first by CMDR Nova* for a system's planet, *Candidate charter: CMDR Nova* for a terraforming Candidate (your name on the colony charter, for stage 2), *Found first by …* for signals and trail steps.
+- **The Station tab** counts your firsts.
+- First come, first named: whoever reaches a station with the data first. Not signed in? The game works as before, and nobody's name goes down.
+- It costs one small record per body on the server (a table in the accounts object), read a galaxy at a time and cached. The client says what it surveyed and the server takes its word, as it does for saves; the claims are checked for shape and sense (real systems, body names the game uses, no more than a hold's worth at once).
+
 ## Stage 2: worlds you can watch change
 
 Alongside the station yards of [building worlds](companies-and-contracts.md#4b-building-worlds):
 
 - **Worlds being terraformed.** A few systems with thin populations have Wexley-Yorozu processors at work: a point of interest in orbit, and a planet whose sky shifts colour over real weeks, driven by the clock so everyone sees the same stage. Survey the progress for W-Y.
-- **Candidates become colonies.** In the shared galaxy, the first commander to hand in a Candidate's data has their callsign on the colony charter.
+- **Candidates become colonies.** The first commander to hand in a Candidate's data already has their callsign on its charter (stage 1b); here the colony is founded and grows.
 - **The darker side.** W-Y wants Candidates before anyone files a claim. Sell a find to a rival, or warn the people who'd be moved off: the explorer's own moral choices.
 
 ## Stage 3: witchspace itself
@@ -73,7 +114,6 @@ Very rare seeded encounters at the end of the longest trails. The first: the ori
 
 ## Later: the shared galaxy and community content
 
-- **First discoveries** carry the finder's callsign in a system's chart entry (one record per system on the server).
 - **A photo gallery** of the best P-key shots, by system.
 - **Community content:** trails, logs and Legends as data files with a validator, like ships, so anyone can add a place worth finding.
 

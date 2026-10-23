@@ -23,6 +23,8 @@ interface Options {
   news?: (s: StarSystem) => string | null;
   /** Your record of a system: whether you've been, and a line on what you surveyed and found. */
   explored?: (s: StarSystem) => { visited: boolean; line: string };
+  /** Who got there first: names on the galaxy, or null. */
+  firsts?: (s: StarSystem) => string | null;
   /** Contracts in hand: where to, in the company's colour, and a line about each. */
   contracts?: { to: StarSystem; colour: string; line: string }[];
 }
@@ -360,6 +362,8 @@ function renderInfo() {
   if (news) rows.push(['News', news]);
   const explored = opts.explored?.(s);
   if (explored) rows.push(['Explored', explored.line]);
+  const firsts = opts.firsts?.(s);
+  if (firsts) rows.push(['Firsts', firsts]);
   const isTarget = opts.target === s;
   // Station names are community content, so everything is escaped.
   const contracts = opts.contracts ?? [];
