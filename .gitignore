@@ -22,3 +22,6 @@ dist/
 
 # Local Worker secrets (wrangler dev)
 .dev.vars
+
+# Helper agents' working copies of the repo
+/.claude/
