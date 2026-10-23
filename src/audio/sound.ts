@@ -175,6 +175,13 @@ export const sfx = {
     rumble.start(ignite);
     rumble.stop(ignite + 1.3);
   },
+  /** The seeker growling as it closes on a ship: higher as it gets nearer a lock. */
+  seek: (progress: number) => {
+    const f = 480 + 520 * Math.min(1, progress);
+    zap(f, f, 0.05, 0.035, 'square');
+  },
+  /** Missile lock (Modern): one solid tone. Fire. */
+  lockTone: () => zap(1040, 1040, 0.5, 0.045, 'square'),
   /** Incoming missile: a short, insistent warble. */
   incoming: () => {
     zap(1300, 900, 0.09, 0.05, 'square');

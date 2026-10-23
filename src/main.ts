@@ -126,7 +126,7 @@ function setState(next: State) {
     for (const n of netMissiles.values()) n.missile.dispose();
     netMissiles.clear();
     // Overlays that only make sense in flight; they're updated each frame while flying.
-    for (const id of ['#mouse-prompt', '#reticle', '#target-info', '#countdown', '#hail']) $(id).hidden = true;
+    for (const id of ['#mouse-prompt', '#reticle', '#seeker', '#target-info', '#countdown', '#hail']) $(id).hidden = true;
   }
   if (isMapOpen()) {
     closeMap();
@@ -1926,6 +1926,7 @@ function buildSystemScene(sys: StarSystem) {
   for (const m of missiles) m.dispose();
   missiles.length = 0;
   locked = null;
+  seeker = null;
   for (const d of drifters) disposeShip(d.model);
   drifters.length = 0;
   for (const e of explosions) e.dispose();
@@ -2998,6 +2999,19 @@ function toggleLock() {
     flash('No missiles · buy more at a station', 1.5);
     return;
   }
+  if (c.difficulty === 'modern') {
+    // Arm, and the seeker does the rest: hold a ship in your sights and it locks.
+    if (seeker || locked || lockedCommander) {
+      seeker = null;
+      locked = null;
+      lockedCommander = null;
+      flash('Missile disarmed', 1.2);
+    } else {
+      seeker = { on: null, progress: 0, beep: 0 };
+      flash('Missile armed · hold a ship in your sights', 1.5);
+    }
+    return;
+  }
   if (riftInterference() > 0.4) {
     flash('Lock failed · rift interference', 1.5);
     return;
@@ -3044,7 +3058,71 @@ function sightedCommander(range: number, cone = 6): Remote | null {
   return best;
 }
 
-// On a touch screen, one missile button by FIRE: Lock, then (red) launch.
+// --- The seeker (Modern) -----------------------------------------------------------
+// As in 1984 and the films: arm the missile and it seeks. Keep a ship in your
+// sights and the box closes on it, growling higher, until the tone goes solid:
+// locked. Then fire. Classic keeps the instant lock.
+
+const SEEK_TIME = 1; // seconds a ship must stay in your sights to lock
+type SeekTarget = NpcShip | Remote;
+/** Armed and seeking: what's in the sights, and how close to a lock (0..1). */
+let seeker: { on: SeekTarget | null; progress: number; beep: number } | null = null;
+const seekPosition = (t: SeekTarget) => (t instanceof NpcShip ? t.obj.position : t.position);
+
+function updateSeeker(dt: number) {
+  if (!seeker) return;
+  if (cmdr().missiles <= 0) {
+    seeker = null;
+    return;
+  }
+  const jammed = riftInterference() > 0.4;
+  const npc = jammed ? null : sightedNpc(LOCK_RANGE, LOCK_CONE);
+  const target: SeekTarget | null = npc ?? (jammed ? null : sightedCommander(LOCK_RANGE, LOCK_CONE));
+  if (target !== seeker.on) seeker = { on: target, progress: 0, beep: 0 };
+  if (!target) return;
+  seeker.progress += dt / SEEK_TIME;
+  seeker.beep -= dt;
+  if (seeker.beep <= 0) {
+    sfx.seek(seeker.progress);
+    seeker.beep = 0.28 - 0.2 * Math.min(1, seeker.progress);
+  }
+  if (seeker.progress < 1) return;
+  seeker = null;
+  sfx.lockTone();
+  if (npc) {
+    locked = npc;
+    flash(`Missile locked · ${npcIdentified(npc) ? npc.def.name : 'unidentified ship'} · fire`, 1.5);
+  } else {
+    lockedCommander = target as Remote;
+    flash(`Missile locked · CMDR ${lockedCommander.name} · fire`, 1.5);
+  }
+}
+
+/** The seeker's box: wide and dashed while it searches, closing on a ship, red when locked. */
+const seekerBox = $('#seeker');
+function updateSeekerBox() {
+  const lockedAt = locked?.obj.position ?? lockedCommander?.position ?? null;
+  const tracking = seeker?.on ? seekPosition(seeker.on) : null;
+  if ((!seeker && !lockedAt) || state !== 'flying') {
+    seekerBox.hidden = true;
+    return;
+  }
+  const at = lockedAt ?? tracking ?? camera.position.clone().addScaledVector(laserDirection(), 1000);
+  const p = at.clone().project(camera);
+  if (p.z > 1) {
+    seekerBox.hidden = true; // behind you
+    return;
+  }
+  const rect = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
+  seekerBox.hidden = false;
+  seekerBox.style.transform = `translate(${rect.left + ((p.x + 1) / 2) * rect.width}px, ${rect.top + ((1 - p.y) / 2) * rect.height}px)`;
+  const size = lockedAt ? 34 : tracking ? 90 - 56 * Math.min(1, seeker!.progress) : 90;
+  seekerBox.style.setProperty('--s', `${Math.round(size)}px`);
+  seekerBox.classList.toggle('locked', Boolean(lockedAt));
+  seekerBox.classList.toggle('tracking', !lockedAt && Boolean(tracking));
+}
+
+// On a touch screen, one missile button by FIRE: Arm (Lock in Classic), then (red) launch.
 const missileButton = $<HTMLButtonElement>('#touch .missile');
 onTap(missileButton, () => {
   missileButton.blur();
@@ -3058,9 +3136,12 @@ function updateMissileButton() {
   if (!commander) return;
   const n = cmdr().missiles;
   const armed = Boolean(locked || lockedCommander);
+  const modern = cmdr().difficulty === 'modern';
   missileButton.classList.toggle('armed', armed);
+  missileButton.classList.toggle('seeking', Boolean(seeker) && !armed);
   missileButton.classList.toggle('empty', n <= 0);
-  const label = n <= 0 ? 'No missiles' : armed ? `Missile ×${n}` : `Lock ×${n}`;
+  const label =
+    n <= 0 ? 'No missiles' : armed ? (modern ? `Fire ×${n}` : `Missile ×${n}`) : seeker ? `Seeking ×${n}` : modern ? `Arm ×${n}` : `Lock ×${n}`;
   if (missileButton.textContent !== label) missileButton.textContent = label;
 }
 
@@ -3079,7 +3160,8 @@ function fireMissile() {
     return;
   }
   if (!locked) {
-    flash(c.missiles > 0 ? 'Lock a target first (T)' : 'No missiles', 1.5);
+    const hint = c.difficulty !== 'modern' ? 'Lock a target first (T)' : seeker ? 'No lock yet · hold the ship in your sights' : 'Arm a missile first (T)';
+    flash(c.missiles > 0 ? hint : 'No missiles', 1.5);
     return;
   }
   if (surrenderTimer !== null) breakSurrender();
@@ -3169,14 +3251,21 @@ function updateMissiles(dt: number) {
   ecmCooldown = Math.max(0, ecmCooldown - dt);
   equipmentHitCooldown = Math.max(0, equipmentHitCooldown - dt);
   const alive = state === 'flying';
+  // A lost lock goes back to seeking (Modern), so the next ship in your sights can be locked.
+  const lockLost = () => {
+    if (alive && commander && cmdr().difficulty === 'modern' && cmdr().missiles > 0) seeker = { on: null, progress: 0, beep: 0 };
+    if (alive) flash(seeker ? 'Missile lock lost · seeking' : 'Missile lock lost', 1.2);
+  };
   if (locked && (!npcs.includes(locked) || locked.obj.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
     locked = null;
-    if (alive) flash('Missile lock lost', 1.2);
+    lockLost();
   }
   if (lockedCommander && (![...sharedSpace.remotes.values()].includes(lockedCommander) || lockedCommander.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
     lockedCommander = null;
-    if (alive) flash('Missile lock lost', 1.2);
+    lockLost();
   }
+  if (alive) updateSeeker(dt);
+  else seeker = null;
   updateNetMissiles(dt);
 
   for (const m of [...missiles]) {
@@ -3785,6 +3874,7 @@ function updateSpace(dt: number) {
   const noise = state === 'flying' ? riftInterference() : 0;
   if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
   setInterference(noise);
+  updateSeekerBox();
   if (state === 'flying') {
     updateHud(player, station, blips, autopilot || Boolean(combatComputer), rollAssist);
     updateTouch(dt, player.speed / player.maxSpeed);
@@ -3917,8 +4007,8 @@ function updateAimDisplay() {
 }
 
 const KEYS_HINT = {
-  mouse: 'Mouse aim · Click fire · W/S throttle · A/D roll · T lock · X missile · G map · H hyperspace · J jump · C docking computer · F1 controls',
-  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · T lock · X missile · G map · H hyperspace · J jump · C docking · F1 controls',
+  mouse: 'Mouse aim · Click fire · W/S throttle · A/D roll · T arm missile · X fire it · G map · H hyperspace · J jump · C docking computer · F1 controls',
+  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · T arm missile · X fire it · G map · H hyperspace · J jump · C docking · F1 controls',
 };
 
 function renderControlsCard() {
@@ -3952,7 +4042,7 @@ function renderControlsCard() {
       ['9', 'Survey autopilot: flies to whatever is left to survey or find here, and holds you in range (explorers; any flight control takes over)'],
       ['P', 'Take a photo of the view, without the HUD (saved, or shared on phones)'],
       ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
-      ['T', 'Lock a missile onto the ship in your sights (again with nothing in sight: disarm)'],
+      ['T', 'Arm a missile: hold a ship in your sights until the tone goes solid (Classic: lock at once). Again to disarm'],
       ['X', 'Launch the locked missile'],
       ['Z', 'ECM: destroy every missile nearby, yours included (needs an ECM)'],
       ['1 2 3 4 / V', 'Look front, rear, left or right (V cycles); fire uses that mount\'s laser'],
@@ -4063,6 +4153,7 @@ async function launch() {
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
   locked = null;
+  seeker = null;
   scheduleMarshals(); // still wanted? they'll be back
   raidClock = 0;
   setView('front');
