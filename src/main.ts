@@ -85,6 +85,8 @@ import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } fro
 import { applyCompanyBand } from './render/livery';
 import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
 import { SpaceDust } from './render/dust';
+import { buildYard, type YardScene } from './render/yard';
+import { stageInfo, stageLabel, yardAt, yardsNear, yardsOf } from './game/yards';
 import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
 import { riftClose, riftDrone, riftGroan, type Drone } from './audio/rift';
@@ -847,8 +849,18 @@ function renderNews() {
         <small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · heard ${ago(now - n.heard)} ago · Wanted: whatever it imports</small></li>`,
     )
     .join('');
-  $('#news-list').innerHTML = (attacks || items.length)
-    ? attacks + items
+  // Wexley-Yorozu yards in the region: news, not a market event (Modern).
+  const yards = exploring()
+    ? yardsNear(here, now)
+        .slice(0, 3)
+        .map(
+          (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${escapeHtml(`Wexley-Yorozu yard at ${n.where.name}: ${stageInfo(n.yard.stage).news}`)}</b>
+        <small>${escapeHtml(n.where === here ? 'Here, by the moon' : `${n.distance.toFixed(1)} LY away`)} · ${escapeHtml(stageLabel(n.yard))}</small></li>`,
+        )
+        .join('')
+    : '';
+  $('#news-list').innerHTML = (attacks || yards || items.length)
+    ? attacks + yards + items
         .map((n) => {
           const kind = EVENT_KINDS[n.event.type];
           const local = n.where === here;
@@ -2001,6 +2013,9 @@ let sceneBodies: SceneBody[] = [];
 let scenePois: ScenePoi[] = [];
 let worldParts: THREE.Group[] = [];
 let survey: { target: SceneBody; progress: number } | null = null;
+/** A Wexley-Yorozu yard by one of the moons (Modern), if there's one here now. */
+let yardScene: YardScene | null = null;
+const YARD_COLOUR = COMPANIES.wy.colour;
 const SIGNAL_DETECT = 6000; // metres: close enough to notice a signal without a survey
 const SIGNAL_REACH = 900; // metres: close enough to find out what it is
 const SIGNAL_COLOUR = '#c9b3ff';
@@ -2017,6 +2032,8 @@ function disposeExploreScene() {
   scenePois = [];
   sceneBodies = [];
   survey = null;
+  yardScene?.dispose();
+  yardScene = null;
   $('#survey').hidden = true;
 }
 
@@ -2046,6 +2063,13 @@ function buildExploreScene(sys: StarSystem) {
     sceneBodies.push({ body: bodies[2 + i], centre: moon.position, radius, range: radius * SURVEY.moon.altitude });
   });
   if (!c || c.difficulty !== 'modern') return;
+  // The yard first, so signals can keep clear of it.
+  const yard = yardAt(sys, Date.now());
+  const quarry = yard && sceneBodies.find((b) => b.body.id === `moon${yard.moon}`);
+  if (yard && quarry) {
+    const defs = { titan: shipById('titanoboa')!, hauler: shipById('bullsnake')!, station: shipById('coriolis')! };
+    yardScene = buildYard(space.scene, yard, defs, { centre: quarry.centre, radius: quarry.radius }, station.root.position);
+  }
   const planetDone = isSurveyed(c, sys, 'planet');
   const courier = courierPoiOf(c, sys);
   for (const poi of [...poisOf(sys), ...trailPoisOf(c, sys), ...(courier ? [courier] : [])]) {
@@ -2053,6 +2077,7 @@ function buildExploreScene(sys: StarSystem) {
     // Near enough that salvage isn't lost to space, and clear of the moons.
     const position = dir.clone().multiplyScalar(Math.min(poi.distance * planetRadius, 30000)).add(planetPos);
     for (const b of sceneBodies) if (b.body.kind === 'moon' && position.distanceTo(b.centre) < b.radius * 3) position.addScaledVector(dir, b.radius * 4);
+    if (yardScene && position.distanceTo(yardScene.centre) < yardScene.radius * 2) position.addScaledVector(dir, yardScene.radius * 3);
     const found = isFound(c, sys, poi.id);
     // A trail's later steps are where its clue said: on the scanner from arrival.
     const sp: ScenePoi = { poi, position, revealed: planetDone || found || (poi.trail?.step ?? 0) > 0, models: [], beacon: null };
@@ -2081,6 +2106,7 @@ function buildExploreScene(sys: StarSystem) {
 function updateExplore(dt: number): boolean {
   const pos = player.obj.position;
   for (const b of sceneBodies) if (b.body.kind === 'moon' && pos.distanceTo(b.centre) < b.radius) return true;
+  yardScene?.update(dt, Date.now());
   for (const p of scenePois) {
     for (const m of p.models) m.root.rotateOnAxis(TUMBLE_AXIS, dt * 0.03);
     if (p.beacon) blinkBeacon(p.beacon, elapsed);
@@ -2267,6 +2293,8 @@ function exploreMarkers(km: (p: THREE.Vector3) => string): Marker[] {
     const found = isFound(cmdr(), currentSystem(), p.poi.id);
     out.push({ position: p.position, color: SIGNAL_COLOUR, radius: 30, label: found ? `${p.poi.name} ${km(p.position)}` : `Signal ${km(p.position)}` });
   }
+  // A yard is hard to miss, so it's always named.
+  if (yardScene) out.push({ position: yardScene.centre, color: YARD_COLOUR, radius: yardScene.radius, label: `Wexley-Yorozu yard · ${stageLabel(yardScene.yard)} · ${km(yardScene.centre)}` });
   return out;
 }
 
@@ -2276,7 +2304,8 @@ function arrivalNote(sys: StarSystem): string {
   const first = recordVisit(cmdr(), sys);
   noteExplorerRank(before);
   const world = describeWorld(worldOf(sys));
-  return [world, first ? 'First visit' : ''].filter(Boolean).join(' · ');
+  const yard = exploring() && yardAt(sys, Date.now()) ? 'A Wexley-Yorozu yard is building here' : '';
+  return [world, yard, first ? 'First visit' : ''].filter(Boolean).join(' · ');
 }
 
 // Fitted equipment is only at risk once the hull is badly hurt, and never
@@ -3862,6 +3891,26 @@ function updateSpace(dt: number) {
       flash('Altitude warning', 1.5);
     }
 
+    // The yard: the constructor is as solid as a moon, the rest bounces you off.
+    const bumped = yardScene?.contact(player.obj.position, player.speed);
+    if (bumped?.kind === 'crash') {
+      sfx.thud();
+      hitFeedback(1);
+      flash(`Collision with the ${bumped.what}`, 3);
+      die();
+      return;
+    }
+    if (bumped) {
+      sfx.thud();
+      player.speed *= 0.2;
+      if (damagePlayer(bumped.damage)) {
+        die();
+        return;
+      }
+      hitFeedback(0.8);
+      flash(`Hull impact · ${bumped.what}`, 1.2);
+    }
+
     const contact = station.contact(player, prev, cmdr().difficulty === 'classic');
     if (contact?.kind === 'docked' && lockedDown()) {
       station.turnAway(player);
@@ -3934,6 +3983,10 @@ function updateSpace(dt: number) {
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
   if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#cfe0ff', kind: 'station' });
+  if (yardScene) {
+    blips.push({ position: yardScene.centre, color: YARD_COLOUR, kind: 'station' });
+    for (const h of yardScene.haulers) blips.push({ position: h.root.position, color: YARD_COLOUR, kind: 'ship' });
+  }
   for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: commanderColour(r), kind: 'commander', locked: r === lockedCommander });
   for (const n of netMissiles.values()) blips.push({ position: n.missile.position, color: '#ff6b6b', kind: 'missile' });
   // Near a rift, contacts jitter about on the scanner.
@@ -5488,6 +5541,7 @@ const J_LOCK_STATION = 4000;
 const J_LOCK_PLANET = 3000; // above the surface
 const J_LOCK_SUN = 6000; // above the surface: jumps stop short of the heat
 const J_LOCK_MOON = 2000; // above the surface
+const J_LOCK_YARD = 3000; // beyond the constructor's length
 
 let countdown: number | null = null;
 let lastTick = 0;
@@ -5681,8 +5735,9 @@ function inSystemJump(quiet = false): boolean {
   const sunNear = pos.distanceTo(SUN_POS) - SUN_RADIUS < J_LOCK_SUN;
   const moons = sceneBodies.filter((b) => b.body.kind === 'moon');
   const moonNear = moons.some((m) => pos.distanceTo(m.centre) - m.radius < J_LOCK_MOON);
-  if (shipsNear || stationNear || planetNear || sunNear || moonNear) {
-    if (!quiet) flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : sunNear ? 'sun' : 'moon'} too close`, 1.5);
+  const yardNear = yardScene !== null && pos.distanceTo(yardScene.centre) - yardScene.radius < J_LOCK_YARD;
+  if (shipsNear || stationNear || planetNear || sunNear || moonNear || yardNear) {
+    if (!quiet) flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : sunNear ? 'sun' : moonNear ? 'moon' : 'yard'} too close`, 1.5);
     return false;
   }
   // Leap forward, but stop short of the station, the planet, its moons or the sun if they're ahead.
@@ -5699,6 +5754,7 @@ function inSystemJump(quiet = false): boolean {
   limit(planetPos, planetRadius + J_LOCK_PLANET - 200);
   limit(SUN_POS, SUN_RADIUS + J_LOCK_SUN - 200);
   for (const m of moons) limit(m.centre, m.radius + J_LOCK_MOON - 200);
+  if (yardScene) limit(yardScene.centre, yardScene.radius + J_LOCK_YARD - 200);
   if (dist < 500) {
     if (!quiet) flash('Mass locked · too close ahead', 1.5);
     return false;
@@ -5959,6 +6015,9 @@ if (import.meta.env.DEV) {
       get state() { return state; },
       get autopilot() { return autopilot; },
       get explore() { return { bodies: sceneBodies, pois: scenePois, planetPos, survey }; },
+      get yard() { return yardScene; },
+      /** Yards at work in this galaxy now. */
+      yards: () => yardsOf(currentSystem().galaxy, Date.now()),
       /** Hyperspace straight to a system in this galaxy, fuel or not. */
       jumpTo(index: number) {
         cmdr().target = index;
