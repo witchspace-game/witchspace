@@ -70,9 +70,21 @@ describe('trails', () => {
     const before = c.credits;
     expect(publishReports(c)).toBe(REPORT_PRICE.published);
     expect(c.credits).toBe(before + REPORT_PRICE.published);
+    expect(exploreOf(c).ninefold).toBe('published');
     const d = newCommander('modern');
     recordDiscovery(d, last, poi);
+    expect(exploreOf(d).ninefold).toBeUndefined();
     expect(sellData(d, last, true)).toEqual({ credits: REPORT_PRICE.wy, reports: 1 });
+    expect(exploreOf(d).ninefold).toBe('wy');
+  });
+
+  it('never repeat a log within a trail', () => {
+    const c = newCommander('modern');
+    for (const t of trailsOf(0)) {
+      exploreOf(c).trails = { [t.id]: t.systems.length - 1 };
+      const logs = t.systems.map((i) => trailPoisOf(c, systemAt(0, i)).find((p) => p.trail?.id === t.id)!.log);
+      expect(new Set(logs).size).toBe(logs.length);
+    }
   });
 });
 
