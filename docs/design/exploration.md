@@ -97,6 +97,8 @@ When you **sell or hand in data at a station while signed in** with a callsign, 
 
 ## Stage 2: worlds you can watch change
 
+**Finds that change the world:** precious deposits, found by explorers and sold to a company, that become developments every career supplies, guards or raids. Designed in [from discovery to development](discovery-to-development.md).
+
 Alongside the station yards of [building worlds](companies-and-contracts.md#4b-building-worlds):
 
 - **Worlds being terraformed.** A few systems with thin populations have Wexley-Yorozu processors at work: a point of interest in orbit, and a planet whose sky shifts colour over real weeks, driven by the clock so everyone sees the same stage. Survey the progress for W-Y.
