@@ -13,6 +13,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
 import { NAMES, nameKey, nameRule } from './names';
+import { isClaim, MAX_CLAIMS } from './firsts';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
 import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES, type CompanyId } from './contact';
 import { companyEmail, signInEmail } from './emails';
@@ -66,6 +67,11 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS contact (
       account TEXT PRIMARY KEY, push TEXT, push_hash TEXT, email INTEGER NOT NULL DEFAULT 0, stop TEXT NOT NULL,
       sent TEXT NOT NULL DEFAULT '[]', title TEXT, body TEXT)`);
+    // Your name on the galaxy: the first account to bring each world's, moon's or signal's data home.
+    // The name shown is the account's callsign now, so a rename follows and a deleted account drops out.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS firsts (
+      galaxy INTEGER NOT NULL, system INTEGER NOT NULL, body TEXT NOT NULL, account TEXT NOT NULL, at INTEGER NOT NULL,
+      PRIMARY KEY (galaxy, system, body))`);
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -79,6 +85,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'POST' && path === '/stats/ping') return this.ping(request);
     if (m === 'GET' && path === '/push/latest') return this.latest(url);
     if (m === 'GET' && path === '/contact/stop') return this.stop(url);
+    const galaxy = path.match(/^\/firsts\/([0-7])$/);
+    if (m === 'GET' && galaxy) return this.firstsOf(Number(galaxy[1]));
 
     const account = await this.sessionAccount(request);
     if (!account) return json({ error: 'Please sign in' }, 401);
@@ -90,7 +98,36 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'DELETE' && path === '/me') return this.deleteAccount(account);
     if (m === 'GET' && path === '/me/contact') return this.getContact(account);
     if (m === 'PUT' && path === '/me/contact') return this.putContact(request, account);
+    if (m === 'POST' && path === '/me/firsts') return this.claimFirsts(request, account);
     return json({ error: 'Not found' }, 404);
+  }
+
+  // --- Your name on the galaxy (docs/design/exploration.md, stage 1b) -------------
+
+  /** GET /firsts/<galaxy>: who brought each body's data home first, for the chart. Public. */
+  private firstsOf(galaxy: number): Response {
+    const rows = this.sql
+      .exec('SELECT f.system, f.body, a.callsign FROM firsts f JOIN accounts a ON a.id = f.account WHERE f.galaxy = ? AND a.callsign IS NOT NULL', galaxy)
+      .toArray()
+      .map((r) => ({ s: r.system as number, b: r.body as string, c: r.callsign as string }));
+    const res = json({ firsts: rows });
+    res.headers.set('Cache-Control', 'public, max-age=300');
+    return res;
+  }
+
+  /** POST /me/firsts {claims: [{galaxy, system, body}]}: data you just brought home. Returns the ones that are yours. */
+  private async claimFirsts(request: Request, account: Account): Promise<Response> {
+    if (!account.callsign) return json({ error: 'Choose a callsign first' }, 409);
+    const body = (await request.json().catch(() => null)) as { claims?: unknown } | null;
+    const claims = Array.isArray(body?.claims) ? body.claims.slice(0, MAX_CLAIMS) : [];
+    const won: { galaxy: number; system: number; body: string }[] = [];
+    const now = Date.now();
+    for (const c of claims) {
+      if (!isClaim(c)) continue;
+      const added = this.sql.exec('INSERT OR IGNORE INTO firsts (galaxy, system, body, account, at) VALUES (?, ?, ?, ?, ?)', c.galaxy, c.system, c.body, account.id, now).rowsWritten;
+      if (added) won.push({ galaxy: c.galaxy, system: c.system, body: c.body });
+    }
+    return json({ firsts: won });
   }
 
   /** For the shared space servers: who a session belongs to, if anyone. */
@@ -437,7 +474,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
   }
 
   private deleteAccount(account: Account): Response {
-    for (const table of ['saves', 'sessions', 'contact']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
+    for (const table of ['saves', 'sessions', 'contact', 'firsts']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM codes WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM accounts WHERE id = ?', account.id);
@@ -457,3 +494,4 @@ interface ContactRow {
   stop: string;
   sent: string;
 }
+

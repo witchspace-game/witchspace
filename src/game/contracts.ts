@@ -5,7 +5,7 @@ import { DANGER_PREMIUM, equilibriumPrice, tradeBalance } from '../economy/marke
 import { hash } from '../economy/seed';
 import { FUEL_CAPACITY, type Commander } from './commander';
 import { COMPANIES, COMPANY_IDS, pickCompany, presence, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
-import { exploreOf, isSurveyed, worldOf } from './explore';
+import { bodiesOf, EXPLORER_DOORS, exploreOf, isSurveyed, worldOf } from './explore';
 
 // Company contracts (Modern rules), as set out in
 // docs/design/companies-and-contracts.md: carry the company's cargo from here
@@ -36,6 +36,8 @@ export interface Contract {
   special?: boolean;
   /** A Wexley-Yorozu survey contract: survey the moons at `to`, hand the data in at any W-Y station. No cargo. */
   survey?: boolean;
+  /** A Science Division special order (explorers, Pathfinder and up): a survey of a system with a terraforming Candidate. */
+  specialOrder?: boolean;
 }
 
 /** A contract you've taken, counting down. */
@@ -149,6 +151,11 @@ export function board(c: Commander, here: StarSystem, now: number): Contract[] {
     const o = surveyOffer(here, near, (salt) => r(salt, 0), `survey:${here.galaxy}:${here.index}:${slot}`);
     if (o) offers.push(o);
   }
+  // Pathfinders get the Science Division's special orders too.
+  if (wyWorks(here) && c.difficulty === 'modern' && exploreOf(c).points >= EXPLORER_DOORS.pathfinder) {
+    const o = surveyOffer(here, near, (salt) => r(salt + 20, 0), `order:${here.galaxy}:${here.index}:${slot}`, true);
+    if (o) offers.push(o);
+  }
   return offers.filter((o) => !c.contracts?.some((a) => a.id === o.id) && !c.contractsDone?.includes(o.id)).sort((a, b) => b.pay - a.pay);
 }
 
@@ -206,23 +213,29 @@ export const wyWorks = (s: StarSystem) => presence(s).wy > 0.5;
 /** Survey pay: a base, per moon, and per jump out. */
 export const SURVEY_PAY = { base: 120, moon: 90, jump: 70 } as const;
 
-/** A survey of the moons of a system two or three jumps out. */
-function surveyOffer(here: StarSystem, near: { s: StarSystem; n: number }[], r: (salt: number) => number, id: string): Contract | null {
-  const targets = near.filter(({ s, n }) => n >= 2 && worldOf(s).moons.length > 0);
+/** Special orders pay this much more than an ordinary survey. */
+export const SPECIAL_ORDER_PAY = 1.75;
+
+/** A survey of the moons of a system two or three jumps out; a special order is one with a terraforming Candidate. */
+function surveyOffer(here: StarSystem, near: { s: StarSystem; n: number }[], r: (salt: number) => number, id: string, special = false): Contract | null {
+  const candidate = (s: StarSystem) => bodiesOf(s).some((b) => b.grade === 'Candidate');
+  const targets = near.filter(({ s, n }) => (special ? n >= 1 && candidate(s) : n >= 2) && worldOf(s).moons.length > 0);
   if (!targets.length) return null;
   const { s: dest, n } = targets[Math.floor(r(11) * targets.length)];
   const moons = worldOf(dest).moons.length;
+  const pay = SURVEY_PAY.base + SURVEY_PAY.moon * moons + SURVEY_PAY.jump * n;
   return {
     id,
     company: 'wy',
     good: 'survey',
-    label: moons === 1 ? 'Moon survey' : 'Moon surveys',
+    label: special ? 'Special order: moon surveys' : moons === 1 ? 'Moon survey' : 'Moon surveys',
     survey: true,
+    ...(special ? { specialOrder: true } : {}),
     qty: 0,
     from: at(here),
     to: at(dest),
     jumps: n + 2,
-    pay: SURVEY_PAY.base + SURVEY_PAY.moon * moons + SURVEY_PAY.jump * n,
+    pay: Math.round(pay * (special ? SPECIAL_ORDER_PAY : 1)),
     danger: 0,
     rush: false,
     needs: 'Casual',
