@@ -23,7 +23,9 @@ function audio() {
     master.gain.value = soundMode === 'off' ? 0 : 0.5;
     master.connect(ctx.destination);
   }
-  if (ctx.state === 'suspended') void ctx.resume();
+  // iOS also has 'interrupted' (the Home Screen app was left, the phone
+  // locked, a call came in), and it stays that way until resumed.
+  if (ctx.state !== 'running') void ctx.resume().catch(() => {});
   return { ctx, master: master! };
 }
 
@@ -32,8 +34,26 @@ export const audioGraph = () => audio();
 
 /** Browsers only allow audio after a user gesture; call this from one. */
 export function unlockAudio() {
-  audio();
+  const { ctx } = audio();
+  if (unlocked) return;
+  unlocked = true;
+  // Older iOS only unlocks once a sound has started inside the gesture.
+  const src = ctx.createBufferSource();
+  src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+  src.connect(ctx.destination);
+  src.start();
 }
+let unlocked = false;
+
+// Every tap, click or key press revives the sound (touch flight controls use
+// pointerdown, which iOS doesn't count as a gesture, so listen for the ends).
+for (const type of ['touchend', 'pointerup', 'click', 'keydown'] as const) {
+  addEventListener(type, () => ctx?.state !== 'running' && unlockAudio(), { capture: true, passive: true });
+}
+// Back from the Home Screen or the lock screen: try at once (the next tap does it if not).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && ctx && ctx.state !== 'running') void ctx.resume().catch(() => {});
+});
 
 export function cycleSoundMode(): SoundMode {
   soundMode = SOUND_MODES[(SOUND_MODES.indexOf(soundMode) + 1) % SOUND_MODES.length];
