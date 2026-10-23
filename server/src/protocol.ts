@@ -20,13 +20,15 @@ export interface Commander {
   s: number;
   /** Lasers firing. */
   f: boolean;
+  /** Running dark (transponder off): others see an unidentified ship until close. */
+  d?: boolean;
 }
 
 export type ClientMessage =
   /** First message: who you are, what you fly, and the lasers fitted. */
   | { type: 'hello'; name: string; ship: string; lasers?: string[]; rank?: string; missiles?: number; ecm?: boolean; session?: string }
   /** About ten times a second: where you are, and your shields and hull (which can only go down this way). */
-  | { type: 'state'; p: Vec3; q: Quat; s: number; f: boolean; h?: [number, number] }
+  | { type: 'state'; p: Vec3; q: Quat; s: number; f: boolean; h?: [number, number]; d?: boolean }
   /** A laser shot: the direction it went, and which laser. The server decides what it hit. */
   | { type: 'fire'; d: Vec3; l: string }
   /** Launch a missile at a commander. The server flies it and decides whether it hits. */
@@ -38,7 +40,7 @@ export type ServerMessage =
   /** Your id, and everyone already here. */
   | { type: 'welcome'; id: string; others: Commander[] }
   | { type: 'join'; commander: Commander }
-  | { type: 'state'; id: string; p: Vec3; q: Quat; s: number; f: boolean }
+  | { type: 'state'; id: string; p: Vec3; q: Quat; s: number; f: boolean; d?: boolean }
   | { type: 'leave'; id: string }
   /** The server didn't accept a move: you're put back here. */
   | { type: 'correct'; p: Vec3 }

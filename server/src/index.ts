@@ -177,7 +177,7 @@ export class SystemRoom extends DurableObject<Env> {
       const first = !a.track;
       const from = a.track ? { p: a.track.p, t: a.track.t } : null;
       a.track = { p: msg.p, t: now, jumpedAt: verdict === 'jump' ? now : (a.track?.jumpedAt ?? 0) };
-      Object.assign(a.commander, { p: msg.p, q: msg.q, s: msg.s, f: Boolean(msg.f) });
+      Object.assign(a.commander, { p: msg.p, q: msg.q, s: msg.s, f: Boolean(msg.f), d: msg.d === true });
       ws.serializeAttachment(a);
       const me = this.combat.get(a.commander.id);
       if (me) {
@@ -188,7 +188,7 @@ export class SystemRoom extends DurableObject<Env> {
       }
       // The first accepted position is when everyone else sees you arrive.
       if (first) this.broadcast(ws, { type: 'join', commander: a.commander });
-      else this.broadcast(ws, { type: 'state', id: a.commander.id, p: msg.p, q: msg.q, s: msg.s, f: Boolean(msg.f) });
+      else this.broadcast(ws, { type: 'state', id: a.commander.id, p: msg.p, q: msg.q, s: msg.s, f: Boolean(msg.f), d: msg.d === true });
       return;
     }
 

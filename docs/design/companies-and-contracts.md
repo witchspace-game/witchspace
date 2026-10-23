@@ -202,6 +202,8 @@ You can switch your transponder off (designed in [law and travel](law-and-travel
 - **In anarchies none of it matters.** There's no law to hide from.
 - **The ship remembers for you** *(built)*. Going dark is always your choice; switching back on is looked after, so forgetting isn't punished. The transponder comes back on after a hyperspace jump (a new system, a cold trail), and on approach to a lawful station (at clearance range, or when you press C). Not if that would make you the suspect: then the computer says so, the **DARK** light counts down to when it's safe (*DARK 2:14*), and it switches on by itself once the coast is clear. A police hail has its own **Switch on** button.
 
+- **How a dark ship looks** *(built, October 2026)*. In neo-vector, a ship's colour is your computer naming it from its transponder (traders green, police blue, pirates red). A ship running dark has no transponder to read, so it shows in a **cold white, at full glow**: you can see it, you can't say what it is. The target panel reads *Unidentified ship · no transponder*, and the scanner mark is white too. Inside **2 km** your computer reads the hull and it flushes into its true colours (*Hull read · …*). Once it has fired on you it shows red, whoever it is. The glow never dims: the glowing hull is Witchspace's look, and running dark hides who you are, not that you're there. The same goes for commanders in shared space (their callsign tag reads *Unidentified ship* until you're close) and for NPCs that run dark, like the Falcon.
+
 ### The police challenge: warn first
 
 Lawful police don't shoot an unidentified ship on sight. A transponder can be damaged or simply broken.

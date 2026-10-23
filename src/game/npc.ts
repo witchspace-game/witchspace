@@ -81,6 +81,12 @@ export class NpcShip {
   maydayCalled?: boolean;
   /** You were running dark when you attacked it: its report can't name you. */
   seenDark?: boolean;
+  /** Running dark itself (the Falcon): unidentified until you're close enough to read the hull. */
+  dark?: boolean;
+  /** Shown as unidentified right now (so the colours only change when that does). */
+  shownUnidentified?: boolean;
+  /** Has fired at you: whoever it is, it's hostile. */
+  firedOnPlayer?: boolean;
   /** A lost company case this ship has taken aboard (contract id). */
   carrying?: string;
   /** The trading company a trader flies for, if any. */

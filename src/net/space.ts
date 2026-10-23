@@ -37,6 +37,8 @@ export interface Remote {
   history: Snapshot[];
   /** Until when (our clock, seconds) they count as hostile: they've shot at us. */
   hostileUntil: number;
+  /** Running dark: no transponder, so we can't say who they are until we're close. */
+  dark: boolean;
 }
 
 export type SpaceEvent =
@@ -137,14 +139,14 @@ export class SharedSpace {
     return r.hostileUntil > this.clock;
   }
 
-  update(dt: number, me: { position: THREE.Vector3; quaternion: THREE.Quaternion; speed: number; firing: boolean; shields: number; hull: number }) {
+  update(dt: number, me: { position: THREE.Vector3; quaternion: THREE.Quaternion; speed: number; firing: boolean; shields: number; hull: number; dark: boolean }) {
     this.clock += dt;
     this.sendTimer -= dt;
     if (this.connected && this.sendTimer <= 0) {
       this.sendTimer = SEND_INTERVAL;
       const p = me.position;
       const q = me.quaternion;
-      this.send({ type: 'state', p: [round(p.x), round(p.y), round(p.z)], q: [q.x, q.y, q.z, q.w], s: round(me.speed), f: me.firing, h: [round(me.shields), round(me.hull)] });
+      this.send({ type: 'state', p: [round(p.x), round(p.y), round(p.z)], q: [q.x, q.y, q.z, q.w], s: round(me.speed), f: me.firing, h: [round(me.shields), round(me.hull)], ...(me.dark ? { d: true } : {}) });
     }
     const at = this.clock - DELAY;
     for (const r of this.remotes.values()) interpolate(r, at);
@@ -165,6 +167,7 @@ export class SharedSpace {
         const r = this.remotes.get(msg.id);
         if (!r) break;
         r.history.push({ t: this.clock, p: toV(msg.p), q: toQ(msg.q), f: msg.f });
+        r.dark = msg.d === true;
         while (r.history.length > 2 && r.history[1].t < this.clock - KEEP) r.history.shift();
         break;
       }
@@ -229,7 +232,7 @@ export class SharedSpace {
   }
 
   private add(c: Commander): Remote {
-    const r: Remote = { id: c.id, name: c.name, rank: c.rank ?? 'Harmless', verified: Boolean(c.verified), ship: c.ship, position: toV(c.p), quaternion: toQ(c.q), firing: c.f, history: [{ t: this.clock, p: toV(c.p), q: toQ(c.q), f: c.f }], hostileUntil: 0 };
+    const r: Remote = { id: c.id, name: c.name, rank: c.rank ?? 'Harmless', verified: Boolean(c.verified), ship: c.ship, position: toV(c.p), quaternion: toQ(c.q), firing: c.f, history: [{ t: this.clock, p: toV(c.p), q: toQ(c.q), f: c.f }], hostileUntil: 0, dark: c.d === true };
     this.remotes.set(c.id, r);
     return r;
   }

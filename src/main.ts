@@ -87,7 +87,7 @@ import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
 import { riftClose, riftDrone, riftGroan, type Drone } from './audio/rift';
 import { camera, isRetro, lens, makeSpace, render, setRetro } from './render/renderer';
-import { buildShip, disposeShip, heatShip, type ShipModel } from './render/shipModel';
+import { buildShip, disposeShip, heatShip, showUnidentified, UNIDENTIFIED, type ShipModel } from './render/shipModel';
 import { buildHangar } from './render/hangar';
 import { stationName } from './galaxy/stationNames';
 import { takePhoto } from './ui/photo';
@@ -1381,7 +1381,9 @@ const PIRATE_CHANCE = [0.75, 0.55, 0.4, 0.3, 0.25, 0.15, 0.1, 0.06];
 const TRADERS_BY_GOVERNMENT = [1, 1, 2, 2, 2, 3, 3, 3];
 const ENCOUNTER_INTERVAL = 40; // seconds between rolls for pirates
 const MAX_PIRATES = 4;
-const BOUNTIES: Record<string, number> = { sidewinder: 50, mamba: 80 };
+const BOUNTIES: Record<string, number> = { sidewinder: 50, mamba: 80, falcon: 2000 };
+/** The Falcon, the Legend of the lanes: a chance in each pirate encounter, by government (anarchies most). */
+const FALCON_CHANCE = [0.04, 0.03, 0.02, 0.015, 0.01, 0.01, 0.005, 0.005];
 const TRADE_GOODS = ['food', 'textiles', 'computers', 'machinery', 'liquor', 'luxuries', 'furs', 'minerals', 'alloys'];
 let encounterTimer = 0;
 let traderTimer = 0;
@@ -1476,10 +1478,15 @@ function spawnTrader(arriving: boolean, distance = 14000 + Math.random() * 8000)
 }
 
 /** A pirate band of one to three, somewhere ahead of the player and away from the station. */
-function spawnPirates(near: THREE.Vector3) {
+function spawnPirates(near: THREE.Vector3): false | 'pirates' | 'falcon' {
   const dir = player.forward().add(new THREE.Vector3().randomDirection().multiplyScalar(0.8)).normalize();
   const centre = near.clone().addScaledVector(dir, 5000 + Math.random() * 2500);
   if (centre.distanceTo(station.root.position) < 5000 || centre.distanceTo(planetPos) < planetRadius * 1.3) return false;
+  // Now and then, the Falcon: alone, running dark, and worth a fortune (Modern only).
+  if (cmdr().difficulty === 'modern' && !npcs.some((n) => n.def.id === 'falcon') && Math.random() < FALCON_CHANCE[currentSystem().government]) {
+    spawnFalcon(centre, near);
+    return 'falcon';
+  }
   const anarchy = currentSystem().government === 0;
   const count = Math.min(MAX_PIRATES - ofRole('pirate').length, 1 + Math.floor(Math.random() * (anarchy ? 3 : 2)));
   for (let i = 0; i < count; i++) {
@@ -1491,7 +1498,35 @@ function spawnPirates(near: THREE.Vector3) {
     npc.ecm = Math.random() < 0.25;
     if (Math.random() < 0.4) npc.cargo = { [Math.random() < 0.5 ? 'narcotics' : 'firearms']: 1 + Math.floor(Math.random() * 2) };
   }
-  return count > 0;
+  return count > 0 ? 'pirates' : false;
+}
+
+/** The Falcon, a Legend: a lone pirate running dark, unidentified until you're close enough to read her hull. */
+function spawnFalcon(at: THREE.Vector3, near: THREE.Vector3) {
+  const npc = addNpc('falcon', 'pirate', at, at);
+  npc.obj.lookAt(near);
+  npc.ship.speed = npc.ship.maxSpeed * 0.5;
+  npc.dark = true;
+  npc.bounty = BOUNTIES.falcon;
+  npc.ecm = true;
+  npc.cargo = { gems: 1 + Math.floor(Math.random() * 3), gold: 1 + Math.floor(Math.random() * 2) };
+  return npc;
+}
+
+/** Each frame: ships running dark stay a cold white unknown until you're close enough to read the hull. */
+function updateIdentities() {
+  for (const npc of npcs) {
+    if (!npc.dark) continue;
+    const unknown = !npcIdentified(npc);
+    if (unknown === npc.shownUnidentified) continue;
+    const first = npc.shownUnidentified === true; // was unknown: this is the hull read
+    showUnidentified(npc.model, unknown);
+    npc.shownUnidentified = unknown;
+    if (first && !unknown) {
+      sfx.lock();
+      flash(npc.def.id === 'falcon' ? 'Hull read · FALCON · the one the haulers warn you about' : `Hull read · ${npc.def.name}`, 3.5);
+    }
+  }
 }
 
 /** Spawn and retire traffic. Traders dock or leave; pirates turn up by chance. */
@@ -1520,7 +1555,8 @@ function updateTraffic(dt: number) {
   if (encounterTimer <= 0 && state === 'flying') {
     encounterTimer = ENCOUNTER_INTERVAL * (0.6 + Math.random() * 0.8);
     if (ofRole('pirate').length < MAX_PIRATES && Math.random() < PIRATE_CHANCE[sys.government]) {
-      if (spawnPirates(player.obj.position)) flash('Contacts on scanner', 2);
+      const met = spawnPirates(player.obj.position);
+      if (met) flash(met === 'falcon' ? 'Unidentified contact on scanner' : 'Contacts on scanner', 2);
     }
   }
 }
@@ -2808,6 +2844,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   for (const npc of [...npcs]) {
     if (!npcs.includes(npc)) continue; // destroyed earlier this frame
     const shot = npc.update(dt);
+    if (shot && npc.target === player) npc.firedOnPlayer = true;
     // Keep ships from flying through the station, except traders docking down the slot.
     const fromStation = npc.obj.position.clone().sub(station.root.position);
     if (fromStation.length() < 120 && legs.get(npc) !== 'docking') npc.obj.position.copy(station.root.position).add(fromStation.setLength(120));
@@ -3702,6 +3739,7 @@ function updateSpace(dt: number) {
     updateClearance();
     updateSurrender(dt);
     updateRouteAutopilot();
+    updateIdentities();
   }
   if (stationFlash > 0) {
     stationFlash = Math.max(0, stationFlash - dt);
@@ -3736,7 +3774,7 @@ function updateSpace(dt: number) {
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
   if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#cfe0ff', kind: 'station' });
-  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, kind: 'commander', locked: r === lockedCommander });
+  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: commanderColour(r), kind: 'commander', locked: r === lockedCommander });
   for (const n of netMissiles.values()) blips.push({ position: n.missile.position, color: '#ff6b6b', kind: 'missile' });
   // Near a rift, contacts jitter about on the scanner.
   const noise = state === 'flying' ? riftInterference() : 0;
@@ -3757,7 +3795,15 @@ function updateSpace(dt: number) {
 // --- Situational awareness markers ----------------------------------------------
 
 /** Red if it's after you; otherwise police blue, Marshals gold, trader green, pirate orange. */
+/** The display colour for a ship with no transponder that we can't yet read. */
+const UNIDENTIFIED_HEX = `#${UNIDENTIFIED.getHexString()}`;
+
+/** Can we say who this ship is? Yes, unless it's running dark and too far off to read its hull. */
+const npcIdentified = (npc: NpcShip) => !npc.dark || npc.obj.position.distanceTo(player.obj.position) < HULL_READ;
+
 function npcColour(npc: NpcShip) {
+  // Unknown until the hull is read; but once it has fired on you, whoever it is, it's hostile.
+  if (!npcIdentified(npc)) return npc.firedOnPlayer ? '#ff4d6d' : UNIDENTIFIED_HEX;
   if (npc.hostile) return '#ff4d6d';
   return npc.role === 'police' ? '#4aa8ff' : npc.role === 'marshal' ? '#ffd98a' : npc.role === 'pirate' ? '#ff9a3d' : '#9ef0c0';
 }
@@ -3782,7 +3828,7 @@ function updateMarkers() {
     const short = { hexon: 'Hexon', vorg: 'Vorg', mutual: 'Mutual', wy: 'W-Y' }[d.special.company];
     markers.push({ position: d.model.root.position, color: COMPANIES[d.special.company].colour, radius: 6, label: `${short} property · sealed ${km(d.model.root.position)}` });
   }
-  for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: sharedSpace.isHostile(r) ? '#ff4d6d' : COMMANDER_COLOUR, radius: 30, label: callsignTag(r, km(r.position)) });
+  for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: commanderColour(r), radius: 30, label: callsignTag(r, km(r.position)) });
   if (carrier?.rift) markers.push({ position: carrier.rift.group.position, color: '#cfe0ff', radius: carrier.rift.radius, label: `Rift ${km(carrier.rift.group.position)}` });
   for (const m of missiles) if (m.target === player) markers.push({ position: m.position, color: '#ff4d6d', radius: 6, label: `MISSILE ${km(m.position)}` });
   const view = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
@@ -3816,7 +3862,12 @@ function updateCombatHud() {
   crosshair.classList.toggle('on-target', onTarget && !gimballed());
   const best = sightedNpc();
   targetInfo.hidden = !best;
-  if (best) {
+  if (best && !npcIdentified(best)) {
+    // No transponder, and too far for a hull read: a ship, and nothing more.
+    const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
+    targetInfo.textContent = `Unidentified ship · no transponder · ${km} km${best.firedOnPlayer ? ' · HOSTILE' : ''}${best === locked ? ' · LOCKED' : ''}`;
+    targetInfo.classList.toggle('hostile', Boolean(best.firedOnPlayer));
+  } else if (best) {
     // The transponder: type, role, condition and standing.
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
     const standing = best.role === 'pirate' ? 'WANTED' : best.role === 'police' ? 'POLICE' : best.role === 'marshal' ? 'MARSHALS' : 'CLEAN';
@@ -4238,9 +4289,12 @@ function die() {
 const COMMANDER_COLOUR = '#dfe9ff'; // their tags and scanner marks; ships keep their own colours
 
 /** Another commander's tag: rank insignia, callsign and range, e.g. "◆◆ CMDR Moxon · 0.8 km". */
-const callsignTag = (r: Remote, range: string) => `${rankInsignia(r.rank)} CMDR ${r.name}${r.verified ? '' : ' (guest)'} · ${range}`.trim();
+const callsignTag = (r: Remote, range: string) => (remoteUnidentified(r) ? `Unidentified ship · ${range}` : `${rankInsignia(r.rank)} CMDR ${r.name}${r.verified ? '' : ' (guest)'} · ${range}`.trim());
+/** A commander running dark, too far off for a hull read: we can see them, not say who they are. */
+const remoteUnidentified = (r: Remote) => r.dark && r.position.distanceTo(player.obj.position) > HULL_READ;
+const commanderColour = (r: Remote) => (sharedSpace.isHostile(r) ? '#ff4d6d' : remoteUnidentified(r) ? UNIDENTIFIED_HEX : COMMANDER_COLOUR);
 const BUMP_SEPARATION = 40; // metres each ship moves apart after a collision
-const remoteModels = new Map<string, { model: ShipModel; fireCooldown: number }>();
+const remoteModels = new Map<string, { model: ShipModel; fireCooldown: number; unidentified: boolean }>();
 const sharedSpace = new SharedSpace(onSpaceEvent);
 
 function sharedSpaceWanted(): boolean {
@@ -4377,6 +4431,7 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
     firing: Boolean(input?.fire) && !overheated,
     shields: player.shields,
     hull: player.hull,
+    dark: transponderOff,
   });
   for (const r of sharedSpace.remotes.values()) {
     let m = remoteModels.get(r.id);
@@ -4384,8 +4439,14 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
       // Other commanders fly their ships in the ship's own colours; their callsign tag says who they are.
       const model = buildShip(shipById(r.ship) ?? shipById('cobra-mk3')!);
       space.scene.add(model.root);
-      m = { model, fireCooldown: 0 };
+      m = { model, fireCooldown: 0, unidentified: false };
       remoteModels.set(r.id, m);
+    }
+    // Running dark: a cold white unknown until we're close enough to read the hull.
+    const unknown = remoteUnidentified(r);
+    if (unknown !== m.unidentified) {
+      showUnidentified(m.model, unknown);
+      m.unidentified = unknown;
     }
     m.model.root.position.copy(r.position);
     m.model.root.quaternion.copy(r.quaternion);
@@ -5068,7 +5129,7 @@ function frame(now?: number) {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier,
       get carrier() { return carrier; },
       get commander() { return commander; },
       get state() { return state; },
