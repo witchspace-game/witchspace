@@ -117,7 +117,9 @@ Alongside the station yards of [building worlds](companies-and-contracts.md#4b-b
 
 Very rare seeded encounters at the end of the longest trails. The first: the original game's first mission, the hunt for a stolen prototype, the **Constrictor**, as a trail of sightings across a galaxy.
 
-### The Falcon *(built, October 2026)*
+### The Falcon *(built, October 2026; to be redesigned)*
+
+> **Next:** [the Falcons, a Legend](legends-the-falcon.md): one named captain a galaxy (the Solo daughters, who hid the Ninefold's forty-one), met on her own circuit, who disables rather than destroys and remembers you. The first version below is a random pirate roll, and plays as a hazard rather than a Legend.
 
 The first Legend in the lanes: a pirate, and a nod to **CMDR Solo** (Samuel Penn, who flew Elite in 1984 and draws its ships for Traveller; see [CREDITS](../../CREDITS.md)).
 
