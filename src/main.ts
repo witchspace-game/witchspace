@@ -4147,6 +4147,7 @@ async function launch() {
   sfx.tunnel();
   await playTunnel();
   inSpace = true;
+  sharedSpace.resume(); // launching here means flying here, even if another window had the ship
   player.repair();
   station.placeForLaunch(player);
   aim.reset(player);
@@ -4442,6 +4443,7 @@ function toggleSharedSpace() {
     // Not saved; it still applies until the page is closed.
   }
   updateSharedButton();
+  if (on) sharedSpace.resume();
   flash(on ? 'Shared space (beta) on: fly with other commanders · Modern rules only' : 'Shared space off: single-player', 2.5);
 }
 
@@ -4465,6 +4467,9 @@ function onSpaceEvent(e: SpaceEvent) {
     }
     case 'lost':
       if (state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
+      break;
+    case 'replaced':
+      flash('Shared space · you joined from another window or device, so this one has left · launch again to fly here', 4.5);
       break;
     case 'hit':
       // The server's word on our shields and hull.

@@ -72,6 +72,8 @@ export default {
 /** What each connection carries through hibernation. */
 interface Attachment {
   commander: Commander | null;
+  /** This system's name, "galaxy:index", for telling other systems where an account now is. */
+  room?: string;
   track: Track | null;
   /** Rate limiting: messages in the current second. */
   window: number;
@@ -115,11 +117,12 @@ export class SystemRoom extends DurableObject<Env> {
   private readonly bumps = new Map<string, number>();
   private readonly inFlight = new Map<string, InFlight>();
 
-  async fetch(): Promise<Response> {
+  async fetch(request: Request): Promise<Response> {
     if (this.ctx.getWebSockets().length >= MAX_PER_SYSTEM) return new Response('This system is full', { status: 503 });
+    const m = new URL(request.url).pathname.match(/^\/system\/(\d)\/(\d{1,3})$/);
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ commander: null, track: null, window: 0, count: 0 } satisfies Attachment);
+    server.serializeAttachment({ commander: null, room: m ? `${m[1]}:${m[2]}` : undefined, track: null, window: 0, count: 0 } satisfies Attachment);
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -164,6 +167,12 @@ export class SystemRoom extends DurableObject<Env> {
       });
       const others = this.commanders().filter((c) => c.id !== a.commander!.id && c.s >= 0);
       this.send(ws, { type: 'welcome', id: a.commander.id, others });
+      // One ship per account: the newest wins, and the old one is taken out wherever it is.
+      if (who && a.room) {
+        const before = await accountsOf(this.env).arrive(who.id, a.room, a.commander.id);
+        if (before?.room === a.room) this.replace(before.id);
+        else if (before) await this.env.SYSTEMS.get(this.env.SYSTEMS.idFromName(before.room)).replace(before.id);
+      }
       return;
     }
 
@@ -372,6 +381,15 @@ export class SystemRoom extends DurableObject<Env> {
       if (a?.commander?.id === id) return ws;
     }
     return null;
+  }
+
+  /** The account behind this ship has joined from somewhere else: tell it, and take the ship out. */
+  async replace(id: string) {
+    const ws = this.socketOf(id);
+    if (!ws) return;
+    this.send(ws, { type: 'replaced' });
+    this.forget(ws);
+    this.leave(ws);
   }
 
   async webSocketClose(ws: WebSocket) {

@@ -57,7 +57,9 @@ export type ServerMessage =
   /** A missile is gone: it hit, an ECM got it, or its motor burned out. */
   | { type: 'missileEnd'; id: string; how: 'hit' | 'ecm' | 'expired'; p: Vec3 }
   /** Someone fired an ECM, here. */
-  | { type: 'ecm'; id: string; p: Vec3 };
+  | { type: 'ecm'; id: string; p: Vec3 }
+  /** Your account joined shared space from somewhere else: this ship has been taken out. One ship per account. */
+  | { type: 'replaced' };
 
 /** The ships commanders can fly in shared space (stage 1: the Cobra). Must match content/ships. */
 export const SHIPS: Record<string, { maxSpeed: number; shields: number; hull: number; radius: number; missiles: number }> = {
