@@ -36,4 +36,6 @@ export interface ShipDef {
     bounty?: number;
   };
   style: { lineColor: string; glow?: number };
+  /** A mark on the hull in its own colour (a captain's sign), glowing like the details. */
+  insignia?: { color: string; vertices: Vec3[]; lines: [number, number][] };
 }

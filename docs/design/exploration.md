@@ -119,11 +119,11 @@ Very rare seeded encounters at the end of the longest trails. The first: the ori
 
 ### The Falcon *(built, October 2026; to be redesigned)*
 
-> **Next:** [the Falcons, a Legend](legends-the-falcon.md): one named captain a galaxy (the Solo daughters, who hid the Ninefold's forty-one), met on her own circuit, who disables rather than destroys and remembers you. The first version below is a random pirate roll, and plays as a hazard rather than a Legend.
+> **Next:** [the Falcons, a Legend](legends-the-falcon.md): one named captain a galaxy (the Solo sons, who hid the Ninefold's forty-one), met on her own circuit, who disables rather than destroys and remembers you. The first version below is a random pirate roll, and plays as a hazard rather than a Legend.
 
 The first Legend in the lanes: a pirate, and a nod to **CMDR Solo** (Samuel Penn, who flew Elite in 1984 and draws its ships for Traveller; see [CREDITS](../../CREDITS.md)).
 
-- **The ship:** a long blade of a hull with a dorsal spine and two radiator vanes swept forward like talons. They aren't wings (there's no air to fly on): her drive runs hot and the vanes shed the heat. Pirate red, full glow. Built by *Solo & Daughters*. 75 m long and 72 m across the vanes: longer than the Cobra she hunts (she was Cobra-sized at first and read as a sliver). Faster than a Cobra (340 m/s against 280), 3 missiles (under Modern rules, never two at you at once, and 20 s apart), an ECM.
+- **The ship:** a long blade of a hull with a dorsal spine and two radiator vanes swept forward like talons. They aren't wings (there's no air to fly on): her drive runs hot and the vanes shed the heat. Pirate red, full glow. Built by *Solo & Sons*, with a small gold feather near her tail. 75 m long and 72 m across the vanes: longer than the Cobra she hunts (she was Cobra-sized at first and read as a sliver). Faster than a Cobra (340 m/s against 280), 3 missiles (under Modern rules, never two at you at once, and 20 s apart), an ECM.
 - **The homage stays ours** ([homage rules](../../CONTRIBUTING.md#legends-and-homages)): the name, the maker and the flavour text wink; the geometry is original, nothing like the film ship.
 - **Meeting her:** a small chance in each pirate encounter (4% in an anarchy, down to 0.5% in the safest systems), never two at once, Modern only. She hunts alone and **runs dark**: an *unidentified contact* on the scanner, a cold white ship, until she's inside 2 km and the hull read says *FALCON · the one the haulers warn you about* (see [how a dark ship looks](companies-and-contracts.md#running-dark)).
 - **The prize:** a 2,000 Cr bounty, and gems and gold in her hold.
