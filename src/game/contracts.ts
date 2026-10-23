@@ -368,7 +368,7 @@ function notice(c: Commander, a: Contract, kind: string, subject: string, body: 
 }
 
 /** Docked: deliver whatever is due here. Returns what happened, for the player. */
-export function deliver(c: Commander, here: StarSystem): string[] {
+export function deliver(c: Commander, here: StarSystem, now = Date.now()): string[] {
   const notes: string[] = [];
   for (const a of [...(c.contracts ?? [])]) {
     if (a.survey) {
@@ -386,6 +386,7 @@ export function deliver(c: Commander, here: StarSystem): string[] {
     logContract(c, a.company, late ? 'late' : a.special ? 'special' : 'delivered');
     finish(c, a.id);
     const after = standingName(standing(c, a.company));
+    notice(c, a, 'delivered', a.survey ? 'Survey received' : 'Delivered, with thanks', `Your ${contractWhat(a)} ${a.survey ? 'was handed in' : `reached ${placeOf(a.to).name}`}${late ? ' late' : ''}: ${pay.toLocaleString()} Cr paid.${after !== before ? ` You're ${after} with us now.` : ''}`, now);
     notes.push(`${COMPANIES[a.company].name} · ${contractWhat(a)} ${a.survey ? 'handed in' : 'delivered'}${late ? ' late' : ''} · ${pay.toLocaleString()} Cr` + (after !== before ? ` · now ${after}` : ''));
   }
   return notes;

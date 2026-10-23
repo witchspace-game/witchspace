@@ -78,7 +78,7 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
-import { abandon, addStanding, afterJump, amendsCost, board, SIGNING_BONUS, welcome, cannotTake, cargoName, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
+import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotTake, cargoName, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
@@ -105,7 +105,8 @@ import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsOf, setCau
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
-import { initTouch, onTap, updateTouch } from './ui/touch';
+import { closeDrawer, initTouch, onTap, updateTouch } from './ui/touch';
+import { COMPANY_SHORT, jobStrip, routeWork, type JobStep } from './game/jobs';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -126,7 +127,7 @@ function setState(next: State) {
     for (const n of netMissiles.values()) n.missile.dispose();
     netMissiles.clear();
     // Overlays that only make sense in flight; they're updated each frame while flying.
-    for (const id of ['#mouse-prompt', '#reticle', '#seeker', '#target-info', '#countdown', '#hail']) $(id).hidden = true;
+    for (const id of ['#mouse-prompt', '#reticle', '#seeker', '#target-info', '#countdown', '#hail', '#job']) $(id).hidden = true;
   }
   if (isMapOpen()) {
     closeMap();
@@ -3885,6 +3886,7 @@ function updateSpace(dt: number) {
     updateTouch(dt, player.speed / player.maxSpeed);
     updateAimDisplay();
     updateCombatHud();
+    updateJob(dt);
     updateTravel(dt);
     updateMarkers();
     const turn = Math.abs(player.pitchGauge) + Math.abs(player.yawGauge) + Math.abs(player.rollGauge) * 0.6;
@@ -4152,6 +4154,7 @@ async function launch() {
   sfx.tunnel();
   await playTunnel();
   inSpace = true;
+  closeDrawer(); // a clean screen to fly from
   sharedSpace.resume(); // launching here means flying here, even if another window had the ship
   player.repair();
   station.placeForLaunch(player);
@@ -4258,6 +4261,135 @@ function updateClearance() {
   else if (darkRefused()) flash(`${name} · Unidentified ship: switch on your transponder to dock`, 4);
   else if (checksClearance(currentSystem())) flash(`${name} · Transponder checked · Docking clearance granted`, 2.5);
   else flash(`${name} · No questions asked`, 2.5);
+  if (!lockedDown() && !clearanceRefused()) setTimeout(() => state === 'flying' && offerRouteWork(), 3000);
+}
+
+// --- What you're doing, and what's next (docs/design/flight-hud-and-touch.md) -------
+
+/** Boards (system and half-hour) already mentioned, so traffic control says it once. */
+const routeWorkSaid = new Set<string>();
+
+/** Approaching a station: traffic control mentions one job on its board that goes your way. */
+function offerRouteWork() {
+  const c = cmdr();
+  if (c.difficulty !== 'modern') return;
+  const here = currentSystem();
+  const now = Date.now();
+  const key = `${here.galaxy}:${here.index}:${Math.floor(now / BOARD_SLOT)}`;
+  if (routeWorkSaid.has(key)) return;
+  const fit = routeWork(c, here, board(c, here, now), cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
+  if (!fit) return;
+  routeWorkSaid.add(key);
+  const o = fit.offer;
+  const what = `${o.qty} t ${cargoName(o)} for ${destinationOf(o).name}`;
+  flash(`${stationName(here).name} · ${COMPANY_SHORT[o.company]} has ${what}, ${fit.why} · ${o.pay.toLocaleString()} Cr · dock to take it`, 5);
+  const id = `route:${o.id}`;
+  if (!c.messages?.some((m) => m.id === id)) {
+    c.messages = [{ id, company: o.company, subject: 'Work on your route', body: `${what} at ${stationName(here).name}, ${here.name}: ${fit.why}. ${o.pay.toLocaleString()} Cr on delivery. On the board until the half hour.`, at: now }, ...(c.messages ?? [])].slice(0, 20);
+    saveCommander(c);
+  }
+}
+
+const jobBox = $('#job');
+let jobStep: JobStep | null = null;
+let jobKey = '';
+let jobTimer = 0;
+let jobListOpen = false;
+/** A fight under way, and how long it's been quiet: when it's over, the computer says what's next. */
+const fight = { on: false, calm: 0 };
+const FIGHT_RANGE = 8000; // metres
+const CALM_AFTER = 4; // seconds without a hostile in range
+
+function updateJob(dt: number) {
+  const pos = player.obj.position;
+  const hostile =
+    npcs.some((n) => n.hostile && n.obj.position.distanceTo(pos) < FIGHT_RANGE) ||
+    [...sharedSpace.remotes.values()].some((r) => sharedSpace.isHostile(r) && r.position.distanceTo(pos) < FIGHT_RANGE);
+  if (hostile) {
+    // A fight: the strip folds away to keep the screen clear.
+    if (!fight.on && jobOpen) {
+      jobOpen = false;
+      jobKey = '';
+    }
+    Object.assign(fight, { on: true, calm: 0 });
+  }
+  else if (fight.on && (fight.calm += dt) >= CALM_AFTER) {
+    fight.on = false;
+    const s = cmdr().difficulty === 'modern' ? jobStrip(cmdr(), currentSystem()) : null;
+    if (s) flash(`Back on course · ${s.step.line.split(' · ')[0]} · ${s.step.next}`, 4.5);
+  }
+  jobTimer -= dt;
+  if (jobTimer > 0) return;
+  jobTimer = 0.5;
+  renderJob();
+  updateContextButton();
+}
+
+function renderJob() {
+  const s = cmdr().difficulty === 'modern' ? jobStrip(cmdr(), currentSystem()) : null;
+  jobStep = s?.step ?? null;
+  jobBox.hidden = !s;
+  if (!s) return;
+  const key = JSON.stringify([s.all.map((x) => [x.line, x.next]), jobListOpen, jobOpen]);
+  if (key === jobKey) return;
+  jobKey = key;
+  jobBox.className = `${s.step.urgency}${s.step.action === 'course' ? ' actionable' : ''}${jobOpen ? ' open' : ''}`;
+  $('#job .job-short').textContent = `▸ ${s.step.short}${s.more ? ` · +${s.more}` : ''}`;
+  $('#job .job-line').textContent = `▸ ${s.step.line}`;
+  $('#job .job-next').textContent = `Next: ${s.step.next}`;
+  const go = $('#job .job-go');
+  go.hidden = !(s.step.action === 'course' && s.step.hop);
+  go.textContent = `Set course · ${s.step.hop?.name ?? ''}`;
+  const more = $('#job .job-more');
+  more.hidden = !s.more;
+  more.textContent = jobListOpen ? 'Hide' : `+${s.more} more`;
+  const list = $('#job .job-list');
+  list.hidden = !jobListOpen || !s.more;
+  list.innerHTML = s.all
+    .slice(1)
+    .map((x) => `<li>${escapeHtml(x.line)}<small>${escapeHtml(x.next)}</small></li>`)
+    .join('');
+}
+
+/** On a phone, the strip is a pill until tapped open. */
+let jobOpen = false;
+onTap($('#job .job-main'), () => {
+  if (isTouch) jobOpen = !jobOpen;
+  else if (jobStep?.action === 'course' && jobStep.end) setJobCourse();
+  jobKey = '';
+  renderJob();
+});
+onTap($('#job .job-go'), setJobCourse);
+function setJobCourse() {
+  if (!jobStep?.end) return;
+  flash(plotCourse(cmdr(), jobStep.end.index), 2.5);
+  saveCommander(cmdr());
+  jobKey = '';
+  renderJob();
+}
+onTap($('#job .job-more'), () => {
+  jobListOpen = !jobListOpen;
+  jobKey = '';
+  renderJob();
+});
+
+/** On a touch screen, the obvious next step comes out of the drawer by itself. */
+const contextButton = $<HTMLButtonElement>('#touch .context-button');
+function updateContextButton() {
+  if (!isTouch) return;
+  const c = cmdr();
+  const here = currentSystem();
+  const pos = player.obj.position;
+  const hop = c.target !== null && c.target !== here.index ? systemAt(here.galaxy, c.target) : null;
+  const surveyNear =
+    exploring() && sceneBodies.some((b) => b.body.kind !== 'star' && pos.distanceTo(b.centre) - b.radius < b.range * 2 && !isSurveyed(c, here, b.body.id));
+  let next: [string, string] = ['KeyJ', 'Jump'];
+  if (pos.distanceTo(station.root.position) < CLEARANCE_RANGE && hasEquipment(c, 'docking-computer')) next = ['KeyC', autopilot ? 'Dock: on' : 'Dock'];
+  else if (surveyNear && hasEquipment(c, 'survey-autopilot')) next = ['Digit9', surveyPilot ? 'Survey: on' : 'Survey'];
+  else if (countdown !== null) next = ['KeyH', 'Cancel jump'];
+  else if (hop && distanceLy(here, hop) <= c.fuel + 1e-9) next = ['KeyH', `Hyper · ${hop.name}`];
+  if (contextButton.dataset.key !== next[0]) contextButton.dataset.key = next[0];
+  if (contextButton.textContent !== next[1]) contextButton.textContent = next[1];
 }
 
 const SURRENDER_TIME = 5; // seconds holding still before the police take you in

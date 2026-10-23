@@ -126,6 +126,12 @@
     <p id="countdown" hidden></p>
     <p id="view-label" hidden></p>
     <p id="target-info" hidden></p>
+    <!-- The job strip: what you're doing and what's next (docs/design/flight-hud-and-touch.md). -->
+    <div id="job" hidden>
+      <button type="button" class="job-main"><span class="job-short"></span><span class="job-line"></span><small class="job-next"></small></button>
+      <span class="job-buttons"><button type="button" class="job-go" hidden></button><button type="button" class="job-more" hidden></button></span>
+      <ul class="job-list" hidden></ul>
+    </div>
     <div id="survey" hidden><span class="survey-label"></span><span class="survey-bar"><i></i></span></div>
     <section id="poi-log" class="panel" hidden aria-live="polite"><h3></h3><p></p><p class="small muted">Press any key or tap to close</p></section>
     <p id="mouse-prompt" hidden>Click to fly with the mouse</p>
@@ -170,8 +176,10 @@
     <!-- Touch controls: only shown on touch screens (body.touch). -->
     <section id="touch" data-screen="flying" hidden>
       <div class="aim-pad"><span>Drag to aim</span><i class="base"></i><i class="finger"></i></div>
-      <div class="touch-actions">
-        <button data-key="KeyZ">ECM</button>
+      <!-- Everything but the fight, in a drawer from the right edge. -->
+      <div class="touch-drawer">
+        <button type="button" class="drawer-tab" aria-expanded="false" aria-label="More controls">‹</button>
+        <div class="touch-actions">
         <button data-key="KeyJ">Jump</button>
         <button data-key="KeyH">Hyper</button>
         <button data-key="KeyC">Dock</button>
@@ -184,11 +192,15 @@
         <button data-key="Digit0" class="dark-button" title="Transponder off / on: run dark">Dark</button>
         <button data-key="KeyN" title="Sound: full, effects only, off (N)">Sound</button>
         <button class="tilt" title="Steer by tilting the phone">Tilt</button>
+        </div>
       </div>
+      <!-- The obvious next step, out of the drawer by itself: Dock, Survey, Hyper or Jump. -->
+      <div class="touch-context"><button data-key="KeyJ" class="context-button">Jump</button></div>
       <div class="touch-fly">
         <div class="speed" aria-label="Speed"><i></i><b>Speed</b></div>
         <div class="fire-stack">
           <!-- One button for missiles: Lock, then (red) launch. -->
+          <button data-key="KeyZ" class="ecm">ECM</button>
           <button class="missile" type="button" aria-label="Arm a missile: hold a ship in your sights to lock, then fire">Arm</button>
           <button class="fire" aria-label="Fire">Fire</button>
         </div>
