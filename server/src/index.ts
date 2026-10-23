@@ -168,7 +168,9 @@ export class SystemRoom extends DurableObject<Env> {
       const others = this.commanders().filter((c) => c.id !== a.commander!.id && c.s >= 0);
       this.send(ws, { type: 'welcome', id: a.commander.id, others });
       // One ship per account: the newest wins, and the old one is taken out wherever it is.
-      if (who && a.room) {
+      // Only games that understand being replaced (v2) take part: an older one would
+      // just reconnect and throw the newer one out, again and again.
+      if (who && a.room && msg.v === 2) {
         const before = await accountsOf(this.env).arrive(who.id, a.room, a.commander.id);
         if (before?.room === a.room) this.replace(before.id);
         else if (before) await this.env.SYSTEMS.get(this.env.SYSTEMS.idFromName(before.room)).replace(before.id);
