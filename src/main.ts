@@ -1050,7 +1050,9 @@ function renderDocked() {
     const wy = wyWorks(here);
     const sellable = data.filter((d) => wy || !d.report);
     const worth = sellable.reduce((sum, d) => sum + dataValue(d, here, wy), 0);
-    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${wy && data.length ? ' <small>Wexley-Yorozu pays a quarter more</small>' : ''}</span>`;
+    // Say what's in it (a tooltip doesn't show on a phone), and that a company station pays more.
+    const names = data.map((d) => d.name).join(', ');
+    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${data.length ? ` <small>${escapeHtml(names)}${wy ? ' · Wexley-Yorozu pays 25% more here' : ''}</small>` : ''}</span>`;
     dataRow.title = data.length ? data.map((d) => `${d.name}: ${dataValue(d, here, wy)} Cr`).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
     const sell = document.createElement('button');
     sell.textContent = sellable.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
