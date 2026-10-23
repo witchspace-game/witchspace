@@ -10,6 +10,7 @@ It builds on [exploration](exploration.md#stage-4-legends) (Legends, the Ninefol
 
 ## Principles
 
+- **The mark:** a small gold feather near her tail, on the hull, in its own glow. A nod you only notice on the hull read, close up; no letters, no monogram.
 - **Rare and findable, not random.** One Falcon at a time in a galaxy, on her own circuit. You hear where she is before you meet her, and you can go looking, or stay away.
 - **She takes; she doesn't kill.** A Falcon leaves you disabled and drifting, lighter by a cargo, never dead. Losing to her is a story, not a reload.
 - **She remembers you.** Every meeting is kept. She knows your ship, what she took, whether you hurt her, and which side you took on the Ninefold.
@@ -20,22 +21,22 @@ It builds on [exploration](exploration.md#stage-4-legends) (Legends, the Ninefol
 
 ## The story
 
-**Solo & Daughters** was a shipyard of four: Iver Solo and his daughters, building fast hulls on contract in the lawless systems. Iver flew with the **Carriers' Mutual** when it was young. He's the reason for the Mutual's empty chair at every meeting: he answered a call nobody else would, and didn't come back. The Mutual still sets his place.
+**Solo & Sons** was a shipyard of five: Iver Solo and his four sons, building fast hulls on contract in the lawless systems. Iver flew with the **Carriers' Mutual** when it was young. He's the reason for the Mutual's empty chair at every meeting: he answered a call nobody else would, and didn't come back. The Mutual still sets his place.
 
 When the *Ninefold* colony failed, Wexley-Yorozu chose recovery under clause 214 over relief: 40,000 Cr against 310,000. Sam Dray's tug *Hold Fast* answered the call he was told not to, and took 41 people off before the recovery crews arrived. **He took them to the Solo yard.** The Science Division's report says Dray should be found. It doesn't know where he went.
 
-The daughters have hidden the forty-one ever since, and fed them, and kept Wexley-Yorozu from finding the yard. They do it with the ships they built for themselves: the Falcons.
+The sons have hidden the forty-one ever since, and fed them, and kept Wexley-Yorozu from finding the yard. They do it with the ships they built for themselves: the Falcons. (A Falcon is *she*, as ships are; her captain is a Solo son.)
 
-| Captain | Galaxies | Feeling | What she's like |
+| Captain | Galaxies | Feeling | What he's like |
 |---|---|---|---|
-| **Rhea Solo**, the eldest | 1 and 2 | **Mad** | She flew escort for the *Hold Fast* the day it left the Ninefold. She takes Wexley-Yorozu cargo first, Hexon's second, and makes sure you know why. Cold to anyone who sold the Ninefold report to the Science Division. |
-| **Wren Solo** | 3 and 4 | **Glad** | Flies because she loves it. Races you before she robs you, laughs on the radio, and lets you keep half if you nearly beat her. |
-| **Juno Solo** | 5 and 6 | **Sad** | Feeds the forty-one. Takes food, medicine and water before anything else, apologises, and leaves the rest. Kept her father's old Mutual membership card. |
-| **Tamsin Solo**, the youngest | 7 and 8 | **Bad** | Sells what she takes to Vorg Industries and doesn't ask what it's for. Her sisters don't like it. She still leaves you alive, but she takes more, and her messages are not kind. |
+| **Bram Solo**, the eldest | 1 and 2 | **Mad** | He flew escort for the *Hold Fast* the day it left the Ninefold. He takes Wexley-Yorozu cargo first, Hexon's second, and makes sure you know why. Cold to anyone who sold the Ninefold report to the Science Division. |
+| **Kit Solo** | 3 and 4 | **Glad** | Flies because he loves it. Races you before he robs you, laughs on the radio, and lets you keep half if you nearly beat him. |
+| **Jory Solo** | 5 and 6 | **Sad** | Feeds the forty-one. Takes food, medicine and water before anything else, apologises, and leaves the rest. Kept his father's old Mutual membership card. |
+| **Tobin Solo**, the youngest | 7 and 8 | **Bad** | Sells what he takes to Vorg Industries and doesn't ask what it's for. His brothers don't like it. He still leaves you alive, but he takes more, and his messages are not kind. |
 
 A commander who flies the Falcons' galaxies in order meets the whole family, and pieces together the yard's story from each.
 
-**The Mutual's code.** The daughters let Carriers' Mutual haulers go. A commander carrying only Mutual cargo is hailed, recognised and waved off ("Give the treasurer our love"). Rob a Mutual hauler yourself and that courtesy ends.
+**The Mutual's code.** The sons let Carriers' Mutual haulers go. A commander carrying only Mutual cargo is hailed, recognised and waved off ("Give the treasurer our love"). Rob a Mutual hauler yourself and that courtesy ends.
 
 ## Meeting a Falcon
 
@@ -60,7 +61,7 @@ A commander who flies the Falcons' galaxies in order meets the whole family, and
 - **Driving her off** is worth it:
   - her bounty (2,000 Cr, **rising by 500 each time she gets away** from anyone in that galaxy, from the clock and seed), paid when you dock;
   - combat rating as a kill of a ship her worth, and a Legend's weight (see [combat rating](combat-rating.md));
-  - standing with Wexley-Yorozu and Hexon (+2), and a word from Rhea's sisters about you on the radio.
+  - standing with Wexley-Yorozu and Hexon (+2), and a word from his brothers about you on the radio.
 - **She comes back.** A Falcon you drove off stays away from you for a few weeks, then returns wary, or wanting revenge, depending on who she is.
 
 ## She remembers you
@@ -70,7 +71,7 @@ Your commander keeps a small record per captain: meetings, what she took, how of
 - **First meeting:** a warning and a price.
 - **Again:** she knows your ship by its transponder, and says so.
 - **You've beaten her before:** she's careful, or she comes for you specifically.
-- **You published the Ninefold report:** Rhea lets you keep half. **You sold it to the Science Division:** she takes everything, and tells you why.
+- **You published the Ninefold report:** Bram lets you keep half. **You sold it to the Science Division:** she takes everything, and tells you why.
 - **You delivered for the Mutual, answered distress calls, never robbed a hauler:** they're warmer.
 
 ## Where it leads (later)
@@ -78,13 +79,13 @@ Your commander keeps a small record per captain: meetings, what she took, how of
 - **The yard.** A trail across the Falcons' galaxies leads to the Solo yard and the forty-one, Sam Dray among them. Bring them something (Mira's yellow flowers, seed stock that works) and the Falcons spare you for good. Sell the yard's position to Wexley-Yorozu instead, and the Science Division comes in force, and every Falcon in the eight galaxies knows your name.
 - **Hunting her for the companies:** Wexley-Yorozu and Hexon post special assignments to find her.
 - **In the shared galaxy:** the chart records who drove her off last, a season at a time.
-- **Flying with them:** a pirate career that starts with an introduction to a Solo daughter.
+- **Flying with them:** a pirate career that starts with an introduction to a Solo son.
 
 ## Building it in stages
 
 | Stage | What |
 |---|---|
-| **1** | One Falcon a galaxy on a seeded circuit, moving with the clock; bar talk and radio word; meetings only in her system; the hail and the price; the random roll removed. Rhea first (galaxies 1 and 2), then her sisters. |
+| **1** | One Falcon a galaxy on a seeded circuit, moving with the clock; bar talk and radio word; meetings only in her system; the hail and the price; the random roll removed. Bram first (galaxies 1 and 2), then his brothers. |
 | **2** | Fighting to disable: drifting, the beacon tow or the jury-rigged drive, her price taken, the calling card. She breaks off and escapes when beaten; the bounty that grows. |
 | **3** | Her memory of you: lines by meeting, by the Ninefold choice, by your record with the Mutual. |
 | **4** | The yard trail and its choice; company hunts; the shared galaxy. |
@@ -105,6 +106,6 @@ Your commander keeps a small record per captain: meetings, what she took, how of
 ## Open questions
 
 - Should a Falcon ever be destroyable, perhaps only at the end of the yard trail, by choice?
-- Four captains for eight galaxies, or one each, with four more daughters' stories to write (a community contribution)?
+- Four captains for eight galaxies, or one each, with four more sons' stories to write (a community contribution)?
 - What does a Falcon do to a commander who is themselves a pirate?
 - In shared space, can two commanders fight one Falcon together?

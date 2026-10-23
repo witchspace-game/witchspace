@@ -61,9 +61,18 @@ export function buildShip(def: ShipDef): ShipModel {
     lines.push({ material: detailLines.material, base: detailLines.material.color.clone() });
   }
 
+  // A mark in its own colour: a nod, finer and softer than the hull lines.
+  const mark: number[] = [];
+  if (def.insignia) for (const [a, b] of def.insignia.lines) mark.push(...def.insignia.vertices[a], ...def.insignia.vertices[b]);
+  if (mark.length) {
+    const markLines = neoLines(mark, new THREE.Color(def.insignia!.color).multiplyScalar(0.9 * glow), 1.0);
+    neo.push(markLines);
+    lines.push({ material: markLines.material, base: markLines.material.color.clone() });
+  }
+
   const retro: THREE.Object3D[] = [
     new THREE.Mesh(fill, new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide, ...behindLines })),
-    retroLines([...hull, ...detail]),
+    retroLines([...hull, ...detail, ...mark]),
   ];
 
   root.add(...neo, ...retro);

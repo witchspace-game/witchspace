@@ -50,6 +50,10 @@ for (const file of files) {
     ids.set(ship.id, name);
 
     let report = checkGeometry(ship.geometry.vertices, ship.geometry.faces, ship.geometry.details);
+    // The insignia's lines must point at its own vertices.
+    ship.insignia?.lines.forEach(([a, b], li) => {
+      if (a >= ship.insignia!.vertices.length || b >= ship.insignia!.vertices.length) report.errors.push(`insignia line ${li}: vertex index out of range`);
+    });
     if (fix && report.errors.some((e) => e.includes('wound'))) {
       ship.geometry.faces = fixWinding(ship.geometry.vertices, ship.geometry.faces);
       writeFileSync(file, JSON.stringify(ship, null, 2) + '\n');
