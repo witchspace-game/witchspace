@@ -99,6 +99,6 @@ describe('the explorer’s record', () => {
   it('ranks rise with points', () => {
     expect(explorerRank(0)).toBe('Homebody');
     expect(explorerRank(40)).toBe('Surveyor');
-    expect(explorerRank(10_000)).toBe('Elite');
+    expect(explorerRank(10_000)).toBe('Voyager');
   });
 });
