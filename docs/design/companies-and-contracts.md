@@ -104,7 +104,7 @@ A special assignment can reach you away from the game, so a company's offer is a
 - **In character.** The notification is from the company, in its own voice ("Hexon Holdings: A matter requiring discretion, Commander"); the email uses the company's colours and banner (`server/src/emails.ts`). Opening it takes you to the game, where the offer is waiting in **Messages** and on the board at any station the company works.
 - **What's kept.** Only what's needed to reach you: the push subscription, whether email is on, and which assignments you've been told about (see the privacy page).
 
-Later: the same channel for things that happen while you're away (a contract running late, an adrift case found, a Marshals invitation), each its own switch.
+Later: the same channel grows into **the array listening while you're away**, a daily ship's log of order fills, Legends and news, each kind its own switch: see [radio and comms](radio-and-comms.md#while-youre-away-the-array-listens).
 
 ## 2c. When things go wrong
 

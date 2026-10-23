@@ -130,6 +130,24 @@ Ofcom publishes guidance and tools for small services. This is a list of what to
 - **NPC radio** (stage 0 and 1) is all in the client, from the seed and the game's own events, with no server at all.
 - **Controls:** **'** (apostrophe) opens the radio to type; Enter sends. Not **/**, which slows the ship down, as on the BBC. On a phone, a **Radio** button opens the log with the quick phrases on top and the keyboard behind them.
 
+## While you're away: the array listens
+
+*Proposed, October 2026.* Notifications shouldn't feel like an app nagging. In Witchspace they're **your ship's radio reaching you**: when you dock and close the game, your Cobra sits in its berth with the comms array still listening, and what it hears finds you.
+
+- **Who sends what:**
+  - **Without an array:** the companies write to you, as they do now (special assignments, see [contracts by notification](companies-and-contracts.md#contracts-by-notification)).
+  - **With an array**, your ship also hears:
+    - **the exchange:** "Your limit order filled: 12 t Gold sold at Lave for 4,180 Cr" (orders already fill while you're away, from the price history);
+    - **the lanes:** "Haulers report a Falcon working Riedquat", and the Mayday that opens [A Debt](legends-the-falcon.md#a-debt-the-night-the-falcon-needs-you);
+    - **the galaxy:** "Opening day at the Wexley-Yorozu yard by Leesti I: first traders get premium prices", and, at most weekly, "Your name is still on Lave I".
+- **One ship's log a day, not a stream.** What the array picks up is gathered into a single quiet message, in the ship's voice: *Ship's log · 3 messages · your Gold order filled · a Falcon near Riedquat*. Story moments (an assignment, the Mayday) can come on their own. All of it stays inside the existing cap (two a week from the companies, plus at most one log a day), and nothing arrives in quiet hours (10 pm to 8 am by default, your device's time).
+- **Tap it and you're there:** the game opens docked, with the radio log showing what the array heard while you were away. The notification is the first line of the session.
+- **Your choice, kind by kind:** under *A · Account*, separate switches for *the companies*, *the exchange*, *Legends* and *news*, all off until you turn them on. Email gets the same log, at most daily, with the one-click stop.
+- **It costs nothing to run.** The server only sends what it can work out from your cloud save, the galaxy's seed and the clock (the hourly `Accounts` alarm), as it already does for assignments: the Falcon's circuit, the yards and order fills all are. No simulation runs while you're away.
+- **What it never sends:** messages from other players (for safety, see [the law](#the-law-uk)), and contract deadlines (they count in jumps, not hours).
+- **What it can't do:** web notifications on an iPhone carry no buttons, so there's no "Accept" in the notification itself. You open the game to act: the ship heard it, you decide.
+- **It makes the array worth fitting for traders**, not only explorers and fighters: the upgrade that keeps the galaxy alive for you between sessions.
+
 ## Building it in stages
 
 | Stage | What | Server |
@@ -141,6 +159,7 @@ Ofcom publishes guidance and tools for small services. This is a list of what to
 | **4. Station mail** | Messages to commanders who aren't online, waiting at their next dock | Accounts |
 | **5. Guild channels** | With guilds (roadmap 4) | Galaxy-wide fan-out |
 | **6. Voice** | Opt-in proximity voice, push-to-talk, off by default | Peer-to-peer audio through a relay; needs its own safety review |
+| **Away** | The array listens while you're away: the daily ship's log, order fills, Legends and news by notification, switches per kind, quiet hours | The hourly Accounts alarm, from save, seed and clock |
 
 Stages 0 and 1 make the game better on their own, and they don't depend on how many people are playing. Stage 2 is worth building once a few commanders are flying in shared space together.
 
