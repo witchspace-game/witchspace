@@ -26,7 +26,7 @@ export interface Commander {
 
 export type ClientMessage =
   /** First message: who you are, what you fly, and the lasers fitted. */
-  | { type: 'hello'; name: string; ship: string; lasers?: string[]; rank?: string; missiles?: number; ecm?: boolean; session?: string }
+  | { type: 'hello'; name: string; ship: string; lasers?: string[]; rank?: string; missiles?: number; ecm?: boolean; session?: string; v?: number }
   /** About ten times a second: where you are, and your shields and hull (which can only go down this way). */
   | { type: 'state'; p: Vec3; q: Quat; s: number; f: boolean; h?: [number, number]; d?: boolean }
   /** A laser shot: the direction it went, and which laser. The server decides what it hit. */

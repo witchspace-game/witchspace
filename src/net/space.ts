@@ -96,7 +96,8 @@ export class SharedSpace {
     this.system = key;
     const ws = new WebSocket(`${SPACE_URL}/system/${key}`);
     this.ws = ws;
-    ws.onopen = () => this.send({ type: 'hello', name, ship, lasers, rank, missiles, ecm, session });
+    // v2: we understand being replaced (one ship per account), and won't reconnect after it.
+    ws.onopen = () => this.send({ type: 'hello', name, ship, lasers, rank, missiles, ecm, session, v: 2 });
     ws.onmessage = (e) => this.receive(JSON.parse(e.data as string) as ServerMessage);
     ws.onclose = () => {
       if (this.ws !== ws) return; // a deliberate leave
