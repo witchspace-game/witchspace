@@ -111,9 +111,9 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .credits { margin: 10px 0 0; font-size: 11px; color: var(--dim); line-height: 1.4; }
 
 /* Docked screen tabs and the market. */
-.panel.docked { max-height: calc(100vh - 110px); overflow-y: auto; }
+.panel.docked { max-height: calc(100vh - 110px); overflow-y: auto; overflow-x: hidden; }
 .panel.docked.wide { width: min(640px, calc(100vw - 32px)); }
-.tabs { display: flex; gap: 6px; margin: 4px 0 12px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
 .tabs button { font-size: 13px; padding: 5px 12px; }
 .tabs button.active { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
 .market-summary { margin: 0 0 8px; font-size: 14px; color: var(--dim); }
@@ -835,7 +835,8 @@ body.touch #banner { top: 64px; font-size: 15px; padding: 7px 12px; }
   .controls { left: 12px; right: 12px; bottom: 40px; justify-content: center; gap: 6px; }
   .controls button { padding: 7px 10px; font-size: 13px; }
   .panel { left: 12px; right: 12px; width: auto; bottom: calc(var(--controls-h, 48px) + 50px); padding: 12px 14px; }
-  .panel.docked, .panel.docked.wide { width: auto; max-height: calc(100vh - var(--controls-h, 48px) - 72px); }
+  /* Tall enough to use, short enough to start below the look switch. */
+  .panel.docked, .panel.docked.wide { width: auto; max-height: calc(100vh - var(--controls-h, 48px) - 112px); }
   .panel h2 { font-size: 22px; }
   /* The title screen keeps the ship in view: name and description only. */
   .panel[data-screen='title'] #ship-stats, .panel[data-screen='title'] .credits { display: none; }
