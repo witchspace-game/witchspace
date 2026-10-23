@@ -546,6 +546,7 @@ export function publishReports(c: Commander): number {
 
 // --- Explorer's rank ----------------------------------------------------------------
 
+/** Ranks for exploring. Elite is earned in combat only, so it isn't one of them. */
 export const EXPLORER_RANKS: [number, string][] = [
   [0, 'Homebody'],
   [5, 'Tourist'],
@@ -554,7 +555,7 @@ export const EXPLORER_RANKS: [number, string][] = [
   [100, 'Pathfinder'],
   [250, 'Trailblazer'],
   [600, 'Pioneer'],
-  [1500, 'Elite'],
+  [1500, 'Voyager'],
 ];
 
 export function explorerRank(points: number): string {

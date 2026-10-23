@@ -17,7 +17,7 @@ This builds on the first slice (rings, moons, surveys, signals; see [ideas](../i
 - **Worlds:** rings on about one planet in eight, up to two moons.
 - **Surveys:** hold low over the planet, close to a moon or hot by the star; the data sells at any station, half price where it was gathered and up to five times far away.
 - **Signals:** derelicts, beacons and wreck fields with written logs and salvage, picked up by a planet survey or by flying near.
-- **The record:** the chart rings systems you've visited; explorer points and a rank from Homebody to Elite.
+- **The record:** the chart rings systems you've visited; explorer points and a rank from Homebody to Voyager. *(Elite is the combat rank only: nobody reaches it by exploring.)*
 
 ## Stage 1: reasons to go, things to spend on *(built, October 2026)*
 
