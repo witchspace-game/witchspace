@@ -4191,6 +4191,11 @@ async function surrender() {
   const c = cmdr();
   const settlement = settle(c);
   saveCommander(c);
+  // They know exactly who you are now: whatever you did dark here is settled too.
+  defiedPolice = hullChecked = false;
+  unpinned = hail = null;
+  transponderOff = switchOnWhenClear = false;
+  for (const n of ofRole('police')) if (n.target === player) n.target = null;
   enterDocked();
   flash(settlementMessage(settlement, 'You surrendered · record cleared'), 5);
 }
