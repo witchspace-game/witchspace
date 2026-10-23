@@ -94,6 +94,9 @@ export function onTap(el: HTMLElement, action: () => void) {
   });
 }
 
+/** Close the touch drawer (on launch, so flight starts with a clean screen). */
+export let closeDrawer = () => {};
+
 export function initTouch() {
   if (!isTouch) return;
   document.body.classList.add('touch');
@@ -131,6 +134,29 @@ export function initTouch() {
   };
   pad.addEventListener('pointerup', endAim);
   pad.addEventListener('pointercancel', endAim);
+
+  // The drawer: tap the tab (or swipe in from it) to open; it closes after any
+  // button in it, or another tap. Nothing opens or closes it on its own.
+  const drawer = root.querySelector<HTMLElement>('.touch-drawer')!;
+  const tab = drawer.querySelector<HTMLElement>('.drawer-tab')!;
+  const setOpen = (open: boolean) => {
+    drawer.classList.toggle('open', open);
+    tab.setAttribute('aria-expanded', String(open));
+    tab.textContent = open ? '›' : '‹';
+  };
+  onTap(tab, () => setOpen(!drawer.classList.contains('open')));
+  let swipeFrom: number | null = null;
+  tab.addEventListener('pointerdown', (e) => (swipeFrom = e.clientX));
+  tab.addEventListener('pointerup', (e) => {
+    if (swipeFrom === null) return;
+    const dx = e.clientX - swipeFrom;
+    swipeFrom = null;
+    if (Math.abs(dx) > 24) setOpen(dx < 0); // swipe in to open, out to close
+  });
+  drawer.querySelector('.touch-actions')!.addEventListener('pointerup', (e) => {
+    if ((e.target as HTMLElement).closest('button')) setTimeout(() => setOpen(false), 120);
+  });
+  closeDrawer = () => setOpen(false);
 
   const tilt = root.querySelector<HTMLElement>('.tilt')!;
   tilt.addEventListener('click', () => void toggleTilt(tilt));
