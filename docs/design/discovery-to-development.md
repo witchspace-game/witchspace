@@ -20,7 +20,7 @@ It builds on [exploration](exploration.md) (surveys, moon grades, first discover
 
 ### 1. Prospect: the explorer finds it
 
-- **Deposits.** About **12 a galaxy**, seeded, on moons and planets in systems that are **low tech (5 or under) or thinly settled**: the places nobody has looked closely, and where Wexley-Yorozu already goes looking.
+- **Deposits.** About **12 a galaxy** at any time, arriving in **survey seasons** (a few new ones a galaxy each month, from the clock, so no one can find them all in an afternoon and there's always something new; see [fairness](exploration.md#fairness-and-pacing-reviewed-october-2026)). Seeded, on moons and planets in systems that are **low tech (5 or under) or thinly settled**: the places nobody has looked closely, and where Wexley-Yorozu already goes looking.
 - **What they are.** Each yields one commodity the game already trades, in a quantity the system has never seen:
 
   | Deposit | Yields | Note |

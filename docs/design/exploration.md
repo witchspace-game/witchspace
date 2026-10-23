@@ -9,6 +9,7 @@ This builds on the first slice (rings, moons, surveys, signals; see [ideas](../i
 - **Seeded, the same for everyone.** Worlds, moons, signals, trails and their stories come from the galaxy's seed: every commander finds the same derelict at the same place, alone or in shared space. That costs nothing to run and lets players compare notes.
 - **Modern rules pay.** Classic stays as it was: rings, moons and the visited record only.
 - **Grows with use.** The shared galaxy adds names (first discoveries, colony charters) as a few records on the server, not a simulation.
+- **First is an honour, never an advantage, and there's always something new to be first to.** Being first puts your name on the galaxy; it never makes your ship stronger. And the galaxy keeps growing (below), so a commander who joins next year has as good a chance at the newest finds as anyone.
 - **Small stories, our own words.** Logs are short, specific and ours: no original prose, no real names.
 - **Every trail is somebody's story.** One person at its heart, told only in what they left behind, and a feeling that turns along the way: **glad, sad, mad, bad**. Nobody remembers a clause; they remember the girl whose message was never sent. The company plots are the skeleton; the people are what make them real.
 
@@ -114,10 +115,54 @@ Alongside the station yards of [building worlds](companies-and-contracts.md#4b-b
 
 Very rare seeded encounters at the end of the longest trails. The first: the original game's first mission, the hunt for a stolen prototype, the **Constrictor**, as a trail of sightings across a galaxy.
 
-## Later: the shared galaxy and community content
+### The Falcon *(built, October 2026)*
 
-- **A photo gallery** of the best P-key shots, by system.
-- **Community content:** trails, logs and Legends as data files with a validator, like ships, so anyone can add a place worth finding.
+The first Legend in the lanes: a pirate, and a nod to **CMDR Solo** (Samuel Penn, who flew Elite in 1984 and draws its ships for Traveller; see [CREDITS](../../CREDITS.md)).
+
+- **The ship:** a long blade of a hull with a dorsal spine and two radiator vanes swept forward like talons. They aren't wings (there's no air to fly on): her drive runs hot and the vanes shed the heat. Pirate red, full glow. Built by *Solo & Daughters*. Faster than a Mamba (340 m/s), 3 missiles, an ECM.
+- **The homage stays ours** ([homage rules](../../CONTRIBUTING.md#legends-and-homages)): the name, the maker and the flavour text wink; the geometry is original, nothing like the film ship.
+- **Meeting her:** a small chance in each pirate encounter (4% in an anarchy, down to 0.5% in the safest systems), never two at once, Modern only. She hunts alone and **runs dark**: an *unidentified contact* on the scanner, a cold white ship, until she's inside 2 km and the hull read says *FALCON · the one the haulers warn you about* (see [how a dark ship looks](companies-and-contracts.md#running-dark)).
+- **The prize:** a 2,000 Cr bounty, and gems and gold in her hold.
+
+## The galaxy grows: made by players, found by explorers
+
+The heart of exploring in the long run. Nobody needs to generate more galaxy: **the community grows it, and explorers are how the community finds what it made.**
+
+- **What people make:** derelicts and their logs, trails and backstories, ships (with the story of where one was first seen), stations and outposts, Legends; one day whole galaxies (a seed plus hand-made places), reached through rifts.
+- **How it arrives:** a data file, checked by a validator like ships are, reviewed under the same rules (original work, no real names, the [homage rules](../../CONTRIBUTING.md#legends-and-homages)), and shipped with the next release. Classic stays untouched.
+- **Where it appears:** placed from its id and the galaxy's seed, so everyone finds it in the same place, at no running cost. It isn't on the chart and isn't announced; explorers of rank hear **bar talk**; surveys and signals reveal it as usual.
+- **Credit both ways:** the first explorer to bring it home is named on it beside its maker (*Found by CMDR Nova · made by CMDR Quill*), and the maker sees how many commanders have found their work.
+- **Why it's fair:** new things to be first to arrive with every release, so firsts never run out and joining late is never too late.
+- **It needs honest claims first** (below): if a script could claim everything the moment a release ships, community content would be grabbed the same way.
+- Also: **a photo gallery** of the best P-key shots, by system.
+
+## Fairness and pacing *(reviewed October 2026)*
+
+Measured from the game's own seed and prices (averages over all 2,048 systems): a system holds 2.7 bodies and 0.6 signals, worth about **12 explorer points** and **190 Cr of data** (600–950 Cr once carried 20–40 light years). Surveying a system and jumping on takes 5–6 minutes, so a keen explorer manages about **10 systems an hour**.
+
+**Who is first, and does it matter?**
+
+| | Who benefits |
+|---|---|
+| Ranks, trails, the Ninefold, the lost courier and the Wisp, data income, contracts | Everyone equally: per commander, from the same seed, or refreshed on the clock |
+| First discoveries | First come: about 900 a galaxy (7,263 in all), and a keen explorer claims 25–35 an hour. Galaxy 1 would be mostly named within weeks |
+| Deposits ([development](discovery-to-development.md)) | First come: about 12 a galaxy as designed, findable in an afternoon |
+
+Firsts are prestige, not power, but if the only names on the galaxy are early names, a new commander arrives to a finished map. So:
+
+1. **Honest claims** *(to build first)*: claims capped at a human pace (about 60 an hour an account), checked on the server against the seed (the moon or signal must exist in that system; the galaxy generator is plain TypeScript and runs in the Worker), and an admin tool to wipe one account's claims.
+2. **Firsts that renew:** *Latest survey* beside *Charted first by* on the chart (surveys go stale after a few weeks, and the Science Division pays again); deposits arrive in **survey seasons** (a few new ones a galaxy each month, from the clock); and above all, the galaxy grows with community content.
+
+**Pacing** *(proposed, not yet changed)*. Today Voyager takes about 12 hours and exploring pays 6,000–9,000 Cr an hour against 1,500–3,000 from contracts (median 167 Cr a run): too fast and too rich. Elite, at a kill every 3–6 minutes, is 300–600 hours. The proposal pairs each explorer rank with a combat rank of similar effort:
+
+| Explorer rank | Points (now → proposed) | Time | Combat twin |
+|---|---|---|---|
+| Pathfinder | 100 → 400 | about 3 hours | Average / Above Average |
+| Trailblazer | 250 → 1,000 | about 8 hours | Competent |
+| Pioneer | 600 → 4,000 | about 35 hours | Dangerous |
+| Voyager | 1,500 → 18,000 | about 150 hours (about 70% of the eight galaxies charted) | Deadly |
+
+With the data distance bonus capped at 3× instead of 5× (about 4,000–5,000 Cr an hour, level with good trading), and the Will-o'-the-Wisp moved to Pioneer and working only while your lasers are cold (none fired for 10 seconds): an escape tool for explorers, not armour for pirates. Elite stays above everything, earned in combat only. See [routes to Elite](combat-rating.md#routes-to-elite-explorer-first).
 
 ## Numbers (stage 1)
 

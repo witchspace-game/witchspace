@@ -12,6 +12,8 @@ export interface ShipModel {
   /** Neo-vector line materials and their normal colours, for effects such as heating. */
   lines: { material: LineMaterial; base: THREE.Color }[];
   parts: { neo: THREE.Object3D[]; retro: THREE.Object3D[] };
+  /** Its own line colours, kept while it's shown as unidentified. */
+  unidentified?: THREE.Color[];
 }
 
 function linePositions(def: ShipDef): { hull: number[]; detail: number[] } {
@@ -82,6 +84,22 @@ export function buildShip(def: ShipDef): ShipModel {
 const WHITE_HOT = new THREE.Color(5, 3.6, 2.2);
 
 /** 0 = normal, 1 = white-hot. Used for re-entry burn-up. */
+/** What the display shows for a ship with no transponder, until its hull is read: a cold white. */
+export const UNIDENTIFIED = new THREE.Color('#d8e2f0');
+
+/**
+ * Show a ship as unidentified (no transponder, too far for a hull read), or
+ * in its own colours again. The glow stays: you can see it, you just can't
+ * tell what it is.
+ */
+export function showUnidentified(model: ShipModel, on: boolean) {
+  model.unidentified ??= model.lines.map((l) => l.base.clone());
+  model.lines.forEach((l, i) => {
+    l.base.copy(on ? UNIDENTIFIED.clone().multiplyScalar(i === 0 ? 1.6 : 1.1) : model.unidentified![i]);
+    l.material.color.copy(l.base);
+  });
+}
+
 export function heatShip(model: ShipModel, heat: number) {
   for (const { material, base } of model.lines) material.color.copy(base).lerp(WHITE_HOT, heat);
 }

@@ -19,6 +19,7 @@ Thank you, Ian and David.
 
 - **[Oolite](https://oolite.space)**, two decades of proof that a fan-built, open-source tribute can thrive.
 - **[Mark Moxon's fully documented Elite source](https://elite.bbcelite.com)**, an extraordinary labour of love that explains how the original works.
+- **[Samuel Penn's Elite ships for Traveller](https://www.notasnark.net/traveller/elite/index)**: the 1984 ships redesigned with deck plans and crews, an inspiration for how Witchspace's ships might work inside (CC BY-SA 4.0). The Falcon is named in his honour.
 
 ## Witchspace contributors
 

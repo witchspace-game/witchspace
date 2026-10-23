@@ -166,6 +166,30 @@ A rough target for the road to Elite **(to tune)**:
 
 Missions should provide **well over half** of the points above Competent. Elite should stay a long-term goal that few commanders reach.
 
+### Routes to Elite: explorer first
+
+Exploring never earns rating points (Elite means a combat pilot), but **exploring to Pathfinder first is a natural apprenticeship** for the road to Elite:
+
+1. **It pays for the fighter.** A proper fighting fit (military laser 6,000, a rear beam 1,000, extra energy 1,500, ECM 600, escape pod 1,000, missiles) costs 10,000–16,000 Cr: about what Pathfinder takes to earn at the [proposed pacing](exploration.md#fairness-and-pacing-reviewed-october-2026), with no money risked on cargo.
+2. **It teaches the flying:** jumps, fuel, mass lock, docking, the chart, closing on a target, staying out of the star.
+3. **It teaches the map:** where the anarchies and big bounties are, which high-tech stations sell military lasers, where to refuel on the run.
+4. **The kit carries over:** long-range tanks for escape jumps and reaching the frontier; Wexley-Yorozu standing for guarding their yards and developments.
+
+To make the pairing designed rather than accidental (proposed):
+
+- **Explorers find the fights.** A *pirate nest* signal that only surveys reveal; sold to the police or the Marshals, it becomes a combat mission to clear it (missions are the main road to Elite, section 5).
+- **Scanner intelligence.** The Deep Survey Scanner reads a ship's threat rank and kit at long range, so an explorer-turned-fighter picks fights at or above their rank, which is what scores (the experience multiplier, section 3).
+- **The Will-o'-the-Wisp as a way out.** Working only while your lasers are cold, it gets a learning fighter out of fights they can't win, and adds nothing to attacking.
+
+| Explorer rank | Combat rank of similar effort |
+|---|---|
+| Pathfinder | Average / Above Average |
+| Trailblazer | Competent |
+| Pioneer | Dangerous |
+| Voyager | Deadly |
+
+Elite has no twin.
+
 ## 7. Showing it
 
 - **Status screen:** rank and progress, for example "Competent · 41 points to Dangerous".
