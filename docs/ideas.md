@@ -39,7 +39,7 @@ A parking spot for good ideas that aren't designed yet. When one is picked up, i
 
 ## Multiplayer and communication
 
-**Now designed in [docs/design/radio-and-comms.md](design/radio-and-comms.md):** the radio, the comms array, the emergency beacon, safety and the stages to build them.
+**Now designed in [docs/design/radio-and-comms.md](design/radio-and-comms.md):** the radio, the comms array, the emergency beacon, safety and the stages to build them. Stages 0 and 1 are built (October 2026): the radio log, hailing, the comms array (remote contract acceptance, distress calls, news at range) and the beacon. Talking to other commanders is next.
 
 - **Radio.** Text channels for local radio (ships in range in the same system), station traffic control, direct hails to your target, and guild channels. **Opt-in proximity voice** that fades and crackles with distance and is positioned left and right like other ship sounds. Hail anything: stations, police and AI-agent commanders answer too. Distress calls go out over the radio so nearby players hear them. **Safety from day one:** mute, block and report; voice off by default; push-to-talk; optional filtering.
   - **Comms you can shoot out.** A basic short-range text radio comes standard. The **comms array** (longer range, voice, guild channels, wide broadcasts) is an **expensive, fragile, exposed upgrade**, visible on the hull as a hardpoint. Make a nuisance of yourself on the open channel and someone may simply shoot your transmitter off, which is a real loss.

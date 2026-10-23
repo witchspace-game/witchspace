@@ -21,7 +21,7 @@ Most contributions are **content files** (JSON validated by JSON Schema), not co
 | `src/render/` | three.js rendering. |
 | `tools/validate.ts` | Content validator CLI. |
 | `docs/worldbuilding.md` | Tone, setting and naming. Read it before writing flavour text. |
-| `docs/design/` | Agreed designs for systems not yet built. Read the relevant one before implementing a feature. |
+| `docs/design/` | Agreed designs, written before building. Built ones end with an "As built" section. Read the relevant one before implementing or changing a feature, and update it when you do. |
 
 ## Workflow for creating content
 
