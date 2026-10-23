@@ -10,7 +10,6 @@ It builds on [exploration](exploration.md#stage-4-legends) (Legends, the Ninefol
 
 ## Principles
 
-- **The mark:** a small gold feather near her tail, on the hull, in its own glow. A nod you only notice on the hull read, close up; no letters, no monogram.
 - **Rare and findable, not random.** One Falcon at a time in a galaxy, on her own circuit. You hear where she is before you meet her, and you can go looking, or stay away.
 - **She takes; she doesn't kill.** A Falcon leaves you disabled and drifting, lighter by a cargo, never dead. Losing to her is a story, not a reload.
 - **She remembers you.** Every meeting is kept. She knows your ship, what she took, whether you hurt her, and which side you took on the Ninefold.
