@@ -54,6 +54,7 @@ import {
   isTouch,
   setFlightInputSuppressed,
   setFlying,
+  setTouchSpeed,
   toggleControlScheme,
   toggleInvertPitch,
   wantsMouseCapture,
@@ -3682,7 +3683,10 @@ function updateSpace(dt: number) {
     else if (combatComputer) {
       if (!combatComputer.fly(dt, player, npcs, locked, { centre: planetPos, radius: planetRadius })) stopCombatComputer('No hostiles · combat computer standing down · you have control');
     } else if (surveyPilot) flySurvey(dt, surveyPilot);
-    else player.steer(dt, input);
+    else {
+      holdForSurrender(input);
+      player.steer(dt, input);
+    }
     player.move(dt);
     player.recharge(dt, isWorking(cmdr(), 'extra-energy') ? 2 : 1);
 
@@ -3954,7 +3958,7 @@ function renderControlsCard() {
       ['R', 'Scanner range: 4 km for dogfights, 12 km for traffic'],
       ['B', 'Energy bomb: destroy every ship within 6 km (single use)'],
       ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
-      ['U', 'Surrender to the police: slow down and hold still (fine, record cleared)'],
+      ['U', 'Surrender to the police: the ship stops itself, then 5 seconds (fine, record cleared)'],
       ...(commander?.difficulty === 'modern' ? [['0', 'Transponder off / on: run dark, unidentified (police will hail you; it switches back on after a jump, or to dock when it\'s safe)']] : []),
       ['Scoop', `Fly slowly (under ${Math.round(SCOOP_SPEED * 100)}% speed) straight into a cargo canister, a yellow dot on the scanner (needs Fuel Scoops)`],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
@@ -4153,28 +4157,31 @@ function toggleSurrender() {
     flash('Nothing on your record here', 2);
     return;
   }
-  if (player.speed > player.maxSpeed * SURRENDER_SPEED) {
-    flash('Cut your speed to surrender', 2);
-    return;
-  }
   setAutopilot(false);
   countdown = null;
   surrenderTimer = SURRENDER_TIME;
-  flash('Surrender signalled · hold still, weapons cold', 2.5);
+  if (isTouch) setTouchSpeed(0); // the slider drops to all stop with you
+  flash('Surrender signalled · all stop, weapons cold', 2.5);
 }
 
-function breakSurrender() {
+/** Firing or throttling up calls it off. No crime in that: you're just not surrendering. */
+function breakSurrender(why = 'Weapons fired') {
   surrenderTimer = null;
-  flash('Surrender broken', 2);
-  becomeFugitive(true);
+  flash(`${why} · surrender withdrawn`, 2);
+}
+
+/** While surrendering, the ship brakes to a stop by itself; throttling up withdraws. */
+function holdForSurrender(input: FlightInput) {
+  if (surrenderTimer === null) return;
+  if (input.throttle > 0 || input.speedStep > 0 || (input.speedTarget ?? 0) > SURRENDER_SPEED) return breakSurrender('Throttle up');
+  input.throttle = 0;
+  input.speedTarget = 0;
 }
 
 function updateSurrender(dt: number) {
   if (surrenderTimer === null) return;
-  if (player.speed > player.maxSpeed * (SURRENDER_SPEED + 0.05)) {
-    breakSurrender();
-    return;
-  }
+  // The escort's clock starts once you've slowed down.
+  if (player.speed > player.maxSpeed * SURRENDER_SPEED) return;
   const before = Math.ceil(surrenderTimer);
   surrenderTimer -= dt;
   if (Math.ceil(surrenderTimer) < before && surrenderTimer > 0) flash(`Police escort on its way · ${Math.ceil(surrenderTimer)}`, 1.1);
