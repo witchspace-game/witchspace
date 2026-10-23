@@ -49,7 +49,7 @@ Approaching a station (at docking-clearance range), traffic control mentions **o
 
 ## Messages
 
-Things worth keeping go into **Messages** on the Contracts tab, from the company concerned: one jump left, running late, reclaimed (as before), **delivered** (with the pay) and **work on your route**. "Back on course" is for the moment and isn't kept. When the radio log is built, the moment-to-moment lines go there too. Phone notifications stay for when you're away from the game.
+Things worth keeping go into **Messages** on the Contracts tab, from the company concerned: one jump left, running late, reclaimed (as before), **delivered** (with the pay) and **work on your route**. "Back on course" is for the moment and isn't kept. Under Modern rules these, and the moment-to-moment lines, are also heard in the radio log ([radio and comms](radio-and-comms.md)). Phone notifications stay for when you're away from the game.
 
 ## 4. The touch drawer
 

@@ -20,7 +20,7 @@ export type EquipmentId =
   | 'docking-computer' | 'combat-computer' | 'escape-pod' | 'gimbal-mount' | 'fuel-scoops' | 'ecm'
   | 'large-cargo-bay' | 'extra-energy' | 'energy-bomb' | 'galactic-hyperdrive' | 'weapons-licence'
   | 'transponder' | 'distress-jammer' | 'long-range-tanks' | 'survey-scanner'
-  | 'survey-autopilot' | 'route-autopilot' | 'wisp';
+  | 'survey-autopilot' | 'route-autopilot' | 'wisp' | 'comms-array';
 
 export type Mount = 'front' | 'rear' | 'left' | 'right';
 
@@ -49,6 +49,8 @@ export interface Equipment {
   explorer?: number;
   /** Never sold: found out there (the lost courier's prototype). Can't be sold on either. */
   found?: boolean;
+  /** Mounted outside the hull: any hit that reaches the hull can knock it out, not only when it's badly hurt. */
+  fragile?: boolean;
 }
 
 export const EQUIPMENT: Equipment[] = [
@@ -180,6 +182,15 @@ export const EQUIPMENT: Equipment[] = [
     minTech: 99,
     undamageable: true,
     found: true,
+  },
+  {
+    id: 'comms-array',
+    name: 'Comms Array',
+    price: 4000,
+    blurb: 'A dish on the hull: companies reach you anywhere in the system, you can accept their work in flight, and you hear distress calls and news from a jump or two out. Fragile, and pirates aim for it.',
+    modernOnly: true,
+    minTech: 9,
+    fragile: true,
   },
   {
     id: 'transponder',
@@ -353,7 +364,7 @@ export function deleteCommander() {
 
 /** Tonnes used in the hold (gold counts by the kilogram, gems by the gram). */
 /** Tonnes of company cargo carried under contract. */
-export const consignedTonnes = (c: Commander) => (c.contracts ?? []).reduce((t, a) => t + (a.adrift ? 0 : a.qty), 0);
+export const consignedTonnes = (c: Commander) => (c.contracts ?? []).reduce((t, a) => t + (a.adrift || a.reserved ? 0 : a.qty), 0);
 
 /** Tonnes used in the hold, company cargo included. */
 export const cargoTonnes = (c: Commander) => cargoTonnage(c.cargo, c.difficulty === 'classic') + consignedTonnes(c);
@@ -371,16 +382,34 @@ export const REPAIR_FRACTION = 0.3;
 // station), destroyed outright under Classic, as in the original.
 const EQUIPMENT_HIT_CHANCE = 1 / 12;
 
-/** Returns the affected item, if any, after a hull hit. */
-export function rollEquipmentDamage(c: Commander, random = Math.random): Equipment | null {
+/**
+ * Returns the affected item, if any, after a hull hit. `prefer` is what the
+ * attacker is aiming for (pirates go for the comms array): when it's fitted
+ * and working, it's the one hit half the time.
+ */
+export function rollEquipmentDamage(c: Commander, random = Math.random, prefer?: EquipmentId): Equipment | null {
   if (random() >= EQUIPMENT_HIT_CHANCE) return null;
   // Under Modern rules every ship has a transponder, and it can be hit too.
   const fitted: EquipmentId[] = c.difficulty === 'modern' ? [...c.equipment, 'transponder'] : c.equipment;
   const candidates = fitted.filter((id) => !c.damaged.includes(id) && !EQUIPMENT.find((e) => e.id === id)?.undamageable);
   if (!candidates.length) return null;
-  const id = candidates[Math.floor(random() * candidates.length)];
+  const id = prefer && candidates.includes(prefer) && random() < 0.5 ? prefer : candidates[Math.floor(random() * candidates.length)];
   if (c.difficulty === 'classic') removeEquipment(c, id);
   else c.damaged.push(id);
+  return EQUIPMENT.find((e) => e.id === id) ?? null;
+}
+
+// Fragile kit (the comms array) sits outside the hull: any hit that gets
+// through the shields can take it out, whatever state the hull is in.
+const FRAGILE_HIT_CHANCE = 1 / 14;
+
+/** After any hull hit: fragile kit knocked out, if it was. Pirates aiming for it (`aimed`) hit it twice as often. */
+export function rollFragileDamage(c: Commander, random = Math.random, aimed = false): Equipment | null {
+  if (c.difficulty !== 'modern' || random() >= FRAGILE_HIT_CHANCE * (aimed ? 2 : 1)) return null;
+  const fragile = c.equipment.filter((id) => !c.damaged.includes(id) && EQUIPMENT.find((e) => e.id === id)?.fragile);
+  if (!fragile.length) return null;
+  const id = fragile[Math.floor(random() * fragile.length)];
+  c.damaged.push(id);
   return EQUIPMENT.find((e) => e.id === id) ?? null;
 }
 

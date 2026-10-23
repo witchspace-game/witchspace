@@ -814,6 +814,54 @@ body.touch #job:not(.open) .job-line, body.touch #job:not(.open) .job-next, body
 body.touch #job .job-go, body.touch #job .job-more { min-height: 36px; padding: 4px 10px; font-size: 12px; }
 body.retro #job .job-main, body.retro #job .job-list { border-radius: 0; font-size: 9px; }
 body.retro #job .job-next, body.retro #job .job-list small { font-size: 8px; }
+/* The radio log: who said what, and when. Bottom left on a desktop, fading when it's quiet. */
+#radio { position: fixed; left: 16px; bottom: 196px; z-index: 5; width: min(440px, 34vw); transition: opacity 1.2s ease; }
+body:not([data-state='flying']) #radio { display: none; }
+#radio.quiet:not(.open):not(:hover) { opacity: 0; pointer-events: none; }
+#radio .radio-pill { display: none; }
+#radio .radio-panel { position: relative; }
+#radio .radio-list { list-style: none; margin: 0; padding: 6px 10px; border: 1px solid var(--edge); border-left: 3px solid var(--dim); border-radius: 6px; background: var(--panel); font-size: 12.5px; line-height: 1.35; }
+#radio.open .radio-list { max-height: 42vh; overflow-y: auto; padding-right: 30px; }
+#radio .radio-list li + li { margin-top: 4px; }
+#radio .radio-list time { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+#radio .radio-list b { color: var(--who, var(--fg)); font-weight: 600; }
+#radio li.r-station b { color: var(--who, #ffb347); }
+#radio li.r-police b { color: var(--who, #4aa8ff); }
+#radio li.r-pirate b { color: var(--who, #ff9a3d); }
+#radio li.r-mayday b, #radio li.r-mayday { color: var(--who, #ff8fa3); }
+#radio li.r-news b { color: var(--who, #c9b3ff); }
+#radio li.r-beacon b { color: var(--who, #ffd98a); }
+#radio .radio-list button { margin-left: 8px; padding: 1px 8px; font-size: 11px; min-height: 0; border-color: var(--accent); color: var(--accent); }
+#radio .radio-done { margin-left: 8px; color: var(--dim); font-size: 11px; }
+#radio .radio-close { display: none; position: absolute; top: 4px; right: 4px; min-height: 0; padding: 0 6px; font-size: 12px; }
+#radio.open .radio-close { display: block; }
+/* On a phone: a pill under the job strip, with an unread count; tap it for the log. */
+body.touch #radio { left: max(10px, env(safe-area-inset-left)); top: max(8px, env(safe-area-inset-top)); bottom: auto; width: auto; max-width: max(120px, calc(50vw - 250px)); }
+body.touch #radio.open { max-width: none; }
+body.touch #job:not([hidden]) ~ #radio { top: calc(max(8px, env(safe-area-inset-top)) + 44px); }
+body.touch #radio.quiet:not(.open) { opacity: 1; pointer-events: auto; }
+body.touch #radio .radio-pill { display: flex; align-items: center; gap: 6px; max-width: 100%; min-height: 32px; padding: 4px 10px; font-size: 11px; letter-spacing: 0.06em; background: var(--panel); border-color: var(--edge); color: var(--dim); white-space: nowrap; overflow: hidden; }
+body.touch #radio.unread .radio-pill { color: var(--fg); border-color: var(--accent); }
+body.touch #radio .radio-count:empty { display: none; }
+body.touch #radio .radio-count { min-width: 16px; padding: 0 4px; border-radius: 8px; color: #000; background: var(--accent); font-size: 10px; text-align: center; }
+body.touch #radio .radio-ticker { display: none; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0.02em; color: var(--fg); }
+body.touch #radio.ticker .radio-ticker { display: inline; }
+body.touch #radio .radio-panel { display: none; }
+body.touch #radio.open .radio-panel { display: block; margin-top: 6px; width: min(78vw, 520px); }
+body.touch #radio.open .radio-list { max-height: 52vh; font-size: 12px; }
+body.touch #radio .radio-list button { min-height: 32px; padding: 4px 12px; font-size: 12px; }
+body.touch #radio .radio-close { min-height: 32px; min-width: 32px; }
+body.retro #radio .radio-list, body.retro #radio .radio-pill { border-radius: 0; font-size: 9px; }
+body.retro #radio .radio-list time { font-size: 8px; }
+/* The emergency beacon: its four fixed calls. */
+#beacon { position: fixed; left: 50%; top: 30%; bottom: auto; width: auto; transform: translateX(-50%); z-index: 7; padding: 10px 14px; text-align: center; }
+#beacon p { font-size: 12px; color: var(--dim); }
+body.touch #beacon { top: 22%; }
+#beacon h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: #ffd98a; }
+#beacon .beacon-calls { display: grid; grid-template-columns: repeat(2, minmax(120px, 1fr)); gap: 8px; }
+#beacon .beacon-calls button { min-height: 40px; font-size: 13px; }
+#beacon p { margin: 8px 0 0; }
+body.retro #beacon .beacon-calls button, body.retro #beacon h3 { font-size: 9px; }
 #touch .touch-actions button { min-height: 44px; padding: 4px; font-size: 12px; background: rgba(0, 10, 6, 0.55); }
 #touch .touch-actions button.on { border-color: var(--accent); color: #000; background: var(--accent); }
 /* In flight on a touch screen, the dashboard moves to the top, out of your thumbs' way. */

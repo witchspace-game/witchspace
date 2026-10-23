@@ -1,6 +1,6 @@
 # Design: radio, the comms array and the emergency beacon
 
-*Proposed, October 2026. Change by pull request.*
+*Proposed, October 2026; stages 0 and 1 built (see "As built" at the end). Change by pull request.*
 
 Commanders can't talk to each other yet. Shared space carries positions, shots, missiles and hits, and nothing else. This design adds a way to talk that belongs in the world: a **radio** every ship has, a **comms array** that reaches further and can be shot off, and an **emergency beacon** that nobody can silence.
 
@@ -48,6 +48,20 @@ An expensive, fragile, visible upgrade: a dish or mast on the hull that other sh
 - **In shared space, it also gives you:** an open broadcast to everyone in the system, and later guild channels and voice.
 - **It can be lost.** A hit to the hull can damage it like other kit; pirates and the Falcon aim for it. Damaged, it works as a plain radio until repaired at a station. Shooting another commander's array is an attack, and a crime wherever there's law.
 - **Rough numbers (to balance):** 4,000 Cr, tech level 9, repair 30% as for other kit.
+
+### The radio is where the companies talk to you
+
+The radio isn't only for ships. **It's the one place everything that talks to you in flight is heard**: station traffic, the police, pirates, traders, and the companies and their contracts. "One jump left", "Running late", "Cargo reclaimed", "Delivered, with thanks", "Work on your route" and "Back on course" all arrive on the radio, from the company that sent them, in its colour. Messages that last (the ones on the Contracts tab) stay where they are; the radio log is where you hear them first, and where you look after a fight to see what you missed.
+
+The **comms array** is how the companies reach you **anywhere**. Without one, a company can only talk to you through a station's traffic control, so you hear about work on your route as you come in to dock. With one:
+
+- **Offers reach you in flight**, anywhere in the system and from the station at your next jump: the same "work on your route" the station would mention, only sooner.
+- **You can accept over the array, without docking.** The offer in the radio log has an **Accept** button (Enter on a keyboard). Accepting **reserves** the contract: it's yours, it counts towards the three you can hold, and it needs the standing it always needed. The company holds the cargo at its station; you **collect it when you next dock there**, and the delivery clock starts when it's loaded.
+- **Hold space is checked when you collect**, not when you accept: the company loads it if there's room, and says how much room it needs if there isn't (sell something and load it from the Contracts tab).
+- **Collect it within two jumps of accepting**, or the company gives the work to someone else and counts it as abandoned, as if you'd given it up at the station. It warns you on the radio a jump before.
+- A reserved contract isn't cargo yet, so it isn't lost with your ship.
+
+The four companies use the array differently in flavour, not in rules; the Carriers' Mutual in particular listens for its own ships' distress calls and remembers who answered.
 
 ### The emergency beacon
 
@@ -121,7 +135,7 @@ Ofcom publishes guidance and tools for small services. This is a list of what to
 | Stage | What | Server |
 |---|---|---|
 | **0. The radio log** | Hails, clearances, police warnings and pirate threats move into a radio log; hail your target and get answers | None |
-| **1. Array and beacon (single-player)** | The comms array as kit you can buy and lose: distress calls to answer, news at range, listening in. The beacon with its fixed calls | None |
+| **1. Array and beacon (single-player)** | The comms array as kit you can buy and lose: company offers anywhere and accepting them remotely, distress calls to answer, news at range, listening in. The beacon with its fixed calls | None |
 | **2. Player radio** | Hail and Local between signed-in commanders, quick phrases, mute, block, report, the filter, admin review. The Online Safety Act steps done first | The system server routes; reports in Accounts |
 | **3. System broadcast** | The array's open channel for players; the array can be shot off by players too | Server-checked array |
 | **4. Station mail** | Messages to commanders who aren't online, waiting at their next dock | Accounts |
@@ -137,3 +151,20 @@ Stages 0 and 1 make the game better on their own, and they don't depend on how m
 - Should messages in anarchies be harder to trace (no law, no police logs), or is the report route the same everywhere? (Moderation must be the same everywhere; the in-world flavour can differ.)
 - How far should news travel with the array: one jump, two, or by the companies' own networks?
 - Do AI-agent commanders talk on the radio, and how are they marked so nobody mistakes one for a person?
+
+## As built (stages 0 and 1, October 2026)
+
+Single-player and Modern rules only; Classic flashes its messages as before. No server changes.
+
+- **The radio log** (`src/ui/radio.ts`, wired in `main.ts`): station traffic, police hails and scans, pirates, traders, distress calls, market news and every company note kept in Messages (one jump left, running late, reclaimed, delivered, loaded, work on your route, back on course, special assignment messages) go into one log with who said it, in their colour, and the time. On a desktop it sits bottom left, shows the last four lines and fades when it's quiet; **'** opens the whole log (the last 40 lines). On a phone it's a pill under the job strip with an unread count and, outside fights, the latest line for a few seconds; tap it for the log. A fight folds it away. Lines that matter this second (police hails, maydays, docking refused, a pirate's price, a rescue) still flash as well. The log lasts for the session; it isn't saved.
+- **Hail** (**L**, or Hail in the touch drawer): the ship in your sights or your missile's target, within 12 km; with nothing there, traffic control within 5 km (anywhere, with a comms array). Answers come from the system's seed, the ship and how many times you've asked (`src/game/radio.ts`). Police and stations know your record and whether you're dark; traders are frightened if shot at and angry if it was you. Pirates threaten (unprompted too, when they first come for you), and about one hail in seven, if you've something worth taking, name a price: 15% of your hold's value, at least 50 Cr. **Pay** (or Enter) and the band leaves; shoot one afterwards and the deal's off.
+- **Comms array** (4,000 Cr, tech level 9, Modern only, repaired at 30% like other kit). It's fragile: any hull hit can knock it out (1 in 14, twice that from pirates), not only when the hull is badly hurt, and pirates' hits on a badly hurt hull pick it half the time. Damaged, it's a plain radio. With it working:
+  - **Work on your route** from the station here and the one at your next jump arrives in flight (checked every 20 seconds and soon after arriving), with an **Accept** button (Enter). Accepting reserves the contract as described above: standing, the three-contract limit and Modern rules are checked then; hold space when you collect. It's loaded automatically when you dock there if it fits, or with **Load** on the Contracts tab once you've made room. You have **two jumps** to collect it, with a warning on the last; after that it counts as abandoned (−3 standing, as giving it up does). The delivery clock (the contract's own jumps) starts when it's loaded. Surveys and special assignments can't be reserved. Reserved cargo isn't lost with your ship.
+  - **Distress calls**: a trader hit by pirates calls Mayday. You hear it within 12 km, or anywhere in the system with the array, and its marker reads MAYDAY wherever it is. With the array, every two to four minutes there's a chance (by government) of an attack starting 13 to 20 km away. A trader calling for help takes 40% damage, so it lasts about a minute and a half against one pirate. Be within 5 km while the pirates are still at it, and see them off: 60 Cr + 40 per pirate, and +1 standing with its company; the Carriers' Mutual pays half as much again, gives +2 and writes to say it remembers.
+  - **News at range**: events under way within two jumps whose news hasn't reached here yet come over the array, with what's wanted.
+- **Emergency beacon** (**`**, then 1–4, or Beacon in the drawer), every ship, can't be damaged, one call per 15 seconds:
+  - **Mayday** with hostiles near, in a lawful system: two Vipers come (the same response as a trader's call) and any Viper already out turns towards you. Without hostiles it's a false alarm: the first is a warning; a second within ten minutes is an offence (Offender: wasting police time). Lawless systems don't answer and don't mind.
+  - **Hull failing** below 60% hull: a Viper escorts you in; above it with nothing hostile, a false alarm; with hostiles, a Mayday.
+  - **Request escort**: in lawful systems a Viper flies with you for two and a half minutes.
+  - **Out of fuel**: traffic control tells you if you can make the nearest system, or to dock and fill up. Only if you can't jump *and* can't dock (refused or in lockdown), a Carriers' Mutual tender brings enough to reach the nearest system at three times the pump price (all you have, if less), once per system. This is the beacon half of the rescue proposed in [law and travel](law-and-travel.md#6-fuel-rescue-and-never-being-stranded); there's no tug yet.
+- **Not built yet**: listening in on police and pirate chatter, static near the edge of range, the array visible on the hull, and everything from stage 2 on.

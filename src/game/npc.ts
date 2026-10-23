@@ -98,6 +98,8 @@ export class NpcShip {
   ecm = false;
   /** Carriers launch fighters rather than fighting themselves. */
   fights = true;
+  /** A pirate you paid off over the radio: it leaves you be, unless you shoot it. */
+  paid?: boolean;
   private cooldown = Math.random();
   private flash = 0;
   private breakTimer = 0;
