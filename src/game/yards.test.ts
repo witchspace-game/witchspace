@@ -89,15 +89,22 @@ describe('the station in its stages', () => {
     expect(stationAtStage(coriolis, 'finished')).toBe(coriolis);
   });
 
-  it('grows: spine, then a frame in outline, then half plated', () => {
+  it('grows: spine, then a scaffold, then plated a face at a time', () => {
     const spine = stationAtStage(coriolis, 'spine')!;
     const frame = stationAtStage(coriolis, 'frame')!;
     const plating = stationAtStage(coriolis, 'plating')!;
-    expect(spine.geometry.details).toBeUndefined();
+    expect(spine.insignia).toBeUndefined();
     expect(frame.geometry.faces.length).toBe(spine.geometry.faces.length);
-    expect(frame.geometry.details!.lines.length).toBeGreaterThan(24);
+    expect(frame.insignia!.lines.length).toBe(28);
+    // Plating covers the scaffold as it goes on.
+    expect(plating.insignia!.lines.length).toBeLessThan(28);
     expect(plating.geometry.faces.length).toBeGreaterThan(frame.geometry.faces.length);
     expect(plating.geometry.faces.length).toBeLessThan(spine.geometry.faces.length + coriolis.geometry.faces.length);
+    // Plated a face at a time over the stage, never quite closed.
+    const early = stationAtStage(coriolis, 'plating', 0.05)!.geometry.faces.length;
+    const late = stationAtStage(coriolis, 'plating', 1)!.geometry.faces.length;
+    expect(early).toBe(spine.geometry.faces.length + 1);
+    expect(late).toBe(spine.geometry.faces.length + coriolis.geometry.faces.length - 2);
     // The spine is a closed, sound hull of its own.
     const spineOnly = checkGeometry(spine.geometry.vertices, spine.geometry.faces);
     expect(spineOnly.errors).toEqual([]);

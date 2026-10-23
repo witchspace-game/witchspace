@@ -167,36 +167,50 @@ const SPINE: { vertices: Vec3[]; faces: number[][] } = (() => {
   return { vertices: [...axis.vertices, ...collar.vertices], faces: [...axis.faces, ...collar.faces] };
 })();
 
-/** Plated first: the back half, then the sides. Faces of the Coriolis, by index. */
-const PLATED_FIRST = [1, 2, 3, 5, 6, 7, 11];
+/** Bare girders, pale steel, so the station's own plates stand out as they go on. */
+const SCAFFOLD_COLOUR = '#bfe3ff';
+
+/**
+ * The order the hull goes on, faces of the Coriolis by index: the back first,
+ * then the sides, then the front around the slot, so a half-built station is
+ * closed behind and open in front, and you can see in to the spine.
+ */
+const PLATING_ORDER = [5, 10, 11, 12, 13, 0, 1, 2, 3, 6, 7, 8, 9];
 
 /**
  * The station as it stands at a stage, made from the finished station's own
- * geometry: the spine alone, then its frame in outline (lines, no plating),
- * then half its faces plated, then the whole hull for spin-up. Null before
- * anything is built.
+ * geometry: the spine alone, then its scaffold (the hull's edges and four
+ * spokes in to the spine, in bare steel), then plated a face at a
+ * time as the stage goes on, then the whole hull for spin-up. Null before anything is built.
  */
-export function stationAtStage(station: ShipDef, stage: YardStage): ShipDef | null {
+export function stationAtStage(station: ShipDef, stage: YardStage, progress = 0.5): ShipDef | null {
   if (stage === 'refining') return null;
   if (stage === 'spin-up' || stage === 'finished') return station;
   const { vertices, faces } = station.geometry;
   const n = SPINE.vertices.length;
-  // The truss: every edge of the finished hull, and struts in to the spine.
-  const frame: { vertices: Vec3[]; lines: [number, number][] } = { vertices: [...vertices], lines: deriveEdges(faces) };
+  const count = stage === 'plating' ? Math.max(1, Math.min(PLATING_ORDER.length - 1, Math.ceil(progress * (PLATING_ORDER.length - 1)))) : 0;
+  const platedFaces = PLATING_ORDER.slice(0, count).map((i) => faces[i]);
+  // The scaffold, in bare steel: every edge of the hull not yet
+  // plated over, and four spokes in to the spine like a wheel's.
+  const covered = new Set(deriveEdges(platedFaces).map(([a, b]) => `${a}-${b}`));
+  const scaffold: { vertices: Vec3[]; lines: [number, number][] } = {
+    vertices: [...vertices],
+    lines: deriveEdges(faces).filter(([a, b]) => !covered.has(`${a}-${b}`)),
+  };
   if (stage !== 'spine') {
-    vertices.forEach((v, i) => {
-      frame.vertices.push([Math.sign(v[0]) * 12, Math.sign(v[1]) * 12, Math.max(-84, Math.min(72, v[2]))]);
-      frame.lines.push([i, frame.vertices.length - 1]);
-    });
+    for (const [x, y] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const at = scaffold.vertices.length;
+      scaffold.vertices.push([x * 80, y * 80, 0], [x * 12, y * 12, 0]);
+      scaffold.lines.push([at, at + 1]);
+    }
   }
-  const plated = stage === 'plating' ? PLATED_FIRST.map((i) => faces[i].map((k) => k + n)) : [];
   return {
     ...station,
     id: `${station.id}-${stage}`,
     geometry: {
       vertices: [...SPINE.vertices, ...vertices],
-      faces: [...SPINE.faces, ...plated],
-      details: stage === 'spine' ? undefined : frame,
+      faces: [...SPINE.faces, ...platedFaces.map((f) => f.map((k) => k + n))],
     },
+    insignia: stage === 'spine' ? undefined : { color: SCAFFOLD_COLOUR, ...scaffold },
   };
 }
