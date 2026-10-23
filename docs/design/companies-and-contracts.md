@@ -243,6 +243,7 @@ Wexley-Yorozu builds stations where they're needed, from what's there (the full 
 - **Construction contracts:** haul the things on that list. In the shared galaxy every commander's deliveries move the build along, so a station opens sooner when players pitch in: a community goal that costs one counter on the server.
 - **Opening day:** spin-up, traffic control, a market, and news across the region, with premiums for the first traders in. The Titanoboa leaves through a rift.
 - **Later:** mining contracts (ore from the moon, once mining is built), and player-built stations (see [player-run stations](player-stations.md)) built the same way, by Wexley-Yorozu under contract.
+- **Developments from finds:** an explorer's find (a platinum seam, a gem field) sold to a company starts a build like this one, with supply contracts, raids and a changed system at the end. See [from discovery to development](discovery-to-development.md).
 - **Moving a station** is a rare event: de-spun, with the constructor docked rigidly through the slot on its axis, pushing, in short slow jumps.
 
 ## 5. How it feels
