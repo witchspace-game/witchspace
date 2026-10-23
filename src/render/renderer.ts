@@ -50,7 +50,12 @@ composer.addPass(renderPass);
 /** Space bending around a witchspace rift; see lens.ts. */
 export const lens = new LensPass();
 composer.addPass(lens);
-composer.addPass(new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.0, 0.5, 0.2));
+// The glow is five blurs, tight to screen-wide. Weighted towards the tight
+// ones, it hugs the lines; the widest is kept faint, or every ship sits in a
+// screen-sized disc of haze. (Radius 0 so these weights are used as given.)
+export const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.0, 0, 0.2);
+bloom.compositeMaterial.uniforms['bloomFactors'].value = [1, 0.75, 0.45, 0.18, 0.04];
+composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
 let retro = false;
