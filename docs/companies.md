@@ -192,7 +192,7 @@ The *Ninefold* is the first of these stories ([exploration](design/exploration.m
 
 Named for the bullsnake: big, heavy, and loud when it's annoyed. *(Original class.)*
 
-- A slow, enormous construction tug that carries station modules and processor sections slung beneath its spine.
+- A slow, stubby workhorse (70 m as built) with an ore hopper slung beneath its spine; bigger loads, station modules and processor sections, go the same way, slowly.
 - Barely armed and hard to stop; drones and tractor booms instead of guns.
 - A frequent sight at Wexley-Yorozu worlds, where a half-built station or an atmosphere processor stands in orbit (a point of interest for explorers).
 - **Concept prompt:**
