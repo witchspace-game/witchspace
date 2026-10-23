@@ -25,7 +25,7 @@ describe('insurance (Modern rules)', () => {
     expect(claim).toMatchObject({ kind: 'paid', excess: 979, paid: 979 });
     expect(c.credits).toBe(10000 - 979);
     expect(c.equipment).toEqual(['fuel-scoops', 'ecm', 'extra-energy']);
-    expect(c.damaged).toEqual(['ecm']); // wear and tear isn't covered
+    expect(c.damaged).toEqual([]); // a new ship: everything works
   });
 
   it('keeps your record: a new ship does not fool the police', () => {
