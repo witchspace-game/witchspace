@@ -4049,6 +4049,7 @@ if (isTouch && !isIos) {
 }
 
 async function launch() {
+  const repaired = fitTransponderForLaunch();
   ensureSystemScene();
   setState('transition');
   if (!isRetro() && isWorking(cmdr(), 'docking-computer')) preloadRecording();
@@ -4066,9 +4067,33 @@ async function launch() {
   setView('front');
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
-  flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
+  // The station that launched you knows exactly who you are: a broken
+  // transponder is logged, not hailed, for the rest of this visit.
+  if (repaired !== null) {
+    flash(`${stationName(currentSystem()).name} · No launch clearance without a working transponder · repaired${repaired ? ` · ${repaired.toLocaleString()} Cr` : ' on the house'}`, 4.5);
+  } else if (transponderBroken() && hasLaw(currentSystem())) {
+    hullChecked = true;
+    flash(`${stationName(currentSystem()).name} · Transponder damaged · your hull is logged, police won't hail you here · repair it when you dock`, 4.5);
+  } else flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
   if (recordVisit(cmdr(), currentSystem())) saveCommander(cmdr()); // where you started counts
   announceEvent(currentSystem(), 2800);
+}
+
+/**
+ * Stations that check transponders won't clear a ship without a working one:
+ * a broken transponder is fixed before launch, for what you can pay (and on
+ * the house if you can't). Returns what it cost, or null if nothing was done.
+ */
+function fitTransponderForLaunch(): number | null {
+  const c = cmdr();
+  if (c.difficulty !== 'modern' || !checksClearance(currentSystem())) return null;
+  transponderOff = false; // cleared out with it on; switch it off once you're away
+  if (!transponderBroken()) return null;
+  const cost = Math.min(c.credits, Math.round(EQUIPMENT.find((e) => e.id === 'transponder')!.price * REPAIR_FRACTION));
+  c.credits = Math.round((c.credits - cost) * 10) / 10;
+  c.damaged = c.damaged.filter((id) => id !== 'transponder');
+  saveCommander(c);
+  return cost;
 }
 
 async function dock() {

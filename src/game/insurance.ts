@@ -44,8 +44,9 @@ export function claimInsurance(c: Commander): Claim {
     return { kind: 'void', stake };
   }
   if (pod) removeEquipment(c, 'escape-pod');
-  // Kit that was already broken comes back broken: the insurers replace the
-  // ship, not the wear and tear.
+  // A new ship is a new ship: everything on it works, the transponder included,
+  // so a broken one can't follow you into the next life (and the next fight).
+  c.damaged = [];
   const excess = excessFor(c);
   const paid = Math.min(excess, spareCredits(c));
   c.credits = Math.round((c.credits - paid) * 10) / 10;
