@@ -58,7 +58,9 @@ export type SpaceEvent =
   | { kind: 'missile'; id: string; owner: Remote | null; ownerIsMe: boolean; target: Remote | null; targetIsMe: boolean; p: THREE.Vector3; d: THREE.Vector3; s: number }
   | { kind: 'missileEnd'; id: string; how: 'hit' | 'ecm' | 'expired'; p: THREE.Vector3 }
   /** Someone else fired an ECM. */
-  | { kind: 'ecm'; by: Remote | null; p: THREE.Vector3 };
+  | { kind: 'ecm'; by: Remote | null; p: THREE.Vector3 }
+  /** Our account joined from another window or device, which now has the ship. */
+  | { kind: 'replaced' };
 
 const HOSTILE_FOR = 15; // seconds a commander who shot at you stays marked hostile
 
@@ -76,6 +78,8 @@ export class SharedSpace {
   private retryAt = 0;
   private myId = '';
   private lostReported = false;
+  /** Taken out because the account joined elsewhere: stay out until asked back in (resume). */
+  private replaced = false;
 
   constructor(private readonly onEvent: (e: SpaceEvent) => void) {}
 
@@ -87,7 +91,7 @@ export class SharedSpace {
   join(galaxy: number, system: number, name: string, ship: string, lasers: string[], rank: string, missiles: number, ecm: boolean, session?: string) {
     const key = `${galaxy}/${system}`;
     if (key === this.system && this.ws) return;
-    if (this.clock < this.retryAt) return;
+    if (this.clock < this.retryAt || this.replaced) return;
     this.leave();
     this.system = key;
     const ws = new WebSocket(`${SPACE_URL}/system/${key}`);
@@ -103,6 +107,11 @@ export class SharedSpace {
       if (!this.lostReported) this.onEvent({ kind: 'lost' });
       this.lostReported = true;
     };
+  }
+
+  /** Back in after being replaced: a deliberate choice on this device (launching, or switching shared space on). */
+  resume() {
+    this.replaced = false;
   }
 
   leave() {
@@ -180,6 +189,12 @@ export class SharedSpace {
       }
       case 'correct':
         this.correction = toV(msg.p);
+        break;
+      case 'replaced':
+        // Don't reconnect, or the two would take turns throwing each other out.
+        this.replaced = true;
+        this.leave();
+        this.onEvent({ kind: 'replaced' });
         break;
       case 'hit': {
         const by = this.remotes.get(msg.by) ?? null;

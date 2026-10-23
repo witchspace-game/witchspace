@@ -131,6 +131,20 @@ export class Accounts extends DurableObject<AccountsEnv> {
   }
 
   /** For the shared space servers: who a session belongs to, if anyone. */
+  /**
+   * Where each signed-in account is flying in shared space, so an account has
+   * one ship at a time. In memory: if this object restarts, the worst case is
+   * a duplicate ship until one of them next joins.
+   */
+  private readonly present = new Map<string, { room: string; id: string }>();
+
+  /** An account's ship joined a system: record it, and return the ship it replaces (if any). */
+  async arrive(account: string, room: string, id: string): Promise<{ room: string; id: string } | null> {
+    const before = this.present.get(account);
+    this.present.set(account, { room, id });
+    return before && before.id !== id ? before : null;
+  }
+
   async whoIs(session: string): Promise<{ id: string; callsign: string | null } | null> {
     if (typeof session !== 'string' || session.length < 20) return null;
     const row = this.sql
