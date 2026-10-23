@@ -162,7 +162,7 @@ export const EQUIPMENT: Equipment[] = [
     blurb: 'Press 9: it flies to whatever is left to survey or find here and holds you in range. It leaves the star to you. Sold to Pathfinders.',
     modernOnly: true,
     minTech: 8,
-    explorer: 100,
+    explorer: 400, // Pathfinder (EXPLORER_DOORS)
   },
   {
     id: 'route-autopilot',
@@ -171,13 +171,13 @@ export const EQUIPMENT: Equipment[] = [
     blurb: 'Starts each jump of a plotted course for you, when there is fuel and nothing hostile near. H stops it. Sold to Pioneers.',
     modernOnly: true,
     minTech: 10,
-    explorer: 600,
+    explorer: 4000, // Pioneer
   },
   {
     id: 'wisp',
     name: 'Will-o’-the-Wisp',
     price: 20000,
-    blurb: 'A Science Division prototype, never sold: the light you chase and never catch. It jinks you out of the way, so enemy lasers miss half the time and half the missiles fired at you are spoofed.',
+    blurb: 'A Science Division prototype, never sold: the light you chase and never catch. It jinks you out of the way, so enemy lasers miss half the time and half the missiles fired at you are spoofed, while your own lasers are cold: an escape, not armour.',
     modernOnly: true,
     minTech: 99,
     undamageable: true,

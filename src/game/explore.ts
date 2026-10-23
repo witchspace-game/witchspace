@@ -510,11 +510,11 @@ export const WY_DATA_BONUS = 1.25;
 /** The Ninefold report: what the Science Division pays, and what publishing it elsewhere fetches. */
 export const REPORT_PRICE = { wy: 1200, published: 300 } as const;
 
-/** What a survey fetches at a station: half where it was gathered, rising with distance, up to five times. */
+/** What a survey fetches at a station: half where it was gathered, rising with distance, up to three times. */
 export function dataValue(d: SurveyData, here: StarSystem, wyHere = false): number {
   if (d.report) return wyHere ? REPORT_PRICE.wy : REPORT_PRICE.published;
   const ly = d.galaxy === here.galaxy ? distanceLy(systemAt(d.galaxy, d.system), here) : 60;
-  return Math.round(d.value * Math.min(5, 0.5 + ly / 8) * (wyHere ? WY_DATA_BONUS : 1));
+  return Math.round(d.value * Math.min(3, 0.5 + ly / 8) * (wyHere ? WY_DATA_BONUS : 1));
 }
 
 /**
@@ -554,10 +554,12 @@ export const EXPLORER_RANKS: [number, string][] = [
   [5, 'Tourist'],
   [15, 'Wanderer'],
   [40, 'Surveyor'],
-  [100, 'Pathfinder'],
-  [250, 'Trailblazer'],
-  [600, 'Pioneer'],
-  [1500, 'Voyager'],
+  // Paced against the combat ranks (docs/design/exploration.md, "Fairness and
+  // pacing"): about 3, 8, 35 and 150 hours of keen exploring.
+  [400, 'Pathfinder'],
+  [1000, 'Trailblazer'],
+  [4000, 'Pioneer'],
+  [18000, 'Voyager'],
 ];
 
 export function explorerRank(points: number): string {
@@ -569,14 +571,14 @@ export function explorerRank(points: number): string {
 // --- The explorer's road: what the ranks open (docs/design/exploration.md, stage 1b) --------
 
 /** Explorer points each door needs. */
-export const EXPLORER_DOORS = { pathfinder: 100, trailblazer: 250, pioneer: 600, voyager: 1500 } as const;
+export const EXPLORER_DOORS = { pathfinder: 400, trailblazer: 1000, pioneer: 4000, voyager: 18000 } as const;
 export const explorerAtLeast = (c: Commander, door: keyof typeof EXPLORER_DOORS) => c.difficulty === 'modern' && exploreOf(c).points >= EXPLORER_DOORS[door];
 
 /** What reaching a rank opens, said when you reach it. */
 export const RANK_NEWS: Record<string, string> = {
   Pathfinder: 'The Science Division has special orders for you, and the Survey Autopilot is yours to buy',
-  Trailblazer: 'The Station tab now names the nearest trail you haven’t started, and the Science Division’s lost courier is out there to find',
-  Pioneer: 'The Route Autopilot is yours to buy',
+  Trailblazer: 'The Station tab now names the nearest trail you haven’t started',
+  Pioneer: 'The Route Autopilot is yours to buy, and the Science Division’s lost courier is out there to find',
   Voyager: 'The Legends will find you first, when they come',
 };
 
@@ -630,7 +632,7 @@ export function courierSystem(galaxy: number): StarSystem {
 
 /** The courier, as a signal (Modern, Trailblazer and up, until you've taken the prototype). */
 export function courierPoiOf(c: Commander, sys: StarSystem): Poi | null {
-  if (!explorerAtLeast(c, 'trailblazer') || courierSystem(sys.galaxy) !== sys) return null;
+  if (!explorerAtLeast(c, 'pioneer') || courierSystem(sys.galaxy) !== sys) return null;
   const lon = roll(sys, 71) * Math.PI * 2;
   const lat = (roll(sys, 72) - 0.5) * 0.6;
   return {
@@ -647,12 +649,12 @@ export function courierPoiOf(c: Commander, sys: StarSystem): Poi | null {
   };
 }
 
-/** Where the courier is, as rumour: within this many light years, Trailblazers hear of it. */
+/** Where the courier is, as rumour: within this many light years, Pioneers hear of it. */
 export const COURIER_RUMOUR_LY = 20;
 
 /** Bar talk of the courier, if it's near and you haven't found it. */
 export function courierRumour(c: Commander, here: StarSystem): string | null {
-  if (!explorerAtLeast(c, 'trailblazer') || c.equipment.includes('wisp')) return null;
+  if (!explorerAtLeast(c, 'pioneer') || c.equipment.includes('wisp')) return null;
   const at = courierSystem(here.galaxy);
   if (isFound(c, at, 'courier')) return null;
   if (at === here) return 'Bar talk: a Science Division courier went dark in this very system. Survey the planet and listen.';
