@@ -2225,10 +2225,15 @@ addEventListener('keydown', () => {
 /** HUD markers for moons and signals. */
 function exploreMarkers(km: (p: THREE.Vector3) => string): Marker[] {
   const out: Marker[] = [];
+  // Moons, and (Modern) the planet: bright in the explorer's colour until
+  // surveyed, then the plain grey of somewhere done, with a tick for anyone
+  // who can't tell the colours apart. Named within 30 km of the surface.
   for (const b of sceneBodies) {
-    if (b.body.kind !== 'moon') continue;
-    const near = player.obj.position.distanceTo(b.centre) < 30000;
-    out.push({ position: b.centre, color: '#9aa3ad', radius: b.radius, label: near ? `${b.body.name} ${km(b.centre)}` : undefined });
+    if (b.body.kind === 'star' || (b.body.kind === 'planet' && !exploring())) continue;
+    const near = player.obj.position.distanceTo(b.centre) - b.radius < 30000;
+    const surveyed = !exploring() || isSurveyed(cmdr(), currentSystem(), b.body.id);
+    const tick = exploring() && surveyed ? ' ✓' : '';
+    out.push({ position: b.centre, color: surveyed ? '#9aa3ad' : SIGNAL_COLOUR, radius: b.radius, label: near ? `${b.body.name}${tick} ${km(b.centre)}` : undefined });
   }
   if (!exploring()) return out;
   for (const p of scenePois) {
