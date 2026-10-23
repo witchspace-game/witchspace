@@ -4819,6 +4819,7 @@ const J_LOCK_SHIPS = 3000;
 const J_LOCK_STATION = 4000;
 const J_LOCK_PLANET = 3000; // above the surface
 const J_LOCK_SUN = 6000; // above the surface: jumps stop short of the heat
+const J_LOCK_MOON = 2000; // above the surface
 
 let countdown: number | null = null;
 let lastTick = 0;
@@ -5001,11 +5002,13 @@ function inSystemJump(quiet = false): boolean {
   const stationNear = pos.distanceTo(station.root.position) < J_LOCK_STATION;
   const planetNear = pos.distanceTo(planetPos) - planetRadius < J_LOCK_PLANET;
   const sunNear = pos.distanceTo(SUN_POS) - SUN_RADIUS < J_LOCK_SUN;
-  if (shipsNear || stationNear || planetNear || sunNear) {
-    if (!quiet) flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : 'sun'} too close`, 1.5);
+  const moons = sceneBodies.filter((b) => b.body.kind === 'moon');
+  const moonNear = moons.some((m) => pos.distanceTo(m.centre) - m.radius < J_LOCK_MOON);
+  if (shipsNear || stationNear || planetNear || sunNear || moonNear) {
+    if (!quiet) flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : sunNear ? 'sun' : 'moon'} too close`, 1.5);
     return false;
   }
-  // Leap forward, but stop short of the station or the planet if they're ahead.
+  // Leap forward, but stop short of the station, the planet, its moons or the sun if they're ahead.
   const fwd = player.forward();
   let dist = J_DISTANCE;
   const limit = (target: THREE.Vector3, keepOut: number) => {
@@ -5018,6 +5021,7 @@ function inSystemJump(quiet = false): boolean {
   limit(station.root.position, J_LOCK_STATION - 200);
   limit(planetPos, planetRadius + J_LOCK_PLANET - 200);
   limit(SUN_POS, SUN_RADIUS + J_LOCK_SUN - 200);
+  for (const m of moons) limit(m.centre, m.radius + J_LOCK_MOON - 200);
   if (dist < 500) {
     if (!quiet) flash('Mass locked · too close ahead', 1.5);
     return false;
