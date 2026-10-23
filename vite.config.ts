@@ -22,4 +22,6 @@ for (const dir of PAGE_DIRS) findPages(dir, input);
 
 export default defineConfig({
   build: { rollupOptions: { input } },
+  // Helper agents work in copies of the repo under .claude/worktrees: don't run their tests twice.
+  test: { exclude: ['**/node_modules/**', '**/.claude/**'] },
 });
