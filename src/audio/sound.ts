@@ -119,7 +119,38 @@ export const sfx = {
     noise(0.04, 'highpass', 4000, 3000, 0.35);
     setTimeout(() => noise(0.05, 'highpass', 3000, 2000, 0.25), 70);
   },
-  jump: () => noise(0.7, 'bandpass', 4000, 300, 0.4),
+  /**
+   * In-system jump: a soft whoosh that swells in and climbs, like a short
+   * hyperspace. (It used to be a falling burst of noise, too like a scrape.)
+   */
+  jump: () => {
+    const { ctx, master } = audio();
+    const t = ctx.currentTime;
+    const air = ctx.createBufferSource();
+    air.buffer = noiseBuffer(ctx, 1.1);
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 1.2;
+    f.frequency.setValueAtTime(250, t);
+    f.frequency.exponentialRampToValueAtTime(2800, t + 0.8);
+    const ag = ctx.createGain();
+    ag.gain.setValueAtTime(0.001, t);
+    ag.gain.exponentialRampToValueAtTime(0.3, t + 0.35);
+    ag.gain.exponentialRampToValueAtTime(0.001, t + 1.05);
+    air.connect(f).connect(ag).connect(master);
+    air.start(t);
+    const tone = ctx.createOscillator();
+    tone.type = 'sine';
+    tone.frequency.setValueAtTime(110, t);
+    tone.frequency.exponentialRampToValueAtTime(440, t + 0.8);
+    const tg = ctx.createGain();
+    tg.gain.setValueAtTime(0.001, t);
+    tg.gain.exponentialRampToValueAtTime(0.07, t + 0.3);
+    tg.gain.exponentialRampToValueAtTime(0.001, t + 1);
+    tone.connect(tg).connect(master);
+    tone.start(t);
+    tone.stop(t + 1.05);
+  },
   tick: () => zap(1200, 1100, 0.05, 0.05, 'square'),
   explosion: () => noise(2.2, 'lowpass', 1800, 40, 1),
   /** Missile lock: two rising notes. */

@@ -1421,6 +1421,30 @@ const PIRATE_CHANCE = [0.75, 0.55, 0.4, 0.3, 0.25, 0.15, 0.1, 0.06];
 const TRADERS_BY_GOVERNMENT = [1, 1, 2, 2, 2, 3, 3, 3];
 const ENCOUNTER_INTERVAL = 40; // seconds between rolls for pirates
 const MAX_PIRATES = 4;
+const CALM_BETWEEN_FIGHTS = 20; // seconds after a fight before the next roll (+10 s per step of government safety)
+const FIGHT_NEAR = 12000; // metres: pirates this close count as a fight on
+let lastFightAt = -Infinity;
+
+// Word gets round (Modern): every pirate you destroy in a system makes the
+// next lot there warier, so they come less often and later: a good pilot
+// can earn quickly, but not forever. It fades with time (halving every 10
+// minutes), so a system you come back to later has forgotten you.
+const WARY_HALF_LIFE = 10 * 60 * 1000; // ms
+const WARY_ODDS = 0.88; // each loss multiplies the odds of the next attack by this
+const WARY_CALM = 5; // seconds more quiet per loss
+const pirateLosses = new Map<string, { n: number; at: number }>();
+function wariness(): number {
+  const w = pirateLosses.get(systemKey(currentSystem()));
+  return w ? w.n * 0.5 ** ((Date.now() - w.at) / WARY_HALF_LIFE) : 0;
+}
+function pirateLost() {
+  if (!modern()) return;
+  const before = wariness();
+  pirateLosses.set(systemKey(currentSystem()), { n: before + 1, at: Date.now() });
+  if (before < 6 && before + 1 >= 6) setTimeout(() => state === 'flying' && flash('Word gets round · pirates here are giving you a wide berth', 4), 3000);
+}
+/** Pirates about you, or anyone out to get you. */
+const fightOn = () => npcs.some((n) => n.hostile || (n.role === 'pirate' && n.obj.position.distanceTo(player.obj.position) < FIGHT_NEAR));
 const BOUNTIES: Record<string, number> = { sidewinder: 50, mamba: 80, falcon: 2000 };
 /** The Falcon, the Legend of the lanes: a chance in each pirate encounter, by government (anarchies most). */
 const FALCON_CHANCE = [0.04, 0.03, 0.02, 0.015, 0.01, 0.01, 0.005, 0.005];
@@ -1527,8 +1551,11 @@ function spawnPirates(near: THREE.Vector3): false | 'pirates' | 'falcon' {
     spawnFalcon(centre, near);
     return 'falcon';
   }
-  const anarchy = currentSystem().government === 0;
-  const count = Math.min(MAX_PIRATES - ofRole('pirate').length, 1 + Math.floor(Math.random() * (anarchy ? 3 : 2)));
+  const gov = currentSystem().government;
+  // Pirates hunt in packs (Modern): two to four in an anarchy, two or three in
+  // a feudal system, one or two where it's safer. Classic keeps 1984's sizes.
+  const [least, extra] = !modern() ? [1, gov === 0 ? 3 : 2] : gov === 0 ? [2, 3] : gov === 1 ? [2, 2] : [1, 2];
+  const count = Math.min(MAX_PIRATES - ofRole('pirate').length, least + Math.floor(Math.random() * extra));
   for (let i = 0; i < count; i++) {
     const def = Math.random() < 0.6 ? 'sidewinder' : 'mamba';
     const npc = addNpc(def, 'pirate', centre.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(300)), centre);
@@ -1614,10 +1641,16 @@ function updateTraffic(dt: number) {
     traderTimer = 25 + Math.random() * 35;
     if (ofRole('trader').length < TRADERS_BY_GOVERNMENT[sys.government]) spawnTrader(Math.random() < 0.6 || reserved);
   }
+  // Pacing (Modern): one fight at a time, and a breather after each, longer
+  // in safer systems, so trouble comes in beats you can follow. (Classic
+  // keeps 1984's: a roll every so often, whatever else is going on.)
+  if (fightOn()) lastFightAt = elapsed;
+  const wary = modern() ? wariness() : 0;
+  const calm = !modern() || (!fightOn() && elapsed - lastFightAt > CALM_BETWEEN_FIGHTS + sys.government * 10 + wary * WARY_CALM);
   encounterTimer -= dt;
-  if (encounterTimer <= 0 && state === 'flying') {
+  if (encounterTimer <= 0 && state === 'flying' && calm) {
     encounterTimer = ENCOUNTER_INTERVAL * (0.6 + Math.random() * 0.8);
-    if (ofRole('pirate').length < MAX_PIRATES && Math.random() < PIRATE_CHANCE[sys.government]) {
+    if (ofRole('pirate').length < MAX_PIRATES && Math.random() < PIRATE_CHANCE[sys.government] * WARY_ODDS ** wary) {
       const met = spawnPirates(player.obj.position);
       if (met) flash(met === 'falcon' ? 'Unidentified contact on scanner' : 'Contacts on scanner', 2);
     }
@@ -1999,7 +2032,8 @@ function buildSystemScene(sys: StarSystem) {
   // Some traffic already about, and maybe trouble soon after arrival.
   for (let i = 0; i < TRADERS_BY_GOVERNMENT[sys.government] - 1; i++) spawnTrader(true, 5000 + Math.random() * 10000);
   traderTimer = 15;
-  encounterTimer = 12 + Math.random() * 10;
+  encounterTimer = modern() ? 25 + Math.random() * 15 : 12 + Math.random() * 10; // Modern: after the arrival news has been read
+  lastFightAt = -Infinity;
   scanned = false;
   scanProgress = 0;
   unpinned = hail = null;
@@ -2500,6 +2534,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   removeNpc(npc);
   if (carrier?.npc === npc) bastionDestroyed(carrier, velocity, killer === player.obj);
   if (killer !== player.obj) return;
+  if (npc.role === 'pirate') pirateLost();
 
   const c = cmdr();
   const before = combatRating(c.kills);
@@ -5061,7 +5096,7 @@ function updateRadio(dt: number) {
   distressTimer -= dt;
   if (distressTimer <= 0) {
     distressTimer = 100 + Math.random() * 120;
-    if (hasArray() && !distresses.length && ofRole('pirate').length < MAX_PIRATES - 1 && Math.random() < PIRATE_CHANCE[currentSystem().government] + 0.15) spawnDistress();
+    if (hasArray() && !distresses.length && !fightOn() && ofRole('pirate').length < MAX_PIRATES - 1 && Math.random() < PIRATE_CHANCE[currentSystem().government] + 0.15) spawnDistress();
   }
 }
 
@@ -6129,6 +6164,8 @@ if (import.meta.env.DEV) {
       get autopilot() { return autopilot; },
       get explore() { return { bodies: sceneBodies, pois: scenePois, planetPos, survey }; },
       get yard() { return yardScene; },
+      /** Encounter pacing: the next roll, the last fight, and how wary the pirates are here. */
+      get pacing() { return { encounterTimer, sinceFight: elapsed - lastFightAt, fightOn: fightOn(), wary: wariness() }; },
       /** Yards at work in this galaxy now. */
       yards: () => yardsOf(currentSystem().galaxy, Date.now()),
       /** Hyperspace straight to a system in this galaxy, fuel or not. */
