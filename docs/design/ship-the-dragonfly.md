@@ -48,11 +48,20 @@ Three shapes, rendered in the game's own style, each from three-quarter, from ab
 
 A story hook: Wexley-Yorozu's offer for the yard, and a commander who flies a Dragonfly deciding whether to help the sisters keep it.
 
+## Its arrival *(Mark: introduced properly, not at random)*
+
+The Dragonfly doesn't just turn up in traffic one day. Its arrival is an event, with its people:
+
+1. **Word first:** news from the Halloran yard's region (*"Halloran Sisters fly a new hull: something with wings"*), and talk in the saloon: a courier who's seen it on trials, and doesn't believe what it can turn inside.
+2. **The launch:** the first Dragonfly leaves the yard on a set day, from the clock, for everyone at once; the news carries it across the region at the speed of news.
+3. **The first runs:** Nell Halloran wants it proved, so the first express data contracts in the region are flown by Dragonflies, and commanders see them working: arriving ahead of the news, slipping past pirate packs.
+4. **Then it's part of the galaxy:** Dragonflies in traffic near the yard, and (once ships can be bought) for sale there, with Ide Halloran's thanks for every one sold.
+
 ## Building it
 
 1. **The ship file** (`content/ships/dragonfly.json`): the chosen shape, with the wings as separate parts so they can fold.
 2. **Folding:** the wings swing between spread and folded with speed (a few tenths of a second), and the turn rate follows them. NPC Dragonflies do the same.
-3. **In the game:** sold at the Halloran yard's region; flown by couriers in traffic now and then; express contracts that suit it.
+3. **In the game:** introduced as above (news, launch, first runs), then flown by couriers near the yard and, once ships can be bought, sold there.
 4. **The sisters:** a small story line, later.
 
 ## Later: down to a planet *(Mark, October 2026)*
@@ -72,4 +81,4 @@ It glides and banks on long, still wings, never flaps.
 
 ## Open questions
 
-- Can a commander buy one, or is it an NPC ship first? (Buying ships isn't in the game yet: every commander flies a Cobra.)
+- Buying ships isn't in the game yet (every commander flies a Cobra): the Dragonfly arrives in the galaxy first, and goes on sale when buying ships does.
