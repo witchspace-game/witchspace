@@ -231,6 +231,9 @@ export interface NewsItem {
   heard: number; // when the news reached here (ms)
 }
 
+/** How long news (or a price report) takes to get from `where` to `here`, in ms. */
+export const newsDelay = (where: StarSystem, here: StarSystem) => (where === here ? 0 : NEWS_BASE + distanceLy(where, here) * NEWS_PER_LY);
+
 /** When news of an event at `where` reaches `here`. */
 export const newsArrives = (where: StarSystem, here: StarSystem, start: number) =>
   where === here ? start : start + NEWS_BASE + distanceLy(where, here) * NEWS_PER_LY;

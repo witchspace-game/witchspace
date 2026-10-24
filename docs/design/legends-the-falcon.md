@@ -44,6 +44,7 @@ A commander who flies the Falcons' galaxies in order meets the whole family, and
 - **Meeting her** happens only in her current system: a chance on each arrival (about one in three), higher if you carry Wexley-Yorozu or Hexon cargo, and never more than once a visit. In practice that's **a few meetings a week for someone who goes looking**, and very rarely for someone who doesn't.
 - **Her approach:** she runs dark, a cold white unknown on the scanner, until the hull read inside 2 km ("Hull read · FALCON"). Then she hails, in her own voice, before she fires. Pay her price (the cargo she wants) and she takes it and goes. Refuse, run, or shoot, and it's a fight.
 - The random Falcon roll on pirate encounters (`FALCON_CHANCE`) goes. Pirates are pirates; the Falcons are the Falcons.
+- **She comes for the pirate-killers** *(Mark, October 2026)*. When the packs in a region have lost about six ships to one commander (the same tally that makes them wary, [pacing](exploration.md#hiding-in-the-clutter) and `pirateLost` in main.ts), word reaches her. First the warning beats: in the saloon, *someone's asking about a Cobra that's been thinning the packs*; on the radio, haulers saying she's changed course. Then, within a visit or two, she comes looking for that commander, outside her circuit, once. Beat her and the region's pirates stay wary for longer; lose and they're back to full strength. Your success is what calls her.
 
 ## The fight, and losing it
 
