@@ -22,7 +22,7 @@ What *Elite* traders loved was knowing something others didn't and getting there
 
 ## Principles
 
-- **Simple to start, deep to master.** A new commander can make money in their first minute without reading a chart. The exchange is still there for those who want it.
+- **Simple to start, deep to master, and mastery pays.** A new commander can make money in their first minute without reading a chart. Learning the exchange (the chart, the order book, the trades feed) is part of the game, and each tool gives a real edge the simple view can't (section 1b).
 - **Information is the edge.** You know what you've seen and what's reached you. Everything else is out of date, a rumour, or a guess.
 - **Every tip has a person behind it**, with a reason to tell you and a feeling about it: glad, sad, mad or bad.
 - **Deterministic.** Events, news, tips and prices come from the seed and the clock, so the same galaxy for everyone; in the shared galaxy, the server holds the same state.
@@ -47,11 +47,21 @@ The charts stay: they're one of the best things in the game. What changes is eve
 
 **Right: buy and sell made simple.** One tap for as much as you can afford and carry (or a chosen amount), one tap to sell the lot; price impact and total shown before you confirm; a one-line limit order (section 5).
 
-**Advanced** (a switch, remembered) adds the order book, depth and the trades feed, for the full exchange.
+**The order book and the trades feed** sit beside the chart, as now, folded small until you open them (and remembered open). They're not extras: they're where a good trader's edge comes from (section 1b).
 
 **On a phone:** the lists first; tap a good and its chart opens full width, with buy and sell under it.
 
 The **back room** (the black market) stays a separate door, as now.
+
+## 1b. Learning the exchange pays
+
+The lists get a newcomer trading; the exchange's tools make a trader rich. Each gives an honest edge, and the game says what it earned, so learning feels rewarding.
+
+- **The order book saves money.** A one-tap trade takes the station's price and walks it as you buy. Reading the book, you place a limit order inside the spread and buy cheaper, or split a big order so it doesn't move the price against you. *Bought 30 t furs at 36.2 · 41 Cr better than buying at market.*
+- **The trades feed shows who knows something.** NPC traders who've heard news trade on it before the station's news board shows it (they hear first, in the saloon and on the radio). A run of big buys in medicine, no news yet: someone knows about a plague. Watch the feed and you see the headline coming.
+- **The chart shows the news cycle.** The overshoot when news breaks, the drift back, the glut after (section 4) are shapes on the candles. Sell the peak, buy the glut, and the game notices: *Sold into the overshoot · 18% above where it settled.*
+- **Someone teaches you.** In the saloon, an old trader (Ma Reyes, retired, glad of the company, sad that nobody asks any more) teaches one tool at a time: reading the book, spotting the smart money, timing a news cycle. Each lesson is a small task in the real market, with a reward, and she remembers how you did.
+- **A Merchant rank.** Profit made with these tools (limit fills, reading the feed, the cycle) builds a Merchant's rank alongside combat and exploration, and the rank opens doors: better insiders will deal with you (section 3), price alerts on the exchange, warehouse space at more stations ([merchants](markets-and-trade.md#5-merchants-trading-without-flying)).
 
 ## 2. Prices you know
 
@@ -120,10 +130,10 @@ Ways to move a market, each with a cost and a risk:
 
 ## 7. Stages
 
-1. **The trader's screen and prices you know** (sections 1 and 2): plain lists round the chart, news markers on it, one-tap trades, the order book behind Advanced, the trade computer working from your knowledge, the starting almanac. The biggest change to how trading feels, and nothing new to simulate.
+1. **The trader's screen and prices you know** (sections 1 and 2): plain lists round the chart, news markers on it, one-tap trades, the book and feed beside it, "better than market" feedback, the trade computer working from your knowledge, the starting almanac. The biggest change to how trading feels, and nothing new to simulate.
 2. **The saloon** (section 3): the people, tips stale, early and planted, and their reputations. Then insiders, and the inspectors.
 3. **The news cycle** (section 4): the overshoot and the aftermath glut, and saying it in words.
-4. **Limit orders on the trader's screen** (section 5), and messages when they fill.
+4. **Limit orders on the trader's screen** (section 5), and messages when they fill. Ma Reyes's lessons and the Merchant rank (section 1b).
 5. **Working the market** (section 6): planted rumours and manipulation records; cornering falls out of stages 1–4.
 
 ## Open questions
