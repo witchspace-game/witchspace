@@ -2,12 +2,13 @@
 title: Ships, classes and makers
 status: proposed
 pillar: world
-summary: Why you'd choose one ship over another. Classes for every kind of life, makers with a character every hull carries, a line-up from each, trims and upgrades, and buying, selling and second-hand ships.
+summary: Why you'd choose one ship over another. Classes for every kind of life, makers with a character every hull carries, ships earned by careers (a Lancer for a Marshal, a Falcon for a pirate the Solos trust), upgrades, and buying and selling.
 card: cobra-mk3
 stages:
   - Classes in the ship files; class and maker on the ship pages; concepts | proposed
   - Shipyards: buy, sell and trade in, with a first few hulls | proposed
-  - Trims and upgrades | proposed
+  - Ships earned by careers: Lancer, Falcon, company hulls, Constrictor | proposed
+  - Upgrades by class | proposed
   - Second-hand ships and a hangar of your own | proposed
   - Makers' line-ups filled out, the Dragonfly first | proposed
 help:
@@ -28,7 +29,9 @@ Mark put it this way: think like Porsche. A 911, a Cayenne, a Boxster and a Carr
 
 1. **A class**, for the life you want: haul cargo, hunt pirates, run data, explore.
 2. **A maker**, for the character you like: fast and dark, rugged and forgiving, industrial and huge.
-3. **A trim**, then **upgrades**, for how you fly it.
+3. **Upgrades**, for how you fly it.
+
+And some ships can't be bought at all: they're **earned**, by the career you choose (section 4).
 
 ## Principles
 
@@ -75,13 +78,26 @@ Each maker has a character, and a line-up in the Porsche way: a way in, the icon
 
 The **halo** is the ship you work towards, or only ever see: some aren't for sale at all.
 
-## 3. Trims and upgrades
+## 3. Upgrades
 
-- **Trims:** each hull comes in two or three, like a car's: a base, a faster **S**, and a specialist trim (a Falcon **Dark** runs colder and stays unidentified closer in; a Python **Long Haul** trades guns for tanks). A trim is a starting point, not a separate ship.
-- **Upgrades:** the equipment that exists now (fuel scoops, the large cargo bay, ECM, gimbals, the comms array, survey kit...), each limited by class: no large cargo bay on a light fighter, no military lasers on a yacht.
-- **Engineering** later ([ship condition](ship-condition.md)): tuning a ship past its trim, with the wear that brings.
+- **Upgrades are how you make a ship yours:** the equipment that exists now (fuel scoops, the large cargo bay, ECM, gimbals, the comms array, survey kit...), each limited by class: no large cargo bay on a light fighter, no military lasers on a yacht. No separate trims of the same hull: that would complicate it for little gain *(Mark)*.
+- **Engineering** later ([ship condition](ship-condition.md)): tuning a ship past what it came with, with the wear that brings.
+- **Looks** (paint, liveries) could come much later, purely cosmetic.
 
-## 4. Buying, selling and owning
+## 4. Earned, not bought
+
+In 1984 you only ever flew the Cobra Mk III. Here, some of the most wanted ships can't be bought at any price: they're **earned by the life you choose**, and flying one says so.
+
+| Ship | Earned by | How |
+|---|---|---|
+| **Lancer** | A Marshal | A Marshals career for **Dangerous** commanders and up: missions for the Co-operative, and a Lancer of your own when they take you on ([law and travel](law-and-travel.md#9-power-and-protection)). |
+| **Falcon** | A pirate the Solos trust | The pirate career that starts with an introduction to a Solo son ([the Falcons](legends-the-falcon.md)): earn their trust (the Debt, the forty-one) and they build you one. Fly it and every Solo son knows you; so does Wexley-Yorozu. |
+| **Company hulls** | Standing | Each company's own ship (Hexon's Coral, Vorg's Gaboon, the Mutual's Garter, Wexley-Yorozu's ships), offered to its trusted contractors ([the trading companies](../companies.md)). |
+| **Constrictor** | The military mission line | The end of a long mission line: the original game's first mission (the stolen prototype) is already a Legend's trail ([exploration](exploration.md#stage-4-legends)); the reward at the end is a military hull nobody else can buy: rare, recognisable, and a target ([ideas](../ideas.md)). |
+
+Earned ships still need upkeep, insurance and the career's goodwill: lose your standing, and the Marshals want their Lancer back.
+
+## 5. Buying, selling and owning
 
 - **Shipyards** at stations, stocking the makers present in that system and its tech level: Solo & Sons hulls only where nobody asks questions; Wexley-Yorozu's at their worlds.
 - **Trade in** your ship against the next; its value follows its condition ([ship condition](ship-condition.md)) and what's fitted.
@@ -89,17 +105,18 @@ The **halo** is the ship you work towards, or only ever see: some aren't for sal
 - **Insurance** follows the ship's value ([law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks)).
 - **A hangar:** later, keep more than one ship, berthed where you left it.
 
-## 5. Concepts
+## 6. Concepts
 
 Makers show ships before they fly, and the site shows them as **concepts**, with their page, their story and the model turning, before they're in the game ([the Dragonfly](ship-the-dragonfly.md): Halloran Sisters showing off a new hull; Solo & Sons' come as *leaked plans*, since their yard is in hiding). A concept says its class and maker from the start. Community designs submitted through the ship editor ([the community platform](community-platform.md)) appear the same way while people vote on them.
 
-## 6. Stages
+## 7. Stages
 
 1. **Classes in the ship files** (a `class` field beside `role`), class and maker on every ship page, and **concepts** (a ship file can be marked as one: on the site, not yet in the game).
 2. **Shipyards:** buy, sell and trade in, with a first few hulls you can fly (Adder, Sidewinder, Python).
-3. **Trims and upgrades by class.**
-4. **Second-hand ships and a hangar.**
-5. **Line-ups filled out,** the Dragonfly first, and every new ship from here on starting from its class.
+3. **Ships earned by careers:** the Marshals' Lancer first, then the Falcon and the company hulls, the Constrictor last.
+4. **Upgrades by class.**
+5. **Second-hand ships and a hangar.**
+6. **Line-ups filled out,** the Dragonfly first, and every new ship from here on starting from its class.
 
 ## Credits
 
@@ -107,6 +124,5 @@ The class list and proportions draw on Samuel Penn's *Ships of Elite* for Mongoo
 
 ## Open questions
 
-- Should trims be bought as separate hulls, or as a refit of the one you have?
 - How many ships can one commander own at once?
 - Which hulls come first when shipyards open?

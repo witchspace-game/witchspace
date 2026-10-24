@@ -7,6 +7,7 @@ card: viper
 stages:
   - Transponders, records and running dark | built
   - Surrender, insurance and the Marshals | built
+  - A Marshals career for Dangerous commanders, and a Lancer of your own | proposed
   - Disabling, capture and boarding | proposed
   - Loans and loan sharks | proposed
   - Ship registry and flags | proposed
