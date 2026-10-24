@@ -7,6 +7,7 @@ card: lancer
 stages:
   - Shared space in beta: one system at a time | built
   - Commanders kept on the server; a shared economy | proposed
+  - Guilds and team insignia | proposed
   - Community-run servers | proposed
 help:
   - Fly shared space with a friend and report what broke | playtest
