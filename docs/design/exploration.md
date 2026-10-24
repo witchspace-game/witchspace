@@ -113,6 +113,26 @@ Alongside the station yards of [building worlds](companies-and-contracts.md#4b-b
 
 **New signals over time** *(proposed, not built)*. Today a system's signals are fixed, so a commander who has found them all has nothing left there but its trails. Instead, a few signals could be tied to the clock as well as the seed: a fresh beacon or wreck now and then, the same for everyone at the same moment (a stricken ship's beacon this week, gone by the next), so places you know keep giving. The old ones fall sunward as the new ones arrive. Each new one needs its people and its feeling, like the rest.
 
+## Hiding in the clutter *(stage 1 built October 2026; stage 2 proposed)*
+
+Wrecks already stop lasers. Clutter goes further: a ship in among the wreckage is hard to pick out at all. It gives the fight somewhere to go besides "shoot or run", and gives running dark a second use.
+
+**The rule.**
+- Inside a **wreck field** (about 700 m round its centre), you're lost in the clutter to any ship more than **1,500 m** away; with your transponder off (running dark), more than **600 m**.
+- **Firing gives you away.** For 3 seconds after you fire, everyone can see you wherever you are.
+- **It works both ways.** While you're in the clutter your scanner is cluttered too: contacts beyond 1,500 m drop off it. You don't get to watch them hunt you.
+- Derelicts (a single hull) are cover, not clutter.
+
+**What the hunter does.** An enemy that loses you doesn't forget you. It flies to where it last saw you and **searches**, circling the spot, for **30 seconds**. See you again and it attacks; time out and it gives up (a pirate goes back to hunting traders, police back to patrol). Police hunting a wanted commander search the same way: you can lie low from the law, too.
+
+**What you're told.** Entering a field: *In the clutter · hidden beyond 1.5 km*. When a hunter loses you: *Lost them · they're searching where they last saw you*. When one gives up: *They've given up the search*.
+
+**Stage 2 (proposed).** New places to hide, each with its people:
+- **Old battle zones:** a field of wrecks from a fight people still remember, for example the Marshals' last stand, with a memorial beacon left by the wing leader's widow, and salvage still out there for the brave.
+- **Asteroid fields:** rocks as cover, and later a reason for mining.
+- **Ambushes:** pirates lying in wait inside a field, so you enter one warily.
+- **Steering round:** enemies fly round wrecks and rocks instead of through them.
+
 ## Stage 3: witchspace itself
 
 - **Misjumps.** Rarely, a jump drops you in deep space between systems, with a wreck field or a signal and little fuel. Danger and drama, and the door to Thargoid space later.

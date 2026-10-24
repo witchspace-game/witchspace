@@ -79,7 +79,7 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
-import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
+import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
@@ -99,7 +99,7 @@ import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { countDevice, countNewCommander } from './net/stats';
 import { claimFirsts, firstsIn, loadFirsts } from './net/firsts';
-import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
+import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, showSystem, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
@@ -636,15 +636,32 @@ const welcomeHere = (c: Commander, here: StarSystem, now: number) => (recruiter 
  * Set a course to a system, however many jumps away: the first hop now, the
  * next after each jump (see hyperspace). Returns what to tell the commander.
  */
+/** The computer's route: the safe way (Modern), or simply the fewest jumps (Classic). */
+function routeTo(from: StarSystem, end: StarSystem): StarSystem[] | null {
+  if (modern()) return safeRoute(from, end);
+  const route: StarSystem[] = [];
+  for (let at: StarSystem | null = from; at && at !== end; ) {
+    at = nextHop(at, end);
+    if (!at) return null;
+    route.push(at);
+  }
+  return route.length ? route : null;
+}
+
 function plotCourse(c: Commander, system: number): string {
   const here = currentSystem();
   const end = systemAt(here.galaxy, system);
-  const hop = nextHop(here, end);
-  if (!hop) return `${end.name} is out of reach from here`;
+  const route = routeTo(here, end);
+  if (!route) return `${end.name} is out of reach from here`;
+  const hop = route[0];
   c.target = hop.index;
   c.courseTo = hop === end ? null : end.index;
-  const jumps = jumpsBetween(here, end);
-  return hop === end ? `Course set: ${end.name}` : `Course plotted to ${end.name}: ${jumps} jumps, first ${hop.name}${distanceLy(here, hop) > c.fuel ? ' (refuel first)' : ''}`;
+  if (hop === end) return `Course set: ${end.name}`;
+  // No safe way round: say where the danger is, before you go.
+  const risky = route.slice(0, -1).filter(DANGEROUS);
+  const warning = risky.length ? ` · no safe way: through ${risky.map((s) => `${s.name} (${GOVERNMENTS[s.government].toLowerCase()})`).join(', ')}` : '';
+  const longer = modern() && !risky.length && route.length > jumpsBetween(here, end, 30) ? ' · the safe way round' : '';
+  return `Course plotted to ${end.name}: ${route.length} jumps, first ${hop.name}${distanceLy(here, hop) > c.fuel ? ' (refuel first)' : ''}${longer}${warning}`;
 }
 let openFile: CompanyId | null = null;
 
@@ -837,6 +854,20 @@ $('#contracts').addEventListener('click', (e) => {
   renderDocked(); // the hold, credits and standing all change with a contract
 });
 
+/** A line of news with the system's name made a link: tap it to see the system on the chart. */
+function linkSystem(text: string, s: StarSystem): string {
+  const name = escapeHtml(s.name);
+  return escapeHtml(text).replace(name, `<button type="button" class="sys-link" data-system="${s.index}" title="Show ${name} on the chart">${name}</button>`);
+}
+
+$('#news-list').addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-system]');
+  if (!b) return;
+  b.blur(); // or Enter on the chart would press it again
+  if (!isMapOpen()) toggleGalaxyMap();
+  showSystem(systemAt(currentSystem().galaxy, Number(b.dataset.system)));
+});
+
 function renderNews() {
   const here = currentSystem();
   const now = Date.now();
@@ -846,7 +877,7 @@ function renderNews() {
     .slice(0, 8);
   const attacks = attackNews(here, now)
     .map(
-      (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${escapeHtml(`Traders attacked near ${n.where.name}: ${n.lost} shipments lost`)}</b>
+      (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Traders attacked near ${n.where.name}: ${n.lost} shipments lost`, n.where)}</b>
         <small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · heard ${ago(now - n.heard)} ago · Wanted: whatever it imports</small></li>`,
     )
     .join('');
@@ -855,7 +886,7 @@ function renderNews() {
     ? yardsNear(here, now)
         .slice(0, 3)
         .map(
-          (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${escapeHtml(`Wexley-Yorozu yard at ${n.where.name}: ${stageInfo(n.yard.stage).news}`)}</b>
+          (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Wexley-Yorozu yard at ${n.where.name}: ${stageInfo(n.yard.stage).news}`, n.where)}</b>
         <small>${escapeHtml(n.where === here ? 'Here, by the moon' : `${n.distance.toFixed(1)} LY away`)} · ${escapeHtml(stageLabel(n.yard))}</small></li>`,
         )
         .join('')
@@ -867,7 +898,7 @@ function renderNews() {
           const local = n.where === here;
           const over = now > n.event.end;
           const status = local ? (over ? 'Over' : 'Here, now') : over ? 'May be over by now' : `${n.distance.toFixed(1)} LY away · news ${ago(n.heard - n.event.start)} old when it arrived`;
-          return `<li class="${local ? 'here' : ''}${over ? ' over' : ''}"><b>${escapeHtml(kind.headline(n.where.name))}</b>
+          return `<li class="${local ? 'here' : ''}${over ? ' over' : ''}"><b>${linkSystem(kind.headline(n.where.name), n.where)}</b>
             <small>${escapeHtml(status)} · heard ${ago(now - n.heard)} ago · Wanted: ${escapeHtml(kind.wanted)}</small></li>`;
         })
         .join('')
@@ -1421,6 +1452,31 @@ const PIRATE_CHANCE = [0.75, 0.55, 0.4, 0.3, 0.25, 0.15, 0.1, 0.06];
 const TRADERS_BY_GOVERNMENT = [1, 1, 2, 2, 2, 3, 3, 3];
 const ENCOUNTER_INTERVAL = 40; // seconds between rolls for pirates
 const MAX_PIRATES = 4;
+const CALM_BETWEEN_FIGHTS = 20; // seconds after a fight before the next roll (+10 s per step of government safety)
+const FIGHT_NEAR = 12000; // metres: pirates this close count as a fight on
+let lastFightAt = -Infinity;
+
+// Word gets round (Modern): every pirate you destroy in a system makes the
+// next lot there warier, so they come less often and later: a good pilot
+// can earn quickly, but not forever. It fades with time (halving every 10
+// minutes), so a system you come back to later has forgotten you.
+const WARY_HALF_LIFE = 10 * 60 * 1000; // ms
+const WARY_ODDS = 0.88; // each loss multiplies the odds of the next attack by this
+const WARY_CALM = 5; // seconds more quiet per loss
+const pirateLosses = new Map<string, { n: number; at: number }>();
+const toldWary = new Set<string>(); // systems where you've been told, so it's said once
+function wariness(): number {
+  const w = pirateLosses.get(systemKey(currentSystem()));
+  return w ? w.n * 0.5 ** ((Date.now() - w.at) / WARY_HALF_LIFE) : 0;
+}
+function pirateLost() {
+  if (!modern()) return;
+  const before = wariness();
+  pirateLosses.set(systemKey(currentSystem()), { n: before + 1, at: Date.now() });
+  if (before + 1 >= 6 && !toldWary.has(systemKey(currentSystem())) && toldWary.add(systemKey(currentSystem()))) setTimeout(() => state === 'flying' && flash('Word gets round · pirates here are giving you a wide berth', 4), 3000);
+}
+/** Pirates about you, or anyone out to get you. */
+const fightOn = () => npcs.some((n) => n.hostile || (n.role === 'pirate' && n.obj.position.distanceTo(player.obj.position) < FIGHT_NEAR));
 const BOUNTIES: Record<string, number> = { sidewinder: 50, mamba: 80, falcon: 2000 };
 /** The Falcon, the Legend of the lanes: a chance in each pirate encounter, by government (anarchies most). */
 const FALCON_CHANCE = [0.04, 0.03, 0.02, 0.015, 0.01, 0.01, 0.005, 0.005];
@@ -1527,8 +1583,11 @@ function spawnPirates(near: THREE.Vector3): false | 'pirates' | 'falcon' {
     spawnFalcon(centre, near);
     return 'falcon';
   }
-  const anarchy = currentSystem().government === 0;
-  const count = Math.min(MAX_PIRATES - ofRole('pirate').length, 1 + Math.floor(Math.random() * (anarchy ? 3 : 2)));
+  const gov = currentSystem().government;
+  // Pirates hunt in packs (Modern): two to four in an anarchy, two or three in
+  // a feudal system, one or two where it's safer. Classic keeps 1984's sizes.
+  const [least, extra] = !modern() ? [1, gov === 0 ? 3 : 2] : gov === 0 ? [2, 3] : gov === 1 ? [2, 2] : [1, 2];
+  const count = Math.min(MAX_PIRATES - ofRole('pirate').length, least + Math.floor(Math.random() * extra));
   for (let i = 0; i < count; i++) {
     const def = Math.random() < 0.6 ? 'sidewinder' : 'mamba';
     const npc = addNpc(def, 'pirate', centre.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(300)), centre);
@@ -1614,10 +1673,16 @@ function updateTraffic(dt: number) {
     traderTimer = 25 + Math.random() * 35;
     if (ofRole('trader').length < TRADERS_BY_GOVERNMENT[sys.government]) spawnTrader(Math.random() < 0.6 || reserved);
   }
+  // Pacing (Modern): one fight at a time, and a breather after each, longer
+  // in safer systems, so trouble comes in beats you can follow. (Classic
+  // keeps 1984's: a roll every so often, whatever else is going on.)
+  if (fightOn()) lastFightAt = elapsed;
+  const wary = modern() ? wariness() : 0;
+  const calm = !modern() || (!fightOn() && elapsed - lastFightAt > CALM_BETWEEN_FIGHTS + sys.government * 10 + wary * WARY_CALM);
   encounterTimer -= dt;
-  if (encounterTimer <= 0 && state === 'flying') {
+  if (encounterTimer <= 0 && state === 'flying' && calm) {
     encounterTimer = ENCOUNTER_INTERVAL * (0.6 + Math.random() * 0.8);
-    if (ofRole('pirate').length < MAX_PIRATES && Math.random() < PIRATE_CHANCE[sys.government]) {
+    if (ofRole('pirate').length < MAX_PIRATES && Math.random() < PIRATE_CHANCE[sys.government] * WARY_ODDS ** wary) {
       const met = spawnPirates(player.obj.position);
       if (met) flash(met === 'falcon' ? 'Unidentified contact on scanner' : 'Contacts on scanner', 2);
     }
@@ -1999,7 +2064,8 @@ function buildSystemScene(sys: StarSystem) {
   // Some traffic already about, and maybe trouble soon after arrival.
   for (let i = 0; i < TRADERS_BY_GOVERNMENT[sys.government] - 1; i++) spawnTrader(true, 5000 + Math.random() * 10000);
   traderTimer = 15;
-  encounterTimer = 12 + Math.random() * 10;
+  encounterTimer = modern() ? 25 + Math.random() * 15 : 12 + Math.random() * 10; // Modern: after the arrival news has been read
+  lastFightAt = -Infinity;
   scanned = false;
   scanProgress = 0;
   unpinned = hail = null;
@@ -2195,6 +2261,25 @@ function coverTargets<T>(value: T): Target<T>[] {
     if (p.beacon) out.push({ value, position: p.beacon.position, radius: BEACON_RADIUS });
   }
   return out;
+}
+
+// Hiding in the clutter (docs/design/exploration.md): in a wreck field you're
+// lost to ships beyond a short range, unless you've just fired. Your scanner
+// is cluttered the same way.
+const CLUTTER_RADIUS = 700; // metres round a wreck field's centre
+const HIDDEN_BEYOND = 1500; // metres
+const HIDDEN_BEYOND_DARK = 600; // metres, transponder off
+const SHOT_GIVES_AWAY = 3; // seconds after firing that everyone can see you
+let lastShotAt = -Infinity;
+let wasInClutter = false;
+
+function inClutter(pos: THREE.Vector3) {
+  return scenePois.some((p) => p.poi.kind === 'wrecks' && p.position.distanceTo(pos) < CLUTTER_RADIUS);
+}
+/** Whether a ship at this distance can pick the player out. */
+function playerVisibleAt(distance: number) {
+  if (!exploring() || !inClutter(player.obj.position) || elapsed - lastShotAt < SHOT_GIVES_AWAY) return true;
+  return distance < (dark() ? HIDDEN_BEYOND_DARK : HIDDEN_BEYOND);
 }
 
 /** The wreck or beacon the ship has run into, pushing it back out; null if none. */
@@ -2481,6 +2566,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   removeNpc(npc);
   if (carrier?.npc === npc) bastionDestroyed(carrier, velocity, killer === player.obj);
   if (killer !== player.obj) return;
+  if (npc.role === 'pirate') pirateLost();
 
   const c = cmdr();
   const before = combatRating(c.kills);
@@ -2899,6 +2985,7 @@ function firePlayerLaser() {
   }
   if (surrenderTimer !== null) breakSurrender();
   laserCooldown = laser.interval;
+  lastShotAt = elapsed;
   laserHeat += laser.heat;
   if (laserHeat >= 100) {
     overheated = true;
@@ -2978,9 +3065,22 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       playerWanted: (isFugitive() && identified()) || defiedPolice,
       npcs,
       inSafeZone: (at: THREE.Vector3) => cmdr().difficulty === 'classic' && inSafeZone(at),
+      canSee: (npc: NpcShip) => playerVisibleAt(npc.obj.position.distanceTo(player.obj.position)),
       cargoValue: (ship: PlayerShip) => (ship === player ? (commander ? holdValue(cmdr().cargo) : 0) : holdValue(npcs.find((n) => n.ship === ship)?.cargo ?? {})),
     };
+    const hunting = (n: NpcShip) => n.target === player && (n.mode === 'attack' || n.mode === 'breakoff');
+    const before = new Map(npcs.map((n) => [n, n.mode === 'search' ? 'search' : hunting(n) ? 'hunt' : '']));
     for (const npc of npcs) think(npc, world);
+    // Tell the player: into the clutter, and when the hunt changes (lost, or given up).
+    const nowIn = alive && exploring() && inClutter(player.obj.position);
+    const lost = alive && npcs.some((n) => before.get(n) === 'hunt' && n.mode === 'search');
+    const notes = [
+      nowIn && !wasInClutter ? `In the clutter · hidden beyond ${((dark() ? HIDDEN_BEYOND_DARK : HIDDEN_BEYOND) / 1000).toFixed(1)} km` : '',
+      lost ? 'Lost them · they’re searching where they last saw you' : '',
+      !lost && alive && npcs.some((n) => before.get(n) === 'search' && n.mode !== 'search' && !hunting(n)) ? 'They’ve given up the search' : '',
+    ].filter(Boolean);
+    if (notes.length) flash(notes.join(' · '), notes.length > 1 ? 4 : 2.5);
+    wasInClutter = nowIn;
     for (const npc of npcs) maybeFireNpcMissile(npc);
   }
   updateMissiles(dt);
@@ -3315,6 +3415,7 @@ function fireMissile() {
   c.missiles -= 1;
   saveCommander(c);
   launchMissile(player, locked.ship);
+  lastShotAt = elapsed; // a launch gives you away too
   flash(`Missile away · ${locked.def.name}`, 1.2);
   locked = null;
 }
@@ -4050,9 +4151,13 @@ function updateSpace(dt: number) {
   dust.update(camera.position, state === 'flying' ? player.forward().multiplyScalar(player.speed) : new THREE.Vector3());
 
   const sighted = state === 'flying' ? sightedNpc() : null;
+  // In a wreck field your scanner is cluttered too: far contacts drop off it.
+  const cluttered = state === 'flying' && exploring() && inClutter(player.obj.position);
   const blips: Blip[] = [
     { position: station.root.position, color: '#ffb347', kind: 'station' },
-    ...npcs.map((p): Blip => ({ position: p.obj.position, color: npcColour(p), kind: 'ship', sighted: p === sighted, locked: p === locked })),
+    ...npcs
+      .filter((p) => !cluttered || p.obj.position.distanceTo(player.obj.position) < HIDDEN_BEYOND)
+      .map((p): Blip => ({ position: p.obj.position, color: npcColour(p), kind: 'ship', sighted: p === sighted, locked: p === locked })),
     ...drifters.map((d): Blip => ({ position: d.model.root.position, color: '#ffd166', kind: 'cargo' })),
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
@@ -5023,7 +5128,7 @@ function updateRadio(dt: number) {
   distressTimer -= dt;
   if (distressTimer <= 0) {
     distressTimer = 100 + Math.random() * 120;
-    if (hasArray() && !distresses.length && ofRole('pirate').length < MAX_PIRATES - 1 && Math.random() < PIRATE_CHANCE[currentSystem().government] + 0.15) spawnDistress();
+    if (hasArray() && !distresses.length && !fightOn() && ofRole('pirate').length < MAX_PIRATES - 1 && Math.random() < PIRATE_CHANCE[currentSystem().government] + 0.15) spawnDistress();
   }
 }
 
@@ -5728,7 +5833,7 @@ async function hyperspace() {
   let routeNote = '';
   if (c.courseTo !== null && c.courseTo !== undefined) {
     const end = systemAt(dest.galaxy, c.courseTo);
-    const hop = nextHop(dest, end);
+    const hop = routeTo(dest, end)?.[0];
     if (hop) {
       c.target = hop.index;
       routeNote = `Next jump plotted: ${hop.name}${hop === end ? '' : ` (on the way to ${end.name})`}${distanceLy(dest, hop) > c.fuel ? ' · refuel first' : ''}`;
@@ -6091,6 +6196,8 @@ if (import.meta.env.DEV) {
       get autopilot() { return autopilot; },
       get explore() { return { bodies: sceneBodies, pois: scenePois, planetPos, survey }; },
       get yard() { return yardScene; },
+      /** Encounter pacing: the next roll, the last fight, and how wary the pirates are here. */
+      get pacing() { return { encounterTimer, sinceFight: elapsed - lastFightAt, fightOn: fightOn(), wary: wariness() }; },
       /** Yards at work in this galaxy now. */
       yards: () => yardsOf(currentSystem().galaxy, Date.now()),
       /** Hyperspace straight to a system in this galaxy, fuel or not. */

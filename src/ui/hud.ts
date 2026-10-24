@@ -68,19 +68,68 @@ let bannerTimer = 0;
 /** Messages that warn of danger or trouble with the law get a red edge. */
 const DANGER = /incoming|destroyed!|fugitive|offender|sting|lost|refused|under attack|overheated|game over|warrant|cease fire|damaged|hostile/i;
 
+// Messages wait their turn, so each can be read: one stays up long enough to
+// read before the next replaces it. A warning shows at once; so does an update
+// of the message on screen (the same words before the first " · ", like a
+// countdown); a repeat just keeps it up. A few at most wait, oldest dropped.
+const QUEUE_MAX = 3;
+const readTime = (text: string, seconds: number) => Math.min(seconds, Math.max(1.8, text.length / 18));
+const topic = (text: string) => text.split(' · ')[0];
+let showing = '';
+let shownAt = 0;
+let sticky = false; // shown with no time limit (game over): nothing replaces it
+let queue: { text: string; seconds: number }[] = [];
+let queueTimer = 0;
+
 export function flash(text: string, seconds = 2.5) {
+  const now = performance.now() / 1000;
+  const up = !banner.hidden;
+  if (up && text === showing && !sticky) return show(text, seconds, false);
+  const urgent = DANGER.test(text) || seconds === 0;
+  if (!up || urgent || (!sticky && (topic(text) === topic(showing) || now - shownAt >= readTime(showing, 99)))) return show(text, seconds, true);
+  if (sticky) return;
+  queue = queue.filter((q) => topic(q.text) !== topic(text));
+  queue.push({ text, seconds });
+  if (queue.length > QUEUE_MAX) queue.shift();
+  clearTimeout(queueTimer);
+  queueTimer = window.setTimeout(next, (readTime(showing, 99) - (now - shownAt)) * 1000);
+}
+
+function show(text: string, seconds: number, fresh: boolean) {
   banner.textContent = text;
   banner.hidden = false;
   banner.classList.toggle('danger', DANGER.test(text));
-  // Restart the entrance each time a new message arrives.
-  banner.classList.remove('pop');
-  void banner.offsetWidth;
-  banner.classList.add('pop');
+  if (fresh) {
+    showing = text;
+    shownAt = performance.now() / 1000;
+    sticky = seconds === 0;
+    // Restart the entrance each time a new message arrives.
+    banner.classList.remove('pop');
+    void banner.offsetWidth;
+    banner.classList.add('pop');
+  }
   clearTimeout(bannerTimer);
-  if (seconds > 0) bannerTimer = window.setTimeout(() => (banner.hidden = true), seconds * 1000);
+  if (seconds > 0) bannerTimer = window.setTimeout(() => {
+    banner.hidden = true;
+    next();
+  }, seconds * 1000);
+  if (fresh && queue.length) {
+    clearTimeout(queueTimer);
+    queueTimer = window.setTimeout(next, readTime(text, seconds || 99) * 1000);
+  }
 }
+
+function next() {
+  if (sticky) return;
+  const n = queue.shift();
+  if (n) show(n.text, Math.max(n.seconds, readTime(n.text, n.seconds)), true);
+}
+
 export function clearFlash() {
   banner.hidden = true;
+  queue = [];
+  sticky = false;
+  clearTimeout(queueTimer);
 }
 
 let interference = 0;

@@ -23,8 +23,9 @@ export const allies = (a: NpcRole, b: NpcRole) => a === b || (LAW.includes(a) &&
  * - attack: chase `target` and fire when lined up
  * - breakoff: peel away after a close pass, then come round again
  * - flee: run directly away from `target` at full speed
+ * - search: lost sight of `target`; circle where it was last seen (`lastSeen`)
  */
-export type NpcMode = 'patrol' | 'travel' | 'attack' | 'breakoff' | 'flee';
+export type NpcMode = 'patrol' | 'travel' | 'attack' | 'breakoff' | 'flee' | 'search';
 
 const STEER_GAIN = 3;
 const FIRE_CONE = THREE.MathUtils.degToRad(3);
@@ -32,6 +33,7 @@ const BREAKOFF_RANGE = 300; // metres: too close, peel away
 const BREAKOFF_TIME = 2.6; // seconds before coming round again
 const AIM_SPREAD = THREE.MathUtils.degToRad(0.7); // so they don't hit with every shot
 const CRUISE = 0.6; // fraction of top speed when travelling
+const SEARCH_RADIUS = 350; // metres: the circle flown round where the target was last seen
 
 /**
  * Pitch, yaw and roll commands that turn a ship towards a world point,
@@ -68,6 +70,9 @@ export class NpcShip {
   /** The ship being attacked or fled from: the player's ship or another NPC's. */
   target: PlayerShip | null = null;
   destination: THREE.Vector3 | null = null;
+  /** Where the target was when this ship last saw it, and how long it will go on searching there. */
+  lastSeen: THREE.Vector3 | null = null;
+  searchLeft = 0;
   /** Who last shot at us, and how long ago. */
   attacker: PlayerShip | null = null;
   attackedAgo = Infinity;
@@ -171,6 +176,7 @@ export class NpcShip {
       heatShip(this.model, Math.max(0, this.flash / 0.18));
     }
     if ((this.mode === 'attack' || this.mode === 'breakoff' || this.mode === 'flee') && !this.target) this.mode = 'patrol';
+    if (this.mode === 'search' && !this.lastSeen) this.mode = 'patrol';
     if (this.mode === 'travel' && !this.destination) this.mode = 'patrol';
 
     let steer: Pick<FlightInput, 'pitch' | 'yaw' | 'roll'>;
@@ -196,6 +202,15 @@ export class NpcShip {
     } else if (this.mode === 'flee') {
       steer = this.steerTo(this.obj.position.clone().sub(toTarget!.setLength(1000)));
       speed = max;
+    } else if (this.mode === 'search') {
+      // Close in on the spot, then circle it, looking.
+      this.searchLeft -= dt;
+      const from = this.obj.position.clone().sub(this.lastSeen!);
+      from.y *= 0.3;
+      if (from.lengthSq() < 1) from.set(1, 0, 0);
+      const round = new THREE.Vector3(-from.z, 0, from.x).setLength(SEARCH_RADIUS * 0.8);
+      steer = this.steerTo(this.lastSeen!.clone().add(from.setLength(SEARCH_RADIUS)).add(round));
+      speed = max * CRUISE;
     } else if (this.mode === 'travel') {
       steer = this.steerTo(this.destination!);
       speed = max * CRUISE;
