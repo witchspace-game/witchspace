@@ -56,6 +56,7 @@ A parking spot for good ideas that aren't designed yet. When one is picked up, i
 ## Community and content
 
 - **Legends.** Rare, secret encounters and easter-egg ships that nod to great science fiction, plus tributes to *Elite*'s own legends. On the [roadmap](../README.md#roadmap); see the homage rules in [CONTRIBUTING](../CONTRIBUTING.md#legends-and-homages).
+- **In-world channels: the companies' own broadcasts.** Wexley-Yorozu's corporate films ("Building tomorrow's stations, today": smiling, glossy, a little sinister), Co-operative Marshals public information films, and leaked footage from Solo & Sons. Start as series on @witchspacegame, in each company's voice, before any gets a channel of its own. (Mark, 24 October 2026)
 - **A Witchspace YouTube channel** of Shorts from commanders' flight recorders, put forward by any commander and edited and published by an AI agent (with a person approving at first). *See design/flight-recorder.md, section 5.* (Mark, 24 October 2026)
 - **Witchspace MCP server.** Tools for AI assistants to validate, preview and balance-check content. *Designed: see design/mcp-server.md.*
 - **In-browser ship editor.** Design a ship visually and export a valid ship file.
