@@ -135,7 +135,7 @@ Wrecks already stop lasers. Clutter goes further: a ship in among the wreckage i
 
 ## Planetfall *(proposed, later)*
 
-Going below orbit, in stages: first skimming a planet's upper atmosphere (a Darner's wings make it the first ship that can, [the Darner](ship-the-darner.md#later-down-to-a-planet-mark-october-2026)), then landing pads at settlements, then real surfaces to fly over and explore. Each stage needs its places and its people, like everything else here.
+Going below orbit, in stages: first skimming a planet's upper atmosphere (a Dragonfly's wings make it the first ship that can, [the Dragonfly](ship-the-dragonfly.md#later-down-to-a-planet-mark-october-2026)), then landing pads at settlements, then real surfaces to fly over and explore. Each stage needs its places and its people, like everything else here.
 
 ## Stage 3: witchspace itself
 
