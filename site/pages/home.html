@@ -1,4 +1,4 @@
-<!-- {"path": "/", "title": "Witchspace: a love letter to Elite", "description": "A free, open-source space game in your browser. Trade, fight, explore and build in eight galaxies of glowing vector space, a love letter to Elite (1984).", "scripts": ["/src/site/hero.ts", "/src/site/home.ts", "/src/site/live.ts"], "bodyClass": "home"} -->
+<!-- {"path": "/", "title": "Witchspace: a love letter to Elite", "description": "A free, open-source space game in your browser. Trade, fight, explore and build in eight galaxies of glowing vector space, a love letter to Elite (1984).", "scripts": ["/src/site/hero.ts", "/src/site/home.ts", "/src/site/live.ts", "/src/site/youtube.ts"], "bodyClass": "home"} -->
 <section class="hero">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="hero-glow" aria-hidden="true"></div>
@@ -90,7 +90,7 @@
     <p class="lede">Bloom, colour and shattering explosions, or white lines on black as in 1984: press <kbd>M</kbd> at any moment. Drag the picture to compare.</p>
   </div>
   <div class="fly">
-    <video class="trailer" controls preload="none" playsinline poster="{{media:trailer-2:large}}"><source src="{{media:trailer-2:video}}" type="video/mp4" /></video>
+    <button type="button" class="trailer yt" data-embed="{{media:trailer-2:embed}}" aria-label="Play the trailer" style="--poster: url('{{media:trailer-2:large}}')"><span class="shot-play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></button>
     <div class="compare" id="compare" style="--pos: 46%">
       <img src="/screens/pair-1984.jpg" alt="The same moment in 1984 mode: a pirate pack over a ringed world in white lines on black" width="1920" height="1080" loading="lazy" />
       <img class="compare-top" src="/screens/pair-neo.jpg" alt="A pirate pack over a ringed world in neo-vector mode, glowing lines and bloom" width="1920" height="1080" loading="lazy" />

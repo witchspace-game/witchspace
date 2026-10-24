@@ -15,6 +15,8 @@ export interface MediaItem {
   poster?: string;
   /** When it was made (YYYY-MM-DD), for files not kept in git; otherwise the first commit's date. */
   added?: string;
+  /** Its id on the Witchspace YouTube channel: played from there (free to stream at any scale), downloads still come from Cloudinary. */
+  youtube?: string;
   /** Seconds into a video for its still. */
   posterOffset?: number;
   title: string;
@@ -63,6 +65,8 @@ export function links(media: Media, item: MediaItem) {
     // The share card: the picture, stamped with the name and address so a shared link is ours at a glance.
     og: still(`${fit},w_1200,h_630,q_auto,f_jpg/${BRAND}`),
     video: item.kind === 'video' ? (up ? `${base}/q_auto/${path}.mp4` : local(item.file)) : undefined,
+    /** The YouTube player, privacy-enhanced (no cookies until it plays). */
+    embed: item.youtube ? `https://www.youtube-nocookie.com/embed/${item.youtube}?autoplay=1&rel=0&playsinline=1` : undefined,
     /** The original file, as a download. */
     download: up ? `${base}/fl_attachment:witchspace-${item.id}/${path}.${item.kind === 'video' ? 'mp4' : 'jpg'}` : local(item.file),
     /** A plain link to the full-size file, for embedding elsewhere. */
@@ -108,7 +112,7 @@ ${media.items.map((item) => card(media, item)).join('\n')}
 export function galleryData(media: Media): string {
   const data = media.items.map((item) => {
     const l = links(media, item);
-    return { id: item.id, kind: item.kind, title: item.title, caption: item.caption, info: describe(item), large: l.large, video: l.video, og: l.og, download: l.download, direct: l.direct };
+    return { id: item.id, kind: item.kind, title: item.title, caption: item.caption, info: describe(item), large: l.large, video: l.video, embed: l.embed, og: l.og, download: l.download, direct: l.direct };
   });
   return `<script type="application/json" id="press-media">${JSON.stringify(data).replace(/</g, '\\u003c')}</script>`;
 }
@@ -125,7 +129,9 @@ export function itemPage(media: Media, item: MediaItem, site: string) {
   const others = media.items.filter((i) => i.id !== item.id && i.group === item.group).slice(0, 3);
   const figure =
     item.kind === 'video'
-      ? `<video class="item-media" controls playsinline preload="metadata" poster="${l.large}"><source src="${l.video}" type="video/mp4" /></video>`
+      ? l.embed
+        ? `<button type="button" class="item-media yt" data-embed="${l.embed}" aria-label="Play ${esc(item.title)}" style="--poster: url('${l.large}')"><span class="shot-play">${PLAY_ICON}</span></button>`
+        : `<video class="item-media" controls playsinline preload="metadata" poster="${l.large}"><source src="${l.video}" type="video/mp4" /></video>`
       : `<a href="${l.direct}"><img class="item-media" src="${l.large}" alt="${esc(item.caption)}" width="${item.width ?? 1920}" height="${item.height ?? 1080}" /></a>`;
   const head =
     item.kind === 'video'
@@ -137,7 +143,7 @@ export function itemPage(media: Media, item: MediaItem, site: string) {
     description: item.caption,
     image: l.og,
     head,
-    scripts: ['/src/site/share.ts'],
+    scripts: ['/src/site/share.ts', '/src/site/youtube.ts'],
     bodyClass: 'press-item',
     content: `<section class="section item">
   <a class="back" href="/press/#gallery">← The press kit</a>

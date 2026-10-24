@@ -14,6 +14,8 @@ interface Item {
   info: string;
   large: string;
   video?: string;
+  /** The YouTube player, when the video is on the channel. */
+  embed?: string;
   og: string;
   download: string;
   direct: string;
@@ -65,7 +67,9 @@ function show(item: Item) {
   index = items.indexOf(item);
   stage.innerHTML =
     item.kind === 'video'
-      ? `<video src="${item.video}" poster="${item.large}" controls autoplay playsinline></video>`
+      ? item.embed
+        ? `<iframe src="${item.embed}" title="${item.title.replace(/"/g, '&quot;')}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>`
+        : `<video src="${item.video}" poster="${item.large}" controls autoplay playsinline></video>`
       : `<img src="${item.large}" alt="${item.caption.replace(/"/g, '&quot;')}" />`;
   viewer.querySelector('.viewer-text strong')!.textContent = item.title;
   viewer.querySelector('.viewer-text span')!.textContent = item.caption;

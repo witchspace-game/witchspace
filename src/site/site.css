@@ -995,3 +995,10 @@ body.menu-open { overflow: hidden; }
 .mcp-card code { font-size: 0.9em; background: var(--surface-2); padding: 2px 6px; border-radius: 6px; overflow-wrap: anywhere; }
 .mcp-card .mcp-url { font-size: 1em; padding: 6px 10px; color: var(--accent); margin-right: 8px; }
 .mcp-card ul { margin: 12px 0; }
+
+/* YouTube videos: our poster and a play button until pressed (src/site/youtube.ts). */
+button.yt { position: relative; display: block; width: 100%; aspect-ratio: 16 / 9; padding: 0; border: 0; cursor: pointer; background: #000 var(--poster) center / cover no-repeat; border-radius: 14px; overflow: hidden; }
+button.yt .shot-play { position: absolute; inset: 0; margin: auto; }
+button.yt:hover .shot-play, button.yt:focus-visible .shot-play { transform: scale(1.08); }
+iframe.yt { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 14px; background: #000; }
+.viewer-stage iframe { width: min(100%, calc((100vh - 220px) * 16 / 9)); aspect-ratio: 16 / 9; border: 0; background: #000; }
