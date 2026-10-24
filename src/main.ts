@@ -66,7 +66,7 @@ import { allies, NpcShip, type NpcRole } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
 import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
 import { sessionToken, signedIn, currentAccount } from './net/account';
-import { claimCallsign, commanderSaved, initAccount, isAccountPanelOpen, toggleAccountPanel } from './ui/accountPanel';
+import { claimCallsign, commanderSaved, initAccount, isAccountPanelOpen, titleShown, toggleAccountPanel } from './ui/accountPanel';
 import { cleanName } from '../server/src/protocol';
 import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
 import { think } from './game/ai';
@@ -427,6 +427,7 @@ function showTitle() {
   updateSharedButton();
   disarmNewCommander();
   setState('title');
+  titleShown();
 }
 
 // There's one commander at a time, and their rules can't change, so starting
@@ -6045,4 +6046,5 @@ void initAccount({
   commanderReplaced: () => {
     if (state === 'title') showTitle();
   },
+  onTitle: () => state === 'title',
 });
