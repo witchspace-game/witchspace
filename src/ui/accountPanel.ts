@@ -15,6 +15,8 @@ export interface AccountHooks {
   flash: (text: string, seconds?: number) => void;
   /** The commander changed under us (loaded from the cloud): refresh the title. */
   commanderReplaced: () => void;
+  /** Whether the title screen is showing: the only place the panel opens by itself. */
+  onTitle: () => boolean;
 }
 
 const panel = document.querySelector<HTMLElement>('#account-panel')!;
@@ -62,7 +64,13 @@ export async function initAccount(h: AccountHooks) {
 
 /** Called after every local save. */
 export function commanderSaved(c: Commander) {
+  if (choice) return; // waiting for you to choose which commander to keep
   acct.queueSave(c, () => void resolveConflict());
+}
+
+/** Back at the title: if there's a choice waiting, ask it now. */
+export function titleShown() {
+  if (choice) toggleAccountPanel(true);
 }
 
 /** Rename, keeping the account's callsign in step. Returns the name to use. */
@@ -129,7 +137,9 @@ async function resolveConflict() {
     return;
   }
   choice = { local, cloud, updated: updated! };
-  toggleAccountPanel(true);
+  // Never in the middle of a fight: say so once, and ask at the title screen.
+  if (hooks.onTitle()) toggleAccountPanel(true);
+  else hooks.flash('Your account has a different commander saved · choose which to keep on the title screen', 5);
 }
 
 async function choose(keep: 'local' | 'cloud') {
@@ -140,7 +150,7 @@ async function choose(keep: 'local' | 'cloud') {
     hooks.commanderReplaced();
   } else {
     acct.markSynced(choice.updated); // we've seen the server's version; ours replaces it
-    await acct.pushSave(choice.local);
+    await acct.pushSave(loadCommander() ?? choice.local); // as it is now, not when the clash was found
   }
   choice = null;
   view = 'main';
