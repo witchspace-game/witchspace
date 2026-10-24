@@ -269,6 +269,7 @@ function updateShipPanel() {
   const { def } = showroomModels[shipIndex];
   const s = def.stats;
   $('#ship-name').textContent = def.name;
+  $('.ship-nav-name').textContent = def.name;
   $('#ship-meta').textContent = [def.manufacturer, def.role].filter(Boolean).join(' · ');
   $('#ship-desc').textContent = def.description;
   const rows: [string, string][] = [
@@ -332,6 +333,27 @@ function updateShowroom(dt: number) {
   camera.lookAt(0, 0, 0);
   showroom.stars.position.copy(camera.position);
   frameShipInSpace();
+  placeShipNav(model.radius, dist);
+}
+
+/** The ship browser sits just under the ship, wherever the ship is on screen, clear of the panel and buttons. */
+function placeShipNav(radius: number, dist: number) {
+  const nav = $('#ship-nav');
+  if (state !== 'title') return;
+  camera.updateMatrixWorld();
+  const centre = new THREE.Vector3(0, 0, 0).project(camera);
+  const x = ((centre.x + 1) / 2) * innerWidth;
+  const y = ((1 - centre.y) / 2) * innerHeight;
+  const shipPx = (radius / dist) * (innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
+  const space = showroomSpace();
+  const controls = document.querySelector<HTMLElement>('nav.controls[data-screen="title"]');
+  const floor = Math.min(space ? space.bottom - 52 : innerHeight, controls && !sideways.matches ? controls.getBoundingClientRect().top - 56 : innerHeight - 56);
+  // On a phone the open space round the ship is tight: the arrows go either side of it instead.
+  const flank = space !== null;
+  nav.classList.toggle('flank', flank);
+  if (space) nav.style.setProperty('--w', `${Math.round(space.right - space.left - 24)}px`);
+  nav.style.setProperty('--x', `${Math.round(x)}px`);
+  nav.style.setProperty('--y', `${Math.round(flank ? y - 22 : Math.min(y + shipPx * 0.75 + 16, floor))}px`);
 }
 
 /** Phones on their side: the title screen's card and buttons share a column on the left (style.css). */
@@ -382,11 +404,29 @@ function frameShipInSpace() {
 const inShowroom = () => state === 'title' || state === 'docked' || state === 'newgame';
 const onControl = (e: Event) => Boolean((e.target as HTMLElement).closest('button, a, input, .panel, #galaxy-map, #controls-card'));
 
+// On the title screen a quick sideways flick changes the ship (a slow drag
+// still turns it), on the ship or on its card.
+const flick = { x: 0, y: 0, t: 0, spinY: 0, on: false };
+function flickStart(e: PointerEvent) {
+  Object.assign(flick, { x: e.clientX, y: e.clientY, t: performance.now(), spinY: spin.y, on: state === 'title' });
+}
+function flickEnd(e: PointerEvent) {
+  if (!flick.on) return;
+  flick.on = false;
+  const dx = e.clientX - flick.x;
+  const dy = e.clientY - flick.y;
+  if (performance.now() - flick.t > 350 || Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 2) return;
+  spin.y = flick.spinY; // it was a flick, not a turn
+  showShip(shipIndex + (dx < 0 ? 1 : -1));
+}
+document.querySelector<HTMLElement>('.panel[data-screen="title"]')?.addEventListener('pointerdown', flickStart);
+
 addEventListener('pointerdown', (e) => {
   if (!inShowroom() || onControl(e)) return;
   spin.dragging = true;
   spin.lastX = e.clientX;
   spin.lastY = e.clientY;
+  flickStart(e);
 });
 addEventListener('pointermove', (e) => {
   if (!spin.dragging) return;
@@ -396,7 +436,10 @@ addEventListener('pointermove', (e) => {
   spin.lastY = e.clientY;
   spin.idle = 0;
 });
-addEventListener('pointerup', () => (spin.dragging = false));
+addEventListener('pointerup', (e) => {
+  spin.dragging = false;
+  flickEnd(e);
+});
 addEventListener(
   'wheel',
   (e) => {

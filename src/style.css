@@ -1340,12 +1340,9 @@ body.touch .prompt { display: none; }
 }
 
 /* Title screen: keyboard letters for keyboards; on touch, one clear way in. */
-.touch-word, .ship-browse { display: none; }
+.touch-word { display: none; }
 body.touch .key { display: none; }
 body.touch .touch-word { display: inline; }
-body.touch nav.controls[data-screen='title'] .prev-next { display: none; }
-body.touch .ship-browse { display: flex; gap: 6px; float: right; }
-body.touch .ship-browse button { padding: 2px 12px; font-size: 20px; line-height: 1.1; }
 body.touch nav.controls[data-screen='title'] { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 body.touch nav.controls[data-screen='title'] #load-button { grid-column: 1 / -1; padding: 12px; font-size: 17px; }
 body.touch nav.controls[data-screen='title'] #load-button small { opacity: 0.7; font-size: 12px; }
@@ -1422,3 +1419,13 @@ body.touch #hail { top: 170px; font-size: 13px; }
   body.touch #target-info { top: 114px; }
   body.touch #hail { top: auto; bottom: 56px; }
 }
+
+/* The ship browser: under the ship on the title screen (placed by main.ts), or swipe. */
+#ship-nav { position: fixed; left: var(--x, 50%); top: var(--y, 70%); z-index: 3; display: flex; align-items: center; gap: 14px; transform: translateX(-50%); }
+#ship-nav[hidden] { display: none; }
+#ship-nav button { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 24px; line-height: 1; background: var(--panel); }
+.ship-nav-name { min-width: 150px; color: var(--dim); font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase; text-align: center; }
+body.retro #ship-nav button { border-radius: 0; font-size: 14px; }
+body.retro .ship-nav-name { font-size: 9px; }
+#ship-nav.flank { width: var(--w, calc(100vw - 24px)); justify-content: space-between; }
+#ship-nav.flank .ship-nav-name { display: none; }
