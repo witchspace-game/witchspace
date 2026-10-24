@@ -870,6 +870,8 @@ body.touch .dash { top: 6px; bottom: auto; transform: translateX(-50%) scale(var
 body.touch #dock-aid { top: 128px; right: 12px; transform: scale(0.8); transform-origin: top right; }
 body.touch #target-info { top: 110px; }
 body.touch #banner { top: 64px; font-size: 15px; padding: 7px 12px; }
+/* The survey bar would sit under the dashboard there; the bottom middle is clear. */
+body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); }
 
 /* --- Phones ----------------------------------------------------------------- */
 
