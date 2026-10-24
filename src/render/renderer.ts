@@ -3,6 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { LensPass } from './lens';
 import { ORIGINAL_PIXELS, RETRO_DOT, registerParts, setLineResolution, setRetroParts } from './wire';
 
@@ -57,6 +58,28 @@ export const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeig
 bloom.compositeMaterial.uniforms['bloomFactors'].value = [1, 0.75, 0.45, 0.18, 0.04];
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
+// The glow fades to black over a wide area, and the screen has only a few
+// shades of dark red (or green, or blue) to do it in, so it showed as rings.
+// A grain of less than one shade per pixel, too fine to see, blends them.
+composer.addPass(
+  new ShaderPass({
+    uniforms: { tDiffuse: { value: null } },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D tDiffuse;
+      varying vec2 vUv;
+      void main() {
+        vec4 c = texture2D(tDiffuse, vUv);
+        float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
+        gl_FragColor = vec4(c.rgb + (n - 0.5) / 255.0, c.a);
+      }`,
+  }),
+);
 
 let retro = false;
 export const isRetro = () => retro;

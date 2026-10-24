@@ -1221,7 +1221,15 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 body.retro .callsign input, body.retro .rename-form input { font-size: 12px; border-radius: 0; border-color: #fff; }
 
 /* The account panel (A on the title screen). */
-.panel.account { left: auto; right: 24px; bottom: 84px; width: min(400px, calc(100vw - 32px)); z-index: 6; }
+/* Above the buttons, not over them, and scrolls if the screen is short. */
+.panel.account { left: auto; right: 24px; bottom: calc(96px + var(--controls-h, 48px)); width: min(400px, calc(100vw - 32px)); max-height: calc(100vh - var(--controls-h, 48px) - 140px); overflow-y: auto; z-index: 6; background: rgb(0, 12, 8); }
+@media (max-width: 700px) {
+  .panel.account { left: 12px; right: 12px; width: auto; bottom: calc(var(--controls-h, 48px) + 50px); max-height: calc(100vh - var(--controls-h, 48px) - 112px); }
+}
+/* Phones on their side: the buttons are in the left column, so the right side is free. */
+@media (max-height: 500px) {
+  .panel.account { left: auto; right: max(12px, env(safe-area-inset-right)); width: min(400px, 46vw); bottom: 12px; max-height: calc(100vh - 24px); }
+}
 .panel.account .meta { margin: 10px 0; color: var(--fg); line-height: 1.45; text-transform: none; letter-spacing: normal; font-size: 15px; }
 .panel.account dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 12px 0; }
 .panel.account dt { color: var(--dim); }
