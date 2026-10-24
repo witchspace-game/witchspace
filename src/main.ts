@@ -112,6 +112,10 @@ import { closeDrawer, initTouch, onTap, updateTouch } from './ui/touch';
 import { COMPANY_SHORT, jobStrip, routeWork, workInReach, type JobStep } from './game/jobs';
 import { BEACON_CALLS, beacon, distressReward, hailReply, newBeacon, newsInReach, pirateAnswer, pirateThreat, RADIO_RANGE, type BeaconCall, type HailContext, type Speaker } from './game/radio';
 import { acceptLatest, clearRadio, initRadio, say, setRadioFight, toggleRadio, wakeRadio, type RadioAction, type RadioKind } from './ui/radio';
+import { FlightRecorder } from './game/recorder';
+import { addMoment, type LoggedMoment } from './game/flightLog';
+import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
+import { closeReplay, isReplayOpen, openReplay, renderFlightLog } from './ui/flightLog';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -1095,6 +1099,7 @@ function holdList(c: Commander): string {
 function renderDocked() {
   const c = cmdr();
   showFittings(c);
+  refreshFlightLog();
   const here = currentSystem();
   const st = stationName(here);
   $('#dock-location').textContent = `${st.name} · ${here.name}`;
@@ -1666,6 +1671,7 @@ function updateIdentities() {
     npc.shownUnidentified = unknown;
     if (first && !unknown) {
       sfx.lock();
+      if (npc.def.id === 'falcon') void keepMoment({ kind: 'legend', text: 'Hull read: the Falcon', subject: 'The Falcon' }, 15, 10);
       flash(npc.def.id === 'falcon' ? 'Hull read · FALCON · the one the haulers warn you about' : `Hull read · ${npc.def.name}`, 3.5);
     }
   }
@@ -1950,6 +1956,7 @@ function updateMarshals(dt: number) {
     if (c.t >= WARNING) {
       c.phase = 'emerging';
       c.t = 0;
+      void keepMoment({ kind: 'marshals', text: 'A witchspace rift: the Co-operative Marshals came through', subject: 'Bastion' }, 8, 21);
       c.npc.obj.visible = true;
       clipShip(c.npc, c.mouth);
       // The nose punches through, and the drone dies away as it comes.
@@ -2260,6 +2267,7 @@ function updateExplore(dt: number): boolean {
       const done = survey.target.body;
       const before = exploreOf(c).points;
       recordSurvey(c, here, done);
+      void keepMoment({ kind: 'discovery', text: `Survey complete · ${done.name}`, subject: done.name }, 20, 3);
       noteExplorerRank(before);
       saveCommander(c);
       sfx.beep();
@@ -2619,6 +2627,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   if (npc.role === 'pirate') {
     c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
     flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr`, 2.5);
+    void keepMoment({ kind: 'kill', text: `${npc.def.name} destroyed · bounty ${npc.bounty} Cr`, subject: npc.def.name }, 20, 4);
   } else {
     flash(`${npc.def.name} destroyed`, 1.5);
     // Killing police or an innocent trader is a serious crime. Under Classic
@@ -5266,6 +5275,8 @@ async function surrender() {
 
 function die() {
   const c = cmdr();
+  // The black box: the last seconds, and the ship going up, for the insurers' screen.
+  const blackBox = keepMoment({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}` }, 26, 4);
   setView('front');
   setAutopilot(false);
   setState('dead');
@@ -5347,6 +5358,7 @@ function die() {
     marshalsStandDown();
     enterDocked();
     flash(message, 5);
+    void blackBox.then((m) => m && state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog));
   }, 5000);
 }
 
@@ -6179,6 +6191,11 @@ function handleKey(code: string) {
 addEventListener('keydown', (e) => {
   if ((e.target as HTMLElement).closest?.('input, textarea')) return; // typing, not flying
   if (e.code === 'Tab' && isMapOpen()) e.preventDefault(); // Tab switches charts, not focus
+  if (e.code === 'Escape' && isReplayOpen()) return closeReplay();
+  if (e.code === 'KeyP' && e.shiftKey) {
+    if (!e.repeat) keepByHand();
+    return;
+  }
   if (!e.repeat) handleKey(e.code);
 });
 // Enter in the callsign box confirms it and starts with the default rules, as Enter does on that screen.
@@ -6196,6 +6213,104 @@ document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) => {
   if (b.closest('#touch')) onTap(b, press);
   else b.addEventListener('click', press);
 });
+
+// --- The flight recorder (docs/design/flight-recorder.md) --------------------
+// The ship's black box: the last 30 seconds of the view, always, in memory.
+// Moments worth keeping go to the flight log on this device; nothing leaves it
+// unless the commander shares it.
+
+const RECORDER_KEY = 'witchspace-recorder';
+const recorderOn = () => {
+  try {
+    return localStorage.getItem(RECORDER_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+};
+interface MomentMeta {
+  events: MomentEvent[];
+  ctx: MomentContext;
+}
+const recorder = new FlightRecorder<MomentMeta>(recorderOn);
+const viewCanvas = () => $<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo');
+
+/** Keep the seconds around now in the flight log. Resolves with the logged moment (or null: no recorder, or nothing to keep). */
+function keepMoment(event: MomentEvent, before: number, after: number): Promise<LoggedMoment | null> {
+  if (!commander) return Promise.resolve(null);
+  const c = cmdr();
+  const sys = currentSystem();
+  const ctx: MomentContext = { callsign: c.name, system: sys.name, galaxy: sys.galaxy + 1, government: GOVERNMENTS[sys.government], rank: combatRating(c.kills), when: Date.now() };
+  return recorder
+    .keep({ events: [event], ctx }, before, after, (a, b) => ({ events: [...a.events, ...b.events], ctx: a.ctx }))
+    .then(async (clip) => {
+      if (!clip) return null;
+      const { events, ctx } = clip.meta;
+      const m: LoggedMoment = {
+        id: `${ctx.when}-${Math.random().toString(36).slice(2, 8)}`,
+        created: ctx.when,
+        title: momentTitle(events, ctx),
+        description: momentDescription(events, ctx),
+        tags: momentTags(events, ctx),
+        events,
+        system: ctx.system,
+        seconds: clip.seconds,
+        video: clip.video,
+        poster: clip.poster,
+        saved: false,
+      };
+      return (await addMoment(m)) ? m : null;
+    });
+}
+
+function refreshFlightLog() {
+  void renderFlightLog({
+    available: recorder.available,
+    enabled: recorderOn(),
+    onToggle: () => {
+      try {
+        localStorage.setItem(RECORDER_KEY, recorderOn() ? 'off' : 'on');
+      } catch {
+        /* storage blocked: stays as it is */
+      }
+      refreshFlightLog();
+    },
+  });
+}
+void recorder.ready.then(() => state === 'docked' && refreshFlightLog());
+
+/** Shift+P, or holding the camera button: keep the last 30 seconds yourself. */
+function keepByHand() {
+  if (state !== 'flying') return;
+  if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the station tab' : "This browser can't record video", 2.5);
+  flash('Flight recorder · last 30 seconds kept', 2);
+  sfx.shutter();
+  void keepMoment({ kind: 'kept', text: 'Kept by hand' }, 30, 0);
+}
+
+// The camera button: tap for a photo, hold for the last 30 seconds.
+{
+  const cam = $<HTMLButtonElement>('#photo-button');
+  let held = 0;
+  let long = false;
+  cam.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    long = false;
+    held = window.setTimeout(() => {
+      long = true;
+      keepByHand();
+    }, 600);
+  });
+  const release = () => {
+    clearTimeout(held);
+    if (!long && held) handleKey('KeyP');
+    held = 0;
+  };
+  cam.addEventListener('pointerup', release);
+  cam.addEventListener('pointercancel', () => {
+    clearTimeout(held);
+    held = 0;
+  });
+}
 
 // --- Main loop --------------------------------------------------------------
 
@@ -6216,10 +6331,13 @@ function frame(now?: number) {
     const rift = carrier?.rift;
     lens.aim(camera, rift ? rift.group.position : null, rift ? rift.radius * rift.open : 0, rift ? rift.open : 0);
     render(space.scene);
+    if (state === 'flying' || state === 'dead') recorder.capture(viewCanvas(), dt);
+    else recorder.pause();
   } else {
     lens.aim(camera, null, 0, 0);
     updateShowroom(dt);
     render(showroom.scene);
+    recorder.pause();
   }
   if (photoPending) {
     photoPending = false;
