@@ -6,6 +6,7 @@ import { marked, type Tokens } from 'marked';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, relative, resolve } from 'node:path';
 import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from './media';
+import { loadShips, shipPage, shipsIndex } from './ships';
 
 const root = resolve(import.meta.dirname, '..');
 const REPO = 'https://github.com/witchspace-game/witchspace/blob/main/';
@@ -15,6 +16,7 @@ const template = readFileSync(join(root, 'site/template.html'), 'utf8');
 
 const NAV = [
   ['/', 'Home'],
+  ['/ships/', 'Ships'],
   ['/design/', 'Design'],
   ['/ideas/', 'Ideas'],
   ['/get-involved/', 'Get involved'],
@@ -78,6 +80,12 @@ for (const name of readdirSync(join(root, 'site/pages'))) {
 // --- A page per press image and video, so each can be shared on its own ------
 
 for (const item of media.items) write(itemPage(media, item, SITE));
+
+// --- The fleet: an index, and a page for each ship ------------------------------
+
+const ships = loadShips(root);
+write({ path: '/ships/', title: 'Ships · Witchspace', description: 'The Witchspace fleet: every ship, who flies it, who drew it, and how to make it better.', content: shipsIndex(ships), bodyClass: 'ships-page' });
+for (const s of ships) write({ path: `/ships/${s.id}/`, ...shipPage(s), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
 
 // --- Design documents from Markdown -------------------------------------------
 
@@ -184,6 +192,7 @@ const generated = [
   'index.html',
   ...NAV.slice(1).map(([p]) => p.slice(1) + 'index.html'),
   'press/index.html',
+  ...ships.map((s) => `ships/${s.id}/index.html`),
   ...docMeta.map((d) => `design/${d.slug}/index.html`),
   ...media.items.map((i) => `press/${i.id}/index.html`),
 ];

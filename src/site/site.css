@@ -784,3 +784,38 @@ button.button { cursor: pointer; }
   .ideas-layout { grid-template-columns: 1fr; }
   .idea-form { position: static; }
 }
+
+/* --- Ships: the fleet, and a page for each (tools/ships.ts) ---------------- */
+
+.ship-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.ship-card { align-items: center; text-align: center; }
+.ship-card h3 { margin-top: 6px; }
+.ship-svg { width: 100%; aspect-ratio: 1; max-width: 220px; overflow: visible; }
+.ship-svg path { fill: none; stroke: var(--ship); stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 2px var(--ship)) drop-shadow(0 0 6px var(--ship)); }
+.ship-svg path.detail { opacity: 0.8; }
+.ship-card:hover .ship-svg path { filter: drop-shadow(0 0 3px var(--ship)) drop-shadow(0 0 10px var(--ship)); }
+.ship-make { margin-top: 32px; max-width: 70ch; }
+.ship-make h3 { margin: 0 0 8px; }
+
+.ship-page .back { display: inline-block; margin-bottom: 18px; font-size: 15px; font-weight: 500; text-decoration: none; }
+.ship-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px; align-items: center; }
+.ship-view { position: relative; aspect-ratio: 1; border: 1px solid var(--border); border-radius: 16px; background: radial-gradient(60% 60% at 50% 50%, rgba(61, 255, 176, 0.06), transparent 70%), #04060b; overflow: hidden; }
+.ship-view .fallback { position: absolute; inset: 12%; width: 76%; max-width: none; }
+.ship-view.live .fallback { display: none; }
+.ship-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: none; }
+.ship-canvas:active { cursor: grabbing; }
+.ship-copy h1 { margin: 4px 0 14px; font-family: 'Space Grotesk', sans-serif; font-size: clamp(40px, 6vw, 64px); line-height: 1; letter-spacing: -0.02em; }
+.ship-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0 0; }
+.ship-stats div { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.ship-stats dt { color: var(--muted); font-size: 13px; }
+.ship-stats dd { margin: 2px 0 0; font-weight: 600; font-size: 17px; }
+.ship-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 32px; }
+.ship-columns .card p + p { margin-top: 10px; }
+.ship-ideas { margin: 12px 0 14px; padding-left: 18px; color: var(--fg); }
+.ship-ideas li { margin: 4px 0; }
+.small { font-size: 13.5px; }
+
+@media (max-width: 800px) {
+  .ship-hero, .ship-columns { grid-template-columns: 1fr; }
+  .ship-stats { grid-template-columns: repeat(2, 1fr); }
+}
