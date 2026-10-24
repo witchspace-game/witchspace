@@ -18,7 +18,7 @@ A review of trading as built (October 2026) found the money is there, but the ga
 2. **It isn't a game of discovery.** The trade computer shows live prices at every market in range and the best run with its profit. Follow it and you're done: nothing to find out, nothing to outwit, no reason to read the news.
 3. **The clever parts are hidden.** Limit orders already fill while you're away, even on a famine that starts after you leave. The news already travels at the speed of ships. Live prices everywhere make both pointless.
 
-What *Elite* traders loved was knowing something others didn't and getting there first. This design puts that back, and adds what Mark asked for: markets you can learn to work, limit orders that matter, news cycles to ride, and tips, true and false, from the people traders drink with.
+What *Elite* traders loved was knowing something others didn't and getting there first. This design puts that back, and adds what Mark asked for: markets you can learn to work, limit orders that matter, news cycles to ride, tips, true and false, from the people traders drink with, and insiders who'll sell what isn't theirs.
 
 ## Principles
 
@@ -81,7 +81,9 @@ Every station has somewhere traders rest: **the saloon** (a bar on a Coriolis; a
 
 **Telling them apart** is the skill: who's telling you, why, and how they feel about it; whether it fits what you know; a trader's reputation in the saloon builds as their tips come true or don't. Nothing is labelled true.
 
-**Insider trading.** Acting on an *early* tip in a lawful system (corporate state, democracy, confederacy) is insider trading. Big trades in the goods a coming event touches, made before its news reaches that station, can be noticed afterwards: the Co-operative's market inspectors may fine you and give you a record (an Offender, as for smuggling) **(to tune: chance by size and government)**. Anarchies and feudal worlds don't care. The risk is the price of the edge.
+**Tips are legal.** Overhearing a laid-off miner is gossip, not a crime, however true it turns out: the only risk is believing the wrong person.
+
+**Insiders are another matter.** Some people in the saloon have information that isn't theirs to sell: a station clerk who sees the price reports before they're posted, a company contact who knows a shipping schedule, a port official who knows a crackdown is coming. Paying one of them is **insider trading**: more reliable than bar talk, dearer **(to tune: 200–1,000 Cr)**, and illegal in lawful systems (corporate state, democracy, confederacy). Big trades on what they told you, made before it was public, can be noticed afterwards: the Co-operative's market inspectors may fine you and give you a record (an Offender, as for smuggling) **(to tune: chance by size and government)**, and the insider loses their job, which they'll remember. Anarchies and feudal worlds don't care. The risk is the price of the edge.
 
 ## 4. The news cycle
 
@@ -116,7 +118,7 @@ Ways to move a market, each with a cost and a risk:
 ## 7. Stages
 
 1. **The trader's screen and prices you know** (sections 1 and 2): plain lists, one-tap trades, the exchange behind Advanced, the trade computer working from your knowledge, the starting almanac. The biggest change to how trading feels, and nothing new to simulate.
-2. **The saloon** (section 3): the people, tips stale, early and planted, and their reputations. Insider trading with the inspectors.
+2. **The saloon** (section 3): the people, tips stale, early and planted, and their reputations. Then insiders, and the inspectors.
 3. **The news cycle** (section 4): the overshoot and the aftermath glut, and saying it in words.
 4. **Limit orders on the trader's screen** (section 5), and messages when they fill.
 5. **Working the market** (section 6): planted rumours and manipulation records; cornering falls out of stages 1–4.
@@ -125,5 +127,5 @@ Ways to move a market, each with a cost and a risk:
 
 - How fresh should a new commander's almanac be, and how far should it reach?
 - Should tips be per commander (each hears their own) or shared (the same people tell everyone the same thing)? Shared is fairer in the shared galaxy; per commander makes a single-player saloon feel alive.
-- How often should insider trading be caught, so the risk is real but the edge worth it?
+- How often should buying from an insider be caught, so the risk is real but the edge worth it?
 - Should the saloon be where contracts and crew are found too, in time?
