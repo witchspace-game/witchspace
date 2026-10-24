@@ -57,6 +57,11 @@ In air, the wings would really be wings, so the Darner is the natural ship to ta
 2. **Landing pads:** settlements with a pad to glide down to, like docking: the Arkwrights, miners' settlements, frontier outposts that only a Darner can reach, with contracts to match.
 3. **Real surfaces,** to fly over, land on and explore: a project the size of the exploration road, much later.
 
+**Smuggling** *(Mark)*: a settlement pad on the surface never sees the station, so there's no docking inspection (at a lawful station that's a 50–80% chance, [the black market](markets-and-trade.md#3-the-black-market)).
+- **Settlement buyers:** a frontier back room that pays well for what the station won't let in.
+- **The risk moves to the sky:** customs cutters patrol the upper atmosphere in lawful systems. A hot, fast dive leaves a trail they can follow; the skill is a slow, quiet descent, best on the night side in the planet's shadow.
+- **A Darner's job, at first:** the only ship that can make the run, which gives smugglers a reason to want one despite its small hold.
+
 It glides and banks on long, still wings, never flaps.
 
 ## Open questions
