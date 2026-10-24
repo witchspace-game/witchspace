@@ -76,6 +76,49 @@ const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.0, 0.5, 0.2);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
+// Where the model goes: the clear space beside the headline if there's room,
+// otherwise above it, measured from the page itself, so it never meets the
+// text whatever the window's shape. In view coordinates (-1 to 1): the centre,
+// and how far the model may reach each way.
+const copy = document.querySelector<HTMLElement>('.hero-copy');
+const header = document.querySelector<HTMLElement>('.site-header');
+let slot = { x: 0.48, y: 0.06, w: 0.36, h: 0.46 };
+function measureSlot() {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (!copy || !w || !h) return;
+  const c = canvas.getBoundingClientRect();
+  const t = copy.getBoundingClientRect();
+  let top = (header ? header.getBoundingClientRect().bottom : c.top) - c.top + 16;
+  // On small screens the ship's name sits up top: keep clear of it too.
+  const name = label?.getBoundingClientRect();
+  if (name && name.height && name.bottom < t.top) top = Math.max(top, name.bottom - c.top + 8);
+  const bottom = Math.min(h - 70, innerHeight - c.top - 24); // clear of the ship's name, and on screen when the hero's taller than it
+  // Where the words actually end (the block itself runs wider than its lines).
+  // The lines of text themselves, not their (full-width) boxes; and only those
+  // on screen: on a short screen the rest is below, out of the ship's way.
+  let inkRight = t.left;
+  const range = document.createRange();
+  const walk = document.createTreeWalker(copy, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+    if (!n.textContent?.trim()) continue;
+    range.selectNodeContents(n);
+    for (const r of range.getClientRects()) if (r.top - c.top < bottom) inkRight = Math.max(inkRight, r.right);
+  }
+  const beside = { left: inkRight - c.left + 32, right: w - 24, top, bottom };
+  const above = { left: 24, right: w - 24, top, bottom: t.top - c.top - 24 };
+  // Whichever lets the model be bigger (ships are about twice as wide as they are tall).
+  const room = (b: typeof beside) => Math.min(b.right - b.left, (b.bottom - b.top) * 2);
+  const r = room(beside) >= room(above) ? beside : above;
+  slot = {
+    x: (r.left + r.right) / w - 1,
+    y: 1 - (r.top + r.bottom) / h,
+    w: Math.max(0.05, ((r.right - r.left) / w) * 0.9),
+    h: Math.max(0.05, ((r.bottom - r.top) / h) * 0.9),
+  };
+}
+void document.fonts?.ready.then(measureSlot);
+
 function resize() {
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
@@ -85,6 +128,7 @@ function resize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   setLineResolution(renderer.getDrawingBufferSize(new THREE.Vector2()));
+  measureSlot();
 }
 new ResizeObserver(resize).observe(canvas);
 resize();
@@ -113,12 +157,8 @@ function frame(now?: number) {
   if (shownFor > SHOW_SECONDS && showcase.length > 1) show((index = (index + 1) % showcase.length));
 
   const model = showcase[index];
-  // Wide screens: the model sits in the right half, beside the headline.
-  // Narrow screens: it sits in the upper part, above the headline. Either
-  // way it's sized to its slot so it never meets the text or the header.
+  // Sized to its slot (measureSlot), so it never meets the text or the header.
   const tanHalf = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const wide = camera.aspect > 1.15;
-  const slot = wide ? { x: 0.48, y: 0.06, h: 0.46, w: 0.36 } : { x: 0, y: 0.5, h: 0.3, w: 0.8 };
   const dist = Math.max(
     (fitHeight.get(model)! * 1.15) / (slot.h * tanHalf),
     model.radius / (slot.w * tanHalf * camera.aspect),
