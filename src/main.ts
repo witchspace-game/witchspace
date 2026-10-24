@@ -4335,7 +4335,7 @@ let wasCaptured = false;
 
 function updateAimDisplay() {
   const captured = isMouseCaptured();
-  if (captured !== wasCaptured && controlScheme() === 'mouse') {
+  if (captured !== wasCaptured && controlScheme() === 'mouse' && !isTouch) {
     flash(captured ? 'Mouse aim · Esc to release' : 'Mouse released · click to fly', 1.5);
   }
   wasCaptured = captured;
@@ -4351,8 +4351,8 @@ function updateAimDisplay() {
 }
 
 const KEYS_HINT = {
-  mouse: 'Mouse aim · Click fire · W/S throttle · A/D roll · T arm missile · X fire it · G map · H hyperspace · J jump · C docking computer · F1 controls',
-  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · T arm missile · X fire it · G map · H hyperspace · J jump · C docking · F1 controls',
+  mouse: 'Mouse aim · Click fire · W/S throttle · A/D roll · T arm missile · X fire it · G map · H hyperspace · J jump · C docking computer · P photo · F1 controls',
+  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · T arm missile · X fire it · G map · H hyperspace · J jump · C docking · P photo · F1 controls',
 };
 
 function renderControlsCard() {
