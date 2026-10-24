@@ -1569,13 +1569,36 @@ function updateIdentities() {
   }
 }
 
+// Traffic control: the slot is yours once you're committed to it (the docking
+// computer on, or lined up on the approach) and for a little while after you
+// launch. Traders don't launch then, and incoming ones wait off to one side,
+// out of the lane, until you're in or clear. Police launch whenever they must.
+const SLOT_CLEAR = 4000; // metres from the station
+const LAUNCH_CLEAR = 15; // seconds after launching
+let launchedAt = -Infinity;
+const slotReserved = () =>
+  state === 'flying' &&
+  player.obj.position.distanceTo(station.root.position) < SLOT_CLEAR &&
+  (autopilot || rollAssistApplies() || elapsed - launchedAt < LAUNCH_CLEAR);
+const holding = new WeakSet<NpcShip>();
+const holdPoint = () => station.toWorld(new THREE.Vector3(1500, 0, SLOT.z + 2500));
+
 /** Spawn and retire traffic. Traders dock or leave; pirates turn up by chance. */
 function updateTraffic(dt: number) {
   const sys = currentSystem();
+  const reserved = slotReserved();
   for (const npc of [...npcs]) {
     const leg = legs.get(npc);
     if (!leg || npc.mode !== 'travel') continue;
-    if (leg === 'inbound' && npc.obj.position.distanceTo(npc.destination!) < 150) {
+    if (leg === 'inbound' && reserved && !holding.has(npc)) {
+      holding.add(npc);
+      npc.destination = holdPoint();
+    } else if (leg === 'inbound' && !reserved && holding.has(npc)) {
+      holding.delete(npc); // cleared in: back to the lane
+      npc.destination = onSlotAxis(900);
+    } else if (leg === 'inbound' && holding.has(npc)) {
+      continue; // waiting its turn
+    } else if (leg === 'inbound' && npc.obj.position.distanceTo(npc.destination!) < 150) {
       legs.set(npc, 'docking');
       npc.destination = onSlotAxis(-SLOT.z); // the station's centre, down the slot
     } else if (leg === 'docking' && station.toLocal(npc.obj.position).z < SLOT.z) {
@@ -1589,7 +1612,7 @@ function updateTraffic(dt: number) {
   traderTimer -= dt;
   if (traderTimer <= 0) {
     traderTimer = 25 + Math.random() * 35;
-    if (ofRole('trader').length < TRADERS_BY_GOVERNMENT[sys.government]) spawnTrader(Math.random() < 0.6);
+    if (ofRole('trader').length < TRADERS_BY_GOVERNMENT[sys.government]) spawnTrader(Math.random() < 0.6 || reserved);
   }
   encounterTimer -= dt;
   if (encounterTimer <= 0 && state === 'flying') {
@@ -2497,6 +2520,11 @@ function playerHitNpc(npc: NpcShip, damage: number) {
   if (npc.hit(damage, player)) destroyNpc(npc, player.obj);
 }
 
+/** A collision is an accident (a ship launching into you, say): it hurts, but it's no crime, no kill, and no grudge. */
+function playerRammedNpc(npc: NpcShip, damage: number) {
+  if (npc.hit(damage)) destroyNpc(npc, null);
+}
+
 // --- The law beyond the station (docs/design/companies-and-contracts.md, section 4) ----
 // Within station space the station sees everything. Out in the lanes, a crime
 // needs a witness: police in sight, another ship, or a victim who gets away.
@@ -2972,7 +3000,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
         sfx.thud();
         hitFeedback(1);
         flash(`Collision with the ${npc.def.name}`, 3);
-        playerHitNpc(npc, 25);
+        playerRammedNpc(npc, 25);
         die();
         return;
       }
@@ -2981,7 +3009,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       for (let i = 0; i < 100 && npc.touches(player.obj.position, 30); i++) player.obj.position.addScaledVector(away, 10);
       sfx.thud();
       hitFeedback(0.9);
-      playerHitNpc(npc, 25);
+      playerRammedNpc(npc, 25);
       if (damagePlayer(25)) {
         die();
         return;
@@ -4282,6 +4310,7 @@ async function launch() {
   sharedSpace.resume(); // launching here means flying here, even if another window had the ship
   player.repair();
   station.placeForLaunch(player);
+  launchedAt = elapsed;
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
