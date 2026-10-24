@@ -32,23 +32,26 @@ What *Elite* traders loved was knowing something others didn't and getting there
 
 ## 1. The trader's screen
 
-The Market tab opens on a plain screen with three short lists, not the exchange.
+The charts stay: they're one of the best things in the game. What changes is everything around them, so the screen answers a trader's question at a glance and the chart tells the story.
 
-**Cheap here** (made here, or in a glut): the four or five best buys, each with what you last knew it fetches elsewhere.
+**Left: plain lists instead of tickers.**
 
-> **Furs** 38 Cr · stock 120 t · last seen 61 Cr at Zaonce, 40 min ago **Buy**
+- **Cheap here** (made here, or in a glut): the best buys, each with what you last knew it fetches elsewhere.
+  > **Furs** 38 Cr · stock 120 t · last seen 61 Cr at Zaonce, 40 min ago
+- **Sells well here** (wanted here, or short): what this station pays over the odds for, and how much of it you carry.
+  > **Computers** 112 Cr · wanted · you have 6 t
+- **Your hold:** each good you carry, what it fetches here, what you paid, the profit or loss.
+- Full names, plain words (*wanted*, *in a glut*, *short*, *illegal here*), a small trend line beside each, and a line saying why: *Food is cheap: Lave grows it. Computers sell well: Lave doesn't make them.*
 
-**Sells well here** (wanted here, or short): what this station pays over the odds for, and whether you have any.
+**Centre: the chart, as now,** for the good you've picked: candles, time frames, volume, the fair-value line. Added: markers where news reached this station (*famine news*, *strike over*) and where you traded, so the news cycle (section 4) can be watched on the candles.
 
-> **Computers** 112 Cr · wanted · you have 6 t **Sell 6 t**
+**Right: buy and sell made simple.** One tap for as much as you can afford and carry (or a chosen amount), one tap to sell the lot; price impact and total shown before you confirm; a one-line limit order (section 5).
 
-**Your hold:** each good you carry, what it fetches here, what you paid, and the profit or loss.
+**Advanced** (a switch, remembered) adds the order book, depth and the trades feed, for the full exchange.
 
-- One tap buys as much as you can afford and carry (or a chosen amount); one tap sells the lot. The price impact is shown before you confirm.
-- Full names, not tickers. Plain words: *wanted*, *in a glut*, *short*, *illegal here*.
-- A line under each list says why: *Food is cheap: Lave grows it. Computers sell well: Lave doesn't make them.*
-- **Advanced** (a switch, remembered) opens today's exchange: chart, order book, limit orders, trades feed.
-- The **back room** (the black market) stays a separate door, as now.
+**On a phone:** the lists first; tap a good and its chart opens full width, with buy and sell under it.
+
+The **back room** (the black market) stays a separate door, as now.
 
 ## 2. Prices you know
 
@@ -117,7 +120,7 @@ Ways to move a market, each with a cost and a risk:
 
 ## 7. Stages
 
-1. **The trader's screen and prices you know** (sections 1 and 2): plain lists, one-tap trades, the exchange behind Advanced, the trade computer working from your knowledge, the starting almanac. The biggest change to how trading feels, and nothing new to simulate.
+1. **The trader's screen and prices you know** (sections 1 and 2): plain lists round the chart, news markers on it, one-tap trades, the order book behind Advanced, the trade computer working from your knowledge, the starting almanac. The biggest change to how trading feels, and nothing new to simulate.
 2. **The saloon** (section 3): the people, tips stale, early and planted, and their reputations. Then insiders, and the inspectors.
 3. **The news cycle** (section 4): the overshoot and the aftermath glut, and saying it in words.
 4. **Limit orders on the trader's screen** (section 5), and messages when they fill.
