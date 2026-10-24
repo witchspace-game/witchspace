@@ -276,6 +276,22 @@ Today the yard can't be shot: lasers pass through the Titanoboa, its haulers and
 - **Sad:** the yard's own people. **Pell Varga** runs crane four; after you've taken it down, his message reaches you at the next station: *"Nobody was hurt this time. We were lucky. I've got a daughter on the next shift."*
 - **Glad**, if you choose the other side: escort contracts protecting the yard from saboteurs, paid by Wexley-Yorozu, with the Arkwrights' broadcasts calling you a company hand.
 
+**What's in it for you.**
+- **As a saboteur:** the Arkwrights' small pay, or the broker's large one; salvage from wrecked worker craft (worth scooping, but stolen); and, at the end of the Arkwrights' chain, what the company never got: the old miners' hand-drawn charts of the moon's richest seams (a real find to survey and sell, [from discovery to development](discovery-to-development.md)), and a friendly contact where nobody asks questions.
+- **As a defender:** Wexley-Yorozu's pay and standing, priority berths and a discount at the new station on opening day, and your name in its opening news, as first discoveries carry your callsign.
+
+**Accidents aren't sabotage.** A fair fight near a yard shouldn't make you a criminal.
+- **The safety catch** covers the yard as it covers the station: with the Titanoboa or a worker craft in the line of fire, you're warned, and have to hold the trigger to override.
+- **Strays in a real fight** (a hostile within range, a few hits on the yard) are an accident: Wexley-Yorozu sends a small repair bill per hit **(to tune: 50 Cr)**, and that's all. No crime, no price on you, no security wing.
+- **Sabotage** is sustained fire at the yard with no hostile about, or overriding the catch to keep shooting.
+- **Pirates' strays count too:** their shots can hit the yard, and then yard security launches at them. A fight near a yard can bring allies.
+
+**Making amends.** Built on the amends companies already have (`amendsCost`, `makeAmends`):
+- **Pay the repair bill** at any Wexley-Yorozu station: it clears the company's price on you and returns some standing. A police record is settled the usual way, apart.
+- **Make it good in kind:** deliver the alloys and machinery the repairs need to the yard, for a smaller bill and more standing back.
+- **Say sorry to the person:** answer Pell Varga's message. It changes nothing in the ledger, but he remembers: his later messages are warmer, and he may warn you when yard security is about.
+- **Clause 214:** can't pay? Wexley-Yorozu offers *"another way to settle the matter"*: hauling for the company at a discount until the debt's worked off.
+
 **What it changes.** Yards run on the shared clock, so every commander sees the same stage at the same time; one player delaying a build would change it for everyone, which needs the server to keep the damage. So, until then:
 - **Damage is temporary and visible:** parts go dark and are repaired in hours; the schedule holds (the company has reserves), and the news reports the attack.
 - **Sabotage contracts** have their own outcome in your story: the Arkwrights' thanks (or not), a message from Varga, a change in standing.
