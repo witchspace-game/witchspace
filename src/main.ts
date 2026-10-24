@@ -79,7 +79,7 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
-import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
+import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
@@ -99,7 +99,7 @@ import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { countDevice, countNewCommander } from './net/stats';
 import { claimFirsts, firstsIn, loadFirsts } from './net/firsts';
-import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
+import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, showSystem, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
@@ -636,15 +636,32 @@ const welcomeHere = (c: Commander, here: StarSystem, now: number) => (recruiter 
  * Set a course to a system, however many jumps away: the first hop now, the
  * next after each jump (see hyperspace). Returns what to tell the commander.
  */
+/** The computer's route: the safe way (Modern), or simply the fewest jumps (Classic). */
+function routeTo(from: StarSystem, end: StarSystem): StarSystem[] | null {
+  if (modern()) return safeRoute(from, end);
+  const route: StarSystem[] = [];
+  for (let at: StarSystem | null = from; at && at !== end; ) {
+    at = nextHop(at, end);
+    if (!at) return null;
+    route.push(at);
+  }
+  return route.length ? route : null;
+}
+
 function plotCourse(c: Commander, system: number): string {
   const here = currentSystem();
   const end = systemAt(here.galaxy, system);
-  const hop = nextHop(here, end);
-  if (!hop) return `${end.name} is out of reach from here`;
+  const route = routeTo(here, end);
+  if (!route) return `${end.name} is out of reach from here`;
+  const hop = route[0];
   c.target = hop.index;
   c.courseTo = hop === end ? null : end.index;
-  const jumps = jumpsBetween(here, end);
-  return hop === end ? `Course set: ${end.name}` : `Course plotted to ${end.name}: ${jumps} jumps, first ${hop.name}${distanceLy(here, hop) > c.fuel ? ' (refuel first)' : ''}`;
+  if (hop === end) return `Course set: ${end.name}`;
+  // No safe way round: say where the danger is, before you go.
+  const risky = route.slice(0, -1).filter(DANGEROUS);
+  const warning = risky.length ? ` · no safe way: through ${risky.map((s) => `${s.name} (${GOVERNMENTS[s.government].toLowerCase()})`).join(', ')}` : '';
+  const longer = modern() && !risky.length && route.length > jumpsBetween(here, end, 30) ? ' · the safe way round' : '';
+  return `Course plotted to ${end.name}: ${route.length} jumps, first ${hop.name}${distanceLy(here, hop) > c.fuel ? ' (refuel first)' : ''}${longer}${warning}`;
 }
 let openFile: CompanyId | null = null;
 
@@ -837,6 +854,20 @@ $('#contracts').addEventListener('click', (e) => {
   renderDocked(); // the hold, credits and standing all change with a contract
 });
 
+/** A line of news with the system's name made a link: tap it to see the system on the chart. */
+function linkSystem(text: string, s: StarSystem): string {
+  const name = escapeHtml(s.name);
+  return escapeHtml(text).replace(name, `<button type="button" class="sys-link" data-system="${s.index}" title="Show ${name} on the chart">${name}</button>`);
+}
+
+$('#news-list').addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-system]');
+  if (!b) return;
+  b.blur(); // or Enter on the chart would press it again
+  if (!isMapOpen()) toggleGalaxyMap();
+  showSystem(systemAt(currentSystem().galaxy, Number(b.dataset.system)));
+});
+
 function renderNews() {
   const here = currentSystem();
   const now = Date.now();
@@ -846,7 +877,7 @@ function renderNews() {
     .slice(0, 8);
   const attacks = attackNews(here, now)
     .map(
-      (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${escapeHtml(`Traders attacked near ${n.where.name}: ${n.lost} shipments lost`)}</b>
+      (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Traders attacked near ${n.where.name}: ${n.lost} shipments lost`, n.where)}</b>
         <small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · heard ${ago(now - n.heard)} ago · Wanted: whatever it imports</small></li>`,
     )
     .join('');
@@ -855,7 +886,7 @@ function renderNews() {
     ? yardsNear(here, now)
         .slice(0, 3)
         .map(
-          (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${escapeHtml(`Wexley-Yorozu yard at ${n.where.name}: ${stageInfo(n.yard.stage).news}`)}</b>
+          (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Wexley-Yorozu yard at ${n.where.name}: ${stageInfo(n.yard.stage).news}`, n.where)}</b>
         <small>${escapeHtml(n.where === here ? 'Here, by the moon' : `${n.distance.toFixed(1)} LY away`)} · ${escapeHtml(stageLabel(n.yard))}</small></li>`,
         )
         .join('')
@@ -867,7 +898,7 @@ function renderNews() {
           const local = n.where === here;
           const over = now > n.event.end;
           const status = local ? (over ? 'Over' : 'Here, now') : over ? 'May be over by now' : `${n.distance.toFixed(1)} LY away · news ${ago(n.heard - n.event.start)} old when it arrived`;
-          return `<li class="${local ? 'here' : ''}${over ? ' over' : ''}"><b>${escapeHtml(kind.headline(n.where.name))}</b>
+          return `<li class="${local ? 'here' : ''}${over ? ' over' : ''}"><b>${linkSystem(kind.headline(n.where.name), n.where)}</b>
             <small>${escapeHtml(status)} · heard ${ago(now - n.heard)} ago · Wanted: ${escapeHtml(kind.wanted)}</small></li>`;
         })
         .join('')
@@ -5801,7 +5832,7 @@ async function hyperspace() {
   let routeNote = '';
   if (c.courseTo !== null && c.courseTo !== undefined) {
     const end = systemAt(dest.galaxy, c.courseTo);
-    const hop = nextHop(dest, end);
+    const hop = routeTo(dest, end)?.[0];
     if (hop) {
       c.target = hop.index;
       routeNote = `Next jump plotted: ${hop.name}${hop === end ? '' : ` (on the way to ${end.name})`}${distanceLy(dest, hop) > c.fuel ? ' · refuel first' : ''}`;

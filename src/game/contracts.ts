@@ -106,6 +106,46 @@ export function nextHop(a: StarSystem, b: StarSystem): StarSystem | null {
   return null;
 }
 
+// The ship's computer plans the safe way: each stop in a dangerous system
+// counts as this many extra jumps, so it goes round anarchies and feudal
+// worlds when that isn't much longer. Your destination is never penalised:
+// you chose it.
+const STOP_DANGER = [3, 1.5, 0.3, 0.2, 0.1, 0.05, 0, 0]; // by government, anarchy first
+export const DANGEROUS = (s: StarSystem) => s.government <= 1; // anarchy or feudal
+
+/**
+ * The route the ship's computer plans from `a` to `b`: the stops after `a`,
+ * ending with `b` (each within a full tank), or null if `b` is here or out of
+ * reach. The fewest jumps, unless a slightly longer way stays out of danger.
+ */
+export function safeRoute(a: StarSystem, b: StarSystem): StarSystem[] | null {
+  if (a === b) return null;
+  const cost = new Map<number, number>([[a.index, 0]]);
+  const prev = new Map<number, StarSystem>();
+  const done = new Set<number>();
+  const open: StarSystem[] = [a];
+  while (open.length) {
+    open.sort((x, y) => cost.get(x.index)! - cost.get(y.index)!);
+    const s = open.shift()!;
+    if (done.has(s.index)) continue;
+    done.add(s.index);
+    if (s === b) break;
+    for (const t of systemsWithin(s, ROUTE_HOP)) {
+      if (done.has(t.index)) continue;
+      const c = cost.get(s.index)! + 1 + (t === b ? 0 : STOP_DANGER[t.government]) + distanceLy(s, t) * 0.001; // shorter hops break ties
+      if (c < (cost.get(t.index) ?? Infinity)) {
+        cost.set(t.index, c);
+        prev.set(t.index, s);
+        open.push(t);
+      }
+    }
+  }
+  if (!prev.has(b.index)) return null;
+  const route = [b];
+  while (prev.get(route[0].index) !== a) route.unshift(prev.get(route[0].index)!);
+  return route;
+}
+
 /** Systems from 1 to `max` jumps away, with their jump counts. */
 export function withinJumps(from: StarSystem, max: number): { s: StarSystem; n: number }[] {
   const out: { s: StarSystem; n: number }[] = [];

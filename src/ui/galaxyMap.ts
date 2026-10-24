@@ -85,6 +85,9 @@ function matches(text: string): StarSystem[] {
 }
 
 /** Put the cursor on a system, showing the whole galaxy if it's off the local chart. */
+export function showSystem(s: StarSystem) {
+  findSystem(s);
+}
 function findSystem(s: StarSystem) {
   if (!opts) return;
   cursor = s;

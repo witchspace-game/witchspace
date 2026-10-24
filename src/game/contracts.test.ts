@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { distanceLy, systemAt } from '../galaxy/generate';
-import { cargoTonnes, newCommander } from './commander';
-import { abandon, afterJump, amendsCost, board, cannotTake, SIGNING_BONUS, welcome, forgive, makeAmends, deliver, destinationOf, jumpsBetween, LATE_GRACE, loseContracts, nextHop, standing, take } from './contracts';
+import { distanceLy, galaxy, systemAt, type StarSystem } from '../galaxy/generate';
+import { cargoTonnes, FUEL_CAPACITY, newCommander } from './commander';
+import { abandon, afterJump, amendsCost, board, cannotTake, SIGNING_BONUS, welcome, forgive, makeAmends, deliver, destinationOf, DANGEROUS, jumpsBetween, LATE_GRACE, loseContracts, nextHop, safeRoute, standing, take } from './contracts';
 import { presence, standingName } from './companies';
 
 const lave = systemAt(0, 7);
@@ -137,3 +137,45 @@ describe('company contracts', () => {
   });
 });
 
+
+describe('the safe route', () => {
+  const g = galaxy(0);
+  const pairs: [StarSystem, StarSystem][] = [];
+  for (let i = 0; i < 40; i++) pairs.push([g[(i * 37) % 256], g[(i * 91 + 13) % 256]]);
+  const dangerStops = (r: StarSystem[]) => r.slice(0, -1).filter(DANGEROUS).length;
+
+  it('gets there, a tank at a time', () => {
+    for (const [a, b] of pairs) {
+      const r = safeRoute(a, b);
+      if (a === b || !r) continue;
+      expect(r.at(-1)).toBe(b);
+      [a, ...r].slice(0, -1).forEach((s, i) => expect(distanceLy(s, r[i])).toBeLessThanOrEqual(FUEL_CAPACITY));
+    }
+  });
+
+  it('is never more than a few jumps longer than the shortest, and avoids danger where it can', () => {
+    let fewer = 0;
+    for (const [a, b] of pairs) {
+      const r = safeRoute(a, b);
+      const shortest = jumpsBetween(a, b, 30);
+      if (!r || shortest === Infinity) continue;
+      expect(r.length).toBeLessThanOrEqual(shortest + 4);
+      if (r.length > shortest) fewer++; // took a longer way round: only worth it to miss danger
+    }
+    expect(fewer).toBeGreaterThan(0);
+  });
+
+  it('stops in danger no more often than the fewest-jumps route does', () => {
+    let safer = 0;
+    for (const [a, b] of pairs) {
+      const r = safeRoute(a, b);
+      if (!r) continue;
+      if (!nextHop(a, b)) continue; // beyond the fewest-jumps planner's 12
+      const direct: StarSystem[] = [];
+      for (let at = a; at !== b; ) direct.push((at = nextHop(at, b)!));
+      expect(dangerStops(r)).toBeLessThanOrEqual(dangerStops(direct));
+      if (dangerStops(r) < dangerStops(direct)) safer++;
+    }
+    expect(safer).toBeGreaterThan(0);
+  });
+});
