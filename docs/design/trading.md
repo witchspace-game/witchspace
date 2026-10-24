@@ -1,3 +1,20 @@
+---
+title: Trading
+status: building
+pillar: trade
+summary: Simple to start, deep to master: a trader's screen round the charts, prices you only know as fresh as the news, trading from the station, a saloon full of tips true and false, and news cycles to ride.
+card: cobra-mk3
+stages:
+  - The trader's screen, prices you know, trading from the station | built
+  - The saloon: tips, insiders and the inspectors | proposed
+  - The news cycle: overshoot and aftermath | proposed
+  - Limit orders on the trader's screen; Ma Reyes's lessons; a Merchant rank | proposed
+  - Working the market: cornering, planted rumours | proposed
+help:
+  - Write a saloon regular: who they are, how they feel, what they know | writing
+  - Playtest the trader's screen and tell us what confused you | playtest
+---
+
 # Trading: knowing something others don't
 
 *Design, 24 October 2026. Modern rules; stage 1 built (October 2026), the rest proposed; Classic keeps 1984's market. It reworks how trading is presented and played, on top of the markets already built ([markets and trade](markets-and-trade.md), [economy and exchanges](economy-and-exchanges.md)). Numbers marked **(to tune)** are starting points.*

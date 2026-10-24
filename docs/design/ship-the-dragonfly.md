@@ -1,3 +1,17 @@
+---
+title: The Dragonfly
+status: designed
+pillar: world
+summary: An information runner with wings that fold: the tightest turn in the game spread, fast folded, charging in sunlight, and one day the first ship to dip into a planet's air.
+card: cobra-mk3
+stages:
+  - Design and shape (A, wings that fold by themselves) | built
+  - The ship file and folding wings | proposed
+  - Its arrival: word, launch day, first runs | proposed
+help:
+  - Write Nell and Ide Halloran's yard: the place, the people | writing
+---
+
 # Design: the Dragonfly
 
 *Design, 24 October 2026. Agreed: shape A, wings that fold by themselves. Not built yet. Modern only; Classic keeps 1984's fleet.*

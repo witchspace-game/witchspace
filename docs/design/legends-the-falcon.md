@@ -1,3 +1,16 @@
+---
+title: The Falcons, a Legend
+status: proposed
+pillar: fight
+summary: A lone pirate running dark on a circuit of lawless worlds, who remembers you, and comes for the commanders who've thinned the packs.
+card: falcon
+stages:
+  - The Falcon, a rare dark pirate | built
+  - The redesign: circuit, memory, the Debt | proposed
+help:
+  - Design a Legend of your own (a homage, never a copy) | ships
+---
+
 # Design: the Falcons, a Legend
 
 *Proposed, October 2026. Change by pull request.*

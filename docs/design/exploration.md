@@ -1,3 +1,21 @@
+---
+title: Exploration
+status: building
+pillar: explore
+summary: Surveys, signals, trails of clues with their people, the explorer's rank, hiding in wreck fields, and later worlds you can watch change, witchspace itself, Legends and planetfall.
+card: cobra-mk3
+stages:
+  - Stage 1: reasons to go, things to spend on | built
+  - Stage 1b: the explorer's road | built
+  - Hiding in the clutter | built
+  - Stage 2: worlds you can watch change | proposed
+  - Stage 3: witchspace itself | proposed
+  - Planetfall | proposed
+help:
+  - Write a trail: clues across several systems, with their people | writing
+  - Write a beacon log or a derelict's last entry | writing
+---
+
 # Exploration
 
 Explore should be as good as Trade and Fight. Trading has contracts, an exchange and four companies; fighting has the law, the Marshals and the police hail. A commander who'd rather wander needs the same: **a reason to go somewhere, something worth finding when you get there, things to spend on, and something to show for it.**

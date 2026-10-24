@@ -1,3 +1,17 @@
+---
+title: The radio and comms
+status: building
+pillar: core
+summary: A radio log for everything that talks to you, hails, a comms array that lets the companies reach you anywhere, an emergency beacon, and (next) talking to other commanders safely.
+card: lancer
+stages:
+  - Stage 0: the radio log and hails | built
+  - Stage 1: the comms array and the beacon | built
+  - Talking to other commanders, with mute, block and report | proposed
+help:
+  - Write radio chatter for a busy system | writing
+---
+
 # Design: radio, the comms array and the emergency beacon
 
 *Proposed, October 2026; stages 0 and 1 built (see "As built" at the end). Change by pull request.*

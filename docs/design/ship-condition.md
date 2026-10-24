@@ -1,3 +1,13 @@
+---
+title: Ship condition and servicing
+status: proposed
+pillar: core
+summary: Ships wear with use: condition, readable symptoms and breakdowns, servicing at stations, second-hand ships with a history, and engineering. Modern rules only.
+card: sidewinder
+help:
+  - Describe a breakdown the way a pilot would notice it | writing
+---
+
 # Design: ship condition and servicing
 
 *Status: **proposal**, Modern rules only. Condition, symptoms and station servicing (sections 1–4) fit into the single-player game. Second-hand ships and engineering work (sections 5–6) come with shipyards and multiplayer. Please discuss in GitHub Discussions before building.*

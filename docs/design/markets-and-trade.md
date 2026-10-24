@@ -1,3 +1,19 @@
+---
+title: Markets and trade
+status: building
+pillar: trade
+summary: Real supply and demand: worlds that produce and consume, stations posting orders, NPC traders hauling to where goods are wanted, world events, and the black market.
+card: bullsnake
+stages:
+  - Supply and demand, new goods, station orders, real cargo on real ships | built
+  - World events and news that travels | built
+  - The black market, stolen goods and the fence | built
+  - Merchants: trading without flying | proposed
+help:
+  - Write a world event: what happens, who it hurts, the headline | writing
+  - Balance-check prices on a run you fly often | playtest
+---
+
 # Design: markets and trade
 
 *Status: **agreed direction**, Modern rules. It builds on the living markets and the exchange already built (see [economy and exchanges](economy-and-exchanges.md)), and everything here works in single-player first. In the shared galaxy, players' orders join the same books. Classic keeps 1984-style markets. Numbers marked **(to tune)** are starting points for playtesting.*

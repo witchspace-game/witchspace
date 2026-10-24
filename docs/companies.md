@@ -1,3 +1,13 @@
+---
+title: The trading companies
+status: designed
+pillar: world
+summary: Hexon Holdings, Vorg Industries, the Carriers' Mutual and Wexley-Yorozu: where they came from, what they want, the people inside them, and their ships.
+card: bullsnake
+help:
+  - Write a person inside one of the companies, and what they want | writing
+---
+
 # The trading companies
 
 *Worldbuilding for the four outfits in [companies and contracts](design/companies-and-contracts.md). Proposed; change by pull request. Tone as in the [worldbuilding bible](worldbuilding.md): dry, terse, let the player imagine the rest.*

@@ -823,3 +823,72 @@ button.button { cursor: pointer; }
 
 /* Every page: share it (src/site/share.ts), just above the footer. */
 .page-share { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter) 40px; display: flex; justify-content: flex-end; }
+
+/* --- The roadmap, the design library and each design's panel (tools/docs.ts) --- */
+
+.tag { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; border: 1px solid currentColor; }
+.tag.building { color: var(--accent); background: rgba(61, 255, 176, 0.08); }
+.tag.designed { color: var(--accent-2); }
+.tag.proposed { color: var(--amber); }
+.tag.idea { color: var(--violet); }
+.tag.built { color: var(--muted); }
+.tag.guide { color: var(--muted); }
+
+.roadmap-page h1, .section-head h1 { margin: 0 0 14px; font-family: 'Space Grotesk', sans-serif; font-size: clamp(40px, 6vw, 64px); line-height: 1; letter-spacing: -0.02em; }
+.road-counts { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 6px 0 22px; padding: 0; list-style: none; color: var(--muted); }
+.road-counts b { color: var(--fg); font-size: 20px; margin-right: 4px; }
+.roadmap-page .section-head p .button { margin: 0 8px 8px 0; }
+.pillar-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.pillar-nav a { padding: 6px 14px; border: 1px solid var(--border-strong); border-radius: 999px; color: var(--fg); font-size: 14px; text-decoration: none; }
+.pillar-nav a:hover { border-color: var(--accent); }
+.pillar { margin-top: 48px; scroll-margin-top: 90px; }
+.pillar-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 16px; }
+.pillar-head h2 { margin: 0; font-size: 28px; }
+.pillar-head p { margin: 0; }
+.road-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.road-item .tag { align-self: flex-start; margin-bottom: 12px; }
+.road-item.built { opacity: 0.72; }
+.road-item.building { border-color: rgba(61, 255, 176, 0.28); }
+.road-steps { display: flex; align-items: center; gap: 5px; margin-top: 16px; }
+.road-steps i { width: 22px; height: 6px; border-radius: 3px; background: var(--border-strong); }
+.road-steps i.built { background: var(--accent); box-shadow: 0 0 6px rgba(61, 255, 176, 0.5); }
+.road-steps i.building { background: linear-gradient(90deg, var(--accent) 50%, var(--border-strong) 50%); }
+.road-steps i.designed { background: rgba(74, 215, 255, 0.5); }
+.road-steps small { margin-left: 8px; color: var(--muted); font-size: 12.5px; }
+.road-help { margin-top: 10px; color: var(--amber); font-size: 13.5px; font-weight: 600; }
+
+.library-head { margin: 40px 0 14px; font-size: 24px; }
+
+.doc-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+.doc .doc-top .back { margin-bottom: 0; }
+.doc-panel { margin: 0 0 32px; padding: 18px 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.doc-status { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 12px; }
+.stages { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.stages li { display: grid; grid-template-columns: 14px 1fr auto; gap: 10px; align-items: center; font-size: 15px; }
+.stages .dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--border-strong); }
+.stages .built .dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px rgba(61, 255, 176, 0.6); }
+.stages .building .dot { border-color: var(--accent); }
+.stages .designed .dot { border-color: var(--accent-2); }
+.stages em { font-style: normal; font-size: 12.5px; color: var(--muted); }
+.stages .built em { color: var(--accent); }
+.doc-help { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.doc-help h3 { margin: 0 0 8px; font-size: 16px; }
+.doc-help ul { margin: 0 0 8px; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+.doc-edit { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); }
+.skill { display: inline-block; margin-right: 6px; padding: 1px 8px; border-radius: 6px; background: var(--surface-2); color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.03em; }
+.skill.writing { color: #f5c4ff; }
+.skill.ships { color: var(--accent); }
+.skill.playtest { color: var(--amber); }
+.skill.art { color: var(--accent-2); }
+.skill.design { color: var(--violet); }
+.skill.code { color: #9fb4ff; }
+
+.help-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.help-skill h3 { margin: 0 0 10px; }
+.help-skill h3 .skill { font-size: 14px; padding: 3px 10px; }
+.help-skill ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; color: var(--fg); font-size: 15px; }
+.help-skill li a { margin-left: 4px; font-size: 13.5px; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .road-items, .help-grid { grid-template-columns: 1fr; }
+}

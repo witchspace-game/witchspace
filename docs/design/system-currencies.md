@@ -1,3 +1,13 @@
+---
+title: System currencies
+status: designed
+pillar: trade
+summary: A currency for every system, modelled on real crypto: government monetary policies, liquidity pools, pegs and crises, and a ledger anyone can verify. Virtual only.
+card: coriolis
+help:
+  - Model a currency crisis for one government type | design
+---
+
 # Design: system currencies
 
 *Status: **agreed direction**, for the shared galaxy under Modern rules. It expands section 4 of [economy and exchanges](economy-and-exchanges.md) from optional station scrip to a currency for every system. Single-player Modern may use a simpler version; Classic keeps plain credits, as in 1984. Numbers are starting points for playtesting.*

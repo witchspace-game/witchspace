@@ -1,3 +1,13 @@
+---
+title: Flight HUD and touch
+status: built
+pillar: core
+summary: The job strip that always says what's next, and a touch drawer made for thumbs.
+card: cobra-mk3
+help:
+  - Fly on a phone and tell us what your thumbs hated | playtest
+---
+
 # Design: the job strip, work on your route, and the touch drawer
 
 *Agreed October 2026. Built in the same month (see "As built").*

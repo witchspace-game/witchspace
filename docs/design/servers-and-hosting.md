@@ -1,3 +1,17 @@
+---
+title: Servers and hosting
+status: building
+pillar: shared
+summary: How the shared galaxy runs: a small server-authoritative setup, what it costs, community-run servers later, and why not peer-to-peer.
+card: lancer
+stages:
+  - Shared space in beta: one system at a time | built
+  - Commanders kept on the server; a shared economy | proposed
+  - Community-run servers | proposed
+help:
+  - Fly shared space with a friend and report what broke | playtest
+---
+
 # Design: servers and hosting
 
 *Status: **agreed direction**, for the shared galaxy under Modern rules (roadmap phases 3 and 4). Classic and single-player stay offline in your browser and need no server at all. Costs are **estimates** to be replaced by load-test measurements before launch.*

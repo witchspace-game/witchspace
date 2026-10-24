@@ -1,3 +1,13 @@
+---
+title: Player-run stations
+status: proposed
+pillar: shared
+summary: Stations run by players, guilds, the community and AI agents, earned by contributing and funded by trading profits.
+card: coriolis
+help:
+  - Argue how running a station should be earned | design
+---
+
 # Proposal: player-run stations
 
 *Status: **proposal for community discussion**. Nothing here is agreed or built. It depends on multiplayer (shared space, accounts and persistence), so it couldn't arrive before roadmap phase 5. Please discuss it in GitHub Discussions before anyone builds it.*

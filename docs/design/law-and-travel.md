@@ -1,3 +1,20 @@
+---
+title: Law, travel, debt and capture
+status: building
+pillar: fight
+summary: Transponders, the law, surrender, getting caught, disabling and capture, fuel and rescue, insurance, loans and loan sharks, the Co-operative Marshals, and travel pacing.
+card: viper
+stages:
+  - Transponders, records and running dark | built
+  - Surrender, insurance and the Marshals | built
+  - Disabling, capture and boarding | proposed
+  - Loans and loan sharks | proposed
+  - Ship registry and flags | proposed
+help:
+  - Write a loan shark: their terms, and what happens if you miss a payment | writing
+  - Playtest getting caught and tell us if it felt fair | playtest
+---
+
 # Design: law, travel, debt and capture
 
 *Status: agreed design, not yet built. It belongs to the **trading and galaxy** milestone. Items marked **(proposed)** haven't been confirmed yet; please discuss them in GitHub Discussions before building.*
