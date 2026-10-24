@@ -10,6 +10,7 @@ stages:
   - Footage as evidence, and sold to the news | proposed
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
+  - The library: one central store for commanders' moments and their data | idea
   - The Witchspace channel: commanders' Shorts on YouTube, edited by an AI agent | idea
 help:
   - Write the newsroom's voice: what it says when it buys your footage of the Falcon | writing
@@ -99,6 +100,15 @@ The galaxy has things almost nobody sees: the Falcon, other Legends, a wreck fro
 The social part. Signed in, **Post to the station board** puts a kept clip or photo in a public gallery, in the game (docked, a Board tab) and on the site, with your callsign, the system and when. Commanders can watch, react and share; the best of the week can lead the site's home page.
 
 Because it's other people's posts, it needs a report button, moderation and limits before it opens, and it follows the online-safety decisions in `launch/safety` (still to be made). That's why it comes last. Clips are only the game's own picture, which keeps the risk low, but captions and callsigns are still people's words.
+
+## The library: one place for every commander's moments *(Mark, 24 October 2026)*
+
+The station board, verified proof, the newsroom, the press kit and the channel all need the same thing underneath: **a central library** where commanders' kept moments go when they choose to send them.
+
+- **What's sent:** the clip or photo, and the recorder's data: system, time, ship, what was in view, who fired first, who died. The data is what makes a moment searchable ("every Falcon sighting this week"), verifiable (checked against the galaxy's seed and clock) and useful as evidence.
+- **Where:** files in Cloudflare R2 beside the Worker we already run; the data in the accounts store. Signed in only, with a size cap and a daily limit per commander.
+- **Who sees what:** sending makes a moment *available*, not public. It shows on the station board, the channel or the press kit only once approved for each, and the commander can withdraw it at any time.
+- **What it feeds:** the station board (section 4), the Sightings wall and verified proof, the newsroom's footage market, the channel's agent (section 5), the press kit's "from the commanders" gallery, and (later) the MCP server, so an assistant can find "the best Bastion arrivals this month".
 
 ## 5. The Witchspace channel *(idea, Mark, 24 October 2026)*
 
