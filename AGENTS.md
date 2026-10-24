@@ -23,6 +23,10 @@ Most contributions are **content files** (JSON validated by JSON Schema), not co
 | `docs/worldbuilding.md` | Tone, setting and naming. Read it before writing flavour text. |
 | `docs/design/` | Agreed designs, written before building. Built ones end with an "As built" section. Read the relevant one before implementing or changing a feature, and update it when you do. |
 
+## The Witchspace MCP server
+
+If your client supports MCP, connect to `https://space.witchspace.org.uk/mcp` (streamable HTTP, read-only, no sign-in), or run it locally from the repo with `claude mcp add witchspace -- npx tsx tools/mcp.ts`. It gives you `validate_ship`, `preview_ship` (a PNG of four views beside a Cobra), `balance_check`, `list_ships`, `get_ship`, `designs`, `get_design`, `help_wanted` and `galaxy_system`. Use them: check and preview every ship you draft before showing it to the person. See docs/design/mcp-server.md.
+
 ## Workflow for creating content
 
 1. Read the relevant schema in `schemas/` and one or two existing examples.

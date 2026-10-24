@@ -1,11 +1,11 @@
 ---
 title: The Witchspace MCP server
-status: proposed
+status: building
 pillar: platform
 summary: Bring your own AI. One web address lets Claude, ChatGPT or Cursor validate, preview and balance-check a ship, read every design and help-wanted task, and look up any system in the galaxy. Later, the live galaxy for players, public news only.
 card: coriolis
 stages:
-  - Contributors - validate, preview and balance-check ships; the designs and help wanted; galaxy lookups | proposed
+  - Contributors - validate, preview and balance-check ships; the designs and help wanted; galaxy lookups | built
   - Submissions - send a checked design to the queue from the conversation | proposed
   - Players - the live galaxy, public news only | proposed
   - New content types as they arrive - characters, events, missions | proposed
@@ -17,7 +17,7 @@ help:
 
 # Design: the Witchspace MCP server
 
-*Design, 24 October 2026. Proposed.*
+*Design, 24 October 2026. Stage 1 built and live at https://space.witchspace.org.uk/mcp; the rest proposed.*
 
 ## Why
 
@@ -33,7 +33,7 @@ MCP (the Model Context Protocol) lets an assistant use tools a service provides.
 - **Never a shortcut through the game.** Players get public information (what the news says, where yards are building, what a system is), never the answers the game asks them to earn: no best trade routes, no price predictions, no where-the-Falcon-is. Learning the exchange should pay ([trading](trading.md)).
 - **Honest about authorship.** The person is the author; contributions made with it are marked AI-assisted, as `AGENTS.md` asks.
 
-## 1. Contributors
+## 1. Contributors *(built)*
 
 Tools:
 

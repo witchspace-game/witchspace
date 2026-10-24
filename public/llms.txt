@@ -13,6 +13,10 @@ Code is GPL-3.0. Content is CC BY-SA 4.0. Witchspace is not affiliated with Fron
 - [AGENTS.md](https://github.com/witchspace-game/witchspace/blob/main/AGENTS.md): rules and workflow for AI assistants creating content or code
 - [CONTRIBUTING](https://github.com/witchspace-game/witchspace/blob/main/CONTRIBUTING.md): how to add a ship in five minutes
 
+## MCP server
+
+- [Witchspace MCP server](https://witchspace.org.uk/design/mcp-server/): connect to https://space.witchspace.org.uk/mcp (streamable HTTP, read-only, no sign-in) for validate_ship, preview_ship, balance_check, list_ships, get_ship, designs, get_design, help_wanted and galaxy_system
+
 ## Content formats
 
 - [Ship schema](https://github.com/witchspace-game/witchspace/blob/main/schemas/ship.schema.json): JSON Schema for ships and stations
