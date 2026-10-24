@@ -397,6 +397,20 @@ addEventListener('pointermove', (e) => {
   panY = drag.py - (dy * 2) / scale; // vertical chart distances count double
   draw();
 });
+// A mouse wheel or trackpad moves it too (the touch drag's desktop twin).
+canvas.addEventListener(
+  'wheel',
+  (e) => {
+    if (mode !== 'local' || !opts) return;
+    e.preventDefault();
+    const { scale } = view();
+    const k = e.deltaMode === 1 ? 16 : 1; // lines, not pixels
+    panX += (e.deltaX * k) / scale;
+    panY += (e.deltaY * k * 2) / scale;
+    draw();
+  },
+  { passive: false },
+);
 addEventListener('pointerup', () => {
   dragged = drag?.moved ?? false;
   drag = null;

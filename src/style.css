@@ -647,6 +647,8 @@ body.retro #galaxy-map .map-title { font-size: 16px; text-shadow: none; }
 body.retro #galaxy-map .map-info { border-width: 2px; font-size: 12px; line-height: 1.6; }
 body.retro #galaxy-map .map-info h3 { font-size: 16px; }
 body.retro #galaxy-map .map-keys { font-size: 8px; }
+#galaxy-map .news-key { color: #ffb347; }
+body.retro #galaxy-map .news-key { color: inherit; }
 
 /* --- 1984 mode: white on black, chunky 8x8-style type ------------------- */
 
@@ -868,7 +870,7 @@ body.retro #beacon .beacon-calls button, body.retro #beacon h3 { font-size: 9px;
 body.touch .keys { display: none; }
 body.touch .dash { top: 6px; bottom: auto; transform: translateX(-50%) scale(var(--dash-scale, 0.72)); transform-origin: top center; }
 body.touch #dock-aid { top: 128px; right: 12px; transform: scale(0.8); transform-origin: top right; }
-body.touch #target-info { top: 110px; }
+body.touch #target-info { top: 130px; }
 body.touch #banner { top: 64px; font-size: 15px; padding: 7px 12px; }
 /* The survey bar would sit under the dashboard there; the bottom middle is clear. */
 body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); }
@@ -1400,4 +1402,9 @@ body.touch #touch .dark-button.armed { border-color: var(--amber); color: #000; 
 #hail .hail-on { pointer-events: auto; margin-left: 10px; min-height: 36px; padding: 4px 14px; font-size: 13px; border-color: #7fb2ff; color: #dbe8ff; }
 #hail .hail-on[hidden] { display: none; }
 body.touch #hail { top: 170px; font-size: 13px; }
-@media (max-height: 500px) { body.touch #hail { top: 64px; } }
+/* Phones on their side: the dashboard is shorter, so the target readout goes
+   just under it, and the hail above the survey bar at the bottom. */
+@media (max-height: 500px) {
+  body.touch #target-info { top: 114px; }
+  body.touch #hail { top: auto; bottom: 56px; }
+}

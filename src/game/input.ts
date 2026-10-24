@@ -122,7 +122,8 @@ export const touchSpeedTarget = () => touchSpeed;
 
 /** Aiming with the ring: the mouse is captured, or we're on a touch screen. */
 export const isMouseCaptured = () => flying && (isTouch || document.pointerLockElement !== null);
-export const wantsMouseCapture = () => flying && !isTouch && scheme === 'mouse' && !document.pointerLockElement;
+// Not while a chart is open: there a click picks a system and a drag moves the chart.
+export const wantsMouseCapture = () => flying && !suppressed && !isTouch && scheme === 'mouse' && !document.pointerLockElement;
 
 addEventListener('mousedown', (e) => {
   if (isTouch) return; // taps arrive as mouse events too; touch has its own fire button
