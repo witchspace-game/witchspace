@@ -13,6 +13,8 @@ export interface MediaItem {
   group: string;
   file: string;
   poster?: string;
+  /** When it was made (YYYY-MM-DD), for files not kept in git; otherwise the first commit's date. */
+  added?: string;
   /** Seconds into a video for its still. */
   posterOffset?: number;
   title: string;

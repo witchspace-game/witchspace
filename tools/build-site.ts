@@ -56,7 +56,7 @@ const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/about/': { ship: 'cobra-mk3', kicker: 'About', sub: 'An unofficial, non-commercial tribute to Elite (1984), made in the open.' },
   '/get-involved/': { ship: 'viper', kicker: 'Get involved', sub: 'Design ships, write lore, build missions, playtest or code.' },
   '/ideas/': { ship: 'cobra-mk3', kicker: 'Ideas', title: 'What should Witchspace do next?', sub: 'Suggest an idea, or vote the ones you care about up or down.' },
-  '/press/': { ship: 'falcon', kicker: 'Press kit', sub: 'Screenshots, video, facts and words about Witchspace.' },
+  '/press/': { ship: 'falcon', kicker: 'Press kit', sub: 'A new trailer, short films, screenshots, facts and words about Witchspace.' },
   '/privacy/': { ship: 'coriolis', kicker: 'Privacy', sub: 'What Witchspace keeps about you, why, and how to delete it.' },
   '/careers/': { ship: 'bullsnake', kicker: 'Careers', title: 'Careers in the eight galaxies', sub: 'Four companies are hiring pilots. Fly for one.' },
 };
@@ -151,7 +151,7 @@ for (const name of readdirSync(join(root, 'site/pages'))) {
     .replace('<!-- roadmap:compact -->', roadmapCompactHtml(docs))
     .replace('<!-- help:skills -->', helpSkillsHtml(docs))
     // {{media:<id>:large}} and the like: a press item's link at a given size.
-    .replace(/\{\{media:([\w-]+):(large|og|direct)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct') => links(media, media.items.find((i) => i.id === id)!)[size]);
+    .replace(/\{\{media:([\w-]+):(large|og|direct|video)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct' | 'video') => links(media, media.items.find((i) => i.id === id)!)[size]!);
   write({ ...meta, content });
 }
 
@@ -172,7 +172,7 @@ for (const item of media.items) {
   const l = links(media, item);
   const object =
     item.kind === 'video'
-      ? { '@type': 'VideoObject', name: item.title, description: item.caption, thumbnailUrl: l.og, contentUrl: l.direct, uploadDate: addedOn(item.file), ...(item.duration ? { duration: `PT${Math.round(item.duration)}S` } : {}), publisher: ORG }
+      ? { '@type': 'VideoObject', name: item.title, description: item.caption, thumbnailUrl: l.og, contentUrl: l.direct, uploadDate: item.added ?? addedOn(item.file), ...(item.duration ? { duration: `PT${Math.round(item.duration)}S` } : {}), publisher: ORG }
       : { '@type': 'ImageObject', name: item.title, description: item.caption, contentUrl: l.direct, thumbnailUrl: l.og, creator: ORG, license: 'https://creativecommons.org/licenses/by-sa/4.0/', acquireLicensePage: `${SITE}/press/` };
   write({ ...p, schema: [object] });
 }
