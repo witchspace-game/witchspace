@@ -20,6 +20,9 @@ This builds on the first slice (rings, moons, surveys, signals; see [ideas](../i
 - **What's left to do, at a glance:** moons and the planet are bracketed in the explorer's lavender until surveyed, then turn grey with a ✓ after the name. Names show within 30 km of the surface. The docked screen lists the survey records you hold.
 - **Moons are solid:** in-system jumps stop 1.8 km short of a moon and moons mass-lock within 2 km, as the planet and the sun do.
 - **Signals:** derelicts, beacons and wreck fields with written logs and salvage, picked up by a planet survey or by flying near.
+  - **Each commander finds their own.** A system's signals come from its seed; who has found them is kept per commander, so a newcomer finds the same beacon fresh, log and salvage included.
+  - **Beacons retire.** Once found, a beacon's lamp goes out, and on later visits it has drifted off: gone from your sky, though not from anyone else's.
+  - **Wrecks are solid cover** *(October 2026)*. Derelicts, wreck fields and beacons stop lasers, yours and the enemy's, and bounce you off with a scrape. Found wrecks stay, so a system you know has places to hide.
 - **The record:** the chart rings systems you've visited; explorer points and a rank from Homebody to Voyager. *(Elite is the combat rank only: nobody reaches it by exploring.)*
 
 ## Stage 1: reasons to go, things to spend on *(built, October 2026)*
@@ -107,6 +110,8 @@ Alongside the station yards of [building worlds](companies-and-contracts.md#4b-b
 - **Worlds being terraformed.** A few systems with thin populations have Wexley-Yorozu processors at work: a point of interest in orbit, and a planet whose sky shifts colour over real weeks, driven by the clock so everyone sees the same stage. Survey the progress for W-Y.
 - **Candidates become colonies.** The first commander to hand in a Candidate's data already has their callsign on its charter (stage 1b); here the colony is founded and grows.
 - **The darker side.** W-Y wants Candidates before anyone files a claim. Sell a find to a rival, or warn the people who'd be moved off: the explorer's own moral choices.
+
+**New signals over time** *(proposed, not built)*. Today a system's signals are fixed, so a commander who has found them all has nothing left there but its trails. Instead, a few signals could be tied to the clock as well as the seed: a fresh beacon or wreck now and then, the same for everyone at the same moment (a stricken ship's beacon this week, gone by the next), so places you know keep giving. The old ones fall sunward as the new ones arrive. Each new one needs its people and its feeling, like the rest.
 
 ## Stage 3: witchspace itself
 

@@ -78,7 +78,7 @@ import { Beams, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
-import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart } from './render/worlds';
+import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, deliver, destinationOf, forgive, jumpsBetween, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
@@ -2103,6 +2103,8 @@ function buildExploreScene(sys: StarSystem) {
     for (const b of sceneBodies) if (b.body.kind === 'moon' && position.distanceTo(b.centre) < b.radius * 3) position.addScaledVector(dir, b.radius * 4);
     if (yardScene && position.distanceTo(yardScene.centre) < yardScene.radius * 2) position.addScaledVector(dir, yardScene.radius * 3);
     const found = isFound(c, sys, poi.id);
+    // A beacon you've found has powered down and drifted off: gone from your sky. (Each commander finds their own.)
+    if (found && poi.kind === 'beacon') continue;
     // A trail's later steps are where its clue said: on the scanner from arrival.
     const sp: ScenePoi = { poi, position, revealed: planetDone || found || (poi.trail?.step ?? 0) > 0, models: [], beacon: null };
     if (poi.kind === 'beacon') {
@@ -2183,10 +2185,38 @@ function updateExplore(dt: number): boolean {
 }
 const TUMBLE_AXIS = new THREE.Vector3(0.3, 1, 0.2).normalize();
 
+// Wrecks and beacons are solid: they stop lasers, yours and theirs, so you
+// can put one between you and a pirate, and they bounce you off.
+const BEACON_RADIUS = 22;
+function coverTargets<T>(value: T): Target<T>[] {
+  const out: Target<T>[] = [];
+  for (const p of scenePois) {
+    for (const m of p.models) out.push({ value, position: m.root.position, radius: m.radius * 0.8 });
+    if (p.beacon) out.push({ value, position: p.beacon.position, radius: BEACON_RADIUS });
+  }
+  return out;
+}
+
+/** The wreck or beacon the ship has run into, pushing it back out; null if none. */
+function bumpCover(pos: THREE.Vector3, shipRadius: number): string | null {
+  for (const p of scenePois) {
+    const solids = [...p.models.map((m) => ({ at: m.root.position, r: m.radius * 0.8 })), ...(p.beacon ? [{ at: p.beacon.position, r: BEACON_RADIUS }] : [])];
+    for (const { at, r } of solids) {
+      const away = pos.clone().sub(at);
+      if (away.length() >= r + shipRadius) continue;
+      if (away.lengthSq() < 1) away.set(0, 1, 0);
+      pos.copy(at).add(away.setLength(r + shipRadius + 5));
+      return p.revealed && isFound(cmdr(), currentSystem(), p.poi.id) ? p.poi.name : p.poi.kind === 'beacon' ? 'beacon' : 'wreck';
+    }
+  }
+  return null;
+}
+
 function discover(p: ScenePoi) {
   const c = cmdr();
   const before = exploreOf(c).points;
   recordDiscovery(c, currentSystem(), p.poi);
+  if (p.beacon) powerDownBeacon(p.beacon); // its message delivered, its lamp goes out
   // The lost courier's prototype: yours now.
   if (p.poi.prize && !hasEquipment(c, p.poi.prize)) {
     c.equipment.push(p.poi.prize);
@@ -2766,7 +2796,7 @@ $('#hail .hail-on').addEventListener('click', (e) => {
   if (transponderOff) toggleTransponder();
 });
 
-type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' } | { kind: 'commander' };
+type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' } | { kind: 'commander' } | { kind: 'cover' };
 
 // Lasers fire straight ahead unless a gimballed mount is fitted, in which
 // case (with mouse aim) they swivel to hit what's under the ring. The ring
@@ -2859,6 +2889,7 @@ function firePlayerLaser() {
     { value: { kind: 'station' as const }, position: station.root.position, radius: 90 },
     // Other commanders stop the beam on screen; whether it hurt them is the server's call.
     ...[...sharedSpace.remotes.values()].map((r) => ({ value: { kind: 'commander' as const }, position: r.position, radius: 28 })),
+    ...coverTargets({ kind: 'cover' as const }),
   ];
   const hit = rayHit(origin, dir, laser.range, targets);
   if (hit?.target.value.kind === 'station' && cmdr().difficulty === 'modern' && fireHeld < FIRE_OVERRIDE && !isFugitive()) {
@@ -2965,9 +2996,10 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
 
     if (shot) {
       const origin = npc.obj.position.clone().addScaledVector(shot, 20);
-      type Struck = 'player' | 'station' | NpcShip;
+      type Struck = 'player' | 'station' | 'cover' | NpcShip;
       const targets: Target<Struck>[] = [
         { value: 'station', position: station.root.position, radius: 90 },
+        ...coverTargets<Struck>('cover'),
         // Ships don't shoot their own side.
         ...npcs.filter((n) => n !== npc && !allies(n.role, npc.role)).map((n) => ({ value: n as Struck, position: n.obj.position, radius: n.radius * 0.75 })),
       ];
@@ -3918,6 +3950,19 @@ function updateSpace(dt: number) {
       lastAltitudeWarning = elapsed;
       sfx.beep();
       flash('Altitude warning', 1.5);
+    }
+
+    const wreck = bumpCover(player.obj.position, 20);
+    if (wreck) {
+      sfx.thud();
+      const damage = 10 + player.speed * 0.15;
+      player.speed *= 0.2;
+      if (damagePlayer(damage)) {
+        die();
+        return;
+      }
+      hitFeedback(0.8);
+      flash(`Hull impact · ${wreck}`, 1.2);
     }
 
     // The yard: the constructor is as solid as a moon, the rest bounces you off.
