@@ -399,7 +399,10 @@ async function render() {
   }
 
   const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => console.error(e) });
-  venc.configure({ codec: 'avc1.640033', width: W, height: H, bitrate: 7e6, framerate: FPS });
+  // ?maxmb=9.5 fits the file under a size (some upload paths cap at 10 MB): the video gets what the audio leaves.
+  const maxMb = Number(params.get('maxmb'));
+  const bitrate = maxMb ? Math.floor((maxMb * 8e6 * 0.96) / total - 192000) : 7e6;
+  venc.configure({ codec: 'avc1.640033', width: W, height: H, bitrate, framerate: FPS });
   const layer = new OffscreenCanvas(W, H);
   const lg = layer.getContext('2d')!;
   const frames = Math.round(total * FPS);
