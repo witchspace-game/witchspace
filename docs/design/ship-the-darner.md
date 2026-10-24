@@ -1,6 +1,6 @@
 # Design: the Darner, a dragonfly ship
 
-*Design, 24 October 2026. Proposed; shape to be chosen from the sketches. Modern only; Classic keeps 1984's fleet.*
+*Design, 24 October 2026. Agreed: shape A, wings that fold by themselves. Not built yet. Modern only; Classic keeps 1984's fleet.*
 
 Mark asked for a ship like a dragonfly. The film ornithopters are someone else's design, so this one starts from the insect itself ([homage rules](../../CONTRIBUTING.md#legends-and-homages)): no flapping, no film names, nothing traced. Insect-winged craft are an old idea (da Vinci drew them); the shape and the story here are ours.
 
@@ -25,11 +25,17 @@ Three shapes, rendered in the game's own style, each from three-quarter, from ab
 - **B, compact:** a short, sturdy body and broad wings: more fighter than insect, and closer to an aircraft.
 - **C:** A with its wings folded back for cruise, like a damselfly at rest. Not a separate ship: what A (or B) looks like at speed.
 
-**Recommendation:** A, with C as its folded state. It's the one that reads as a dragonfly at a glance, and the fold between A and C is the ship's character.
+**Chosen (Mark): A**, with C as its folded state. It's the one that reads as a dragonfly at a glance, and the fold between A and C is the ship's character. The wings fold and spread by themselves with speed.
 
 ## What it's for
 
-- **Role:** a fast courier and scout. Small hold (6 t), light hull and shields, one missile. It's the ship for **express contracts** (the run that has to be there in time), survey work, and slipping through pirate space rather than fighting through it.
+- **Role: an information runner** *(Mark: data, not goods)*. A 6 t hold is too small to make goods pay, but data takes no hold at all, and everything about the ship favours it:
+  - **Speed is what data is worth.** Prices and news travel at the speed of ships ([trading](trading.md#2-prices-you-know)), so a fast ship with fresh reports arrives ahead of the news wave: market reports, news and saloon tips carried to traders who'll pay for them, and to companies who want to know first.
+  - **Survey data** fetches most far from where it was gathered ([exploration](exploration.md)); a fast ship that can charge in sunlight reaches the far, stationless systems and brings it home.
+  - **It doesn't look worth robbing.** Pirates scan holds and go for valuable cargo; a Darner scans as nearly empty. Unless someone's told them what it's carrying: then it's a target (a story hook).
+  - **Sensitive data wants discretion, not capacity:** sealed reports, shipping schedules, the Ninefold report. One-person, can't-be-late runs, delivered by settlement pad if nobody at the station should know.
+  - **Express contracts** pay for time, not tonnes.
+  Scouting second; planet-pad smuggling (below) the risky sideline. Light hull and shields, one missile.
 - **In a fight:** it doesn't out-gun anything; it out-turns everything. Spread, it can stay inside a Viper's turn. Folded, it can run.
 - **Who sells it:** the Halloran yard and stations near it. Mid-price **(to tune: about 90,000 Cr)**, less than a Cobra: it's a specialist, not a workhorse.
 
@@ -66,6 +72,4 @@ It glides and banks on long, still wings, never flaps.
 
 ## Open questions
 
-- A or B (or something else)?
-- Should the fold be automatic, or a key (and a touch button) so a pilot chooses when to spread?
 - Can a commander buy one, or is it an NPC ship first? (Buying ships isn't in the game yet: every commander flies a Cobra.)
