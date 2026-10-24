@@ -1,8 +1,9 @@
 import { FUEL_CAPACITY, type Commander } from '../game/commander';
-import { distanceLy, systemsWithin, type StarSystem } from '../galaxy/generate';
+import { distanceLy, systemAt, systemsWithin, type StarSystem } from '../galaxy/generate';
 import { COMMODITIES } from './commodities';
 import { stationTrades } from './legality';
 import { costToBuy, freshMarket, proceedsToSell, recover, type MarketState } from './market';
+import { checkOrders, type Fill, type OrderState } from './orders';
 import { newsDelay } from './events';
 import { maxBuyable, quotes, type TradeContext } from './trade';
 
@@ -121,6 +122,34 @@ export function bestKnownElsewhere(ctx: TradeContext): Map<string, { dest: StarS
       const price = proceedsToSell(s, state, good.id, 1);
       if (price > (out.get(good.id)?.price ?? 0)) out.set(good.id, { dest: s, price, age });
     }
+  }
+  return out;
+}
+
+/** Markets you can send orders to from here: within news range (the trade computer's reach is a tank of fuel; news goes further). */
+export const ORDER_RANGE = 25; // light years
+export function marketsForOrders(here: StarSystem): StarSystem[] {
+  return systemsWithin(here, ORDER_RANGE).sort((a, b) => distanceLy(here, a) - distanceLy(here, b));
+}
+
+/**
+ * Orders you've sent to other markets: check them as far as news of those
+ * markets has reached here, so you hear of a fill at the speed of news.
+ */
+export function checkSentOrders(c: Commander, here: StarSystem, now: number): { system: StarSystem; fill: Fill }[] {
+  const out: { system: StarSystem; fill: Fill }[] = [];
+  for (const [k, state] of Object.entries(c.markets) as [string, OrderState][]) {
+    if ((!state.orders?.length && !state.fills?.length) || k === key(here)) continue;
+    const [g, i] = k.split(':').map(Number);
+    const s = systemAt(g, i);
+    const t = knownAt(c, here, s, now);
+    if (t > state.updated) {
+      state.stock = recover(s, state, t).stock;
+      state.updated = t;
+    }
+    checkOrders(c, s, state, t);
+    for (const fill of state.fills ?? []) out.push({ system: s, fill });
+    state.fills = []; // told here, not again on arrival
   }
   return out;
 }

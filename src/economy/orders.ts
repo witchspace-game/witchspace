@@ -20,6 +20,8 @@ export interface LimitOrder {
   placed: number; // ms
   /** The market price when it was placed, to show what waiting for your price earned. */
   market?: number;
+  /** Sent from another station: when it was sent (it starts working at `placed`, once it arrives). */
+  sent?: number;
 }
 
 export interface Fill {
@@ -74,15 +76,44 @@ export function placeOrder(c: Commander, system: StarSystem, state: OrderState, 
   return { ok: true, message: `${side === 'buy' ? 'Buy' : 'Sell'} order placed: ${qty}${units(id)} of ${good.name} at ${limit.toFixed(2)} Cr` };
 }
 
+// Trading from the station (docs/design/trading.md, section 5b): an order sent
+// to another market travels at the speed of news, so it starts working when it
+// arrives, on what you knew when you sent it. A buy holds your credits and
+// fills into storage there; a sell offers goods already in storage there.
+export const BROKER_FEE = 0.02; // of the order's value, on sending
+
+export function sendOrder(c: Commander, system: StarSystem, state: OrderState, id: string, side: 'buy' | 'sell', qty: number, limit: number, now: number, delay: number): OrderResult {
+  const good = commodityById(id);
+  if (!good || qty <= 0 || !(limit > 0)) return { ok: false, message: 'Set a quantity and a price' };
+  limit = Math.round(limit * 100) / 100;
+  const fee = Math.round(limit * qty * BROKER_FEE * 10) / 10;
+  if (side === 'buy') {
+    const hold = Math.round(limit * qty * 10) / 10;
+    if (hold + fee > c.credits) return { ok: false, message: 'Not enough credits to cover the order and the broker' };
+    c.credits = Math.round((c.credits - hold - fee) * 10) / 10;
+  } else {
+    if ((state.storage?.[id] ?? 0) < qty) return { ok: false, message: `You haven't that much ${good.name} in storage at ${system.name}` };
+    if (fee > c.credits) return { ok: false, message: 'Not enough credits for the broker' };
+    c.credits = Math.round((c.credits - fee) * 10) / 10;
+    state.storage![id] -= qty;
+    if (state.storage![id] <= 0) delete state.storage![id];
+  }
+  const oid = Math.max(0, ...(state.orders ?? []).map((o) => o.oid)) + 1;
+  const market = priceAt(system, state, id, state.updated);
+  state.orders = [...(state.orders ?? []), { oid, id, side, qty, limit, placed: now + delay, market, sent: now }];
+  state.ordersChecked ??= state.updated;
+  return { ok: true, message: `${side === 'buy' ? 'Buy' : 'Sell'} order sent to ${system.name}: ${qty}${units(id)} of ${good.name} at ${limit.toFixed(2)} Cr · broker ${fee.toFixed(1)} Cr` };
+}
+
 /** Cancel an order: credits come back, and goods go back to the hold (or storage, if it's full). */
-export function cancelOrder(c: Commander, state: OrderState, oid: number, capacity: number): OrderResult {
+export function cancelOrder(c: Commander, state: OrderState, oid: number, capacity: number, here = true): OrderResult {
   const order = (state.orders ?? []).find((o) => o.oid === oid);
   if (!order) return { ok: false, message: 'No such order' };
   state.orders = state.orders!.filter((o) => o.oid !== oid);
   if (order.side === 'buy') c.credits = Math.round((c.credits + order.limit * order.qty) * 10) / 10;
   else {
     state.storage = { ...(state.storage ?? {}), [order.id]: (state.storage?.[order.id] ?? 0) + order.qty };
-    collect(c, state, capacity);
+    if (here) collect(c, state, capacity); // elsewhere, the goods stay in storage there
   }
   return { ok: true, message: `Order cancelled: ${order.qty}${units(order.id)} of ${commodityById(order.id)?.name}` };
 }

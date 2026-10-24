@@ -16,12 +16,12 @@ import {
 import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
 import { abolitionistPrice, backRoomQuotes, fenceQuotes, fenceSell, freeSlaves, hasAbolitionists, hasBackRoom, stingChance, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
 import { cleanQty, FUEL_CAPACITY, stolenQty } from '../game/commander';
-import { activeEvent, eventsAt, EVENT_KINDS } from '../economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, newsDelay } from '../economy/events';
 import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
-import { cancelOrder, collect, describeFill, placeOrder, type OrderState } from '../economy/orders';
+import { BROKER_FEE, cancelOrder, collect, describeFill, placeOrder, sendOrder, type OrderState } from '../economy/orders';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
-import { bestKnownElsewhere, bestOutlets, bestRoutes } from '../economy/routes';
-import { GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
+import { bestKnownElsewhere, bestOutlets, bestRoutes, checkSentOrders, knownAt, marketsForOrders } from '../economy/routes';
+import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
 
 // The station market as a trading exchange, in the style of today's crypto
 // exchanges: a list of pairs against the credit, a candlestick chart, the
@@ -67,6 +67,18 @@ const age = (ms: number) => {
 };
 
 export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
+  // Trading from the station (docs/design/trading.md, 5b): another market can
+  // be put on screen, as you know it, and limit orders sent to it.
+  let viewing: StarSystem | null = null;
+  /** The market on screen: this station's, or another as you know it (its `now` is when your news of it dates from). */
+  function view(): TradeContext {
+    const ctx = deps.context();
+    if (!viewing || viewing === ctx.system) return ctx;
+    return { ...ctx, system: viewing, now: knownAt(ctx.commander, ctx.system, viewing, ctx.now) };
+  }
+  const remote = () => viewing !== null && viewing !== deps.context().system;
+  /** Storage at the market on screen (remote sells come from there). */
+  const storedThere = (ctx: TradeContext, id: string) => (marketState(ctx) as OrderState).storage?.[id] ?? 0;
   let selected = 'food';
   let side: 'buy' | 'sell' = 'buy';
   let interval: Interval = '15m';
@@ -78,6 +90,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     <section class="ex-routes" hidden></section>
     <div class="ex">
       <aside class="ex-pairs" aria-label="Markets">
+        <label class="ex-market"><span>Market</span><select aria-label="Market on screen"></select></label>
+        <p class="ex-remote-note" hidden></p>
         <button class="ex-routes-toggle" title="Every market within a tank of fuel, as you know it, and the best runs from here">Trade computer ›</button>
         <button class="ex-backroom-toggle" hidden>Back room ›</button>
         <div class="ex-pairs-list"></div>
@@ -170,6 +184,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   const index = () => COMMODITIES.findIndex((c) => c.id === selected);
   const limitPrice = () => Number(priceInput.value) || 0;
   const maxQty = (ctx: TradeContext) => {
+    if (remote()) {
+      if (side === 'sell') return storedThere(ctx, selected);
+      return limitPrice() > 0 ? Math.floor(ctx.commander.credits / (limitPrice() * (1 + BROKER_FEE))) : 0;
+    }
     // Where there's a law, only clean goods can be sold openly.
     if (side === 'sell') return ctx.system.government > 0 ? cleanQty(ctx.commander, selected) : (ctx.commander.cargo[selected] ?? 0);
     // A limit buy waits for the price, so it's limited by credits, not stock or hold.
@@ -183,7 +201,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   };
   const qty = () => Math.max(0, Math.floor(Number(qtyInput.value) || 0));
 
-  function setQty(n: number, ctx = deps.context()) {
+  function setQty(n: number, ctx = view()) {
     const max = maxQty(ctx);
     const q = Math.max(0, Math.min(max, Math.floor(n)));
     qtyInput.value = q ? String(q) : '';
@@ -192,6 +210,33 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   // --- Pairs ------------------------------------------------------------------
 
+  // --- The market on screen ----------------------------------------------------------
+
+  let chooserFor = '';
+  function renderChooser() {
+    const docked = deps.context();
+    const select = $<HTMLSelectElement>('.ex-market select');
+    const k = `${docked.system.galaxy}:${docked.system.index}`;
+    if (chooserFor !== k) {
+      chooserFor = k;
+      viewing = null;
+      select.innerHTML =
+        `<option value="">${docked.system.name} · here</option>` +
+        marketsForOrders(docked.system)
+          .map((s) => `<option value="${s.index}">${s.name} · ${distanceLy(docked.system, s).toFixed(1)} LY</option>`)
+          .join('');
+    }
+    select.value = viewing && remote() ? String(viewing.index) : '';
+    const note = $('.ex-remote-note');
+    note.hidden = !remote();
+    if (remote()) {
+      const delay = newsDelay(viewing!, docked.system);
+      note.innerHTML = `As you know it: ${age(docked.now - knownAt(docked.commander, docked.system, viewing!, docked.now))} old. Orders you send arrive in ${age(delay)}; you'll hear of fills as long again after. Broker ${(BROKER_FEE * 100).toFixed(0)}%.`;
+    }
+    $('.ex-routes-toggle').hidden = remote();
+    if (remote()) $('.ex-backroom-toggle').hidden = true;
+  }
+
   // The goods as a trader thinks of them: what you're carrying, what's cheap
   // here, what sells well here, then everything else (docs/design/trading.md).
   let restOpen = false;
@@ -199,7 +244,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   function renderPairs(ctx: TradeContext) {
     const state = marketState(ctx);
     const now = ctx.now;
-    const elsewhere = bestKnownElsewhere(ctx);
+    const away = remote();
+    const elsewhere = away ? new Map() : bestKnownElsewhere(ctx);
     const rows = quotes(ctx).map((q) => {
       const id = q.commodity.id;
       const off = !tradesHere(ctx, id);
@@ -207,7 +253,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         q,
         id,
         off,
-        held: ctx.commander.cargo[id] ?? 0,
+        held: away ? storedThere(ctx, id) : (ctx.commander.cargo[id] ?? 0),
         order: off ? null : stationOrder(ctx.system, state, id),
         balance: tradeBalance(ctx.system, id),
         best: elsewhere.get(id),
@@ -249,13 +295,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const section = (title: string, list: string) => (list ? `<h5 class="ex-list-head">${title}</h5>${list}` : '');
     $('.ex-pairs-list').innerHTML =
       section(
-        'Your hold',
-        hold.map((r) => row(r, r.off ? '' : 'sell', [`${r.held.toLocaleString()} ${u(r)} aboard`, there(r)].filter(Boolean).join(' · '))).join(''),
+        away ? `In storage at ${ctx.system.name}` : 'Your hold',
+        hold.map((r) => row(r, r.off ? '' : 'sell', [`${r.held.toLocaleString()} ${u(r)} ${away ? 'in storage' : 'aboard'}`, there(r)].filter(Boolean).join(' · '))).join(''),
       ) +
-      section('Cheap here', cheap.map((r) => row(r, 'buy', there(r) || (r.order?.side === 'sell' ? 'in a glut here' : 'made here'))).join('')) +
-      section('Sells well here', wanted.map((r) => row(r, '', r.order?.side === 'buy' ? `short · station buying ${r.order.qty.toLocaleString()} ${u(r)}` : 'wanted here')).join('')) +
+      section(away ? `Cheap at ${ctx.system.name}` : 'Cheap here', cheap.map((r) => row(r, 'buy', there(r) || (r.order?.side === 'sell' ? `in a glut ${away ? 'there' : 'here'}` : `made ${away ? 'there' : 'here'}`))).join('')) +
+      section(away ? `Sells well at ${ctx.system.name}` : 'Sells well here', wanted.map((r) => row(r, '', r.order?.side === 'buy' ? `short · station buying ${r.order.qty.toLocaleString()} ${u(r)}` : `wanted ${away ? 'there' : 'here'}`)).join('')) +
       `<button class="ex-rest-toggle" aria-expanded="${restOpen}">${restOpen ? '▾' : '▸'} All other goods (${rest.length})</button>` +
-      (restOpen ? rest.map((r) => row(r, '', r.off ? 'not traded here' : '')).join('') : '');
+      (restOpen ? rest.map((r) => row(r, '', r.off ? `not traded ${away ? 'there' : 'here'}` : '')).join('') : '');
   }
 
   // --- Header -----------------------------------------------------------------
@@ -295,7 +341,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div><dt>Station stock</dt><dd>${q.stock.toLocaleString()} ${u}</dd></div>
         <div><dt>Trade</dt><dd>${role}</dd></div>
         ${demand}
-        <div><dt>In your hold</dt><dd>${held.toLocaleString()} ${u}${stolenQty(ctx.commander, selected) ? ` <em class="ex-hot">${stolenQty(ctx.commander, selected).toLocaleString()} stolen</em>` : ''}</dd></div>
+        <div><dt>${remote() ? 'In storage there' : 'In your hold'}</dt><dd>${(remote() ? storedThere(ctx, selected) : held).toLocaleString()} ${u}${stolenQty(ctx.commander, selected) ? ` <em class="ex-hot">${stolenQty(ctx.commander, selected).toLocaleString()} stolen</em>` : ''}</dd></div>
       </dl>
       <p class="ex-why">${why(ctx, c, balance, order, touched ? event : null)}</p>`;
   }
@@ -303,12 +349,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   /** Why the price is what it is, in a sentence. */
   function why(ctx: TradeContext, c: Commodity, balance: number, order: ReturnType<typeof stationOrder>, event: ReturnType<typeof activeEvent>): string {
     const here = ctx.system.name;
-    if (!tradesHere(ctx, c.id)) return `${c.name} isn't traded openly at ${here}: it's against the law here.`;
-    if (event) return `${EVENT_KINDS[event.type].headline(here)}. That's moving ${c.name.toLowerCase()} prices here.`;
+    const at = remote() ? 'there' : 'here';
+    if (!tradesHere(ctx, c.id)) return `${c.name} isn't traded openly at ${here}: it's against the law ${at}.`;
+    if (event) return `${EVENT_KINDS[event.type].headline(here)}. That's moving ${c.name.toLowerCase()} prices ${at}.`;
     if (order?.side === 'buy') return `${here} is short of ${c.name.toLowerCase()} and the station is buying to restock: a good place to sell.`;
     if (order?.side === 'sell') return `${here} has more ${c.name.toLowerCase()} than it can use: cheap while the glut lasts.`;
-    if (balance > 0.25) return `${c.name} is cheap here: ${here} makes it. Sell it where it's wanted.`;
-    if (balance < -0.25) return `${c.name} sells well here: ${here} doesn't make it, so it has to be brought in.`;
+    if (balance > 0.25) return `${c.name} is cheap ${at}: ${here} makes it. Sell it where it's wanted.`;
+    if (balance < -0.25) return `${c.name} sells well ${at}: ${here} doesn't make it, so it has to be brought in.`;
     return `${here} makes and uses its own ${c.name.toLowerCase()}, so the price stays close to fair.`;
   }
 
@@ -416,12 +463,19 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   function renderForm(ctx: TradeContext) {
     const c = commodity();
     const u = unitLabel(c);
+    if (remote() && orderType !== 'limit') {
+      orderType = 'limit';
+      suggestPrice(ctx);
+    }
+    $('.ex-types').hidden = remote();
     root.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => b.classList.toggle('active', b.dataset.side === side));
     root.querySelectorAll<HTMLButtonElement>('[data-type]').forEach((b) => b.classList.toggle('active', b.dataset.type === orderType));
     $('.ex-form').classList.toggle('selling', side === 'sell');
     const limit = orderType === 'limit';
     $('.ex-price').hidden = !limit;
-    $('.ex-ordertype').innerHTML = limit
+    $('.ex-ordertype').innerHTML = remote()
+      ? `Order to ${ctx.system.name} <span>arrives in ${age(newsDelay(ctx.system, deps.context().system))}, then waits for your price; ${side === 'buy' ? 'what it buys waits in storage there' : 'sells from your storage there'}</span>`
+      : limit
       ? `Limit order <span>waits until the price reaches yours; ${side === 'buy' ? 'your credits are held' : 'your goods are held'} until then</span>`
       : `Market order <span>fills now, at the station's prices</span>`;
     const max = maxQty(ctx);
@@ -429,7 +483,11 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     $('.ex-qty-unit').textContent = u;
     const held = ctx.commander.cargo[selected] ?? 0;
     $('.ex-avail').innerHTML =
-      side === 'buy'
+      remote()
+        ? side === 'buy'
+          ? `Available <b>${fmt(ctx.commander.credits)} Cr</b>`
+          : `In storage there <b>${storedThere(ctx, selected).toLocaleString()} ${u}</b> ${c.name}`
+        : side === 'buy'
         ? `Available <b>${fmt(ctx.commander.credits)} Cr</b> · Hold space <b>${fmt(freeTonnes(ctx))} t</b>`
         : `Available <b>${held.toLocaleString()} ${u}</b> ${c.name}`;
 
@@ -437,17 +495,19 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const state = marketState(ctx);
     if (limit) {
       const value = n * limitPrice();
+      const fee = remote() ? Math.round(value * BROKER_FEE * 10) / 10 : 0;
       $('.ex-est').innerHTML = `
         <div><dt>Limit price</dt><dd>${limitPrice() ? `${fmt(limitPrice(), 2)} Cr` : '-'}</dd></div>
-        <div><dt>Market now</dt><dd>${fmt(quotes(ctx).find((x) => x.commodity.id === selected)!.price, 2)} Cr</dd></div>
+        <div><dt>${remote() ? 'Market, as known' : 'Market now'}</dt><dd>${fmt(quotes(ctx).find((x) => x.commodity.id === selected)!.price, 2)} Cr</dd></div>
+        ${remote() ? `<div><dt>Broker</dt><dd>${fee ? `${fmt(fee)} Cr` : '-'}</dd></div>` : ''}
         <div><dt>${side === 'buy' ? 'Credits held' : 'You receive when filled'}</dt><dd><b>${value ? `${fmt(value)} Cr` : '-'}</b></dd></div>`;
       const submit = $<HTMLButtonElement>('.ex-submit');
       let why = '';
-      if (!tradesHere(ctx, selected)) why = 'Not traded openly here';
-      else if (side === 'sell' && held === 0) why = `No ${c.name} in your hold`;
-      else if (side === 'buy' && value > ctx.commander.credits) why = 'Not enough credits';
+      if (!tradesHere(ctx, selected)) why = 'Not traded openly there';
+      else if (side === 'sell' && (remote() ? storedThere(ctx, selected) : held) === 0) why = remote() ? `No ${c.name} in storage there` : `No ${c.name} in your hold`;
+      else if (side === 'buy' && value + fee > ctx.commander.credits) why = 'Not enough credits';
       submit.disabled = Boolean(why) || n === 0 || !limitPrice();
-      submit.textContent = why || `Place ${side} order${n ? ` · ${n.toLocaleString()} ${u} at ${fmt(limitPrice(), 2)}` : ''}`;
+      submit.textContent = why || `${remote() ? `Send ${side} order` : `Place ${side} order`}${n ? ` · ${n.toLocaleString()} ${u} at ${fmt(limitPrice(), 2)}` : ''}`;
       $('.ex-msg').textContent = message;
       return;
     }
@@ -505,15 +565,17 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       ? `<h5>Open orders</h5><table class="ex-orders"><thead><tr><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Limit</th><th class="num">Market</th><th></th></tr></thead><tbody>${orders
           .map((o) => {
             const now = quotes(ctx).find((x) => x.commodity.id === o.id)!.price;
+            const onWay = o.sent !== undefined && o.placed > deps.context().now;
             return `<tr><td>${commodityById(o.id)?.name}</td><td class="${o.side === 'buy' ? 'up' : 'down'}">${o.side === 'buy' ? 'Buy' : 'Sell'}</td><td class="num">${o.qty.toLocaleString()}</td>
-              <td class="num">${fmt(o.limit, 2)}</td><td class="num">${fmt(now, 2)}</td><td class="num"><button data-cancel="${o.oid}">Cancel</button></td></tr>`;
+              <td class="num">${fmt(o.limit, 2)}</td><td class="num">${onWay ? `<small>arrives ${clock(o.placed)}</small>` : fmt(now, 2)}</td><td class="num"><button data-cancel="${o.oid}">Cancel</button></td></tr>`;
           })
           .join('')}</tbody></table>`
       : '';
     const storageHtml = stored.length
       ? `<p class="ex-storage">In storage here, waiting for hold space: ${stored.map(([id, q]) => `<b>${q.toLocaleString()} ${unitLabel(commodityById(id)!)} ${commodityById(id)?.name}</b>`).join(', ')}</p>`
       : '';
-    $('.ex-mine h4').textContent = orders.length ? 'Your orders and trades here' : 'Your trades here';
+    const where = remote() ? `at ${ctx.system.name}` : 'here';
+    $('.ex-mine h4').textContent = orders.length ? `Your orders and trades ${where}` : `Your trades ${where}`;
     $('.ex-trades-list').innerHTML = openHtml + storageHtml + (trades.length
       ? `<table><thead><tr><th>Time</th><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Avg</th><th class="num">Total</th></tr></thead><tbody>${trades
           .map(
@@ -537,7 +599,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const abolition = hasAbolitionists(c, ctx.system);
     const fence = fenceQuotes(c, ctx.system, marketState(ctx), ctx.now);
     const toggle = $<HTMLButtonElement>('.ex-backroom-toggle');
-    toggle.hidden = !quotesHere.length && !fence.length && !(abolition && (c.cargo.slaves ?? 0) > 0);
+    toggle.hidden = remote() || (!quotesHere.length && !fence.length && !(abolition && (c.cargo.slaves ?? 0) > 0));
     if (!backOpen) return;
     const risk = stingChance(ctx.system, 1);
     const rows = quotesHere
@@ -642,18 +704,22 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     routesOpen = open;
     $('.ex-routes').hidden = !open;
     $('.ex').hidden = open || backOpen;
-    if (open) renderRoutes(deps.context());
+    if (open) renderRoutes(view());
   }
 
   function render(newMessage?: string) {
     if (newMessage !== undefined) message = newMessage;
-    const ctx = deps.context();
+    const docked = deps.context();
     // Orders that filled since we last looked, and goods waiting in storage.
-    const state = marketState(ctx) as OrderState;
+    const state = marketState(docked) as OrderState;
     const notes = (state.fills ?? []).map(describeFill);
     state.fills = [];
-    const moved = collect(ctx.commander, state, ctx.capacity);
+    const moved = collect(docked.commander, state, docked.capacity);
     for (const [id, q] of Object.entries(moved)) notes.push(`Collected ${q.toLocaleString()} ${unitLabel(commodityById(id)!)} of ${commodityById(id)?.name} from storage`);
+    // Orders sent elsewhere, as far as news of them has come back.
+    for (const { system, fill } of checkSentOrders(docked.commander, docked.system, docked.now)) notes.push(`News from ${system.name}: ${describeFill(fill)}`);
+    renderChooser();
+    const ctx = view();
     if (notes.length) {
       deps.traded({ ok: true, message: notes.join(' · ') });
       return;
@@ -682,9 +748,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       setRoutesOpen(false);
       return;
     } else if (el.dataset.course) {
-      const ctx = deps.context();
+      const ctx = view();
       deps.setCourse(systemAt(ctx.system.galaxy, Number(el.dataset.course)));
-      renderRoutes(deps.context());
+      renderRoutes(view());
       return;
     } else if (el.dataset.routeBuy) {
       selected = el.dataset.routeBuy;
@@ -700,21 +766,21 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     } else if (el.classList.contains('ex-back-close')) {
       setBackOpen(false);
     } else if (el.dataset.back) {
-      const ctx = deps.context();
+      const ctx = view();
       const result = backRoomTrade(ctx.commander, ctx.system, marketState(ctx), el.dataset.good!, el.dataset.back as 'buy' | 'sell', Number(el.dataset.n), ctx.capacity, ctx.now);
       backMessage = result.message;
       backCaught = result.caught;
       deps.dealt(result);
       return;
     } else if (el.dataset.fence) {
-      const ctx = deps.context();
+      const ctx = view();
       const result = fenceSell(ctx.commander, ctx.system, marketState(ctx), el.dataset.fence, Number(el.dataset.n), ctx.now);
       backMessage = result.message;
       backCaught = result.caught;
       deps.dealt(result);
       return;
     } else if (el.dataset.free) {
-      const ctx = deps.context();
+      const ctx = view();
       const result = freeSlaves(ctx.commander, ctx.system, Number(el.dataset.free), ctx.now);
       backMessage = result.message;
       backCaught = false;
@@ -724,7 +790,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       restOpen = !restOpen;
     } else if (el.dataset.id) {
       selected = el.dataset.id;
-      if (orderType === 'limit') queueMicrotask(() => suggestPrice(deps.context()));
+      if (orderType === 'limit') queueMicrotask(() => suggestPrice(view()));
       message = '';
       qtyInput.value = '';
       slider.value = '0';
@@ -733,8 +799,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         side = el.dataset.quick as 'buy' | 'sell';
         orderType = 'market';
         render();
-        setQty(maxQty(deps.context()));
-        renderForm(deps.context());
+        setQty(maxQty(view()));
+        renderForm(view());
         return;
       }
     } else if (el.dataset.side) {
@@ -742,23 +808,23 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       qtyInput.value = '';
       slider.value = '0';
       message = '';
-      if (orderType === 'limit') suggestPrice(deps.context());
+      if (orderType === 'limit') suggestPrice(view());
     } else if (el.dataset.type) {
       orderType = el.dataset.type as 'market' | 'limit';
       qtyInput.value = '';
       slider.value = '0';
       message = '';
-      if (orderType === 'limit') suggestPrice(deps.context());
+      if (orderType === 'limit') suggestPrice(view());
     } else if (el.dataset.cancel) {
-      const ctx = deps.context();
-      const result = cancelOrder(ctx.commander, marketState(ctx) as OrderState, Number(el.dataset.cancel), ctx.capacity);
+      const ctx = view();
+      const result = cancelOrder(ctx.commander, marketState(ctx) as OrderState, Number(el.dataset.cancel), ctx.capacity, !remote());
       message = result.message;
       deps.traded(result);
       return;
     } else if (el.dataset.interval) {
       interval = el.dataset.interval as Interval;
     } else if (el.dataset.pct) {
-      setQty((maxQty(deps.context()) * Number(el.dataset.pct)) / 100);
+      setQty((maxQty(view()) * Number(el.dataset.pct)) / 100);
     } else if (el.dataset.order) {
       // Fill the station's order: sell into a buy order, buy from a sell order.
       side = el.dataset.order === 'buy' ? 'sell' : 'buy';
@@ -768,10 +834,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       side = el.dataset.kind === 'ask' ? 'buy' : 'sell';
       setQty(Number(el.dataset.total));
     } else if (el.classList.contains('ex-submit')) {
-      const ctx = deps.context();
+      const ctx = view();
       const n = qty();
-      const result =
-        orderType === 'limit'
+      const docked = deps.context();
+      const result = remote()
+        ? sendOrder(ctx.commander, ctx.system, marketState(ctx) as OrderState, selected, side, n, limitPrice(), docked.now, newsDelay(ctx.system, docked.system))
+        : orderType === 'limit'
           ? placeOrder(ctx.commander, ctx.system, marketState(ctx) as OrderState, selected, side, n, limitPrice(), ctx.now)
           : side === 'buy'
             ? buy(ctx, selected, n)
@@ -786,16 +854,26 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     } else return;
     render();
   });
+  $<HTMLSelectElement>('.ex-market select').addEventListener('change', (e) => {
+    const v = (e.target as HTMLSelectElement).value;
+    const docked = deps.context();
+    viewing = v === '' ? null : systemAt(docked.system.galaxy, Number(v));
+    message = '';
+    qtyInput.value = '';
+    slider.value = '0';
+    if (!viewing) orderType = 'market';
+    render();
+  });
   qtyInput.addEventListener('input', () => {
-    const ctx = deps.context();
+    const ctx = view();
     const max = maxQty(ctx);
     if (qty() > max) qtyInput.value = String(max);
     slider.value = String(max ? Math.round((qty() / max) * 100) : 0);
     renderForm(ctx);
   });
-  priceInput.addEventListener('input', () => renderForm(deps.context()));
+  priceInput.addEventListener('input', () => renderForm(view()));
   slider.addEventListener('input', () => {
-    const ctx = deps.context();
+    const ctx = view();
     setQty((maxQty(ctx) * Number(slider.value)) / 100, ctx);
     renderForm(ctx);
   });

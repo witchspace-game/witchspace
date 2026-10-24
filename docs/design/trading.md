@@ -1,6 +1,6 @@
 # Trading: knowing something others don't
 
-*Design, 24 October 2026. Proposed, Modern rules; Classic keeps 1984's market. It reworks how trading is presented and played, on top of the markets already built ([markets and trade](markets-and-trade.md), [economy and exchanges](economy-and-exchanges.md)). Numbers marked **(to tune)** are starting points.*
+*Design, 24 October 2026. Modern rules; stage 1 built (October 2026), the rest proposed; Classic keeps 1984's market. It reworks how trading is presented and played, on top of the markets already built ([markets and trade](markets-and-trade.md), [economy and exchanges](economy-and-exchanges.md)). Numbers marked **(to tune)** are starting points.*
 
 ## Why
 
@@ -139,7 +139,8 @@ Ways to move a market, each with a cost and a risk:
 
 ## 7. Stages
 
-1. **The trader's screen, prices you know, and trading from the station** (sections 1, 2 and 5b): plain lists round the chart, news markers on it, one-tap trades, the book and feed beside it, "better than market" feedback, the trade computer working from your knowledge, the starting almanac. The biggest change to how trading feels, and nothing new to simulate.
+1. *(Built, October 2026.)* **The trader's screen, prices you know, and trading from the station** (sections 1, 2 and 5b): plain lists round the chart, news markers on it, one-tap trades, the book and feed beside it, "better than market" feedback, the trade computer working from your knowledge, the starting almanac. The biggest change to how trading feels, and nothing new to simulate.
+   *As built:* the lists (your hold or, on another market, your storage there; cheap; sells well; the rest folded) with trend lines and the best price you know elsewhere; the why line; the trade computer from your own visits and reports at the speed of news, ages shown (no almanac needed: reports from every system in range reach the station anyway); a market chooser for any market within 25 LY, shown as you know it, with limit orders sent there (arriving at the speed of news, 2% broker, fills heard of as news returns, goods kept in storage there); "better than market" when a limit order fills. Still to do from stage 1: news-arrival markers on the chart (world events here are already marked).
 2. **The saloon** (section 3): the people, tips stale, early and planted, and their reputations. Then insiders, and the inspectors.
 3. **The news cycle** (section 4): the overshoot and the aftermath glut, and saying it in words.
 4. **Limit orders on the trader's screen** (section 5), and messages when they fill. Ma Reyes's lessons and the Merchant rank (section 1b).
