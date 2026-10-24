@@ -16,7 +16,7 @@ import {
 import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
 import { abolitionistPrice, backRoomQuotes, fenceQuotes, fenceSell, freeSlaves, hasAbolitionists, hasBackRoom, stingChance, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
 import { cleanQty, FUEL_CAPACITY, stolenQty } from '../game/commander';
-import { activeEvent, eventsAt, EVENT_KINDS, newsDelay } from '../economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, newsAt, newsDelay, type NewsItem } from '../economy/events';
 import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
 import { BROKER_FEE, cancelOrder, collect, describeFill, placeOrder, sendOrder, type OrderState } from '../economy/orders';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
@@ -421,8 +421,23 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       if (e.start >= start) events.push({ time: at(e.start), position: 'aboveBar', shape: 'square', color: '#f7a600', text: name });
       if (e.end >= start && e.end <= lastStart + ms) events.push({ time: at(e.end), position: 'aboveBar', shape: 'circle', color: '#848e9c', text: `${name} ends` });
     }
+    // News of trouble elsewhere, where it reached this station: traders here act on it, so watch the candles.
+    for (const n of news(ctx)) {
+      if (n.where === ctx.system || n.heard < start) continue;
+      const kind = EVENT_KINDS[n.event.type];
+      const touches = (kind.effects[selected] ?? 0) !== 0 || (kind.effects.imports !== undefined && tradeBalance(n.where, selected) < -0.2);
+      if (touches) events.push({ time: at(n.heard), position: 'belowBar', shape: 'circle', color: '#7fb2ff', text: `${kind.name} news · ${n.where.name}` });
+    }
     markers.setMarkers([...mine, ...events].sort((a, b) => (a.time as number) - (b.time as number)));
     legend(undefined);
+  }
+
+  /** The news that has reached the market on screen (worked out once a minute: it's the whole region). */
+  let newsCache = { key: '', items: [] as NewsItem[] };
+  function news(ctx: TradeContext): NewsItem[] {
+    const key = `${ctx.system.galaxy}:${ctx.system.index}:${Math.floor(ctx.now / 60_000)}`;
+    if (newsCache.key !== key) newsCache = { key, items: newsAt(ctx.system, ctx.now) };
+    return newsCache.items;
   }
 
   // --- Order book --------------------------------------------------------------
