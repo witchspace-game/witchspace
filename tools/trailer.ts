@@ -225,7 +225,8 @@ function drawWordmark(cx: number, cy: number, size: number, alpha: number) {
 async function drawShot(shot: Shot, t: number) {
   if (shot.clip) {
     const v = videos.get(CLIP(shot.clip))!;
-    await seek(v, (shot.from ?? 0) + t * (shot.speed ?? 1));
+    // The middle of the frame: ask for its exact start and rounding can hand back the one before (a stutter).
+    await seek(v, (shot.from ?? 0) + t * (shot.speed ?? 1) + 0.5 / FPS);
     cover(v, v.videoWidth, v.videoHeight, portrait ? 1.0 : 1);
   } else if (shot.still) {
     const i = images.get(shot.still)!;

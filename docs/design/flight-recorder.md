@@ -2,11 +2,11 @@
 title: The flight recorder
 status: proposed
 pillar: core
-summary: Every ship's black box keeps the last 30 seconds. Watch how you died, keep the great moments in a flight log, use footage as evidence or sell it to the news, prove the sightings nobody would believe, and post the best to the station board.
+summary: Every ship's black box keeps the last 30 seconds, and sharing what you saw is part of the game. Watch how you died, keep the great moments, share them to your socials with a link back, use footage as evidence or sell it to the news, and post the best to the station board.
 card: cobra-mk3
 stages:
   - Photos one tap away on touch screens (P) | built
-  - The recorder, the death replay and the flight log | proposed
+  - The recorder, the death replay and the flight log, with sharing to socials | proposed
   - Footage as evidence, and sold to the news | proposed
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
@@ -27,10 +27,11 @@ P takes a photo of the view, without the HUD, and has since October. But a photo
 
 The answer is a thing every ship already ought to have: a **flight recorder**. A black box, a dashcam: always running, never needing to be remembered. What it keeps is yours to watch, keep, share and, in the game, to use.
 
-Mark: "it's like social media never died." Commanders trading clips of their best fights and worst deaths, in the game and out of it, is how a space game gets talked about.
+A picture paints a thousand words. Seeing something amazing in space, catching it, and showing your friends should be part of playing, not something you do outside the game with a screen recorder. Mark: "it's like social media never died." Commanders trading clips of their best fights and worst deaths, on their own socials and in the game, is how a space game gets talked about, and every share is an invitation to play.
 
 ## Principles
 
+- **Sharing is part of the game.** Every photo and kept moment is one tap from WhatsApp, Instagram, TikTok, X or Facebook, branded, with a link back that unfurls into a proper preview and puts the viewer one tap from playing.
 - **Never ask the player to press record.** The recorder keeps the last 30 seconds, always; you decide afterwards what was worth keeping.
 - **Footage is worth something in the game,** not just outside it: evidence for the law, news for the newsroom, proof for explorers.
 - **Yours until you say otherwise.** Everything stays on your device. Nothing is uploaded unless you post it, deliberately, signed in.
@@ -40,6 +41,15 @@ Mark: "it's like social media never died." Commanders trading clips of their bes
 ## 1. Photos *(built)*
 
 P, or the camera button on touch screens (beside the drawer tab, always to hand), takes a photo of the view without the HUD, with a small WITCHSPACE mark in the corner. On phones it opens the share sheet; elsewhere it's saved. From stage 2 it also goes into the flight log.
+
+## Sharing it
+
+Sharing works everywhere a commander can see a photo or a kept moment: the camera button, the death replay, the flight log, the station board.
+
+- **One tap to your socials.** On phones, the share sheet (WhatsApp, Instagram, TikTok, Messages...) with the picture or clip itself; on desktop, the site's share buttons (Facebook, X, WhatsApp) and a link to copy.
+- **Branded, always.** Photos carry the WITCHSPACE mark; clips end on a short card: the wordmark, *Trade. Fight. Explore. Build.*, witchspace.org.uk.
+- **A link that sells the game.** Shared from an account, a moment gets its own page on the site (as press kit items do): the clip playing, your callsign, the system, what happened ("Jameson vs a pirate pack at Riedquat"), a Play free button, and a branded preview card so it unfurls properly on every platform.
+- **Vertical too.** Clips are offered upright for stories and reels as well as wide, cropped to the action.
 
 ## 2. The recorder, the death replay and the flight log
 
@@ -74,7 +84,7 @@ The game knows what happened, so the recorder's metadata (who fired first, who d
 
 ## Proof: things nobody would believe
 
-*(Mark: "capture things that no one would believe!" Like Bigfoot sightings, but in space, except here the blurry photo can be proven real.)*
+*(Mark: "capture things that no one would believe!" The playful version of a picture painting a thousand words: the shot your friends won't believe, which the game can prove is real.)*
 
 The galaxy has things almost nobody sees: the Falcon, other Legends, a wreck from before the stations, one-in-a-thousand sights we'll design to be photographed. Say you saw one and nobody believes you. A photo or clip from the recorder is **proof**.
 

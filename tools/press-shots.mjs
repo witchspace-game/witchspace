@@ -29,13 +29,14 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** A fresh Modern commander, docked at Lave. */
-async function start({ viewport = { width: 1920, height: 1080 }, scale = 1, device } = {}) {
+async function start({ viewport = { width: 1920, height: 1080 }, scale = 1, device, touch = false } = {}) {
   // scale 1.5 at 1280×720 is still a 1920×1080 picture, with the HUD big enough to read.
   if (scale !== 1) viewport = { width: Math.round(1920 / scale), height: Math.round(1080 / scale) };
   const ctx = await browser.newContext(device ? { ...devices[device] } : { viewport, deviceScaleFactor: scale });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log('  page error:', e.message));
-  await page.goto(`${URL}/play/`);
+  // Touch mode counts as aiming (a headless browser can't lock the pointer), so the gimbals swing onto targets.
+  await page.goto(`${URL}/play/${touch ? '?touch' : ''}`);
   await page.waitForFunction(() => window.witchspace);
   await wait(1200);
   const key = (code) => page.evaluate((c) => { dispatchEvent(new KeyboardEvent('keydown', { code: c })); dispatchEvent(new KeyboardEvent('keyup', { code: c })); }, code);
@@ -176,28 +177,38 @@ async function record(s, name, secs, cues = {}) {
   await s.page.clock.install();
   // Take each frame straight after the game draws it, in the same callback: read any later and the canvas may be blank.
   // Time carries on from the real clock (frame times and performance.now alike), so the game never sees it run backwards.
+  // From here the recorder runs the frames: frame callbacks are queued and run exactly once per
+  // video frame, a fixed 1/30 s apart, so the game moves the same amount every frame (left to the
+  // browser, a step could hold one game frame or two, and the motion stutters).
   await s.page.evaluate(() => {
-    const raf = window.requestAnimationFrame.bind(window);
     const fakeNow = performance.now.bind(performance);
     const offset = window.__realNow - fakeNow();
     performance.now = () => fakeNow() + offset;
-    window.requestAnimationFrame = (cb) => raf((t) => {
-      cb(t + offset);
-      if (window.__grabNext) {
-        window.__grabNext = false;
-        window.__rec.grab();
-      }
-    });
+    window.__rafQ = [];
+    window.requestAnimationFrame = (cb) => (window.__rafQ.push(cb), window.__rafQ.length);
+    window.__frame = (grab) => {
+      const q = window.__rafQ;
+      window.__rafQ = [];
+      const t = performance.now();
+      for (const cb of q) cb(t);
+      if (grab) window.__rec.grab();
+    };
   });
-  await s.page.clock.runFor(400); // a few frames to settle before the first one kept
+  for (let i = 0; i < 12; i++) {
+    // A few frames to settle before the first one kept.
+    await s.page.clock.runFor(1000 / FPS);
+    await s.page.evaluate(() => window.__frame(false));
+  }
   const frames = Math.round(secs * FPS);
   const pending = Object.entries(cues).map(([t, fn]) => [Math.round(Number(t) * FPS), fn]);
   for (let i = 0; i < frames; i++) {
     for (const [at, fn] of pending) if (at === i) await fn();
-    await s.page.evaluate(() => (window.__grabNext = true));
     await s.page.clock.runFor(1000 / FPS);
+    await s.page.evaluate(() => window.__frame(true));
   }
   const size = await s.page.evaluate(() => window.__rec.finish());
+  // An encoder that fails quietly leaves a near-empty file: say so rather than cut a film from it.
+  if (size < 100_000) throw new Error(`${name}: only ${size} bytes recorded; record it again`);
   const parts = [];
   for (let i = 0; i < size; i += 4 << 20) parts.push(Buffer.from(await s.page.evaluate(([i, n]) => window.__rec.chunk(i, n), [i, 4 << 20]), 'base64'));
   writeFileSync(join(OUT, `${name}.mp4`), Buffer.concat(parts));
@@ -218,11 +229,14 @@ const animate = (s, fn) =>
   s.page.evaluate((src) => {
     const w = window.witchspace;
     const fn = eval(`(${src})`);
+    // Once a frame, in step with what's drawn (a timer drifts against the frames and the camera wobbles).
     // Elapsed time by summing small steps, so the jump when the recorder takes over the clock doesn't count.
     let t = 0;
     let last = performance.now();
-    clearInterval(window.__director);
-    window.__director = setInterval(() => {
+    const id = (window.__directorId = (window.__directorId ?? 0) + 1);
+    const step = () => {
+      if (window.__directorId !== id) return; // a newer director took over
+      requestAnimationFrame(step);
       const now = performance.now();
       t += Math.min(Math.max(now - last, 0), 50) / 1000;
       last = now;
@@ -230,8 +244,15 @@ const animate = (s, fn) =>
       w.player.hull = 100;
       w.player.shields = 100;
       fn(t);
-      w.aim.reset(w.player); // the gimbals aim where the nose points
-    }, 4);
+      // The gimbals: aim at the nearest pirate in reach of the nose (the aim clamps to what they can swing to).
+      const me = w.player.obj.position;
+      const near = w.npcs.filter((n) => n.role === 'pirate' && !n.dead).sort((a, b) => a.obj.position.distanceTo(me) - b.obj.position.distanceTo(me))[0];
+      if (near) {
+        w.aim.dir.copy(near.obj.position).sub(me).normalize();
+        w.aim.clamp(w.player);
+      } else w.aim.reset(w.player);
+    };
+    requestAnimationFrame(step);
     fn(0);
   }, fn.toString());
 
@@ -616,7 +637,7 @@ const SCENES = {
 
   /** The pack, coming in over a ringed planet; the guns open up; two break up. */
   async 'clip-pack'() {
-    const s = await start({ scale: 1.5 });
+    const s = await start({ scale: 1.5, touch: true });
     await launch(s);
     await jump(s, { government: 0 });
     await facePlanet(s, 3.4);
@@ -833,7 +854,7 @@ const SCENES = {
 
   /** Dogfight: banking through a pack crossing the frame, two kills. */
   async 'clip-fight'() {
-    const s = await start({ scale: 1.5 });
+    const s = await start({ scale: 1.5, touch: true });
     await launch(s);
     await jump(s, { government: 0 });
     await facePlanet(s, 2.8);
