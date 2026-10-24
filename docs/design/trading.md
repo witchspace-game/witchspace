@@ -117,6 +117,15 @@ Limit orders already exist (they fill while you're away, from the price history)
 - **On your behalf, out of sight:** they fill while you're elsewhere, when the cycle swings past your price. You're told by message when you're next in range of news from that station, and the goods or credits wait at the station.
 - **A standing order is a bet on the news:** place a sell order at Zaonce before the famine news arrives, and it fills on the overshoot whether you're there or not.
 
+## 5b. Trading from the station
+
+A good trader can work markets without leaving the dock *(Mark, October 2026)*.
+
+- **Remote orders.** From any station, place limit orders on any market within news range (25 LY). The order travels at the speed of news, as reports do: one to Zaonce arrives about an hour later, and is made on what you knew when you sent it.
+- **Settled there.** What a remote order buys waits in storage at that station; what it sells is paid when it fills, held there until the news of it gets back to you (and then it's yours).
+- **What you can make without flying:** a market's swings over time (buy the famine dip at Zaonce, sell the recovery, all from Lave). Moving goods between markets still means moving them: fly them yourself, or later hire a hauler ([merchants](markets-and-trade.md#5-merchants-trading-without-flying)).
+- **A broker's fee** on each remote order **(to tune: 2%)**, so flying it yourself still pays better.
+
 ## 6. Working the market
 
 Ways to move a market, each with a cost and a risk:
@@ -130,7 +139,7 @@ Ways to move a market, each with a cost and a risk:
 
 ## 7. Stages
 
-1. **The trader's screen and prices you know** (sections 1 and 2): plain lists round the chart, news markers on it, one-tap trades, the book and feed beside it, "better than market" feedback, the trade computer working from your knowledge, the starting almanac. The biggest change to how trading feels, and nothing new to simulate.
+1. **The trader's screen, prices you know, and trading from the station** (sections 1, 2 and 5b): plain lists round the chart, news markers on it, one-tap trades, the book and feed beside it, "better than market" feedback, the trade computer working from your knowledge, the starting almanac. The biggest change to how trading feels, and nothing new to simulate.
 2. **The saloon** (section 3): the people, tips stale, early and planted, and their reputations. Then insiders, and the inspectors.
 3. **The news cycle** (section 4): the overshoot and the aftermath glut, and saying it in words.
 4. **Limit orders on the trader's screen** (section 5), and messages when they fill. Ma Reyes's lessons and the Merchant rank (section 1b).

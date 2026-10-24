@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { newCommander } from '../game/commander';
 import { distanceLy, systemAt } from '../galaxy/generate';
-import { bestOutlets, bestRoutes } from './routes';
+import { bestOutlets, bestRoutes, knownAt, marketsInRange } from './routes';
+import { newsDelay } from './events';
 import type { TradeContext } from './trade';
 
 const lave = systemAt(0, 7);
@@ -36,5 +37,26 @@ describe('the trade computer', () => {
     const [o] = bestOutlets(t);
     expect(o.id).toBe('computers');
     expect(o.proceeds).toBeGreaterThanOrEqual(o.here);
+  });
+
+  it('knows a far market only as its latest report left it, at the speed of news', () => {
+    const t = ctx();
+    const far = marketsInRange(lave).sort((a, b) => distanceLy(lave, b) - distanceLy(lave, a))[0];
+    const near = marketsInRange(lave).sort((a, b) => distanceLy(lave, a) - distanceLy(lave, b))[0];
+    const age = (s: typeof far) => t.now - knownAt(t.commander, lave, s, t.now);
+    expect(age(far)).toBeCloseTo(newsDelay(far, lave), -1);
+    expect(age(far)).toBeGreaterThan(age(near)); // further away, older news
+    expect(age(lave)).toBe(0); // here, it's live
+  });
+
+  it('remembers what you saw yourself, if that is fresher than the reports', () => {
+    const t = ctx();
+    const far = marketsInRange(lave).sort((a, b) => distanceLy(lave, b) - distanceLy(lave, a))[0];
+    t.commander.markets[`${far.galaxy}:${far.index}`] = { stock: {}, updated: t.now - 5 * 60_000 };
+    expect(t.now - knownAt(t.commander, lave, far, t.now)).toBe(5 * 60_000);
+  });
+
+  it('says how old each run is', () => {
+    for (const r of bestRoutes(ctx())) expect(r.age).toBeCloseTo(newsDelay(r.dest, lave), -1);
   });
 });

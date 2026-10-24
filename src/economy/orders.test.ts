@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
 import { newCommander } from '../game/commander';
 import { freshMarket, priceAt } from './market';
-import { cancelOrder, checkOrders, collect, placeOrder, type OrderState } from './orders';
+import { cancelOrder, checkOrders, collect, describeFill, placeOrder, type OrderState } from './orders';
 
 const NOW = 1_800_000_000_000;
 const lave = systemAt(0, 7);
@@ -21,6 +21,17 @@ function range(state: OrderState, hours: number) {
 }
 
 describe('limit orders', () => {
+  it('say what waiting for your price earned when they fill', () => {
+    const c = newCommander('modern');
+    c.credits = 1000;
+    const state: OrderState = freshMarket(lave, NOW);
+    const market = priceAt(lave, state, 'food', NOW);
+    placeOrder(c, lave, state, 'food', 'buy', 10, market - 0.5, NOW);
+    const order = state.orders![0];
+    expect(order.market).toBe(market);
+    expect(describeFill({ order, t: NOW + HOUR })).toContain(`${Math.round(0.5 * 10)} Cr better than buying at market`);
+  });
+
   it('hold the credits for a buy order, and refuse one that would fill at once', () => {
     const c = newCommander('modern');
     c.credits = 1000;

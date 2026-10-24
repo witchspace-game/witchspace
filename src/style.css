@@ -1017,9 +1017,18 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 
 /* Pairs */
 .ex-pairs { grid-area: pairs; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
-.ex-pairs-head, .ex-pair { display: grid; grid-template-columns: minmax(70px, 1fr) 50px 56px; gap: 4px; align-items: center; }
-.ex-pairs-head { padding: 8px 10px 6px; color: var(--ex-dim); font-size: 11px; }
-.ex-pairs-head span:not(:first-child) { text-align: right; }
+.ex-pair { display: grid; grid-template-columns: minmax(0, 1fr) 36px 48px; gap: 2px 6px; align-items: center; }
+/* The trader's lists: your hold, cheap here, sells well here, the rest. */
+.ex-list-head { margin: 10px 10px 2px; color: var(--ex-dim); font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.ex-sub { grid-column: 1 / -1; color: var(--ex-dim); font-size: 10.5px; line-height: 1.35; }
+.ex-spark { width: 36px; height: 14px; }
+.ex-spark polyline { fill: none; stroke-width: 1.2; }
+.ex-spark .up { stroke: var(--ex-up); }
+.ex-spark .down { stroke: var(--ex-down); }
+.ex-pair.hot .ex-sub { color: #f7a600; }
+.ex-rest-toggle { width: 100%; margin-top: 8px; padding: 6px 10px; border: 0; border-top: 1px solid var(--ex-line); border-radius: 0; background: none; color: var(--ex-dim); font-size: 11.5px; text-align: left; cursor: pointer; }
+.ex-why { grid-column: 1 / -1; width: 100%; margin: 2px 0 0; color: #b7c0cc; font-size: 12.5px; line-height: 1.4; }
+.ex-age { display: block; color: var(--ex-dim); font-size: 10px; }
 .ex-pairs-list { flex: 1; min-height: 0; overflow-y: auto; }
 .ex-pair { width: 100%; padding: 6px 10px; border: 0; border-left: 2px solid transparent; border-radius: 0; background: none; color: var(--ex-text); font-size: 12.5px; text-align: left; cursor: pointer; }
 .ex-pair:hover { background: rgba(255, 255, 255, 0.04); }
@@ -1189,11 +1198,10 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   .ex-feed, .ex-mine { max-height: 220px; }
   .ex { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'pairs' 'head' 'chart' 'form' 'book' 'trades'; }
   .ex-trades { grid-template-columns: minmax(0, 1fr); }
-  .ex-pairs-head { display: none; }
-  .ex-pairs-list { display: flex; overflow-x: auto; }
-  .ex-pair { flex: 0 0 auto; width: auto; display: flex; gap: 6px; align-items: baseline; border-left: 0; border-bottom: 2px solid transparent; padding: 6px 12px; }
-  .ex-pair.active { border-bottom-color: var(--ex-gold); }
-  .ex-pair .num { text-align: left; font-size: 11px; }
+  /* The lists first, full width: tap a good and its chart is just below. */
+  .ex-pairs-list { overflow: visible; }
+  .ex-pair { padding: 9px 12px; font-size: 14px; }
+  .ex-sub { font-size: 12px; white-space: normal; }
   .ex-head { gap: 12px; }
   .ex-canvas { min-height: 220px; }
   .panel.docked.exchange { top: 8px; }

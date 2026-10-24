@@ -18,6 +18,8 @@ export interface LimitOrder {
   qty: number;
   limit: number; // credits per unit
   placed: number; // ms
+  /** The market price when it was placed, to show what waiting for your price earned. */
+  market?: number;
 }
 
 export interface Fill {
@@ -67,7 +69,7 @@ export function placeOrder(c: Commander, system: StarSystem, state: OrderState, 
     if (c.cargo[id] <= 0) delete c.cargo[id];
   }
   const oid = Math.max(0, ...(state.orders ?? []).map((o) => o.oid)) + 1;
-  state.orders = [...(state.orders ?? []), { oid, id, side, qty, limit, placed: now }];
+  state.orders = [...(state.orders ?? []), { oid, id, side, qty, limit, placed: now, market: price }];
   state.ordersChecked ??= now;
   return { ok: true, message: `${side === 'buy' ? 'Buy' : 'Sell'} order placed: ${qty}${units(id)} of ${good.name} at ${limit.toFixed(2)} Cr` };
 }
@@ -143,5 +145,8 @@ export function collect(c: Commander, state: OrderState, capacity: number): Reco
 /** Plain words for a fill. */
 export function describeFill(f: Fill): string {
   const o = f.order;
-  return `Order filled: ${o.side === 'buy' ? 'bought' : 'sold'} ${o.qty}${units(o.id)} of ${commodityById(o.id)?.name} at ${o.limit.toFixed(2)} Cr`;
+  // What waiting for your price earned, against trading at the market when you placed it.
+  const better = o.market ? Math.round((o.side === 'buy' ? o.market - o.limit : o.limit - o.market) * o.qty) : 0;
+  const gain = better > 0 ? ` · ${better.toLocaleString()} Cr better than ${o.side === 'buy' ? 'buying' : 'selling'} at market` : '';
+  return `Order filled: ${o.side === 'buy' ? 'bought' : 'sold'} ${o.qty}${units(o.id)} of ${commodityById(o.id)?.name} at ${o.limit.toFixed(2)} Cr${gain}`;
 }

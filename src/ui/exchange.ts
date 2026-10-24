@@ -20,7 +20,7 @@ import { activeEvent, eventsAt, EVENT_KINDS } from '../economy/events';
 import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
 import { cancelOrder, collect, describeFill, placeOrder, type OrderState } from '../economy/orders';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
-import { bestOutlets, bestRoutes } from '../economy/routes';
+import { bestKnownElsewhere, bestOutlets, bestRoutes } from '../economy/routes';
 import { GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
 
 // The station market as a trading exchange, in the style of today's crypto
@@ -60,6 +60,11 @@ const fmt = (n: number, dp = 1) => n.toLocaleString(undefined, { minimumFraction
 const pct = (n: number) => `${n >= 0 ? '+' : ''}${(n * 100).toFixed(2)}%`;
 const unitLabel = (c: Commodity) => (c.unit === 't' ? 't' : c.unit);
 const clock = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+/** How old a price is, briefly: "12 min", "1 h 20". */
+const age = (ms: number) => {
+  const m = Math.round(ms / 60_000);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}` : ''}`;
+};
 
 export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   let selected = 'food';
@@ -73,9 +78,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     <section class="ex-routes" hidden></section>
     <div class="ex">
       <aside class="ex-pairs" aria-label="Markets">
-        <button class="ex-routes-toggle" title="Every market within a tank of fuel, live, and the best runs from here">Trade computer ›</button>
+        <button class="ex-routes-toggle" title="Every market within a tank of fuel, as you know it, and the best runs from here">Trade computer ›</button>
         <button class="ex-backroom-toggle" hidden>Back room ›</button>
-        <div class="ex-pairs-head"><span>Pair</span><span>Price</span><span>1h</span></div>
         <div class="ex-pairs-list"></div>
       </aside>
       <header class="ex-head"></header>
@@ -188,25 +192,70 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   // --- Pairs ------------------------------------------------------------------
 
+  // The goods as a trader thinks of them: what you're carrying, what's cheap
+  // here, what sells well here, then everything else (docs/design/trading.md).
+  let restOpen = false;
+
   function renderPairs(ctx: TradeContext) {
     const state = marketState(ctx);
     const now = ctx.now;
-    $('.ex-pairs-list').innerHTML = quotes(ctx)
-      .map((q) => {
-        const id = q.commodity.id;
-        const was = priceAt(ctx.system, state, id, now - HOUR);
-        const change = (q.price - was) / was;
-        const held = ctx.commander.cargo[id] ?? 0;
-        const off = !tradesHere(ctx, id);
-        const order = off ? null : stationOrder(ctx.system, state, id);
-        const tag = order ? `<i class="ex-tag ${order.side === 'buy' ? 'short' : 'glut'}">${order.side === 'buy' ? 'Short' : 'Surplus'}</i>` : '';
-        return `<button class="ex-pair${id === selected ? ' active' : ''}${off ? ' off' : ''}" data-id="${id}" title="${q.commodity.name}${off ? ' · not traded at this lawful station' : ''}">
-          <span class="ex-sym"><b>${ticker(id)}</b>${held ? `<i class="ex-held${stolenQty(ctx.commander, id) ? ' hot' : ''}" title="${stolenQty(ctx.commander, id) ? 'In your hold, some of it stolen' : 'In your hold'}"></i>` : ''}${q.commodity.legality === 'illegal' ? '<em title="Illegal goods">Illegal</em>' : ''}${tag}</span>
-          <span class="num">${fmt(q.price)}</span>
-          <span class="num ${change >= 0 ? 'up' : 'down'}">${pct(change)}</span>
-        </button>`;
-      })
-      .join('');
+    const elsewhere = bestKnownElsewhere(ctx);
+    const rows = quotes(ctx).map((q) => {
+      const id = q.commodity.id;
+      const off = !tradesHere(ctx, id);
+      return {
+        q,
+        id,
+        off,
+        held: ctx.commander.cargo[id] ?? 0,
+        order: off ? null : stationOrder(ctx.system, state, id),
+        balance: tradeBalance(ctx.system, id),
+        best: elsewhere.get(id),
+      };
+    });
+    type Row = (typeof rows)[number];
+    const spark = (id: string) => {
+      const pts = [6, 5, 4, 3, 2, 1, 0].map((k) => priceAt(ctx.system, state, id, now - k * 10 * 60_000));
+      const lo = Math.min(...pts);
+      const span = Math.max(...pts) - lo || 1;
+      const up = pts[6] >= pts[0];
+      return `<svg class="ex-spark" viewBox="0 0 36 14" aria-hidden="true"><polyline points="${pts.map((p, k) => `${k * 6},${(13 - ((p - lo) / span) * 12).toFixed(1)}`).join(' ')}" class="${up ? 'up' : 'down'}"/></svg>`;
+    };
+    const there = (r: Row) => (r.best && r.best.price > r.q.price * 1.05 ? `<span class="up">${fmt(r.best.price)}</span> at ${r.best.dest.name} · ${age(r.best.age)} old` : '');
+    const row = (r: Row, quick: 'buy' | 'sell' | '', sub: string) => {
+      const illegal = r.q.commodity.legality === 'illegal' ? '<em title="Illegal goods">Illegal</em>' : '';
+      const hot = r.held && stolenQty(ctx.commander, r.id) ? ' hot' : '';
+      return `<button class="ex-pair${r.id === selected ? ' active' : ''}${r.off ? ' off' : ''}${hot}" data-id="${r.id}"${quick ? ` data-quick="${quick}"` : ''} title="${r.q.commodity.name}${r.off ? ' · not traded at this lawful station' : ''}">
+        <span class="ex-sym"><b>${r.q.commodity.name}</b>${illegal}</span>${spark(r.id)}<span class="num">${fmt(r.q.price)}</span>
+        ${sub ? `<small class="ex-sub">${sub}</small>` : ''}</button>`;
+    };
+    const used = new Set<string>();
+    const take = (list: Row[]) => (list.forEach((r) => used.add(r.id)), list);
+    const hold = take(rows.filter((r) => r.held > 0));
+    const cheap = take(
+      rows
+        .filter((r) => !used.has(r.id) && !r.off && r.q.stock > 0 && ((r.best?.price ?? 0) > r.q.price * 1.12 || r.balance > 0.25 || r.order?.side === 'sell'))
+        .sort((a, b) => (b.best?.price ?? 0) / b.q.price - (a.best?.price ?? 0) / a.q.price)
+        .slice(0, 5),
+    );
+    const wanted = take(
+      rows
+        .filter((r) => !used.has(r.id) && !r.off && (r.balance < -0.25 || r.order?.side === 'buy'))
+        .sort((a, b) => b.q.price / priceAt(ctx.system, state, b.id, now - HOUR) - a.q.price / priceAt(ctx.system, state, a.id, now - HOUR))
+        .slice(0, 5),
+    );
+    const rest = rows.filter((r) => !used.has(r.id));
+    const u = (r: Row) => unitLabel(r.q.commodity);
+    const section = (title: string, list: string) => (list ? `<h5 class="ex-list-head">${title}</h5>${list}` : '');
+    $('.ex-pairs-list').innerHTML =
+      section(
+        'Your hold',
+        hold.map((r) => row(r, r.off ? '' : 'sell', [`${r.held.toLocaleString()} ${u(r)} aboard`, there(r)].filter(Boolean).join(' · '))).join(''),
+      ) +
+      section('Cheap here', cheap.map((r) => row(r, 'buy', there(r) || (r.order?.side === 'sell' ? 'in a glut here' : 'made here'))).join('')) +
+      section('Sells well here', wanted.map((r) => row(r, '', r.order?.side === 'buy' ? `short · station buying ${r.order.qty.toLocaleString()} ${u(r)}` : 'wanted here')).join('')) +
+      `<button class="ex-rest-toggle" aria-expanded="${restOpen}">${restOpen ? '▾' : '▸'} All other goods (${rest.length})</button>` +
+      (restOpen ? rest.map((r) => row(r, '', r.off ? 'not traded here' : '')).join('') : '');
   }
 
   // --- Header -----------------------------------------------------------------
@@ -232,11 +281,11 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const event = activeEvent(ctx.system, ctx.now);
     const touched = event && ((EVENT_KINDS[event.type].effects[selected] ?? 0) !== 0 || (balance < -0.2 && EVENT_KINDS[event.type].effects.imports));
     const eventPill = event
-      ? `<div class="ex-event${touched ? ' hit' : ''}" title="${EVENT_KINDS[event.type].headline(ctx.system.name)}">${EVENT_KINDS[event.type].name}${touched ? ` · ${ticker(selected)} affected` : ''}</div>`
+      ? `<div class="ex-event${touched ? ' hit' : ''}" title="${EVENT_KINDS[event.type].headline(ctx.system.name)}">${EVENT_KINDS[event.type].name}${touched ? ` · ${c.name} affected` : ''}</div>`
       : '';
     $('.ex-head').innerHTML = `
       ${eventPill}
-      <div class="ex-title"><b>${ticker(selected)}</b><span>/CR</span><small>${c.name} · per ${u}${c.legality === 'illegal' ? ' · <em>Illegal</em>' : ''}</small></div>
+      <div class="ex-title"><b>${c.name}</b><span>/CR</span><small>per ${u}${c.legality === 'illegal' ? ' · <em>Illegal</em>' : ''}</small></div>
       <div class="ex-last ${change >= 0 ? 'up' : 'down'}">${fmt(q.price)}<small>Cr</small></div>
       <dl>
         <div><dt>1h change</dt><dd class="${change >= 0 ? 'up' : 'down'}">${pct(change)}</dd></div>
@@ -247,7 +296,20 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div><dt>Trade</dt><dd>${role}</dd></div>
         ${demand}
         <div><dt>In your hold</dt><dd>${held.toLocaleString()} ${u}${stolenQty(ctx.commander, selected) ? ` <em class="ex-hot">${stolenQty(ctx.commander, selected).toLocaleString()} stolen</em>` : ''}</dd></div>
-      </dl>`;
+      </dl>
+      <p class="ex-why">${why(ctx, c, balance, order, touched ? event : null)}</p>`;
+  }
+
+  /** Why the price is what it is, in a sentence. */
+  function why(ctx: TradeContext, c: Commodity, balance: number, order: ReturnType<typeof stationOrder>, event: ReturnType<typeof activeEvent>): string {
+    const here = ctx.system.name;
+    if (!tradesHere(ctx, c.id)) return `${c.name} isn't traded openly at ${here}: it's against the law here.`;
+    if (event) return `${EVENT_KINDS[event.type].headline(here)}. That's moving ${c.name.toLowerCase()} prices here.`;
+    if (order?.side === 'buy') return `${here} is short of ${c.name.toLowerCase()} and the station is buying to restock: a good place to sell.`;
+    if (order?.side === 'sell') return `${here} has more ${c.name.toLowerCase()} than it can use: cheap while the glut lasts.`;
+    if (balance > 0.25) return `${c.name} is cheap here: ${here} makes it. Sell it where it's wanted.`;
+    if (balance < -0.25) return `${c.name} sells well here: ${here} doesn't make it, so it has to be brought in.`;
+    return `${here} makes and uses its own ${c.name.toLowerCase()}, so the price stays close to fair.`;
   }
 
   // --- Chart ------------------------------------------------------------------
@@ -369,7 +431,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     $('.ex-avail').innerHTML =
       side === 'buy'
         ? `Available <b>${fmt(ctx.commander.credits)} Cr</b> · Hold space <b>${fmt(freeTonnes(ctx))} t</b>`
-        : `Available <b>${held.toLocaleString()} ${u}</b> ${ticker(selected)}`;
+        : `Available <b>${held.toLocaleString()} ${u}</b> ${c.name}`;
 
     const n = qty();
     const state = marketState(ctx);
@@ -413,7 +475,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     else if (side === 'sell' && held === 0) reason = `No ${c.name} in your hold`;
     else if (side === 'sell' && max === 0) reason = 'Stolen: try a fence in the back room';
     submit.disabled = Boolean(reason) || n === 0;
-    submit.textContent = reason || `${side === 'buy' ? 'Buy' : 'Sell'} ${n ? n.toLocaleString() + ' ' + u + ' ' : ''}${ticker(selected)}`;
+    submit.textContent = reason || `${side === 'buy' ? 'Buy' : 'Sell'} ${n ? n.toLocaleString() + ' ' + u + ' ' : ''}${c.name}`;
     $('.ex-msg').textContent = message;
   }
 
@@ -443,19 +505,19 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       ? `<h5>Open orders</h5><table class="ex-orders"><thead><tr><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Limit</th><th class="num">Market</th><th></th></tr></thead><tbody>${orders
           .map((o) => {
             const now = quotes(ctx).find((x) => x.commodity.id === o.id)!.price;
-            return `<tr><td>${ticker(o.id)}/CR</td><td class="${o.side === 'buy' ? 'up' : 'down'}">${o.side === 'buy' ? 'Buy' : 'Sell'}</td><td class="num">${o.qty.toLocaleString()}</td>
+            return `<tr><td>${commodityById(o.id)?.name}</td><td class="${o.side === 'buy' ? 'up' : 'down'}">${o.side === 'buy' ? 'Buy' : 'Sell'}</td><td class="num">${o.qty.toLocaleString()}</td>
               <td class="num">${fmt(o.limit, 2)}</td><td class="num">${fmt(now, 2)}</td><td class="num"><button data-cancel="${o.oid}">Cancel</button></td></tr>`;
           })
           .join('')}</tbody></table>`
       : '';
     const storageHtml = stored.length
-      ? `<p class="ex-storage">In storage here, waiting for hold space: ${stored.map(([id, q]) => `<b>${q.toLocaleString()} ${unitLabel(commodityById(id)!)} ${ticker(id)}</b>`).join(', ')}</p>`
+      ? `<p class="ex-storage">In storage here, waiting for hold space: ${stored.map(([id, q]) => `<b>${q.toLocaleString()} ${unitLabel(commodityById(id)!)} ${commodityById(id)?.name}</b>`).join(', ')}</p>`
       : '';
     $('.ex-mine h4').textContent = orders.length ? 'Your orders and trades here' : 'Your trades here';
     $('.ex-trades-list').innerHTML = openHtml + storageHtml + (trades.length
       ? `<table><thead><tr><th>Time</th><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Avg</th><th class="num">Total</th></tr></thead><tbody>${trades
           .map(
-            (t) => `<tr><td>${clock(t.t)}</td><td>${ticker(t.id)}/CR</td><td class="${t.side === 'buy' ? 'up' : 'down'}">${t.side === 'buy' ? 'Buy' : 'Sell'}</td>
+            (t) => `<tr><td>${clock(t.t)}</td><td>${commodityById(t.id)?.name}</td><td class="${t.side === 'buy' ? 'up' : 'down'}">${t.side === 'buy' ? 'Buy' : 'Sell'}</td>
             <td class="num">${t.qty.toLocaleString()}</td><td class="num">${fmt(t.total / t.qty, 2)}</td><td class="num">${fmt(t.total)}</td></tr>`,
           )
           .join('')}</tbody></table>`
@@ -546,7 +608,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         const good = commodityById(r.id)!;
         const u = unitLabel(good);
         return `<tr><td><b>${good.name}</b><small>${ticker(r.id)}</small></td>
-          <td class="num">${fmt(r.cost / r.qty)}</td><td>${place(r.dest, r.ly, r.reachable)}</td><td class="num">${fmt(r.proceeds / r.qty)}</td>
+          <td class="num">${fmt(r.cost / r.qty)}</td><td>${place(r.dest, r.ly, r.reachable)}</td><td class="num">${fmt(r.proceeds / r.qty)}<small class="ex-age">${age(r.age)} old</small></td>
           <td class="num">${r.qty.toLocaleString()} ${u}</td><td class="num up">+${fmt(r.profit)}</td>
           <td class="ex-back-actions"><button data-route-buy="${r.id}">Buy</button>${courseButton(r.dest)}</td></tr>`;
       })
@@ -555,18 +617,18 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       .map((o) => {
         const good = commodityById(o.id)!;
         return `<tr><td><b>${good.name}</b><small>${o.held.toLocaleString()} ${unitLabel(good)}</small></td>
-          <td>${place(o.dest!, o.ly, o.ly <= c.fuel)}</td><td class="num">${fmt(o.proceeds)}</td><td class="num">${fmt(o.here)}</td><td class="num up">+${fmt(o.proceeds - o.here)}</td>
+          <td>${place(o.dest!, o.ly, o.ly <= c.fuel)}</td><td class="num">${fmt(o.proceeds)}<small class="ex-age">${age(o.age)} old</small></td><td class="num">${fmt(o.here)}</td><td class="num up">+${fmt(o.proceeds - o.here)}</td>
           <td class="ex-back-actions">${courseButton(o.dest!)}</td></tr>`;
       })
       .join('');
     $('.ex-routes').innerHTML = `
       <header><button class="ex-routes-close">‹ Exchange</button><h3>Trade computer</h3>
-        <span>Live prices at every market within ${FUEL_CAPACITY} LY. They move while you travel: news and other traders get there too.</span></header>
+        <span>Every market within ${FUEL_CAPACITY} LY, as you know it: what you saw there yourself, or the latest report, which travels at the speed of news. Prices may have moved since, and will while you travel.</span></header>
       <h4>Best runs from ${ctx.system.name}</h4>
       ${
         routes.length
-          ? `<table><thead><tr><th>Goods</th><th class="num">Buy here</th><th>Sell at</th><th class="num">Price there</th><th class="num">A full load</th><th class="num">Profit</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-             <p class="ex-note">A full load is as much as your credits, hold and the stock here allow. Prices include how much your own buying and selling moves them.</p>`
+          ? `<table><thead><tr><th>Goods</th><th class="num">Buy here</th><th>Sell at</th><th class="num">Price there (as known)</th><th class="num">A full load</th><th class="num">Profit</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+             <p class="ex-note">A full load is as much as your credits, hold and the stock here allow. Prices include how much your own buying and selling moves them. The further away, the older the news.</p>`
           : '<p class="ex-empty">Nothing here sells for more within range. Try the news, or another station.</p>'
       }
       ${
@@ -658,12 +720,23 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       backCaught = false;
       deps.dealt(result);
       return;
+    } else if (el.classList.contains('ex-rest-toggle')) {
+      restOpen = !restOpen;
     } else if (el.dataset.id) {
       selected = el.dataset.id;
       if (orderType === 'limit') queueMicrotask(() => suggestPrice(deps.context()));
       message = '';
       qtyInput.value = '';
       slider.value = '0';
+      // From the lists: ready to buy as much as you can, or sell the lot. You still confirm.
+      if (el.dataset.quick) {
+        side = el.dataset.quick as 'buy' | 'sell';
+        orderType = 'market';
+        render();
+        setQty(maxQty(deps.context()));
+        renderForm(deps.context());
+        return;
+      }
     } else if (el.dataset.side) {
       side = el.dataset.side as 'buy' | 'sell';
       qtyInput.value = '';
