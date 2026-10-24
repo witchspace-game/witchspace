@@ -26,3 +26,6 @@ dist/
 
 # Helper agents' working copies of the repo
 /.claude/
+
+# Made by tools/build-site.ts for tools/share-cards.mjs
+/tools/share-cards.json

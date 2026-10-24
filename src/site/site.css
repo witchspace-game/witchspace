@@ -809,6 +809,7 @@ button.button { cursor: pointer; }
 .ship-stats div { padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .ship-stats dt { color: var(--muted); font-size: 13px; }
 .ship-stats dd { margin: 2px 0 0; font-weight: 600; font-size: 17px; }
+.ship-share { margin: 18px 0 0; }
 .ship-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 32px; }
 .ship-columns .card p + p { margin-top: 10px; }
 .ship-ideas { margin: 12px 0 14px; padding-left: 18px; color: var(--fg); }
@@ -819,3 +820,6 @@ button.button { cursor: pointer; }
   .ship-hero, .ship-columns { grid-template-columns: 1fr; }
   .ship-stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Every page: share it (src/site/share.ts), just above the footer. */
+.page-share { max-width: 1200px; margin: 0 auto; padding: 0 var(--gutter) 40px; display: flex; justify-content: flex-end; }

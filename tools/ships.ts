@@ -37,6 +37,9 @@ const ROLE: Record<string, string> = {
   multirole: 'Multirole', pirate: 'Pirate', police: 'Police', marshal: 'Co-operative Marshals', miner: 'Ore hauler', freighter: 'Constructor', station: 'Station',
 };
 
+/** The first sentence, for a share card's line. */
+const firstSentence = (text: string) => (text.match(/^.*?[.!?](\s|$)/)?.[0] ?? text).trim().slice(0, 120);
+
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 export function loadShips(root: string): ShipFile[] {
@@ -130,7 +133,7 @@ ${ships
 </section>`;
 }
 
-export function shipPage(s: ShipFile): { title: string; description: string; content: string } {
+export function shipPage(s: ShipFile) {
   const c = s.credits ?? {};
   const stats = STAT_LABELS.filter(([k]) => s.stats?.[k] !== undefined)
     .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${esc(f(s.stats![k]))}</dd></div>`)
@@ -139,6 +142,18 @@ export function shipPage(s: ShipFile): { title: string; description: string; con
   const authors = (c.authors ?? []).join(', ') || 'Witchspace contributors';
   const def = JSON.stringify({ id: s.id, name: s.name, geometry: s.geometry, style: s.style ?? {} }).replace(/</g, '\\u003c');
   return {
+    card: { ship: s.id, kicker: roleLine(s) || 'Ship', sub: firstSentence(s.description ?? '') },
+    schema: [
+      {
+        '@type': 'CreativeWork',
+        name: s.name,
+        description: s.description ?? '',
+        creator: (c.authors ?? ['Witchspace contributors']).map((name) => ({ '@type': 'Organization', name })),
+        license: 'https://creativecommons.org/licenses/by-sa/4.0/',
+        isPartOf: { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' },
+        ...(s.manufacturer && s.manufacturer !== 'None' ? { brand: { '@type': 'Brand', name: s.manufacturer } } : {}),
+      },
+    ],
     title: `${s.name} · Ships · Witchspace`,
     description: `${s.name}${roleLine(s) ? ` (${roleLine(s)})` : ''}: ${s.description ?? 'a ship in Witchspace'}`.slice(0, 300),
     content: `<section class="section ship-page">
@@ -153,6 +168,7 @@ export function shipPage(s: ShipFile): { title: string; description: string; con
       <h1>${esc(s.name)}</h1>
       <p class="lede">${esc(s.description ?? '')}</p>
       ${stats ? `<dl class="ship-stats">${stats}</dl>` : ''}
+      <p class="ship-share"><button type="button" class="button ghost small" data-share data-share-url="/ships/${esc(s.id)}/" data-share-title="${esc(s.name)}">Share the ${esc(s.name)}</button></p>
     </div>
   </div>
   <script type="application/json" id="ship-def">${def}</script>

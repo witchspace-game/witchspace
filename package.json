@@ -9,6 +9,7 @@
     "validate": "tsx tools/validate.ts",
     "sim:docking": "tsx tools/simulate-docking.ts",
     "site": "tsx tools/build-site.ts",
+    "cards": "tsx tools/build-site.ts && node tools/share-cards.mjs",
     "test": "vitest run",
     "preview:headers": "npm run build && tsx tools/serve-dist.ts"
   },
