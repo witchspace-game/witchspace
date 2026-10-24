@@ -49,6 +49,16 @@ A story hook: Wexley-Yorozu's offer for the yard, and a commander who flies a Da
 3. **In the game:** sold at the Halloran yard's region; flown by couriers in traffic now and then; express contracts that suit it.
 4. **The sisters:** a small story line, later.
 
+## Later: down to a planet *(Mark, October 2026)*
+
+In air, the wings would really be wings, so the Darner is the natural ship to take commanders down to a planet. There's nothing below the orbit yet (planets are wireframe globes, and flying into one is fatal), so this is a staged idea, in [exploration](exploration.md#planetfall-proposed-later):
+
+1. **Skimming the upper atmosphere:** only a Darner can dip into a planet's outer air on its wings. A glowing horizon, the surface far below as a wireframe grid, survey data worth more, and a place to lose pursuers who can't follow.
+2. **Landing pads:** settlements with a pad to glide down to, like docking: the Arkwrights, miners' settlements, frontier outposts that only a Darner can reach, with contracts to match.
+3. **Real surfaces,** to fly over, land on and explore: a project the size of the exploration road, much later.
+
+It glides and banks on long, still wings, never flaps.
+
 ## Open questions
 
 - A or B (or something else)?
