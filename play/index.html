@@ -34,8 +34,6 @@
 
     <!-- Title: ship showroom -->
     <section class="panel" data-screen="title">
-      <!-- On touch screens the ship browser lives here, by the ship it browses. -->
-      <span class="ship-browse"><button data-key="ArrowLeft" aria-label="Previous ship">‹</button><button data-key="ArrowRight" aria-label="Next ship">›</button></span>
       <h2 id="ship-name"></h2>
       <p id="ship-meta" class="meta"></p>
       <p id="ship-desc" class="desc"></p>
@@ -49,9 +47,9 @@
       </div>
     </section>
     <p class="prompt" data-screen="title">Load New Commander (Y/N)?</p>
+    <!-- The ship browser, under the ship itself (main.ts places it each frame). Or swipe. -->
+    <div id="ship-nav" data-screen="title"><button data-key="ArrowLeft" aria-label="Previous ship">‹</button><span class="ship-nav-name"></span><button data-key="ArrowRight" aria-label="Next ship">›</button></div>
     <nav class="controls" data-screen="title">
-      <button data-key="ArrowLeft" class="prev-next">◀ Prev</button>
-      <button data-key="ArrowRight" class="prev-next">Next ▶</button>
       <button data-key="KeyY" id="load-button" class="primary"><span class="key">Y · </span>Load commander</button>
       <button data-key="KeyN" id="new-button"><span class="key">N · </span>New commander</button>
       <button data-key="KeyA" id="account-button" title="Sign in to keep your callsign and play on any device"><span class="key">A · </span>Sign in</button>

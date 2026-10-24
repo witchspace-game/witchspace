@@ -251,9 +251,51 @@ Wexley-Yorozu builds stations where they're needed, from what's there (the full 
   - **Where** (`src/game/yards.ts`): every Wexley-Yorozu world with a moon (`wyWorks`, about 90 a galaxy) is a possible site. Five constructors work each galaxy at once; the sites are dealt out between them from the seed so two never share a world, and each picks its next site from the seed and its build number, never the world it just left.
   - **When:** from the seed and the clock, no server, so every commander sees the same yard at the same stage. A build runs 13 days: refining (1 day, no station yet), bare spine (2), frame (3), half-plated (4), spinning up (2, the spin easing up to the Coriolis's), finished (1, turning at full speed). Then the Titanoboa is two days in transit and starts again somewhere else, so yards come and go: over a year one constructor builds at a couple of dozen worlds.
   - **What you see** (`src/render/yard.ts`): the **Titanoboa** (`content/ships/titanoboa.json`, 2,500 m: an armoured hexagonal spine, eight refinery bays open to space with trusses between, three smelter stacks, a command tower, an ore intake under the prow, the W on the deck; 166 vertices, in Wexley-Yorozu yellow at full glow) parked 2.2 km off the moon on the side facing the station, lying across the line between them. The new station sits beside it in its stage, made in code from the Coriolis's own geometry: the docking axis and slot collar; then the frame in outline with struts to the spine; then seven of its fourteen faces plated; then the whole hull. Four **Bullsnakes** (`content/ships/bullsnake.json`, a stubby 70 m ore hauler, so smaller than the "enormous tug" first imagined above) shuttle between the moon's surface and the intake on lanes timed by the clock, so they're in the same places for everyone.
+  - **To do: it should feel more industrial** *(Mark, 24 October 2026)*. It builds space stations, and it should look and move like a working factory, not a hull with detail drawn on. Ideas to try: cranes and gantries that actually move (booms swinging, trolleys running along them, cables lowering plates towards the station); welding flashes and sparks at the station's open faces, in time with the plating stage; conveyor and pipe runs between the bays, the smelter stacks and the intake, with glowing slag or ore moving along them; worker craft (small tugs and drones) shuttling plates and struts from the bays to the station; floodlights raking the work face; scaffolding round the part of the station being plated; and a hum and clank to go with it when you're close. The station rising should look made by it, piece by piece.
   - **Solid:** flying into the Titanoboa is fatal, like ramming a Bastion (one box per part of the hull, so the gaps between bays are space); the new station and the haulers bounce you off with hull damage, like the station. It mass-locks the in-system jump within 3 km of its hull, and jumps stop short of it.
   - **Found:** a HUD marker, always named ("Wexley-Yorozu yard · Station: frame · 12.4 km"), and scanner contacts; the arrival note says "A Wexley-Yorozu yard is building here"; the News tab lists up to three yards within 25 light years and what stage they're at.
   - **Not yet:** docking at a part-built station, its market (buying electronics, machinery, food; selling alloys), construction contracts and deliveries that speed the build (the server counter), opening day and its news and premiums, the Titanoboa arriving and leaving through a rift, the security wing, keeping the finished station on the chart (today it goes when the yard does), surveying a yard as an explorer's find, moving stations, and [the discovery-to-development chain](discovery-to-development.md). A stage that changes while you're in the system shows on your next arrival.
+
+### Attacking a yard *(proposed, October 2026)*
+
+Today the yard can't be shot: lasers pass through the Titanoboa, its haulers and the new station; ramming the Titanoboa is fatal and the rest bounce you off. This is what happens once they can be hit.
+
+**What you can hit.**
+- **Worker craft and haulers** (the tugs and drones of the industrial pass, the Bullsnakes) can be destroyed. They spill what they carry (plates, struts, alloys, ore) for scooping: stolen goods if anyone saw.
+- **The Titanoboa** is too big to destroy, but its parts can be knocked out: a crane stops and sags, a refinery bay goes dark, a smelter stack flares and dies. Damage shows (sparks, a dark bay, a crane hanging still), and repair drones come out and mend it over a few hours.
+- **The new station** is treated as a station: the safety catch warns you, and firing through it is firing on a station.
+
+**What it costs you.**
+- **The law:** a crime where there's a law and a witness, like any other ([the law beyond the station](#4-the-law-beyond-the-station)). Running dark, or hiding in the clutter ([exploration](exploration.md#hiding-in-the-clutter)), is how a saboteur stays unnamed.
+- **Wexley-Yorozu:** standing falls hard, and the company posts its own price on you, apart from the police, collected by anyone who fancies it.
+- **Yard security:** a wing in Wexley-Yorozu yellow launches from the Titanoboa, tougher than police, and it doesn't stop at the system's edge: it follows you a jump or two, as the Marshals do.
+
+**Why anyone would.** Clause 214 again: some people are moved off a world so a yard can be built there. Sabotage is a choice with people on both sides of it.
+- **Mad:** a family moved off the moon's old mining settlement, the **Arkwrights**, three generations in one hab, who'll pay you (not much) to slow the build: *"They gave us forty days. Give them a few more."*
+- **Bad:** a broker for a rival, never named, who pays well to have the build stopped and doesn't care who's under the crane.
+- **Sad:** the yard's own people. **Pell Varga** runs crane four; after you've taken it down, his message reaches you at the next station: *"Nobody was hurt this time. We were lucky. I've got a daughter on the next shift."*
+- **Glad**, if you choose the other side: escort contracts protecting the yard from saboteurs, paid by Wexley-Yorozu, with the Arkwrights' broadcasts calling you a company hand.
+
+**What's in it for you.**
+- **As a saboteur:** the Arkwrights' small pay, or the broker's large one; salvage from wrecked worker craft (worth scooping, but stolen); and, at the end of the Arkwrights' chain, what the company never got: the old miners' hand-drawn charts of the moon's richest seams (a real find to survey and sell, [from discovery to development](discovery-to-development.md)), and a friendly contact where nobody asks questions.
+- **As a defender:** Wexley-Yorozu's pay and standing, priority berths and a discount at the new station on opening day, and your name in its opening news, as first discoveries carry your callsign.
+
+**Accidents aren't sabotage.** A fair fight near a yard shouldn't make you a criminal.
+- **The safety catch** covers the yard as it covers the station: with the Titanoboa or a worker craft in the line of fire, you're warned, and have to hold the trigger to override.
+- **Strays in a real fight** (a hostile within range, a few hits on the yard) are an accident: Wexley-Yorozu sends a small repair bill per hit **(to tune: 50 Cr)**, and that's all. No crime, no price on you, no security wing.
+- **Sabotage** is sustained fire at the yard with no hostile about, or overriding the catch to keep shooting.
+- **Pirates' strays count too:** their shots can hit the yard, and then yard security launches at them. A fight near a yard can bring allies.
+
+**Making amends.** Built on the amends companies already have (`amendsCost`, `makeAmends`):
+- **Pay the repair bill** at any Wexley-Yorozu station: it clears the company's price on you and returns some standing. A police record is settled the usual way, apart.
+- **Make it good in kind:** deliver the alloys and machinery the repairs need to the yard, for a smaller bill and more standing back.
+- **Say sorry to the person:** answer Pell Varga's message. It changes nothing in the ledger, but he remembers: his later messages are warmer, and he may warn you when yard security is about.
+- **Clause 214:** can't pay? Wexley-Yorozu offers *"another way to settle the matter"*: hauling for the company at a discount until the debt's worked off.
+
+**What it changes.** Yards run on the shared clock, so every commander sees the same stage at the same time; one player delaying a build would change it for everyone, which needs the server to keep the damage. So, until then:
+- **Damage is temporary and visible:** parts go dark and are repaired in hours; the schedule holds (the company has reserves), and the news reports the attack.
+- **Sabotage contracts** have their own outcome in your story: the Arkwrights' thanks (or not), a message from Varga, a change in standing.
+- **In the shared galaxy, later:** damage held on the server can slow a build for everyone, and defending a yard becomes a community goal, as delivering to it already is.
 
 ## 5. How it feels
 
