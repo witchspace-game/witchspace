@@ -2197,6 +2197,25 @@ function coverTargets<T>(value: T): Target<T>[] {
   return out;
 }
 
+// Hiding in the clutter (docs/design/exploration.md): in a wreck field you're
+// lost to ships beyond a short range, unless you've just fired. Your scanner
+// is cluttered the same way.
+const CLUTTER_RADIUS = 700; // metres round a wreck field's centre
+const HIDDEN_BEYOND = 1500; // metres
+const HIDDEN_BEYOND_DARK = 600; // metres, transponder off
+const SHOT_GIVES_AWAY = 3; // seconds after firing that everyone can see you
+let lastShotAt = -Infinity;
+let wasInClutter = false;
+
+function inClutter(pos: THREE.Vector3) {
+  return scenePois.some((p) => p.poi.kind === 'wrecks' && p.position.distanceTo(pos) < CLUTTER_RADIUS);
+}
+/** Whether a ship at this distance can pick the player out. */
+function playerVisibleAt(distance: number) {
+  if (!exploring() || !inClutter(player.obj.position) || elapsed - lastShotAt < SHOT_GIVES_AWAY) return true;
+  return distance < (dark() ? HIDDEN_BEYOND_DARK : HIDDEN_BEYOND);
+}
+
 /** The wreck or beacon the ship has run into, pushing it back out; null if none. */
 function bumpCover(pos: THREE.Vector3, shipRadius: number): string | null {
   for (const p of scenePois) {
@@ -2899,6 +2918,7 @@ function firePlayerLaser() {
   }
   if (surrenderTimer !== null) breakSurrender();
   laserCooldown = laser.interval;
+  lastShotAt = elapsed;
   laserHeat += laser.heat;
   if (laserHeat >= 100) {
     overheated = true;
@@ -2978,9 +2998,22 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       playerWanted: (isFugitive() && identified()) || defiedPolice,
       npcs,
       inSafeZone: (at: THREE.Vector3) => cmdr().difficulty === 'classic' && inSafeZone(at),
+      canSee: (npc: NpcShip) => playerVisibleAt(npc.obj.position.distanceTo(player.obj.position)),
       cargoValue: (ship: PlayerShip) => (ship === player ? (commander ? holdValue(cmdr().cargo) : 0) : holdValue(npcs.find((n) => n.ship === ship)?.cargo ?? {})),
     };
+    const hunting = (n: NpcShip) => n.target === player && (n.mode === 'attack' || n.mode === 'breakoff');
+    const before = new Map(npcs.map((n) => [n, n.mode === 'search' ? 'search' : hunting(n) ? 'hunt' : '']));
     for (const npc of npcs) think(npc, world);
+    // Tell the player: into the clutter, and when the hunt changes (lost, or given up).
+    const nowIn = alive && exploring() && inClutter(player.obj.position);
+    const lost = alive && npcs.some((n) => before.get(n) === 'hunt' && n.mode === 'search');
+    const notes = [
+      nowIn && !wasInClutter ? `In the clutter · hidden beyond ${((dark() ? HIDDEN_BEYOND_DARK : HIDDEN_BEYOND) / 1000).toFixed(1)} km` : '',
+      lost ? 'Lost them · they’re searching where they last saw you' : '',
+      !lost && alive && npcs.some((n) => before.get(n) === 'search' && n.mode !== 'search' && !hunting(n)) ? 'They’ve given up the search' : '',
+    ].filter(Boolean);
+    if (notes.length) flash(notes.join(' · '), notes.length > 1 ? 4 : 2.5);
+    wasInClutter = nowIn;
     for (const npc of npcs) maybeFireNpcMissile(npc);
   }
   updateMissiles(dt);
@@ -3315,6 +3348,7 @@ function fireMissile() {
   c.missiles -= 1;
   saveCommander(c);
   launchMissile(player, locked.ship);
+  lastShotAt = elapsed; // a launch gives you away too
   flash(`Missile away · ${locked.def.name}`, 1.2);
   locked = null;
 }
@@ -4050,9 +4084,13 @@ function updateSpace(dt: number) {
   dust.update(camera.position, state === 'flying' ? player.forward().multiplyScalar(player.speed) : new THREE.Vector3());
 
   const sighted = state === 'flying' ? sightedNpc() : null;
+  // In a wreck field your scanner is cluttered too: far contacts drop off it.
+  const cluttered = state === 'flying' && exploring() && inClutter(player.obj.position);
   const blips: Blip[] = [
     { position: station.root.position, color: '#ffb347', kind: 'station' },
-    ...npcs.map((p): Blip => ({ position: p.obj.position, color: npcColour(p), kind: 'ship', sighted: p === sighted, locked: p === locked })),
+    ...npcs
+      .filter((p) => !cluttered || p.obj.position.distanceTo(player.obj.position) < HIDDEN_BEYOND)
+      .map((p): Blip => ({ position: p.obj.position, color: npcColour(p), kind: 'ship', sighted: p === sighted, locked: p === locked })),
     ...drifters.map((d): Blip => ({ position: d.model.root.position, color: '#ffd166', kind: 'cargo' })),
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];

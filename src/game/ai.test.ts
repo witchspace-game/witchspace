@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
-import { think, type World } from './ai';
+import { SEARCH_TIME, think, type World } from './ai';
 import type { NpcRole, NpcShip } from './npc';
 import type { PlayerShip } from './playerShip';
 import { combatRating, nextRating } from './rating';
@@ -12,7 +12,7 @@ function fakeNpc(role: NpcRole, x: number): NpcShip {
   const ship = fakeShip(x);
   return {
     role, ship, obj: ship.obj, mode: 'patrol', hostile: false, target: null, destination: null,
-    attacker: null, attackedAgo: Infinity, health: 1,
+    attacker: null, attackedAgo: Infinity, health: 1, lastSeen: null, searchLeft: 0,
   } as unknown as NpcShip;
 }
 
@@ -80,6 +80,60 @@ describe('who fights whom', () => {
     think(pirate, world([pirate, cop]));
     expect(pirate.mode).toBe('flee');
     expect(pirate.target).toBe(cop.ship);
+  });
+});
+
+describe('hiding in the clutter', () => {
+  it('a pirate that loses sight of you searches where it last saw you, then gives up', () => {
+    const pirate = fakeNpc('pirate', 0);
+    const player = fakeShip(1000);
+    let visible = true;
+    const w = { ...world([pirate], player), canSee: () => visible };
+    think(pirate, w);
+    expect(pirate.mode).toBe('attack');
+    // You slip into the wreck field and keep moving.
+    visible = false;
+    player.obj.position.set(1400, 200, 0);
+    think(pirate, w);
+    expect(pirate.mode).toBe('search');
+    expect(pirate.hostile).toBe(true);
+    expect(pirate.lastSeen!.x).toBe(1000); // where you were, not where you are
+    expect(pirate.searchLeft).toBe(SEARCH_TIME);
+    // Time runs out (npc.update counts it down in flight).
+    pirate.searchLeft = 0;
+    think(pirate, w);
+    expect(pirate.mode).toBe('patrol');
+    expect(pirate.target).toBeNull();
+    // And it doesn't pick you up again while you're hidden.
+    think(pirate, w);
+    expect(pirate.target).toBeNull();
+  });
+
+  it('seen again, it attacks', () => {
+    const pirate = fakeNpc('pirate', 0);
+    let visible = true;
+    const w = { ...world([pirate], fakeShip(1000)), canSee: () => visible };
+    think(pirate, w);
+    visible = false;
+    think(pirate, w);
+    expect(pirate.mode).toBe('search');
+    visible = true;
+    think(pirate, w);
+    expect(pirate.mode).toBe('attack');
+  });
+
+  it('a hidden player is never picked as fresh prey', () => {
+    const pirate = fakeNpc('pirate', 0);
+    const trader = fakeNpc('trader', 5000);
+    think(pirate, { ...world([pirate, trader], fakeShip(1000)), canSee: () => false });
+    expect(pirate.target).toBe(trader.ship);
+  });
+
+  it('police lose a hidden wanted player too', () => {
+    const cop = fakeNpc('police', 0);
+    const w = { ...world([cop], fakeShip(500), true, true), canSee: () => false };
+    think(cop, w);
+    expect(cop.hostile).toBe(false); // never saw you: no idea where to look
   });
 });
 
