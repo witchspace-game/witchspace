@@ -9,6 +9,7 @@ import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMA
 import { nameRule } from './names';
 import { Accounts, type AccountsEnv } from './accounts';
 import { IdeasBoard, type IdeasEnv } from './ideas';
+import { mcp } from './mcp';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
 
 export interface Env extends IdeasEnv, AccountsEnv {
@@ -43,6 +44,8 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
+    // The MCP server for AI assistants: public and read-only, so open to any caller (server/src/mcp.ts).
+    if (url.pathname === '/mcp') return mcp(request);
     // A link in an email, so no Origin: stop the companies getting in touch.
     if (url.pathname === '/contact/stop') return accountsOf(env).fetch(request);
     // The ideas board (/ideas…) and accounts (/auth…, /me…, /admin…), called from our pages and tools.

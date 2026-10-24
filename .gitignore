@@ -37,3 +37,7 @@ dist/
 
 # Press films: served from Cloudinary (tools/upload-media.ts), too big for the repo.
 /public/media/films/
+
+# Generated for the MCP server by tools/mcp-data.ts before the Worker runs or deploys.
+/server/src/mcp-data.json
+/server/src/mcp-schema.js

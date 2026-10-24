@@ -10,6 +10,7 @@ stages:
   - Footage as evidence, and sold to the news | proposed
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
+  - The Witchspace channel: commanders' Shorts on YouTube, edited by an AI agent | idea
 help:
   - Write the newsroom's voice: what it says when it buys your footage of the Falcon | writing
   - Playtest the death replay and tell us if it made you want to share it, or just stung | playtest
@@ -98,6 +99,25 @@ The galaxy has things almost nobody sees: the Falcon, other Legends, a wreck fro
 The social part. Signed in, **Post to the station board** puts a kept clip or photo in a public gallery, in the game (docked, a Board tab) and on the site, with your callsign, the system and when. Commanders can watch, react and share; the best of the week can lead the site's home page.
 
 Because it's other people's posts, it needs a report button, moderation and limits before it opens, and it follows the online-safety decisions in `launch/safety` (still to be made). That's why it comes last. Clips are only the game's own picture, which keeps the risk low, but captions and callsigns are still people's words.
+
+## 5. The Witchspace channel *(idea, Mark, 24 October 2026)*
+
+A Witchspace YouTube channel of **Shorts from commanders' flight recorders**: any commander can put a kept moment forward, and an AI agent turns the good ones into Shorts on the channel. One place where the galaxy's best fights, worst deaths and strangest sightings pile up, each one an invitation to play.
+
+How it could work:
+
+- **Put forward, never taken.** From the flight log or the station board, *"Send to the Witchspace channel"*, signed in. Nothing goes up without the commander choosing it, and the commander can ask for it to come down.
+- **The agent does the editing.** It picks the moment, cuts the vertical version (the trailer tooling already makes vertical cuts), adds the end card and a caption from what the game knows ("CMDR Jameson vs a pirate pack at Riedquat"), writes the title, description and tags, credits the commander's callsign with a link to their moment's page, and queues it.
+- **A person in the loop, at first.** The agent drafts; a maintainer (or a trusted moderator) approves the day's Shorts before they publish. Later, verified moments from commanders in good standing could go up by themselves.
+- **Series, not a firehose.** "How I died", "Sightings", "Firsts", "The week in Witchspace": the agent fills playlists, and a weekly round-up Short shows the best.
+
+Things to settle before it opens:
+
+- **Consent and credit:** the commander agrees, per clip, to it appearing on the channel under their callsign, licensed CC BY-SA like the game's other content. Callsigns only, never real names.
+- **Safety:** clips are only the game's picture, but captions are people's words: same moderation as the station board, and the online-safety decisions in `launch/safety`. The channel is not "made for kids" unless that's decided deliberately.
+- **Music:** only what we can publish everywhere: the U.S. Marine Band's public-domain Blue Danube, the game's own sounds, or nothing.
+- **YouTube's limits:** uploads through the API are rationed per day, so the agent publishes a few a day, not everything; enough for a channel that's alive, not spam.
+- **Who runs the channel,** and whose account it's under.
 
 ## Classic rules
 

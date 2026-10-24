@@ -47,9 +47,18 @@
   <p>
     Ask yours to <em>"design a pirate gunship for Witchspace"</em> and it will write against the schema and check its work with the validator. Please tick the "AI-assisted" box on your pull request, and play-test what you submit: you're the author.
   </p>
-  <p class="muted">
-    Also on the way: a Witchspace MCP server so assistants can validate, preview and balance-check content directly. A machine-readable summary of the project lives at <a href="/llms.txt">/llms.txt</a>.
-  </p>
+  <div class="card mcp-card">
+    <h3>Add Witchspace to your assistant</h3>
+    <p>One web address gives your assistant the game's own tools: check a ship against the rules, draw it beside a Cobra for scale, compare it with the fleet, read every design and help-wanted task, and look up any system in the eight galaxies.</p>
+    <p><code class="mcp-url">https://space.witchspace.org.uk/mcp</code> <button type="button" class="button small" data-copy="https://space.witchspace.org.uk/mcp">Copy</button></p>
+    <ul class="doc">
+      <li><strong>Claude:</strong> Settings, Connectors, Add custom connector, and paste the address.</li>
+      <li><strong>ChatGPT:</strong> Settings, Connectors (developer mode), Create, and paste the address.</li>
+      <li><strong>Claude Code:</strong> <code>claude mcp add --transport http witchspace https://space.witchspace.org.uk/mcp</code></li>
+      <li><strong>Cursor and others:</strong> add it as a remote MCP server (streamable HTTP).</li>
+    </ul>
+    <p class="muted small">It only reads: nothing you do with it changes anything. <a href="/design/mcp-server/">How it works, and what's next</a>. A plain summary of the project for any AI lives at <a href="/llms.txt">/llms.txt</a>.</p>
+  </div>
 </section>
 
 <section class="section">
