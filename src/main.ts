@@ -1464,6 +1464,7 @@ const WARY_HALF_LIFE = 10 * 60 * 1000; // ms
 const WARY_ODDS = 0.88; // each loss multiplies the odds of the next attack by this
 const WARY_CALM = 5; // seconds more quiet per loss
 const pirateLosses = new Map<string, { n: number; at: number }>();
+const toldWary = new Set<string>(); // systems where you've been told, so it's said once
 function wariness(): number {
   const w = pirateLosses.get(systemKey(currentSystem()));
   return w ? w.n * 0.5 ** ((Date.now() - w.at) / WARY_HALF_LIFE) : 0;
@@ -1472,7 +1473,7 @@ function pirateLost() {
   if (!modern()) return;
   const before = wariness();
   pirateLosses.set(systemKey(currentSystem()), { n: before + 1, at: Date.now() });
-  if (before < 6 && before + 1 >= 6) setTimeout(() => state === 'flying' && flash('Word gets round · pirates here are giving you a wide berth', 4), 3000);
+  if (before + 1 >= 6 && !toldWary.has(systemKey(currentSystem())) && toldWary.add(systemKey(currentSystem()))) setTimeout(() => state === 'flying' && flash('Word gets round · pirates here are giving you a wide berth', 4), 3000);
 }
 /** Pirates about you, or anyone out to get you. */
 const fightOn = () => npcs.some((n) => n.hostile || (n.role === 'pirate' && n.obj.position.distanceTo(player.obj.position) < FIGHT_NEAR));
