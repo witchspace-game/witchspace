@@ -1,3 +1,18 @@
+---
+title: Combat rating and missions
+status: designed
+pillar: fight
+summary: The road from Harmless to Elite: points weighted by danger, nothing for crimes or easy targets, player kills, and combat missions as the main way up.
+card: mamba
+stages:
+  - Ranks, shown in the game | built
+  - Points weighted by danger | designed
+  - Combat missions | proposed
+  - Player kills (shared galaxy) | proposed
+help:
+  - Write a combat mission briefing, with its people | writing
+---
+
 # Design: combat rating and combat missions
 
 *Status: **agreed direction**, Modern rules unless stated otherwise. Weighted kill points (sections 1–3) and the status display (section 6) fit into the single-player game now. Player kills (section 4) wait for multiplayer, and missions (section 5) for a mission system. Numbers marked **(to tune)** are starting points for playtesting.*

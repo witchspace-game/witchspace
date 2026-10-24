@@ -108,7 +108,7 @@ export function openShare(target: ShareTarget) {
       <div class="share-head"><h2>Share</h2><button type="button" class="icon-button" data-close aria-label="Close">${ICONS.close}</button></div>
       ${
         image
-          ? `<figure class="share-preview"><img src="${image}" alt="" /><figcaption><strong></strong><span>${url.replace(/^https?:\/\//, '')}</span></figcaption></figure>`
+          ? `<figure class="share-preview"><img src="${image.startsWith(SITE) ? image.slice(SITE.length) : image}" alt="" /><figcaption><strong></strong><span>${url.replace(/^https?:\/\//, '')}</span></figcaption></figure>`
           : ''
       }
       ${typeof navigator.share === 'function' ? `<button type="button" class="button primary share-native">${ICONS.share}Share…</button>` : ''}

@@ -1,3 +1,11 @@
+---
+title: Ideas backlog
+status: idea
+pillar: platform
+summary: Ideas that aren't designed yet, from multicrew ships to a streamer mode. The community votes on what comes next.
+card: cobra-mk3
+---
+
 # Ideas backlog
 
 A parking spot for good ideas that aren't designed yet. When one is picked up, it gets a proper document in [`docs/design/`](design) and a link from here.

@@ -1,3 +1,18 @@
+---
+title: Economy and exchanges
+status: building
+pillar: trade
+summary: Living markets, news that travels, station exchanges, local currencies, contracts and futures, station shares, and fair play. All virtual, all earned in play.
+card: coriolis
+stages:
+  - Living markets and the exchange | built
+  - News that travels | built
+  - Player orders, market makers and delivery contracts (shared galaxy) | proposed
+  - Scrip, futures, shares and banking | proposed
+help:
+  - Argue for (or against) station scrip in the open questions | design
+---
+
 # Design: economy and exchanges
 
 *Status: **proposal**. Section 1 (living markets) and a simple form of section 2 (news that travels) are intended for the **trading and galaxy** milestone. Everything else needs multiplayer and comes later. Please discuss in GitHub Discussions before building.*

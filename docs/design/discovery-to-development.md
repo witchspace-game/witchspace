@@ -1,3 +1,13 @@
+---
+title: From discovery to development
+status: proposed
+pillar: explore
+summary: An explorer's find, sold to a company, becomes a development every career can supply, guard or raid, and changes the system.
+card: titanoboa
+help:
+  - Write what a development means for the people already living there | writing
+---
+
 # Design: from discovery to development
 
 *Proposed, October 2026. Change by pull request.*

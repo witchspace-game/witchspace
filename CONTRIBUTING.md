@@ -38,7 +38,7 @@ Legends are rare easter-egg ships, and fans are warmly invited to build them. No
 - ✅ **Flavour text that hints** and lets players get the joke.
 - ❌ **Tracing or modelling the actual on-screen design**, using logos or insignia, or quoting dialogue.
 
-Until the legends system lands (see the [roadmap](README.md#roadmap)), add a legend as a normal ship file and mention in your pull request where and how rarely you'd like it to appear. Reviewers will check homages against these rules before merging, because merging publishes the work under the project's name.
+Until the legends system lands (see the [roadmap](https://witchspace.org.uk/roadmap/)), add a legend as a normal ship file and mention in your pull request where and how rarely you'd like it to appear. Reviewers will check homages against these rules before merging, because merging publishes the work under the project's name.
 
 ## Using AI to contribute
 

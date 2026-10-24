@@ -1,3 +1,11 @@
+---
+title: Worldbuilding guide
+status: guide
+pillar: world
+summary: The tone of the galaxy: dry, wry and a little lawless. Read this before writing anything.
+card: cobra-mk3
+---
+
 # Witchspace worldbuilding bible
 
 *A living document. Propose changes by pull request.*

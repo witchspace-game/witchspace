@@ -1,3 +1,13 @@
+---
+title: Stations and worlds
+status: proposed
+pillar: world
+summary: Physical limits: station classes, ship sizes, docking capacity, how many stations a world can support, supply and decline, rivals and allies.
+card: coriolis
+help:
+  - Design a new station class (a homage is fine, a copy isn't) | ships
+---
+
 # Design: stations and worlds
 
 *Status: **proposal**. The world data (section 1), basic station classes and ship size classes (sections 2–3) belong to the **trading and galaxy** milestone. Docking queues, supply and decline, rival stations and growth (sections 4–7) need multiplayer and come later. Please discuss in GitHub Discussions before building.*

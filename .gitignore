@@ -13,6 +13,8 @@ dist/
 /privacy/
 /careers/
 /design/
+/roadmap/
+/ships/
 
 # Launch drafts (posts, emails): kept local until they're approved and posted
 /launch/
@@ -25,3 +27,9 @@ dist/
 
 # Helper agents' working copies of the repo
 /.claude/
+
+# Made by tools/build-site.ts for tools/share-cards.mjs
+/tools/share-cards.json
+
+# Design sketches (local only)
+/sketch/

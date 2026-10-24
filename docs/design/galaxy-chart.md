@@ -1,3 +1,19 @@
+---
+title: The galaxy chart
+status: building
+pillar: core
+summary: Where every career starts a decision: the route drawn, danger at a glance, a proper key, links in from everywhere, zoom, and trade on the chart.
+card: coriolis
+stages:
+  - Links from the news; the safe route | built
+  - The route drawn, with danger rings | proposed
+  - A key and bigger symbols | proposed
+  - Links from contracts, trails and the exchange | proposed
+  - Danger switch; zoom | proposed
+help:
+  - Mock up the chart's key: every symbol, at phone size | art
+---
+
 # The galaxy chart
 
 *Design, 24 October 2026. Proposed; the first two pieces (links from the news, the safe route) are built.*

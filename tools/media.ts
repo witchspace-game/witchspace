@@ -37,6 +37,12 @@ export const loadMedia = (root: string): Media => JSON.parse(readFileSync(join(r
 const local = (file: string) => '/' + file.replace(/^public\//, '');
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 
+/** Cloudinary text overlays (it has Arial, not the site's fonts): the wordmark, and the address under it. */
+const BRAND = [
+  'l_text:Arial_26_bold_letter_spacing_9:%20%20WITCHSPACE%20%20,co_rgb:eef3fa,b_rgb:05070dcc/fl_layer_apply,g_north_west,x_36,y_32',
+  'l_text:Arial_19_bold:%20%20witchspace.org.uk%20%20%C2%B7%20%20free%20in%20your%20browser%20%20,co_rgb:3dffb0,b_rgb:05070dcc/fl_layer_apply,g_north_west,x_36,y_78',
+].join('/');
+
 /** Links to one item, at the sizes the site uses. */
 export function links(media: Media, item: MediaItem) {
   const base = `https://res.cloudinary.com/${media.cloud}/${item.kind}/upload`;
@@ -52,7 +58,8 @@ export function links(media: Media, item: MediaItem) {
   return {
     thumb: (w: number) => still(`${fit},w_${w},h_${Math.round((w * 9) / 16)},q_auto,f_auto`),
     large: still('c_limit,w_2400,q_auto:good,f_auto'),
-    og: still(`${fit},w_1200,h_630,q_auto,f_jpg`),
+    // The share card: the picture, stamped with the name and address so a shared link is ours at a glance.
+    og: still(`${fit},w_1200,h_630,q_auto,f_jpg/${BRAND}`),
     video: item.kind === 'video' ? (up ? `${base}/q_auto/${path}.mp4` : local(item.file)) : undefined,
     /** The original file, as a download. */
     download: up ? `${base}/fl_attachment:witchspace-${item.id}/${path}.${item.kind === 'video' ? 'mp4' : 'jpg'}` : local(item.file),

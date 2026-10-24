@@ -55,6 +55,8 @@ async function load() {
   try {
     ideas = ((await api(`?sort=${sort}`)) as { ideas: Idea[] }).ideas;
     render();
+    // Linked to one idea (from a ship's page): show it.
+    if (location.hash.startsWith('#idea-')) document.getElementById(location.hash.slice(1))?.scrollIntoView({ block: 'center' });
   } catch {
     list.innerHTML = '<li class="muted">The ideas board isn’t answering just now. Try again in a moment.</li>';
   }
@@ -70,7 +72,7 @@ function render() {
     .map((i) => {
       const net = i.up - i.down;
       const label = STATUS_LABEL[i.status];
-      return `<li class="idea" data-id="${i.id}">
+      return `<li class="idea" id="idea-${i.id}" data-id="${i.id}">
         <div class="votes" role="group" aria-label="Vote">
           <button type="button" class="vote up${i.mine > 0 ? ' on' : ''}" data-vote="1" aria-label="Vote up" aria-pressed="${i.mine > 0}">▲</button>
           <span class="score" title="${i.up} up, ${i.down} down">${net}</span>
@@ -180,5 +182,14 @@ form.addEventListener('submit', async (e) => {
     if (widget !== undefined) turnstile?.reset(widget);
   }
 });
+
+// Arrived from a ship's page ("Suggest an improvement"): start the idea with the ship's name.
+const about = new URLSearchParams(location.search).get('about');
+if (about) {
+  const title = form.querySelector<HTMLInputElement>('input[name=title]')!;
+  title.value = `${about.slice(0, 40)}: `;
+  title.focus();
+  title.setSelectionRange(title.value.length, title.value.length);
+}
 
 void load();

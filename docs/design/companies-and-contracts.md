@@ -1,3 +1,21 @@
+---
+title: Companies and contracts
+status: building
+pillar: trade
+summary: Four companies with their own ships, standing and files on you; contracts that can go wrong; the law beyond the station; and Wexley-Yorozu yards building stations by moons.
+card: bullsnake
+stages:
+  - The companies, contracts and standing | built
+  - Files, messages and special assignments | built
+  - The law beyond the station | built
+  - Yards you can see: the Titanoboa and a station rising | built
+  - Company ships to intercept, escorts and security | proposed
+  - Attacking (or defending) a yard; amends | proposed
+help:
+  - Write a special assignment that goes wrong, with its people | writing
+  - Sketch moving cranes and worker craft for the Titanoboa | ships
+---
+
 # Design: trading companies, contracts, and the law beyond the station
 
 *Status: agreed. **Stage 1 built (October 2026):** the four companies and their presence by system (`src/game/companies.ts`); a Contracts tab at the station with haulage and rush contracts, cargo supplied, deadlines in jumps, pay on delivery (half if late, reclaimed after three more jumps), standing with each company (`src/game/contracts.ts`); traders in company colours, named in the target readout. Still to come from stage 1: supply runs, bonds and perks.*

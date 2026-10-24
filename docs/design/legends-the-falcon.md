@@ -1,3 +1,17 @@
+---
+title: The Falcons, a Legend
+status: proposed
+pillar: fight
+summary: A lone pirate running dark on a circuit of lawless worlds, who remembers you, and comes for the commanders who've thinned the packs.
+card: falcon
+stages:
+  - The Falcon, a rare dark pirate | built
+  - The redesign: circuit, memory, the Debt | proposed
+  - Flying with them: a pirate career, and a Falcon of your own | proposed
+help:
+  - Design a Legend of your own (a homage, never a copy) | ships
+---
+
 # Design: the Falcons, a Legend
 
 *Proposed, October 2026. Change by pull request.*
@@ -97,7 +111,7 @@ The turning point of a Falcon's story: the Legend who hunted you, caught, and yo
 - **The yard.** A trail across the Falcons' galaxies leads to the Solo yard and the forty-one, Sam Dray among them. Bring them something (Mira's yellow flowers, seed stock that works) and the Falcons spare you for good. Sell the yard's position to Wexley-Yorozu instead, and the Science Division comes in force, and every Falcon in the eight galaxies knows your name.
 - **Hunting her for the companies:** Wexley-Yorozu and Hexon post special assignments to find her.
 - **In the shared galaxy:** the chart records who drove her off last, a season at a time.
-- **Flying with them:** a pirate career that starts with an introduction to a Solo son.
+- **Flying with them:** a pirate career that starts with an introduction to a Solo son, and ends, for those the Solos come to trust, with a Falcon of your own ([ships, classes and makers](ships-and-classes.md#4-earned-not-bought)).
 
 ## Building it in stages
 
