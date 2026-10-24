@@ -62,7 +62,12 @@ export function buildBeacon(size = 14): THREE.Group {
 }
 
 export function blinkBeacon(g: THREE.Group, time: number) {
-  (g.userData.lamp as THREE.Mesh).visible = time % 2 < 0.25;
+  (g.userData.lamp as THREE.Mesh).visible = !g.userData.off && time % 2 < 0.25;
+}
+
+/** Found: the lamp goes out for good. */
+export function powerDownBeacon(g: THREE.Group) {
+  g.userData.off = true;
 }
 
 /** Free anything built here. */
