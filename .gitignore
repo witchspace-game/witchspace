@@ -30,3 +30,6 @@ dist/
 
 # Made by tools/build-site.ts for tools/share-cards.mjs
 /tools/share-cards.json
+
+# Design sketches (local only)
+/sketch/
