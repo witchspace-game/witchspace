@@ -33,3 +33,7 @@ dist/
 
 # Design sketches (local only)
 /sketch/
+/press-shots/
+
+# Press films: served from Cloudinary (tools/upload-media.ts), too big for the repo.
+/public/media/films/
