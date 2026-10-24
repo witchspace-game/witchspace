@@ -56,7 +56,7 @@ A parking spot for good ideas that aren't designed yet. When one is picked up, i
 ## Community and content
 
 - **Legends.** Rare, secret encounters and easter-egg ships that nod to great science fiction, plus tributes to *Elite*'s own legends. On the [roadmap](../README.md#roadmap); see the homage rules in [CONTRIBUTING](../CONTRIBUTING.md#legends-and-homages).
-- **Witchspace MCP server.** Tools for AI assistants to validate, preview and balance-check content.
+- **Witchspace MCP server.** Tools for AI assistants to validate, preview and balance-check content. *Designed: see design/mcp-server.md.*
 - **In-browser ship editor.** Design a ship visually and export a valid ship file.
 
 ## Play anywhere
