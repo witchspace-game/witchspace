@@ -7,7 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, posix, relative, resolve } from 'node:path';
 import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from './media';
-import { docPanel, helpWantedHtml, libraryHtml, loadDocs, PILLARS, roadmapHtml, roadmapSummaryHtml, STATUS } from './docs';
+import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLARS, roadmapCompactHtml, roadmapHtml, roadmapSummaryHtml, STATUS } from './docs';
 import { loadShips, shipPage, shipsIndex } from './ships';
 
 const root = resolve(import.meta.dirname, '..');
@@ -17,13 +17,15 @@ const media = loadMedia(root);
 const template = readFileSync(join(root, 'site/template.html'), 'utf8');
 
 const NAV = [
-  ['/', 'Home'],
   ['/ships/', 'Ships'],
   ['/roadmap/', 'Roadmap'],
+  ['/careers/', 'Careers'],
   ['/ideas/', 'Ideas'],
   ['/get-involved/', 'Get involved'],
   ['/about/', 'About'],
 ] as const;
+/** The phone menu: everything, since there's no room for the bar. */
+const MENU = [['/', 'Home'], ...NAV, ['/design/', 'Design documents'], ['/press/', 'Press kit'], ['/privacy/', 'Privacy']] as const;
 
 interface Page {
   path: string; // URL path, ending in '/'
@@ -50,7 +52,7 @@ const cardFile = (path: string) => (path === '/' ? 'home' : path.replace(/^\/|\/
 
 /** Branded cards for the hand-written pages (ships and design docs get theirs where they're made). */
 const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
-  '/': { ship: 'cobra-mk3', kicker: 'A love letter to Elite (1984)', title: 'Trade. Fight. Explore.', sub: 'Glowing vector ships, eight galaxies, and the original look one key away.' },
+  '/': { ship: 'cobra-mk3', kicker: 'A love letter to Elite (1984)', title: 'Trade. Fight. Explore. Build.', sub: 'Eight galaxies of glowing vector space, built with the people who fly it.' },
   '/about/': { ship: 'cobra-mk3', kicker: 'About', sub: 'An unofficial, non-commercial tribute to Elite (1984), made in the open.' },
   '/get-involved/': { ship: 'viper', kicker: 'Get involved', sub: 'Design ships, write lore, build missions, playtest or code.' },
   '/ideas/': { ship: 'cobra-mk3', kicker: 'Ideas', title: 'What should Witchspace do next?', sub: 'Suggest an idea, or vote the ones you care about up or down.' },
@@ -105,11 +107,12 @@ function render(page: Page): string {
   const imageAlt = own ? `${title}: ${card!.sub}` : page.title;
   const section = '/' + (page.path.split('/')[1] ?? '') + (page.path === '/' ? '' : '/');
   const nav = NAV.map(([href, label]) => {
-    const current = href === '/' ? page.path === '/' : section === href;
+    // Design documents belong to the roadmap.
+    const current = section === href || (href === '/roadmap/' && section === '/design/');
     return `<a href="${href}"${current ? ' aria-current="page"' : ''}>${label}</a>`;
   }).join('\n        ');
   // Every page can be shared (src/site/share.ts), so every page loads it.
-  const scripts = [...new Set([...(page.scripts ?? []), '/src/site/share.ts'])].map((src) => `    <script type="module" src="${src}"></script>`).join('\n');
+  const scripts = [...new Set([...(page.scripts ?? []), '/src/site/share.ts', '/src/site/nav.ts'])].map((src) => `    <script type="module" src="${src}"></script>`).join('\n');
   return template
     .replaceAll('{{title}}', escapeAttr(page.title))
     .replaceAll('{{description}}', escapeAttr(page.description))
@@ -121,6 +124,7 @@ function render(page: Page): string {
     .replace('{{head}}', (page.head ?? '') + structuredData(page, image))
     .replace('{{bodyClass}}', page.bodyClass ?? '')
     .replace('{{nav}}', nav)
+    .replace('{{menu}}', MENU.map(([href, label]) => `<a href="${href}"${href === page.path ? ' aria-current="page"' : ''}>${label}</a>`).join('\n      ') + '\n      <a class="button primary" href="/play/">Play free</a>')
     .replace('{{content}}', page.content)
     .replace('{{scripts}}', scripts);
 }
@@ -144,6 +148,8 @@ for (const name of readdirSync(join(root, 'site/pages'))) {
     .replace('<!-- press:data -->', galleryData(media))
     .replace('<!-- help:wanted -->', helpWantedHtml(docs))
     .replace('<!-- roadmap:summary -->', roadmapSummaryHtml(docs))
+    .replace('<!-- roadmap:compact -->', roadmapCompactHtml(docs))
+    .replace('<!-- help:skills -->', helpSkillsHtml(docs))
     // {{media:<id>:large}} and the like: a press item's link at a given size.
     .replace(/\{\{media:([\w-]+):(large|og|direct)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct') => links(media, media.items.find((i) => i.id === id)!)[size]);
   write({ ...meta, content });
@@ -254,7 +260,7 @@ write({
 
 const generated = [
   'index.html',
-  ...NAV.slice(1).map(([p]) => p.slice(1) + 'index.html'),
+  ...NAV.map(([p]) => p.slice(1) + 'index.html'),
   'press/index.html',
   ...ships.map((s) => `ships/${s.id}/index.html`),
   'roadmap/index.html',

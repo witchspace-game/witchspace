@@ -12,7 +12,7 @@ if (compare && range) {
 // Only animate if the reader hasn't asked for less motion; without this
 // script everything is simply visible.
 if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
-  const items = document.querySelectorAll<HTMLElement>('.section-head, .feature, .tile, .card, .roadmap li, .compare');
+  const items = document.querySelectorAll<HTMLElement>('.section-head, .now-card, .ladder, .card, .mini a, .compare, .fly .trailer');
   const seen = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {

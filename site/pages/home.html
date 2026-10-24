@@ -1,184 +1,124 @@
-<!-- {"path": "/", "title": "Witchspace: a love letter to Elite", "description": "A free, open-source space trading game in your browser. Glowing vector ships, eight galaxies, an authentic 1984 mode, and a galaxy built by its community.", "scripts": ["/src/site/hero.ts", "/src/site/home.ts"], "bodyClass": "home"} -->
+<!-- {"path": "/", "title": "Witchspace: a love letter to Elite", "description": "A free, open-source space game in your browser. Trade, fight, explore and build in eight galaxies of glowing vector space, a love letter to Elite (1984).", "scripts": ["/src/site/hero.ts", "/src/site/home.ts", "/src/site/live.ts"], "bodyClass": "home"} -->
 <section class="hero">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="hero-glow" aria-hidden="true"></div>
   <div class="hero-inner">
     <div class="hero-copy">
       <p class="eyebrow"><span class="dot"></span>Free · Open source · Plays in your browser</p>
-      <h1>Trade. Fight.<br /><span class="gradient">Explore.</span></h1>
+      <h1>Trade. Fight.<br />Explore. <span class="gradient">Build.</span></h1>
       <p class="hero-lede">
-        Fly a Cobra Mk III across eight galaxies of glowing vector space. A love letter to <em>Elite</em> (1984), rebuilt for today's browsers, with the original look one key away.
+        Eight galaxies of glowing vector space, a love letter to <em>Elite</em> (1984). Start with 100 credits and a Cobra, and help build the galaxy you fly in.
       </p>
       <div class="actions">
         <a class="button primary big" href="/play/">Play now, it's free</a>
-        <a class="button ghost big" href="#screens">See the game</a>
+        <a class="button ghost big" href="#now">See the galaxy right now</a>
       </div>
-      <p class="hero-note">No download, no account. Mouse, keyboard, gamepad or touch.</p>
+      <p class="live-strip" id="live-strip"><span class="live-dot" aria-hidden="true"></span><b>Live</b> <span>The galaxy runs on its own clock, the same for everyone.</span></p>
     </div>
   </div>
   <p class="ship-name" id="hero-ship" aria-live="polite"></p>
-  <dl class="stats">
-    <div><dt>2,048</dt><dd>star systems</dd></div>
-    <div><dt>8</dt><dd>galaxies</dd></div>
-    <div><dt>17</dt><dd>trade goods</dd></div>
-    <div><dt>100 Cr</dt><dd>to start, as ever</dd></div>
-  </dl>
 </section>
 
-<section class="section trailer-section" id="trailer">
-  <div class="section-head center">
-    <p class="kicker">Watch it fly</p>
-    <h2>53 seconds of Witchspace</h2>
-  </div>
-  <video class="trailer" controls preload="none" poster="/media/trailer-poster.jpg"><source src="/media/witchspace-trailer.mp4" type="video/mp4" /></video>
-</section>
-
-<section class="section compare-section" id="screens">
+<section class="section" id="now">
   <div class="section-head">
-    <p class="kicker">Two looks, one key</p>
-    <h2>1984 is always one keypress away</h2>
-    <p class="lede">Neo-vector brings bloom, colour and shattering explosions. Press <kbd>M</kbd> at any moment and you're back in 1984: white lines on black, sharpened for modern screens. Drag to compare.</p>
+    <p class="kicker">Right now in the galaxy</p>
+    <h2>It's running. You just haven't launched yet.</h2>
   </div>
-  <div class="compare" id="compare" style="--pos: 46%">
-    <img src="/screens/retro.jpg" alt="The same scene in 1984 mode: white wireframe station and planet on black" width="1200" height="900" loading="lazy" />
-    <img class="compare-top" src="/screens/neo.jpg" alt="A Coriolis station and planet in neo-vector mode, with police Vipers on patrol" width="1200" height="900" loading="lazy" />
-    <span class="compare-label left">Neo-vector</span>
-    <span class="compare-label right retro-label">1984</span>
-    <span class="compare-handle" aria-hidden="true"></span>
-    <input type="range" min="0" max="100" value="46" aria-label="Compare neo-vector and 1984 modes" />
+  <div class="now-grid">
+    <div class="now-card news">
+      <h3><span class="live-dot" aria-hidden="true"></span>The news, as it reaches Lave</h3>
+      <div id="now-news"><p class="muted">Famines, booms, strikes and wars come and go across the galaxy, and the news travels at the speed of ships.</p></div>
+      <a class="card-cta" href="/play/">Launch from Lave and chase the news →</a>
+    </div>
+    <div class="now-card">
+      <h3>Shipyards</h3>
+      <div class="big" id="now-yard">A station rising</div>
+      <p class="muted" id="now-yard-line">Wexley-Yorozu's Titanoboa builds stations by moons, stage by stage, over days.</p>
+      <div class="bar"><i id="now-yard-bar"></i></div>
+      <small class="muted" id="now-yard-meta"></small>
+      <a class="card-cta" href="/play/">Fly out and watch it rise →</a>
+    </div>
+    <div class="now-card market">
+      <h3>A market in crisis</h3>
+      <div class="big" id="now-crisis">Somewhere, a shortage</div>
+      <p><span class="up" id="now-crisis-pct"></span> <span class="muted">on the usual price, while the trouble lasts</span></p>
+      <a class="card-cta" id="now-crisis-cta" href="/play/">Find a run →</a>
+    </div>
+    <div class="now-card falcon">
+      <canvas id="now-falcon" aria-label="The Falcon, turning"></canvas>
+      <h3>A Legend</h3>
+      <div class="big">The Falcon</div>
+      <p class="muted">A lone pirate running dark. Nobody sees her twice, and nobody forgets.</p>
+      <a class="card-cta" href="/ships/falcon/">Meet her →</a>
+    </div>
+    <div class="now-card">
+      <h3>First to get there</h3>
+      <div class="big">Unclaimed</div>
+      <p class="muted">Most of the galaxy hasn't been surveyed. The first commander to bring a world's data home puts their callsign on the chart, for everyone to see.</p>
+      <a class="card-cta" href="/play/">Put your name on the galaxy →</a>
+    </div>
   </div>
-</section>
-
-<section class="section showcase">
-  <article class="feature">
-    <figure><img src="/screens/combat.jpg" alt="Military lasers firing at two pirate ships in front of a planet" width="1600" height="900" loading="lazy" /></figure>
-    <div class="feature-copy">
-      <p class="kicker">Combat</p>
-      <h2>Dogfights with weight</h2>
-      <p>Same physics for everyone: pitch, roll and no drift, just like 1984. Pirates hunt traders, police answer crimes, and your laser runs hot if you hold the trigger too long.</p>
-      <ul class="ticks">
-        <li>Pulse, beam and military lasers on four mounts</li>
-        <li>Homing missiles, ECM and the energy bomb</li>
-        <li>Bounties, and a combat rating from Harmless to Elite</li>
-      </ul>
-    </div>
-  </article>
-  <article class="feature reverse">
-    <figure><img src="/screens/exchange.jpg" alt="The station market as a trading exchange: pairs, a candlestick chart, the order book and the trade form" width="1600" height="900" loading="lazy" /></figure>
-    <div class="feature-copy">
-      <p class="kicker">Trade</p>
-      <h2>A market that moves</h2>
-      <p>Every station runs a real exchange. Other traders' deals move the price, stations post orders when they run short, and news of a famine three jumps away is worth money, if you get there first.</p>
-      <ul class="ticks">
-        <li>Candlestick charts, an order book and market orders</li>
-        <li>Supply chains, world events and news that travels</li>
-        <li>A back room for contraband, if you dare</li>
-      </ul>
-    </div>
-  </article>
-  <article class="feature">
-    <figure><img src="/screens/map.jpg" alt="The galactic chart, with Lave selected and its economy, government and tech level shown" width="1600" height="900" loading="lazy" /></figure>
-    <div class="feature-copy">
-      <p class="kicker">Explore</p>
-      <h2>2,048 systems, right where you left them</h2>
-      <p>Every galaxy is generated just as it was in 1984, so Lave, Diso and Leesti are where you remember. Now there's more to find there: ringed worlds and moons, survey data to sell, and signals that lead to derelicts and their logs.</p>
-      <ul class="ticks">
-        <li>Survey planets, moons and stars, and sell the data far away</li>
-        <li>Derelicts, beacons and wreck fields, the same for everyone</li>
-        <li>Hyperspace, in-system jumps and galactic hyperdrives</li>
-        <li>Fuel scoops: skim a star for fuel, scoop cargo from wrecks</li>
-        <li>Pirates, police and traders, each with somewhere to be</li>
-      </ul>
-    </div>
-  </article>
-  <article class="feature reverse">
-    <figure><img src="/screens/hangar.jpg" alt="The station hangar, with a Cobra Mk III on the pad and the equipment shop open" width="1600" height="900" loading="lazy" /></figure>
-    <div class="feature-copy">
-      <p class="kicker">Your ship</p>
-      <h2>Kit out your Cobra</h2>
-      <p>Dock, trade and refit with your ship on the pad, turning it to see your upgrades. Laser louvres and missile hatches show on the hull, so a sharp-eyed pilot can tell what you're carrying.</p>
-      <ul class="ticks">
-        <li>Docking computer, with that waltz</li>
-        <li>A comms array: hear distress calls, and take work over the radio</li>
-        <li>Cargo bay, extra energy, escape pod and more</li>
-        <li>The law: records, scans, fines, and surrender when it goes wrong</li>
-      </ul>
-    </div>
-  </article>
+  <p class="caption">The same for every commander, worked out from the galaxy's own clock. This is the game, running, live.</p>
 </section>
 
 <section class="section">
-  <div class="section-head center">
-    <p class="kicker">Your game, your way</p>
-    <h2>Pick it up anywhere</h2>
+  <div class="section-head">
+    <p class="kicker">One Cobra, many lives</p>
+    <h2>Trade, fight, explore, or build?</h2>
+    <p class="lede">Every commander starts the same way: 100 credits and a Cobra at Lave. Where you go from there is up to you.</p>
   </div>
-  <div class="tiles">
-    <div class="tile">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="5" /><path d="M12 7v4" /></svg>
-      <h3>Mouse and keyboard</h3>
-      <p>Aim with the mouse and fly with W, A, S, D. Trackpads and Magic Mouse swipes work too.</p>
-    </div>
-    <div class="tile">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></svg>
-      <h3>Classic keyboard</h3>
-      <p>The keyboard-only scheme, close to the BBC original, for purists.</p>
-    </div>
-    <div class="tile">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 14H9l-1.6 1.8A3 3 0 0 1 2 14v-1a4 4 0 0 1 4-4z" /><path d="M7 11v3M5.5 12.5h3M16 12h.01M18 13.5h.01" /></svg>
-      <h3>Gamepad</h3>
-      <p>Sticks for pitch, roll and yaw; triggers for speed. Launch and dock from the sofa.</p>
-    </div>
-    <div class="tile">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2.5" /><path d="M11 18h2" /></svg>
-      <h3>Phone and tablet</h3>
-      <p>Touch controls, or tilt to steer: upright in the station, sideways to fly. Add it to your Home Screen and it plays full screen, and the companies can send you work.</p>
-    </div>
-    <div class="tile">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4v5c0 4.5-3.4 8.2-8 9-4.6-.8-8-4.5-8-9V7z" /><path d="M9 12l2 2 4-4" /></svg>
-      <h3>Classic or Modern rules</h3>
-      <p>One life and GAME OVER, as in 1984. Or Modern: flight assists, insurance, and a little forgiveness.</p>
-    </div>
-    <div class="tile">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" /></svg>
-      <h3>Nothing to install</h3>
-      <p>It runs in any modern browser, on almost any machine. Your commander saves as you play.</p>
-    </div>
+  <div class="ladders">
+    <div class="ladder"><p class="verb">Trade</p><h3>Trader to trading house</h3><p>Buy low, sell high, read the news, and work the markets from the dock.</p>
+      <ol class="rungs"><li class="in">Hauler</li><li class="in">Company contractor</li><li class="building">Merchant <em>being built</em></li><li class="planned top">Trading house <em>planned</em></li></ol></div>
+    <div class="ladder"><p class="verb">Fight</p><h3>Harmless to Elite</h3><p>Hunt pirates for bounties, or join the Marshals and fly a Lancer of your own.</p>
+      <ol class="rungs"><li class="in">Harmless</li><li class="in">Dangerous</li><li class="planned">Marshal <em>planned</em></li><li class="in top">Elite</li></ol></div>
+    <div class="ladder"><p class="verb">Explore</p><h3>Tourist to Voyager</h3><p>Survey worlds, follow trails, and put your callsign on the chart.</p>
+      <ol class="rungs"><li class="in">Tourist</li><li class="in">Surveyor</li><li class="in">First discoverer</li><li class="in top">Voyager</li></ol></div>
+    <div class="ladder"><p class="verb">Build</p><h3>Contributor to station charter</h3><p>Supply the yards, design ships and stories, and earn a station of your own.</p>
+      <ol class="rungs"><li class="in">Contributor</li><li class="building">Credited designer <em>being built</em></li><li class="planned">Guild <em>planned</em></li><li class="planned top">Station charter <em>planned</em></li></ol></div>
+  </div>
+  <div class="ladder-foot">
+    <div class="key"><span class="in">In the game</span><span class="building">Being built</span><span>Planned</span></div>
+    <div><a class="button primary" href="/play/">Start your career</a> <a class="button ghost" href="/careers/">Who's hiring</a></div>
   </div>
 </section>
 
-<section class="section">
-  <div class="section-head center">
-    <p class="kicker">Built in the open</p>
-    <h2>A galaxy made by its players</h2>
-    <p class="lede">Ships are small JSON files, worlds and missions are open content, and the design is written down before it's built, so everyone can have a say.</p>
+<section class="section" id="screens">
+  <div class="section-head">
+    <p class="kicker">See it fly</p>
+    <h2>Neo-vector, or 1984. One key.</h2>
+    <p class="lede">Bloom, colour and shattering explosions, or white lines on black as in 1984: press <kbd>M</kbd> at any moment. Drag the picture to compare.</p>
   </div>
-  <div class="cards three">
-    <a class="card link" href="/ships/">
-      <h3>Design a ship</h3>
-      <p>Browse the fleet, suggest improvements on any ship's page, or draw your own, by hand or with your favourite AI assistant.</p>
-      <span class="more">See the ships →</span>
-    </a>
-    <a class="card link" href="/roadmap/">
-      <h3>Shape what comes next</h3>
-      <p>Every feature is designed in the open, with what it needs listed beside it. Pick something up, or argue for your ideas.</p>
-      <span class="more">See the roadmap →</span>
-    </a>
-    <a class="card link" href="https://github.com/witchspace-game/witchspace">
-      <h3>Free and open source</h3>
-      <p>Code under GPL-3.0, content under CC BY-SA 4.0. Forks stay open, contributions stay credited.</p>
-      <span class="more">View on GitHub →</span>
-    </a>
+  <div class="fly">
+    <video class="trailer" controls preload="none" poster="/media/trailer-poster.jpg"><source src="/media/witchspace-trailer.mp4" type="video/mp4" /></video>
+    <div class="compare" id="compare" style="--pos: 46%">
+      <img src="/screens/retro.jpg" alt="The same scene in 1984 mode: white wireframe station and planet on black" width="1200" height="900" loading="lazy" />
+      <img class="compare-top" src="/screens/neo.jpg" alt="A Coriolis station and planet in neo-vector mode, with police Vipers on patrol" width="1200" height="900" loading="lazy" />
+      <span class="compare-label left">Neo-vector</span>
+      <span class="compare-label right retro-label">1984</span>
+      <span class="compare-handle" aria-hidden="true"></span>
+      <input type="range" min="0" max="100" value="46" aria-label="Compare neo-vector and 1984 modes" />
+    </div>
   </div>
+  <p class="center fly-cta"><a class="button primary big" href="/play/">Play now, it's free</a> <a class="button ghost big" href="/press/">More pictures</a></p>
 </section>
 
 <section class="section">
-  <div class="section-head center">
-    <p class="kicker">Roadmap</p>
-    <h2>Being built now</h2>
-    <p class="lede">Everything is designed in the open before it's built. Here's what's under way, and how far along.</p>
+  <div class="together">
+    <div>
+      <p class="kicker">Built with you</p>
+      <h2>Being built now</h2>
+      <!-- roadmap:compact -->
+      <p><a href="/roadmap/">The whole roadmap →</a></p>
+    </div>
+    <div>
+      <p class="kicker">Help wanted</p>
+      <h2>What are you good at?</h2>
+      <p class="muted">Most of what Witchspace needs isn't code.</p>
+      <!-- help:skills -->
+      <p><a class="button ghost" href="/get-involved/">Get involved</a> <a class="button ghost" href="/ideas/">Suggest an idea</a></p>
+    </div>
   </div>
-  <!-- roadmap:summary -->
-  <p class="center muted"><a href="/roadmap/">The full roadmap, and where you could help →</a></p>
 </section>
 
 <section class="cta">

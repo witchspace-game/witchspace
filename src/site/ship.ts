@@ -18,9 +18,11 @@ const def = JSON.parse(document.querySelector('#ship-def')!.textContent!) as Shi
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 try {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  // Opaque, in the frame's own colour: over a see-through canvas the glow pools into a wash.
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   const scene = new THREE.Scene();
+  scene.background = new THREE.Color('#04060b');
   const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 50000);
   const model = buildShip(def);
   scene.add(model.root);

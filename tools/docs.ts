@@ -250,3 +250,28 @@ ${now
   .join('\n')}
   </div>`;
 }
+
+/** For the home page: the three furthest-along designs being built, as a compact list with their steps. */
+export function roadmapCompactHtml(docs: Doc[]): string {
+  const now = docs
+    .filter((d) => d.status === 'building' && d.stages.length)
+    .sort((a, b) => b.stages.filter((s) => s.status === 'built').length / b.stages.length - a.stages.filter((s) => s.status === 'built').length / a.stages.length)
+    .slice(0, 3);
+  return `<div class="mini">${now
+    .map((d) => {
+      const next = d.stages.find((s) => s.status !== 'built');
+      return `<a href="/design/${d.slug}/"><b>${esc(d.title)}</b><span class="muted">${next ? `Next: ${esc(next.name)}` : esc(d.summary)}</span><span class="steps" aria-label="${progress(d)}">${d.stages.map((s) => `<i class="${s.status === 'built' ? 'd' : ''}"></i>`).join('')}</span></a>`;
+    })
+    .join('')}</div>`;
+}
+
+/** For the home page: help wanted as a chip per skill, with how many tasks want it. */
+export function helpSkillsHtml(docs: Doc[]): string {
+  const counts = new Map<string, number>();
+  for (const d of docs) for (const h of d.help) counts.set(h.skill, (counts.get(h.skill) ?? 0) + 1);
+  return `<div class="skill-chips">${Object.keys(SKILLS)
+    .filter((s) => counts.has(s))
+    .sort((a, b) => counts.get(b)! - counts.get(a)!)
+    .map((s) => `<a href="/get-involved/#help-wanted">${SKILLS[s]}<span>${counts.get(s)}</span></a>`)
+    .join('')}</div>`;
+}

@@ -39,8 +39,12 @@
       <nav aria-label="Main">
         {{nav}}
         <a class="button primary small" href="/play/">Play free</a>
+        <button type="button" class="menu-toggle" aria-expanded="false" aria-controls="site-menu" aria-label="Menu"><span></span><span></span><span></span></button>
       </nav>
     </header>
+    <nav class="site-menu" id="site-menu" aria-label="Menu" hidden>
+      {{menu}}
+    </nav>
 
     <main id="main">
 {{content}}
