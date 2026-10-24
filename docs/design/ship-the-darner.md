@@ -9,6 +9,12 @@ Mark asked for a ship like a dragonfly. The film ornithopters are someone else's
 - **Name:** the **Darner**, after the dragonflies of that name (an ordinary word, like Cobra and Mamba before it).
 - **Shape:** a long, segmented tail ending in the engine; a deep middle where four narrow wings root; a short head with two big canopy domes like a dragonfly's eyes. About 63 m long, 69 m across with its wings spread (a Cobra is 50 by 68).
 - **The wings aren't for air.** There's none to fly on (the Falcon's notes say the same). Each wing is a radiator vane with a manoeuvring thruster at its tip: **spread**, the tip thrusters give it the tightest turn in the game; **folded** back along the tail, it's slimmer and faster, but turns like anything else. It spreads them by itself below a third of its top speed, and folds them above.
+- **Sunlight on the wings** *(Mark, October 2026)*. Spread in sunlight, the wings charge the fuel cells (solar-powered fuel-making, a little at a time):
+  - **By distance:** strong near a star, weak at a planet's distance, nothing in deep space or in a planet's shadow (sunlight falls off with the square of distance) **(to tune: about 1 LY of fuel a minute close to the star)**.
+  - **Only when slow:** the wings spread below a third of top speed, so charging means drifting in the light, not flying.
+  - **Gentler than scooping:** slower than skimming a star with fuel scoops, but no heat and no risk. The patient pilot's way to refuel, and why explorers and smugglers like it: it can top up wherever there's a sun, station or not.
+  - **And the rest:** shields and laser charge also recover faster with the wings spread in sunlight.
+  - **Balance:** slow enough that fuel prices and scoops still matter.
 - **In neo-vector:** each wing is a few glowing lines with fine veins across it and a small dark cell near the tip, so it reads as a dragonfly from any angle. Iridescent blue-green.
 
 ## The sketches
