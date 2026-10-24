@@ -1,6 +1,6 @@
 ---
 title: The Shrike
-status: proposed
+status: idea
 pillar: world
 summary: Bram Solo's interceptor, built to disable rather than kill. Leaked plans from the hidden Solo yard, and the first ship to bring disabling and capture into the game.
 card: falcon
@@ -15,7 +15,7 @@ help:
 
 # Design: the Shrike
 
-*Design, 24 October 2026. Proposed; shape to be chosen from the sketches.*
+*Design, 24 October 2026. On hold: the sketches didn't work (boxy, no clear job), and the Shrike waits for a place in Solo & Sons' line-up ([ships, classes and makers](ships-and-classes.md)).*
 
 The second concept from **Solo & Sons** ([the Falcons, a Legend](legends-the-falcon.md)): Iver Solo and his four sons, a yard hidden in the lawless systems, sheltering the forty-one from the *Ninefold*. Their ships are named for birds of prey. The shrike is the bird that pins its prey before it eats.
 
