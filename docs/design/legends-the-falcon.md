@@ -62,6 +62,7 @@ A commander who flies the Falcons' galaxies in order meets the whole family, and
 
 ## The fight, and losing it
 
+- **Her guns.** A beam laser at the tip of each talon vane, firing together, converging where she aims, on a little gimbal (8°) so they swing onto you without being a turret. Between them, 40 damage a second at up to 3 km: well above a pirate's pulse laser (14 a second at 1.8 km), below a commander's beam (90). She shouldn't simply outgun a well-fitted Cobra; her flying, and how she learns you, is what makes her dangerous. *(Built 25 October 2026, with the break-off; Mark asked for the twin beams.)*
 - **She fights to disable.** Her lasers go for your drives, her missiles (three, never two at you at once, as for every ship) to break your shields. She doesn't fire on a ship that's beaten.
 - **Beaten:** when your hull is down to about a third, she stops. Your **hyperdrive is knocked out** and your speed limited: you're **drifting**, with life support on.
 - **She takes her price:** company cargo she wants first, then the most valuable goods, up to her hold (10 t). A company contract taken by a Falcon fails without the usual standing loss: the companies know who she is. Your ship, equipment, credits and survey data are left alone.
@@ -78,6 +79,7 @@ A commander who flies the Falcons' galaxies in order meets the whole family, and
   - her bounty (2,000 Cr, **rising by 500 each time she gets away** from anyone in that galaxy, from the clock and seed), paid when you dock;
   - combat rating as a kill of a ship her worth, and a Legend's weight (see [combat rating](combat-rating.md));
   - standing with Wexley-Yorozu and Hexon (+2), and a word from his brothers about you on the radio.
+- **Not a living.** *(Mark, October 2026: "would a player with beam or military lasers find it easy to make money fighting Falcon pilots all day long?")* Until the circuit is built she's still a random roll on pirate encounters, so for now a Falcon you drove off keeps away from you for a day (`falconDrivenOff` on the commander), and a meeting in that time pays no bounty. The circuit, the shared bounty and her learning you are the real answer.
 - **She comes back.** A Falcon you drove off stays away from you for a few weeks, then returns wary, or wanting revenge, depending on who she is.
 
 ## She remembers you
@@ -87,6 +89,13 @@ Your commander keeps a small record per captain: meetings, what she took, how of
 - **First meeting:** a warning and a price.
 - **Again:** she knows your ship by its transponder, and says so.
 - **You've beaten her before:** she's careful, or she comes for you specifically.
+- **She learns how you beat her** *(Mark, October 2026: "does she get better weapons or better flying the second time you meet?")*. Each time you drive her off, she comes back with one answer to your last win, and her lines say so ("I've been practising, Commander"):
+  - **you beat her head-on:** she won't joust again; she circles and comes in from behind or below;
+  - **you used missiles:** a better ECM, or decoys;
+  - **you out-turned her:** she refits for speed and fights from range, hit and run;
+  - **you out-ranged her:** longer-range beams.
+
+  One change a meeting, kept in her record of you, so after three or four she's a hard fight built for you, and beam lasers win the first meeting but only flying wins the fourth. Each brother starts from his own style too: Bram cold and precise, Kit showing off with close passes, Jory careful at range, Tobin dirty, with more missiles. Nothing new is needed but a few numbers in her record and how her AI picks its approach.
 - **You published the Ninefold report:** Bram lets you keep half. **You sold it to the Science Division:** she takes everything, and tells you why.
 - **You delivered for the Mutual, answered distress calls, never robbed a hauler:** they're warmer.
 
@@ -121,7 +130,7 @@ The turning point of a Falcon's story: the Legend who hunted you, caught, and yo
 |---|---|
 | **1** | One Falcon a galaxy on a seeded circuit, moving with the clock; bar talk and radio word; meetings only in her system; the hail and the price; the random roll removed. Bram first (galaxies 1 and 2), then his brothers. |
 | **2** | Fighting to disable: drifting, the beacon tow or the jury-rigged drive, her price taken, the calling card. She breaks off and escapes when beaten; the bounty that grows. |
-| **3** | Her memory of you: lines by meeting, by the Ninefold choice, by your record with the Mutual. |
+| **3** | Her memory of you: lines by meeting, by the Ninefold choice, by your record with the Mutual; she learns how you beat her; each brother's style. |
 | **4** | **A Debt**: the Mayday, the three ways it goes, the Falcon who protects you (or never lets you go). |
 | **5** | The yard trail and its choice; company hunts; the shared galaxy. |
 
@@ -135,7 +144,10 @@ The turning point of a Falcon's story: the Legend who hunted you, caught, and yo
 | Meeting her, in her system | About 1 in 3 per arrival; more with W-Y or Hexon cargo; Mutual-only cargo waved off |
 | Disabled at | About a third of your hull |
 | She takes | Up to 10 t; your ship, kit, credits and data never |
-| She breaks off at | About a fifth of her hull |
+| She breaks off at | About a fifth of her shields and hull |
+| Her shields, hull | 320, 230 |
+| Her guns | Twin vane beams firing together, 40 a second between them, 3 km, 8° gimbal |
+| Keeps away after you drive her off | A day, no bounty in that time (until the circuit) |
 | Bounty | 2,000 Cr, +500 each escape |
 
 ## Open questions

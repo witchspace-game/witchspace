@@ -83,6 +83,17 @@ export const PIRATE_LASER: Laser = {
   color: '#ff9a3d',
 };
 
+/** The Falcon's twin beams, one on each vane, firing together (docs/design/legends-the-falcon.md): 40 a second between them, well above a pirate's and below a commander's beam. Her flying is what makes her dangerous. */
+export const FALCON_LASER: Laser = {
+  name: 'Solo & Sons beam laser',
+  interval: 0.25,
+  damage: 5, // each
+  range: 3000,
+  heat: 0,
+  cooling: 0,
+  color: '#ff4d6d',
+};
+
 export const TRADER_LASER: Laser = { ...PIRATE_LASER, interval: 0.8, damage: 5, color: '#ffe08a' };
 
 export interface Target<T> {

@@ -75,7 +75,7 @@ import { Missile, MISSILE } from './game/missile';
 import { combatRating, rankInsignia } from './game/rating';
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
-import { Beams, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
+import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
@@ -1631,7 +1631,7 @@ function spawnPirates(near: THREE.Vector3): false | 'pirates' | 'falcon' {
   const centre = near.clone().addScaledVector(dir, 5000 + Math.random() * 2500);
   if (centre.distanceTo(station.root.position) < 5000 || centre.distanceTo(planetPos) < planetRadius * 1.3) return false;
   // Now and then, the Falcon: alone, running dark, and worth a fortune (Modern only).
-  if (cmdr().difficulty === 'modern' && !npcs.some((n) => n.def.id === 'falcon') && Math.random() < FALCON_CHANCE[currentSystem().government]) {
+  if (cmdr().difficulty === 'modern' && !falconAvoiding() && !npcs.some((n) => n.def.id === 'falcon') && Math.random() < FALCON_CHANCE[currentSystem().government]) {
     spawnFalcon(centre, near);
     return 'falcon';
   }
@@ -1661,6 +1661,9 @@ function spawnFalcon(at: THREE.Vector3, near: THREE.Vector3) {
   npc.bounty = BOUNTIES.falcon;
   npc.ecm = true;
   npc.breaksOffAt = FALCON_BREAKS_OFF;
+  npc.laser = FALCON_LASER;
+  npc.guns = FALCON_GUNS.map(([x, y, z]) => new THREE.Vector3(x, y, z));
+  npc.gimbal = FALCON_GIMBAL;
   npc.cargo = { gems: 1 + Math.floor(Math.random() * 3), gold: 1 + Math.floor(Math.random() * 2) };
   return npc;
 }
@@ -1670,6 +1673,10 @@ function spawnFalcon(at: THREE.Vector3, near: THREE.Vector3) {
 // for your trouble), hails you, and jumps out with her ECM covering her.
 // Driving her off pays her bounty and counts as a kill.
 const FALCON_BREAKS_OFF = 0.2;
+/** A laser at the tip of each talon vane, firing in turn. */
+const FALCON_GUNS = [[36, -2.4, 23], [-36, -2.4, 23]] as const;
+/** Her beams swing onto you this far off her nose: a little gimbal, not a turret. */
+const FALCON_GIMBAL = THREE.MathUtils.degToRad(8);
 const FALCON_JUMP_DELAY = 2.5; // seconds from breaking off to her jump
 const FALCON_FEE = 4; // grams of gem-stones in the can
 const FALCON_PARTING = [
@@ -1678,6 +1685,9 @@ const FALCON_PARTING = [
   "Not bad. Not good enough. Here, for your trouble.",
   "My father built this ship to leave fights like this one. Keep the change, Commander.",
 ];
+/** After you drive her off, she keeps away from you for a day, and a meeting in that time (only a dev spawn now) pays no bounty: she isn't a living. */
+const FALCON_AVOIDS = 24 * 3600_000;
+const falconAvoiding = () => Date.now() - (cmdr().falconDrivenOff ?? 0) < FALCON_AVOIDS;
 const fleeing = new Map<NpcShip, number>();
 
 /** Each frame: a Falcon down to her last fifth breaks off, then jumps out. */
@@ -1691,10 +1701,13 @@ function updateLegends(dt: number) {
     if (npc.obj.position.distanceTo(player.obj.position) < 6000) sfx.ecm();
     spillCargo(npc.obj.position, npc.ship.forward().multiplyScalar(npc.ship.speed * 0.3), { gems: FALCON_FEE });
     radio('pirate', 'Falcon', FALCON_PARTING[Math.floor(Math.random() * FALCON_PARTING.length)], { colour: '#ff4d6d' });
-    if (npc.attacker === player && commander) {
+    if (npc.attacker === player && commander && falconAvoiding()) {
+      flash('Falcon driven off · no bounty: you beat her less than a day ago', 3);
+    } else if (npc.attacker === player && commander) {
       const c = cmdr();
       c.kills += combatComputer ? 0.5 : 1;
       c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
+      c.falconDrivenOff = Date.now();
       addStanding(c, 'wy', 2);
       addStanding(c, 'hexon', 2);
       saveCommander(c);
@@ -3205,32 +3218,33 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     if (fromStation.length() < 120 && legs.get(npc) !== 'docking') npc.obj.position.copy(station.root.position).add(fromStation.setLength(120));
 
     if (shot) {
-      const origin = npc.obj.position.clone().addScaledVector(shot, 20);
-      type Struck = 'player' | 'station' | 'cover' | NpcShip;
-      const targets: Target<Struck>[] = [
-        { value: 'station', position: station.root.position, radius: 90 },
-        ...coverTargets<Struck>('cover'),
-        // Ships don't shoot their own side.
-        ...npcs.filter((n) => n !== npc && !allies(n.role, npc.role)).map((n) => ({ value: n as Struck, position: n.obj.position, radius: n.radius * 0.75 })),
-      ];
-      // The Will-o'-the-Wisp jinks the ship out of the way of half the shots.
-      if (alive && !(evading() && Math.random() < EVADE_LASERS)) targets.push({ value: 'player', position: player.obj.position, radius: 22 });
-      const hit = rayHit(origin, shot, npc.laser.range, targets);
-      beams.fire(origin, hit ? hit.point : origin.clone().addScaledVector(shot, npc.laser.range), npc.laser.color);
-      zapAt(origin, 700, 120, 0.15, 0.5);
-      const struck = hit?.target.value;
-      if (struck instanceof NpcShip) {
-        // A trader calling for help puts everything into its shields, to last until help comes.
-        const calling = struck.role === 'trader' && npc.role === 'pirate' && modern();
-        if (calling) distressCall(struck, npc);
-        if (struck.hit(npc.laser.damage * (calling ? DISTRESS_SHIELDING : 1), npc.ship)) destroyNpc(struck, npc.obj);
-      } else if (struck === 'player') {
-        sfx.hit();
-        hitFeedback(0.35);
-        showHitDirection(camera, npc.obj.position);
-        if (damagePlayer(npc.laser.damage, npc)) {
-          die();
-          return;
+      for (const { origin, dir: aim } of npc.muzzles(shot)) {
+        type Struck = 'player' | 'station' | 'cover' | NpcShip;
+        const targets: Target<Struck>[] = [
+          { value: 'station', position: station.root.position, radius: 90 },
+          ...coverTargets<Struck>('cover'),
+          // Ships don't shoot their own side.
+          ...npcs.filter((n) => n !== npc && !allies(n.role, npc.role)).map((n) => ({ value: n as Struck, position: n.obj.position, radius: n.radius * 0.75 })),
+        ];
+        // The Will-o'-the-Wisp jinks the ship out of the way of half the shots.
+        if (alive && !(evading() && Math.random() < EVADE_LASERS)) targets.push({ value: 'player', position: player.obj.position, radius: 22 });
+        const hit = rayHit(origin, aim, npc.laser.range, targets);
+        beams.fire(origin, hit ? hit.point : origin.clone().addScaledVector(aim, npc.laser.range), npc.laser.color);
+        zapAt(origin, 700, 120, 0.15, 0.5);
+        const struck = hit?.target.value;
+        if (struck instanceof NpcShip) {
+          // A trader calling for help puts everything into its shields, to last until help comes.
+          const calling = struck.role === 'trader' && npc.role === 'pirate' && modern();
+          if (calling) distressCall(struck, npc);
+          if (struck.hit(npc.laser.damage * (calling ? DISTRESS_SHIELDING : 1), npc.ship)) destroyNpc(struck, npc.obj);
+        } else if (struck === 'player') {
+          sfx.hit();
+          hitFeedback(0.35);
+          showHitDirection(camera, npc.obj.position);
+          if (damagePlayer(npc.laser.damage, npc)) {
+            die();
+            return;
+          }
         }
       }
     }
