@@ -85,7 +85,7 @@ Everything about her says ambusher, not jouster: she's **fast** (340 to a Cobra'
   - **a better pilot answers it sooner:** a rookie Falcon sits behind you and eats your rear laser; an ace has seen the mount before the first shot;
   - **she learns it:** beat her with a rear laser, and next time she comes from below ([she learns how you beat her](#she-remembers-you)).
 
-  It's what a commander who's met her before would fit.
+  It's what a commander who's met her before would fit. With a combat computer flying Tail guard while you work the rear laser, it's a kit; she reads that too ([combat computer routines](combat-computer-routines.md)).
 - **Your heat decides when you commit.** Hers barely builds; yours does. Hold a beam on her for four seconds and you're overheated just as she comes round.
 - **Pilot skill scales this** ([pilot skill](pilot-skill.md)): how quickly she gets behind you, how well she reads your turn, how soon she breaks when you face her, rising with your combat rating. The first pass at pilot skill, an ace who jinked out of your sights, made her no stronger in the duels: a ship can't sidestep, so a dodge means turning, and turning takes her guns off you. She wins by position, not by dodging.
 - **Tuning.** The test bot has to fight her properly, turning to keep her in front rather than only jousting, with a human's reaction time and aim. Measure how often she takes your tail, how long fights last, and whether turning into her beats a bigger laser.
