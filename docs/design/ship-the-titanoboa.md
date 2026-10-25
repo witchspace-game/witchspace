@@ -53,7 +53,7 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 | **Furnace** | 300 m | A crucible: six-sided, swelling to 480 m across and narrowing again | Smelting and refining, and where the exotic materials are made. The hottest thing on her. |
 | **Fabricator** | 520 m | An open cradle: the spine, two rails above and below, a gantry at each end | Where station sections are made. Open at the sides, so sections slide out. You can see through it. |
 | **Habitat** | 160 m | A six-sided wheel, 680 m across, on three spokes, turning for gravity | Quarters for a few thousand workers. Carries the company insignia. |
-| **Science** (add-on) | 220 m | A sealed pod on a 300 m mast, held out from the spine | Research on whatever explorers found living in the system, kept at arm's length. |
+| **Science** (add-on) | 220 m | A sealed pod on a 300 m mast, held out from the spine; the pod is a separate solid on a clamp, so it can go | Research on whatever explorers found living in the system, kept at arm's length, and ejected if containment fails. |
 | **Reactor** | 300 m | A compact eight-sided core behind a broad shadow shield, with four flat radiator vanes in an X, 880 m tip to tip | Power for the whole ship. The one you don't want to go wrong. |
 | **Drive** (stern only) | 300 m | A tapering block and three flared bells | She never hurries. |
 
@@ -82,6 +82,21 @@ Each module is 26 to 64 vertices, well inside a ship file's 256, so each can be 
 
 Each module is sketched with the same hull rules; a Standard line-up with a science module is 288 vertices (another reason line-ups are assembled at runtime, not stored as one ship).
 
+### Ejecting the pod *(Mark, 25 October 2026)*
+
+The pod sits at the end of its mast for a reason: if containment fails, the clamp lets go and the pod is **ejected**, pushed straight out along the mast, away from the ship and the workers. That saves the Titanoboa. It doesn't solve the problem; it moves it.
+
+An ejected pod drifts. It beacons, it's sealed (probably), and nobody is quite sure what's inside or whether it's still alive. **And it's drifting towards the planet.** Nobody on the world below wants it to arrive.
+
+That's an event worth flying to, with sides to pick:
+
+- **The Science Division** pays well to recover it intact: tow it back, gently.
+- **The colony** on the planet would rather it never arrived, and will pay for it to be destroyed before it reaches the atmosphere.
+- **Wexley-Yorozu** wants it back, and wants nobody else to look inside. Clause 214 covers specimens.
+- **Pirates** have heard what exotic specimens fetch.
+
+It runs on a clock: the pod's drift towards the planet, shown on the scanner and in the news. Whatever happens is the system's story afterwards: a recovered pod and a grateful Science Division, a burnt streak in the upper atmosphere, or something that arrived. *(What arriving means is for the exploration and worlds designs to decide; it should be rare, and it should matter.)*
+
 ## 4. Sections swapped in the yard
 
 Now and then a section fails, most dramatically a reactor. The yard reacts on the radio, the failed section is uncoupled and towed clear by Bullsnakes, sits dark at a safe distance, and a replacement arrives and is fitted. While it's out, the yard works slower (a station's stages take longer), and the gap in the line-up is there for anyone to see.
@@ -104,4 +119,5 @@ None: Classic has no yards and no Titanoboa, as 1984 had none.
 - How often does a section fail: rare enough to be an event worth flying to, often enough that commanders see it?
 - Is there ever a second company's Titanoboa, or is modular construction Wexley-Yorozu's alone?
 - Which modules can a station keep, and does a kept module change what the station's market buys and sells (a science pod wants medical supplies and pays for specimens)?
+- Can a pod reach the planet, and what happens to a world when one does? (Rare, lasting, and the system's news for a long time.)
 - Should a science module carry the Science Division's own colour as a stripe or insignia, or stay construction yellow like the rest?
