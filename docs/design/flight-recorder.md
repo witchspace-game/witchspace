@@ -7,7 +7,7 @@ card: cobra-mk3
 stages:
   - Photos one tap away on touch screens (P) | built
   - The recorder, the death replay and the flight log, with sharing to socials | built
-  - The claim - the insurers want your recorder, and a lost one means going back for it | proposed
+  - The claim - submit your recorder to the insurers; featured clips paid, and on the news when they take off | proposed
   - Footage as evidence, and sold to the news | proposed
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
@@ -94,16 +94,31 @@ The game knows what happened, so the recorder's metadata (who fired first, who d
 
 **Explorers.** The photo taken on a first survey goes on the chart with the world, under your name.
 
-## The claim: the insurers want your recorder *(Mark, 25 October 2026)*
+## The claim: submit your recorder *(Mark, 25 October 2026)*
 
-When you're destroyed, the insurance claim needs the black box. It's what the insurers assess the loss on, so the death replay stops being a consolation and becomes the claim itself. It's also how they enforce the exclusions in [law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks): void if you died while committing a crime, fighting the police, or by your own hand. Until now the game simply knew; this is how the insurers know.
+When you're destroyed, the insurers pay out when you **submit your flight recorder**: the clip and its data go to Witchspace. It's the act that settles the claim in the game, and in the world it's how commanders' best and worst moments reach everyone else. Deaths are the most shareable moments there are, and this makes handing one over part of getting your ship back.
 
-- **Recovered (most deaths).** The insurers' screen reads *"Flight recorder recovered. Our assessors have reviewed the incident."* They watch your last minute, and so do you. Killed by pirates, by the Falcon, by an accident: paid, less the excess, as now. Caught on the recorder firing first on a clean ship, smuggling, or fighting the police: void, and the screen says what they saw. The recorder's data decides, never anyone judging the pictures, so it's always fair.
-- **Not recovered.** Some deaths leave nothing to find: going up inside a sun, crushed by a carrier, an energy bomb at close range, or simply bad luck (about one death in ten). No recorder, no assessment: the insurers pay only **half**, pending recovery, and the claim stays open.
-- **Going back for it.** A lost recorder is often not destroyed, only lost: it drifts where you died, a beacon on the chart for a few days, like other cargo left adrift. Fly back and scoop it, and the rest of the claim is paid at the next station. Someone else can scoop it too: another commander who finds your recorder can return it to your insurers for a finder's fee, or sell what's on it to the news. A Falcon fight nobody saw is worth something.
-- **The kill cam is the assessors' reconstruction.** When the recorder is recovered, the insurers' screen offers *Watch it from outside* ([the kill cam](kill-cam.md)), the assessors' reconstruction built from the recorder's data. When it isn't, there's nothing to rebuild from: the reconstruction comes with the recorder, which is one more reason to go back.
-- **No hiding it.** You can't decline to submit the recorder and still claim; refuse, and you get the bare Cobra the Co-operative gives Fugitives. What's on it is what happened.
+**Submitting pays the claim; everything else is optional.** A clip carries your callsign, and permission given because your ship depends on it isn't freely given (UK data protection asks for consent that is). Plenty of players can't or won't post: younger players, people without social accounts, people who'd rather stay out of sight. So nobody loses a ship over sharing, and nobody is paid to post.
+
+- **Submit to claim.** The insurers' screen reads *"Submit your flight recorder to the assessors"*. Submitting uploads the clip and its data to Witchspace (the [library](#the-library-one-place-for-every-commanders-moments-mark-24-october-2026)) and pays the claim, less the excess. The data decides the claim, never anyone judging the pictures: caught firing first on a clean ship, smuggling or fighting the police, and the claim is void, as set out in [law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks). This is how the insurers know.
+- **Or don't.** Decline, and you get the bare Cobra the Co-operative gives Fugitives. What's on the recorder is what happened.
+- **"Witchspace may feature this clip, credited to your callsign."** An unticked box on the same screen, changing nothing about the payout. Tick it and the clip joins the queue Witchspace picks from for its channels.
+- **Featured, and paid.** If Witchspace posts your clip (on @witchspace_game, the channel, the site), the newsroom buys it: about 500 Cr in the game, and your callsign in the post. That rewards good clips, not clicks, and matches footage sold to the news (above).
+- **Share it yourself**, one tap, with the link back, as now. Never required, never rewarded directly: social platforms frown on rewards for posting, and their rules are checked before anything here changes.
+- **The founder approves every post.** Submitted clips with the box ticked go into a queue; nothing reaches Witchspace's accounts without a person choosing it.
+- **Not recovered.** Some deaths leave nothing to submit: going up inside a sun, crushed by a carrier, an energy bomb at close range, or bad luck (about one death in ten). The insurers pay half and the claim stays open. The recorder drifts where you died, a beacon on the chart for a few days: scoop it and the rest is paid when you submit it. Another commander who scoops it can hand it to your insurers for a finder's fee.
+- **The kill cam is the assessors' reconstruction** ([the kill cam](kill-cam.md)), rebuilt from the submitted data, and offered beside the video.
 - **Classic rules** have no insurance, as in 1984: the recorder is just a recorder.
+
+### When a clip takes off
+
+A clip that people watch becomes part of the galaxy's story.
+
+- **Counted where we can.** Views on Witchspace's own site and library, and on what Witchspace posts to its own channel and Instagram (whose figures the account owner can read). Views of a commander's own posts aren't ours to see, and aren't counted.
+- **On the news.** A clip past a threshold (to balance: 10,000 views) becomes a news item, credited to the callsign, travelling at the speed of ships like any other: *"The recording from CMDR Kestrel's last seconds at Riedquat has been seen by 40,000 people. The Falcon has not commented."* A huge one reaches every station in the galaxy.
+- **Paid again.** The newsroom pays a bonus as a clip passes each threshold.
+- **Famous in the lanes.** A widely seen clip earns a mention in the saloons and on the radio: haulers who recognise your ship, a pirate who's seen how you fly. For the Falcon, it's one more thing she knows about you.
+- **The clip of the week** goes on the station board ([section 4](#4-the-station-board)) and the site's front page.
 
 ## Proof: things nobody would believe
 
