@@ -72,6 +72,8 @@ A commander who flies the Falcons' galaxies in order meets the whole family, and
 ## Beating her
 
 - **A Falcon can't be destroyed.** At about a fifth of her hull she breaks off: she jettisons a can (gems, a fee for your trouble), hails you with something you'll remember, and jumps out with her ECM covering her.
+
+  *Built early, 25 October 2026, after Mark's beam lasers took her in a single pass: she breaks off at a fifth of her shields and hull, drops a can of gem-stones, hails you, and jumps out 2.5 seconds later, her ECM taking any missile fired at her. Driving her off pays her bounty, counts as a kill, and adds 2 to your standing with Wexley-Yorozu and Hexon. She's tougher too, as a Legend should be: 320 shields and 230 hull (a beam laser needs about five seconds on her, not two). The rising bounty, her brothers' word on the radio, and her coming back for you arrive with the rest of the redesign.*
 - **Driving her off** is worth it:
   - her bounty (2,000 Cr, **rising by 500 each time she gets away** from anyone in that galaxy, from the clock and seed), paid when you dock;
   - combat rating as a kill of a ship her worth, and a Legend's weight (see [combat rating](combat-rating.md));

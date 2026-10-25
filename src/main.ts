@@ -1660,8 +1660,62 @@ function spawnFalcon(at: THREE.Vector3, near: THREE.Vector3) {
   npc.dark = true;
   npc.bounty = BOUNTIES.falcon;
   npc.ecm = true;
+  npc.breaksOffAt = FALCON_BREAKS_OFF;
   npc.cargo = { gems: 1 + Math.floor(Math.random() * 3), gold: 1 + Math.floor(Math.random() * 2) };
   return npc;
+}
+
+// A Falcon can't be destroyed (docs/design/legends-the-falcon.md, Beating her):
+// at about a fifth of her hull she breaks off, jettisons a can of gems (a fee
+// for your trouble), hails you, and jumps out with her ECM covering her.
+// Driving her off pays her bounty and counts as a kill.
+const FALCON_BREAKS_OFF = 0.2;
+const FALCON_JUMP_DELAY = 2.5; // seconds from breaking off to her jump
+const FALCON_FEE = 4; // grams of gem-stones in the can
+const FALCON_PARTING = [
+  "Enough. You've earned the stones. Spend them somewhere I'm not.",
+  "You fly like a Mutual pilot. That's a compliment. The stones are for the paintwork.",
+  "Not bad. Not good enough. Here, for your trouble.",
+  "My father built this ship to leave fights like this one. Keep the change, Commander.",
+];
+const fleeing = new Map<NpcShip, number>();
+
+/** Each frame: a Falcon down to her last fifth breaks off, then jumps out. */
+function updateLegends(dt: number) {
+  for (const npc of npcs) {
+    if (!npc.brokeOff || fleeing.has(npc)) continue;
+    fleeing.set(npc, FALCON_JUMP_DELAY);
+    Object.assign(npc, { mode: 'flee', hostile: false, fights: false, target: player });
+    // Her ECM covers her: anything already fired at her goes.
+    for (const m of [...missiles]) if (m.target === npc.ship) explodeMissile(m);
+    if (npc.obj.position.distanceTo(player.obj.position) < 6000) sfx.ecm();
+    spillCargo(npc.obj.position, npc.ship.forward().multiplyScalar(npc.ship.speed * 0.3), { gems: FALCON_FEE });
+    radio('pirate', 'Falcon', FALCON_PARTING[Math.floor(Math.random() * FALCON_PARTING.length)], { colour: '#ff4d6d' });
+    if (npc.attacker === player && commander) {
+      const c = cmdr();
+      c.kills += combatComputer ? 0.5 : 1;
+      c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
+      addStanding(c, 'wy', 2);
+      addStanding(c, 'hexon', 2);
+      saveCommander(c);
+      flash(`Falcon driven off · Bounty ${npc.bounty} Cr`, 3);
+      void keepCombat({ kind: 'kill', text: `Drove off the Falcon · bounty ${npc.bounty} Cr`, subject: 'Falcon' }, 20, 6);
+    }
+  }
+  for (const [npc, left] of fleeing) {
+    if (!npcs.includes(npc)) {
+      fleeing.delete(npc);
+      continue;
+    }
+    const now = left - dt;
+    fleeing.set(npc, now);
+    if (now > 0) continue;
+    fleeing.delete(npc);
+    const seen = npc.obj.position.distanceTo(player.obj.position) < 12000;
+    boomAt(npc.obj.position, 0.8, 4000, 0.6);
+    removeNpc(npc);
+    if (seen) flash('The Falcon jumped out', 2);
+  }
 }
 
 /** Each frame: ships running dark stay a cold white unknown until you're close enough to read the hull. */
@@ -3126,7 +3180,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     };
     const hunting = (n: NpcShip) => n.target === player && (n.mode === 'attack' || n.mode === 'breakoff');
     const before = new Map(npcs.map((n) => [n, n.mode === 'search' ? 'search' : hunting(n) ? 'hunt' : '']));
-    for (const npc of npcs) think(npc, world);
+    for (const npc of npcs) if (!fleeing.has(npc)) think(npc, world); // a Falcon breaking off is past arguing with
     // Tell the player: into the clutter, and when the hunt changes (lost, or given up).
     const nowIn = alive && exploring() && inClutter(player.obj.position);
     const lost = alive && npcs.some((n) => before.get(n) === 'hunt' && n.mode === 'search');
@@ -4179,6 +4233,7 @@ function updateSpace(dt: number) {
     updateSurrender(dt);
     updateRouteAutopilot();
     updateIdentities();
+    updateLegends(dt);
     updateRadio(dt);
   }
   if (stationFlash > 0) {

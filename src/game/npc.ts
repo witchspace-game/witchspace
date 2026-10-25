@@ -105,6 +105,10 @@ export class NpcShip {
   fights = true;
   /** A pirate you paid off over the radio: it leaves you be, unless you shoot it. */
   paid?: boolean;
+  /** A Legend can't be destroyed: below this share of her shields and hull she breaks off instead (docs/design/legends-the-falcon.md). */
+  breaksOffAt?: number;
+  /** She's down to it: the game takes over from here (the can, the hail, the jump). */
+  brokeOff = false;
   private cooldown = Math.random();
   private flash = 0;
   private breakTimer = 0;
@@ -144,6 +148,16 @@ export class NpcShip {
     if (from) {
       this.attacker = from;
       this.attackedAgo = 0;
+    }
+    if (this.breaksOffAt !== undefined) {
+      const s = this.def.stats;
+      const floor = this.breaksOffAt * (s.shields + s.hull);
+      const left = this.ship.shields + this.ship.hull;
+      if (left - damage <= floor) {
+        this.ship.damage(Math.max(0, left - floor));
+        this.brokeOff = true;
+        return false;
+      }
     }
     return this.ship.damage(damage);
   }
