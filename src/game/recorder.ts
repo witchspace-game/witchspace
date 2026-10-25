@@ -47,6 +47,8 @@ export class FlightRecorder<M> {
   private sinceFrame = 1;
   private frames = 0;
   private broken = false;
+  /** Resting (nothing about): the next frame recorded starts afresh with a keyframe. */
+  private rested = false;
   private codec: string | null = null;
   /** Whether this browser can record at all (decided once, asynchronously). */
   ready: Promise<boolean>;
@@ -80,9 +82,17 @@ export class FlightRecorder<M> {
     return this.codec !== null && !this.broken;
   }
 
-  /** Call right after the frame is drawn (a WebGL canvas is blank once the task ends). dt in seconds. */
-  capture(canvas: HTMLCanvasElement, dt: number) {
+  /**
+   * Call right after the frame is drawn (a WebGL canvas is blank once the task ends). dt in seconds.
+   * While `resting` (nothing about: see recorderWatch.ts) nothing is recorded, unless a clip is
+   * still being finished, so the buffer holds the last minute worth having, not a minute of black.
+   */
+  capture(canvas: HTMLCanvasElement, dt: number, resting = false) {
     if (!this.available || !this.enabled() || canvas.width < 2 || canvas.height < 2) return;
+    if (resting && !this.pending.length) {
+      this.rested = true;
+      return;
+    }
     this.mediaTime += Math.min(dt, 0.1);
     this.sinceFrame += dt;
     if (this.sinceFrame < 1 / FPS - 0.002) return;
@@ -95,6 +105,8 @@ export class FlightRecorder<M> {
     const g = this.frame!.getContext('2d')!;
     g.drawImage(canvas, 0, 0, width, height);
     const frame = new VideoFrame(this.frame!, { timestamp: Math.round(this.mediaTime * 1e6), duration: Math.round(1e6 / FPS) });
+    if (this.rested) this.frames = 0; // waking: a keyframe, so the cut to the new scene is clean
+    this.rested = false;
     this.encoder.encode(frame, { keyFrame: this.frames++ % FPS === 0 });
     frame.close();
     void this.finishDue();

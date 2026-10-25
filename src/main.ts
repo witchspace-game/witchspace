@@ -113,6 +113,7 @@ import { COMPANY_SHORT, jobStrip, routeWork, workInReach, type JobStep } from '.
 import { BEACON_CALLS, beacon, distressReward, hailReply, newBeacon, newsInReach, pirateAnswer, pirateThreat, RADIO_RANGE, type BeaconCall, type HailContext, type Speaker } from './game/radio';
 import { acceptLatest, clearRadio, initRadio, say, setRadioFight, toggleRadio, wakeRadio, type RadioAction, type RadioKind } from './ui/radio';
 import { FlightRecorder, type Clip } from './game/recorder';
+import { RecorderWatch } from './game/recorderWatch';
 import { addMoment, deleteMoment, type LoggedMoment } from './game/flightLog';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
 import { closeReplay, isReplayOpen, openReplay, renderFlightLog } from './ui/flightLog';
@@ -6242,6 +6243,29 @@ interface MomentMeta {
   ctx: MomentContext;
 }
 const recorder = new FlightRecorder<MomentMeta>(recorderOn);
+const recorderWatch = new RecorderWatch();
+const LEGENDS = new Set(['falcon']);
+
+/** Whether anything is about worth recording: what the game knows is there, not just what the scanner shows. */
+function watchSurroundings(dt: number) {
+  const ships = [
+    ...npcs.map((n) => n.obj.position),
+    ...missiles.map((m) => m.position),
+    ...[...sharedSpace.remotes.values()].map((r) => r.position),
+    ...(yardScene ? [yardScene.centre] : []),
+  ];
+  recorderWatch.update(
+    {
+      me: player.obj.position,
+      ships,
+      legends: npcs.filter((n) => LEGENDS.has(n.def.id)).length,
+      station: station.root.position,
+      planet: planet ? { position: planetPos, radius: planetRadius } : null,
+      rift: Boolean(carrier?.rift),
+    },
+    dt,
+  );
+}
 const viewCanvas = () => $<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo');
 
 function momentContext(): MomentContext | null {
@@ -6404,7 +6428,8 @@ function frame(now?: number) {
     const rift = carrier?.rift;
     lens.aim(camera, rift ? rift.group.position : null, rift ? rift.radius * rift.open : 0, rift ? rift.open : 0);
     render(space.scene);
-    if (state === 'flying' || state === 'dead') recorder.capture(viewCanvas(), dt);
+    if (state === 'flying') watchSurroundings(dt);
+    if (state === 'flying' || state === 'dead') recorder.capture(viewCanvas(), dt, state === 'flying' && recorderWatch.resting);
     else recorder.pause();
   } else {
     lens.aim(camera, null, 0, 0);
@@ -6423,7 +6448,7 @@ function frame(now?: number) {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, recorder, recorderWatch, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier,
       get carrier() { return carrier; },
       get commander() { return commander; },
       get state() { return state; },
