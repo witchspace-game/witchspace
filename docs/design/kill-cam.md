@@ -28,6 +28,7 @@ A kill cam answers it. The ship logs where every ship was and every shot fired, 
 
 ## Principles
 
+- **It's the assessors' reconstruction.** Insurers rebuild the incident from the recorder's data to assess your claim, so the kill cam needs the recorder recovered; a lost one has to be found first ([the claim](flight-recorder.md#the-claim-the-insurers-want-your-recorder-mark-25-october-2026)).
 - **Labelled as a reconstruction.** The video is what you saw; the kill cam is the game's account of what happened. It's always marked RECONSTRUCTION, and it never stands in for the video as evidence or proof ([the flight recorder](flight-recorder.md): footage as evidence, and proof of sightings).
 - **Only what your ship knew.** The track holds what your scanner saw, nothing more. A ship running dark stays dark: a Legend that never showed on your scanner doesn't appear in the replay ([Legends](legends-the-falcon.md)). In shared space, other commanders appear only as your scanner saw them.
 - **The game's own renderer.** The same ship models, beams, missiles and explosions, in the same neo glow. No second engine to keep in step.

@@ -7,6 +7,7 @@ card: cobra-mk3
 stages:
   - Photos one tap away on touch screens (P) | built
   - The recorder, the death replay and the flight log, with sharing to socials | built
+  - The claim - the insurers want your recorder, and a lost one means going back for it | proposed
   - Footage as evidence, and sold to the news | proposed
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
@@ -92,6 +93,17 @@ The game knows what happened, so the recorder's metadata (who fired first, who d
 **News.** The newsroom buys footage as the survey office buys data ([exploration](exploration.md)): the rarer, the better it pays. A Falcon sighting, the Bastion coming through, a station's frame rising, a famine market. The news item it makes credits your callsign, and travels at the speed of ships like any other.
 
 **Explorers.** The photo taken on a first survey goes on the chart with the world, under your name.
+
+## The claim: the insurers want your recorder *(Mark, 25 October 2026)*
+
+When you're destroyed, the insurance claim needs the black box. It's what the insurers assess the loss on, so the death replay stops being a consolation and becomes the claim itself. It's also how they enforce the exclusions in [law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks): void if you died while committing a crime, fighting the police, or by your own hand. Until now the game simply knew; this is how the insurers know.
+
+- **Recovered (most deaths).** The insurers' screen reads *"Flight recorder recovered. Our assessors have reviewed the incident."* They watch your last minute, and so do you. Killed by pirates, by the Falcon, by an accident: paid, less the excess, as now. Caught on the recorder firing first on a clean ship, smuggling, or fighting the police: void, and the screen says what they saw. The recorder's data decides, never anyone judging the pictures, so it's always fair.
+- **Not recovered.** Some deaths leave nothing to find: going up inside a sun, crushed by a carrier, an energy bomb at close range, or simply bad luck (about one death in ten). No recorder, no assessment: the insurers pay only **half**, pending recovery, and the claim stays open.
+- **Going back for it.** A lost recorder is often not destroyed, only lost: it drifts where you died, a beacon on the chart for a few days, like other cargo left adrift. Fly back and scoop it, and the rest of the claim is paid at the next station. Someone else can scoop it too: another commander who finds your recorder can return it to your insurers for a finder's fee, or sell what's on it to the news. A Falcon fight nobody saw is worth something.
+- **The kill cam is the assessors' reconstruction.** When the recorder is recovered, the insurers' screen offers *Watch it from outside* ([the kill cam](kill-cam.md)), the assessors' reconstruction built from the recorder's data. When it isn't, there's nothing to rebuild from: the reconstruction comes with the recorder, which is one more reason to go back.
+- **No hiding it.** You can't decline to submit the recorder and still claim; refuse, and you get the bare Cobra the Co-operative gives Fugitives. What's on it is what happened.
+- **Classic rules** have no insurance, as in 1984: the recorder is just a recorder.
 
 ## Proof: things nobody would believe
 

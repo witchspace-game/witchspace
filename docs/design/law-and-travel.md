@@ -131,6 +131,7 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
   - while Wanted or a Fugitive, or while fighting the police;
   - while committing a crime (attacking clean ships, smuggling);
   - by your own hand (self-destruct is fraud).
+- **How the insurers know: your flight recorder.** A claim needs the black box, and the assessors decide on what it recorded. If it isn't recovered, they pay half until it is, and you can go back for it ([the flight recorder: the claim](flight-recorder.md#the-claim-the-insurers-want-your-recorder-mark-25-october-2026)).
 
 ### When insurance doesn't pay
 
