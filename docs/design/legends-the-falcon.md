@@ -62,13 +62,27 @@ A commander who flies the Falcons' galaxies in order meets the whole family, and
 
 ## The fight, and losing it
 
-- **Her guns.** A beam laser on each talon vane, both firing at once, converging where she aims, on a little gimbal (8°) so they swing onto you without being a turret: 55 damage a second between them, at up to 3.2 km. *(Built 25 October 2026; Mark asked for twin beam lasers.)* Tuned in test duels, a bot flying a Cobra at a Cobra's turn rate against her, five fights a laser: a **military laser won 3 of 5**, a **beam 1 of 5**, a **pulse 1 of 5**. Full beam lasers (144 a second) took a Cobra in under two seconds whatever it carried, and half that still won every fight: she only has to take you to a third of your hull, you have to take her to a fifth. Her AI is still the plain pirate's, flying at you head-on; better flying, not more damage, is the next step ([pilot skill](#she-remembers-you)).
+- **Her guns, for now.** A beam laser on each talon vane, both firing at once on a little gimbal (8°): 55 damage a second between them, at up to 3.2 km. *(Built 25 October 2026 as a stopgap; [how she fights](#how-she-fights-the-ambusher) replaces it.)* In test duels (a bot flying a Cobra at a Cobra's turn rate, five fights a laser) a military laser won 3 of 5, a beam 1 of 5, a pulse 1 of 5. Full beam lasers firing together (144 a second) took a Cobra in under two seconds whatever it carried: she only has to take you to a third of your hull, you have to take her to a fifth.
 - **She fights to disable.** Her lasers go for your drives, her missiles (three, never two at you at once, as for every ship) to break your shields. She doesn't fire on a ship that's beaten.
 - **Beaten:** when your hull is down to about a third, she stops. *(Built early, 25 October 2026, with her beam lasers: at a third of your hull, by laser, missile or collision, she stops, takes her price (below), hails you and jumps out. The drifting, the beacon tow and the calling card in your Messages are still to come.)* Your **hyperdrive is knocked out** and your speed limited: you're **drifting**, with life support on.
 - **She takes her price:** company cargo she wants first, then the most valuable goods, up to her hold (10 t). A company contract taken by a Falcon fails without the usual standing loss: the companies know who she is. Your ship, equipment, credits and survey data are left alone.
 - **Her calling card** arrives in your Messages: a line from her, and what she took.
 - **Then she leaves** through witchspace, and you're alone.
 - **Getting home:** fire the emergency beacon. In lawful space the police tow you in; elsewhere a Carriers' Mutual tug comes, for a fee you can always afford (never below the 100 Cr stake). Or, after a couple of minutes, your engineer jury-rigs the drive for slow flight to the nearest station. Never stranded, never destroyed.
+
+## How she fights: the ambusher
+
+*Mark, 25 October 2026: "The Falcons run dark, they are fast, and having two beam lasers that are fixed would mean they have to point their nose at you."*
+
+Everything about her says ambusher, not jouster: she's **fast** (340 to a Cobra's 280: you can't outrun her), she **turns tighter** (0.95 to 0.8), she **runs dark** (you don't know what she is until she's close), and her **guns are fixed**: she has to point her nose at you to fire.
+
+- **Her guns.** Two fixed beam lasers, one at each vane tip, **firing alternately** (Mark's idea): left, right, left. A beam laser firing steadily overheats in about four seconds; two taking turns each fire half as often and take about twenty, so in practice she never stops. That's her edge: not more firepower than you, but firepower she can keep up while yours overheats. Fixed guns are hard to land, so she gets a beam laser's full 90 a second, with real heat, the same rules as yours.
+- **She comes from behind, out of the dark.** Her approach uses running dark to get onto your tail before you've read her hull. Turning a Cobra round takes about four seconds: four seconds of her fire and none of yours.
+- **She won't joust.** In a head-on pass her fixed beams would win every time (in the test duels, 90 a second won all twelve jousts in about 3.5 seconds, even against military lasers), so a head-on pass is the one fight she doesn't offer. Turn to face her and she breaks away, fast and dark again, and comes back round for your tail.
+- **Your chance is the break.** As she breaks she's turning, her guns are off you, and she's crossing your sights. Turning into her and catching her as she breaks beats a bigger laser: a commander with military lasers who sits still is eaten from behind; one who flies well wins with a beam.
+- **Your heat decides when you commit.** Hers barely builds; yours does. Hold a beam on her for four seconds and you're overheated just as she comes round.
+- **Pilot skill scales this** ([pilot skill](pilot-skill.md)): how quickly she gets behind you, how well she reads your turn, how soon she breaks when you face her, rising with your combat rating. The first pass at pilot skill, an ace who jinked out of your sights, made her no stronger in the duels: a ship can't sidestep, so a dodge means turning, and turning takes her guns off you. She wins by position, not by dodging.
+- **Tuning.** The test bot has to fight her properly, turning to keep her in front rather than only jousting, with a human's reaction time and aim. Measure how often she takes your tail, how long fights last, and whether turning into her beats a bigger laser.
 
 ## Beating her
 
@@ -129,6 +143,7 @@ The turning point of a Falcon's story: the Legend who hunted you, caught, and yo
 | Stage | What |
 |---|---|
 | **1** | One Falcon a galaxy on a seeded circuit, moving with the clock; bar talk and radio word; meetings only in her system; the hail and the price; the random roll removed. Bram first (galaxies 1 and 2), then his brothers. |
+| **1b** | How she fights: fixed beams firing alternately with real heat; the ambush from behind out of the dark; breaking off when you face her; tuned with a bot that turns. |
 | **2** | Fighting to disable: drifting, the beacon tow or the jury-rigged drive, her price taken, the calling card. She breaks off and escapes when beaten; the bounty that grows. |
 | **3** | Her memory of you: lines by meeting, by the Ninefold choice, by your record with the Mutual; she learns how you beat her; each brother's style. |
 | **4** | **A Debt**: the Mayday, the three ways it goes, the Falcon who protects you (or never lets you go). |
@@ -146,7 +161,7 @@ The turning point of a Falcon's story: the Legend who hunted you, caught, and yo
 | She takes | Up to 10 t; your ship, kit, credits and data never |
 | She breaks off at | About a fifth of her shields and hull |
 | Her shields, hull | 320, 230 |
-| Her guns | Twin vane beam lasers firing together, 55 a second between them, 3.2 km, 8° gimbal |
+| Her guns | Now: twin vane beams firing together, 55 a second, 8° gimbal. Planned: two fixed beam lasers firing alternately, 90 a second, with heat |
 | Keeps away after you drive her off | A day, no bounty in that time (until the circuit) |
 | Bounty | 2,000 Cr, +500 each escape |
 
