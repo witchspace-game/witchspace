@@ -61,7 +61,7 @@ const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/careers/': { ship: 'bullsnake', kicker: 'Careers', title: 'Careers in the eight galaxies', sub: 'Four companies are hiring pilots. Fly for one.' },
 };
 
-const ORG = { '@type': 'Organization', name: 'Witchspace', url: SITE, logo: `${SITE}/icons/icon-512.png`, sameAs: ['https://github.com/witchspace-game/witchspace'] };
+const ORG = { '@type': 'Organization', name: 'Witchspace', url: SITE, logo: `${SITE}/icons/icon-512.png`, sameAs: ['https://github.com/witchspace-game/witchspace', 'https://www.instagram.com/witchspace_game/'] };
 const GAME = {
   '@type': 'VideoGame',
   name: 'Witchspace',
