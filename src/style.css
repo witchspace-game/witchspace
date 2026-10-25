@@ -936,6 +936,8 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
   body.touch #survey { bottom: auto; top: max(10px, env(safe-area-inset-top)); }
   /* With the top clear, the docking readout goes there, off the fire buttons. */
   body.touch #dock-aid { top: max(8px, env(safe-area-inset-top)); left: 50%; right: auto; transform: translateX(-50%) scale(0.75); transform-origin: top center; }
+  /* Both at once (surveying near a station): the survey bar steps down below the docking readout. */
+  body.touch:has(#dock-aid:not([hidden])) #survey { top: calc(max(8px, env(safe-area-inset-top)) + 96px); }
   body.touch #touch .speed { height: 110px; }
   body.touch #touch .fire { width: 76px; height: 76px; }
   /* Touch targets at the recommended size: 44 px tall (Apple), 8 px apart (Google). */
