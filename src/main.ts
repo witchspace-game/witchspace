@@ -4891,6 +4891,17 @@ onTap($('#job .job-more'), () => {
   jobKey = '';
   renderJob();
 });
+// A tap anywhere else folds the list away again.
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    if (!jobListOpen || $('#job').contains(e.target as Node)) return;
+    jobListOpen = false;
+    jobKey = '';
+    renderJob();
+  },
+  true,
+);
 
 // --- The radio (docs/design/radio-and-comms.md) -------------------------------------
 // Under Modern rules, everything said to you in flight goes in the radio log:

@@ -159,6 +159,8 @@ export function initRadio() {
   const el = root();
   onTap(el.querySelector<HTMLElement>('.radio-pill')!, () => toggleRadio());
   onTap(el.querySelector<HTMLElement>('.radio-close')!, () => toggleRadio(false));
+  // A tap anywhere else closes the log too.
+  document.addEventListener('pointerdown', (e) => open && !el.contains(e.target as Node) && toggleRadio(false), true);
   // Accept buttons come and go with the list: catch their taps on the list itself.
   const list = el.querySelector<HTMLElement>('.radio-list')!;
   let tapped = 0;
