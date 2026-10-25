@@ -26,6 +26,7 @@ Welcome, Commander. 🚀 Whether you design ships, write lore, build missions or
 ### Style guide
 
 - Neo-vector colours by role: traders and multirole ships are green, police blue, pirates red/magenta, aliens purple and stations amber. Every hull glows at full strength: the glowing, coloured hull is Witchspace's signature, so don't dim a ship to make it stealthy or moody. (A ship running dark is shown in a cold white by the game until its hull is read; that's the game's job, not the ship file's.)
+- Elegance over detail. A Witchspace ship is a few glowing lines that read at a glance: a strong silhouette, clean edges, every line earning its place. We don't chase rendered realism (textures, surface clutter, modelled interiors); others do that beautifully, and restraint is what makes ours ours. When in doubt, take a line away.
 - Descriptions are one or two sentences, in-universe, dry and a little wry.
 - Stats should sit inside the existing range. A ship that's fastest, toughest *and* cheapest will be asked to pick one.
 

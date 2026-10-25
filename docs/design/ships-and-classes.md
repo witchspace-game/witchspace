@@ -39,6 +39,7 @@ And some ships can't be bought at all: they're **earned**, by the career you cho
 - **Every maker has a character,** and every hull it builds carries it: their freighter still feels like theirs.
 - **Trade-offs, not tiers.** A better ship in one way is worse in another (hold against speed, turn against armour, range against guns), so there's no single best ship, only the best one for you.
 - **The classic names are our tribute; the geometry is ours.** Names from 1984 (Adder, Python, Anaconda...) are welcome, as the Cobra and Viper are; every hull is original neo-vector geometry, designed from its class, never traced from the originals or anyone's drawings.
+- **Elegant, not detailed.** A hull is a few glowing lines with a silhouette you'd know at scanner range, never a rendered model with every panel and interior. Fully rendered ship reveals elsewhere are gorgeous, but the elegance of the neo world is what we love about ours (Mark, 25 October 2026). Character comes from shape, proportion and colour; when in doubt, take a line away.
 - **Earned, never bought.** Ships cost credits made in play ([no pay-to-win](player-stations.md)).
 
 ## 1. Classes
