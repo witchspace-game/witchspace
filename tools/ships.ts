@@ -49,7 +49,11 @@ const ROLE: Record<string, string> = {
 };
 
 /** The first sentence, for a share card's line. */
-const firstSentence = (text: string) => (text.match(/^.*?[.!?](\s|$)/)?.[0] ?? text).trim().slice(0, 120);
+const firstSentence = (text: string) => {
+  const first = (text.match(/^.*?[.!?](\s|$)/)?.[0] ?? text).trim();
+  // Too long for a card: end at a word, with an ellipsis, never mid-phrase.
+  return first.length > 120 ? first.slice(0, first.lastIndexOf(' ', 117)).replace(/[,;:·\s]+$/, '').replace(/\s(and|or|a|the)$/, '') + '…' : first;
+};
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
