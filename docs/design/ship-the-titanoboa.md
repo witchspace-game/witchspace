@@ -36,24 +36,35 @@ Mark's idea answers both problems. A factory in space wouldn't be one hull; it w
 
 ## 1. The modules
 
-Sketched in the game's renderer (25 October 2026) and checked against the hull rules; proportions to refine.
+Third draft, 25 October 2026, drawn in the game's renderer, every module checked against the hull rules and compared at one scale. Mark asked for each module to be elegant and recognisable, and for the geometry to make sense, because these parts will matter in the game world. So they follow rules, and any new module has to follow them too.
 
-| Module | Shape | What it does |
-|---|---|---|
-| **Maw** (the prow) | A six-sided funnel with an open, recessed mouth | The intake. Ore from the moon goes in here; the ship eats the moon a little at a time. |
-| **Furnace** | A crucible: six-sided, swelling to twice its width and narrowing again | Smelting and refining, and where the exotic materials are made. The hottest thing on her. |
-| **Reactor** | A broad eight-sided drum, the widest module | Power for the whole ship. The one you don't want to go wrong. |
-| **Fabricator** | An open cradle: a thin spine with two long arms above and below, joined at the ends | Where station sections are made: the spine, the truss, the plate. You can see through it. |
-| **Science** | A sealed containment pod held out on a mast, at arm's length from the rest of the ship | Research on whatever explorers found living in the system: exotic organisms, kept well away from the workers. |
-| **Habitat** | A flat, wide six-sided slab | Quarters for a few thousand workers. Carries the company insignia. |
-| **Drive** | A block with three nozzles | She never hurries. |
-| **Coupling** | A short square neck, 70 m | Between every pair of modules. |
+### The rules
 
-**Line-ups.** Front to back, the maw first and the drive last:
+1. **One coupling.** A coupling is a **140 m square**. Every module ends, at each coupled end, in a 35 m half-neck of that square, standing on a flat face at least as big. Two coupled modules show a 70 m neck with a seam in the middle: that's where they come apart. Any module fits any other, and a station can take the same coupling ([section 3](#3-modules-sent-where-theyre-needed)).
+2. **The order follows the work.** Ore goes in at the **maw**, is smelted in the **furnaces**, and becomes station sections in the **fabricator**, which is open at the sides so finished sections slide out. Then the **habitat**, then add-ons such as **science**. The **reactor** sits at the back beside the **drive** it powers, its **shadow shield facing forward** to protect the crew (as real nuclear spacecraft designs do) and its radiators fanned out where nothing else is.
+3. **One true scale.** Modules are 160 to 520 m long; a Bullsnake, the tug that moves them, is 70 m. A Standard line-up is about 2.2 km, close to the 2.5 km the lore gives her.
+4. **One shape per module,** in a few dozen lines. If you have to explain what a module is, it isn't finished.
 
-- **Small** (a refinery job): maw, furnace, reactor, drive. About 1.4 km, 130 vertices.
-- **Standard** (a station): maw, furnace, furnace, reactor, fabricator, habitat, drive. About 2.4 km, 224 vertices.
-- **Large** (a great works): three furnaces, two fabricators, two reactors. About 3.4 km, 320 vertices.
+### The modules
+
+| Module | Length | Shape | What it does |
+|---|---|---|---|
+| **Maw** (prow only) | 300 m | A wide six-sided mouth, 500 m across, with a deep throat, tapering back to the coupling | The intake. Ore from the moon goes in here, a little at a time. |
+| **Furnace** | 300 m | A crucible: six-sided, swelling to 480 m across and narrowing again | Smelting and refining, and where the exotic materials are made. The hottest thing on her. |
+| **Fabricator** | 520 m | An open cradle: the spine, two rails above and below, a gantry at each end | Where station sections are made. Open at the sides, so sections slide out. You can see through it. |
+| **Habitat** | 160 m | A six-sided wheel, 680 m across, on three spokes, turning for gravity | Quarters for a few thousand workers. Carries the company insignia. |
+| **Science** (add-on) | 220 m | A sealed pod on a 300 m mast, held out from the spine | Research on whatever explorers found living in the system, kept at arm's length. |
+| **Reactor** | 300 m | A compact eight-sided core behind a broad shadow shield, with four flat radiator vanes in an X, 880 m tip to tip | Power for the whole ship. The one you don't want to go wrong. |
+| **Drive** (stern only) | 300 m | A tapering block and three flared bells | She never hurries. |
+
+**Line-ups**, front to back:
+
+- **Small** (a refinery job): maw, furnace, reactor, drive.
+- **Standard** (a station): maw, furnace, furnace, fabricator, habitat, reactor, drive. About 2.2 km, 330 vertices, 500 lines.
+- **With science:** the Standard with a science module between the habitat and the reactor. About 2.4 km.
+- **Large** (a great works): more furnaces and fabricators, and a second reactor and drive.
+
+Each module is 26 to 64 vertices, well inside a ship file's 256, so each can be its own part.
 
 ## 2. How it's built in the game
 
