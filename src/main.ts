@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
 import { cycleSoundMode, danube, preloadRecording, sfx, unlockAudio } from './audio/sound';
 import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
+import { withLineUp } from './content/moduleFiles';
 import { shipById, ships } from './content/ships';
 import type { ShipDef } from './content/types';
 import {
@@ -86,7 +87,7 @@ import { applyCompanyBand } from './render/livery';
 import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
 import { SpaceDust } from './render/dust';
 import { buildYard, type YardScene } from './render/yard';
-import { stageInfo, stageLabel, yardAt, yardsNear, yardsOf } from './game/yards';
+import { lineUpOf, stageInfo, stageLabel, yardAt, yardsNear, yardsOf } from './game/yards';
 import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
 import { riftClose, riftDrone, riftGroan, type Drone } from './audio/rift';
@@ -2208,7 +2209,7 @@ function buildExploreScene(sys: StarSystem) {
   const yard = yardAt(sys, Date.now());
   const quarry = yard && sceneBodies.find((b) => b.body.id === `moon${yard.moon}`);
   if (yard && quarry) {
-    const defs = { titan: shipById('titanoboa')!, hauler: shipById('bullsnake')!, station: shipById('coriolis')! };
+    const defs = { titan: withLineUp(shipById('titanoboa')!, lineUpOf(yard)), hauler: shipById('bullsnake')!, station: shipById('coriolis')! };
     yardScene = buildYard(space.scene, yard, defs, { centre: quarry.centre, radius: quarry.radius }, station.root.position);
   }
   const planetDone = isSurveyed(c, sys, 'planet');

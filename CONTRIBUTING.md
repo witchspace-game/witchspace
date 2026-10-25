@@ -11,6 +11,17 @@ Welcome, Commander. 🚀 Whether you design ships, write lore, build missions or
 5. Run `npm run validate -- --fix` until every file shows ✓.
 6. Open a pull request with a screenshot of your ship.
 
+## Design a section of the Titanoboa
+
+Wexley-Yorozu's Titanoboa is built from modules on one coupling, and anyone can design a new one: a greenhouse, an ice refinery, a shipyard cradle, whatever you can imagine.
+
+1. Copy a core module, e.g. `content/modules/furnace.json`, to `content/modules/<your-module-id>.json`.
+2. Give it a `zone` (where it goes, prow to stern: intake, industry, logistics, crew, fabrication, add-on, power), a `length`, which ends couple, one sentence in Wexley-Yorozu's catalogue voice, and your commander name as `designer`.
+3. Draw the body: one shape with one job, at most 256 vertices. It stops 35 m short of each coupled end, and must end there in a flat face covering the 140 m coupling square. The game adds the necks.
+4. Run `npm run validate` until it shows ✓, and open a pull request with a picture.
+
+The standard, and why each core module looks as it does: [the Titanoboa design](docs/design/ship-the-titanoboa.md#designing-a-module-the-standard). Accepted modules are fitted in yards, and Wexley-Yorozu pays the designer's commander 5,000 Cr (in game credits).
+
 ### Geometry rules
 
 - Units are metres. **+Z is the nose**, +Y is up and +X is port (left). This is the glTF convention.

@@ -17,6 +17,17 @@ interface ShipFile {
   geometry: { vertices: number[][]; faces: number[][]; details?: { vertices: number[][]; lines: number[][] } };
   stats?: Record<string, number>;
   style?: { lineColor?: string };
+  insignia?: { color: string; vertices: number[][]; lines: number[][] };
+  modules?: string[];
+}
+
+interface ModuleFile {
+  id: string;
+  name: string;
+  zone: string;
+  length: number;
+  description: string;
+  designer: string;
 }
 
 /** Ships worth a page: the fleet, not the props. */
@@ -27,7 +38,7 @@ const FIRST = 'cobra-mk3';
 /** Where a ship's design is written down, when it has more than its file. */
 const DESIGN: Record<string, { href: string; label: string }> = {
   falcon: { href: REPO + 'docs/design/legends-the-falcon.md', label: 'The Falcons, a Legend' },
-  titanoboa: { href: REPO + 'docs/design/companies-and-contracts.md#4b-building-worlds', label: 'Building worlds: the yards' },
+  titanoboa: { href: '/design/ship-the-titanoboa/', label: 'The Titanoboa, a modular factory' },
   bullsnake: { href: REPO + 'docs/companies.md#its-ship-the-bullsnake', label: 'Wexley-Yorozu and its ships' },
   lancer: { href: '/design/law-and-travel/#9-power-and-protection', label: 'The Co-operative Marshals' },
   bastion: { href: '/design/law-and-travel/#9-power-and-protection', label: 'The Co-operative Marshals' },
@@ -96,7 +107,7 @@ export function shipSvg(s: ShipFile, cls = 'ship-svg'): string {
 }
 
 const STAT_LABELS: [string, string, (n: number) => string][] = [
-  ['maxSpeed', 'Top speed', (n) => `${n} m/s`],
+  ['maxSpeed', 'Top speed', (n) => (n ? `${n} m/s` : 'None')],
   ['hull', 'Hull', (n) => n.toLocaleString('en-GB')],
   ['shields', 'Shields', (n) => n.toLocaleString('en-GB')],
   ['cargo', 'Hold', (n) => `${n} t`],
@@ -133,14 +144,41 @@ ${ships
 </section>`;
 }
 
-export function shipPage(s: ShipFile) {
+/** The Titanoboa's modules, from content/modules. */
+export function loadModules(root: string): Map<string, ModuleFile> {
+  const dir = join(root, 'content/modules');
+  return new Map(readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => {
+    const m = JSON.parse(readFileSync(join(dir, f), 'utf8')) as ModuleFile;
+    return [m.id, m];
+  }));
+}
+
+/** A modular ship's sections, fore to aft, each with its job and its designer. */
+function modulesCard(s: ShipFile, modules: Map<string, ModuleFile>): string {
+  if (!s.modules) return '';
+  const rows = [...new Set(s.modules)]
+    .map((id) => modules.get(id))
+    .filter((m): m is ModuleFile => m !== undefined)
+    .map((m) => {
+      const count = s.modules!.filter((id) => id === m.id).length;
+      return `<li><strong>${esc(m.name)}${count > 1 ? ` ×${count}` : ''}</strong> <span class="muted small">${m.length} m · ${esc(m.zone)} · designed by ${esc(m.designer)}</span><br>${esc(m.description)} <a class="small" href="${REPO}content/modules/${esc(m.id)}.json">File</a></li>`;
+    })
+    .join('');
+  return `<div class="card ship-modules">
+      <h3>Built from modules</h3>
+      <p>Fore to aft: ${s.modules.map((id) => esc(modules.get(id)?.name ?? id)).join(' → ')}. Every module couples the same way, so the line-up changes with the job, and anyone can design a new one to <a href="/design/ship-the-titanoboa/#designing-a-module-the-standard">the standard</a>.</p>
+      <ul>${rows}</ul>
+    </div>`;
+}
+
+export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map()) {
   const c = s.credits ?? {};
   const stats = STAT_LABELS.filter(([k]) => s.stats?.[k] !== undefined)
     .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${esc(f(s.stats![k]))}</dd></div>`)
     .join('');
   const design = DESIGN[s.id];
   const authors = (c.authors ?? []).join(', ') || 'Witchspace contributors';
-  const def = JSON.stringify({ id: s.id, name: s.name, geometry: s.geometry, style: s.style ?? {} }).replace(/</g, '\\u003c');
+  const def = JSON.stringify({ id: s.id, name: s.name, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
   return {
     card: { ship: s.id, kicker: roleLine(s) || 'Ship', sub: firstSentence(s.description ?? '') },
     schema: [
@@ -172,6 +210,7 @@ export function shipPage(s: ShipFile) {
     </div>
   </div>
   <script type="application/json" id="ship-def">${def}</script>
+  ${modulesCard(s, modules)}
 
   <div class="ship-columns">
     <div class="card">
