@@ -2,7 +2,7 @@
 title: The Titanoboa, a modular factory
 status: designed
 pillar: world
-summary: Wexley-Yorozu's constructor rebuilt as a factory of modules on a common coupling - maw, furnaces, reactor, fabricator, science, habitat, drive - each a single clear shape in glowing line. It's as big as the job needs, new modules are sent where they're needed and can stay on the finished station, sections are swapped when they fail, and a reactor towed between stars is work for commanders.
+summary: Wexley-Yorozu's constructor rebuilt as a factory of modules on a common coupling - maw, furnaces, fabricator, habitat, science, reactor - each a single clear shape in glowing line, brought by tug teams and assembled where the work is. It's as big as the job needs, new modules are sent where they're needed and can stay on the finished station, sections are swapped when they fail, and a reactor towed between stars is work for commanders.
 card: titanoboa
 stages:
   - The modules and the coupling, and the standard line-up on the ship page | proposed
@@ -40,10 +40,11 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 
 ### The rules
 
-1. **One coupling.** A coupling is a **140 m square**. Every module ends, at each coupled end, in a 35 m half-neck of that square, standing on a flat face at least as big. Two coupled modules show a 70 m neck with a seam in the middle: that's where they come apart. Any module fits any other, and a station can take the same coupling ([section 3](#3-modules-sent-where-theyre-needed)).
-2. **The order follows the work.** Ore goes in at the **maw**, is smelted in the **furnaces**, and becomes station sections in the **fabricator**, which is open at the sides so finished sections slide out. Then the **habitat**, then add-ons such as **science**. The **reactor** sits at the back beside the **drive** it powers, its **shadow shield facing forward** to protect the crew (as real nuclear spacecraft designs do) and its radiators fanned out where nothing else is.
-3. **One true scale.** Modules are 160 to 520 m long; a Bullsnake, the tug that moves them, is 70 m. A Standard line-up is about 2.2 km, close to the 2.5 km the lore gives her.
-4. **One shape per module,** in a few dozen lines. If you have to explain what a module is, it isn't finished.
+1. **One coupling.** A coupling is a **140 m square**. Every module ends, at each coupled end, in a 35 m half-neck of that square, standing on a flat face at least as big. An end with nothing coupled to it is a clean face: no coupling sticking out into space. Two coupled modules show a 70 m neck with a seam in the middle: that's where they come apart. Any module fits any other, and a station can take the same coupling ([section 3](#3-modules-sent-where-theyre-needed)).
+2. **It arrives in pieces, and has no engine** (Mark). Modules are moved by Bullsnake teams, so the Titanoboa never travels whole: its modules come through a Wexley-Yorozu rift, are coupled in orbit by the moon, and when the station opens it comes apart again and the modules go on to the next job. Small station-keeping thrusters hold it in orbit; they're not worth a line. The one exception is the rare job of **moving a station**, which needs a **drive module** fitted at the stern for the purpose ([the trading companies](../companies.md#the-fleet-the-titanoboa-and-the-yards)).
+3. **The order follows the work.** Ore goes in at the **maw**, is smelted in the **furnaces**, and becomes station sections in the **fabricator**, which is open at the sides so finished sections slide out. Then the **habitat**, then add-ons such as **science**. The **reactor** sits at the stern, its **shadow shield facing forward** to protect the crew (as real nuclear spacecraft designs do) and its radiators fanned out where nothing else is.
+4. **One true scale.** Modules are 160 to 520 m long; a Bullsnake, the tug that moves them, is 70 m. A Standard line-up is about 1.9 km and grows with the job; with science and a second fabricator she passes the 2.5 km the lore gives her.
+5. **One shape per module,** in a few dozen lines. If you have to explain what a module is, it isn't finished.
 
 ### The modules
 
@@ -53,16 +54,17 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 | **Furnace** | 300 m | A crucible: six-sided, swelling to 480 m across and narrowing again | Smelting and refining, and where the exotic materials are made. The hottest thing on her. |
 | **Fabricator** | 520 m | An open cradle: the spine, two rails above and below, a gantry at each end | Where station sections are made. Open at the sides, so sections slide out. You can see through it. |
 | **Habitat** | 160 m | A six-sided wheel, 680 m across, on three spokes, turning for gravity | Quarters for a few thousand workers. Carries the company insignia. |
-| **Science** (add-on) | 220 m | One to three sealed pods, each on a 300 m mast at the habitat spokes' angles; each pod sits on a clamp, so it can be ejected and replaced | Research on whatever explorers found living in the system: one find to a pod, kept at arm's length from the crew and from each other. |
+| **Science** (add-on) | 220 m | A six-sided hub with one to three sealed pods, each on a 300 m mast leaving a face square-on, at the habitat spokes' angles; each pod sits on a clamp, so it can be ejected and replaced | Research on whatever explorers found living in the system: one find to a pod, kept at arm's length from the crew and from each other. |
 | **Reactor** | 300 m | A compact eight-sided core behind a broad shadow shield, with four flat radiator vanes in an X, 880 m tip to tip | Power for the whole ship. The one you don't want to go wrong. |
-| **Drive** (stern only) | 300 m | A tapering block and three flared bells | She never hurries. |
+| **Drive** (optional, stern only) | 300 m | A tapering block and three flared bells | Fitted only to move a station, slowly. She never hurries. |
 
 **Line-ups**, front to back:
 
-- **Small** (a refinery job): maw, furnace, reactor, drive.
-- **Standard** (a station): maw, furnace, furnace, fabricator, habitat, reactor, drive. About 2.2 km, 330 vertices, 500 lines.
-- **With science:** the Standard with a science module between the habitat and the reactor. About 2.4 km.
-- **Large** (a great works): more furnaces and fabricators, and a second reactor and drive.
+- **Small** (a refinery job): maw, furnace, reactor.
+- **Standard** (a station): maw, furnace, furnace, fabricator, habitat, reactor. About 1.9 km.
+- **With science:** the Standard with a science module between the habitat and the reactor. About 2.1 km; 370 vertices with three pods.
+- **Moving a station:** the Standard with a drive module at the stern.
+- **Large** (a great works): more furnaces and fabricators, and a second reactor.
 
 Each module is 26 to 64 vertices, well inside a ship file's 256, so each can be its own part.
 
@@ -114,6 +116,10 @@ Now and then a section fails, most dramatically a reactor. The yard reacts on th
 - **Salvage.** A failed reactor towed out and abandoned is worth something to someone, and it's Wexley-Yorozu property. Clause 214 has views.
 
 These are proposals for the contracts design ([companies and contracts](companies-and-contracts.md)) once the modules exist.
+
+## When it's built: what changes in the game
+
+The yard's news lines in `src/game/yards.ts` say the Titanoboa *has arrived* and *leaves soon*; with stage 1 they become *is being assembled* and *is coming apart*, and the yard scene shows modules arriving with their tug teams.
 
 ## Classic rules
 
