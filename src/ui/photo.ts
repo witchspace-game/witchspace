@@ -1,13 +1,14 @@
 // P: take a photo of the view. The 3D scene is its own canvas with the HUD
 // drawn over it in HTML, so a photo is the scene alone: no HUD, just the
-// shot, with a small mark in the corner. On phones it goes straight to the
-// share sheet (WhatsApp, Instagram, Messages…); elsewhere it's saved.
+// shot, with a small mark in the corner. Photos go to the flight log, to share
+// once you're docked (nothing pops up mid-fight); where the log can't be used
+// (storage blocked), savePhoto shares or saves it straight away as before.
 //
 // A WebGL canvas is cleared once it's on screen, so call takePhoto() right
 // after rendering a frame, in the same task.
 
-/** Copy the canvas now; save or share it after. */
-export function takePhoto(canvas: HTMLCanvasElement, retro: boolean): Promise<string> {
+/** Copy the canvas now; the image (JPEG, or PNG for 1984 mode's crisp pixels) follows. */
+export function takePhoto(canvas: HTMLCanvasElement, retro: boolean): Promise<Blob | null> {
   // 1984 mode is drawn small and scaled up by whole pixels: keep it crisp.
   const scale = retro ? Math.max(1, Math.round(1600 / canvas.width)) : 1;
   const out = document.createElement('canvas');
@@ -31,26 +32,26 @@ export function takePhoto(canvas: HTMLCanvasElement, retro: boolean): Promise<st
   ctx.fillStyle = retro ? '#ffffff' : 'rgba(234, 255, 246, 0.85)';
   ctx.fillText(text, out.width - pad, out.height - pad);
 
-  const name = `witchspace-${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').replace(/^(\d{8})/, '$1-')}.png`;
-  return new Promise((resolve) => {
-    out.toBlob(async (blob) => {
-      if (!blob) return resolve('Photo failed');
-      const file = new File([blob], name, { type: 'image/png' });
-      // Phones: hand it to the share sheet. Dismissing it falls back to saving.
-      if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: 'Witchspace', text: 'witchspace.org.uk' });
-          return resolve('Photo shared');
-        } catch {
-          // Dismissed, or not allowed: save it instead.
-        }
-      }
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = name;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      resolve(`Photo saved · ${name}`);
-    }, 'image/png');
-  });
+  return new Promise((resolve) => out.toBlob(resolve, retro ? 'image/png' : 'image/jpeg', 0.9));
+}
+
+/** Share a photo (phones) or save it: for when the flight log can't keep it. */
+export async function savePhoto(blob: Blob): Promise<string> {
+  const name = `witchspace-${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').replace(/^(\d{8})/, '$1-')}.${blob.type === 'image/png' ? 'png' : 'jpg'}`;
+  const file = new File([blob], name, { type: blob.type });
+  // Phones: hand it to the share sheet. Dismissing it falls back to saving.
+  if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Witchspace', text: 'witchspace.org.uk' });
+      return 'Photo shared';
+    } catch {
+      // Dismissed, or not allowed: save it instead.
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return `Photo saved · ${name}`;
 }

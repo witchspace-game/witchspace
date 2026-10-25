@@ -4,7 +4,7 @@
 // pictures, so its title, description and tags are true. The flight log, the
 // death replay and (later) the channel agent all write from here.
 
-export type MomentKind = 'death' | 'marshals' | 'legend' | 'discovery' | 'kill' | 'kept';
+export type MomentKind = 'death' | 'marshals' | 'legend' | 'discovery' | 'kill' | 'kept' | 'photo';
 
 export interface MomentEvent {
   kind: MomentKind;
@@ -25,7 +25,7 @@ export interface MomentContext {
 }
 
 /** The order a moment is named by when several happen in one clip: the most remarkable first. */
-const WEIGHT: Record<MomentKind, number> = { death: 6, marshals: 5, legend: 4, discovery: 3, kill: 2, kept: 1 };
+const WEIGHT: Record<MomentKind, number> = { death: 6, marshals: 5, legend: 4, discovery: 3, kill: 2, kept: 1, photo: 0 };
 
 export function leadEvent(events: MomentEvent[]): MomentEvent {
   return [...events].sort((a, b) => WEIGHT[b.kind] - WEIGHT[a.kind])[0];
@@ -55,18 +55,23 @@ export function momentTitle(events: MomentEvent[], ctx: MomentContext): string {
     case 'kill':
       title = kills.length > 1 ? `${plural(kills.length, 'kill')} in one fight${at}` : `${lead.subject ?? 'Pirate'} down${at}`;
       break;
+    case 'photo':
+      title = `A photo from ${ctx.system}`;
+      break;
     default:
       title = `From my flight recorder${at}`;
   }
   return `CMDR ${ctx.callsign}: ${title}`.slice(0, 100);
 }
 
+const lead = (events: MomentEvent[]) => leadEvent(events).kind;
+
 /** The description: what happened, where, and how to play. */
 export function momentDescription(events: MomentEvent[], ctx: MomentContext): string {
   const lines = events.map((e) => `· ${e.text}`);
   const when = new Date(ctx.when).toISOString().slice(0, 16).replace('T', ' ');
   return [
-    `Recovered from CMDR ${ctx.callsign}'s flight recorder, ${ctx.system} (galaxy ${ctx.galaxy}, ${ctx.government}), ${when} UTC.`,
+    `${lead(events) === 'photo' ? 'Taken by' : 'Recovered from'} CMDR ${ctx.callsign}'s ${lead(events) === 'photo' ? 'ship camera' : 'flight recorder'}, ${ctx.system} (galaxy ${ctx.galaxy}, ${ctx.government}), ${when} UTC.`,
     '',
     ...lines,
     '',
@@ -77,8 +82,8 @@ export function momentDescription(events: MomentEvent[], ctx: MomentContext): st
 
 /** Tags: the game's, then what happened. */
 export function momentTags(events: MomentEvent[], ctx: MomentContext): string[] {
-  const tags = new Set(['witchspace', 'elite 1984', 'space game', 'flight recorder', 'browser game']);
   const kinds = new Set(events.map((e) => e.kind));
+  const tags = new Set(['witchspace', 'elite 1984', 'space game', kinds.has('photo') ? 'screenshot' : 'flight recorder', 'browser game']);
   if (kinds.has('kill') || kinds.has('death')) ['space combat', 'dogfight'].forEach((t) => tags.add(t));
   if (kinds.has('death')) tags.add('how i died');
   if (kinds.has('marshals')) ['co-operative marshals', 'capital ship'].forEach((t) => tags.add(t));

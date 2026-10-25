@@ -94,7 +94,7 @@ import { camera, isRetro, lens, makeSpace, render, setRetro } from './render/ren
 import { buildShip, disposeShip, heatShip, showUnidentified, UNIDENTIFIED, type ShipModel } from './render/shipModel';
 import { buildHangar } from './render/hangar';
 import { stationName } from './galaxy/stationNames';
-import { takePhoto } from './ui/photo';
+import { savePhoto, takePhoto } from './ui/photo';
 import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { countDevice, countNewCommander } from './net/stats';
@@ -112,8 +112,8 @@ import { closeDrawer, initTouch, onTap, updateTouch } from './ui/touch';
 import { COMPANY_SHORT, jobStrip, routeWork, workInReach, type JobStep } from './game/jobs';
 import { BEACON_CALLS, beacon, distressReward, hailReply, newBeacon, newsInReach, pirateAnswer, pirateThreat, RADIO_RANGE, type BeaconCall, type HailContext, type Speaker } from './game/radio';
 import { acceptLatest, clearRadio, initRadio, say, setRadioFight, toggleRadio, wakeRadio, type RadioAction, type RadioKind } from './ui/radio';
-import { FlightRecorder } from './game/recorder';
-import { addMoment, type LoggedMoment } from './game/flightLog';
+import { FlightRecorder, type Clip } from './game/recorder';
+import { addMoment, deleteMoment, type LoggedMoment } from './game/flightLog';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
 import { closeReplay, isReplayOpen, openReplay, renderFlightLog } from './ui/flightLog';
 import './style.css';
@@ -2627,7 +2627,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   if (npc.role === 'pirate') {
     c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
     flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr`, 2.5);
-    void keepMoment({ kind: 'kill', text: `${npc.def.name} destroyed · bounty ${npc.bounty} Cr`, subject: npc.def.name }, 20, 4);
+    void keepCombat({ kind: 'kill', text: `${npc.def.name} destroyed · bounty ${npc.bounty} Cr`, subject: npc.def.name }, 20, 4);
   } else {
     flash(`${npc.def.name} destroyed`, 1.5);
     // Killing police or an innocent trader is a serious crime. Under Classic
@@ -4393,7 +4393,8 @@ function renderControlsCard() {
       ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
       ['O', 'Combat computer: it flies, you man the turrets (needs one fitted; any flight control takes over)'],
       ['9', 'Survey autopilot: flies to whatever is left to survey or find here, and holds you in range (explorers; any flight control takes over)'],
-      ['P', 'Take a photo of the view, without the HUD (saved, or shared on phones)'],
+      ['P', 'Take a photo of the view, without the HUD, into your flight log (share it when docked)'],
+      ['Shift+P', 'Flight recorder: keep the last 30 seconds (or hold the camera button)'],
       ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
       ['T', 'Arm a missile: hold a ship in your sights until the tone goes solid (Classic: lock at once). Again to disarm'],
       ['X', 'Launch the locked missile'],
@@ -5276,7 +5277,7 @@ async function surrender() {
 function die() {
   const c = cmdr();
   // The black box: the last seconds, and the ship going up, for the insurers' screen.
-  const blackBox = keepMoment({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}` }, 26, 4);
+  const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}` }, 26, 4);
   setView('front');
   setAutopilot(false);
   setState('dead');
@@ -5358,7 +5359,7 @@ function die() {
     marshalsStandDown();
     enterDocked();
     flash(message, 5);
-    void blackBox.then((m) => m && state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog));
+    void blackBox.then((m) => m && state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog, recorderIntroduced() ? undefined : RECORDER_INTRO));
   }, 5000);
 }
 
@@ -5730,16 +5731,22 @@ function checkCombatComputer(input: FlightInput) {
 
 let photoPending = false;
 
-/** P: copy the frame just drawn, with a shutter flash, then save or share it. */
+/** P: copy the frame just drawn, with a shutter flash, into the flight log (or saved or shared, where there's no log). */
 function snapPhoto() {
   const canvas = $<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo');
-  const saving = takePhoto(canvas, isRetro());
+  const shot = takePhoto(canvas, isRetro());
+  const ctx = momentContext();
   sfx.shutter();
   const el = $('#photo-flash');
   el.classList.remove('on');
   void el.offsetWidth; // restart the CSS animation
   el.classList.add('on');
-  void saving.then((message) => flash(message, 2.5));
+  void shot.then(async (photo) => {
+    if (!photo) return flash('Photo failed', 2.5);
+    const m = ctx && (await logMoment({ events: [{ kind: 'photo', text: 'Photo taken' }], ctx }, { photo, poster: null, seconds: 0 }));
+    flash(m ? 'Photo · in your flight log' : await savePhoto(photo), 2.5);
+    if (m && state === 'docked') refreshFlightLog();
+  });
 }
 
 // --- Input ------------------------------------------------------------------
@@ -6215,12 +6222,15 @@ document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) => {
 });
 
 // --- The flight recorder (docs/design/flight-recorder.md) --------------------
-// The ship's black box: the last 30 seconds of the view, always, in memory.
+// The ship's black box: the last minute of the view, always, in memory.
 // Moments worth keeping go to the flight log on this device; nothing leaves it
 // unless the commander shares it.
 
 const RECORDER_KEY = 'witchspace-recorder';
+/** Classic stays as 1984 had it: no recorder (photos still work). */
+const classicRules = () => !!commander && cmdr().difficulty !== 'modern';
 const recorderOn = () => {
+  if (classicRules()) return false;
   try {
     return localStorage.getItem(RECORDER_KEY) !== 'off';
   } catch {
@@ -6234,41 +6244,103 @@ interface MomentMeta {
 const recorder = new FlightRecorder<MomentMeta>(recorderOn);
 const viewCanvas = () => $<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo');
 
-/** Keep the seconds around now in the flight log. Resolves with the logged moment (or null: no recorder, or nothing to keep). */
-function keepMoment(event: MomentEvent, before: number, after: number): Promise<LoggedMoment | null> {
-  if (!commander) return Promise.resolve(null);
+function momentContext(): MomentContext | null {
+  if (!commander) return null;
   const c = cmdr();
   const sys = currentSystem();
-  const ctx: MomentContext = { callsign: c.name, system: sys.name, galaxy: sys.galaxy + 1, government: GOVERNMENTS[sys.government], rank: combatRating(c.kills), when: Date.now() };
-  return recorder
-    .keep({ events: [event], ctx }, before, after, (a, b) => ({ events: [...a.events, ...b.events], ctx: a.ctx }))
-    .then(async (clip) => {
-      if (!clip) return null;
-      const { events, ctx } = clip.meta;
-      const m: LoggedMoment = {
-        id: `${ctx.when}-${Math.random().toString(36).slice(2, 8)}`,
-        created: ctx.when,
-        title: momentTitle(events, ctx),
-        description: momentDescription(events, ctx),
-        tags: momentTags(events, ctx),
-        events,
-        system: ctx.system,
-        seconds: clip.seconds,
-        video: clip.video,
-        poster: clip.poster,
-        saved: false,
-      };
-      return (await addMoment(m)) ? m : null;
-    });
+  return { callsign: c.name, system: sys.name, galaxy: sys.galaxy + 1, government: GOVERNMENTS[sys.government], rank: combatRating(c.kills), when: Date.now() };
+}
+
+/** Write a clip or photo into the flight log. Resolves with the logged moment, or null if there was no room. */
+async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 'video' | 'photo' | 'poster' | 'seconds'>): Promise<LoggedMoment | null> {
+  const m: LoggedMoment = {
+    id: `${ctx.when}-${Math.random().toString(36).slice(2, 8)}`,
+    created: ctx.when,
+    title: momentTitle(events, ctx),
+    description: momentDescription(events, ctx),
+    tags: momentTags(events, ctx),
+    events,
+    system: ctx.system,
+    ...media,
+    saved: false,
+  };
+  if (await addMoment(m)) return m;
+  flash('Flight log full · delete or unkeep something in the station tab', 3);
+  return null;
+}
+
+// Moments that land together share one clip: each clip is logged once, whoever asked for it.
+const logged = new WeakMap<Clip<MomentMeta>, Promise<LoggedMoment | null>>();
+const sameEvents = (a: MomentMeta, b: MomentMeta): MomentMeta => ({ events: [...a.events, ...b.events.filter((e) => !a.events.includes(e))], ctx: a.ctx });
+
+/** Keep the seconds around now in the flight log. Resolves with the logged moment (or null: no recorder, or nothing to keep). */
+function keepMoment(event: MomentEvent, before: number, after: number, events: MomentEvent[] = [event]): Promise<LoggedMoment | null> {
+  const ctx = momentContext();
+  if (!ctx) return Promise.resolve(null);
+  return recorder.keep({ events, ctx }, before, after, sameEvents).then((clip) => {
+    if (!clip) return null;
+    let m = logged.get(clip);
+    if (!m) {
+      m = logMoment(clip.meta, { video: clip.video, poster: clip.poster, seconds: clip.seconds });
+      logged.set(clip, m);
+      void m.then((x) => x && introduceRecorder(x));
+    }
+    return m;
+  });
+}
+
+// A fight is one clip, not one per kill: each kill (and a death) within
+// FIGHT_GAP seconds of the last re-cuts the fight's clip from its start, up to
+// a minute, and the earlier cut is replaced.
+const FIGHT_GAP = 25;
+const FIGHT_MAX = 60;
+let combatClip: { start: number; last: number; events: MomentEvent[]; moment: Promise<LoggedMoment | null> } | null = null;
+
+function keepCombat(event: MomentEvent, before: number, after: number): Promise<LoggedMoment | null> {
+  const t = recorder.time;
+  if (!combatClip || t - combatClip.last > FIGHT_GAP || t + after - combatClip.start > FIGHT_MAX) combatClip = { start: t - before, last: t, events: [], moment: Promise.resolve(null) };
+  const f = combatClip;
+  f.events.push(event);
+  f.last = t;
+  const earlier = f.moment;
+  f.moment = keepMoment(event, Math.max(before, t - f.start), after, [...f.events]);
+  void Promise.all([earlier, f.moment]).then(async ([old, now]) => {
+    if (old && now && old.id !== now.id) {
+      await deleteMoment(old.id);
+      if (state === 'docked') refreshFlightLog();
+    }
+  });
+  return f.moment;
+}
+
+// The first time a moment is kept, say what the flight recorder is; the
+// flight log asks once whether to keep it on.
+const RECORDER_INTRO_KEY = 'witchspace-recorder-intro';
+const RECORDER_INTRO = "Your ship's flight recorder keeps your last moments. Only the view is recorded, and it stays on this device unless you share it. You can turn it off in the station tab.";
+const recorderIntroduced = () => {
+  try {
+    return localStorage.getItem(RECORDER_INTRO_KEY) === 'done';
+  } catch {
+    return true;
+  }
+};
+let introFlashed = false;
+function introduceRecorder(m: LoggedMoment) {
+  if (introFlashed || recorderIntroduced() || state !== 'flying' || m.events.some((e) => e.kind === 'death')) return;
+  introFlashed = true;
+  setTimeout(() => flash('Flight recorder kept that · watch it in the flight log when you dock · Shift+P keeps any moment', 5), 2600);
 }
 
 function refreshFlightLog() {
   void renderFlightLog({
-    available: recorder.available,
+    available: recorder.available && !classicRules(),
+    unavailable: classicRules() ? 'Classic rules, as in 1984: no flight recorder.' : "This browser can't record video, so there's no flight recorder here.",
     enabled: recorderOn(),
-    onToggle: () => {
+    intro: !recorderIntroduced(),
+    onToggle: (on = !recorderOn()) => {
       try {
-        localStorage.setItem(RECORDER_KEY, recorderOn() ? 'off' : 'on');
+        localStorage.setItem(RECORDER_KEY, on ? 'on' : 'off');
+        localStorage.setItem(RECORDER_INTRO_KEY, 'done');
       } catch {
         /* storage blocked: stays as it is */
       }
@@ -6281,6 +6353,7 @@ void recorder.ready.then(() => state === 'docked' && refreshFlightLog());
 /** Shift+P, or holding the camera button: keep the last 30 seconds yourself. */
 function keepByHand() {
   if (state !== 'flying') return;
+  if (classicRules()) return flash('Classic rules: no flight recorder', 2);
   if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the station tab' : "This browser can't record video", 2.5);
   flash('Flight recorder · last 30 seconds kept', 2);
   sfx.shutter();

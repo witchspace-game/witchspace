@@ -1,7 +1,7 @@
 // The flight log in the station tab, and the replay player (the death replay
-// too): watch, share, keep or delete what the flight recorder kept.
+// too): watch, share, keep or delete the clips and photos the ship kept.
 
-import { deleteMoment, listMoments, MAX, setSaved, type LoggedMoment } from '../game/flightLog';
+import { BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
 import { escapeHtml } from './escape';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -12,11 +12,14 @@ const url = (b: Blob) => {
   return u;
 };
 
-const fileName = (m: LoggedMoment) => `witchspace-${m.system.toLowerCase()}-${new Date(m.created).toISOString().slice(0, 16).replace(/[-:T]/g, '')}.mp4`;
+const media = (m: LoggedMoment) => (m.video ?? m.photo)!;
+const extension = (b: Blob) => ({ 'video/mp4': 'mp4', 'image/png': 'png' })[b.type] ?? 'jpg';
+const fileName = (m: LoggedMoment) => `witchspace-${m.system.toLowerCase()}-${new Date(m.created).toISOString().slice(0, 16).replace(/[-:T]/g, '')}.${extension(media(m))}`;
+const megabytes = (bytes: number) => `${Math.max(1, Math.round(bytes / 1048576))} MB`;
 
-/** Share a moment's clip: the share sheet where there is one (phones), otherwise download it. */
+/** Share a moment: the share sheet where there is one (phones), otherwise download it. */
 export async function shareMoment(m: LoggedMoment): Promise<string> {
-  const file = new File([m.video], fileName(m), { type: 'video/mp4' });
+  const file = new File([media(m)], fileName(m), { type: media(m).type });
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: m.title, text: `${m.title} · Witchspace, free in your browser: https://witchspace.org.uk/play` });
@@ -26,19 +29,19 @@ export async function shareMoment(m: LoggedMoment): Promise<string> {
     }
   }
   const a = document.createElement('a');
-  a.href = url(m.video);
+  a.href = url(media(m));
   a.download = fileName(m);
   a.click();
   return 'Saved to your downloads';
 }
 
-/** The replay player over everything: the death replay, or a moment from the log. */
-export function openReplay(m: LoggedMoment, heading: string, onChange?: () => void) {
+/** The replay player over everything: the death replay, or a moment from the log. `note` replaces the line under it. */
+export function openReplay(m: LoggedMoment, heading: string, onChange?: () => void, note = 'Only the view is recorded. It stays on this device unless you share it.') {
   const box = $('#replay');
   const kept = () => (m.saved ? 'Kept' : 'Keep');
   box.innerHTML = `<div class="replay-card" role="dialog" aria-modal="true" aria-label="${escapeHtml(heading)}">
     <p class="replay-heading">${escapeHtml(heading)}</p>
-    <video src="${url(m.video)}" ${m.poster ? `poster="${url(m.poster)}"` : ''} controls autoplay playsinline muted></video>
+    ${m.video ? `<video src="${url(m.video)}" ${m.poster ? `poster="${url(m.poster)}"` : ''} controls autoplay playsinline muted></video>` : `<img src="${url(media(m))}" alt="${escapeHtml(m.title)}" />`}
     <h3>${escapeHtml(m.title)}</h3>
     <p class="replay-meta">${m.events.map((e) => escapeHtml(e.text)).join(' · ')}</p>
     <div class="replay-actions">
@@ -46,7 +49,7 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
       <button type="button" data-act="keep" aria-pressed="${m.saved}">${kept()}</button>
       <button type="button" data-act="close">Close</button>
     </div>
-    <p class="replay-note">Only the view is recorded. It stays on this device unless you share it.</p>
+    <p class="replay-note">${escapeHtml(note)}</p>
   </div>`;
   box.hidden = false;
   const close = () => {
@@ -75,34 +78,51 @@ export function closeReplay() {
 }
 
 /** The flight log, in the station tab. */
-export async function renderFlightLog(opts: { available: boolean; enabled: boolean; onToggle: () => void }) {
+export async function renderFlightLog(opts: { available: boolean; unavailable: string; enabled: boolean; intro: boolean; onToggle: (on?: boolean) => void }) {
   const el = $('#flight-log');
   while (urls.length) URL.revokeObjectURL(urls.pop()!);
-  if (!opts.available) {
-    el.innerHTML = `<p class="meta">This browser can't record video, so there's no flight recorder here. Photos (P) still work.</p>`;
-    return;
-  }
   const moments = await listMoments();
-  const toggle = `<button type="button" class="log-toggle" aria-pressed="${opts.enabled}">Flight recorder: ${opts.enabled ? 'on' : 'off'}</button>`;
-  if (!moments.length) {
-    el.innerHTML = `<p class="meta">${opts.enabled ? 'Your ship keeps the last 30 seconds of flight. Kills, Legends, the Marshals, discoveries and your last moments are kept here by themselves; press Shift+P (or hold the camera button) to keep one yourself.' : 'The flight recorder is off.'} ${toggle}</p>`;
-  } else {
-    el.innerHTML = `<p class="meta">${moments.length} of ${MAX} · kept on this device · the oldest unkept moment makes room for new ones. ${toggle}</p>
+  const toggle = opts.available ? `<button type="button" class="log-toggle" aria-pressed="${opts.enabled}">Flight recorder: ${opts.enabled ? 'on' : 'off'}</button>` : '';
+  const how = 'Your ship keeps the last minute of flight in memory and saves only the moments worth keeping: a fight, a Legend, the Marshals, a discovery and your last moments. Shift+P (or holding the camera button) keeps the last 30 seconds yourself; P takes a photo.';
+  let head: string;
+  if (!opts.available) head = `<p class="meta">${escapeHtml(opts.unavailable)} Photos (P) still come here.</p>`;
+  else if (opts.intro)
+    head = `<div class="log-intro"><p><strong>Your flight recorder</strong> ${how} Everything stays on this device (up to ${megabytes(BUDGET)}) unless you share it, and what you don't Keep clears after a week.</p>
+      <p class="log-intro-actions"><button type="button" class="primary" data-intro="on">Keep it on</button><button type="button" data-intro="off">Turn it off</button></p></div>`;
+  else if (!moments.length) head = `<p class="meta">${opts.enabled ? how : 'The flight recorder is off. Photos (P) still come here.'} ${toggle}</p>`;
+  else head = '';
+  if (moments.length) {
+    const used = moments.reduce((n, m) => n + momentBytes(m), 0);
+    const unkept = moments.some((m) => !m.saved);
+    head += `<p class="meta">${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} · ${megabytes(used)} of ${megabytes(BUDGET)} on this device · what you don't Keep clears after a week. ${opts.intro ? '' : toggle} ${unkept ? '<button type="button" class="log-clear">Clear unkept</button>' : ''}</p>
       <ul class="log-list">${moments
         .map(
           (m) => `<li data-id="${m.id}">
-          <button type="button" class="log-play" aria-label="Watch ${escapeHtml(m.title)}">${m.poster ? `<img src="${url(m.poster)}" alt="" />` : ''}<span>${Math.round(m.seconds)} s</span></button>
+          <button type="button" class="log-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${url(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s` : 'Photo'}</span></button>
           <div><strong>${escapeHtml(m.title.replace(/^CMDR [^:]+: /, ''))}</strong><small>${escapeHtml(m.events.map((e) => e.text).join(' · '))}</small>
           <span class="log-actions"><button type="button" data-act="share">Share</button><button type="button" data-act="keep" aria-pressed="${m.saved}">${m.saved ? 'Kept' : 'Keep'}</button><button type="button" data-act="delete">Delete</button></span></div>
         </li>`,
         )
         .join('')}</ul>`;
   }
-  el.querySelector<HTMLButtonElement>('.log-toggle')!.onclick = opts.onToggle;
+  el.innerHTML = head;
+  el.querySelector<HTMLButtonElement>('.log-toggle')?.addEventListener('click', () => opts.onToggle());
+  for (const b of el.querySelectorAll<HTMLButtonElement>('[data-intro]')) b.onclick = () => opts.onToggle(b.dataset.intro === 'on');
+  const clear = el.querySelector<HTMLButtonElement>('.log-clear');
+  if (clear)
+    clear.onclick = async () => {
+      if (!clear.dataset.armed) {
+        clear.dataset.armed = '1';
+        clear.textContent = 'Clear every unkept moment?';
+        return;
+      }
+      await clearUnkept();
+      void renderFlightLog(opts);
+    };
   for (const li of el.querySelectorAll<HTMLLIElement>('li[data-id]')) {
     const m = moments.find((x) => x.id === li.dataset.id)!;
     const refresh = () => void renderFlightLog(opts);
-    li.querySelector<HTMLButtonElement>('.log-play')!.onclick = () => openReplay(m, 'From the flight log', refresh);
+    li.querySelector<HTMLButtonElement>('.log-play')!.onclick = () => openReplay(m, 'From the flight log', refresh, m.photo ? 'Taken with your ship camera. It stays on this device unless you share it.' : undefined);
     li.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = async (e) => {
       (e.target as HTMLButtonElement).textContent = await shareMoment(m);
     };
