@@ -114,9 +114,24 @@ A module is a good one when:
 - **It's one shape with one job,** recognisable at scanner range, in glowing line: a few dozen lines, never more than 256 vertices. [Elegance over detail](../../CONTRIBUTING.md).
 - **It says which zone it belongs to,** so the game can place it in a line-up: **intake** (at the prow), **industry** (behind the intake), **logistics** (holds and docks), **crew** (in the middle, away from heat and the reactor), **add-on** (towards the stern, at arm's length from the crew), **power** (the stern).
 - **It has a sentence** saying what it does, in Wexley-Yorozu's catalogue voice.
+- **It names its designer:** the commander who gets paid when it's built (below).
 - **It makes sense:** it's where its neighbours need it, and anything dangerous faces away from the crew.
 
 How it will work once modules are content files (stage 2): you write a module file, `npm run validate` checks it against the standard, the MCP server can check and draw it from a conversation, and accepted modules appear in yards, credited to whoever designed them.
+
+### Paid on commission *(Mark, 25 October 2026)*
+
+Wexley-Yorozu pays for good ideas, in credits, and only once they're built. When an accepted module is first fitted at a yard in the live game, the designer's commander is paid:
+
+- **A commission fee** of 5,000 Cr, once, on the day it's first fitted. About what an explorer's finder's fee pays ([discovery to development](discovery-to-development.md)): a good day's work, not a fortune.
+- **A royalty** of 50 Cr each time a yard fits it into a line-up afterwards. A trickle, not an income, so a popular module can't break the economy.
+- **Their name in the catalogue.** The module's entry reads *Designed by CMDR X*, on the ship page and in the yard news when it's fitted: *"Wexley-Yorozu fits CMDR X's new hold at Lave."*
+
+And the company being the company, the standard design agreement has a clause of its own: *"All designs submitted become the property of Wexley-Yorozu in perpetuity, across all systems known and unknown. The company thanks you for your contribution."* You're paid; they own your idea forever.
+
+Two guards keep it fair. **Only accepted modules are paid:** review stays with the maintainers, so submitting modules earns nothing until one is built. And **the pay goes to a named commander:** the module file carries its designer's commander name, and the fee waits until that commander next docks.
+
+The pay is in credits, in the game. Nobody is paid real money for a module: the real-world reward is the credit on the page, in the repo, and your module flying in everyone's game.
 
 ## 3. Modules sent where they're needed
 
@@ -174,4 +189,5 @@ None: Classic has no yards and no Titanoboa, as 1984 had none.
 - Is there ever a second company's Titanoboa, or is modular construction Wexley-Yorozu's alone?
 - Which modules can a station keep, and does a kept module change what the station's market buys and sells (a science pod wants medical supplies and pays for specimens)?
 - Can a pod reach the planet, and what happens to a world when one does? (Rare, lasting, and the system's news for a long time.)
+- Are 5,000 Cr and 50 Cr a fitting the right pay once the economy is tuned, and should a module that's kept by a station pay its designer too?
 - Should a science module carry the Science Division's own colour as a stripe or insignia, or stay construction yellow like the rest?
