@@ -53,7 +53,7 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 | **Furnace** | 300 m | A crucible: six-sided, swelling to 480 m across and narrowing again | Smelting and refining, and where the exotic materials are made. The hottest thing on her. |
 | **Fabricator** | 520 m | An open cradle: the spine, two rails above and below, a gantry at each end | Where station sections are made. Open at the sides, so sections slide out. You can see through it. |
 | **Habitat** | 160 m | A six-sided wheel, 680 m across, on three spokes, turning for gravity | Quarters for a few thousand workers. Carries the company insignia. |
-| **Science** (add-on) | 220 m | A sealed pod on a 300 m mast, held out from the spine; the pod is a separate solid on a clamp, so it can go | Research on whatever explorers found living in the system, kept at arm's length, and ejected if containment fails. |
+| **Science** (add-on) | 220 m | One to three sealed pods, each on a 300 m mast at the habitat spokes' angles; each pod sits on a clamp, so it can be ejected and replaced | Research on whatever explorers found living in the system: one find to a pod, kept at arm's length from the crew and from each other. |
 | **Reactor** | 300 m | A compact eight-sided core behind a broad shadow shield, with four flat radiator vanes in an X, 880 m tip to tip | Power for the whole ship. The one you don't want to go wrong. |
 | **Drive** (stern only) | 300 m | A tapering block and three flared bells | She never hurries. |
 
@@ -96,6 +96,12 @@ That's an event worth flying to, with sides to pick:
 - **Pirates** have heard what exotic specimens fetch.
 
 It runs on a clock: the pod's drift towards the planet, shown on the scanner and in the news. Whatever happens is the system's story afterwards: a recovered pod and a grateful Science Division, a burnt streak in the upper atmosphere, or something that arrived. *(What arriving means is for the exploration and worlds designs to decide; it should be rare, and it should matter.)*
+
+### Adding and replacing pods *(Mark, 25 October 2026)*
+
+A pod is a part like any other: it clamps onto a mast. So a science module grows as the finds do. **One find to a pod**, because nobody keeps two unknowns together: a second discovery in the system means a second pod, brought out by a Bullsnake team and clamped onto the next mast, up to three. The masts stand at the habitat spokes' angles, so the whole factory shares one geometry.
+
+After an ejection, the mast stands **bare** until a replacement arrives, and anyone flying past can see that something went wrong here. A new pod coming in is a delivery commanders can be paid to escort (what's in it this time?).
 
 ## 4. Sections swapped in the yard
 
