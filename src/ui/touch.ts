@@ -138,7 +138,7 @@ export function initTouch() {
   pad.addEventListener('pointercancel', endAim);
 
   // The drawer: tap the tab (or swipe in from it) to open; it closes after any
-  // button in it, or another tap. Nothing opens or closes it on its own.
+  // button in it, another tap on the tab, or a tap anywhere outside it.
   const drawer = root.querySelector<HTMLElement>('.touch-drawer')!;
   const tab = drawer.querySelector<HTMLElement>('.drawer-tab')!;
   const setOpen = (open: boolean) => {
@@ -159,6 +159,7 @@ export function initTouch() {
     if ((e.target as HTMLElement).closest('button')) setTimeout(() => setOpen(false), 120);
   });
   closeDrawer = () => setOpen(false);
+  document.addEventListener('pointerdown', (e) => drawer.classList.contains('open') && !drawer.contains(e.target as Node) && setOpen(false), true);
 
   const tilt = root.querySelector<HTMLElement>('.tilt')!;
   tilt.addEventListener('click', () => void toggleTilt(tilt));
