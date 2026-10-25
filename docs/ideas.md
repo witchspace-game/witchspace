@@ -59,6 +59,7 @@ A parking spot for good ideas that aren't designed yet. When one is picked up, i
 - **In-world channels: the companies' own broadcasts.** Wexley-Yorozu's corporate films ("Building tomorrow's stations, today": smiling, glossy, a little sinister), Co-operative Marshals public information films, and leaked footage from Solo & Sons. Start as series on @witchspacegame, in each company's voice, before any gets a channel of its own. (Mark, 24 October 2026)
 - **A Witchspace YouTube channel** of Shorts from commanders' flight recorders, put forward by any commander and edited and published by an AI agent (with a person approving at first). *See design/flight-recorder.md, section 5.* (Mark, 24 October 2026)
 - **The kill cam.** Watch how you died from outside: the ship logs every ship's position and every shot (a few hundred KB a minute), and the game rebuilds the fight from any angle, labelled as a reconstruction. *Designed: see design/kill-cam.md.* (Mark, 25 October 2026)
+- **The ejected science pod.** A Titanoboa's science module can eject its containment pod if something goes wrong; it drifts towards the planet on a clock, and commanders choose: recover it for the Science Division, destroy it for the colony, return it quietly to Wexley-Yorozu, or sell what's inside. *See design/ship-the-titanoboa.md.* (Mark, 25 October 2026)
 - **Witchspace MCP server.** Tools for AI assistants to validate, preview and balance-check content. *Designed: see design/mcp-server.md.*
 - **In-browser ship editor.** Design a ship visually and export a valid ship file.
 

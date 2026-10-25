@@ -214,22 +214,22 @@ Named for *Titanoboa*, the largest snake that ever lived. *(Original class.)*
 
 **Nobody tows a station across the stars.** A Coriolis is millions of tonnes; hauling that between systems would cost more than building it. Wexley-Yorozu does what any sensible builder does: it brings the factory, and makes the station from what's already there.
 
-**The Titanoboa is the factory.** A constructor ship kilometres long: smelters, refineries, fabricators, a reactor, and quarters for a few thousand workers. It arrives through a rift, parks in orbit for the months of the build, and leaves the same way when the station opens.
+**The Titanoboa is the factory.** A constructor ship kilometres long: smelters, refineries, fabricators, a reactor, and quarters for a few thousand workers. It arrives in pieces: Bullsnake teams bring its modules through a rift and it's assembled in orbit for the months of the build, then taken apart again when the station opens, its modules going on to the next job. *(Modular since October 2026: see [the Titanoboa design](design/ship-the-titanoboa.md).)*
 
 **How a station gets built:**
 
 1. **Survey.** Survey ships (and explorers' data, bought by the Science Division) pick the site: a stable orbit near a **moon or an asteroid field**, because that's where the raw material is, and lifting ore off a small moon costs almost nothing.
-2. **The constructor arrives.** The Titanoboa takes up station near the moon. Mining drones and Bullsnakes start running ore up from the surface.
+2. **The constructor is assembled.** Tug teams bring the Titanoboa's modules through a rift and couple them in orbit near the moon, the maw facing it. Mining drones and Bullsnakes start running ore up from the surface.
 3. **Refining.** Ore goes in one end of the Titanoboa; structural alloy, plate and cable come out of the other. The bulk of the station is made here, from the moon.
 4. **What can't be made locally comes by trade.** Electronics, computers, machinery, life support, medicine, food for the workers, and the workers themselves. That's the work for traders and haulers, and why a yard pays well.
 5. **The spine.** The docking axis goes up first: it's the station's backbone and its spin axis.
 6. **The frame.** The truss shell grows around the spine, the familiar Coriolis shape in outline.
 7. **Plating and pressure.** Panels go on, sections are sealed and pressurised one by one, and the first berths open.
-8. **Spin-up.** The finished station is spun up, slowly, over days, until its rim gives a comfortable gravity. Traffic control comes online, the market opens, and the Titanoboa leaves.
+8. **Spin-up.** The finished station is spun up, slowly, over days, until its rim gives a comfortable gravity. Traffic control comes online, the market opens, and the Titanoboa comes apart, module by module, perhaps leaving one behind on the new station.
 
 **What you see at a yard:** the Titanoboa in orbit by a moon, a stream of ore haulers between them, the station in whatever stage it's reached (a bare spine, a skeleton, half-plated, spinning up), and a corporate fleet around it all: Bullsnakes, tenders, survey ships, and a security wing that doesn't like visitors.
 
-**Moving a station** happens almost never, and it's an event when it does. The station is de-spun, and the Titanoboa docks rigidly through the slot, which sits right on the station's axis and centre of mass. It pushes rather than pulls (cables can't push, and a towed station would swing like a wrecking ball every time the tug changed speed), and makes short, slow jumps.
+**Moving a station** happens almost never, and it's an event when it does. The station is de-spun, a Titanoboa is assembled with a drive module fitted (the only time it carries one), and it docks rigidly through the slot, which sits right on the station's axis and centre of mass. It pushes rather than pulls (cables can't push, and a towed station would swing like a wrecking ball every time the tug changed speed), and makes short, slow jumps.
 
 - **Concept prompt (the yard):**
   > Wireframe space scene: a colossal constructor ship kilometres long, with an armoured spine, open refinery bays and glowing smelters, parked in orbit beside a small grey moon; a stream of small ore haulers running between the moon and the ship; beside it a half-built Coriolis space station, its central spine complete, the truss frame partly built and partly plated, work lights and welding sparks along the frame. Off-white hulls with construction-yellow markings, vast scale, vector-display style.
