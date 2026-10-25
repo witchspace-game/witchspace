@@ -175,18 +175,20 @@ function layoutForScreen() {
 }
 
 /**
- * On a touch screen in landscape the dashboard sits at the top, between the
- * flight buttons on the left and the readouts on the right: size it to fit
- * that gap, so nothing covers the scanner on any phone.
+ * On a touch screen in landscape the dashboard sits at the bottom, between
+ * your thumbs: the speed slider and fire button on the right, and the aim
+ * pad's corner on the left. Size it to fit that gap, so nothing covers the
+ * scanner on any phone.
  */
 function fitDashboard() {
   const dash = document.querySelector<HTMLElement>('.dash');
-  const actions = document.querySelector<HTMLElement>('#touch .touch-actions');
+  const fly = document.querySelector<HTMLElement>('#touch .touch-fly');
   if (!dash || !document.body.classList.contains('touch')) return;
   const natural = dash.offsetWidth; // unscaled: transforms don't change offsetWidth
   if (!natural) return;
   const landscape = innerHeight < 500;
-  const left = landscape && actions ? actions.getBoundingClientRect().right + 10 : 10;
+  const AIM_LABEL = 190; // "Drag to aim", bottom left
+  const left = landscape && fly ? Math.max(AIM_LABEL, innerWidth - fly.getBoundingClientRect().left + 10) : 10;
   const room = innerWidth - 2 * left; // centred, so the same margin both sides
   const most = landscape ? 0.62 : 0.72;
   document.documentElement.style.setProperty('--dash-scale', String(Math.max(0.4, Math.min(most, room / natural))));
