@@ -151,7 +151,7 @@ for (const name of readdirSync(join(root, 'site/pages'))) {
     .replace('<!-- roadmap:compact -->', roadmapCompactHtml(docs))
     .replace('<!-- help:skills -->', helpSkillsHtml(docs))
     // {{media:<id>:large}} and the like: a press item's link at a given size.
-    .replace(/\{\{media:([\w-]+):(large|og|direct|video)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct' | 'video') => links(media, media.items.find((i) => i.id === id)!)[size]!);
+    .replace(/\{\{media:([\w-]+):(large|og|direct|video|embed)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct' | 'video' | 'embed') => links(media, media.items.find((i) => i.id === id)!)[size]!);
   write({ ...meta, content });
 }
 

@@ -108,6 +108,14 @@ const BUILD: Shot[] = [
 ];
 
 // music: seconds into the recording to start from (66 is where the waltz proper begins).
+/**
+ * A film cut upright for Shorts, Reels and stories: the same shots, cropped to
+ * the middle of the picture (or where `focus` says the action is). Stills that
+ * were framed wide are left out.
+ */
+const upright = (shots: Shot[], focus: Record<string, [number, number]> = {}): Shot[] =>
+  shots.filter((s) => !s.still && !s.phones).map((s) => (s.clip && focus[s.clip] ? { ...s, focus: focus[s.clip] } : s));
+
 const CUTS = {
   trailer: { shots: TRAILER, w: 1920, h: 1080, music: 66 },
   social: { shots: SOCIAL, w: 1920, h: 1080, music: 66 },
@@ -117,6 +125,12 @@ const CUTS = {
   fight: { shots: FIGHT, w: 1920, h: 1080, music: 200 },
   bastion: { shots: BASTION, w: 1920, h: 1080, music: 0 },
   build: { shots: BUILD, w: 1920, h: 1080, music: 260 },
+  // Shorts.
+  'docking-short': { shots: upright(DOCK), w: 1080, h: 1920, music: 66 },
+  'falcon-short': { shots: upright(FALCON, { 'clip-falcon-dark': [0.64, 0.5], 'clip-falcon': [0.4, 0.5] }), w: 1080, h: 1920, music: 150 },
+  'fight-short': { shots: upright(FIGHT), w: 1080, h: 1920, music: 200 },
+  'bastion-short': { shots: upright(BASTION, { 'clip-bastion': [0.42, 0.5] }), w: 1080, h: 1920, music: 0 },
+  'build-short': { shots: upright(BUILD, { 'clip-yard': [0.35, 0.5] }), w: 1080, h: 1920, music: 260 },
 };
 
 const params = new URLSearchParams(location.search);
@@ -173,6 +187,21 @@ function cover(src: CanvasImageSource, sw: number, sh: number, zoom = 1, focus: 
   g.drawImage(src, x, y, dw, dh);
 }
 
+/** A caption: wrapped to the frame (upright frames are narrow), lines stacked upwards from the baseline y. */
+function caption(str: string, x: number, y: number, size: number, align: CanvasTextAlign) {
+  g.save();
+  g.font = `600 ${size}px 'Space Grotesk', sans-serif`;
+  const max = W - 2 * (portrait ? 70 : 110) * unit;
+  const lines: string[] = [];
+  for (const word of str.split(' ')) {
+    const last = lines[lines.length - 1];
+    if (last && g.measureText(`${last} ${word}`).width <= max) lines[lines.length - 1] = `${last} ${word}`;
+    else lines.push(word);
+  }
+  g.restore();
+  lines.forEach((line, i) => text(line, x, y - (lines.length - 1 - i) * size * 1.25, size, { weight: 600, align, glow: 'rgba(0,0,0,0.9)' }));
+}
+
 function text(str: string, x: number, y: number, size: number, opts: { font?: string; weight?: number; color?: string; align?: CanvasTextAlign; spacing?: number; glow?: string } = {}) {
   g.save();
   g.font = `${opts.weight ?? 600} ${size}px ${opts.font ?? "'Space Grotesk'"}, sans-serif`;
@@ -227,7 +256,7 @@ async function drawShot(shot: Shot, t: number) {
     const v = videos.get(CLIP(shot.clip))!;
     // The middle of the frame: ask for its exact start and rounding can hand back the one before (a stutter).
     await seek(v, (shot.from ?? 0) + t * (shot.speed ?? 1) + 0.5 / FPS);
-    cover(v, v.videoWidth, v.videoHeight, portrait ? 1.0 : 1);
+    cover(v, v.videoWidth, v.videoHeight, 1, shot.focus);
   } else if (shot.still) {
     const i = images.get(shot.still)!;
     const [a, b] = shot.zoom ?? [1, 1];
@@ -290,7 +319,7 @@ async function drawShot(shot: Shot, t: number) {
     if (a > 0) {
       g.save();
       g.globalAlpha = a;
-      text(shot.caption, left, portrait ? H * 0.86 : H - 140 * unit, (portrait ? 54 : 58) * unit, { weight: 600, align, glow: 'rgba(0,0,0,0.9)' });
+      caption(shot.caption, left, portrait ? H * 0.86 : H - 140 * unit, (portrait ? 54 : 58) * unit, align);
       g.restore();
     }
   }
@@ -299,7 +328,7 @@ async function drawShot(shot: Shot, t: number) {
     if (a <= 0) continue;
     g.save();
     g.globalAlpha = a;
-    text(line, left, portrait ? H * 0.86 : H - 140 * unit, (portrait ? 54 : 58) * unit, { weight: 600, align, glow: 'rgba(0,0,0,0.9)' });
+    caption(line, left, portrait ? H * 0.86 : H - 140 * unit, (portrait ? 54 : 58) * unit, align);
     g.restore();
   }
   if (shot.card === 'title') {
@@ -370,7 +399,10 @@ async function render() {
   }
 
   const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => console.error(e) });
-  venc.configure({ codec: 'avc1.640033', width: W, height: H, bitrate: 7e6, framerate: FPS });
+  // ?maxmb=9.5 fits the file under a size (some upload paths cap at 10 MB): the video gets what the audio leaves.
+  const maxMb = Number(params.get('maxmb'));
+  const bitrate = maxMb ? Math.floor((maxMb * 8e6 * 0.96) / total - 192000) : 7e6;
+  venc.configure({ codec: 'avc1.640033', width: W, height: H, bitrate, framerate: FPS });
   const layer = new OffscreenCanvas(W, H);
   const lg = layer.getContext('2d')!;
   const frames = Math.round(total * FPS);

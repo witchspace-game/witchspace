@@ -112,6 +112,8 @@
         <p class="fuel-row" id="data-row" hidden></p>
         <h3>Equip ship</h3>
         <ul id="equip"></ul>
+        <h3>Flight log</h3>
+        <div id="flight-log"></div>
       </div>
       <div id="tab-contracts" role="tabpanel" hidden>
         <p class="meta">Company work: they supply the cargo, you carry it there within so many jumps, and they pay on delivery.</p>
@@ -164,6 +166,8 @@
     <p id="mouse-prompt" hidden>Click to fly with the mouse</p>
     <p class="keys" id="keys-hint" data-screen="flying"></p>
     <div id="photo-flash" aria-hidden="true"></div>
+    <!-- The flight recorder's replays: the death replay, or a moment from the flight log. -->
+    <div id="replay" hidden></div>
     <section id="controls-card" class="panel" hidden>
       <h2>Controls</h2>
       <p class="meta" id="controls-scheme"></p>
@@ -224,7 +228,7 @@
         </div>
       </div>
       <!-- P: a photo of the view, without the HUD, straight to the share sheet. Always to hand, for the moment it happens. -->
-      <button data-key="KeyP" class="photo-button" title="Take a photo of the view (P)" aria-label="Take a photo of the view"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg></button>
+      <button type="button" id="photo-button" class="photo-button" title="Tap for a photo of the view (P) · hold to keep the last 30 seconds (Shift+P)" aria-label="Take a photo of the view; hold to keep the last 30 seconds"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg></button>
       <!-- The obvious next step, out of the drawer by itself: Dock, Survey, Hyper or Jump. -->
       <div class="touch-context"><button data-key="KeyJ" class="context-button">Jump</button></div>
       <div class="touch-fly">

@@ -1,15 +1,16 @@
 ---
 title: The flight recorder
-status: proposed
+status: building
 pillar: core
 summary: Every ship's black box keeps the last 30 seconds, and sharing what you saw is part of the game. Watch how you died, keep the great moments, share them to your socials with a link back, use footage as evidence or sell it to the news, and post the best to the station board.
 card: cobra-mk3
 stages:
   - Photos one tap away on touch screens (P) | built
-  - The recorder, the death replay and the flight log, with sharing to socials | proposed
+  - The recorder, the death replay and the flight log, with sharing to socials | built
   - Footage as evidence, and sold to the news | proposed
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
+  - The library: one central store for commanders' moments and their data | idea
   - The Witchspace channel: commanders' Shorts on YouTube, edited by an AI agent | idea
 help:
   - Write the newsroom's voice: what it says when it buys your footage of the Falcon | writing
@@ -20,7 +21,7 @@ help:
 
 # Design: the flight recorder
 
-*Design, 24 October 2026. Proposed. Modern rules; Classic keeps 1984's single life and no replays.*
+*Design, 24 October 2026. The recorder, the death replay and the flight log are built; the rest proposed. Modern rules; Classic keeps 1984's single life and no replays.*
 
 ## Why
 
@@ -52,7 +53,9 @@ Sharing works everywhere a commander can see a photo or a kept moment: the camer
 - **A link that sells the game.** Shared from an account, a moment gets its own page on the site (as press kit items do): the clip playing, your callsign, the system, what happened ("Jameson vs a pirate pack at Riedquat"), a Play free button, and a branded preview card so it unfurls properly on every platform.
 - **Vertical too.** Clips are offered upright for stories and reels as well as wide, cropped to the action.
 
-## 2. The recorder, the death replay and the flight log
+## 2. The recorder, the death replay and the flight log *(built)*
+
+*Built, 24 October 2026: `src/game/recorder.ts` (WebCodecs H.264, 720p, 30 fps, a rolling 30 s in memory, cut at keyframes), `src/game/moments.ts` (titles, descriptions and tags written from the game's own events), `src/game/flightLog.ts` (IndexedDB, 20 moments) and `src/ui/flightLog.ts`. Moments kept by themselves: a kill, the Falcon's hull read, the Marshals coming through, a survey, your death. By hand: Shift+P, or hold the camera button. A switch in the station tab turns it off. Photos don't go into the log yet.*
 
 **The recorder.** While flying, the view is encoded at 720p, 30 fps, into a rolling buffer of the last 30 seconds in memory (a keyframe every second, so any second can start a clip). Nothing is written until something is kept. The encoder is WebCodecs, already used to make the trailer (`tools/trailer.ts`), with MP4 output; it needs Chrome, Edge or Safari 16.4 and later. Where it isn't available, the recorder quietly isn't there and photos still work.
 
@@ -99,6 +102,26 @@ The galaxy has things almost nobody sees: the Falcon, other Legends, a wreck fro
 The social part. Signed in, **Post to the station board** puts a kept clip or photo in a public gallery, in the game (docked, a Board tab) and on the site, with your callsign, the system and when. Commanders can watch, react and share; the best of the week can lead the site's home page.
 
 Because it's other people's posts, it needs a report button, moderation and limits before it opens, and it follows the online-safety decisions in `launch/safety` (still to be made). That's why it comes last. Clips are only the game's own picture, which keeps the risk low, but captions and callsigns are still people's words.
+
+## The library: one place for every commander's moments *(Mark, 24 October 2026)*
+
+The station board, verified proof, the newsroom, the press kit and the channel all need the same thing underneath: **a central library** where commanders' kept moments go when they choose to send them.
+
+- **What's sent:** the clip or photo, and the recorder's data: system, time, ship, what was in view, who fired first, who died. The data is what makes a moment searchable ("every Falcon sighting this week"), verifiable (checked against the galaxy's seed and clock) and useful as evidence.
+- **Where:** files in Cloudflare R2 beside the Worker we already run; the data in the accounts store. Signed in only, with a size cap and a daily limit per commander.
+- **Who sees what:** sending makes a moment *available*, not public. It shows on the station board, the channel or the press kit only once approved for each, and the commander can withdraw it at any time.
+- **What it feeds:** the station board (section 4), the Sightings wall and verified proof, the newsroom's footage market, the channel's agent (section 5), the press kit's "from the commanders" gallery, and (later) the MCP server, so an assistant can find "the best Bastion arrivals this month".
+
+## The channel agent
+
+What happens to a moment a commander sends, once the library exists:
+
+1. **Words, from the game, not from the pictures.** `src/game/moments.ts` already writes each moment's title, description and tags from the recorder's events (*"CMDR Jameson: Took 2 pirates with me at Riedquat"*; who, where, the government, the rank, what was destroyed and for how much), so they're true by construction and never claim what the game can't know (a survey is "complete", never "first" unless the server says so).
+2. **The cut and the card.** The agent makes the upright Short from the clip (the trailer tooling's vertical cut, cropped to the action), adds the end card, and draws a thumbnail from the frame of the lead event, in the house style: one subject, three or four big words, the mark.
+3. **The queue.** Each draft (video, thumbnail, title, description, tags, playlist) waits for a person: approve, edit, or turn down, with a reason the commander sees. Turned down never means deleted: it stays in the commander's own log.
+4. **Publishing.** Approved Shorts go up through the YouTube Data API (`tools/youtube.ts`), a few a day within the quota, into the right playlist (Flight Recorder, Sightings, How I died), crediting the callsign and linking the moment's page on the site.
+5. **Limits.** Per commander per day; none from commanders under a ban; nothing with a caption until the station board's moderation is in place (callsigns and the game's own words only, until then).
+6. **Later: trust.** Commanders in good standing with verified moments may skip the queue, and the agent can pick a weekly round-up.
 
 ## 5. The Witchspace channel *(idea, Mark, 24 October 2026)*
 
