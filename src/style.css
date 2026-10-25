@@ -1441,7 +1441,7 @@ body.retro .ship-nav-name { font-size: 9px; }
 #ship-nav.flank { width: var(--w, calc(100vw - 24px)); justify-content: space-between; }
 #ship-nav.flank .ship-nav-name { display: none; }
 
-/* The flight recorder: replays (the death replay too) and the flight log in the station tab. */
+/* The flight recorder: replays (the death replay too) and the flight log tab. */
 #replay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top)) 12px; background: rgba(0, 4, 3, 0.82); backdrop-filter: blur(6px); }
 #replay[hidden] { display: none; }
 .replay-card { width: min(860px, 100%); max-height: 100%; overflow: auto; padding: 16px; border: 1px solid var(--edge); border-radius: 12px; background: rgba(0, 12, 8, 0.92); box-shadow: 0 0 40px rgba(61, 255, 176, 0.18); }
@@ -1467,3 +1467,20 @@ body.retro #replay { backdrop-filter: none; }
 .log-intro { padding: 12px 14px; border: 1px solid var(--accent); border-radius: 10px; background: rgba(61, 255, 176, 0.06); }
 .log-intro p { margin: 0 0 10px; }
 .log-intro-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 !important; }
+
+/* The kill cam: your death rebuilt from the track, over everything (docs/design/kill-cam.md). */
+body.killcam-open > :not(#neo):not(#retro):not(#killcam) { visibility: hidden !important; }
+#killcam { position: fixed; inset: 0; z-index: 70; cursor: grab; touch-action: none; }
+#killcam[hidden] { display: none; }
+#killcam:active { cursor: grabbing; }
+.killcam-head { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 16px; right: 16px; max-width: 560px; display: grid; gap: 4px; color: var(--dim); font-size: 14px; pointer-events: none; }
+.killcam-head strong { color: #ffd28a; letter-spacing: 0.24em; text-transform: uppercase; font-size: 13px; }
+.killcam-bar { position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(760px, calc(100% - 32px)); display: grid; gap: 8px; padding: 10px 12px; background: rgba(0, 8, 6, 0.72); border: 1px solid rgba(61, 255, 176, 0.25); border-radius: 10px; cursor: default; }
+.killcam-views, .killcam-time-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.killcam-views button.active { border-color: var(--neo, #3dffb0); color: var(--neo, #3dffb0); }
+.killcam-save { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-left: auto; }
+.killcam-saving { color: var(--dim); font-size: 13px; font-variant-numeric: tabular-nums; }
+.killcam-scrub { flex: 1 1 160px; min-width: 120px; accent-color: #3dffb0; }
+.killcam-time { min-width: 7.5em; color: var(--dim); font-size: 13px; font-variant-numeric: tabular-nums; }
+.killcam-label { position: absolute; left: 0; top: 0; padding: 2px 6px; font-size: 12px; white-space: nowrap; color: #d8e2f0; background: rgba(0, 6, 4, 0.55); border-radius: 4px; pointer-events: none; }
+.killcam-label.killer { color: #ff8da1; border: 1px solid rgba(255, 77, 109, 0.6); }

@@ -26,9 +26,11 @@ export interface LoggedMoment {
   poster: Blob | null;
   /** Marked Keep: never cleared to make room. */
   saved: boolean;
+  /** The kill cam's track (game/track.ts), gzipped: kept with a death, so the fight can be watched from outside. */
+  track?: Blob;
 }
 
-export const momentBytes = (m: LoggedMoment) => (m.video?.size ?? 0) + (m.photo?.size ?? 0) + (m.poster?.size ?? 0);
+export const momentBytes = (m: LoggedMoment) => (m.video?.size ?? 0) + (m.photo?.size ?? 0) + (m.poster?.size ?? 0) + (m.track?.size ?? 0);
 
 /** Which moments to clear, oldest unkept first, so `incoming` more bytes (and one more moment) fit; null if they can't. */
 export function makeRoom(all: LoggedMoment[], incoming: number, now: number): string[] | null {
@@ -99,6 +101,12 @@ export async function addMoment(m: LoggedMoment): Promise<boolean> {
 export async function setSaved(id: string, saved: boolean) {
   const m = await run<LoggedMoment | undefined>('readonly', (s) => s.get(id));
   if (m) await run('readwrite', (s) => s.put({ ...m, saved }));
+}
+
+/** Keep the kill cam's track with a moment (a death, once the explosion has played out). */
+export async function attachTrack(id: string, track: Blob) {
+  const m = await run<LoggedMoment | undefined>('readonly', (s) => s.get(id));
+  if (m) await run('readwrite', (s) => s.put({ ...m, track }));
 }
 
 export async function deleteMoment(id: string) {

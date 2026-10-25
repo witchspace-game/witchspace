@@ -7,10 +7,11 @@ card: cobra-mk3
 stages:
   - Photos one tap away on touch screens (P) | built
   - The recorder, the death replay and the flight log, with sharing to socials | built
+  - The claim - submit your recorder to the insurers; featured clips paid, and on the news when they take off | proposed
   - Footage as evidence, and sold to the news | proposed
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
-  - The kill cam - watch how you died from outside, rebuilt from the fight's data (design/kill-cam.md) | proposed
+  - The kill cam - watch how you died from outside, rebuilt from the fight's data (design/kill-cam.md) | built
   - The library: one central store for commanders' moments and their data | idea
   - The Witchspace channel: commanders' Shorts on YouTube, edited by an AI agent | idea
 help:
@@ -58,7 +59,7 @@ Sharing works everywhere a commander can see a photo or a kept moment: the camer
 
 ## 2. The recorder, the death replay and the flight log *(built)*
 
-*Built, 24 October 2026: `src/game/recorder.ts` (WebCodecs H.264, 720p, 30 fps, a rolling 30 s in memory, cut at keyframes), `src/game/moments.ts` (titles, descriptions and tags written from the game's own events), `src/game/flightLog.ts` (IndexedDB, 20 moments) and `src/ui/flightLog.ts`. Moments kept by themselves: a kill, the Falcon's hull read, the Marshals coming through, a survey, your death. By hand: Shift+P, or hold the camera button. A switch in the station tab turns it off. Photos don't go into the log yet.*
+*Built, 24 October 2026: `src/game/recorder.ts` (WebCodecs H.264, 720p, 30 fps, a rolling 30 s in memory, cut at keyframes), `src/game/moments.ts` (titles, descriptions and tags written from the game's own events), `src/game/flightLog.ts` (IndexedDB, 20 moments) and `src/ui/flightLog.ts`. Moments kept by themselves: a kill, the Falcon's hull read, the Marshals coming through, a survey, your death. By hand: Shift+P, or hold the camera button. A switch in the flight log turns it off. Photos don't go into the log yet.*
 
 *Revised, 25 October 2026, after Mark's worry about phones filling up and about P in a dogfight: the buffer is a minute, and **a fight is one clip** (each kill within 25 seconds of the last re-cuts it from the fight's start, up to a minute, replacing the earlier cut; a death in the fight folds it in: "Took 2 pirates with me"). The bitrate is halved (1.2 Mbps: glowing lines on black lose nothing, checked frame by frame), so a 26 s clip is about 3 MB. The log has a **150 MB budget** and 60 moments; the oldest unkept moment makes room, unkept moments clear after a week, and the log shows the space used with a Clear unkept button. **Photos go to the log.** The first kept moment is announced in flight, the death replay says what the recorder is, and the log asks once: Keep it on, or Turn it off. Classic rules have no recorder, as this design always said.*
 
@@ -78,7 +79,7 @@ And you can keep it yourself: a long press on the camera button (or Shift+P) kee
 
 **The death replay.** Under Modern rules, when you're destroyed, the insurers' screen opens on *"Flight recorder recovered"*, playing your last moments, with **Share** and **Keep**. The worst moment of a session becomes the one most worth sharing ("how I died"), and it shows what got you, which teaches.
 
-**The flight log.** Docked, a new **Log** section in the station tab shows what's been kept since you launched: watch, keep, share or delete. Kept moments and photos are stored on the device (IndexedDB), up to about 20; the oldest unkept go first. With an account, kept moments sync with your commander only when stage 4 arrives, and only what you post.
+**The flight log.** Docked, the **Flight log** tab shows what's been kept: watch, keep, share or delete. It's the first thing you see in a new ship (a new commander, or the insurers' replacement), and the station opens on it whenever you dock with new moments, badged *Flight log · 2 new*. *(Mark, 25 October 2026: it had been at the bottom of the station tab, under the equipment, where few would find it.)* Kept moments and photos are stored on the device (IndexedDB), up to about 20; the oldest unkept go first. With an account, kept moments sync with your commander only when stage 4 arrives, and only what you post.
 
 ## 3. Footage that's worth something
 
@@ -92,6 +93,32 @@ The game knows what happened, so the recorder's metadata (who fired first, who d
 **News.** The newsroom buys footage as the survey office buys data ([exploration](exploration.md)): the rarer, the better it pays. A Falcon sighting, the Bastion coming through, a station's frame rising, a famine market. The news item it makes credits your callsign, and travels at the speed of ships like any other.
 
 **Explorers.** The photo taken on a first survey goes on the chart with the world, under your name.
+
+## The claim: submit your recorder *(Mark, 25 October 2026)*
+
+When you're destroyed, the insurers pay out when you **submit your flight recorder**: the clip and its data go to Witchspace. It's the act that settles the claim in the game, and in the world it's how commanders' best and worst moments reach everyone else. Deaths are the most shareable moments there are, and this makes handing one over part of getting your ship back.
+
+**Submitting pays the claim; everything else is optional.** A clip carries your callsign, and permission given because your ship depends on it isn't freely given (UK data protection asks for consent that is). Plenty of players can't or won't post: younger players, people without social accounts, people who'd rather stay out of sight. So nobody loses a ship over sharing, and nobody is paid to post.
+
+- **Submit to claim.** The insurers' screen reads *"Submit your flight recorder to the assessors"*. Submitting uploads the clip and its data to Witchspace (the [library](#the-library-one-place-for-every-commanders-moments-mark-24-october-2026)) and pays the claim, less the excess. The data decides the claim, never anyone judging the pictures: caught firing first on a clean ship, smuggling or fighting the police, and the claim is void, as set out in [law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks). This is how the insurers know.
+- **Or don't.** Decline, and you get the bare Cobra the Co-operative gives Fugitives. What's on the recorder is what happened.
+- **"Witchspace may feature this clip, credited to your callsign."** An unticked box on the same screen, changing nothing about the payout. Tick it and the clip joins the queue Witchspace picks from for its channels.
+- **Featured, and paid.** If Witchspace posts your clip (on @witchspace_game, the channel, the site), the newsroom buys it: about 500 Cr in the game, and your callsign in the post. That rewards good clips, not clicks, and matches footage sold to the news (above).
+- **Share it yourself**, one tap, with the link back, as now. Never required, never rewarded directly: social platforms frown on rewards for posting, and their rules are checked before anything here changes.
+- **The founder approves every post.** Submitted clips with the box ticked go into a queue; nothing reaches Witchspace's accounts without a person choosing it.
+- **Not recovered.** Some deaths leave nothing to submit: going up inside a sun, crushed by a carrier, an energy bomb at close range, or bad luck (about one death in ten). The insurers pay half and the claim stays open. The recorder drifts where you died, a beacon on the chart for a few days: scoop it and the rest is paid when you submit it. Another commander who scoops it can hand it to your insurers for a finder's fee.
+- **The kill cam is the assessors' reconstruction** ([the kill cam](kill-cam.md)), rebuilt from the submitted data, and offered beside the video.
+- **Classic rules** have no insurance, as in 1984: the recorder is just a recorder.
+
+### When a clip takes off
+
+A clip that people watch becomes part of the galaxy's story.
+
+- **Counted where we can.** Views on Witchspace's own site and library, and on what Witchspace posts to its own channel and Instagram (whose figures the account owner can read). Views of a commander's own posts aren't ours to see, and aren't counted.
+- **On the news.** A clip past a threshold (to balance: 10,000 views) becomes a news item, credited to the callsign, travelling at the speed of ships like any other: *"The recording from CMDR Kestrel's last seconds at Riedquat has been seen by 40,000 people. The Falcon has not commented."* A huge one reaches every station in the galaxy.
+- **Paid again.** The newsroom pays a bonus as a clip passes each threshold.
+- **Famous in the lanes.** A widely seen clip earns a mention in the saloons and on the radio: haulers who recognise your ship, a pirate who's seen how you fly. For the Falcon, it's one more thing she knows about you.
+- **The clip of the week** goes on the station board ([section 4](#4-the-station-board)) and the site's front page.
 
 ## Proof: things nobody would believe
 

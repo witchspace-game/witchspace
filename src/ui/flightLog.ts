@@ -1,4 +1,4 @@
-// The flight log in the station tab, and the replay player (the death replay
+// The flight log in its own station tab, and the replay player (the death replay
 // too): watch, share, keep or delete the clips and photos the ship kept.
 
 import { BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
@@ -25,6 +25,10 @@ const media = (m: LoggedMoment) => (m.video ?? m.photo)!;
 const extension = (b: Blob) => ({ 'video/mp4': 'mp4', 'image/png': 'png' })[b.type] ?? 'jpg';
 const fileName = (m: LoggedMoment) => `witchspace-${m.system.toLowerCase()}-${new Date(m.created).toISOString().slice(0, 16).replace(/[-:T]/g, '')}.${extension(media(m))}`;
 const megabytes = (bytes: number) => `${Math.max(1, Math.round(bytes / 1048576))} MB`;
+
+/** Opens the kill cam on a moment's track (set by the game). */
+let outsideView: ((m: LoggedMoment) => void) | null = null;
+export const setOutsideView = (fn: (m: LoggedMoment) => void) => (outsideView = fn);
 
 /** Share a moment: the share sheet where there is one (phones), otherwise download it. */
 export async function shareMoment(m: LoggedMoment): Promise<string> {
@@ -55,7 +59,8 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
     <h3>${escapeHtml(m.title)}</h3>
     <p class="replay-meta">${m.events.map((e) => escapeHtml(e.text)).join(' · ')}</p>
     <div class="replay-actions">
-      <button type="button" class="primary" data-act="share">Share</button>
+      ${m.track && outsideView ? '<button type="button" class="primary" data-act="outside">Watch it from outside</button>' : ''}
+      <button type="button"${m.track ? '' : ' class="primary"'} data-act="share">Share</button>
       <button type="button" data-act="keep" aria-pressed="${m.saved}">${kept()}</button>
       <button type="button" data-act="close">Close</button>
     </div>
@@ -78,6 +83,8 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
     onChange?.();
   };
   box.querySelector<HTMLButtonElement>('[data-act="close"]')!.onclick = close;
+  const outside = box.querySelector<HTMLButtonElement>('[data-act="outside"]');
+  if (outside) outside.onclick = () => outsideView?.(m);
   box.onclick = (e) => e.target === box && close();
 }
 
@@ -89,7 +96,7 @@ export function closeReplay() {
   revoke(replayUrls);
 }
 
-/** The flight log, in the station tab. */
+/** The flight log, its own tab when docked. */
 export async function renderFlightLog(opts: { available: boolean; unavailable: string; enabled: boolean; intro: boolean; onToggle: (on?: boolean) => void }) {
   const el = $('#flight-log');
   revoke(logUrls);
@@ -112,7 +119,7 @@ export async function renderFlightLog(opts: { available: boolean; unavailable: s
           (m) => `<li data-id="${m.id}">
           <button type="button" class="log-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${url(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s` : 'Photo'}</span></button>
           <div><strong>${escapeHtml(m.title.replace(/^CMDR [^:]+: /, ''))}</strong><small>${escapeHtml(m.events.map((e) => e.text).join(' · '))}</small>
-          <span class="log-actions"><button type="button" data-act="share">Share</button><button type="button" data-act="keep" aria-pressed="${m.saved}">${m.saved ? 'Kept' : 'Keep'}</button><button type="button" data-act="delete">Delete</button></span></div>
+          <span class="log-actions">${m.track && outsideView ? '<button type="button" data-act="outside">From outside</button>' : ''}<button type="button" data-act="share">Share</button><button type="button" data-act="keep" aria-pressed="${m.saved}">${m.saved ? 'Kept' : 'Keep'}</button><button type="button" data-act="delete">Delete</button></span></div>
         </li>`,
         )
         .join('')}</ul>`;
@@ -135,6 +142,8 @@ export async function renderFlightLog(opts: { available: boolean; unavailable: s
     const m = moments.find((x) => x.id === li.dataset.id)!;
     const refresh = () => void renderFlightLog(opts);
     li.querySelector<HTMLButtonElement>('.log-play')!.onclick = () => openReplay(m, 'From the flight log', refresh, m.photo ? 'Taken with your ship camera. It stays on this device unless you share it.' : undefined);
+    const outside = li.querySelector<HTMLButtonElement>('[data-act="outside"]');
+    if (outside) outside.onclick = () => outsideView?.(m);
     li.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = async (e) => {
       (e.target as HTMLButtonElement).textContent = await shareMoment(m);
     };

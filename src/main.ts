@@ -115,9 +115,11 @@ import { BEACON_CALLS, beacon, distressReward, hailReply, newBeacon, newsInReach
 import { acceptLatest, clearRadio, initRadio, say, setRadioFight, toggleRadio, wakeRadio, type RadioAction, type RadioKind } from './ui/radio';
 import { FlightRecorder, type Clip } from './game/recorder';
 import { RecorderWatch } from './game/recorderWatch';
-import { addMoment, deleteMoment, type LoggedMoment } from './game/flightLog';
+import { addMoment, attachTrack, deleteMoment, listMoments, type LoggedMoment } from './game/flightLog';
+import { readTrack, TrackRecorder, trackBlob, type Pose } from './game/track';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
-import { closeReplay, isReplayOpen, openReplay, renderFlightLog } from './ui/flightLog';
+import { closeReplay, isReplayOpen, openReplay, renderFlightLog, setOutsideView } from './ui/flightLog';
+import { KillCam } from './ui/killCam';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -540,11 +542,11 @@ function startCommander(difficulty: Difficulty) {
   }
   saveCommander(commander);
   sfx.beep();
-  enterDocked();
+  enterDocked(!recruiter); // a new ship: the flight log first, unless a recruiter is waiting
   if (recruiter && difficulty === 'modern') setDockTab('contracts');
 }
 
-function enterDocked() {
+function enterDocked(newShip = false) {
   boughtHere = { equipment: new Set(), lasers: {}, missiles: 0 };
   ensureSystemScene();
   inSpace = false;
@@ -556,6 +558,23 @@ function enterDocked() {
   markInbox(cmdr());
   renderDocked();
   setState('docked');
+  void showNewMoments(newShip);
+}
+
+// The flight log is the first thing you see in a new ship, and whenever you
+// dock with new moments: the recorder is half the point of flying.
+let flightFrom = Date.now(); // when this flight began: moments after it are new
+
+/** Badge the Flight log tab with what's new, and open on it if there is something (or the ship is new). */
+async function showNewMoments(newShip: boolean) {
+  if (classicRules() || !recorder.available) return setLogBadge(0);
+  const fresh = (await listMoments().catch(() => [])).filter((m) => m.created >= flightFrom).length;
+  setLogBadge(fresh);
+  if ((fresh || newShip) && state === 'docked' && dockTab === 'station') setDockTab('log');
+}
+
+function setLogBadge(n: number) {
+  $('.tabs [data-tab="log"]').textContent = n ? `Flight log · ${n} new` : 'Flight log';
 }
 
 // What was bought on this visit, so a change of mind before launch gets the
@@ -582,13 +601,18 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'contracts' | 'market' | 'news';
+type DockTab = 'station' | 'log' | 'contracts' | 'market' | 'news';
 let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
   dockTab = tab;
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
+  $('#tab-log').hidden = tab !== 'log';
+  if (tab === 'log') {
+    refreshFlightLog();
+    setLogBadge(0); // seen
+  }
   $('#tab-market').hidden = tab !== 'market';
   $('#tab-news').hidden = tab !== 'news';
   $('#tab-contracts').hidden = tab !== 'contracts';
@@ -2191,6 +2215,7 @@ let builtSystem: StarSystem | null = null;
 /** Rebuild the planet, police and debris for a star system. */
 function buildSystemScene(sys: StarSystem) {
   builtSystem = sys;
+  track.clear(); // a new system: the old fight is over
   if (planet) disposePlanet(planet);
   planetRadius = sys.radius * 1.2;
   atmosphere = planetRadius * ATMOSPHERE_SCALE;
@@ -2636,6 +2661,7 @@ const evading = () => commander?.difficulty === 'modern' && isWorking(commander,
  * hull it may take out fitted equipment. Returns true if the ship is destroyed.
  */
 function damagePlayer(amount: number, from?: NpcShip): boolean {
+  if (from) lastHitBy = { npc: from, at: elapsed };
   const hullBefore = player.hull;
   let destroyed = player.damage(amount);
   // A Falcon fights to disable: at a third of your hull she stops, and takes her price.
@@ -2703,6 +2729,7 @@ function becomeOffender(message: string, unknown = !identified()) {
 
 /** A ship blows up. If the player did it, the law and the combat rating take note. */
 function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
+  trackBoom(npc);
   const velocity = npc.ship.forward().multiplyScalar(npc.ship.speed);
   const boom = new Explosion(npc.def, npc.obj, velocity);
   space.scene.add(boom.group);
@@ -3165,6 +3192,7 @@ function firePlayerLaser() {
   }
   const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
   for (const muzzle of muzzles()) beams.fire(muzzle, end, laser.color);
+  trackBeam(player, origin, end, laser.color, hit?.target.value.kind === 'npc' ? hit.target.value.npc : null);
   sfx.laser();
   if (sharedSpace.connected) sharedSpace.fire(dir, laser.id);
   if (!hit) return;
@@ -3278,7 +3306,9 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
         // The Will-o'-the-Wisp jinks the ship out of the way of half the shots.
         if (alive && !(evading() && Math.random() < EVADE_LASERS)) targets.push({ value: 'player', position: player.obj.position, radius: 22 });
         const hit = rayHit(origin, aim, npc.laser.range, targets);
-        beams.fire(origin, hit ? hit.point : origin.clone().addScaledVector(aim, npc.laser.range), npc.laser.color);
+        const beamEnd = hit ? hit.point : origin.clone().addScaledVector(aim, npc.laser.range);
+        beams.fire(origin, beamEnd, npc.laser.color);
+        trackBeam(npc, origin, beamEnd, npc.laser.color, hit?.target.value === 'player' ? player : hit?.target.value instanceof NpcShip ? hit.target.value : null);
         zapAt(origin, 700, 120, 0.15, 0.5);
         const struck = hit?.target.value;
         if (struck instanceof NpcShip) {
@@ -4291,6 +4321,7 @@ function updateSpace(dt: number) {
 
   updateCombat(dt, input);
   updateSharedSpace(dt, input);
+  if (state === 'flying' || state === 'dead') recordTrack();
   if (state === 'flying') {
     updateClearance();
     updateSurrender(dt);
@@ -4636,6 +4667,7 @@ async function launch() {
   player.repair();
   station.placeForLaunch(player);
   launchedAt = elapsed;
+  flightFrom = Date.now();
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
@@ -5396,10 +5428,88 @@ async function surrender() {
   flash(settlementMessage(settlement, 'You surrendered · record cleared'), 5);
 }
 
+// --- The kill cam's track (docs/design/kill-cam.md) ---------------------------
+// The last minute of every ship your scanner saw, 20 times a second, and every
+// shot and explosion, kept with the black box when you die so the insurers'
+// screen can rebuild the fight from outside. Only what your ship knew.
+
+const track = new TrackRecorder();
+const trackIds = new WeakMap<object, number>();
+let nextTrackId = 2; // 1 is you
+let lastHitBy: { npc: NpcShip; at: number } | null = null;
+const TRACK_RANGE = 12000; // metres: the scanner's long range
+
+function trackId(o: object): number {
+  if (o === player) return 1;
+  let id = trackIds.get(o);
+  if (id === undefined) {
+    id = nextTrackId++;
+    if (nextTrackId > 0x7fff) nextTrackId = 2;
+    trackIds.set(o, id);
+  }
+  return id;
+}
+
+const poseOf = (id: number, obj: THREE.Object3D, unknown = false): Pose => ({ id, p: obj.position.toArray(), q: obj.quaternion.toArray() as Pose['q'], ...(unknown ? { unknown } : {}) });
+
+function recordTrack() {
+  if (classicRules() || !track.due(elapsed)) return;
+  const here = player.obj.position;
+  const poses: Pose[] = [];
+  if (state === 'flying') {
+    track.ship({ id: 1, def: player.def.id, role: 'you', label: `CMDR ${cmdr().name}` });
+    poses.push(poseOf(1, player.obj));
+  }
+  for (const npc of npcs) {
+    if (npc.obj.position.distanceTo(here) > TRACK_RANGE) continue;
+    const id = trackId(npc);
+    track.ship({ id, def: npc.def.id, role: npc.role, label: `${npc.def.name} · ${npc.role}${npc.bounty ? ` · ${npc.bounty} Cr` : ''}` });
+    poses.push(poseOf(id, npc.obj, npc.dark && !npcIdentified(npc)));
+  }
+  for (const m of missiles) {
+    if (m.position.distanceTo(here) > TRACK_RANGE) continue;
+    const id = trackId(m);
+    track.ship({ id, def: 'missile', role: 'missile', label: 'Missile' });
+    poses.push(poseOf(id, m.model.root));
+  }
+  if (station.root.position.distanceTo(here) < TRACK_RANGE) {
+    const id = trackId(station);
+    track.ship({ id, def: 'coriolis', role: 'station', label: `${currentSystem().name} station` });
+    poses.push(poseOf(id, station.root));
+  }
+  track.sample(elapsed, poses);
+}
+
+function trackBeam(from: object, a: THREE.Vector3, b: THREE.Vector3, color: string, hit: object | null) {
+  if (classicRules()) return;
+  track.event({ t: elapsed, kind: 'beam', from: trackId(from), a: a.toArray(), b: b.toArray(), color, ...(hit ? { hit: trackId(hit) } : {}) });
+}
+
+function trackBoom(npc: NpcShip) {
+  if (!classicRules()) track.event({ t: elapsed, kind: 'boom', id: trackId(npc), p: npc.obj.position.toArray() });
+}
+
+function trackScene() {
+  const sys = currentSystem();
+  return { system: sys.name, when: Date.now(), you: 1, planet: { p: planetPos.toArray(), r: planetRadius, color: planetColour(sys) }, sun: SUN_POS.toArray() };
+}
+
 function die() {
   const c = cmdr();
   // The black box: the last seconds, and the ship going up, for the insurers' screen.
   const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}` }, 26, 4);
+  const killer = lastHitBy && elapsed - lastHitBy.at < 5 ? lastHitBy.npc : null;
+  track.event({ t: elapsed, kind: 'boom', id: trackId(player), p: player.obj.position.toArray() });
+  track.event({ t: elapsed, kind: 'death', ...(killer ? { by: trackId(killer) } : {}) });
+  // The kill cam: the fight's track, kept with the black box once the explosion has played out.
+  void blackBox.then(async (m) => {
+    const data = m && classicRules() ? null : track.snapshot(trackScene());
+    if (m && data) {
+      m.track = await trackBlob(data);
+      await attachTrack(m.id, m.track).catch(() => undefined);
+    }
+    track.clear();
+  });
   setView('front');
   setAutopilot(false);
   setState('dead');
@@ -5479,7 +5589,7 @@ function die() {
     }
     saveCommander(c);
     marshalsStandDown();
-    enterDocked();
+    enterDocked(true); // a new ship from the insurers
     flash(message, 5);
     void blackBox.then((m) => m && state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog, recorderIntroduced() ? undefined : RECORDER_INTRO));
   }, 5000);
@@ -6206,6 +6316,7 @@ function handleMapKey(code: string): boolean {
 
 function handleKey(code: string) {
   unlockAudio();
+  if (killCam.key(code)) return;
   if (handleMapKey(code)) return;
   if (code === 'KeyG' && (state === 'docked' || state === 'flying') && commander) {
     toggleGalaxyMap();
@@ -6410,7 +6521,7 @@ async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 
     saved: false,
   };
   if (await addMoment(m)) return m;
-  flash('Flight log full · delete or unkeep something in the station tab', 3);
+  flash('Flight log full · delete or unkeep something in the flight log', 3);
   return null;
 }
 
@@ -6461,7 +6572,7 @@ function keepCombat(event: MomentEvent, before: number, after: number): Promise<
 // The first time a moment is kept, say what the flight recorder is; the
 // flight log asks once whether to keep it on.
 const RECORDER_INTRO_KEY = 'witchspace-recorder-intro';
-const RECORDER_INTRO = "Your ship's flight recorder keeps your last moments. Only the view is recorded, and it stays on this device unless you share it. You can turn it off in the station tab.";
+const RECORDER_INTRO = "Your ship's flight recorder keeps your last moments. Only the view is recorded, and it stays on this device unless you share it. You can turn it off in the flight log.";
 const recorderIntroduced = () => {
   try {
     return localStorage.getItem(RECORDER_INTRO_KEY) === 'done';
@@ -6499,7 +6610,7 @@ void recorder.ready.then(() => state === 'docked' && refreshFlightLog());
 function keepByHand() {
   if (state !== 'flying') return;
   if (classicRules()) return flash('Classic rules: no flight recorder', 2);
-  if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the station tab' : "This browser can't record video", 2.5);
+  if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the flight log' : "This browser can't record video", 2.5);
   flash('Flight recorder · last 30 seconds kept', 2);
   sfx.shutter();
   void keepMoment({ kind: 'kept', text: 'Kept by hand' }, 30, 0);
@@ -6530,6 +6641,23 @@ function keepByHand() {
   });
 }
 
+// --- The kill cam (docs/design/kill-cam.md) -----------------------------------
+
+const killCam = new KillCam(camera);
+if (import.meta.env.DEV) Object.assign(window, { __kc: killCam });
+// A saved reconstruction goes into the flight log, like any moment.
+killCam.onVideo = async (v) => {
+  const when = Date.now();
+  await addMoment({ id: `${when}-recon`, created: when, title: v.title, description: v.description, tags: ['witchspace', 'reconstruction', 'killcam'], events: [], system: v.system, seconds: v.seconds, video: v.video, poster: v.poster, saved: false });
+  if (state === 'docked') refreshFlightLog();
+};
+setOutsideView(async (m) => {
+  const data = m.track ? await readTrack(m.track).catch(() => null) : null;
+  if (!data) return flash("This reconstruction is from an older version of the game and can't be rebuilt", 3);
+  document.querySelector<HTMLVideoElement>('#replay video')?.pause();
+  killCam.open(data);
+});
+
 // --- Main loop --------------------------------------------------------------
 
 // Timer pauses while the tab is hidden, so there's no huge step on return.
@@ -6539,6 +6667,17 @@ timer.connect(document);
 function frame(now?: number) {
   timer.update(now);
   const dt = Math.min(timer.getDelta(), 0.1);
+  if (killCam.active) {
+    // The kill cam has the screen: the game holds still underneath (and while it saves a video, it draws its own frames).
+    if (!killCam.exporting) {
+      lens.aim(camera, null, 0, 0);
+      killCam.update(dt);
+      render(killCam.space.scene);
+    }
+    recorder.pause();
+    requestAnimationFrame(frame);
+    return;
+  }
   for (const button of gamepadPresses()) {
     const code = padToKey(button);
     if (code) handleKey(code);
