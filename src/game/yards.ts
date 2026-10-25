@@ -6,7 +6,8 @@ import { worldOf } from './explore';
 import { wyWorks } from './contracts';
 
 // Wexley-Yorozu yards (docs/design/companies-and-contracts.md, 4b): the
-// Titanoboa constructor parked by a moon, building a station from it. Which
+// Titanoboa constructor, assembled from modules by a moon, building a station
+// from it (docs/design/ship-the-titanoboa.md). Which
 // worlds have a yard, and how far each build has got, come from the galaxy's
 // seed and the clock, so every commander sees the same yard at the same stage
 // with no server. When a build finishes, the constructor moves on to another
@@ -24,15 +25,16 @@ export type YardStage = 'refining' | 'spine' | 'frame' | 'plating' | 'spin-up' |
 /**
  * A build, in order. The constructor refines first (no station yet), then the
  * spine goes up, the frame around it, the plating, and the slow spin-up; the
- * finished station turns beside it for a day before the Titanoboa leaves.
+ * finished station turns beside it for a day before the Titanoboa comes apart
+ * and its modules are towed to the next site.
  */
 export const STAGES: { stage: YardStage; name: string; days: number; news: string }[] = [
-  { stage: 'refining', name: 'not begun', days: 1, news: 'the Titanoboa has arrived and lit its smelters' },
+  { stage: 'refining', name: 'not begun', days: 1, news: 'the Titanoboa has been assembled by the moon and lit its furnaces' },
   { stage: 'spine', name: 'bare spine', days: 2, news: 'the spine of a new station is going up' },
   { stage: 'frame', name: 'frame', days: 3, news: 'the frame of a new station is rising by the moon' },
   { stage: 'plating', name: 'half-plated', days: 4, news: 'a new station is being plated, section by section' },
   { stage: 'spin-up', name: 'spinning up', days: 2, news: 'a new station is spinning up' },
-  { stage: 'finished', name: 'finished', days: 1, news: 'a new station is finished; the Titanoboa leaves soon' },
+  { stage: 'finished', name: 'finished', days: 1, news: 'a new station is finished; the Titanoboa is coming apart' },
 ];
 
 /** How long a build takes, and the constructor's passage to the next site. */
@@ -129,6 +131,14 @@ export function yardsOf(g: number, t: number): Yard[] {
 
 /** The yard at a system at time `t`, if there is one. */
 export const yardAt = (s: StarSystem, t: number): Yard | null => yardsOf(s.galaxy, t).find((y) => y.system === s.index) ?? null;
+
+/** The Titanoboa's modules, fore to aft: a station's worth of work. */
+export const STANDARD_LINE_UP = ['maw', 'furnace', 'furnace', 'hold', 'habitat', 'fabricator', 'reactor'];
+/** With a science module between the fabricator and the reactor, for whatever was found living there. */
+export const SCIENCE_LINE_UP = ['maw', 'furnace', 'furnace', 'hold', 'habitat', 'fabricator', 'science', 'reactor'];
+
+/** Which line-up a build uses: about one in three carries a science module. Same for everyone. */
+export const lineUpOf = (y: Yard): string[] => (hash(systemAt(y.galaxy, y.system), 905, y.build & 0xffff) < 1 / 3 ? SCIENCE_LINE_UP : STANDARD_LINE_UP);
 
 export const stageInfo = (stage: YardStage) => STAGES.find((s) => s.stage === stage)!;
 

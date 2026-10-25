@@ -1,0 +1,59 @@
+{
+  "$schema": "../../schemas/module.schema.json",
+  "id": "furnace",
+  "name": "Furnace",
+  "zone": "industry",
+  "length": 300,
+  "couples": {
+    "fore": true,
+    "aft": true
+  },
+  "description": "A crucible for smelting, refining and the exotic materials. Wexley-Yorozu recommends you do not stand near it.",
+  "designer": "Witchspace",
+  "credits": {
+    "authors": [
+      "Witchspace contributors"
+    ],
+    "license": "CC-BY-SA-4.0",
+    "aiAssisted": true,
+    "notes": "A core module, from Mark's modular Titanoboa (25 October 2026)."
+  },
+  "geometry": {
+    "vertices": [
+      [100.5, 58, 115],
+      [0, 116, 115],
+      [-100.5, 58, 115],
+      [-100.5, -58, 115],
+      [0, -116, 115],
+      [100.5, -58, 115],
+      [207.8, 120, 0],
+      [0, 240, 0],
+      [-207.8, 120, 0],
+      [-207.8, -120, 0],
+      [0, -240, 0],
+      [207.8, -120, 0],
+      [100.5, 58, -115],
+      [0, 116, -115],
+      [-100.5, 58, -115],
+      [-100.5, -58, -115],
+      [0, -116, -115],
+      [100.5, -58, -115]
+    ],
+    "faces": [
+      [0, 1, 2, 3, 4, 5],
+      [6, 7, 1, 0],
+      [7, 8, 2, 1],
+      [8, 9, 3, 2],
+      [9, 10, 4, 3],
+      [10, 11, 5, 4],
+      [11, 6, 0, 5],
+      [12, 13, 7, 6],
+      [13, 14, 8, 7],
+      [14, 15, 9, 8],
+      [15, 16, 10, 9],
+      [16, 17, 11, 10],
+      [17, 12, 6, 11],
+      [17, 16, 15, 14, 13, 12]
+    ]
+  }
+}

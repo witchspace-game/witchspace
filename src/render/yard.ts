@@ -1,17 +1,23 @@
 import * as THREE from 'three';
+import { moduleById } from '../content/moduleFiles';
+import { centresOf } from '../content/modules';
 import type { ShipDef } from '../content/types';
 import { stationAtStage, stationSpin, type Yard } from '../game/yards';
 import { buildShip, disposeShip, type ShipModel } from './shipModel';
 
 // A Wexley-Yorozu yard in flight (game/yards.ts says where and how far along):
-// the Titanoboa parked off the moon on the side facing the station, the new
-// station beside it in its current stage, and Bullsnakes running ore from the
-// moon's surface to the intake under the constructor's prow. The haulers run
-// on the clock, so everyone in the system sees them in the same places.
+// the Titanoboa, assembled from its modules, parked off the moon on the side
+// facing the station; the new station beside its fabricator, where the
+// sections come out; Bullsnakes running ore from the moon's surface into the
+// maw, and tug teams parked on the hold's pads. The haulers run on the clock,
+// so everyone in the system sees them in the same places.
 
 const STANDOFF = 2200; // metres from the moon's surface to the constructor's centre
-const STATION_OFF = 1100; // metres from the constructor's centreline to the new station, clear of the bays
-const INTAKE = new THREE.Vector3(0, -110, 1200); // under the prow, in the constructor's frame
+const STATION_OFF = 1100; // metres from the constructor's centreline to the new station, off the fabricator's open side
+const MOUTH_DEPTH = 70; // how far into the maw a hauler flies to empty its hopper
+const PAD_TUGS = [-60, 0, 60]; // three Bullsnakes to a pad, side by side along the hold
+const PAD_OUT = 250; // metres out from the spine, the middle of the pad
+const PAD_HEIGHT = 25; // a Bullsnake's hopper sits on the pad
 const HAULERS = 4;
 const HAUL_PERIOD = 150; // seconds for a round trip
 const BUILD_RADIUS = 95; // the station under construction, as solid as the finished one
@@ -22,6 +28,7 @@ export interface YardScene {
   yard: Yard;
   titan: ShipModel;
   station: ShipModel | null;
+  /** The ore haulers, then the tugs parked on the hold's pads. */
   haulers: ShipModel[];
   /** Where to put a marker and measure from, and how much room it takes. */
   centre: THREE.Vector3;
@@ -32,21 +39,16 @@ export interface YardScene {
   dispose(): void;
 }
 
-/** One box per separate part of a hull, in its own frame: tight enough to fly between the bays' outlines without falling through. */
-function partBoxes(def: ShipDef): THREE.Box3[] {
+/** One box per face, in the hull's own frame: tight enough to fly through the habitat's wheel or the fabricator's cradle. */
+function faceBoxes(def: ShipDef): THREE.Box3[] {
   const { vertices, faces } = def.geometry;
-  const parent = vertices.map((_, i) => i);
-  const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
-  for (const f of faces) for (const v of f) parent[find(v)] = find(f[0]);
-  const boxes = new Map<number, THREE.Box3>();
-  for (const f of faces) {
-    for (const v of f) {
-      const root = find(v);
-      if (!boxes.has(root)) boxes.set(root, new THREE.Box3());
-      boxes.get(root)!.expandByPoint(new THREE.Vector3(...vertices[v]));
-    }
-  }
-  return [...boxes.values()];
+  return faces.map((f) => new THREE.Box3().setFromPoints(f.map((i) => new THREE.Vector3(...vertices[i]))));
+}
+
+/** Where each module sits along the hull: from the ship's line-up, or nothing for a one-piece hull. */
+function modulesAlong(def: ShipDef) {
+  const mods = (def.modules ?? []).map((id) => moduleById(id));
+  return mods.every((m) => m) ? centresOf(mods.map((m) => m!)) : [];
 }
 
 export function buildYard(
@@ -68,21 +70,29 @@ export function buildYard(
   titan.root.lookAt(centre.clone().add(along));
   scene.add(titan.root);
   titan.root.updateMatrixWorld();
-  const boxes = partBoxes(defs.titan);
+  const boxes = faceBoxes(defs.titan);
+  const sections = modulesAlong(defs.titan);
+  const find = (id: string) => sections.find((m) => m.id === id);
 
   const stageDef = stationAtStage(defs.station, yard.stage, yard.progress);
   const station = stageDef ? buildShip(stageDef) : null;
   const spin = stationSpin(yard, defs.station.stats.rollRate ?? 0.25);
   if (station) {
-    // On the station's side of the constructor, its slot facing the way traffic will come.
-    station.root.position.copy(centre).addScaledVector(out, STATION_OFF).addScaledVector(along, -300);
+    // Off the fabricator's open side, the side facing the station, so the sections go straight across.
+    // Its slot faces the way traffic will come.
+    const local = out.clone().applyQuaternion(titan.root.quaternion.clone().invert());
+    const side = local.x >= 0 ? 1 : -1;
+    station.root.position.copy(titan.root.localToWorld(new THREE.Vector3(side * STATION_OFF, 0, find('fabricator')?.z ?? -300)));
     station.root.lookAt(station.root.position.clone().add(out));
     // Where a spin-up has got to, so it's the same for everyone.
     station.root.rotateZ((spin * (Date.now() / 1000)) % (Math.PI * 2));
     scene.add(station.root);
   }
 
-  const intake = titan.root.localToWorld(INTAKE.clone());
+  // Into the maw's mouth; a one-piece hull takes it at the prow.
+  const maw = find('maw');
+  const prow = maw ? maw.z + maw.length / 2 : titan.radius;
+  const intake = titan.root.localToWorld(new THREE.Vector3(0, 0, prow - MOUTH_DEPTH));
   const haulers: ShipModel[] = [];
   const routes: { from: THREE.Vector3; to: THREE.Vector3 }[] = [];
   for (let i = 0; i < HAULERS; i++) {
@@ -95,10 +105,23 @@ export function buildYard(
     const from = moon.centre.clone().add(to.clone().sub(moon.centre).setLength(moon.radius + 60)).add(side);
     routes.push({ from, to });
   }
+  // Tug teams resting on the hold's pads between jobs, noses out, ready to launch.
+  const hold = find('hold');
+  if (hold) {
+    for (const sx of [1, -1]) {
+      for (const dz of PAD_TUGS) {
+        const m = buildShip(defs.hauler);
+        m.root.quaternion.copy(titan.root.quaternion).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), (sx * Math.PI) / 2));
+        m.root.position.copy(titan.root.localToWorld(new THREE.Vector3(sx * PAD_OUT, PAD_HEIGHT, hold.z + dz)));
+        scene.add(m.root);
+        haulers.push(m);
+      }
+    }
+  }
 
   const place = (now: number) => {
-    haulers.forEach((m, i) => {
-      const { from, to } = routes[i];
+    routes.forEach(({ from, to }, i) => {
+      const m = haulers[i];
       const phase = ((now / 1000 / HAUL_PERIOD + i / HAULERS) % 1 + 1) % 1;
       // Up loaded, back empty; easing off at each end to load and unload.
       const up = phase < 0.5;

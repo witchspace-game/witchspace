@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/witchspace-game/witchspace/main/schemas/module.schema.json",
+  "title": "Witchspace Titanoboa module",
+  "description": "One section of Wexley-Yorozu's Titanoboa, built to the coupling standard (docs/design/ship-the-titanoboa.md). Units are metres; +Z is forward (towards the maw), +Y is up. The module runs from z = +length/2 to -length/2; at each coupled end the game adds a 35 m half-neck of the 140 m coupling square, so the body stops 35 m short there and must end in a flat face covering the square.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "name",
+    "zone",
+    "length",
+    "couples",
+    "description",
+    "designer",
+    "credits",
+    "geometry"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "id": {
+      "description": "Unique kebab-case id. Must match the file name (without .json).",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "zone": {
+      "description": "Where it belongs in a line-up, prow to stern.",
+      "enum": [
+        "intake",
+        "industry",
+        "logistics",
+        "crew",
+        "fabrication",
+        "add-on",
+        "power"
+      ]
+    },
+    "length": {
+      "description": "Metres from fore end to aft end, necks included.",
+      "type": "number",
+      "minimum": 100,
+      "maximum": 1000
+    },
+    "couples": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fore",
+        "aft"
+      ],
+      "properties": {
+        "fore": {
+          "type": "boolean"
+        },
+        "aft": {
+          "type": "boolean"
+        }
+      }
+    },
+    "description": {
+      "description": "One sentence on what it does, in Wexley-Yorozu's catalogue voice.",
+      "type": "string",
+      "minLength": 10,
+      "maxLength": 300
+    },
+    "designer": {
+      "description": "The commander who designed it (paid 5,000 Cr in the game when it's first fitted).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40
+    },
+    "credits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authors",
+        "license"
+      ],
+      "properties": {
+        "authors": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "license": {
+          "const": "CC-BY-SA-4.0"
+        },
+        "aiAssisted": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "vertices",
+        "faces"
+      ],
+      "properties": {
+        "vertices": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 256,
+          "items": {
+            "$ref": "#/$defs/vec3"
+          }
+        },
+        "faces": {
+          "description": "Flat, convex polygons wound counter-clockwise from outside.",
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 256,
+          "items": {
+            "type": "array",
+            "minItems": 3,
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "insignia": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "color",
+        "vertices",
+        "lines"
+      ],
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$"
+        },
+        "vertices": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/vec3"
+          }
+        },
+        "lines": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "vec3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "number"
+      }
+    }
+  }
+}

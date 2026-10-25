@@ -38,4 +38,28 @@ export interface ShipDef {
   style: { lineColor: string; glow?: number };
   /** A mark on the hull in its own colour (a captain's sign), glowing like the details. */
   insignia?: { color: string; vertices: Vec3[]; lines: [number, number][] };
+  /** Built from modules (content/modules), fore to aft: the geometry is their assembly. */
+  modules?: string[];
+}
+
+/** Where a module belongs in a line-up, from prow to stern. */
+export type ModuleZone = 'intake' | 'industry' | 'logistics' | 'crew' | 'fabrication' | 'add-on' | 'power';
+
+// Mirrors schemas/module.schema.json. Keep the two in sync.
+export interface ModuleDef {
+  id: string;
+  name: string;
+  zone: ModuleZone;
+  /** Metres from fore end to aft end, necks included. */
+  length: number;
+  /** Which ends take the coupling. */
+  couples: { fore: boolean; aft: boolean };
+  /** One sentence, in Wexley-Yorozu's catalogue voice. */
+  description: string;
+  /** The commander who designed it, paid when it's first fitted. */
+  designer: string;
+  credits: { authors: string[]; license: 'CC-BY-SA-4.0'; aiAssisted?: boolean; notes?: string };
+  /** The body, between the necks: z runs from +length/2 (fore) to -length/2 (aft), less 35 m at each coupled end. */
+  geometry: { vertices: Vec3[]; faces: number[][] };
+  insignia?: { color: string; vertices: Vec3[]; lines: [number, number][] };
 }

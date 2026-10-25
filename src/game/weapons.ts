@@ -83,6 +83,22 @@ export const PIRATE_LASER: Laser = {
   color: '#ff9a3d',
 };
 
+/**
+ * The Falcon's guns: a beam laser on each vane, both firing at once, gimballed
+ * (docs/design/legends-the-falcon.md). 55 a second between them, tuned in test
+ * duels so a military laser usually beats her, a beam sometimes, a pulse rarely:
+ * she only has to take a Cobra to a third, while you have to take her to a fifth.
+ */
+export const FALCON_LASER: Laser = {
+  name: 'Beam laser',
+  interval: 0.1,
+  damage: 2.75, // each
+  range: 3200,
+  heat: 0,
+  cooling: 0,
+  color: '#ff4d6d',
+};
+
 export const TRADER_LASER: Laser = { ...PIRATE_LASER, interval: 0.8, damage: 5, color: '#ffe08a' };
 
 export interface Target<T> {

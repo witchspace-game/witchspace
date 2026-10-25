@@ -769,8 +769,8 @@
     "maxSpeed": 340,
     "pitchRate": 0.95,
     "rollRate": 1.8,
-    "hull": 110,
-    "shields": 90,
+    "hull": 230,
+    "shields": 320,
     "cargo": 10,
     "missiles": 3,
     "price": 140000

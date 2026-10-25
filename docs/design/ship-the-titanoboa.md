@@ -5,9 +5,9 @@ pillar: world
 summary: Wexley-Yorozu's constructor rebuilt as a factory of modules on a common coupling - maw, furnaces, hold, habitat, fabricator, science, reactor - each a single clear shape in glowing line, brought by tug teams and assembled where the work is. We designed the core; the standard is open, so anyone can design a module. It's as big as the job needs, new modules are sent where they're needed and can stay on the finished station, sections are swapped when they fail, and a reactor towed between stars is work for commanders.
 card: titanoboa
 stages:
-  - The core modules, the coupling standard, and the standard line-up on the ship page | proposed
+  - The core modules, the coupling standard, and the standard line-up on the ship page | done
   - Community modules - anyone designs a section to the standard, checked by validate and the MCP server | proposed
-  - Yards assemble the line-up the job needs (a station, a refinery, an atmosphere processor) | proposed
+  - Yards assemble the line-up the job needs (a station, a refinery, an atmosphere processor) | started
   - Modules sent where they're needed - a science module for exotic organisms couples on, and stays with the station | proposed
   - Sections swapped in the yard - a failed reactor towed away, a new one fitted | proposed
   - Module work for commanders - haul, escort and salvage a section | proposed
@@ -20,7 +20,7 @@ help:
 
 # Design: the Titanoboa, a modular factory
 
-*Design, 25 October 2026, from Mark's idea: the Titan is a factory in space, built from sections that can be removed and replaced, so it can be as large as it needs to be. Proposed; it replaces the current hull. Modern only, as yards are.*
+*Design, 25 October 2026, from Mark's idea: the Titan is a factory in space, built from sections that can be removed and replaced, so it can be as large as it needs to be. Stage 1 is built: the modular Titanoboa is the one in the game. Modern only, as yards are.*
 
 ## Why
 
@@ -56,8 +56,8 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 | **Furnace** | 300 m | A crucible: six-sided, swelling to 480 m across and narrowing again | Smelting and refining, and where the exotic materials are made. The hottest thing on her. |
 | **Hold** | 320 m | Four storage cells around the spine, leaving a cross where the spine runs through, and a flat landing pad on each side | Stores refined metal from the furnaces and goods brought in by traders. Its pads are where Bullsnakes land, load and launch, and where traders deliver. |
 | **Fabricator** | 520 m | An open cradle: the spine, two rails above and below, a gantry at each end | Where station sections are made. Open at the sides, so sections slide out. You can see through it. |
-| **Habitat** | 160 m | A six-sided wheel, 680 m across, on three spokes, turning for gravity | Quarters for a few thousand workers. Carries the company insignia. |
-| **Science** (add-on) | 220 m | A six-sided hub with one to three sealed pods, each on a 300 m mast leaving a face square-on, at the habitat spokes' angles; each pod sits on a clamp, so it can be ejected and replaced | Research on whatever explorers found living in the system: one find to a pod, kept at arm's length from the crew and from each other. |
+| **Habitat** | 160 m | A six-sided wheel, 680 m across and flat on top, on three spokes in an inverted Y, turning for gravity | Quarters for a few thousand workers. The company mark sits on top of the wheel, where everyone flying past sees it. |
+| **Science** (add-on) | 220 m | A six-sided hub with one to three sealed pods, each on a 300 m mast leaving a face square-on, in a Y (the habitat's spokes, turned over); each pod sits on a clamp, so it can be ejected and replaced | Research on whatever explorers found living in the system: one find to a pod, kept at arm's length from the crew and from each other. |
 | **Reactor** | 300 m | A compact eight-sided core behind a broad shadow shield, with four flat radiator vanes in an X, 880 m tip to tip | Power for the whole ship. The one you don't want to go wrong. |
 | **Drive** (optional, stern only) | 300 m | A tapering block and three flared bells | Fitted only to move a station, slowly. She never hurries. |
 
@@ -98,11 +98,14 @@ Follow the material, the crew, the power and the traffic, and the order falls ou
 
 ## 2. How it's built in the game
 
-**Modules are parts, not one ship.** A ship file holds at most 256 vertices, and a Large Titanoboa needs more, so each module becomes its own small content file with its length and its coupling points, checked by the same hull rules as any ship (`npm run validate`). The game assembles a line-up from them at runtime, the same way the yard already assembles the station in its current stage ([the yards](companies-and-contracts.md#4b-building-worlds)).
+*(Built, 25 October 2026.)*
 
-- **The ship file** `content/ships/titanoboa.json` stays, generated from the Standard line-up by a tool, so the ship page, the share card and anything else that expects one ship still works.
-- **The yard** (`src/render/yard.ts`) builds the line-up the job needs instead of the one hull, and takes its ore intake from the maw and its outfall from the fabricator rather than from fixed points.
-- **Contributors can design a module.** One shape, one coupling, a sentence on what it does: a small, satisfying first contribution, and the MCP server can check it.
+**Modules are parts, not one ship.** Each module is its own small file in `content/modules/`, with its zone, its length, which ends couple, its sentence, its designer and its body, checked against `schemas/module.schema.json`, the hull rules and the coupling standard by `npm run validate`. The standard lives in `src/content/modules.ts`: a body stops 35 m short of each coupled end and must end there in a flat face covering the 140 m square; the game adds the necks, and only where two modules meet, so a free end is a clean face. Zones must run prow to stern (intake, industry, logistics, crew, fabrication, add-on, power), so a line-up can't put the reactor in front of the crew.
+
+- **The core modules** are generated by `npx tsx tools/titanoboa.ts`: maw, furnace, hold, habitat, fabricator, science, reactor and drive.
+- **The ship file** `content/ships/titanoboa.json` is generated from the Standard line-up and names its modules, so the ship page, the share card and anything else that expects one ship still works. It is the only ship allowed past 256 vertices, because it's assembled; validate checks it still matches its modules.
+- **The yard** (`src/render/yard.ts`) assembles the line-up for the build (about one in three carries a science module), takes its ore into the maw, sets the new station off the fabricator's open side, and parks a tug team on each of the hold's pads, noses out. Collisions are face by face, so you can fly through the habitat's wheel and the fabricator's cradle.
+- **Contributors can design a module.** One shape, one coupling, a sentence on what it does: a small, satisfying first contribution.
 
 ## Designing a module: the standard *(Mark, 25 October 2026)*
 
@@ -112,12 +115,12 @@ A module is a good one when:
 
 - **It fits the coupling:** a 140 m square, at one or both ends, on a flat face at least as big. Nothing else about its outline is fixed.
 - **It's one shape with one job,** recognisable at scanner range, in glowing line: a few dozen lines, never more than 256 vertices. [Elegance over detail](../../CONTRIBUTING.md).
-- **It says which zone it belongs to,** so the game can place it in a line-up: **intake** (at the prow), **industry** (behind the intake), **logistics** (holds and docks), **crew** (in the middle, away from heat and the reactor), **add-on** (towards the stern, at arm's length from the crew), **power** (the stern).
+- **It says which zone it belongs to,** so the game can place it in a line-up: **intake** (at the prow), **industry** (behind the intake), **logistics** (holds and docks), **crew** (in the middle, away from heat and the reactor), **fabrication** (next to the crew who work there), **add-on** (towards the stern, at arm's length from the crew), **power** (the stern).
 - **It has a sentence** saying what it does, in Wexley-Yorozu's catalogue voice.
 - **It names its designer:** the commander who gets paid when it's built (below).
 - **It makes sense:** it's where its neighbours need it, and anything dangerous faces away from the crew.
 
-How it will work once modules are content files (stage 2): you write a module file, `npm run validate` checks it against the standard, the MCP server can check and draw it from a conversation, and accepted modules appear in yards, credited to whoever designed them.
+How it works: you write a module file in `content/modules/` (copy a core one to start), and `npm run validate` checks it against the standard. Accepted modules appear in yards, credited to whoever designed them. Stage 2 adds the MCP server checking and drawing a module from a conversation, and yards choosing community modules for their line-ups.
 
 ### Paid on commission *(Mark, 25 October 2026)*
 
@@ -182,7 +185,7 @@ These are proposals for the contracts design ([companies and contracts](companie
 
 ## When it's built: what changes in the game
 
-The yard's news lines in `src/game/yards.ts` say the Titanoboa *has arrived* and *leaves soon*; with stage 1 they become *is being assembled* and *is coming apart*, and the yard scene shows modules arriving with their tug teams.
+Done with stage 1: the yard's news now says the Titanoboa *has been assembled by the moon* and, when the station is finished, *is coming apart*. Still to come: the yard scene showing modules arriving with their tug teams.
 
 ## Classic rules
 

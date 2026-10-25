@@ -785,12 +785,13 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
   display: none; grid-template-columns: repeat(4, 56px); gap: 8px; padding: 8px;
   margin-right: max(8px, env(safe-area-inset-right)); background: rgba(0, 12, 8, 0.78); border: 1px solid var(--edge); border-radius: 12px;
 }
+#touch .touch-drawer.open { z-index: 2; } /* over the fire buttons while it is open */
 #touch .touch-drawer.open .touch-actions { display: grid; animation: drawer-in 0.16s ease-out; }
 @keyframes drawer-in { from { transform: translateX(36px); opacity: 0; } }
 /* The camera: left of the drawer tab, out of the way of the thumbs. */
 #touch .photo-button { position: absolute; right: 52px; top: max(8px, env(safe-area-inset-top)); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
 #touch .photo-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
-#touch .touch-drawer.open ~ .photo-button { display: none; }
+#touch .touch-drawer.open ~ .photo-button, #touch .touch-drawer.open ~ .touch-context { display: none; }
 /* The next step, out of the drawer by itself. */
 #touch .touch-context { position: absolute; right: max(10px, env(safe-area-inset-right)); top: calc(max(8px, env(safe-area-inset-top)) + 56px); }
 #touch .touch-drawer.open + .touch-context { display: none; }
@@ -873,7 +874,7 @@ body.touch #beacon { top: 22%; }
 body.retro #beacon .beacon-calls button, body.retro #beacon h3 { font-size: 9px; }
 #touch .touch-actions button { min-height: 44px; padding: 4px; font-size: 12px; background: rgba(0, 10, 6, 0.55); }
 #touch .touch-actions button.on { border-color: var(--accent); color: #000; background: var(--accent); }
-/* In flight on a touch screen, the dashboard moves to the top, out of your thumbs' way. */
+/* In flight on an upright touch screen, the dashboard moves to the top, out of your thumbs' way (on its side, it goes between them: see below). */
 body.touch .keys { display: none; }
 body.touch .dash { top: 6px; bottom: auto; transform: translateX(-50%) scale(var(--dash-scale, 0.72)); transform-origin: top center; }
 body.touch #dock-aid { top: 128px; right: 12px; transform: scale(0.8); transform-origin: top right; }
@@ -930,7 +931,13 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
   .controls { bottom: 26px; }
   .showroom-hint { display: none; }
   .tribute { bottom: 4px; font-size: 9px; }
-  body.touch .dash { transform: translateX(-50%) scale(var(--dash-scale, 0.58)); }
+  /* Landscape: the dashboard sits at the bottom between your thumbs, as the 1984 console did, leaving the sky clear. */
+  body.touch .dash { top: auto; bottom: max(8px, env(safe-area-inset-bottom)); transform: translateX(-50%) scale(var(--dash-scale, 0.58)); transform-origin: bottom center; }
+  body.touch #survey { bottom: auto; top: max(10px, env(safe-area-inset-top)); }
+  /* With the top clear, the docking readout goes there, off the fire buttons. */
+  body.touch #dock-aid { top: max(8px, env(safe-area-inset-top)); left: 50%; right: auto; transform: translateX(-50%) scale(0.75); transform-origin: top center; }
+  /* Both at once (surveying near a station): the survey bar steps down below the docking readout. */
+  body.touch:has(#dock-aid:not([hidden])) #survey { top: calc(max(8px, env(safe-area-inset-top)) + 96px); }
   body.touch #touch .speed { height: 110px; }
   body.touch #touch .fire { width: 76px; height: 76px; }
   /* Touch targets at the recommended size: 44 px tall (Apple), 8 px apart (Google). */

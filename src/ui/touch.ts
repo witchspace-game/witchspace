@@ -1,4 +1,4 @@
-import { isTouch, setTouchFire, setTouchSpeed, touchAim, touchSpeedTarget } from '../game/input';
+import { isPitchInverted, isTouch, setTouchFire, setTouchSpeed, toggleInvertPitch, touchAim, touchSpeedTarget } from '../game/input';
 
 // On-screen controls for phones and tablets: drag on the left to aim, a speed
 // slider and a fire button on the right, and buttons for everything else
@@ -10,8 +10,10 @@ const AIM_SENSITIVITY = 1.6; // finger movement is smaller than mouse movement
 const STICK_DEADZONE = 18; // px
 const STICK_RATE = 4; // aim pixels per second, per pixel of offset
 
-// Tilt steering (optional): tip the phone and the aim moves that way, again
-// like a joystick, measured from how you were holding it when you turned it on.
+// Tilt steering (optional): the phone is a flight stick. Tip it left or right
+// to turn that way; tip the top towards you (pull back) to climb, away from
+// you (push forward) to dive. Measured from how you were holding it when you
+// turned it on, and it keeps turning while you hold it tipped.
 const TILT_DEADZONE = 3; // degrees
 const TILT_RATE = 14; // aim pixels per second, per degree of tilt
 const TILT_MAX = 25; // degrees: tilting further doesn't turn faster
@@ -160,6 +162,10 @@ export function initTouch() {
 
   const tilt = root.querySelector<HTMLElement>('.tilt')!;
   tilt.addEventListener('click', () => void toggleTilt(tilt));
+  // The I key's setting, for phones: flips dragging and tilting alike, and is remembered.
+  const invert = root.querySelector<HTMLElement>('.invert')!;
+  invert.classList.toggle('on', isPitchInverted());
+  invert.addEventListener('click', () => invert.classList.toggle('on', toggleInvertPitch()));
 
   // Fire: held down.
   const fire = root.querySelector<HTMLElement>('.fire')!;
@@ -201,7 +207,7 @@ export function updateTouch(dt: number, speedFraction: number) {
       const a = Math.min(TILT_MAX, Math.abs(deg));
       return a < TILT_DEADZONE ? 0 : Math.sign(deg) * (a - TILT_DEADZONE) * TILT_RATE * dt;
     };
-    touchAim(turn(tiltX), turn(tiltY));
+    touchAim(turn(tiltX), -turn(tiltY)); // pull back to climb
   }
   if (aiming) {
     const ox = curX - startX;

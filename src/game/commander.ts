@@ -250,6 +250,8 @@ export interface Commander {
   fuel: number;
   /** Ships destroyed, for the combat rating. */
   kills: number;
+  /** When you last drove off the Falcon (epoch ms): she keeps away from you for a day after. */
+  falconDrivenOff?: number;
   /** Co-operative Marshals carriers destroyed: each one brings the next sooner. */
   bastionsDestroyed?: number;
   /** Slaves handed to abolitionists to be freed (Modern rules). */

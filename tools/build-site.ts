@@ -8,7 +8,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join, posix, relative, resolve } from 'node:path';
 import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from './media';
 import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLARS, roadmapCompactHtml, roadmapHtml, roadmapSummaryHtml, STATUS } from './docs';
-import { loadShips, shipPage, shipsIndex } from './ships';
+import { loadModules, loadShips, shipPage, shipsIndex } from './ships';
 
 const root = resolve(import.meta.dirname, '..');
 const REPO = 'https://github.com/witchspace-game/witchspace/blob/main/';
@@ -61,7 +61,7 @@ const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/careers/': { ship: 'bullsnake', kicker: 'Careers', title: 'Careers in the eight galaxies', sub: 'Four companies are hiring pilots. Fly for one.' },
 };
 
-const ORG = { '@type': 'Organization', name: 'Witchspace', url: SITE, logo: `${SITE}/icons/icon-512.png`, sameAs: ['https://github.com/witchspace-game/witchspace', 'https://www.instagram.com/witchspace_game/'] };
+const ORG = { '@type': 'Organization', name: 'Witchspace', url: SITE, logo: `${SITE}/icons/icon-512.png`, sameAs: ['https://github.com/witchspace-game/witchspace', 'https://www.instagram.com/witchspace_game/', 'https://www.youtube.com/channel/UC0ZD9s_rEYbGhXb3S6ai-Iw'] };
 const GAME = {
   '@type': 'VideoGame',
   name: 'Witchspace',
@@ -181,7 +181,8 @@ for (const item of media.items) {
 
 const ships = loadShips(root);
 write({ path: '/ships/', title: 'Ships · Witchspace', description: 'The Witchspace fleet: every ship, who flies it, who drew it, and how to make it better.', content: shipsIndex(ships), bodyClass: 'ships-page', card: { ship: 'falcon', kicker: 'The fleet', title: 'Ships', sub: 'Every ship, who flies it, who drew it, and how to make it better.' }, schema: [{ '@type': 'CollectionPage', name: 'Ships', hasPart: ships.map((sh) => ({ '@type': 'CreativeWork', name: sh.name, url: `${SITE}/ships/${sh.id}/` })) }] });
-for (const s of ships) write({ path: `/ships/${s.id}/`, ...shipPage(s), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
+const shipModules = loadModules(root);
+for (const s of ships) write({ path: `/ships/${s.id}/`, ...shipPage(s, shipModules), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
 
 // --- Design documents, the roadmap and the library (tools/docs.ts) --------------
 

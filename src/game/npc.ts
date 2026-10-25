@@ -105,16 +105,38 @@ export class NpcShip {
   fights = true;
   /** A pirate you paid off over the radio: it leaves you be, unless you shoot it. */
   paid?: boolean;
+  /** A Legend can't be destroyed: below this share of her shields and hull she breaks off instead (docs/design/legends-the-falcon.md). */
+  breaksOffAt?: number;
+  /** She's down to it: the game takes over from here (the can, the hail, the jump). */
+  brokeOff = false;
+  /** She beat you (a Legend disables, never kills): the game takes over, her price and her jump. */
+  won = false;
+  /** Where its lasers sit, in the hull's own frame, all firing at once; without them it fires from the nose. */
+  guns?: THREE.Vector3[];
+  /** Gimballed lasers swing onto a target this far off the nose (radians); fixed ones need it dead ahead. */
+  gimbal?: number;
   private cooldown = Math.random();
   private flash = 0;
   private breakTimer = 0;
   private readonly breakDir = new THREE.Vector3();
   private readonly box: THREE.Box3;
 
+  /** Where a shot leaves from, and which way: one from the nose, or one from each gun at once, converging on the target. */
+  muzzles(shot: THREE.Vector3): { origin: THREE.Vector3; dir: THREE.Vector3 }[] {
+    if (!this.guns?.length) return [{ origin: this.obj.position.clone().addScaledVector(shot, 20), dir: shot }];
+    // Wing guns converge where she's aiming, or a shot from a tip passes beside the target.
+    const range = this.target ? this.target.obj.position.distanceTo(this.obj.position) : this.laser.range;
+    const aim = this.obj.position.clone().addScaledVector(shot, range);
+    return this.guns.map((g) => {
+      const origin = this.obj.localToWorld(g.clone());
+      return { origin, dir: aim.clone().sub(origin).normalize() };
+    });
+  }
+
   constructor(
     readonly def: ShipDef,
     readonly role: NpcRole,
-    readonly laser: Laser,
+    public laser: Laser,
     readonly patrol: Patrol,
   ) {
     this.ship = new PlayerShip(def);
@@ -144,6 +166,16 @@ export class NpcShip {
     if (from) {
       this.attacker = from;
       this.attackedAgo = 0;
+    }
+    if (this.breaksOffAt !== undefined) {
+      const s = this.def.stats;
+      const floor = this.breaksOffAt * (s.shields + s.hull);
+      const left = this.ship.shields + this.ship.hull;
+      if (left - damage <= floor) {
+        this.ship.damage(Math.max(0, left - floor));
+        this.brokeOff = true;
+        return false;
+      }
     }
     return this.ship.damage(damage);
   }
@@ -230,10 +262,10 @@ export class NpcShip {
 
     if (this.mode === 'attack' && dist < this.laser.range && this.cooldown <= 0) {
       const fwd = this.ship.forward();
-      if (fwd.angleTo(toTarget!) < FIRE_CONE) {
+      if (fwd.angleTo(toTarget!) < (this.gimbal ?? FIRE_CONE)) {
         this.cooldown = this.laser.interval;
         const spread = new THREE.Vector3().randomDirection().multiplyScalar(Math.tan(AIM_SPREAD) * Math.random());
-        return fwd.add(spread).normalize();
+        return (this.gimbal ? toTarget!.clone().normalize() : fwd).add(spread).normalize();
       }
     }
     return null;

@@ -5,11 +5,20 @@ import { BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, 
 import { escapeHtml } from './escape';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
-const urls: string[] = [];
-const url = (b: Blob) => {
+// Object URLs for the flight log's list, and separately for the replay player:
+// redrawing the list must never revoke a video the player is still loading
+// (Safari loads a little at a time, so a revoked URL stops it dead).
+const logUrls: string[] = [];
+const replayUrls: string[] = [];
+const urlIn = (pool: string[]) => (b: Blob) => {
   const u = URL.createObjectURL(b);
-  urls.push(u);
+  pool.push(u);
   return u;
+};
+const url = urlIn(logUrls);
+const replayUrl = urlIn(replayUrls);
+const revoke = (pool: string[]) => {
+  while (pool.length) URL.revokeObjectURL(pool.pop()!);
 };
 
 const media = (m: LoggedMoment) => (m.video ?? m.photo)!;
@@ -38,10 +47,11 @@ export async function shareMoment(m: LoggedMoment): Promise<string> {
 /** The replay player over everything: the death replay, or a moment from the log. `note` replaces the line under it. */
 export function openReplay(m: LoggedMoment, heading: string, onChange?: () => void, note = 'Only the view is recorded. It stays on this device unless you share it.') {
   const box = $('#replay');
+  revoke(replayUrls);
   const kept = () => (m.saved ? 'Kept' : 'Keep');
   box.innerHTML = `<div class="replay-card" role="dialog" aria-modal="true" aria-label="${escapeHtml(heading)}">
     <p class="replay-heading">${escapeHtml(heading)}</p>
-    ${m.video ? `<video src="${url(m.video)}" ${m.poster ? `poster="${url(m.poster)}"` : ''} controls autoplay playsinline muted></video>` : `<img src="${url(media(m))}" alt="${escapeHtml(m.title)}" />`}
+    ${m.video ? `<video src="${replayUrl(m.video)}" ${m.poster ? `poster="${replayUrl(m.poster)}"` : ''} controls autoplay playsinline muted></video>` : `<img src="${replayUrl(media(m))}" alt="${escapeHtml(m.title)}" />`}
     <h3>${escapeHtml(m.title)}</h3>
     <p class="replay-meta">${m.events.map((e) => escapeHtml(e.text)).join(' · ')}</p>
     <div class="replay-actions">
@@ -55,6 +65,7 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
   const close = () => {
     box.hidden = true;
     box.innerHTML = '';
+    revoke(replayUrls);
   };
   box.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = async (e) => {
     (e.target as HTMLButtonElement).textContent = await shareMoment(m);
@@ -75,12 +86,13 @@ export function closeReplay() {
   const box = $('#replay');
   box.hidden = true;
   box.innerHTML = '';
+  revoke(replayUrls);
 }
 
 /** The flight log, in the station tab. */
 export async function renderFlightLog(opts: { available: boolean; unavailable: string; enabled: boolean; intro: boolean; onToggle: (on?: boolean) => void }) {
   const el = $('#flight-log');
-  while (urls.length) URL.revokeObjectURL(urls.pop()!);
+  revoke(logUrls);
   const moments = await listMoments();
   const toggle = opts.available ? `<button type="button" class="log-toggle" aria-pressed="${opts.enabled}">Flight recorder: ${opts.enabled ? 'on' : 'off'}</button>` : '';
   const how = 'Your ship keeps the last minute of flight in memory and saves only the moments worth keeping: a fight, a Legend, the Marshals, a discovery and your last moments. Shift+P (or holding the camera button) keeps the last 30 seconds yourself; P takes a photo.';
