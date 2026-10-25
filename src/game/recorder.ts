@@ -1,17 +1,17 @@
 // The flight recorder (docs/design/flight-recorder.md, stage 2): every ship's
 // black box. While flying, the view is encoded (H.264, 720p, 30 fps, in the
-// browser with WebCodecs) into a rolling buffer of the last 30 seconds, held
-// in memory. Nothing is written until a moment happens (a kill, a Legend, the
+// browser with WebCodecs) into a rolling buffer of the last minute, held in
+// memory (a few MB). Nothing is written until a moment happens (a kill, a Legend, the
 // Marshals, a discovery, your death, or you keep it yourself); then the
 // seconds around it become an MP4 for the flight log. Where WebCodecs or
 // H.264 aren't available, the recorder simply isn't there.
 
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 
-const SECONDS = 30; // what the buffer holds
+const SECONDS = 60; // what the buffer holds: the longest clip (a whole fight)
 const FPS = 30;
 const HEIGHT = 720;
-const BITRATE = 2_500_000;
+const BITRATE = 1_200_000; // glowing lines on black: half of what a busy scene needs
 const CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42e028', 'avc1.42001f'];
 
 interface Chunk {
@@ -69,6 +69,11 @@ export class FlightRecorder<M> {
       }
     }
     return false;
+  }
+
+  /** The recorder's clock, in seconds of recorded flight: what keep()'s `before` counts back from. */
+  get time() {
+    return this.mediaTime;
   }
 
   get available() {

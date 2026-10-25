@@ -2,7 +2,7 @@
 title: The flight recorder
 status: building
 pillar: core
-summary: Every ship's black box keeps the last 30 seconds, and sharing what you saw is part of the game. Watch how you died, keep the great moments, share them to your socials with a link back, use footage as evidence or sell it to the news, and post the best to the station board.
+summary: Every ship's black box keeps the last minute, and sharing what you saw is part of the game. Watch how you died, keep the great moments, share them to your socials with a link back, use footage as evidence or sell it to the news, and post the best to the station board.
 card: cobra-mk3
 stages:
   - Photos one tap away on touch screens (P) | built
@@ -10,6 +10,7 @@ stages:
   - Footage as evidence, and sold to the news | proposed
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
+  - The kill cam - watch how you died from outside, rebuilt from the fight's data (design/kill-cam.md) | proposed
   - The library: one central store for commanders' moments and their data | idea
   - The Witchspace channel: commanders' Shorts on YouTube, edited by an AI agent | idea
 help:
@@ -34,15 +35,17 @@ A picture paints a thousand words. Seeing something amazing in space, catching i
 ## Principles
 
 - **Sharing is part of the game.** Every photo and kept moment is one tap from WhatsApp, Instagram, TikTok, X or Facebook, branded, with a link back that unfurls into a proper preview and puts the viewer one tap from playing.
-- **Never ask the player to press record.** The recorder keeps the last 30 seconds, always; you decide afterwards what was worth keeping.
+- **Never ask the player to press record.** The recorder keeps the last minute, always; you decide afterwards what was worth keeping.
 - **Footage is worth something in the game,** not just outside it: evidence for the law, news for the newsroom, proof for explorers.
 - **Yours until you say otherwise.** Everything stays on your device. Nothing is uploaded unless you post it, deliberately, signed in.
-- **Light on the phone.** 720p, only while flying, a setting to switch it off, and a log of limited size.
+- **Light on the phone.** 720p, only while flying, a setting to switch it off, a log with a space limit, and nothing left lying around: what you don't keep clears after a week.
+- **Told, not hidden.** The first time it keeps something, the game says so, and the flight log asks once whether to keep it on.
+- **Never in the way.** Nothing pops up mid-flight: photos and clips go to the log quietly, to share once you're docked.
 - **The picture is the game's own.** Only the 3D view is recorded: no HUD, no other apps, nothing personal.
 
 ## 1. Photos *(built)*
 
-P, or the camera button on touch screens (beside the drawer tab, always to hand), takes a photo of the view without the HUD, with a small WITCHSPACE mark in the corner. On phones it opens the share sheet; elsewhere it's saved. From stage 2 it also goes into the flight log.
+P, or the camera button on touch screens (beside the drawer tab, always to hand), takes a photo of the view without the HUD, with a small WITCHSPACE mark in the corner. It goes into the flight log (a JPEG of a few hundred KB; PNG in 1984 mode), with a shutter flash and nothing else, so a photo mid-fight costs nothing; you share it from the log once docked. Where the log can't be used (storage blocked), it's shared or saved straight away as before.
 
 ## Sharing it
 
@@ -57,7 +60,9 @@ Sharing works everywhere a commander can see a photo or a kept moment: the camer
 
 *Built, 24 October 2026: `src/game/recorder.ts` (WebCodecs H.264, 720p, 30 fps, a rolling 30 s in memory, cut at keyframes), `src/game/moments.ts` (titles, descriptions and tags written from the game's own events), `src/game/flightLog.ts` (IndexedDB, 20 moments) and `src/ui/flightLog.ts`. Moments kept by themselves: a kill, the Falcon's hull read, the Marshals coming through, a survey, your death. By hand: Shift+P, or hold the camera button. A switch in the station tab turns it off. Photos don't go into the log yet.*
 
-**The recorder.** While flying, the view is encoded at 720p, 30 fps, into a rolling buffer of the last 30 seconds in memory (a keyframe every second, so any second can start a clip). Nothing is written until something is kept. The encoder is WebCodecs, already used to make the trailer (`tools/trailer.ts`), with MP4 output; it needs Chrome, Edge or Safari 16.4 and later. Where it isn't available, the recorder quietly isn't there and photos still work.
+*Revised, 25 October 2026, after Mark's worry about phones filling up and about P in a dogfight: the buffer is a minute, and **a fight is one clip** (each kill within 25 seconds of the last re-cuts it from the fight's start, up to a minute, replacing the earlier cut; a death in the fight folds it in: "Took 2 pirates with me"). The bitrate is halved (1.2 Mbps: glowing lines on black lose nothing, checked frame by frame), so a 26 s clip is about 3 MB. The log has a **150 MB budget** and 60 moments; the oldest unkept moment makes room, unkept moments clear after a week, and the log shows the space used with a Clear unkept button. **Photos go to the log.** The first kept moment is announced in flight, the death replay says what the recorder is, and the log asks once: Keep it on, or Turn it off. Classic rules have no recorder, as this design always said.*
+
+**The recorder.** While flying, the view is encoded at 720p, 30 fps, into a rolling buffer of the last minute in memory (a keyframe every second, so any second can start a clip). Nothing is written until something is kept. The encoder is WebCodecs, already used to make the trailer (`tools/trailer.ts`), with MP4 output; it needs Chrome, Edge or Safari 16.4 and later. Where it isn't available, the recorder quietly isn't there and photos still work.
 
 **Moments.** The recorder keeps the buffer, by itself, when something worth keeping happens:
 
@@ -148,6 +153,6 @@ Classic stays as 1984 had it: one life, no recorder, no replays. Photos (P) work
 
 ## Open questions
 
-- 30 seconds, or longer for big moments like the Marshals arriving (about a minute from rift to Lancers)?
+- 30 seconds, or longer for big moments like the Marshals arriving (about a minute from rift to Lancers)? *Partly answered: fights run up to a minute.*
 - Should the newsroom pay only the first commander to bring a sighting, as surveys do, or anyone?
-- Is the recorder on by default on phones, or offered the first time something worth keeping happens?
+- Is the recorder on by default on phones, or offered the first time something worth keeping happens? *Answered: on, because nothing is saved until a moment happens, and introduced the first time one is: the flight log asks once whether to keep it on.*

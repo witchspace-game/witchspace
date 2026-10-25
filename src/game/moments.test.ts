@@ -28,4 +28,11 @@ describe('moments', () => {
     expect(d).toMatch(/witchspace\.org\.uk\/play/);
     expect(momentTags([kill('Mamba')], ctx)).toEqual(expect.arrayContaining(['witchspace', 'flight recorder', 'dogfight', 'mamba', 'riedquat']));
   });
+
+  it('names photos as photos', () => {
+    const photo: MomentEvent = { kind: 'photo', text: 'Photo' };
+    expect(momentTitle([photo], ctx)).toBe('CMDR Jameson: A photo from Riedquat');
+    expect(momentDescription([photo], ctx)).toMatch(/^Taken by CMDR Jameson's ship camera/);
+    expect(momentTags([photo], ctx)).toContain('screenshot');
+  });
 });

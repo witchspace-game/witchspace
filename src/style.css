@@ -1456,3 +1456,7 @@ body.retro .ship-nav-name { font-size: 9px; }
 .log-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .log-actions button { padding: 2px 10px; font-size: 13px; min-height: 30px; }
 body.retro #replay { backdrop-filter: none; }
+.replay-card > img { display: block; width: 100%; max-height: 60vh; object-fit: contain; border-radius: 8px; background: #000; }
+.log-intro { padding: 12px 14px; border: 1px solid var(--accent); border-radius: 10px; background: rgba(61, 255, 176, 0.06); }
+.log-intro p { margin: 0 0 10px; }
+.log-intro-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 !important; }

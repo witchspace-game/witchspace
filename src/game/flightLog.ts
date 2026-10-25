@@ -1,10 +1,15 @@
-// The flight log: the moments the flight recorder kept, on this device
-// (IndexedDB), never uploaded. Up to MAX; when full, the oldest moment you
-// haven't marked Keep makes room. Moments you keep stay until you delete them.
+// The flight log: the clips and photos the flight recorder kept, on this
+// device (IndexedDB), never uploaded. It has a budget (BUDGET bytes, MAX
+// moments): when full, the oldest moment you haven't marked Keep makes room,
+// and unkept moments go by themselves after a week. Moments you keep stay
+// until you delete them.
 
 import type { MomentEvent } from './moments';
 
-export const MAX = 20;
+export const MAX = 60;
+export const BUDGET = 150 * 1024 * 1024;
+/** Unkept moments older than this are cleared. */
+export const EXPIRES = 7 * 24 * 3600 * 1000;
 
 export interface LoggedMoment {
   id: string;
@@ -15,10 +20,30 @@ export interface LoggedMoment {
   events: MomentEvent[];
   system: string;
   seconds: number;
-  video: Blob;
+  /** A clip (MP4), or a photo: one of the two. */
+  video?: Blob;
+  photo?: Blob;
   poster: Blob | null;
-  /** Marked Keep: never pushed out to make room. */
+  /** Marked Keep: never cleared to make room. */
   saved: boolean;
+}
+
+export const momentBytes = (m: LoggedMoment) => (m.video?.size ?? 0) + (m.photo?.size ?? 0) + (m.poster?.size ?? 0);
+
+/** Which moments to clear, oldest unkept first, so `incoming` more bytes (and one more moment) fit; null if they can't. */
+export function makeRoom(all: LoggedMoment[], incoming: number, now: number): string[] | null {
+  const gone = all.filter((m) => !m.saved && now - m.created > EXPIRES);
+  const left = all.filter((m) => !gone.includes(m));
+  const spare = left.filter((m) => !m.saved).sort((a, b) => a.created - b.created);
+  let used = left.reduce((n, m) => n + momentBytes(m), 0) + incoming;
+  let count = left.length + 1;
+  while ((used > BUDGET || count > MAX) && spare.length) {
+    const m = spare.shift()!;
+    gone.push(m);
+    used -= momentBytes(m);
+    count--;
+  }
+  return used > BUDGET || count > MAX ? null : gone.map((m) => m.id);
 }
 
 const DB = 'witchspace-flight-log';
@@ -44,11 +69,14 @@ async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRe
   });
 }
 
-/** Newest first. */
+/** Newest first, with expired unkept moments cleared. */
 export async function listMoments(): Promise<LoggedMoment[]> {
   try {
     const all = await run<LoggedMoment[]>('readonly', (s) => s.getAll());
-    return all.sort((a, b) => b.created - a.created);
+    const now = Date.now();
+    const expired = all.filter((m) => !m.saved && now - m.created > EXPIRES);
+    for (const m of expired) await deleteMoment(m.id);
+    return all.filter((m) => !expired.includes(m)).sort((a, b) => b.created - a.created);
   } catch {
     return []; // private browsing, storage blocked: the log is just empty
   }
@@ -57,10 +85,10 @@ export async function listMoments(): Promise<LoggedMoment[]> {
 /** Add a moment, making room if the log is full. Returns false if it couldn't be stored. */
 export async function addMoment(m: LoggedMoment): Promise<boolean> {
   try {
-    const all = await listMoments();
-    const spare = all.filter((x) => !x.saved).sort((a, b) => a.created - b.created);
-    for (let over = all.length + 1 - MAX; over > 0 && spare.length; over--) await deleteMoment(spare.shift()!.id);
-    if (all.length + 1 - MAX > 0 && !spare.length && all.filter((x) => x.saved).length >= MAX) return false; // all kept: no room
+    await db();
+    const room = makeRoom(await listMoments(), momentBytes(m), Date.now());
+    if (!room) return false; // everything is kept: no room
+    for (const id of room) await deleteMoment(id);
     await run('readwrite', (s) => s.put(m));
     return true;
   } catch {
@@ -75,6 +103,11 @@ export async function setSaved(id: string, saved: boolean) {
 
 export async function deleteMoment(id: string) {
   await run('readwrite', (s) => s.delete(id));
+}
+
+/** Clear everything not marked Keep. */
+export async function clearUnkept() {
+  for (const m of await listMoments()) if (!m.saved) await deleteMoment(m.id);
 }
 
 export async function getMoment(id: string): Promise<LoggedMoment | undefined> {
