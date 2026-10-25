@@ -1,4 +1,4 @@
-// The flight log in the station tab, and the replay player (the death replay
+// The flight log in its own station tab, and the replay player (the death replay
 // too): watch, share, keep or delete the clips and photos the ship kept.
 
 import { BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
@@ -89,7 +89,7 @@ export function closeReplay() {
   revoke(replayUrls);
 }
 
-/** The flight log, in the station tab. */
+/** The flight log, its own tab when docked. */
 export async function renderFlightLog(opts: { available: boolean; unavailable: string; enabled: boolean; intro: boolean; onToggle: (on?: boolean) => void }) {
   const el = $('#flight-log');
   revoke(logUrls);

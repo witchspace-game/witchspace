@@ -115,7 +115,7 @@ import { BEACON_CALLS, beacon, distressReward, hailReply, newBeacon, newsInReach
 import { acceptLatest, clearRadio, initRadio, say, setRadioFight, toggleRadio, wakeRadio, type RadioAction, type RadioKind } from './ui/radio';
 import { FlightRecorder, type Clip } from './game/recorder';
 import { RecorderWatch } from './game/recorderWatch';
-import { addMoment, deleteMoment, type LoggedMoment } from './game/flightLog';
+import { addMoment, deleteMoment, listMoments, type LoggedMoment } from './game/flightLog';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
 import { closeReplay, isReplayOpen, openReplay, renderFlightLog } from './ui/flightLog';
 import './style.css';
@@ -540,11 +540,11 @@ function startCommander(difficulty: Difficulty) {
   }
   saveCommander(commander);
   sfx.beep();
-  enterDocked();
+  enterDocked(!recruiter); // a new ship: the flight log first, unless a recruiter is waiting
   if (recruiter && difficulty === 'modern') setDockTab('contracts');
 }
 
-function enterDocked() {
+function enterDocked(newShip = false) {
   boughtHere = { equipment: new Set(), lasers: {}, missiles: 0 };
   ensureSystemScene();
   inSpace = false;
@@ -556,6 +556,23 @@ function enterDocked() {
   markInbox(cmdr());
   renderDocked();
   setState('docked');
+  void showNewMoments(newShip);
+}
+
+// The flight log is the first thing you see in a new ship, and whenever you
+// dock with new moments: the recorder is half the point of flying.
+let flightFrom = Date.now(); // when this flight began: moments after it are new
+
+/** Badge the Flight log tab with what's new, and open on it if there is something (or the ship is new). */
+async function showNewMoments(newShip: boolean) {
+  if (classicRules() || !recorder.available) return setLogBadge(0);
+  const fresh = (await listMoments().catch(() => [])).filter((m) => m.created >= flightFrom).length;
+  setLogBadge(fresh);
+  if ((fresh || newShip) && state === 'docked' && dockTab === 'station') setDockTab('log');
+}
+
+function setLogBadge(n: number) {
+  $('.tabs [data-tab="log"]').textContent = n ? `Flight log · ${n} new` : 'Flight log';
 }
 
 // What was bought on this visit, so a change of mind before launch gets the
@@ -582,13 +599,18 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'contracts' | 'market' | 'news';
+type DockTab = 'station' | 'log' | 'contracts' | 'market' | 'news';
 let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
   dockTab = tab;
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
+  $('#tab-log').hidden = tab !== 'log';
+  if (tab === 'log') {
+    refreshFlightLog();
+    setLogBadge(0); // seen
+  }
   $('#tab-market').hidden = tab !== 'market';
   $('#tab-news').hidden = tab !== 'news';
   $('#tab-contracts').hidden = tab !== 'contracts';
@@ -4636,6 +4658,7 @@ async function launch() {
   player.repair();
   station.placeForLaunch(player);
   launchedAt = elapsed;
+  flightFrom = Date.now();
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
@@ -5479,7 +5502,7 @@ function die() {
     }
     saveCommander(c);
     marshalsStandDown();
-    enterDocked();
+    enterDocked(true); // a new ship from the insurers
     flash(message, 5);
     void blackBox.then((m) => m && state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog, recorderIntroduced() ? undefined : RECORDER_INTRO));
   }, 5000);
@@ -6410,7 +6433,7 @@ async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 
     saved: false,
   };
   if (await addMoment(m)) return m;
-  flash('Flight log full · delete or unkeep something in the station tab', 3);
+  flash('Flight log full · delete or unkeep something in the flight log', 3);
   return null;
 }
 
@@ -6461,7 +6484,7 @@ function keepCombat(event: MomentEvent, before: number, after: number): Promise<
 // The first time a moment is kept, say what the flight recorder is; the
 // flight log asks once whether to keep it on.
 const RECORDER_INTRO_KEY = 'witchspace-recorder-intro';
-const RECORDER_INTRO = "Your ship's flight recorder keeps your last moments. Only the view is recorded, and it stays on this device unless you share it. You can turn it off in the station tab.";
+const RECORDER_INTRO = "Your ship's flight recorder keeps your last moments. Only the view is recorded, and it stays on this device unless you share it. You can turn it off in the flight log.";
 const recorderIntroduced = () => {
   try {
     return localStorage.getItem(RECORDER_INTRO_KEY) === 'done';
@@ -6499,7 +6522,7 @@ void recorder.ready.then(() => state === 'docked' && refreshFlightLog());
 function keepByHand() {
   if (state !== 'flying') return;
   if (classicRules()) return flash('Classic rules: no flight recorder', 2);
-  if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the station tab' : "This browser can't record video", 2.5);
+  if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the flight log' : "This browser can't record video", 2.5);
   flash('Flight recorder · last 30 seconds kept', 2);
   sfx.shutter();
   void keepMoment({ kind: 'kept', text: 'Kept by hand' }, 30, 0);
