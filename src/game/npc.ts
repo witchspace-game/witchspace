@@ -109,6 +109,8 @@ export class NpcShip {
   breaksOffAt?: number;
   /** She's down to it: the game takes over from here (the can, the hail, the jump). */
   brokeOff = false;
+  /** She beat you (a Legend disables, never kills): the game takes over, her price and her jump. */
+  won = false;
   /** Where its lasers sit, in the hull's own frame, all firing at once; without them it fires from the nose. */
   guns?: THREE.Vector3[];
   /** Gimballed lasers swing onto a target this far off the nose (radians); fixed ones need it dead ahead. */

@@ -1678,6 +1678,16 @@ const FALCON_GUNS = [[36, -2.4, 23], [-36, -2.4, 23]] as const;
 /** Her beams swing onto you this far off her nose: a little gimbal, not a turret. */
 const FALCON_GIMBAL = THREE.MathUtils.degToRad(8);
 const FALCON_JUMP_DELAY = 2.5; // seconds from breaking off to her jump
+/** She stops when your hull is down to this share: she disables, she doesn't kill. */
+const FALCON_DISABLES = 1 / 3;
+/** Her price, in tonnes: the most valuable goods in your hold, never company cargo, your ship, kit or credits. */
+const FALCON_TAKES = 10;
+const FALCON_CALLING = [
+  "That's my price. The rest is yours, and so is your life. Fly safe, Commander.",
+  "Nothing personal. The Solos have bills too.",
+  "You'll get home. Slowly. Think about who you carry for.",
+  "Tell them the Falcon took it. They'll understand.",
+];
 const FALCON_FEE = 4; // grams of gem-stones in the can
 const FALCON_PARTING = [
   "Enough. You've earned the stones. Spend them somewhere I'm not.",
@@ -1693,7 +1703,16 @@ const fleeing = new Map<NpcShip, number>();
 /** Each frame: a Falcon down to her last fifth breaks off, then jumps out. */
 function updateLegends(dt: number) {
   for (const npc of npcs) {
-    if (!npc.brokeOff || fleeing.has(npc)) continue;
+    if (!npc.won || fleeing.has(npc)) continue;
+    fleeing.set(npc, FALCON_JUMP_DELAY * 2);
+    Object.assign(npc, { mode: 'flee', hostile: false, fights: false, target: player });
+    const taken = commander ? takeFalconsPrice(cmdr()) : '';
+    radio('pirate', 'Falcon', FALCON_CALLING[Math.floor(Math.random() * FALCON_CALLING.length)], { colour: '#ff4d6d' });
+    flash(taken ? `The Falcon took ${taken}` : 'The Falcon found nothing worth taking', 3.5);
+    void keepCombat({ kind: 'legend', text: taken ? `The Falcon took ${taken}` : 'Beaten by the Falcon', subject: 'The Falcon' }, 20, 6);
+  }
+  for (const npc of npcs) {
+    if (!npc.brokeOff || npc.won || fleeing.has(npc)) continue;
     fleeing.set(npc, FALCON_JUMP_DELAY);
     Object.assign(npc, { mode: 'flee', hostile: false, fights: false, target: player });
     // Her ECM covers her: anything already fired at her goes.
@@ -1729,6 +1748,30 @@ function updateLegends(dt: number) {
     removeNpc(npc);
     if (seen) flash('The Falcon jumped out', 2);
   }
+}
+
+/** Her price: the most valuable goods by the tonne, up to her hold, leaving company cargo alone. Returns what she took, for the banner. */
+function takeFalconsPrice(c: Commander): string {
+  const consigned: Record<string, number> = {};
+  for (const a of c.contracts ?? []) if (!a.adrift && !a.reserved) consigned[a.good] = (consigned[a.good] ?? 0) + a.qty;
+  const goods = Object.entries(c.cargo)
+    .map(([id, qty]) => ({ c: commodityById(id), id, free: qty - (consigned[id] ?? 0) }))
+    .filter((g) => g.c && g.free > 0)
+    .sort((a, b) => b.c!.basePrice * UNITS_PER_TONNE[b.c!.unit] - a.c!.basePrice * UNITS_PER_TONNE[a.c!.unit]);
+  let room = FALCON_TAKES;
+  const took: string[] = [];
+  for (const g of goods) {
+    if (room <= 0) break;
+    const per = UNITS_PER_TONNE[g.c!.unit];
+    const units = Math.min(g.free, Math.floor(room * per));
+    if (units <= 0) continue;
+    c.cargo[g.id] -= units;
+    if (c.cargo[g.id] <= 0) delete c.cargo[g.id];
+    room -= units / per;
+    took.push(`${units}${g.c!.unit === 't' ? ' t' : g.c!.unit} of ${g.c!.name.toLowerCase()}`);
+  }
+  saveCommander(c);
+  return took.slice(0, 3).join(', ') + (took.length > 3 ? ' and more' : '');
 }
 
 /** Each frame: ships running dark stay a cold white unknown until you're close enough to read the hull. */
@@ -2594,7 +2637,13 @@ const evading = () => commander?.difficulty === 'modern' && isWorking(commander,
  */
 function damagePlayer(amount: number, from?: NpcShip): boolean {
   const hullBefore = player.hull;
-  const destroyed = player.damage(amount);
+  let destroyed = player.damage(amount);
+  // A Falcon fights to disable: at a third of your hull she stops, and takes her price.
+  if (from?.breaksOffAt !== undefined && player.hull < player.def.stats.hull * FALCON_DISABLES) {
+    player.hull = Math.min(hullBefore, player.def.stats.hull * FALCON_DISABLES);
+    destroyed = false;
+    from.won = true;
+  }
   const badlyHurt = player.hull < player.def.stats.hull * EQUIPMENT_RISK_HULL;
   // Pirates aim for the comms array: it's how you'd call for help.
   const aimed = from?.role === 'pirate';
@@ -3266,7 +3315,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       sfx.thud();
       hitFeedback(0.9);
       playerRammedNpc(npc, 25);
-      if (damagePlayer(25)) {
+      if (damagePlayer(25, npc.breaksOffAt !== undefined ? npc : undefined)) { // a Legend disables, even by collision
         die();
         return;
       }
@@ -3681,7 +3730,7 @@ function updateMissiles(dt: number) {
       sfx.hit();
       hitFeedback(1.2);
       showHitDirection(camera, m.position);
-      if (damagePlayer(MISSILE.damage)) {
+      if (damagePlayer(MISSILE.damage, npcs.find((n) => n.ship === m.owner))) {
         die();
         return;
       }

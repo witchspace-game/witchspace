@@ -62,9 +62,9 @@ A commander who flies the Falcons' galaxies in order meets the whole family, and
 
 ## The fight, and losing it
 
-- **Her guns.** A beam laser at the tip of each talon vane, firing together, converging where she aims, on a little gimbal (8°) so they swing onto you without being a turret. Between them, 40 damage a second at up to 3 km: well above a pirate's pulse laser (14 a second at 1.8 km), below a commander's beam (90). She shouldn't simply outgun a well-fitted Cobra; her flying, and how she learns you, is what makes her dangerous. *(Built 25 October 2026, with the break-off; Mark asked for the twin beams.)*
+- **Her guns.** A beam laser on each talon vane, both firing at once, converging where she aims, on a little gimbal (8°) so they swing onto you without being a turret: 55 damage a second between them, at up to 3.2 km. *(Built 25 October 2026; Mark asked for twin beam lasers.)* Tuned in test duels, a bot flying a Cobra at a Cobra's turn rate against her, five fights a laser: a **military laser won 3 of 5**, a **beam 1 of 5**, a **pulse 1 of 5**. Full beam lasers (144 a second) took a Cobra in under two seconds whatever it carried, and half that still won every fight: she only has to take you to a third of your hull, you have to take her to a fifth. Her AI is still the plain pirate's, flying at you head-on; better flying, not more damage, is the next step ([pilot skill](#she-remembers-you)).
 - **She fights to disable.** Her lasers go for your drives, her missiles (three, never two at you at once, as for every ship) to break your shields. She doesn't fire on a ship that's beaten.
-- **Beaten:** when your hull is down to about a third, she stops. Your **hyperdrive is knocked out** and your speed limited: you're **drifting**, with life support on.
+- **Beaten:** when your hull is down to about a third, she stops. *(Built early, 25 October 2026, with her beam lasers: at a third of your hull, by laser, missile or collision, she stops, takes her price (below), hails you and jumps out. The drifting, the beacon tow and the calling card in your Messages are still to come.)* Your **hyperdrive is knocked out** and your speed limited: you're **drifting**, with life support on.
 - **She takes her price:** company cargo she wants first, then the most valuable goods, up to her hold (10 t). A company contract taken by a Falcon fails without the usual standing loss: the companies know who she is. Your ship, equipment, credits and survey data are left alone.
 - **Her calling card** arrives in your Messages: a line from her, and what she took.
 - **Then she leaves** through witchspace, and you're alone.
@@ -146,7 +146,7 @@ The turning point of a Falcon's story: the Legend who hunted you, caught, and yo
 | She takes | Up to 10 t; your ship, kit, credits and data never |
 | She breaks off at | About a fifth of her shields and hull |
 | Her shields, hull | 320, 230 |
-| Her guns | Twin vane beams firing together, 40 a second between them, 3 km, 8° gimbal |
+| Her guns | Twin vane beam lasers firing together, 55 a second between them, 3.2 km, 8° gimbal |
 | Keeps away after you drive her off | A day, no bounty in that time (until the circuit) |
 | Bounty | 2,000 Cr, +500 each escape |
 

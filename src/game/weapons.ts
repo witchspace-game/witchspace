@@ -83,12 +83,17 @@ export const PIRATE_LASER: Laser = {
   color: '#ff9a3d',
 };
 
-/** The Falcon's twin beams, one on each vane, firing together (docs/design/legends-the-falcon.md): 40 a second between them, well above a pirate's and below a commander's beam. Her flying is what makes her dangerous. */
+/**
+ * The Falcon's guns: a beam laser on each vane, both firing at once, gimballed
+ * (docs/design/legends-the-falcon.md). 55 a second between them, tuned in test
+ * duels so a military laser usually beats her, a beam sometimes, a pulse rarely:
+ * she only has to take a Cobra to a third, while you have to take her to a fifth.
+ */
 export const FALCON_LASER: Laser = {
-  name: 'Solo & Sons beam laser',
-  interval: 0.25,
-  damage: 5, // each
-  range: 3000,
+  name: 'Beam laser',
+  interval: 0.1,
+  damage: 2.75, // each
+  range: 3200,
   heat: 0,
   cooling: 0,
   color: '#ff4d6d',
