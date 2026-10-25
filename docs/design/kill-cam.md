@@ -1,13 +1,13 @@
 ---
 title: The kill cam
-status: proposed
+status: building
 pillar: fight
 summary: Watch how you died from outside. Alongside the video, the ship logs where everything was and every shot fired, a few hundred KB, and the game rebuilds the fight so you can watch it from behind the pirate who got you, orbit it or slow it down. Tiny enough to keep millions in the library, and labelled as a reconstruction.
 card: mamba
 stages:
-  - The track - the last minute of every ship's position and every shot, logged as you fly | proposed
-  - The replay - watch your death from outside, from the insurers' screen | proposed
-  - Keep and share - tracks kept with their moments in the flight log, and a chosen camera saved as a video | proposed
+  - The track - the last minute of every ship's position and every shot, logged as you fly | built
+  - The replay - watch your death from outside, from the insurers' screen | built
+  - Keep and share - tracks kept with their moments in the flight log (built), and a chosen camera saved as a video | started
   - The library - send a track, and anyone can open the fight in their browser from a link | idea
   - Shared space - other commanders' ships in the replay, from what your scanner saw | idea
 help:
@@ -37,6 +37,8 @@ A kill cam answers it. The ship logs where every ship was and every shot fired, 
 
 ## 1. The track
 
+*Built, 25 October 2026: `src/game/track.ts` (the ring buffer, the packing and its tests) and the recording in `main.ts` (`recordTrack`, `trackBeam`, `trackBoom`). Every ship within 12 km (the scanner's long range), missiles and the station, 20 times a second; a ship running dark is kept as unidentified until its hull was read. Shots (yours and theirs), explosions, and your death, with who hit you last. Packed at 22 bytes a ship a sample and gzipped, kept with the death's moment in the flight log. Classic records nothing.*
+
 While you fly, a ring buffer holds the last minute of the fight as numbers, sampled 20 times a second:
 
 - **Every ship your scanner sees:** an id, its type (the ship file), position and orientation. Positions are kept relative to you as 32-bit floats; orientation as a quaternion in four 16-bit numbers. About 21 bytes a ship a sample.
@@ -51,6 +53,8 @@ While you fly, a ring buffer holds the last minute of the fight as numbers, samp
 
 ## 2. The replay
 
+*Built, 25 October 2026: `src/ui/killCam.ts`. **Watch it from outside** on the insurers' screen, and **From outside** on a death in the flight log. It opens on the last 14 seconds before your death, behind the ship that fired the killing shot (labelled in red), with Behind you and Orbit (drag to turn, scroll to zoom), play and pause (Space), a quarter speed, a scrubber, and RECONSTRUCTION with the assessors' line at the top. Escape closes it. The camera follows its ship and eases only around it, so a fighter can't outrun it.*
+
 When you die, the insurers' screen offers **Watch it from outside** beside the video. The replay builds the scene from the track in a second camera (the game isn't running underneath), and plays it with:
 
 - **Cameras:** behind your killer (the default: it answers the question), behind you, orbiting the fight, and free.
@@ -61,6 +65,8 @@ When you die, the insurers' screen offers **Watch it from outside** beside the v
 Ships between samples are smoothed (positions interpolated, orientations slerped), so 20 a second plays smoothly at 60.
 
 ## 3. Keep and share
+
+*The track is kept with the death's moment (built). Saving a camera as video is next.*
 
 The track is kept with the death's moment in the flight log (it adds a few per cent to the clip's size). From the replay you can save the camera you're watching as a video, through the same WebCodecs path the recorder uses, upright for Shorts or wide, ending on the house card. Where the browser can't encode video, the replay still plays: it's just numbers.
 

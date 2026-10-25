@@ -11,7 +11,7 @@ stages:
   - Footage as evidence, and sold to the news | proposed
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
-  - The kill cam - watch how you died from outside, rebuilt from the fight's data (design/kill-cam.md) | proposed
+  - The kill cam - watch how you died from outside, rebuilt from the fight's data (design/kill-cam.md) | built
   - The library: one central store for commanders' moments and their data | idea
   - The Witchspace channel: commanders' Shorts on YouTube, edited by an AI agent | idea
 help:

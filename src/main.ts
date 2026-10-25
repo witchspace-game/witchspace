@@ -115,9 +115,11 @@ import { BEACON_CALLS, beacon, distressReward, hailReply, newBeacon, newsInReach
 import { acceptLatest, clearRadio, initRadio, say, setRadioFight, toggleRadio, wakeRadio, type RadioAction, type RadioKind } from './ui/radio';
 import { FlightRecorder, type Clip } from './game/recorder';
 import { RecorderWatch } from './game/recorderWatch';
-import { addMoment, deleteMoment, listMoments, type LoggedMoment } from './game/flightLog';
+import { addMoment, attachTrack, deleteMoment, listMoments, type LoggedMoment } from './game/flightLog';
+import { readTrack, TrackRecorder, trackBlob, type Pose } from './game/track';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
-import { closeReplay, isReplayOpen, openReplay, renderFlightLog } from './ui/flightLog';
+import { closeReplay, isReplayOpen, openReplay, renderFlightLog, setOutsideView } from './ui/flightLog';
+import { KillCam } from './ui/killCam';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -2213,6 +2215,7 @@ let builtSystem: StarSystem | null = null;
 /** Rebuild the planet, police and debris for a star system. */
 function buildSystemScene(sys: StarSystem) {
   builtSystem = sys;
+  track.clear(); // a new system: the old fight is over
   if (planet) disposePlanet(planet);
   planetRadius = sys.radius * 1.2;
   atmosphere = planetRadius * ATMOSPHERE_SCALE;
@@ -2658,6 +2661,7 @@ const evading = () => commander?.difficulty === 'modern' && isWorking(commander,
  * hull it may take out fitted equipment. Returns true if the ship is destroyed.
  */
 function damagePlayer(amount: number, from?: NpcShip): boolean {
+  if (from) lastHitBy = { npc: from, at: elapsed };
   const hullBefore = player.hull;
   let destroyed = player.damage(amount);
   // A Falcon fights to disable: at a third of your hull she stops, and takes her price.
@@ -2725,6 +2729,7 @@ function becomeOffender(message: string, unknown = !identified()) {
 
 /** A ship blows up. If the player did it, the law and the combat rating take note. */
 function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
+  trackBoom(npc);
   const velocity = npc.ship.forward().multiplyScalar(npc.ship.speed);
   const boom = new Explosion(npc.def, npc.obj, velocity);
   space.scene.add(boom.group);
@@ -3187,6 +3192,7 @@ function firePlayerLaser() {
   }
   const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
   for (const muzzle of muzzles()) beams.fire(muzzle, end, laser.color);
+  trackBeam(player, origin, end, laser.color, hit?.target.value.kind === 'npc' ? hit.target.value.npc : null);
   sfx.laser();
   if (sharedSpace.connected) sharedSpace.fire(dir, laser.id);
   if (!hit) return;
@@ -3300,7 +3306,9 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
         // The Will-o'-the-Wisp jinks the ship out of the way of half the shots.
         if (alive && !(evading() && Math.random() < EVADE_LASERS)) targets.push({ value: 'player', position: player.obj.position, radius: 22 });
         const hit = rayHit(origin, aim, npc.laser.range, targets);
-        beams.fire(origin, hit ? hit.point : origin.clone().addScaledVector(aim, npc.laser.range), npc.laser.color);
+        const beamEnd = hit ? hit.point : origin.clone().addScaledVector(aim, npc.laser.range);
+        beams.fire(origin, beamEnd, npc.laser.color);
+        trackBeam(npc, origin, beamEnd, npc.laser.color, hit?.target.value === 'player' ? player : hit?.target.value instanceof NpcShip ? hit.target.value : null);
         zapAt(origin, 700, 120, 0.15, 0.5);
         const struck = hit?.target.value;
         if (struck instanceof NpcShip) {
@@ -4313,6 +4321,7 @@ function updateSpace(dt: number) {
 
   updateCombat(dt, input);
   updateSharedSpace(dt, input);
+  if (state === 'flying' || state === 'dead') recordTrack();
   if (state === 'flying') {
     updateClearance();
     updateSurrender(dt);
@@ -5419,10 +5428,88 @@ async function surrender() {
   flash(settlementMessage(settlement, 'You surrendered · record cleared'), 5);
 }
 
+// --- The kill cam's track (docs/design/kill-cam.md) ---------------------------
+// The last minute of every ship your scanner saw, 20 times a second, and every
+// shot and explosion, kept with the black box when you die so the insurers'
+// screen can rebuild the fight from outside. Only what your ship knew.
+
+const track = new TrackRecorder();
+const trackIds = new WeakMap<object, number>();
+let nextTrackId = 2; // 1 is you
+let lastHitBy: { npc: NpcShip; at: number } | null = null;
+const TRACK_RANGE = 12000; // metres: the scanner's long range
+
+function trackId(o: object): number {
+  if (o === player) return 1;
+  let id = trackIds.get(o);
+  if (id === undefined) {
+    id = nextTrackId++;
+    if (nextTrackId > 0x7fff) nextTrackId = 2;
+    trackIds.set(o, id);
+  }
+  return id;
+}
+
+const poseOf = (id: number, obj: THREE.Object3D, unknown = false): Pose => ({ id, p: obj.position.toArray(), q: obj.quaternion.toArray() as Pose['q'], ...(unknown ? { unknown } : {}) });
+
+function recordTrack() {
+  if (classicRules() || !track.due(elapsed)) return;
+  const here = player.obj.position;
+  const poses: Pose[] = [];
+  if (state === 'flying') {
+    track.ship({ id: 1, def: player.def.id, role: 'you', label: `CMDR ${cmdr().name}` });
+    poses.push(poseOf(1, player.obj));
+  }
+  for (const npc of npcs) {
+    if (npc.obj.position.distanceTo(here) > TRACK_RANGE) continue;
+    const id = trackId(npc);
+    track.ship({ id, def: npc.def.id, role: npc.role, label: `${npc.def.name} · ${npc.role}${npc.bounty ? ` · ${npc.bounty} Cr` : ''}` });
+    poses.push(poseOf(id, npc.obj, npc.dark && !npcIdentified(npc)));
+  }
+  for (const m of missiles) {
+    if (m.position.distanceTo(here) > TRACK_RANGE) continue;
+    const id = trackId(m);
+    track.ship({ id, def: 'missile', role: 'missile', label: 'Missile' });
+    poses.push(poseOf(id, m.model.root));
+  }
+  if (station.root.position.distanceTo(here) < TRACK_RANGE) {
+    const id = trackId(station);
+    track.ship({ id, def: 'coriolis', role: 'station', label: `${currentSystem().name} station` });
+    poses.push(poseOf(id, station.root));
+  }
+  track.sample(elapsed, poses);
+}
+
+function trackBeam(from: object, a: THREE.Vector3, b: THREE.Vector3, color: string, hit: object | null) {
+  if (classicRules()) return;
+  track.event({ t: elapsed, kind: 'beam', from: trackId(from), a: a.toArray(), b: b.toArray(), color, ...(hit ? { hit: trackId(hit) } : {}) });
+}
+
+function trackBoom(npc: NpcShip) {
+  if (!classicRules()) track.event({ t: elapsed, kind: 'boom', id: trackId(npc), p: npc.obj.position.toArray() });
+}
+
+function trackScene() {
+  const sys = currentSystem();
+  return { system: sys.name, when: Date.now(), you: 1, planet: { p: planetPos.toArray(), r: planetRadius, color: planetColour(sys) }, sun: SUN_POS.toArray() };
+}
+
 function die() {
   const c = cmdr();
   // The black box: the last seconds, and the ship going up, for the insurers' screen.
   const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}` }, 26, 4);
+  const killer = lastHitBy && elapsed - lastHitBy.at < 5 ? lastHitBy.npc : null;
+  track.event({ t: elapsed, kind: 'boom', id: trackId(player), p: player.obj.position.toArray() });
+  track.event({ t: elapsed, kind: 'death', ...(killer ? { by: trackId(killer) } : {}) });
+  // The kill cam: the fight's track, kept with the black box once the explosion has played out.
+  void blackBox.then(async (m) => {
+    const data = m && classicRules() ? null : track.snapshot(trackScene());
+    if (m && data) {
+      m.track = await trackBlob(data);
+      await attachTrack(m.id, m.track).catch(() => undefined);
+    }
+    track.clear();
+  });
   setView('front');
   setAutopilot(false);
   setState('dead');
@@ -6229,6 +6316,7 @@ function handleMapKey(code: string): boolean {
 
 function handleKey(code: string) {
   unlockAudio();
+  if (killCam.key(code)) return;
   if (handleMapKey(code)) return;
   if (code === 'KeyG' && (state === 'docked' || state === 'flying') && commander) {
     toggleGalaxyMap();
@@ -6553,6 +6641,17 @@ function keepByHand() {
   });
 }
 
+// --- The kill cam (docs/design/kill-cam.md) -----------------------------------
+
+const killCam = new KillCam(camera);
+if (import.meta.env.DEV) Object.assign(window, { __kc: killCam });
+setOutsideView(async (m) => {
+  const data = m.track ? await readTrack(m.track).catch(() => null) : null;
+  if (!data) return flash("This reconstruction is from an older version of the game and can't be rebuilt", 3);
+  document.querySelector<HTMLVideoElement>('#replay video')?.pause();
+  killCam.open(data);
+});
+
 // --- Main loop --------------------------------------------------------------
 
 // Timer pauses while the tab is hidden, so there's no huge step on return.
@@ -6562,6 +6661,15 @@ timer.connect(document);
 function frame(now?: number) {
   timer.update(now);
   const dt = Math.min(timer.getDelta(), 0.1);
+  if (killCam.active) {
+    // The kill cam has the screen: the game holds still underneath.
+    lens.aim(camera, null, 0, 0);
+    killCam.update(dt);
+    render(killCam.space.scene);
+    recorder.pause();
+    requestAnimationFrame(frame);
+    return;
+  }
   for (const button of gamepadPresses()) {
     const code = padToKey(button);
     if (code) handleKey(code);
