@@ -1478,6 +1478,8 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam) { visibility: hidden !i
 .killcam-bar { position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(760px, calc(100% - 32px)); display: grid; gap: 8px; padding: 10px 12px; background: rgba(0, 8, 6, 0.72); border: 1px solid rgba(61, 255, 176, 0.25); border-radius: 10px; cursor: default; }
 .killcam-views, .killcam-time-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .killcam-views button.active { border-color: var(--neo, #3dffb0); color: var(--neo, #3dffb0); }
+.killcam-save { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-left: auto; }
+.killcam-saving { color: var(--dim); font-size: 13px; font-variant-numeric: tabular-nums; }
 .killcam-scrub { flex: 1 1 160px; min-width: 120px; accent-color: #3dffb0; }
 .killcam-time { min-width: 7.5em; color: var(--dim); font-size: 13px; font-variant-numeric: tabular-nums; }
 .killcam-label { position: absolute; left: 0; top: 0; padding: 2px 6px; font-size: 12px; white-space: nowrap; color: #d8e2f0; background: rgba(0, 6, 4, 0.55); border-radius: 4px; pointer-events: none; }

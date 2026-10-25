@@ -7,7 +7,7 @@ card: mamba
 stages:
   - The track - the last minute of every ship's position and every shot, logged as you fly | built
   - The replay - watch your death from outside, from the insurers' screen | built
-  - Keep and share - tracks kept with their moments in the flight log (built), and a chosen camera saved as a video | started
+  - Keep and share - tracks kept with their moments in the flight log, and a chosen camera saved as a video | built
   - The library - send a track, and anyone can open the fight in their browser from a link | idea
   - Shared space - other commanders' ships in the replay, from what your scanner saw | idea
 help:
@@ -66,7 +66,7 @@ Ships between samples are smoothed (positions interpolated, orientations slerped
 
 ## 3. Keep and share
 
-*The track is kept with the death's moment (built). Saving a camera as video is next.*
+*Built, 25 October 2026: `src/ui/encodeVideo.ts` and **Save video · upright** or **· wide** in the kill cam. The reconstruction is rendered offline, frame by frame at 30 fps, at exactly 720×1280 or 1280×720 (so it's smooth whatever the device manages live), from the camera you're watching. Every frame carries RECONSTRUCTION and the title (*"CMDR Kestrel: shot down by a Mamba at Riedquat"*), the ship labels and witchspace.org.uk; it ends on the house card (the mark, the title, witchspace.org.uk/play). It goes into the flight log like any moment, and **Share the video** opens the share sheet or downloads it. On a Mac, 16 seconds saved in about two.*
 
 The track is kept with the death's moment in the flight log (it adds a few per cent to the clip's size). From the replay you can save the camera you're watching as a video, through the same WebCodecs path the recorder uses, upright for Shorts or wide, ending on the house card. Where the browser can't encode video, the replay still plays: it's just numbers.
 

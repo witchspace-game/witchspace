@@ -2,10 +2,11 @@ import * as THREE from 'three';
 import { shipById } from '../content/ships';
 import { buildPlanet, disposePlanet } from '../render/bodies';
 import { Explosion } from '../render/explosion';
-import { makeSpace, type Space } from '../render/renderer';
+import { atSize, makeSpace, render, type Space } from '../render/renderer';
 import { buildShip, disposeShip, showUnidentified, type ShipModel } from '../render/shipModel';
 import { Beams } from '../game/weapons';
 import { bracket, killerOf, type TrackData } from '../game/track';
+import { encodeVideo } from './encodeVideo';
 import { escapeHtml } from './escape';
 
 // The kill cam (docs/design/kill-cam.md, stage 2): your death rebuilt from the
@@ -15,11 +16,25 @@ import { escapeHtml } from './escape';
 // the assessors' account of what happened.
 
 type View = 'killer' | 'you' | 'orbit';
+export type Shape = 'wide' | 'upright';
+
+/** A saved reconstruction, for the flight log and sharing. */
+export interface KillCamVideo {
+  video: Blob;
+  poster: Blob | null;
+  seconds: number;
+  title: string;
+  description: string;
+  system: string;
+}
 
 const BEFORE_DEATH = 14; // seconds of the fight shown before the end, at first
 const AFTER_DEATH = 4;
 const SLOW = 0.25;
 const BOOM = 4.5; // seconds an explosion lasts
+const FPS = 30;
+const CARD = 2.5; // seconds of the house card at the end of a saved video
+const SIZES: Record<Shape, [number, number]> = { wide: [1280, 720], upright: [720, 1280] };
 
 export class KillCam {
   active = false;
@@ -45,6 +60,11 @@ export class KillCam {
   private readonly camLook = new THREE.Vector3();
   private snap = true;
   private onClose: (() => void) | null = null;
+  /** Rendering a video: the live loop leaves the screen alone. */
+  exporting = false;
+  /** Where saved videos go (the game logs them in the flight log). */
+  onVideo: ((v: KillCamVideo) => Promise<void>) | null = null;
+  private lastVideo: KillCamVideo | null = null;
   private readonly el: HTMLElement;
 
   constructor(private readonly camera: THREE.PerspectiveCamera) {
@@ -132,6 +152,14 @@ export class KillCam {
   }
 
   update(dt: number) {
+    if (this.exporting) return;
+    this.advance(dt);
+    this.updateLabels(this.data);
+    this.updateTime();
+  }
+
+  /** Move the reconstruction on by dt seconds (scaled by the replay speed) and aim the camera. */
+  private advance(dt: number) {
     const d = this.data;
     if (!d) return;
     const before = this.t;
@@ -146,8 +174,6 @@ export class KillCam {
     this.updateBooms(d, this.playing ? dt * this.speed : 0);
     this.aimCamera(d, dt);
     this.space.stars.position.copy(this.camera.position);
-    this.updateLabels(d);
-    this.updateTime();
   }
 
   /** Where everyone was at time t: positions interpolated, orientations slerped between samples. */
@@ -223,9 +249,11 @@ export class KillCam {
     if (view === 'killer' && !killer) view = 'orbit';
     const youModel = this.models.get(d.scene.you);
     if (view === 'you' && !youModel?.root.visible) view = 'orbit';
+    // An upright frame is narrow: stand further back, so the ship doesn't fill it.
+    const back = this.camera.aspect < 1 ? 1 / this.camera.aspect : 1;
     if (view === 'killer' && killer) {
       // Over the shoulder of the ship that got you, looking at you.
-      const r = Math.max(30, (killerModel!.radius ?? 20) * 3.2);
+      const r = Math.max(30, (killerModel!.radius ?? 20) * 3.2) * back;
       const toYou = you.clone().sub(killer.position).normalize();
       const up = new THREE.Vector3(0, 1, 0).applyQuaternion(killer.quaternion);
       anchor.copy(killer.position);
@@ -235,7 +263,7 @@ export class KillCam {
       const f = new THREE.Vector3(0, 0, 1).applyQuaternion(youModel.root.quaternion);
       const up = new THREE.Vector3(0, 1, 0).applyQuaternion(youModel.root.quaternion);
       anchor.copy(you);
-      pos.copy(f).multiplyScalar(-70).addScaledVector(up, 22);
+      pos.copy(f).multiplyScalar(-70 * back).addScaledVector(up, 22 * back);
       look.copy(f).multiplyScalar(300);
     } else {
       // Orbit the fight: you, and whoever killed you.
@@ -258,7 +286,8 @@ export class KillCam {
     this.camera.lookAt(anchor.add(this.camLook));
   }
 
-  private updateLabels(d: TrackData) {
+  private updateLabels(d: TrackData | null) {
+    if (!d) return;
     const v = new THREE.Vector3();
     for (const [id, el] of this.labels) {
       const m = this.models.get(id);
@@ -304,6 +333,10 @@ export class KillCam {
           <button type="button" data-view="killer"${this.killer === undefined ? ' disabled' : ''}>Behind the killer</button>
           <button type="button" data-view="you">Behind you</button>
           <button type="button" data-view="orbit">Orbit</button>
+          <span class="killcam-save">
+            <button type="button" data-save="upright" title="Upright, for Shorts, Reels and TikTok">Save video · upright</button>
+            <button type="button" data-save="wide">Save video · wide</button>
+          </span>
         </div>
         <div class="killcam-time-row">
           <button type="button" data-act="play">Pause</button>
@@ -338,6 +371,7 @@ export class KillCam {
       this.playing = false;
     };
     this.el.querySelector<HTMLButtonElement>('[data-act="close"]')!.onclick = () => this.close();
+    this.el.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) => (b.onclick = () => void this.save(b.dataset.save as Shape)));
     // Drag to turn the orbit, scroll to zoom it.
     this.el.onpointerdown = (e) => {
       if ((e.target as HTMLElement).closest('.killcam-bar')) return;
@@ -360,6 +394,110 @@ export class KillCam {
     };
   }
 
+  /** Save the reconstruction from the camera you're watching, ending on the house card; then offer to share it. */
+  private async save(shape: Shape) {
+    const d = this.data;
+    if (!d || this.exporting) return;
+    const box = this.el.querySelector<HTMLElement>('.killcam-save')!;
+    const was = box.innerHTML;
+    box.innerHTML = '<span class="killcam-saving">Saving · 0%</span>';
+    this.exporting = true;
+    const keep = { t: this.t, playing: this.playing, speed: this.speed, yaw: this.orbit.yaw };
+    for (const l of this.labels.values()) l.hidden = true;
+    const [w, h] = SIZES[shape];
+    const span = this.end - this.start;
+    const fight = Math.ceil(span * FPS);
+    const frames = fight + Math.ceil(CARD * FPS);
+    const title = this.title(d);
+    const icon = await loadIcon();
+    let poster: Blob | null = null;
+    // Start clean: no beams or explosions left over from watching.
+    this.beams.update(1);
+    for (const b of this.booms) b.boom.group.removeFromParent();
+    this.booms = [];
+    this.t = this.start;
+    this.playing = true;
+    this.speed = 1;
+    this.snap = true;
+    const video = await atSize(w, h, (canvas) =>
+      encodeVideo({
+        width: w,
+        height: h,
+        fps: FPS,
+        frames,
+        onProgress: (f) => {
+          const label = box.querySelector('.killcam-saving');
+          if (label) label.textContent = `Saving · ${Math.round(f * 100)}%`;
+        },
+        draw: async (i, g) => {
+          if (i < fight) {
+            this.playing = true;
+            this.advance(i === 0 ? 0 : 1 / FPS);
+            render(this.space.scene);
+            g.drawImage(canvas, 0, 0, w, h);
+            this.drawLabels(g, d, w, h);
+            stamp(g, w, h, title);
+            if (!poster && this.t >= this.deathAt - 1.5) poster = await still(g, w, h);
+          } else houseCard(g, w, h, title, icon);
+        },
+      }),
+    ).catch(() => null);
+    this.exporting = false;
+    Object.assign(this, { t: keep.t, playing: keep.playing, speed: keep.speed });
+    this.orbit.yaw = keep.yaw;
+    this.snap = true;
+    if (!video) {
+      box.innerHTML = '<span class="killcam-saving">This browser can\'t save video</span>';
+      setTimeout(() => {
+        box.innerHTML = was;
+        this.renderSaveButtons();
+      }, 2500);
+      return;
+    }
+    this.lastVideo = { video, poster, seconds: span + CARD, title, description: `Reconstructed from the flight recorder at ${d.scene.system}`, system: d.scene.system };
+    await this.onVideo?.(this.lastVideo).catch(() => undefined);
+    box.innerHTML = `<button type="button" class="primary" data-act="share-video">Share the video</button><span class="killcam-saving">Saved to your flight log</span>`;
+    box.querySelector<HTMLButtonElement>('[data-act="share-video"]')!.onclick = async (e) => {
+      (e.target as HTMLButtonElement).textContent = await shareVideo(this.lastVideo!);
+    };
+  }
+
+  private renderSaveButtons() {
+    this.el.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) => (b.onclick = () => void this.save(b.dataset.save as Shape)));
+  }
+
+  /** "CMDR Kestrel: shot down by a Mamba at Riedquat". */
+  private title(d: TrackData): string {
+    const you = d.ships.find((s) => s.id === d.scene.you)?.label ?? 'A commander';
+    const killer = this.killer !== undefined ? d.ships.find((s) => s.id === this.killer) : undefined;
+    const who = killer ? (killer.def === 'falcon' ? 'the Falcon' : `a ${killer.label.split(' · ')[0]}`) : null;
+    return `${you}: ${who ? `shot down by ${who}` : 'ship destroyed'} at ${d.scene.system}`;
+  }
+
+  /** The ship labels, drawn into the video (the live ones are HTML). */
+  private drawLabels(g: OffscreenCanvasRenderingContext2D, d: TrackData, w: number, h: number) {
+    const v = new THREE.Vector3();
+    const size = Math.round(Math.min(w, h) / 42);
+    g.font = `500 ${size}px ${fontFamily()}`;
+    g.textAlign = 'center';
+    g.textBaseline = 'bottom';
+    for (const [id] of this.labels) {
+      const m = this.models.get(id);
+      if (!m?.root.visible) continue;
+      v.copy(m.root.position).project(this.camera);
+      if (v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) continue;
+      const ship = d.ships.find((s) => s.id === id)!;
+      const text = (this.unknown.get(id) ? 'Unidentified contact' : id === d.scene.you ? `${ship.label} (you)` : ship.label) + (id === this.killer ? ' · fired the killing shot' : '');
+      const x = ((v.x + 1) / 2) * w;
+      const y = ((1 - v.y) / 2) * h - size * 1.6;
+      const tw = g.measureText(text).width;
+      g.fillStyle = 'rgba(0, 6, 4, 0.6)';
+      g.fillRect(x - tw / 2 - size * 0.4, y - size * 1.25, tw + size * 0.8, size * 1.5);
+      g.fillStyle = id === this.killer ? '#ff8da1' : '#d8e2f0';
+      g.fillText(text, x, y);
+    }
+  }
+
   /** Keys while it's open: space plays or pauses, Escape closes. Returns true if it used the key. */
   key(code: string): boolean {
     if (!this.active) return false;
@@ -370,4 +508,82 @@ export class KillCam {
     } else return false;
     return true;
   }
+}
+
+const fontFamily = () => getComputedStyle(document.body).fontFamily || 'sans-serif';
+
+/** Always labelled: RECONSTRUCTION and whose, top left; the way back to the game, bottom right. */
+function stamp(g: OffscreenCanvasRenderingContext2D, w: number, h: number, title: string) {
+  const s = Math.min(w, h) / 36;
+  const pad = s * 1.2;
+  g.textAlign = 'left';
+  g.textBaseline = 'top';
+  g.fillStyle = '#ffd28a';
+  g.font = `700 ${s}px ${fontFamily()}`;
+  g.fillText('R E C O N S T R U C T I O N', pad, pad);
+  g.fillStyle = 'rgba(216, 226, 240, 0.85)';
+  g.font = `400 ${s * 0.85}px ${fontFamily()}`;
+  g.fillText(title, pad, pad + s * 1.4, w - pad * 2);
+  g.textAlign = 'right';
+  g.textBaseline = 'bottom';
+  g.fillStyle = 'rgba(61, 255, 176, 0.9)';
+  g.font = `600 ${s * 0.9}px ${fontFamily()}`;
+  g.fillText('witchspace.org.uk', w - pad, h - pad);
+}
+
+/** The house card the video ends on: the mark, the name, and where to play. */
+function houseCard(g: OffscreenCanvasRenderingContext2D, w: number, h: number, title: string, icon: ImageBitmap | null) {
+  g.fillStyle = '#000';
+  g.fillRect(0, 0, w, h);
+  const s = Math.min(w, h) / 20;
+  const cy = h / 2;
+  if (icon) g.drawImage(icon, w / 2 - s * 1.6, cy - s * 5, s * 3.2, s * 3.2);
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillStyle = '#e8fff6';
+  g.font = `700 ${s * 1.3}px ${fontFamily()}`;
+  g.fillText('W I T C H S P A C E', w / 2, cy);
+  g.fillStyle = 'rgba(216, 226, 240, 0.8)';
+  g.font = `400 ${s * 0.62}px ${fontFamily()}`;
+  g.fillText(title, w / 2, cy + s * 1.4, w * 0.9);
+  g.fillStyle = '#3dffb0';
+  g.font = `600 ${s * 0.8}px ${fontFamily()}`;
+  g.fillText('witchspace.org.uk/play', w / 2, cy + s * 2.9);
+  g.fillStyle = 'rgba(216, 226, 240, 0.6)';
+  g.font = `400 ${s * 0.55}px ${fontFamily()}`;
+  g.fillText('Free · open source · plays in your browser', w / 2, cy + s * 4);
+}
+
+async function loadIcon(): Promise<ImageBitmap | null> {
+  try {
+    return await createImageBitmap(await (await fetch('/icons/icon-512.png')).blob());
+  } catch {
+    return null;
+  }
+}
+
+async function still(g: OffscreenCanvasRenderingContext2D, w: number, h: number): Promise<Blob | null> {
+  const c = new OffscreenCanvas(480, Math.round((480 * h) / w));
+  c.getContext('2d')!.drawImage(g.canvas, 0, 0, c.width, c.height);
+  return c.convertToBlob({ type: 'image/jpeg', quality: 0.8 }).catch(() => null);
+}
+
+/** Share a saved video: the share sheet where there is one (phones), otherwise download it. */
+export async function shareVideo(v: KillCamVideo): Promise<string> {
+  const name = `witchspace-reconstruction-${v.system.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.mp4`;
+  const file = new File([v.video], name, { type: 'video/mp4' });
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: v.title, text: `${v.title} · Witchspace, free in your browser: https://witchspace.org.uk/play` });
+      return 'Shared';
+    } catch {
+      /* dismissed: fall back to saving */
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(v.video);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+  return 'Saved to your downloads';
 }

@@ -115,6 +115,31 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
+/**
+ * Render at a fixed size for a while (saving the kill cam as a video), then put
+ * everything back as it was. Always the neo view: the 1984 one has its own canvas.
+ */
+export async function atSize<T>(width: number, height: number, fn: (canvas: HTMLCanvasElement) => Promise<T>): Promise<T> {
+  const wasRetro = retro;
+  if (wasRetro) setRetro(false);
+  const ratio = neoRenderer.getPixelRatio();
+  neoRenderer.setPixelRatio(1);
+  composer.setPixelRatio(1);
+  neoRenderer.setSize(width, height, false);
+  composer.setSize(width, height);
+  setLineResolution(new THREE.Vector2(width, height));
+  camera.aspect = width / height;
+  camera.updateProjectionMatrix();
+  try {
+    return await fn(neoCanvas);
+  } finally {
+    neoRenderer.setPixelRatio(ratio);
+    composer.setPixelRatio(ratio);
+    if (wasRetro) setRetro(true);
+    else resize();
+  }
+}
+
 // --- Scenes -----------------------------------------------------------------
 
 function starfield(count: number, size: number, colourful: boolean) {

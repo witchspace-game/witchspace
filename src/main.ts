@@ -6645,6 +6645,12 @@ function keepByHand() {
 
 const killCam = new KillCam(camera);
 if (import.meta.env.DEV) Object.assign(window, { __kc: killCam });
+// A saved reconstruction goes into the flight log, like any moment.
+killCam.onVideo = async (v) => {
+  const when = Date.now();
+  await addMoment({ id: `${when}-recon`, created: when, title: v.title, description: v.description, tags: ['witchspace', 'reconstruction', 'killcam'], events: [], system: v.system, seconds: v.seconds, video: v.video, poster: v.poster, saved: false });
+  if (state === 'docked') refreshFlightLog();
+};
 setOutsideView(async (m) => {
   const data = m.track ? await readTrack(m.track).catch(() => null) : null;
   if (!data) return flash("This reconstruction is from an older version of the game and can't be rebuilt", 3);
@@ -6662,10 +6668,12 @@ function frame(now?: number) {
   timer.update(now);
   const dt = Math.min(timer.getDelta(), 0.1);
   if (killCam.active) {
-    // The kill cam has the screen: the game holds still underneath.
-    lens.aim(camera, null, 0, 0);
-    killCam.update(dt);
-    render(killCam.space.scene);
+    // The kill cam has the screen: the game holds still underneath (and while it saves a video, it draws its own frames).
+    if (!killCam.exporting) {
+      lens.aim(camera, null, 0, 0);
+      killCam.update(dt);
+      render(killCam.space.scene);
+    }
     recorder.pause();
     requestAnimationFrame(frame);
     return;
