@@ -217,6 +217,8 @@ marked.use({
   },
   walkTokens(token) {
     if (token.type === 'link') token.href = rewriteHref(token.href);
+    // Images in docs point at public/ so they show on GitHub too; the site serves public/ at its root.
+    if (token.type === 'image' && token.href.startsWith('../../public/')) token.href = token.href.slice('../../public'.length);
   },
 });
 

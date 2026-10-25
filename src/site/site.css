@@ -439,6 +439,7 @@ body.home.scrolled .site-header { background: rgba(5, 7, 13, 0.72); border-botto
 .doc h2 { font-size: clamp(24px, 3vw, 30px); margin: 2.2em 0 0.5em; }
 .doc h3 { font-size: 20px; margin: 1.8em 0 0.4em; }
 .doc p, .doc li { max-width: var(--measure); }
+.doc img { display: block; max-width: 100%; height: auto; border-radius: 10px; }
 .doc li + li { margin-top: 4px; }
 .doc > p:first-of-type > em:only-child,
 .doc em:first-child { color: var(--muted); }

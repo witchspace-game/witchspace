@@ -2,16 +2,18 @@
 title: The Titanoboa, a modular factory
 status: designed
 pillar: world
-summary: Wexley-Yorozu's constructor rebuilt as a factory of modules on a common coupling - maw, furnaces, fabricator, habitat, science, reactor - each a single clear shape in glowing line, brought by tug teams and assembled where the work is. It's as big as the job needs, new modules are sent where they're needed and can stay on the finished station, sections are swapped when they fail, and a reactor towed between stars is work for commanders.
+summary: Wexley-Yorozu's constructor rebuilt as a factory of modules on a common coupling - maw, furnaces, hold, habitat, fabricator, science, reactor - each a single clear shape in glowing line, brought by tug teams and assembled where the work is. We designed the core; the standard is open, so anyone can design a module. It's as big as the job needs, new modules are sent where they're needed and can stay on the finished station, sections are swapped when they fail, and a reactor towed between stars is work for commanders.
 card: titanoboa
 stages:
-  - The modules and the coupling, and the standard line-up on the ship page | proposed
+  - The core modules, the coupling standard, and the standard line-up on the ship page | proposed
+  - Community modules - anyone designs a section to the standard, checked by validate and the MCP server | proposed
   - Yards assemble the line-up the job needs (a station, a refinery, an atmosphere processor) | proposed
   - Modules sent where they're needed - a science module for exotic organisms couples on, and stays with the station | proposed
   - Sections swapped in the yard - a failed reactor towed away, a new one fitted | proposed
   - Module work for commanders - haul, escort and salvage a section | proposed
 help:
-  - Design a module - one clear shape that says what it does at scanner range | ships
+  - Design a module to the standard - a greenhouse, a shipyard cradle, an ice refinery, anything you can imagine | ships
+  - Critique the core modules - does each one read as what it is, and is anything in the wrong place? | design
   - Write the yard's radio when a reactor section is being changed out | writing
   - Name the module types as Wexley-Yorozu's catalogue would (dry, corporate, a little sinister) | writing
 ---
@@ -42,8 +44,8 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 
 1. **One coupling.** A coupling is a **140 m square**. Every module ends, at each coupled end, in a 35 m half-neck of that square, standing on a flat face at least as big. An end with nothing coupled to it is a clean face: no coupling sticking out into space. Two coupled modules show a 70 m neck with a seam in the middle: that's where they come apart. Any module fits any other, and a station can take the same coupling ([section 3](#3-modules-sent-where-theyre-needed)).
 2. **It arrives in pieces, and has no engine** (Mark). Modules are moved by Bullsnake teams, so the Titanoboa never travels whole: its modules come through a Wexley-Yorozu rift, are coupled in orbit by the moon, and when the station opens it comes apart again and the modules go on to the next job. Small station-keeping thrusters hold it in orbit; they're not worth a line. The one exception is the rare job of **moving a station**, which needs a **drive module** fitted at the stern for the purpose ([the trading companies](../companies.md#the-fleet-the-titanoboa-and-the-yards)).
-3. **The order follows the work.** Ore goes in at the **maw**, is smelted in the **furnaces**, and becomes station sections in the **fabricator**, which is open at the sides so finished sections slide out. Then the **habitat**, then add-ons such as **science**. The **reactor** sits at the stern, its **shadow shield facing forward** to protect the crew (as real nuclear spacecraft designs do) and its radiators fanned out where nothing else is.
-4. **One true scale.** Modules are 160 to 520 m long; a Bullsnake, the tug that moves them, is 70 m. A Standard line-up is about 1.9 km and grows with the job; with science and a second fabricator she passes the 2.5 km the lore gives her.
+3. **The order follows the work, the crew and the traffic** (see [the anatomy](#the-anatomy-why-each-section-sits-where-it-does)): maw, furnaces, hold, habitat, fabricator, add-ons such as science, reactor.
+4. **One true scale.** Modules are 160 to 520 m long; a Bullsnake, the tug that moves them, is 70 m. A Standard line-up is about 2.2 km and grows with the job; with science she reaches the 2.5 km the lore gives her.
 5. **One shape per module,** in a few dozen lines. If you have to explain what a module is, it isn't finished.
 
 ### The modules
@@ -52,6 +54,7 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 |---|---|---|---|
 | **Maw** (prow only) | 300 m | A wide six-sided mouth, 500 m across, with a deep throat, tapering back to the coupling | The intake. Ore from the moon goes in here, a little at a time. |
 | **Furnace** | 300 m | A crucible: six-sided, swelling to 480 m across and narrowing again | Smelting and refining, and where the exotic materials are made. The hottest thing on her. |
+| **Hold** | 320 m | Four storage cells around the spine, leaving a cross where the spine runs through, and a flat landing pad on each side | Stores refined metal from the furnaces and goods brought in by traders. Its pads are where Bullsnakes land, load and launch, and where traders deliver. |
 | **Fabricator** | 520 m | An open cradle: the spine, two rails above and below, a gantry at each end | Where station sections are made. Open at the sides, so sections slide out. You can see through it. |
 | **Habitat** | 160 m | A six-sided wheel, 680 m across, on three spokes, turning for gravity | Quarters for a few thousand workers. Carries the company insignia. |
 | **Science** (add-on) | 220 m | A six-sided hub with one to three sealed pods, each on a 300 m mast leaving a face square-on, at the habitat spokes' angles; each pod sits on a clamp, so it can be ejected and replaced | Research on whatever explorers found living in the system: one find to a pod, kept at arm's length from the crew and from each other. |
@@ -60,13 +63,38 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 
 **Line-ups**, front to back:
 
-- **Small** (a refinery job): maw, furnace, reactor.
-- **Standard** (a station): maw, furnace, furnace, fabricator, habitat, reactor. About 1.9 km.
-- **With science:** the Standard with a science module between the habitat and the reactor. About 2.1 km; 370 vertices with three pods.
+- **Small** (a refinery job): maw, furnace, hold, reactor.
+- **Standard** (a station): maw, furnace, furnace, hold, habitat, fabricator, reactor. About 2.2 km.
+- **With science:** the Standard with a science module between the fabricator and the reactor. About 2.4 km.
 - **Moving a station:** the Standard with a drive module at the stern.
 - **Large** (a great works): more furnaces and fabricators, and a second reactor.
 
 Each module is 26 to 64 vertices, well inside a ship file's 256, so each can be its own part.
+
+### The anatomy: why each section sits where it does
+
+![The Titanoboa from the side, each section labelled with its job: reactor, science, fabricator, habitat, hold, furnaces, maw](../../public/media/design/titanoboa-anatomy.jpg)
+
+Follow the material, the crew, the power and the traffic, and the order falls out.
+
+| Neighbours | Why they sit together |
+|---|---|
+| **Maw, then furnaces** | Ore goes from the mouth straight into the crucibles. The dirtiest, hottest work is together at the end that faces the moon, and nobody lives there. |
+| **Furnaces, then hold** | Refined metal (plate, beam, cable) is stored as it comes out. The hold is the buffer between making metal and making station: a furnace can stop for repairs and the fabricator keeps working. |
+| **Hold, then habitat** | The crew arrive and leave by the hold's pads, so they live next door. The hold's bulk stands between them and the furnaces' heat and noise. |
+| **Habitat, then fabricator** | Most of the crew work in the fabricator, next door. Material from the hold reaches it along the spine, through the habitat's hub. |
+| **Fabricator, then science** | Science sits past the fabricator, at the far end from the crew: one find to a pod, at arm's length, and an ejected pod endangers nobody. |
+| **Science, then reactor** | The reactor is at the stern. Its shadow shield faces forward, so everything ahead of it is in its shadow, and its radiators point where nothing else is. Power runs forward along the spine. |
+
+**Where things are:**
+
+- **The station's materials** are made from the moon, and stored in the hold's cells as metal until the fabricator uses them. What can't be made locally (electronics, life support, food) comes in by trade and is stored in the hold too.
+- **Tugs** land and launch from the hold's two pads, three Bullsnakes to a pad. Ore haulers don't land: they fly up to the maw and empty into it. Finished sections leave the fabricator's open sides, where tug teams collect them for the station frame.
+- **The crew** live and sleep in the habitat's rim, where the wheel's spin gives gravity. The hub is weightless: it's where the corridor along the spine passes through, and where shuttles from the hold's pads come in.
+- **Traders** deliver to the hold. One day that's where commanders dock at a yard.
+
+**Does it make sense?** Every module has a reason to be next to its neighbours; the crew are in the middle, shielded both ways; material moves one way, from prow to fabricator; power moves the other way, from stern to prow. And it's still only seven kinds of section, each a single shape.
+
 
 ## 2. How it's built in the game
 
@@ -75,6 +103,20 @@ Each module is 26 to 64 vertices, well inside a ship file's 256, so each can be 
 - **The ship file** `content/ships/titanoboa.json` stays, generated from the Standard line-up by a tool, so the ship page, the share card and anything else that expects one ship still works.
 - **The yard** (`src/render/yard.ts`) builds the line-up the job needs instead of the one hull, and takes its ore intake from the maw and its outfall from the fabricator rather than from fixed points.
 - **Contributors can design a module.** One shape, one coupling, a sentence on what it does: a small, satisfying first contribution, and the MCP server can check it.
+
+## Designing a module: the standard *(Mark, 25 October 2026)*
+
+We've designed the core sections. The standard is open: **anyone can design a section** that fits, and the game will know where it goes. A greenhouse that feeds the crew, a shipyard cradle, an ice refinery, a chapel, a racing gate for the workers' day off: whatever you can imagine.
+
+A module is a good one when:
+
+- **It fits the coupling:** a 140 m square, at one or both ends, on a flat face at least as big. Nothing else about its outline is fixed.
+- **It's one shape with one job,** recognisable at scanner range, in glowing line: a few dozen lines, never more than 256 vertices. [Elegance over detail](../../CONTRIBUTING.md).
+- **It says which zone it belongs to,** so the game can place it in a line-up: **intake** (at the prow), **industry** (behind the intake), **logistics** (holds and docks), **crew** (in the middle, away from heat and the reactor), **add-on** (towards the stern, at arm's length from the crew), **power** (the stern).
+- **It has a sentence** saying what it does, in Wexley-Yorozu's catalogue voice.
+- **It makes sense:** it's where its neighbours need it, and anything dangerous faces away from the crew.
+
+How it will work once modules are content files (stage 2): you write a module file, `npm run validate` checks it against the standard, the MCP server can check and draw it from a conversation, and accepted modules appear in yards, credited to whoever designed them.
 
 ## 3. Modules sent where they're needed
 
