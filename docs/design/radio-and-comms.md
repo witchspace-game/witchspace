@@ -9,6 +9,9 @@ stages:
   - Stage 1: the comms array and the beacon | built
   - Talking to other commanders, with mute, block and report | proposed
 help:
+  - Redesign the radio panel so a glance says whether anything needs you (see "The wall of text") | design
+  - Sketch or mock up the radio panel's cards, colours and motion | art
+  - Prototype a better radio panel in HTML and CSS | code
   - Write radio chatter for a busy system | writing
 ---
 
@@ -74,6 +77,8 @@ Range is real. Messages from ships beyond scanner range don't arrive; near the e
 - **A voice, later.** A few key lines spoken (a hail, a Mayday) would mean you don't have to read them at all.
 
 The test of a good answer: in the middle of a busy system, a glance tells you whether anything needs you, and what.
+
+**Over to the community** *(Mark)*. These are starting points, not the answer. If you have a better idea for the radio and the comms array, or improvements to any of this, we'd love it: a sketch, a mock-up, a prototype or a paragraph. Post it in [Discussions](https://github.com/witchspace-game/witchspace/discussions/categories/ideas) or on the [ideas board](https://witchspace.org.uk/ideas/?about=The%20radio%20and%20comms), and the best answer gets built, credited to you.
 
 ## The comms array
 
