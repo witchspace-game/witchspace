@@ -12,8 +12,9 @@ stages:
   - Verified proof of rare sightings, and the Sightings wall | proposed
   - The station board: post clips and photos for other commanders | proposed
   - The kill cam - watch how you died from outside, rebuilt from the fight's data (design/kill-cam.md) | built
-  - The library: one central store for commanders' moments and their data | idea
-  - The Witchspace channel: commanders' Shorts on YouTube, edited by an AI agent | idea
+  - One share sheet, hearts on clips, and an upright cut for Shorts, Reels and TikTok | built
+  - Clip pages: share a moment as its flight track, and the link replays it for anyone | built
+  - The Witchspace channel: commanders' clips on YouTube (posted by hand for now; an approval queue next) | building
 help:
   - Write the newsroom's voice: what it says when it buys your footage of the Falcon | writing
   - Playtest the death replay and tell us if it made you want to share it, or just stung | playtest

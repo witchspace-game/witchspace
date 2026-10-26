@@ -73,27 +73,67 @@ export function loadShips(root: string): ShipFile[] {
 export function shipSvg(s: ShipFile, cls = 'ship-svg'): string {
   const yaw = -0.7;
   const pitch = 0.45;
+  // Screen x and y, and depth (smaller is nearer the viewer).
   const project = ([x, y, z]: number[]) => {
     const x1 = x * Math.cos(yaw) - z * Math.sin(yaw);
     const z1 = x * Math.sin(yaw) + z * Math.cos(yaw);
     const y1 = y * Math.cos(pitch) - z1 * Math.sin(pitch);
-    return [x1, -y1];
+    const z2 = y * Math.sin(pitch) + z1 * Math.cos(pitch);
+    return [x1, -y1, z2];
+  };
+  const { vertices, faces } = s.geometry;
+  const v = vertices.map(project);
+  // The hull's faces as triangles, to hide what's behind them, as the game does.
+  const tris: number[][][] = [];
+  for (const f of faces) for (let i = 1; i < f.length - 1; i++) tris.push([v[f[0]], v[f[i]], v[f[i + 1]]]);
+  const span = Math.max(...v.map((p) => p[0])) - Math.min(...v.map((p) => p[0])) || 1;
+  const eps = span * 0.004;
+  const hidden = (p: number[]) =>
+    tris.some(([a, b, c]) => {
+      const den = (b[1] - c[1]) * (a[0] - c[0]) + (c[0] - b[0]) * (a[1] - c[1]);
+      if (Math.abs(den) < 1e-9) return false;
+      const l1 = ((b[1] - c[1]) * (p[0] - c[0]) + (c[0] - b[0]) * (p[1] - c[1])) / den;
+      const l2 = ((c[1] - a[1]) * (p[0] - c[0]) + (a[0] - c[0]) * (p[1] - c[1])) / den;
+      const l3 = 1 - l1 - l2;
+      if (l1 < 0.001 || l2 < 0.001 || l3 < 0.001) return false;
+      return l1 * a[2] + l2 * b[2] + l3 * c[2] < p[2] - eps;
+    });
+  // Each line, cut into short steps, keeping the runs nothing stands in front of.
+  const visible = (a: number[], b: number[]): [number[], number[]][] => {
+    const steps = Math.max(2, Math.ceil((Math.hypot(b[0] - a[0], b[1] - a[1]) / span) * 60));
+    const at = (t: number) => a.map((x, i) => x + (b[i] - x) * t);
+    const out: [number[], number[]][] = [];
+    let start: number | null = null;
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const seen = !hidden(at(t));
+      if (seen && start === null) start = t;
+      if ((!seen || i === steps) && start !== null) {
+        const end = seen ? t : (i - 0.5) / steps;
+        const [p, q] = [at(start), at(end)];
+        if (Math.hypot(q[0] - p[0], q[1] - p[1]) > span * 0.01) out.push([p, q]); // no specks
+        start = null;
+      }
+    }
+    return out;
   };
   const edges = new Set<string>();
-  const hull: [number[], number[]][] = [];
-  for (const f of s.geometry.faces) {
+  const all: [number[], number[]][] = [];
+  for (const f of faces) {
     for (let i = 0; i < f.length; i++) {
       const a = f[i];
       const b = f[(i + 1) % f.length];
       const k = a < b ? `${a}-${b}` : `${b}-${a}`;
       if (edges.has(k)) continue;
       edges.add(k);
-      hull.push([project(s.geometry.vertices[a]), project(s.geometry.vertices[b])]);
+      all.push([v[a], v[b]]);
     }
   }
+  const hull = all.flatMap(([a, b]) => visible(a, b));
   const d = s.geometry.details;
-  const detail = (d?.lines ?? []).map(([a, b]) => [project(d!.vertices[a]), project(d!.vertices[b])] as [number[], number[]]);
-  const pts = [...hull, ...detail].flat();
+  const detail = (d?.lines ?? []).flatMap(([a, b]) => visible(project(d!.vertices[a]), project(d!.vertices[b])));
+  // Framed on the whole ship, hidden lines and all, so it sits where it always has.
+  const pts = [...all, ...(d?.lines ?? []).map(([a, b]) => [project(d!.vertices[a]), project(d!.vertices[b])])].flat();
   const minX = Math.min(...pts.map((p) => p[0]));
   const maxX = Math.max(...pts.map((p) => p[0]));
   const minY = Math.min(...pts.map((p) => p[1]));

@@ -9,7 +9,7 @@ stages:
   - The saloon: regulars and tips | built
   - The saloon: insiders and the inspectors | proposed
   - The news cycle: overshoot and aftermath | proposed
-  - Limit orders on the trader's screen; Ma Reyes's lessons; a Merchant rank | proposed
+  - Limit orders (Bitcoin first); Ma Reyes's lessons; a Merchant rank | building
   - Working the market: cornering, planted rumours | proposed
 help:
   - Write a saloon regular: who they are, how they feel, what they know | writing

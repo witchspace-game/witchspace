@@ -7,6 +7,7 @@ card: lancer
 stages:
   - Stage 0: the radio log and hails | built
   - Stage 1: the comms array and the beacon | built
+  - While you're away: the ship's log by notification (Bitcoin orders and hearts so far) | building
   - Talking to other commanders, with mute, block and report | proposed
 help:
   - Redesign the radio panel so a glance says whether anything needs you (see "The wall of text") | design
