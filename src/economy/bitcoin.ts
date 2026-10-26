@@ -33,11 +33,11 @@ export interface BtcTrade {
   total: number;
 }
 
-// The latest price heard, kept here so debts can be settled without asking the
-// network (net/bitcoin.ts sets it). Nobody can seize your coins, but if you owe
-// a fine or the insurers' excess and your credits fall short, enough of them is
-// sold for you at the market price to pay it, and you're told (onSold). Sell
-// some yourself first if you'd rather choose the moment.
+// The latest price heard, for showing what your coins are worth (net/bitcoin.ts
+// sets it). Credits are the Co-operative's money: fines and the insurers'
+// excess are taken from them, with no say. Bitcoin is nobody's: nobody can
+// fine it, seize it or write it off, so it's how a commander keeps their
+// wealth out of reach (Mark). The law can still hold your kit.
 let latest: BtcQuote | null = null;
 export const setQuote = (q: BtcQuote | null) => (latest = q);
 export const lastQuote = () => latest;
@@ -88,33 +88,4 @@ export function sellBitcoin(c: Commander, q: BtcQuote | null, sats: number, now 
   c.credits = tenth(c.credits + total);
   record(c, { t: now, side: 'sell', sats: n, price: bid, total });
   return { ok: true, message: `Sold ${formatSats(n)} for ${total.toLocaleString()} Cr` };
-}
-
-export interface Sold {
-  sats: number;
-  total: number;
-  /** What it paid for: "your fine", "the insurers' excess". */
-  reason: string;
-}
-const soldListeners: ((sold: Sold) => void)[] = [];
-/** Be told when Bitcoin is sold to pay a debt (the game says so on screen). */
-export const onSold = (fn: (sold: Sold) => void) => soldListeners.push(fn);
-
-/**
- * Before a debt of `amount` is taken from your credits: if they fall short,
- * enough of your Bitcoin is sold at the market price (the last price heard,
- * less the spread) to make it up, and you're told. Without a price heard,
- * nothing is sold. Returns the sats sold.
- */
-export function cover(c: Commander, amount: number, reason: string, q = latest, now = Date.now()): number {
-  const short = amount - c.credits;
-  if (short <= 0 || !q || !satsOf(c)) return 0;
-  const bid = bidPrice(q);
-  const sats = Math.min(satsOf(c), Math.ceil((short * SATS) / bid));
-  const total = Math.floor(((sats * bid) / SATS) * 10) / 10;
-  c.sats = satsOf(c) - sats;
-  c.credits = tenth(c.credits + total);
-  record(c, { t: now, side: 'sell', sats, price: bid, total });
-  for (const fn of soldListeners) fn({ sats, total, reason });
-  return sats;
 }

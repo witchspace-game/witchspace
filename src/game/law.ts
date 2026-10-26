@@ -3,7 +3,6 @@ import { contrabandAt, stolenAt } from '../economy/legality';
 import { bannedSpecial, objectionableTonnes, shieldedTonnes } from './compartment';
 import { addStanding, cargoName, finish, logContract } from './contracts';
 import { EQUIPMENT, STAKE, removeEquipment, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
-import { btcValue, cover } from '../economy/bitcoin';
 
 // The law, as set out in docs/design/law-and-travel.md:
 // - ordinary crimes are local: your record belongs to the system where it happened;
@@ -64,8 +63,8 @@ export function coolRecords(c: Commander) {
 
 export const FINES = { offender: 100, fugitive: 500, warrant: 1000 };
 
-/** Credits above a new commander's stake, Bitcoin counted at its price: all the law or the insurers will take from. */
-export const spareCredits = (c: Commander) => Math.max(0, c.credits + btcValue(c) - STAKE);
+/** Credits above a new commander's stake: all the law or the insurers will take from. */
+export const spareCredits = (c: Commander) => Math.max(0, c.credits - STAKE);
 
 /**
  * Fines are cut to your means: never more than half your spare credits. A
@@ -151,22 +150,13 @@ export function settle(c: Commander, caught = false): Settlement {
   return { fine, paid, confiscated, impounded, owed };
 }
 
-/**
- * Take what you can pay; if it isn't enough, your equipment is impounded here
- * until you pay the rest. Short of credits, enough of your Bitcoin is sold at
- * the market price to pay first (leaving you the stake), and you're told.
- */
+/** Take what you can pay; if it isn't enough, your equipment is impounded here until you pay the rest. */
 export function charge(c: Commander, amount: number): { paid: number; owed: number; impounded: EquipmentId[] } {
-  cover(c, amount + STAKE, 'your fine'); // leaving you the stake, as fines to your means always have
   const paid = Math.min(amount, c.credits);
   c.credits = Math.round((c.credits - paid) * 10) / 10;
-  return { paid, ...impound(c, Math.round((amount - paid) * 10) / 10) };
-}
-
-/** Hold your equipment here against a debt until you pay it. With nothing to hold, the station writes the debt off. */
-export function impound(c: Commander, debt: number): { owed: number; impounded: EquipmentId[] } {
   const prev = c.impound && c.impound.at === systemKey(here(c)) ? c.impound : null;
-  const owed = debt > 0 && (c.equipment.length || prev) ? debt : 0;
+  // With nothing to hold, the station writes off what you couldn't pay.
+  const owed = c.equipment.length || prev ? Math.round((amount - paid) * 10) / 10 : 0;
   let impounded: EquipmentId[] = [];
   if (owed > 0) {
     impounded = [...c.equipment];
@@ -174,7 +164,7 @@ export function impound(c: Commander, debt: number): { owed: number; impounded: 
     c.damaged = [];
     c.impound = { at: systemKey(here(c)), items: [...(prev?.items ?? []), ...impounded], owed: owed + (prev?.owed ?? 0) };
   }
-  return { owed, impounded };
+  return { paid, owed, impounded };
 }
 
 /** Pay off an impound at the station holding it and get your equipment back. */

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { STAKE, newCommander } from '../game/commander';
 import { claimInsurance } from '../game/insurance';
 import { charge, spareCredits } from '../game/law';
-import { askPrice, bidPrice, btcValue, buyBitcoin, cover, formatBtc, onSold, SATS, sellBitcoin, setQuote, SPREAD, STALE_MS, type Sold } from './bitcoin';
+import { askPrice, bidPrice, btcValue, buyBitcoin, formatBtc, SATS, sellBitcoin, setQuote, SPREAD, STALE_MS } from './bitcoin';
 
 const NOW = 1_800_000_000_000;
 const quote = { price: 80_000, time: NOW - 10_000 };
@@ -50,83 +50,37 @@ describe('Bitcoin on the exchange', () => {
   });
 });
 
-describe('Bitcoin and what you owe', () => {
-  it('counts towards your means', () => {
+describe('Bitcoin is out of reach', () => {
+  it('is never taken for a fine: fines come out of credits, and the kit is held for the rest', () => {
     setQuote(quote);
-    const c = newCommander('modern');
-    c.sats = SATS / 100; // 0.01 coin, about 796 Cr at the bid
-    expect(btcValue(c)).toBeCloseTo(bidPrice(quote) / 100, 0);
-    expect(spareCredits(c)).toBeCloseTo(btcValue(c), 0);
-  });
-
-  it('pays a fine by selling just enough sats at the market price, and says so', () => {
-    setQuote(quote);
-    const told: Sold[] = [];
-    onSold((x) => told.push(x));
     const c = newCommander('modern');
     c.credits = 0;
-    c.sats = SATS / 100; // about 796 Cr
+    c.sats = SATS / 100;
     c.equipment = ['ecm'];
     const { paid, owed } = charge(c, 500);
-    expect(paid).toBe(500);
-    expect(owed).toBe(0);
-    expect(c.impound).toBeNull();
-    expect(c.sats).toBeGreaterThan(0);
-    expect(SATS / 100 - c.sats!).toBe(Math.ceil(((500 + STAKE) * SATS) / bidPrice(quote)));
-    expect(c.credits).toBeGreaterThanOrEqual(STAKE); // the stake is left
-    expect(told.at(-1)).toMatchObject({ reason: 'your fine' });
+    expect(paid).toBe(0);
+    expect(owed).toBe(500);
+    expect(c.sats).toBe(SATS / 100);
   });
 
-  it('pays the insurance excess the same way, leaving the stake in credits', () => {
+  it("doesn't make a fine bigger: the law only sees your credits", () => {
+    setQuote(quote);
+    const c = newCommander('modern');
+    c.sats = SATS; // a whole coin
+    expect(spareCredits(c)).toBe(0);
+  });
+
+  it('is never taken for the insurers\' excess', () => {
     setQuote(quote);
     const c = newCommander('modern');
     c.credits = STAKE;
-    c.sats = SATS / 10; // about 7,960 Cr
-    const claim = claimInsurance(c);
-    expect(claim).toMatchObject({ kind: 'paid', excess: 250, paid: 250, owed: 0 });
-    expect(c.credits).toBeGreaterThanOrEqual(STAKE);
-    expect(c.sats).toBeLessThan(SATS / 10);
+    c.sats = SATS / 10;
+    claimInsurance(c);
+    expect(c.sats).toBe(SATS / 10);
+    expect(c.credits).toBe(STAKE);
   });
 
-  it('sells nothing if you have the credits: sell some yourself first to choose the moment', () => {
-    setQuote(quote);
-    const c = newCommander('modern');
-    c.credits = 1_000;
-    c.sats = 1_000_000;
-    charge(c, 500);
-    expect(c.sats).toBe(1_000_000);
-    expect(c.credits).toBe(500);
-  });
-
-  it('sells sats rather than take your last 100 credits', () => {
-    setQuote(quote);
-    const c = newCommander('modern');
-    c.credits = STAKE;
-    c.sats = 1_000_000;
-    charge(c, 100);
-    expect(c.credits).toBeGreaterThanOrEqual(STAKE);
-    expect(c.sats).toBeLessThan(1_000_000);
-  });
-
-  it('without a price heard, sells nothing: the rest is owed, the kit held', () => {
-    const c = newCommander('modern');
-    c.credits = 0;
-    c.sats = 1_000_000;
-    c.equipment = ['ecm'];
-    expect(cover(c, 500, 'your fine', null)).toBe(0);
-    expect(charge(c, 500)).toMatchObject({ paid: 0, owed: 500 });
-    expect(c.sats).toBe(1_000_000);
-  });
-
-  it('changes nothing for a commander without Bitcoin', () => {
-    const c = newCommander('modern');
-    c.credits = 1_000;
-    expect(claimInsurance(c)).toMatchObject({ paid: 250, owed: 0 });
-    expect(c.impound).toBeNull();
-  });
-
-  it('survives the ship: nothing else touches the wallet', () => {
-    setQuote(quote);
+  it('survives the ship', () => {
     const c = newCommander('modern');
     c.credits = 5_000;
     c.sats = 1_234_567;
@@ -134,9 +88,11 @@ describe('Bitcoin and what you owe', () => {
     expect(c.sats).toBe(1_234_567);
   });
 
-  it('counts for nothing until a price has been heard', () => {
+  it('is worth what it would sell for, once a price has been heard', () => {
     const c = newCommander('modern');
-    c.sats = 1_000_000;
+    c.sats = SATS / 100;
     expect(btcValue(c)).toBe(0);
+    setQuote(quote);
+    expect(btcValue(c)).toBeCloseTo(bidPrice(quote) / 100, 0);
   });
 });

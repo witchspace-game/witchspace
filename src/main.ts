@@ -120,7 +120,7 @@ import { readTrack, TrackRecorder, trackBlob, type Pose } from './game/track';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
 import { closeReplay, isReplayOpen, openReplay, renderFlightLog, setOutsideView } from './ui/flightLog';
 import { KillCam } from './ui/killCam';
-import { btcValue, formatBtc, formatSats, onSold, satsOf } from './economy/bitcoin';
+import { btcValue, formatBtc, satsOf } from './economy/bitcoin';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -1010,14 +1010,6 @@ const exchange = mountExchange($('#exchange'), {
   },
 });
 const useExchange = () => cmdr().difficulty === 'modern' && !isRetro();
-
-// Short of credits for a fine, enough Bitcoin is sold at the market price to
-// pay it (economy/bitcoin.ts cover): say so, after the fine's own message. The
-// insurers' excess says so in the claim itself.
-onSold(({ sats, total, reason }) => {
-  if (reason === "the insurers' excess") return;
-  setTimeout(() => flash(`Short of credits: sold ${formatSats(sats)} of your Bitcoin at the market price (${total.toLocaleString()} Cr) to pay ${reason}`, 6), 5200);
-});
 
 function renderMarket(message = '') {
   const ex = useExchange();
@@ -5606,10 +5598,8 @@ function die() {
         if (claim.stake) message += ` and ${claim.stake.toLocaleString()} Cr to start again`;
         message += ' · settle with the law before you launch';
       } else {
-        message = `${claim.pod ? 'Picked up. ' : ''}Insurance paid out · excess ${(claim.paid + claim.owed).toLocaleString()} Cr`;
-        if (claim.sold) message += ` · paid by selling ${formatSats(claim.sold)} of your Bitcoin at the market price`;
-        if (claim.owed) message += ` · ${claim.owed.toLocaleString()} Cr owed: your kit is held here until you pay`;
-        else if (claim.paid < claim.excess) message += ` (the rest written off)`;
+        message = `${claim.pod ? 'Picked up. ' : ''}Insurance paid out · excess ${claim.paid.toLocaleString()} Cr`;
+        if (claim.paid < claim.excess) message += ` (the rest written off)`;
       }
     }
     // Bitcoin isn't in the hold: the keys were in your head.
