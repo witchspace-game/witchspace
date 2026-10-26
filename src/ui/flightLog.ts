@@ -1,4 +1,4 @@
-// The flight log in its own station tab, and the replay player (the death replay
+// The flight log, full screen from the button beside the galaxy map, and the replay player (the death replay
 // too): watch, share, keep or delete the clips and photos the ship kept.
 
 import { BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
