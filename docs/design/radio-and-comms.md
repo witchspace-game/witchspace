@@ -9,6 +9,9 @@ stages:
   - Stage 1: the comms array and the beacon | built
   - Talking to other commanders, with mute, block and report | proposed
 help:
+  - Redesign the radio panel so a glance says whether anything needs you (see "The wall of text") | design
+  - Sketch or mock up the radio panel's cards, colours and motion | art
+  - Prototype a better radio panel in HTML and CSS | code
   - Write radio chatter for a busy system | writing
 ---
 
@@ -51,7 +54,33 @@ Everything you hear goes into one **radio log**, a small panel that fades when i
 
 Range is real. Messages from ships beyond scanner range don't arrive; near the edge they arrive with gaps and static.
 
-### The comms array
+#### The wall of text: needs a better design *(Mark, 26 October 2026)*
+
+*Status: **problem noted, to design**.* As built, every line anyone says goes into one list, and in a busy system it becomes **a wall of text**: station traffic, police, pirates, traders, company notes and news, all the same size, one after another. It's hard to read, the line that matters is buried among the ones that don't, and in flight there's no time to read a wall. It needs a more intuitive, elegant answer, not more lines. Directions to explore:
+
+- **What needs you comes first, as a card, not a line.** An offer to accept, a pirate's price, a police hail with a countdown, a Mayday: each its own card at the top, with its button (Accept, Pay, Switch on) and its timer, gone once answered. Everything else is background.
+- **Conversations, not a list.** Group by who's talking, like a messaging app: one row per voice (Meridian traffic, the Viper on your tail, Hexon Freight, the pirate band), showing its latest line and how many you haven't read. Tap a row for that conversation. Five rows instead of forty lines.
+- **Fewer words.** Every line written to be read at a glance: who, then a few words (*Traffic · cleared, bay 4*). The detail is a tap away, not on screen.
+- **Chatter folds away.** Lines that need nothing from you (thanks, greetings, routine traffic) fold into one quiet line, *3 more from traffic*, and drop out after a few minutes.
+- **Calmer in a fight.** In combat only the urgent cards show; the rest waits until it's over, then sums up: *While you were fighting: 2 messages from Hexon, a news report.*
+- **Icons and colour, not labels.** A small mark for each kind of voice (station, police, pirate, company, news) instead of writing its name every time; the colours already exist.
+- **Colour says who, motion says how** *(Mark)*. Each voice keeps its colour, as a thin glowing edge on its card or row rather than coloured text, so who's speaking is obvious at a glance without the panel turning into a rainbow. A small, quiet animation hints at the message's character before you read a word:
+  - **station traffic** settles in calmly, a soft fade;
+  - **police** carry a slow steady pulse on the edge, like a patrol light;
+  - **a pirate's line** arrives with a brief flicker of interference, a twitch, then still;
+  - **a Mayday** beats like a heartbeat until it's answered or lost;
+  - **a company note** slides in smoothly, businesslike;
+  - **news** sweeps once across, like a ticker;
+  - **the Falcon** comes through with a shimmer of static, cold and white.
+
+  Each plays once as the message arrives (the Mayday excepted) and then stays still, so the panel is calm to read. Settings and the system's "reduce motion" keep the colours and drop the motion.
+- **A voice, later.** A few key lines spoken (a hail, a Mayday) would mean you don't have to read them at all.
+
+The test of a good answer: in the middle of a busy system, a glance tells you whether anything needs you, and what.
+
+**Over to the community** *(Mark)*. These are starting points, not the answer. If you have a better idea for the radio and the comms array, or improvements to any of this, we'd love it: a sketch, a mock-up, a prototype or a paragraph. Post it in [Discussions](https://github.com/witchspace-game/witchspace/discussions/categories/ideas) or on the [ideas board](https://witchspace.org.uk/ideas/?about=The%20radio%20and%20comms), and the best answer gets built, credited to you.
+
+## The comms array
 
 An expensive, fragile, visible upgrade: a dish or mast on the hull that other ships can see and shoot.
 

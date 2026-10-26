@@ -113,8 +113,8 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 /* Docked screen tabs and the market. */
 .panel.docked { max-height: calc(100vh - 110px); overflow-y: auto; overflow-x: hidden; }
 .panel.docked.wide { width: min(640px, calc(100vw - 32px)); }
-.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
-.tabs button { font-size: 13px; padding: 5px 12px; }
+.tabs { display: flex; gap: 4px; margin: 4px 0 12px; } /* one row, however narrow the panel */
+.tabs button { flex: 1 1 auto; min-width: 0; font-size: 13px; padding: 5px 8px; white-space: nowrap; }
 .tabs button.active { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
 .market-summary { margin: 0 0 8px; font-size: 14px; color: var(--dim); }
 .market-summary b { color: var(--fg); font-weight: 600; }
@@ -1462,7 +1462,18 @@ body.retro .ship-nav-name { font-size: 9px; }
 .replay-meta, .replay-note { margin: 0 0 10px; color: var(--dim); font-size: 14px; }
 .replay-note { margin: 10px 0 0; font-size: 12px; }
 .replay-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-#flight-log .meta { color: var(--dim); }
+/* The flight log, full screen: a gallery of the ship's moments. */
+#flight-log-view { position: fixed; inset: 0; z-index: 30; overflow-y: auto; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(0, 6, 4, 0.94); backdrop-filter: blur(6px); }
+#flight-log-view[hidden] { display: none; }
+.log-head, #flight-log { max-width: 1100px; margin-inline: auto; }
+.log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.log-head h2 { margin: 0; }
+.log-close { width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; font-size: 18px; }
+#flight-log-view .log-list { grid-template-columns: repeat(auto-fill, minmax(min(240px, calc(50% - 7px)), 1fr)); gap: 14px; margin-top: 12px; }
+#flight-log-view .log-list li { grid-template-columns: 1fr; gap: 8px; padding: 10px; border: 1px solid var(--edge); border-radius: 10px; background: rgba(0, 12, 8, 0.7); }
+#flight-log-view .log-play { width: 100%; }
+body.retro #flight-log-view { background: #000; backdrop-filter: none; }
+#flight-log .meta { color: var(--dim); text-transform: none; letter-spacing: normal; font-size: 15px; }
 #flight-log .log-toggle { margin-left: 6px; padding: 2px 10px; font-size: 13px; }
 .log-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
 .log-list li { display: grid; grid-template-columns: 132px 1fr; gap: 12px; align-items: start; }

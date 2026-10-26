@@ -131,6 +131,7 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 
 function setState(next: State) {
   if (next !== 'title' && isAccountPanelOpen()) toggleAccountPanel(false);
+  if (next !== 'docked' && logOpen) setFlightLog(false);
   if (next !== 'flying') {
     countdown = null; // leaving flight cancels a hyperspace countdown
     combatComputer = null;
@@ -566,16 +567,28 @@ function enterDocked(newShip = false) {
 // dock with new moments: the recorder is half the point of flying.
 let flightFrom = Date.now(); // when this flight began: moments after it are new
 
-/** Badge the Flight log tab with what's new, and open on it if there is something (or the ship is new). */
+/** Badge the Flight log button with what's new, and open the log if there is something (or the ship is new). */
 async function showNewMoments(newShip: boolean) {
   if (classicRules() || !recorder.available) return setLogBadge(0);
   const fresh = (await listMoments().catch(() => [])).filter((m) => m.created >= flightFrom).length;
   setLogBadge(fresh);
-  if ((fresh || newShip) && state === 'docked' && dockTab === 'station') setDockTab('log');
+  if ((fresh || newShip) && state === 'docked' && dockTab === 'station' && !isMapOpen()) setFlightLog(true);
 }
 
 function setLogBadge(n: number) {
-  $('.tabs [data-tab="log"]').textContent = n ? `Flight log · ${n} new` : 'Flight log';
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.log-button')) b.innerHTML = `<span class="key">F · </span>Flight log${n ? ` · ${n} new` : ''}`;
+}
+
+// The flight log belongs to the ship, not the station: it opens full screen,
+// a gallery, from the button beside the galaxy map (F).
+let logOpen = false;
+function setFlightLog(open: boolean) {
+  logOpen = open && state === 'docked';
+  $('#flight-log-view').hidden = !logOpen;
+  if (logOpen) {
+    refreshFlightLog();
+    setLogBadge(0); // seen
+  }
 }
 
 // What was bought on this visit, so a change of mind before launch gets the
@@ -602,7 +615,7 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'log' | 'contracts' | 'market' | 'news';
+type DockTab = 'station' | 'contracts' | 'market' | 'news';
 let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
@@ -610,11 +623,6 @@ function setDockTab(tab: DockTab) {
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
   if (tab === 'station' && state === 'docked') renderDocked(); // credits, hold and wallet may have changed at the exchange
-  $('#tab-log').hidden = tab !== 'log';
-  if (tab === 'log') {
-    refreshFlightLog();
-    setLogBadge(0); // seen
-  }
   $('#tab-market').hidden = tab !== 'market';
   $('#tab-news').hidden = tab !== 'news';
   $('#tab-contracts').hidden = tab !== 'contracts';
@@ -6358,6 +6366,7 @@ function handleKey(code: string) {
   if (killCam.key(code)) return;
   if (handleMapKey(code)) return;
   if (code === 'KeyG' && (state === 'docked' || state === 'flying') && commander) {
+    if (logOpen) setFlightLog(false);
     toggleGalaxyMap();
     return;
   }
@@ -6404,7 +6413,8 @@ function handleKey(code: string) {
       else if (code === 'Escape') showTitle();
       break;
     case 'docked':
-      if (code === 'KeyL' || code === 'Enter') void launch();
+      if (code === 'KeyF' || (code === 'Escape' && logOpen)) setFlightLog(!logOpen);
+      else if (code === 'KeyL' || code === 'Enter') void launch();
       else if (code === 'KeyT') setDockTab(dockTab === 'market' ? 'station' : 'market');
       break;
     case 'flying':
