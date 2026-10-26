@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { STAKE, newCommander } from '../game/commander';
 import { claimInsurance } from '../game/insurance';
 import { charge, spareCredits } from '../game/law';
-import { askPrice, bidPrice, btcValue, buyBitcoin, formatBtc, SATS, sellBitcoin, setQuote, SPREAD, STALE_MS } from './bitcoin';
+import { askPrice, bidPrice, btcValue, buyBitcoin, cancelBtcOrder, fillBtcOrders, formatBtc, placeBtcOrder, SATS, sellBitcoin, setQuote, SPREAD, STALE_MS } from './bitcoin';
 
 const NOW = 1_800_000_000_000;
 const quote = { price: 80_000, time: NOW - 10_000 };
@@ -96,3 +96,54 @@ describe('Bitcoin is out of reach', () => {
     expect(btcValue(c)).toBeCloseTo(bidPrice(quote) / 100, 0);
   });
 });
+
+describe('Bitcoin limit orders', () => {
+  const MIN = 60_000;
+  const spans = (from: number, prices: number[]) => prices.map((p, i) => ({ t: from + i * MIN, h: p + 50, l: p - 50 }));
+
+  it('holds the credits, and buys at the limit the first time the real price falls to it', () => {
+    const c = newCommander('modern');
+    c.credits = 1_000;
+    expect(placeBtcOrder(c, 'buy', 500, 78_000, NOW).ok).toBe(true);
+    expect(c.credits).toBe(500); // held
+    expect(fillBtcOrders(c, spans(NOW + MIN, [80_000, 79_000, 78_400]))).toHaveLength(0); // not yet
+    const fills = fillBtcOrders(c, spans(NOW + MIN, [80_000, 79_000, 78_020, 77_000]));
+    expect(fills).toHaveLength(1);
+    expect(fills[0].at).toBe(NOW + 3 * MIN); // the first minute it got there
+    expect(c.sats).toBe(Math.floor((500 * SATS) / (78_000 * (1 + SPREAD))));
+    expect(c.btcOrders).toHaveLength(0);
+  });
+
+  it('sells at the limit when the price rises to it', () => {
+    const c = newCommander('modern');
+    c.sats = SATS / 100;
+    placeBtcOrder(c, 'sell', SATS / 100, 85_000, NOW);
+    expect(c.sats).toBe(0); // held
+    const credits = c.credits;
+    expect(fillBtcOrders(c, spans(NOW + MIN, [84_000, 85_000]))).toHaveLength(1);
+    expect(c.credits).toBeCloseTo(credits + (85_000 * (1 - SPREAD)) / 100, 0);
+  });
+
+  it('never fills worse than the real price: a buy set above the market buys at the market', () => {
+    const c = newCommander('modern');
+    placeBtcOrder(c, 'buy', 100, 81_000, NOW);
+    fillBtcOrders(c, [{ t: NOW + MIN, h: 80_300, l: 80_300 }]);
+    expect(c.btcTrades![0].price).toBeCloseTo(80_300 * (1 + SPREAD), 5);
+  });
+
+  it("never fills from the price before it was placed: no orders in the past", () => {
+    const c = newCommander('modern');
+    placeBtcOrder(c, 'buy', 50, 70_000, NOW);
+    expect(fillBtcOrders(c, spans(NOW - 10 * MIN, [69_000, 69_000, 69_000]))).toHaveLength(0);
+  });
+
+  it('gives back what it held when cancelled', () => {
+    const c = newCommander('modern');
+    c.credits = 300;
+    placeBtcOrder(c, 'buy', 200, 70_000, NOW);
+    cancelBtcOrder(c, NOW);
+    expect(c.credits).toBe(300);
+    expect(c.btcOrders).toHaveLength(0);
+  });
+});
+

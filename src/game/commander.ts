@@ -220,7 +220,7 @@ import type { ActiveContract, CompanyLog } from './contracts';
 import type { AdriftCase, Message } from './assignments';
 import type { WorldEvent } from '../economy/events';
 import type { CompanyId } from './companies';
-import type { BtcTrade } from '../economy/bitcoin';
+import type { BtcOrder, BtcTrade } from '../economy/bitcoin';
 import type { Heard } from './saloon';
 
 export interface Commander {
@@ -290,6 +290,8 @@ export interface Commander {
   sats?: number;
   /** Your recent Bitcoin trades, oldest first. */
   btcTrades?: BtcTrade[];
+  /** Bitcoin limit orders waiting for the price, with what they hold. */
+  btcOrders?: BtcOrder[];
   /** The saloon: drinks bought this visit, and the tips you've heard (game/saloon.ts). */
   saloon?: { drinks: string[]; heard: Heard[] };
 }
