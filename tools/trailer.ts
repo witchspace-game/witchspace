@@ -109,12 +109,12 @@ const BUILD: Shot[] = [
 
 // music: seconds into the recording to start from (66 is where the waltz proper begins).
 /**
- * A film cut upright for Shorts, Reels and stories: the same shots, cropped to
- * the middle of the picture (or where `focus` says the action is). Stills that
- * were framed wide are left out.
+ * A film cut upright for Shorts, Reels and stories: the same shots, from clips
+ * filmed upright (`node tools/press-shots.mjs <clips> --upright` makes
+ * <clip>-upright.mp4), so nothing is cropped or stretched. Stills that were
+ * framed wide are left out.
  */
-const upright = (shots: Shot[], focus: Record<string, [number, number]> = {}): Shot[] =>
-  shots.filter((s) => !s.still && !s.phones).map((s) => (s.clip && focus[s.clip] ? { ...s, focus: focus[s.clip] } : s));
+const upright = (shots: Shot[]): Shot[] => shots.filter((s) => !s.still && !s.phones).map((s) => (s.clip ? { ...s, clip: `${s.clip}-upright` } : s));
 
 const CUTS = {
   trailer: { shots: TRAILER, w: 1920, h: 1080, music: 66 },
@@ -127,10 +127,10 @@ const CUTS = {
   build: { shots: BUILD, w: 1920, h: 1080, music: 260 },
   // Shorts.
   'docking-short': { shots: upright(DOCK), w: 1080, h: 1920, music: 66 },
-  'falcon-short': { shots: upright(FALCON, { 'clip-falcon-dark': [0.64, 0.5], 'clip-falcon': [0.4, 0.5] }), w: 1080, h: 1920, music: 150 },
+  'falcon-short': { shots: upright(FALCON), w: 1080, h: 1920, music: 150 },
   'fight-short': { shots: upright(FIGHT), w: 1080, h: 1920, music: 200 },
-  'bastion-short': { shots: upright(BASTION, { 'clip-bastion': [0.42, 0.5] }), w: 1080, h: 1920, music: 0 },
-  'build-short': { shots: upright(BUILD, { 'clip-yard': [0.35, 0.5] }), w: 1080, h: 1920, music: 260 },
+  'bastion-short': { shots: upright(BASTION), w: 1080, h: 1920, music: 0 },
+  'build-short': { shots: upright(BUILD), w: 1080, h: 1920, music: 260 },
 };
 
 const params = new URLSearchParams(location.search);
@@ -401,7 +401,8 @@ async function render() {
   const venc = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: (e) => console.error(e) });
   // ?maxmb=9.5 fits the file under a size (some upload paths cap at 10 MB): the video gets what the audio leaves.
   const maxMb = Number(params.get('maxmb'));
-  const bitrate = maxMb ? Math.floor((maxMb * 8e6 * 0.96) / total - 192000) : 7e6;
+  // Generous: Instagram and YouTube re-encode whatever they're given, and glowing lines on black survive that only from a sharp source.
+  const bitrate = maxMb ? Math.floor((maxMb * 8e6 * 0.96) / total - 192000) : portrait ? 12e6 : 10e6;
   venc.configure({ codec: 'avc1.640033', width: W, height: H, bitrate, framerate: FPS });
   const layer = new OffscreenCanvas(W, H);
   const lg = layer.getContext('2d')!;

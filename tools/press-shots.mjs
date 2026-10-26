@@ -11,6 +11,11 @@
 // time, so every clip is a smooth 30 fps however slowly the GPU draws. The
 // trailer is cut from them by tools/press-video.mjs. Output lands in
 // press-shots/ (git-ignored).
+//
+// --upright films the clips upright, 1080×1920, for Shorts and Reels: the game
+// is drawn in a portrait window, so nothing is cropped or stretched (cutting
+// the middle out of a wide clip and blowing it up is what made the first reels
+// soft). They're written as <clip>-upright.mp4.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,6 +27,9 @@ const opt = (name, fallback) => {
 };
 const OUT = opt('--out', 'press-shots');
 const URL = opt('--url', 'http://localhost:5183');
+const UPRIGHT = args.includes('--upright') && Boolean(args.splice(args.indexOf('--upright'), 1));
+// The picture's size: 1920×1080, or 1080×1920 upright.
+const [PW, PH] = UPRIGHT ? [1080, 1920] : [1920, 1080];
 const { chromium, devices } = await import(process.env.PLAYWRIGHT ?? 'playwright');
 mkdirSync(OUT, { recursive: true });
 
@@ -29,15 +37,17 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true, args:
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** A fresh Modern commander, docked at Lave. */
-async function start({ viewport = { width: 1920, height: 1080 }, scale = 1, device, touch = false } = {}) {
+async function start({ viewport = { width: PW, height: PH }, scale = 1, device, touch = false } = {}) {
   // scale 1.5 at 1280×720 is still a 1920×1080 picture, with the HUD big enough to read.
-  if (scale !== 1) viewport = { width: Math.round(1920 / scale), height: Math.round(1080 / scale) };
+  if (scale !== 1) viewport = { width: Math.round(PW / scale), height: Math.round(PH / scale) };
   const ctx = await browser.newContext(device ? { ...devices[device] } : { viewport, deviceScaleFactor: scale });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log('  page error:', e.message));
   // Touch mode counts as aiming (a headless browser can't lock the pointer), so the gimbals swing onto targets.
   await page.goto(`${URL}/play/${touch ? '?touch' : ''}`);
   await page.waitForFunction(() => window.witchspace);
+  // Upright, the frame is narrow: scenes that move ships across it squeeze their sideways moves by this.
+  await page.evaluate((n) => (window.__narrow = n), UPRIGHT ? 0.45 : 1);
   await wait(1200);
   const key = (code) => page.evaluate((c) => { dispatchEvent(new KeyboardEvent('keydown', { code: c })); dispatchEvent(new KeyboardEvent('keyup', { code: c })); }, code);
   const state = () => page.evaluate(() => window.witchspace.state);
@@ -129,21 +139,21 @@ const FPS = 30;
  */
 async function record(s, name, secs, cues = {}) {
   await s.page.addScriptTag({ path: 'node_modules/mp4-muxer/build/mp4-muxer.js' });
-  await s.page.evaluate((fps) => {
-    const out = new OffscreenCanvas(1920, 1080);
+  await s.page.evaluate(([fps, W, H]) => {
+    const out = new OffscreenCanvas(W, H);
     const g = out.getContext('2d');
     const target = new Mp4Muxer.ArrayBufferTarget();
-    const mux = new Mp4Muxer.Muxer({ target, video: { codec: 'avc', width: 1920, height: 1080, frameRate: fps }, fastStart: 'in-memory' });
+    const mux = new Mp4Muxer.Muxer({ target, video: { codec: 'avc', width: W, height: H, frameRate: fps }, fastStart: 'in-memory' });
     const enc = new VideoEncoder({ output: (c, m) => mux.addVideoChunk(c, m), error: (e) => console.log('REC', e.message) });
-    enc.configure({ codec: 'avc1.640033', width: 1920, height: 1080, bitrate: 20e6, framerate: fps });
+    enc.configure({ codec: 'avc1.640033', width: W, height: H, bitrate: 20e6, framerate: fps });
     let n = 0;
     const visible = () => ['#tunnel', '#retro', '#neo'].map((q) => document.querySelector(q)).find((c) => c && !c.hidden && getComputedStyle(c).display !== 'none');
     window.__rec = {
       grab() {
         const c = visible();
         g.fillStyle = '#000';
-        g.fillRect(0, 0, 1920, 1080);
-        g.drawImage(c, 0, 0, 1920, 1080);
+        g.fillRect(0, 0, W, H);
+        g.drawImage(c, 0, 0, W, H);
         const f = new VideoFrame(out, { timestamp: Math.round((n * 1e6) / fps), duration: Math.round(1e6 / fps) });
         enc.encode(f, { keyFrame: n % fps === 0 });
         f.close();
@@ -162,7 +172,7 @@ async function record(s, name, secs, cues = {}) {
         return btoa(str);
       },
     };
-  }, FPS);
+  }, [FPS, PW, PH]);
   // The last real frame time the game saw, plus a margin, so its next frame time is later.
   await s.page.evaluate(() => {
     window.__trackT = true;
@@ -211,8 +221,9 @@ async function record(s, name, secs, cues = {}) {
   if (size < 100_000) throw new Error(`${name}: only ${size} bytes recorded; record it again`);
   const parts = [];
   for (let i = 0; i < size; i += 4 << 20) parts.push(Buffer.from(await s.page.evaluate(([i, n]) => window.__rec.chunk(i, n), [i, 4 << 20]), 'base64'));
-  writeFileSync(join(OUT, `${name}.mp4`), Buffer.concat(parts));
-  console.log(`  ${name}.mp4 · ${frames} frames · ${(size / 1048576).toFixed(1)} MB`);
+  const file = `${name}${UPRIGHT ? '-upright' : ''}.mp4`;
+  writeFileSync(join(OUT, file), Buffer.concat(parts));
+  console.log(`  ${file} · ${PW}×${PH} · ${frames} frames · ${(size / 1048576).toFixed(1)} MB`);
 }
 
 /** Remember the camera's starting frame; window.__at([x, y, z]) maps from it to the world. */
@@ -678,11 +689,12 @@ const SCENES = {
       const at = window.__at;
       const f = w.npcs.find((n) => n.def.id === 'falcon');
       const k = t / 5;
-      f.obj.position.copy(at([140 - 300 * k, 30 - 40 * k, 150 + 20 * Math.sin(k * 3)]));
-      f.obj.lookAt(at([-400, -60, 160]));
+      const n = window.__narrow;
+      f.obj.position.copy(at([(140 - 300 * k) * n, 30 - 40 * k, 150 + 20 * Math.sin(k * 3)]));
+      f.obj.lookAt(at([-400 * n, -60, 160]));
       const look = w.player.obj.clone();
       look.quaternion.copy(window.__q0);
-      look.rotateY(0.18 - 0.36 * k);
+      look.rotateY((0.18 - 0.36 * k) * n);
       w.player.obj.quaternion.copy(look.quaternion);
       w.player.obj.position.copy(at([0, 0, 0]));
     });
@@ -870,10 +882,10 @@ const SCENES = {
       me.rotateY(0.06 * Math.sin(t * 0.8));
       w.npcs.filter((n) => n.role === 'pirate').forEach((n, i) => {
         if (n.dead) return;
-        // Crossing right to left, staggered, closing a little.
-        const x = 520 - 190 * t + i * 160;
+        // Crossing right to left, staggered, closing a little (and slower across a narrow upright frame).
+        const x = (520 - 190 * t + i * 160) * window.__narrow;
         n.obj.position.copy(at([x, [-40, 60, 0][i % 3] + 10 * Math.sin(t + i), 520 - 25 * t + i * 60]));
-        n.obj.lookAt(at([x - 900, 0, 400]));
+        n.obj.lookAt(at([x - 900 * window.__narrow, 0, 400]));
       });
     });
     await record(s, 'clip-fight', 6.5, {
