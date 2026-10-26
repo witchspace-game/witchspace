@@ -204,6 +204,18 @@ When a real currency collapses (Argentina, Turkey, Lebanon), most people don't r
 | The risk | The issuer: its reserves, or a freeze | Only the price |
 | Can someone freeze it? | Yes: the issuer can blacklist a wallet, as real issuers do | No |
 
+**Pegged to the credit.** The credit is the galaxy's dollar (on the exchange 1 Cr = 1 US dollar), so systems peg their stablecoins to it as real issuers peg to the dollar. Not everyone does: Compact members peg to the Meridian, multi-government systems to a basket of their neighbours, and systems that won't peg let their money float or use Bitcoin outright.
+
+**Three ways to hold the peg**, as in the real world:
+
+| Backed by | Real-world model | Who issues it | How it breaks |
+|---|---|---|---|
+| **Credits in reserve**, one for every coin | USDT, USDC | Corporate States: safe and dull | The issuer quietly holds less than it says, and the published reserves show it |
+| **Bitcoin locked up**, about 150% of every coin | DAI | Confederacies and the companies: no bank needed | A real Bitcoin fall forces loans to be sold off to keep the backing; a fast crash can outrun the sales |
+| **An algorithm**, nothing else | TerraUSD | Feudal worlds (section 2) | Confidence goes and it spirals to zero |
+
+The Bitcoin-backed kind ties the real price into the galaxy a second way: a real crash sets off forced sales in-game, and commanders who watch them can profit.
+
 **Who issues them:** Corporate States; the big companies (a new line of business for them, see [companies and contracts](companies-and-contracts.md)); player stations, later; and the Compact, whose Meridian starts life as "just a stablecoin", which is how it draws systems in before anyone notices they've joined.
 
 **The real market tests them.** An issuer's reserves can be partly **held in Bitcoin**, as some real issuers' are. Reserves are published on the ledger (section 7), so:
