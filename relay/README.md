@@ -1,6 +1,6 @@
 # Witchspace price relay
 
-The live Bitcoin price for the game's exchange ([design](../docs/design/system-currencies.md#6b-bitcoin-money-that-weighs-nothing-mark-26-october-2026)).
+The live Bitcoin price for the game's exchange ([design](../docs/design/system-currencies.md#6b-bitcoin-against-the-witchspace-universe-mark-26-october-2026)).
 
 Binance refuses requests from Cloudflare's servers, where the game's server runs, so the game can't ask it directly. This tiny server runs on [fly.io](https://fly.io) in Tokyo, where Binance answers, and passes the price on.
 
