@@ -123,6 +123,7 @@ import { KillCam } from './ui/killCam';
 import { record, regularsAt, slotOf, talk, venue } from './game/saloon';
 import { hasBackRoom } from './economy/blackmarket';
 import { checkBtcOrders } from './net/bitcoin';
+import { getClip, heartClip, reportClip } from './net/clips';
 import { btcValue, formatBtc, satsOf } from './economy/bitcoin';
 import './style.css';
 
@@ -6918,6 +6919,27 @@ initRadio();
 setDockTab('station');
 showTitle();
 answerAdvert();
+
+// A shared clip's link (witchspace.org.uk/clip/<id>, or /play/?clip=<id>): straight
+// into the kill cam on it, with its hearts; closing it leaves you at the title
+// screen, a key from playing (docs/design/flight-recorder.md, "Clip pages").
+const sharedClipId = location.pathname.match(/^\/clip\/([a-z0-9]{8,12})\/?$/)?.[1] ?? new URLSearchParams(location.search).get('clip');
+if (sharedClipId && /^[a-z0-9]{8,12}$/.test(sharedClipId)) void openSharedClip(sharedClipId);
+async function openSharedClip(id: string) {
+  const clip = await getClip(id);
+  const data = clip ? await readTrack(clip.track).catch(() => null) : null;
+  if (!clip || !data) return flash("That clip isn't here any more · but the galaxy is: press Enter to fly", 5);
+  document.title = `${clip.title} · Witchspace`;
+  killCam.open(data, {
+    seconds: clip.seconds,
+    title: clip.title,
+    shared: { hearts: clip.hearts, mine: clip.mine, heart: (on) => heartClip(id, on), report: () => reportClip(id) },
+    onClose: () => {
+      document.title = 'Play · Witchspace';
+      history.replaceState(null, '', '/play/');
+    },
+  });
+}
 frame();
 
 // Accounts: every save also goes to the cloud when signed in; sign-in links land here.

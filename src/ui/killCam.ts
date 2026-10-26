@@ -21,6 +21,14 @@ import { fontFamily, houseCard, loadIcon, stamp, still } from './videoCards';
 type View = 'killer' | 'you' | 'orbit';
 export type Shape = 'wide' | 'upright';
 
+/** A shared clip, watched from its link: its hearts and the actions on it. */
+export interface SharedView {
+  hearts: number;
+  mine: boolean;
+  heart(on: boolean): Promise<{ hearts: number; mine: boolean } | null>;
+  report(): Promise<boolean>;
+}
+
 /** A saved reconstruction, for the flight log and sharing. */
 export interface KillCamVideo {
   video: Blob;
@@ -59,6 +67,8 @@ export class KillCam {
   private death = false;
   /** The moment's own title, for a clip that isn't a death. */
   private named: string | undefined;
+  /** Watching someone's shared clip (from its link): its hearts, a report, and the way into the game. */
+  private shared: SharedView | null = null;
   private playing = true;
   private speed = 1;
   private view: View = 'killer';
@@ -83,10 +93,11 @@ export class KillCam {
   }
 
   /** Open a track: a death's, or any clip's (`seconds` long, ending where the track ends, titled `title`). */
-  open(data: TrackData, opts: { seconds?: number; title?: string; onClose?: () => void } = {}) {
+  open(data: TrackData, opts: { seconds?: number; title?: string; onClose?: () => void; shared?: SharedView } = {}) {
     this.close(false);
     this.data = data;
     this.onClose = opts.onClose ?? null;
+    this.shared = opts.shared ?? null;
     const death = data.events.find((e) => e.kind === 'death');
     const last = data.samples[data.samples.length - 1]?.t ?? 0;
     this.death = Boolean(death);
@@ -347,8 +358,14 @@ export class KillCam {
       `<div class="killcam-head"><strong>Reconstruction</strong><span>${
         this.death
           ? `Our assessors have reconstructed the incident at ${escapeHtml(d.scene.system)} from your flight recorder${killerName ? `. The killing shot: the ${escapeHtml(killerName)}` : ''}.`
-          : `Rebuilt from your flight recorder at ${escapeHtml(d.scene.system)}${killerName ? `, following the ${escapeHtml(killerName)}` : ''}.`
-      }</span></div>
+          : this.shared
+            ? `${escapeHtml(this.named ?? '')}. Rebuilt from the flight recorder${killerName ? `, following the ${escapeHtml(killerName)}` : ''}.`
+            : `Rebuilt from your flight recorder at ${escapeHtml(d.scene.system)}${killerName ? `, following the ${escapeHtml(killerName)}` : ''}.`
+      }</span>${
+        this.shared
+          ? `<div class="killcam-shared"><button type="button" class="killcam-heart" data-act="heart" aria-pressed="${this.shared.mine}" aria-label="Heart this clip">♥ <b>${this.shared.hearts}</b></button><button type="button" class="primary" data-act="play-free">Play Witchspace free</button><button type="button" class="killcam-report" data-act="report">Report</button></div>`
+          : ''
+      }</div>
       <div class="killcam-bar">
         <div class="killcam-views" role="group" aria-label="Camera">
           <button type="button" data-view="killer"${this.killer === undefined ? ' disabled' : ''}>${this.death ? 'Behind the killer' : 'Behind the target'}</button>
@@ -392,10 +409,34 @@ export class KillCam {
       this.playing = false;
     };
     this.el.querySelector<HTMLButtonElement>('[data-act="close"]')!.onclick = () => this.close();
+    const shared = this.shared;
+    if (shared) {
+      const heart = this.el.querySelector<HTMLButtonElement>('[data-act="heart"]')!;
+      heart.onclick = async () => {
+        heart.disabled = true;
+        const r = await shared.heart(!shared.mine);
+        heart.disabled = false;
+        if (!r) return;
+        Object.assign(shared, r);
+        heart.setAttribute('aria-pressed', String(r.mine));
+        heart.querySelector('b')!.textContent = String(r.hearts);
+      };
+      this.el.querySelector<HTMLButtonElement>('[data-act="play-free"]')!.onclick = () => this.close();
+      const report = this.el.querySelector<HTMLButtonElement>('[data-act="report"]')!;
+      report.onclick = async () => {
+        if (!report.dataset.armed) {
+          report.dataset.armed = '1';
+          report.textContent = 'Report this clip?';
+          return;
+        }
+        report.disabled = true;
+        report.textContent = (await shared.report()) ? 'Reported · thank you' : 'Couldn’t report it';
+      };
+    }
     this.el.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) => (b.onclick = () => void this.save(b.dataset.save as Shape)));
     // Drag to turn the orbit, scroll to zoom it.
     this.el.onpointerdown = (e) => {
-      if ((e.target as HTMLElement).closest('.killcam-bar')) return;
+      if ((e.target as HTMLElement).closest('.killcam-bar, .killcam-shared')) return;
       this.orbit.dragging = true;
       this.orbit.auto = false;
       if (this.view !== 'orbit') {

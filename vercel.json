@@ -6,6 +6,23 @@
       "main": true
     }
   },
+  "rewrites": [
+    {
+      "source": "/clip/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([Bb]ot|[Cc]rawler|[Ss]pider|facebookexternalhit|facebookcatalog|WhatsApp|Cardyb|Mastodon|Embedly|Iframely|SkypeUriPreview|vkShare).*"
+        }
+      ],
+      "destination": "https://space.witchspace.org.uk/clip-card/:id"
+    },
+    {
+      "source": "/clip/:id",
+      "destination": "/play/index.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
