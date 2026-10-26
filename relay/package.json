@@ -1,0 +1,15 @@
+{
+  "name": "witchspace-relay",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Witchspace's price relay: the live Bitcoin price from Binance, served from Tokyo for the game's server.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "deploy": "fly deploy --ha=false"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

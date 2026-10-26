@@ -1,0 +1,4 @@
+README.md
+fly.toml
+node_modules
+*.log
