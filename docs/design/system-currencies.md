@@ -184,6 +184,35 @@ A commander can keep their savings in Bitcoin and hold almost no credits, the Bi
 - **The Compact hates it most.** Bitcoin is the reason no system *needs* the Meridian, so Bitcoin against the Compact becomes the galaxy's central story: Compact members tax it, Compact patrols hunt the smugglers, holdout systems adopt it.
 - **Later:** a pirate can't scoop your sats, but can demand them as ransom when you surrender; anarchies pay bounties in sats.
 
+### The same everywhere: a yardstick (Mark)
+
+Jump to a new system and its money is different: a new name, a new rate, a policy you have to read. **Bitcoin stays Bitcoin.** A sat at Lave is a sat at Riedquat, so it's the one measure a commander can carry across the galaxy and know where they are.
+
+- **Prices in sats, as an option.** Any price can be shown in sats beside the local price: *Fuel 14 LVR · 2,100 sats*. A commander who thinks in sats compares systems at a glance, whatever their currencies are doing.
+- **Your worth in one number.** The commander card can total everything you hold (credits, local currencies, cargo, ship) in sats as well as credits.
+- **Reading a crisis.** When a currency is collapsing, its price in sats shows it plainly: what cost 2,000 sats last week costs 3,500 today.
+
+### Stablecoins: the other way out (Mark, 26 October 2026)
+
+When a real currency collapses (Argentina, Turkey, Lebanon), most people don't run to Bitcoin first. They run to **dollar stablecoins**. The galaxy works the same way: systems and their people want **stablecoins**, coins pegged 1:1 to the credit by an issuer who promises to hold the reserves. Section 2 already has two kinds (Corporate States' fully backed coins, Feudal worlds' algorithmic pegs); here they become the everyday escape from a failing system currency.
+
+**A real choice when a system's money fails:**
+
+| | Stablecoin | Bitcoin |
+|---|---|---|
+| Value | Steady, 1 Cr | The live real-world price |
+| The risk | The issuer: its reserves, or a freeze | Only the price |
+| Can someone freeze it? | Yes: the issuer can blacklist a wallet, as real issuers do | No |
+
+**Who issues them:** Corporate States; the big companies (a new line of business for them, see [companies and contracts](companies-and-contracts.md)); player stations, later; and the Compact, whose Meridian starts life as "just a stablecoin", which is how it draws systems in before anyone notices they've joined.
+
+**The real market tests them.** An issuer's reserves can be partly **held in Bitcoin**, as some real issuers' are. Reserves are published on the ledger (section 7), so:
+
+- **A real Bitcoin crash** pushes an issuer's reserves below what it owes. Commanders who read the reserves see it first and sell, or bet on the break.
+- **The run.** The coin slips below 1 Cr, the news board carries it, and the system's economy shakes. Nobody scripted it: the real market did.
+- **A real rally** does the reverse: over-backed issuers grow bold and lend more, which sets up the next crisis.
+- **Freezes.** An issuer can freeze the wallets of commanders it doesn't like (smugglers, Compact enemies). Bitcoin can't be frozen; that's the trade.
+
 ### Guardrails
 
 - **In-game only.** It's the real price, not real money: in-game Bitcoin can't be bought, sold or withdrawn for real coins or cash. The screen says so (*Live price from Binance · in-game only · not real money*). Nothing here is financial advice.
@@ -195,13 +224,15 @@ A commander can keep their savings in Bitcoin and hold almost no credits, the Bi
 
 1. **Bitcoin against credits:** the exchange row and chart, buying and selling in sats, the wallet on the commander card, surviving death. About a day; fun on its own.
 2. **Paying in sats,** spreads and bans by government, the news headlines.
-3. **The system currencies** (section 10): Bitcoin becomes the way out of every crisis, and the Confederacies run on it.
-4. **The Compact:** Bitcoin against the Meridian, ransoms and bounties in sats.
+3. **The system currencies** (section 10), **with stablecoins from day one**: Corporate State coins with published reserves, some held in Bitcoin, so a real crash can test them. Bitcoin and stablecoins become the two ways out of every crisis, prices can be shown in sats, and the Confederacies run on Bitcoin.
+4. **The Compact:** the Meridian starting as a stablecoin, frozen wallets, Bitcoin against the Meridian, ransoms and bounties in sats.
+5. **Shared galaxy:** paying other commanders in sats (escorts, wingmen's shares, bounties on players, contracts held until the job's done).
 
 ### Open questions
 
 - **Credit inflation:** yes or no, and how fast.
 - **Custody:** only ever in your own wallet, or can the Bankers' Guild hold it for you, and can a guild fail with your coins in it?
+- **Stablecoin reserves:** how much of an issuer's reserves can be Bitcoin, and whether players can see every issuer's reserves or only those of systems they've visited.
 - **Real-world swings:** a real bull run makes holders rich without flying; a real crash halves their savings. That's the point, but it ties in-game wealth to the outside world.
 
 ## 7. A ledger anyone can check
