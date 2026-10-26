@@ -81,23 +81,37 @@ export function closeReplay() {
 }
 
 /** The flight log, its own tab when docked. */
-export async function renderFlightLog(opts: { available: boolean; unavailable: string; enabled: boolean; intro: boolean; onToggle: (on?: boolean) => void }) {
+export async function renderFlightLog(opts: {
+  available: boolean;
+  unavailable: string;
+  enabled: boolean;
+  intro: boolean;
+  onToggle: (on?: boolean) => void;
+  /** Recording in HD, or stepped down to SD (and whether HD can be tried again). */
+  quality?: { hd: boolean; canRetry: boolean; retry: () => void };
+}) {
   const el = $('#flight-log');
   revoke(logUrls);
   const moments = await listMoments();
   const toggle = opts.available ? `<button type="button" class="log-toggle" aria-pressed="${opts.enabled}">Flight recorder: ${opts.enabled ? 'on' : 'off'}</button>` : '';
+  const q = opts.available && opts.enabled ? opts.quality : undefined;
+  const quality = q
+    ? q.hd
+      ? '<span class="log-quality">Recording in HD (720p)</span>'
+      : `<span class="log-quality">Recording at 480p: in HD the game was slowing down on this device.${q.canRetry ? ' <button type="button" class="log-hd">Try HD again</button>' : ''}</span>`
+    : '';
   const how = 'Your ship keeps the last minute of flight in memory and saves only the moments worth keeping: a fight, a Legend, the Marshals, a discovery and your last moments. Shift+P (or holding the camera button) keeps the last 30 seconds yourself; P takes a photo.';
   let head: string;
   if (!opts.available) head = `<p class="meta">${escapeHtml(opts.unavailable)} Photos (P) still come here.</p>`;
   else if (opts.intro)
     head = `<div class="log-intro"><p><strong>Your flight recorder</strong> ${how} Everything stays on this device (up to ${megabytes(BUDGET)}) unless you share it, and what you don't Keep clears after a week.</p>
       <p class="log-intro-actions"><button type="button" class="primary" data-intro="on">Keep it on</button><button type="button" data-intro="off">Turn it off</button></p></div>`;
-  else if (!moments.length) head = `<p class="meta">${opts.enabled ? how : 'The flight recorder is off. Photos (P) still come here.'} ${toggle}</p>`;
+  else if (!moments.length) head = `<p class="meta">${opts.enabled ? how : 'The flight recorder is off. Photos (P) still come here.'} ${toggle} ${quality}</p>`;
   else head = '';
   if (moments.length) {
     const used = moments.reduce((n, m) => n + momentBytes(m), 0);
     const unkept = moments.some((m) => !m.saved);
-    head += `<p class="meta">${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} · ${megabytes(used)} of ${megabytes(BUDGET)} on this device · what you don't Keep clears after a week. ${opts.intro ? '' : toggle} ${unkept ? '<button type="button" class="log-clear">Clear unkept</button>' : ''}</p>
+    head += `<p class="meta">${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} · ${megabytes(used)} of ${megabytes(BUDGET)} on this device · what you don't Keep clears after a week. ${opts.intro ? '' : toggle} ${unkept ? '<button type="button" class="log-clear">Clear unkept</button>' : ''} ${quality}</p>
       <ul class="log-list">${moments
         .map(
           (m) => `<li data-id="${m.id}">
@@ -110,6 +124,10 @@ export async function renderFlightLog(opts: { available: boolean; unavailable: s
   }
   el.innerHTML = head;
   el.querySelector<HTMLButtonElement>('.log-toggle')?.addEventListener('click', () => opts.onToggle());
+  el.querySelector<HTMLButtonElement>('.log-hd')?.addEventListener('click', () => {
+    q?.retry();
+    void renderFlightLog(opts);
+  });
   for (const b of el.querySelectorAll<HTMLButtonElement>('[data-intro]')) b.onclick = () => opts.onToggle(b.dataset.intro === 'on');
   const clear = el.querySelector<HTMLButtonElement>('.log-clear');
   if (clear)
