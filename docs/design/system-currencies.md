@@ -135,7 +135,7 @@ A powerful bloc pushes **one currency for many systems**, much like the euro. It
 - **The price:** the relay ([relay/](../../relay/README.md), on fly.io in Tokyo) has it from Binance; the game's server (`server/src/btc.ts`) keeps each answer 15 seconds (candles a minute) and passes it on; the exchange asks only while it's open. When nobody is trading, nothing is asked.
 - **The exchange:** Bitcoin is the first row of the list. Picking it puts the real market's candles on the same chart (5 minute, 15 minute and hourly), the broker's two prices where the order book is, and a form to spend credits or sell sats. Your trades are marked on the chart.
 - **The wallet:** `sats` on the commander, with the last 50 trades. It takes no hold space and survives the ship.
-- **The rules:** `src/economy/bitcoin.ts`, with tests: the spread, fresh prices only, out of reach of fines and the insurers.
+- **The rules:** `src/economy/bitcoin.ts`, with tests: spot fills and the fee, fresh prices only, out of reach of fines and the insurers.
 - **Not yet:** the 1984 look's plain price list doesn't show Bitcoin; Classic never will.
 
 ### Guardrails
@@ -177,7 +177,7 @@ A commander can keep their savings in Bitcoin and hold almost no credits, the Bi
 
 - **The real price.** It mirrors the live BTC price: Binance BTCUSDT, fetched by our server through [our relay in Tokyo](../../relay/README.md) (Binance refuses Cloudflare's servers) and passed on to every player. **1 Cr = 1 US dollar**, so the number on screen is the real number. A coin is about 80,000 Cr, more than half the dearest ship in the yard, so owning a whole one is a milestone.
 - **A Bitcoin row at the top of every exchange:** *Bitcoin · 80,251 Cr · the same everywhere · live*. The same chart as any good, with real Bitcoin candles and your trades marked on them.
-- **No price curve.** Buying furs moves a station's price; buying Bitcoin doesn't, because the station is only a broker for a market far bigger than us. You pay the live price plus a small spread.
+- **No price curve.** Buying furs moves a station's price; buying Bitcoin doesn't, because the station is only a broker for a market far bigger than us. Every trade fills at the spot price, with the broker's fee shown on its own (Mark): modelled on Binance's spot fees for a regular account, 0.1% for a limit order and 0.1% for a market order.
 - **Traded in sats.** A new commander with 100 Cr buys about 125,000 sats; the screen shows both: *₿ 0.00125 · 100 Cr*.
 - **Limit orders** *(Mark, built 26 October 2026)*: buy if the price falls to yours, or sell if it rises to it, with the credits or sats held until then. Fills are judged against the real market's own minute-by-minute history since the order was placed, so an order fills while you're out flying, and anywhere, since Bitcoin is the same everywhere; at your limit, or better if the price was better. A price that crosses the galaxy once a minute suits space, where news travels no faster.
 - **One price everywhere.** It's one network, so you can't profit by carrying it between systems, only by judging when to hold it.
@@ -186,7 +186,7 @@ A commander can keep their savings in Bitcoin and hold almost no credits, the Bi
 
 - **Zero tonnes.** It never uses hold space, cargo scans can't find it, and pirates and the Falcon can't scoop it.
 - **It survives your ship.** After a claim: *Your Bitcoin is safe: the keys were in your head.*
-- **Nobody can take it** (Mark). Credits are the Co-operative's money, centralised: fines and the insurers' excess are taken from them, with no say. Bitcoin is nobody's, so it can't be fined, seized or written off, and the law doesn't count it when it sets a fine to your means. That makes it the way to **preserve wealth** in a galaxy whose money can be taken from you. The price of that safety is the market's swings and the broker's spread. The law still has teeth: what your credits can't pay, it takes by holding your kit.
+- **Nobody can take it** (Mark). Credits are the Co-operative's money, centralised: fines and the insurers' excess are taken from them, with no say. Bitcoin is nobody's, so it can't be fined, seized or written off, and the law doesn't count it when it sets a fine to your means. That makes it the way to **preserve wealth** in a galaxy whose money can be taken from you. The price of that safety is the market's swings and the broker's fee. The law still has teeth: what your credits can't pay, it takes by holding your kit.
 - **On the commander card:** *Bitcoin ₿ 0.0412 · 3,307 Cr · 0 t*.
 - **Real news.** When the real price moves more than about 5% in a day, the news board carries it (*Bitcoin up 7%: celebrations in the anarchies*) and NPCs talk about it on the radio.
 
@@ -196,7 +196,7 @@ A commander can keep their savings in Bitcoin and hold almost no credits, the Bi
 - **Feudal pegs break.** Whoever held Bitcoin instead of the pegged coin is left standing.
 - **Communist states ban it,** because it gets around their exchange controls: you can hold it there but not trade it, and smuggling sats out becomes a career.
 - **Confederacies run on it.** The table in section 2 gives them a fixed-supply coin modelled on Bitcoin; with this idea it becomes the real thing, as El Salvador did. The Confederacies are the Bitcoin-standard systems.
-- **Anarchies trade it freely,** with the thinnest spreads and no questions; corporate states charge fees.
+- **Anarchies trade it freely,** with the lowest fees and no questions; corporate states charge more.
 - **The Compact hates it most.** Bitcoin is the reason no system *needs* the Meridian, so Bitcoin against the Compact becomes the galaxy's central story: Compact members tax it, Compact patrols hunt the smugglers, holdout systems adopt it.
 - **Later:** a pirate can't scoop your sats, but can demand them as ransom when you surrender; anarchies pay bounties in sats.
 
@@ -244,7 +244,7 @@ The Bitcoin-backed kind ties the real price into the galaxy a second way: a real
 ### Guardrails
 
 - **In-game only.** It's the real price, not real money: in-game Bitcoin can't be bought, sold or withdrawn for real coins or cash. The screen says so, in the game's own voice (*Witchspace Bitcoin stays in Witchspace: it can't be bought or cashed out for real money*); where the price comes from stays behind the scenes, so the galaxy stays the galaxy (Mark). Nothing here is financial advice.
-- **Fair fills.** Each trade fills at a price fetched at that moment, with a small spread, so watching Binance gains nothing.
+- **Fair fills.** Each trade fills at a price fetched at that moment, plus the broker's fee, so watching Binance gains nothing.
 - **Stale means stopped.** If the price is more than a few minutes old, trading pauses: *The network is quiet: price 6 minutes old, trading paused.*
 - **Modern only.** Classic stays credits only, as in 1984.
 

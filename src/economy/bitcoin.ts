@@ -9,8 +9,13 @@ import type { TradeResult } from './trade';
 // money. Modern rules only; Classic stays credits only, as in 1984.
 
 export const SATS = 100_000_000; // to the coin
-/** The station is a broker, not a market: you pay the live price plus half a percent, and sell for half a percent under it. */
-export const SPREAD = 0.005;
+/**
+ * The broker's fee, on top of the spot price (Mark): every trade fills at the
+ * real price, and the fee is shown on its own. Modelled on Binance's spot fees
+ * for a regular account: 0.1% to make (a limit order) and 0.1% to take (a
+ * market order). Kept apart, since on Binance the taker pays more as volume grows.
+ */
+export const FEE = { limit: 0.001, market: 0.001 };
 /** A price older than this isn't traded on: the network is quiet. */
 export const STALE_MS = 5 * 60_000;
 /** Trades kept on the commander, for the exchange's "Your trades" and the chart's markers. */
@@ -27,10 +32,12 @@ export interface BtcTrade {
   t: number;
   side: 'buy' | 'sell';
   sats: number;
-  /** Credits per coin the trade filled at, spread included. */
+  /** Credits per coin the trade filled at: the spot price (before the fee came in, the broker's spread was included). */
   price: number;
-  /** Credits paid or received. */
+  /** Credits paid or received, fee included. */
   total: number;
+  /** The broker's fee, in credits. */
+  fee?: number;
 }
 
 // The latest price heard, for showing what your coins are worth (net/bitcoin.ts
@@ -42,14 +49,20 @@ let latest: BtcQuote | null = null;
 export const setQuote = (q: BtcQuote | null) => (latest = q);
 export const lastQuote = () => latest;
 
-export const askPrice = (q: BtcQuote) => q.price * (1 + SPREAD);
-export const bidPrice = (q: BtcQuote) => q.price * (1 - SPREAD);
+/** Spending `credits` at `price`: the sats you get, after the fee. */
+export const buyAt = (credits: number, price: number, fee: number) => ({ sats: Math.floor((credits * (1 - fee) * SATS) / price), fee: credits * fee });
+/** Selling `sats` at `price`: the credits you get, after the fee. */
+export const sellAt = (sats: number, price: number, fee: number) => {
+  const gross = (sats * price) / SATS;
+  return { total: Math.floor(gross * (1 - fee) * 10) / 10, fee: gross * fee };
+};
+const cents = (n: number) => Math.round(n * 100) / 100;
 export const isFresh = (q: BtcQuote | null, now = Date.now()): boolean => Boolean(q) && now - q!.time < STALE_MS;
 
 const tenth = (n: number) => Math.round(n * 10) / 10;
 export const satsOf = (c: Commander) => c.sats ?? 0;
-/** What your Bitcoin would sell for now, at the last price heard; nothing if none has been. */
-export const btcValue = (c: Commander, q = latest) => (q && satsOf(c) ? Math.floor(((satsOf(c) * bidPrice(q)) / SATS) * 10) / 10 : 0);
+/** What your Bitcoin is worth now, at the last price heard; nothing if none has been. */
+export const btcValue = (c: Commander, q = latest) => (q && satsOf(c) ? Math.floor(((satsOf(c) * q.price) / SATS) * 10) / 10 : 0);
 
 /** ₿ 0.00125000 */
 export const formatBtc = (sats: number) => `₿ ${(sats / SATS).toFixed(8)}`;
@@ -66,15 +79,13 @@ const stale = (q: BtcQuote | null, now: number) =>
 /** Spend up to `credits` on Bitcoin at the live price. */
 export function buyBitcoin(c: Commander, q: BtcQuote | null, credits: number, now = Date.now()): TradeResult {
   if (!q || !isFresh(q, now)) return { ok: false, message: stale(q, now) };
-  const spend = Math.min(credits, c.credits);
-  const ask = askPrice(q);
-  const sats = Math.floor((spend * SATS) / ask);
+  const total = Math.floor(Math.min(credits, c.credits) * 10) / 10;
+  const { sats, fee } = buyAt(total, q.price, FEE.market);
   if (sats < 1) return { ok: false, message: 'Not enough credits for a single sat' };
-  const total = Math.min(c.credits, Math.ceil(((sats * ask) / SATS) * 10) / 10);
   c.credits = tenth(c.credits - total);
   c.sats = satsOf(c) + sats;
-  record(c, { t: now, side: 'buy', sats, price: ask, total });
-  return { ok: true, message: `Bought ${formatSats(sats)} for ${total.toLocaleString()} Cr` };
+  record(c, { t: now, side: 'buy', sats, price: q.price, total, fee: cents(fee) });
+  return { ok: true, message: `Bought ${formatSats(sats)} for ${total.toLocaleString()} Cr · fee ${cents(fee).toLocaleString()} Cr` };
 }
 
 /** Sell `sats` of your Bitcoin at the live price. */
@@ -82,12 +93,11 @@ export function sellBitcoin(c: Commander, q: BtcQuote | null, sats: number, now 
   if (!q || !isFresh(q, now)) return { ok: false, message: stale(q, now) };
   const n = Math.min(Math.floor(sats), satsOf(c));
   if (n < 1) return { ok: false, message: 'No Bitcoin to sell' };
-  const bid = bidPrice(q);
-  const total = Math.floor(((n * bid) / SATS) * 10) / 10;
+  const { total, fee } = sellAt(n, q.price, FEE.market);
   c.sats = satsOf(c) - n;
   c.credits = tenth(c.credits + total);
-  record(c, { t: now, side: 'sell', sats: n, price: bid, total });
-  return { ok: true, message: `Sold ${formatSats(n)} for ${total.toLocaleString()} Cr` };
+  record(c, { t: now, side: 'sell', sats: n, price: q.price, total, fee: cents(fee) });
+  return { ok: true, message: `Sold ${formatSats(n)} for ${total.toLocaleString()} Cr · fee ${cents(fee).toLocaleString()} Cr` };
 }
 
 // --- Limit orders (Mark) -------------------------------------------------------------
@@ -96,7 +106,7 @@ export function sellBitcoin(c: Commander, q: BtcQuote | null, sats: number, now 
 // you cancel. Fills are judged against the real market's own price history
 // since the order was placed, minute by minute (news crosses the galaxy no
 // faster), so an order can fill while you're out flying, at your limit, with
-// the broker's spread as ever. Bitcoin is the same everywhere: an order placed
+// the broker's (smaller) limit-order fee. Bitcoin is the same everywhere: an order placed
 // at one station fills wherever you are.
 
 export interface BtcOrder {
@@ -166,15 +176,13 @@ export function fillBtcOrders(c: Commander, spans: PriceSpan[] | ((o: BtcOrder) 
     // The worst price that stretch offered, but never worse than the limit.
     const at = o.side === 'buy' ? Math.min(o.limit, hit.h) : Math.max(o.limit, hit.l);
     if (o.side === 'buy') {
-      const price = at * (1 + SPREAD);
-      const sats = Math.floor((o.credits! * SATS) / price);
+      const { sats, fee } = buyAt(o.credits!, at, FEE.limit);
       c.sats = satsOf(c) + sats;
-      trade = { t: hit.t, side: 'buy', sats, price, total: o.credits! };
+      trade = { t: hit.t, side: 'buy', sats, price: at, total: o.credits!, fee: cents(fee) };
     } else {
-      const price = at * (1 - SPREAD);
-      const total = Math.floor(((o.sats! * price) / SATS) * 10) / 10;
+      const { total, fee } = sellAt(o.sats!, at, FEE.limit);
       c.credits = tenth(c.credits + total);
-      trade = { t: hit.t, side: 'sell', sats: o.sats!, price, total };
+      trade = { t: hit.t, side: 'sell', sats: o.sats!, price: at, total, fee: cents(fee) };
     }
     record(c, trade);
     out.push({ order: o, at: hit.t, trade });
@@ -183,7 +191,7 @@ export function fillBtcOrders(c: Commander, spans: PriceSpan[] | ((o: BtcOrder) 
   return out;
 }
 
-/** "Your Bitcoin buy filled at 78,000 at 14:32: 64,000 sats for 50 Cr". */
+/** "Your Bitcoin buy filled at 78,000 at 14:32: 64,000 sats for 50 Cr · fee 0.05 Cr". */
 export const describeBtcFill = (f: { order: BtcOrder; at: number; trade: BtcTrade }) =>
-  `Your Bitcoin ${f.order.side} filled at ${Math.round(f.trade.price / (f.order.side === 'buy' ? 1 + SPREAD : 1 - SPREAD)).toLocaleString()} at ${new Date(f.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}: ${formatSats(f.trade.sats)} for ${f.trade.total.toLocaleString()} Cr`;
+  `Your Bitcoin ${f.order.side} filled at ${Math.round(f.trade.price).toLocaleString()} at ${new Date(f.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}: ${formatSats(f.trade.sats)} for ${f.trade.total.toLocaleString()} Cr${f.trade.fee ? ` · fee ${f.trade.fee.toLocaleString()} Cr` : ''}`;
 

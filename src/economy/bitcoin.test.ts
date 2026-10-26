@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { STAKE, newCommander } from '../game/commander';
 import { claimInsurance } from '../game/insurance';
 import { charge, spareCredits } from '../game/law';
-import { askPrice, bidPrice, btcValue, buyBitcoin, cancelBtcOrder, fillBtcOrders, formatBtc, placeBtcOrder, SATS, sellBitcoin, setQuote, SPREAD, STALE_MS } from './bitcoin';
+import { btcValue, buyBitcoin, cancelBtcOrder, fillBtcOrders, formatBtc, placeBtcOrder, SATS, sellBitcoin, setQuote, FEE, STALE_MS } from './bitcoin';
 
 const NOW = 1_800_000_000_000;
 const quote = { price: 80_000, time: NOW - 10_000 };
@@ -10,24 +10,24 @@ const quote = { price: 80_000, time: NOW - 10_000 };
 afterEach(() => setQuote(null));
 
 describe('Bitcoin on the exchange', () => {
-  it('buys sats at the live price plus the spread', () => {
+  it('buys sats at the spot price, less the fee', () => {
     const c = newCommander('modern');
     const r = buyBitcoin(c, quote, 100, NOW);
     expect(r.ok).toBe(true);
-    // 100 Cr at 80,400 a coin: about 124,378 sats
-    expect(c.sats).toBe(Math.floor((100 * SATS) / askPrice(quote)));
-    expect(c.credits).toBeGreaterThanOrEqual(0);
-    expect(c.credits).toBeLessThan(0.2);
+    // 100 Cr at 80,000 a coin, 0.1 Cr to the broker: 124,875 sats
+    expect(c.sats).toBe(Math.floor((100 * (1 - FEE.market) * SATS) / 80_000));
+    expect(c.credits).toBe(0);
+    expect(c.btcTrades![0]).toMatchObject({ price: 80_000, fee: 0.1 });
     expect(c.btcTrades).toHaveLength(1);
   });
 
-  it('sells for the live price less the spread, so a round trip costs about one percent', () => {
+  it('sells at the spot price less the fee, so a round trip costs about 0.2%', () => {
     const c = newCommander('modern');
     c.credits = 10_000;
     buyBitcoin(c, quote, 10_000, NOW);
     sellBitcoin(c, quote, c.sats!, NOW);
     expect(c.sats).toBe(0);
-    expect(c.credits).toBeCloseTo(10_000 * (1 - SPREAD) / (1 + SPREAD), -1);
+    expect(c.credits).toBeCloseTo(10_000 * (1 - FEE.market) ** 2, -1);
   });
 
   it('takes no hold space and leaves cargo alone', () => {
@@ -88,12 +88,12 @@ describe('Bitcoin is out of reach', () => {
     expect(c.sats).toBe(1_234_567);
   });
 
-  it('is worth what it would sell for, once a price has been heard', () => {
+  it('is worth the spot price, once a price has been heard', () => {
     const c = newCommander('modern');
     c.sats = SATS / 100;
     expect(btcValue(c)).toBe(0);
     setQuote(quote);
-    expect(btcValue(c)).toBeCloseTo(bidPrice(quote) / 100, 0);
+    expect(btcValue(c)).toBe(800);
   });
 });
 
@@ -110,7 +110,8 @@ describe('Bitcoin limit orders', () => {
     const fills = fillBtcOrders(c, spans(NOW + MIN, [80_000, 79_000, 78_020, 77_000]));
     expect(fills).toHaveLength(1);
     expect(fills[0].at).toBe(NOW + 3 * MIN); // the first minute it got there
-    expect(c.sats).toBe(Math.floor((500 * SATS) / (78_000 * (1 + SPREAD))));
+    expect(c.sats).toBe(Math.floor((500 * (1 - FEE.limit) * SATS) / 78_000));
+    expect(fills[0].trade).toMatchObject({ price: 78_000, fee: 0.5 });
     expect(c.btcOrders).toHaveLength(0);
   });
 
@@ -121,14 +122,14 @@ describe('Bitcoin limit orders', () => {
     expect(c.sats).toBe(0); // held
     const credits = c.credits;
     expect(fillBtcOrders(c, spans(NOW + MIN, [84_000, 85_000]))).toHaveLength(1);
-    expect(c.credits).toBeCloseTo(credits + (85_000 * (1 - SPREAD)) / 100, 0);
+    expect(c.credits).toBeCloseTo(credits + (85_000 * (1 - FEE.limit)) / 100, 0);
   });
 
   it('never fills worse than the real price: a buy set above the market buys at the market', () => {
     const c = newCommander('modern');
     placeBtcOrder(c, 'buy', 100, 81_000, NOW);
     fillBtcOrders(c, [{ t: NOW + MIN, h: 80_300, l: 80_300 }]);
-    expect(c.btcTrades![0].price).toBeCloseTo(80_300 * (1 + SPREAD), 5);
+    expect(c.btcTrades![0].price).toBe(80_300);
   });
 
   it("never fills from the price before it was placed: no orders in the past", () => {
