@@ -1334,6 +1334,18 @@ body.retro .contracts li { font-size: 12px; border-radius: 0; }
 body.retro .contracts li small, body.retro .risk { font-size: 8px; }
 .contracts li.special { border-left-color: var(--company, var(--amber)); background: rgba(255, 179, 71, 0.06); }
 .contracts li.message { border-left-color: var(--dim); }
+/* The saloon (main.ts renderSaloon): the regulars, each a card. */
+.regulars { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 10px; }
+.regular { padding: 10px 12px; border-left: 2px solid var(--edge); background: rgba(61, 255, 176, 0.04); line-height: 1.35; }
+.regular small { color: var(--dim); }
+.regular-look { margin: 4px 0 0; color: var(--dim); font-style: italic; }
+.regular-record { margin: 4px 0 0; color: var(--amber); font-size: 13px; }
+.regular-says { margin: 8px 0 0; font-size: 15px; }
+.regular-actions { margin: 8px 0 0; }
+.regular-actions button { min-height: 34px; padding: 4px 12px; }
+#saloon h3 small { color: var(--dim); font-weight: 400; font-size: 13px; letter-spacing: 0.04em; text-transform: none; }
+#saloon .meta { text-transform: none; letter-spacing: normal; font-size: 14px; }
+.saloon-back { border-style: dashed; border-color: rgba(255, 77, 109, 0.5); color: #ff8da1; }
 .contracts li.message.unread { border-left-color: var(--amber); background: rgba(255, 179, 71, 0.08); }
 .contracts li.message.receipt { padding-top: 5px; padding-bottom: 5px; }
 .contracts li.message-earlier { padding: 0; border-left: 0; background: none; }

@@ -221,6 +221,7 @@ import type { AdriftCase, Message } from './assignments';
 import type { WorldEvent } from '../economy/events';
 import type { CompanyId } from './companies';
 import type { BtcTrade } from '../economy/bitcoin';
+import type { Heard } from './saloon';
 
 export interface Commander {
   name: string;
@@ -289,6 +290,8 @@ export interface Commander {
   sats?: number;
   /** Your recent Bitcoin trades, oldest first. */
   btcTrades?: BtcTrade[];
+  /** The saloon: drinks bought this visit, and the tips you've heard (game/saloon.ts). */
+  saloon?: { drinks: string[]; heard: Heard[] };
 }
 
 const KEY = 'witchspace.commander.v1';

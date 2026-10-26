@@ -120,6 +120,8 @@ import { readTrack, TrackRecorder, trackBlob, type Pose } from './game/track';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
 import { closeReplay, isReplayOpen, openReplay, renderFlightLog, setOutsideView } from './ui/flightLog';
 import { KillCam } from './ui/killCam';
+import { record, regularsAt, slotOf, talk, venue } from './game/saloon';
+import { hasBackRoom } from './economy/blackmarket';
 import { btcValue, formatBtc, satsOf } from './economy/bitcoin';
 import './style.css';
 
@@ -624,7 +626,7 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'contracts' | 'market' | 'news';
+type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon';
 let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
@@ -634,6 +636,8 @@ function setDockTab(tab: DockTab) {
   if (tab === 'station' && state === 'docked') renderDocked(); // credits, hold and wallet may have changed at the exchange
   $('#tab-market').hidden = tab !== 'market';
   $('#tab-news').hidden = tab !== 'news';
+  $('#tab-saloon').hidden = tab !== 'saloon';
+  if (tab === 'saloon') renderSaloon();
   $('#tab-contracts').hidden = tab !== 'contracts';
   if (tab === 'news') renderNews();
   if (tab === 'contracts') renderContracts();
@@ -982,6 +986,81 @@ $('#news-list').addEventListener('click', (e) => {
   showSystem(systemAt(currentSystem().galaxy, Number(b.dataset.system)));
 });
 
+// --- The saloon (docs/design/trading.md, section 3; game/saloon.ts) ------------------
+// Two to four regulars, coming and going with the clock. Buy one a drink and
+// they talk; the ones who know something early want paying properly, and so do
+// the liars. Their record builds as their tips come true or don't.
+
+function renderSaloon() {
+  const c = cmdr();
+  const here = currentSystem();
+  const now = Date.now();
+  const v = venue(here);
+  const slot = slotOf(now);
+  const s = (c.saloon ??= { drinks: [], heard: [] });
+  const sysName = (i: number) => systemAt(here.galaxy, i).name;
+  const cards = regularsAt(here, now)
+    .map((r) => {
+      const drunk = s.drinks.includes(`${r.id}@${slot}`);
+      const heard = s.heard.find((h) => h.who === r.id && h.slot === slot);
+      const words = drunk ? talk(r, sysName, Boolean(heard?.paid)) : null;
+      const rec = record(s.heard, r.id, now);
+      const before = s.heard.some((h) => h.who === r.id && h.slot !== slot); // on an earlier visit
+      const known = rec.right || rec.wrong ? `Their tips: ${rec.right} came true${rec.wrong ? ` · ${rec.wrong} didn't` : ''}` : before ? 'You have heard from them before: too soon to say' : '';
+      const action = !drunk
+        ? `<button data-drink="${r.id}" ${c.credits < r.drink ? 'disabled' : ''}>Buy a drink · ${r.drink} Cr</button>`
+        : words?.more
+          ? `<button data-pay="${r.id}" ${c.credits < r.price ? 'disabled' : ''}>Pay ${r.price} Cr for the rest</button>`
+          : '';
+      return `<li class="regular regular-${r.mood}">
+        <strong>${escapeHtml(r.name)}</strong> <small>${escapeHtml(r.trade)}</small>
+        <p class="regular-look">${escapeHtml(r.look)}</p>
+        ${known ? `<p class="regular-record">${escapeHtml(known)}</p>` : ''}
+        ${words ? `<p class="regular-says">“${escapeHtml(words.said)}”</p>` : ''}
+        ${action ? `<p class="regular-actions">${action}</p>` : ''}
+      </li>`;
+    })
+    .join('');
+  const back = hasBackRoom(c, here) ? `<button type="button" class="saloon-back">A door at the back ›</button>` : '';
+  $('#saloon').innerHTML = `
+    <h3>${escapeHtml(v.name)} <small>the ${v.kind} at ${escapeHtml(stationName(here).name)}</small></h3>
+    <p class="meta">Regulars come and go every couple of hours. What they tell you might be worth a fortune, or nothing at all: nobody here wears a label.</p>
+    <ul class="regulars">${cards}</ul>
+    ${back}`;
+}
+
+$('#saloon').addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
+  if (!b) return;
+  const c = cmdr();
+  const here = currentSystem();
+  const now = Date.now();
+  const slot = slotOf(now);
+  const s = (c.saloon ??= { drinks: [], heard: [] });
+  if (b.classList.contains('saloon-back')) {
+    // The back room: through the exchange's own door.
+    setDockTab('market');
+    document.querySelector<HTMLButtonElement>('#exchange .ex-backroom-toggle')?.click();
+    return;
+  }
+  const r = regularsAt(here, now).find((x) => x.id === (b.dataset.drink ?? b.dataset.pay));
+  if (!r) return;
+  if (b.dataset.drink && c.credits >= r.drink) {
+    c.credits = Math.round((c.credits - r.drink) * 10) / 10;
+    s.drinks = [...s.drinks, `${r.id}@${slot}`].slice(-40);
+    // Glad and mad tell all for a drink; sad and bad want paying for the rest.
+    if (r.tip) s.heard = [...s.heard, { who: r.id, name: r.name, galaxy: here.galaxy, at: now, slot, tip: r.tip, paid: r.price === 0 }].slice(-60);
+  } else if (b.dataset.pay && c.credits >= r.price) {
+    const h = s.heard.find((x) => x.who === r.id && x.slot === slot);
+    if (!h) return;
+    c.credits = Math.round((c.credits - r.price) * 10) / 10;
+    h.paid = true;
+  } else return;
+  saveCommander(c);
+  sfx.beep();
+  renderSaloon();
+});
+
 function renderNews() {
   const here = currentSystem();
   const now = Date.now();
@@ -1165,6 +1244,8 @@ function holdList(c: Commander): string {
 }
 
 function renderDocked() {
+  // The saloon is Modern's: Classic stations are as they were in 1984.
+  document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
   const c = cmdr();
   showFittings(c);
   refreshFlightLog();
