@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { distanceLy, galaxy, systemAt } from '../galaxy/generate';
 import { fuelCapacity, newCommander, removeEquipment } from './commander';
-import { board, deliver, surveyDone, take, wyWorks } from './contracts';
+import { board, deliver, forContract, surveyDone, take, wyWorks } from './contracts';
 import {
   advanceTrail,
   bodiesOf,
@@ -125,6 +125,30 @@ describe('Wexley-Yorozu survey contracts', () => {
     expect(c.credits).toBe(credits + offer!.pay);
     // Wexley-Yorozu keeps the moon data: it isn't paid twice.
     expect(exploreOf(c).data.filter((d) => d.system === target.index && d.body.startsWith('moon'))).toHaveLength(0);
+  });
+
+  it("keeps the contract's moon data out of a data sale, so it can't be sold off cheap first", () => {
+    const c = newCommander('modern');
+    let here = galaxy(0)[0];
+    let offer;
+    for (const s of galaxy(0)) {
+      if (!wyWorks(s)) continue;
+      offer = board(c, s, NOW).find((o) => o.survey);
+      if (offer) {
+        here = s;
+        break;
+      }
+    }
+    take(c, offer!, 0);
+    const target = systemAt(offer!.to.galaxy, offer!.to.system);
+    for (const b of bodiesOf(target)) recordSurvey(c, target, b);
+    const moons = exploreOf(c).data.filter((d) => forContract(c, d));
+    expect(moons.length).toBeGreaterThan(0);
+    const others = exploreOf(c).data.length - moons.length;
+    sellData(c, here, true, (d) => forContract(c, d));
+    expect(exploreOf(c).data).toEqual(moons); // the rest sold, the contract's kept
+    expect(others).toBeGreaterThan(0);
+    expect(deliver(c, here)).toHaveLength(1); // and the contract still pays
   });
 });
 

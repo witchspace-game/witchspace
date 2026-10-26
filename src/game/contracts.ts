@@ -294,6 +294,10 @@ export function surveyDone(c: Commander, a: Contract): boolean {
   return worldOf(s).moons.every((_, i) => isSurveyed(c, s, `moon${i}`));
 }
 
+/** Survey data an active survey contract is for (its target's moons): kept for the contract, not sold. */
+export const forContract = (c: Commander, d: { galaxy: number; system: number; body: string }) =>
+  (c.contracts ?? []).some((a) => a.survey && a.to.galaxy === d.galaxy && a.to.system === d.system && d.body.startsWith('moon'));
+
 /** What a contract is, in a line: "4 t Food" or "Moon surveys of Riedquat". */
 export const contractWhat = (a: Contract) => (a.survey ? `${cargoName(a)} of ${placeOf(a.to).name}` : `${a.qty} t ${cargoName(a)}`);
 
