@@ -179,6 +179,7 @@ How it could work:
 - **The agent does the editing.** It picks the moment, cuts the vertical version (the trailer tooling already makes vertical cuts), adds the end card and a caption from what the game knows ("CMDR Jameson vs a pirate pack at Riedquat"), writes the title, description and tags, credits the commander's callsign with a link to their moment's page, and queues it.
 - **A person in the loop, at first.** The agent drafts; a maintainer (or a trusted moderator) approves the day's Shorts before they publish. Later, verified moments from commanders in good standing could go up by themselves.
 - **Series, not a firehose.** "How I died", "Sightings", "Firsts", "The week in Witchspace": the agent fills playlists, and a weekly round-up Short shows the best.
+- **A Kill Cam playlist** *(Mark, 26 October 2026)*: the reconstructions, filmed from outside by the kill cam and labelled RECONSTRUCTION, in their own series beside the cockpit clips ("Flight Recorder", already on the channel). The kill cam saves wide (16:9) as well as upright, so a wide reconstruction is a normal video for the channel's videos and this playlist, not a Short; the upright cut of the same moment can go out as a Short as well. Deaths from behind the ship that got you, and the best fights from behind the target.
 
 Things to settle before it opens:
 
