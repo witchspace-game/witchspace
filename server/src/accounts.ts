@@ -80,6 +80,15 @@ export class Accounts extends DurableObject<AccountsEnv> {
         /* already there */
       }
     }
+    // Every device that has switched notifications on (Mark): each gets the same messages. Replaces contact.push,
+    // which held only the latest device; any address still there moves across once.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS devices (hash TEXT PRIMARY KEY, account TEXT NOT NULL, endpoint TEXT NOT NULL, added INTEGER NOT NULL)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS devices_account ON devices (account)');
+    for (const old of this.sql.exec('SELECT account, push, push_hash FROM contact WHERE push IS NOT NULL AND push_hash IS NOT NULL').toArray()) {
+      const endpoint = (JSON.parse(old.push as string) as { endpoint: string }).endpoint;
+      this.sql.exec('INSERT OR IGNORE INTO devices (hash, account, endpoint, added) VALUES (?, ?, ?, ?)', old.push_hash, old.account, endpoint, Date.now());
+    }
+    this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL WHERE push IS NOT NULL');
     // Your name on the galaxy: the first account to bring each world's, moon's or signal's data home.
     // The name shown is the account's callsign now, so a rename follows and a deleted account drops out.
     this.sql.exec(`CREATE TABLE IF NOT EXISTS firsts (
@@ -109,7 +118,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'PUT' && path === '/me/save') return this.putSave(request, account);
     if (m === 'POST' && path === '/auth/signout') return this.signOut(request);
     if (m === 'DELETE' && path === '/me') return this.deleteAccount(account);
-    if (m === 'GET' && path === '/me/contact') return this.getContact(account);
+    if (m === 'GET' && path === '/me/contact') return this.getContact(account, url);
     if (m === 'PUT' && path === '/me/contact') return this.putContact(request, account);
     if (m === 'POST' && path === '/me/firsts') return this.claimFirsts(request, account);
     return json({ error: 'Not found' }, 404);
@@ -351,9 +360,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
       return json({
         callsign: who.callsign,
         alarm: await this.ctx.storage.getAlarm(),
-        push: Boolean(row?.push),
-        // Which kind of device it reaches (Apple's service is an iPhone, iPad or Safari on a Mac; Google's is Chrome).
-        pushService: row?.push ? new URL((JSON.parse(row.push) as { endpoint: string }).endpoint).hostname : null,
+        // The devices it reaches, by push service (Apple's is an iPhone, iPad or Safari on a Mac; Google's is Chrome).
+        devices: this.devicesOf(who.id as string).map((d) => ({ service: new URL(d.endpoint).hostname, added: d.added })),
         kinds: JSON.parse(row?.kinds ?? '{}'),
         tz: row?.tz ?? null,
         awake: awake(now, row?.tz ?? 0),
@@ -369,17 +377,14 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (request.method === 'POST' && path === '/admin/log/test') {
       const key = (new URL(request.url).searchParams.get('callsign') ?? '').trim().toLowerCase();
       const who = this.sql.exec('SELECT id FROM accounts WHERE callsign_key = ?', key).toArray()[0];
-      const row = who ? this.contactRow(who.id as string) : null;
-      if (!row?.push || !this.env.VAPID_PUBLIC || !this.env.VAPID_PRIVATE) return json({ error: 'No notification address for that commander' }, 404);
-      this.sql.exec('UPDATE contact SET title = ?, body = ? WHERE account = ?', "Ship's log · test", 'If you can read this, notifications reach you, Commander.', row.account);
-      const result = await sendPush((JSON.parse(row.push) as { endpoint: string }).endpoint, { publicKey: this.env.VAPID_PUBLIC, privateJwk: this.env.VAPID_PRIVATE });
-      if (result === 'gone') this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL WHERE account = ?', row.account);
-      return json({ result });
+      if (!who || !this.devicesOf(who.id as string).length) return json({ error: 'No devices for that commander' }, 404);
+      const sent = await this.notify(who.id as string, "Ship's log · test", 'If you can read this, notifications reach you, Commander.');
+      return json({ sent, devices: this.devicesOf(who.id as string).length });
     }
     // Run the companies' hourly check now (testing), and see how many have asked to be contacted.
     if (request.method === 'POST' && path === '/admin/contact/run') {
       await this.alarm();
-      const n = this.sql.exec('SELECT COUNT(*) AS n FROM contact WHERE push IS NOT NULL OR email = 1').one().n;
+      const n = this.sql.exec(`SELECT COUNT(*) AS n FROM contact WHERE email = 1 OR ${HAS_DEVICE}`).one().n;
       return json({ ran: true, contactable: n });
     }
     const body = (await request.json().catch(() => null)) as { name?: unknown; email?: unknown } | null;
@@ -459,50 +464,79 @@ export class Accounts extends DurableObject<AccountsEnv> {
   // --- The companies get in touch (opt-in) ------------------------------------------
 
   private contactRow(id: string): ContactRow | null {
-    return (this.sql.exec('SELECT account, push, email, stop, sent, kinds, tz, logged, seen FROM contact WHERE account = ?', id).toArray()[0] as unknown as ContactRow | undefined) ?? null;
+    return (this.sql.exec('SELECT account, email, stop, sent, kinds, tz, logged, seen FROM contact WHERE account = ?', id).toArray()[0] as unknown as ContactRow | undefined) ?? null;
   }
 
-  private getContact(account: Account): Response {
+  /** The devices an account's notifications go to. */
+  private devicesOf(account: string): { hash: string; endpoint: string; added: number }[] {
+    return this.sql.exec('SELECT hash, endpoint, added FROM devices WHERE account = ? ORDER BY added', account).toArray() as unknown as { hash: string; endpoint: string; added: number }[];
+  }
+
+  /** Send a notification to every device on the account; a device that's gone is forgotten. True if any took it. */
+  private async notify(account: string, title: string, body: string): Promise<boolean> {
+    if (!this.env.VAPID_PUBLIC || !this.env.VAPID_PRIVATE) return false;
+    this.sql.exec('UPDATE contact SET title = ?, body = ? WHERE account = ?', title, body, account);
+    let sent = false;
+    for (const d of this.devicesOf(account)) {
+      const result = await sendPush(d.endpoint, { publicKey: this.env.VAPID_PUBLIC, privateJwk: this.env.VAPID_PRIVATE });
+      if (result === 'gone') this.sql.exec('DELETE FROM devices WHERE hash = ?', d.hash);
+      if (result === 'sent') sent = true;
+    }
+    return sent;
+  }
+
+  /** GET /me/contact?e=sha256(endpoint): `push` is whether this device (`e`) is on; `devices`, how many are. */
+  private getContact(account: Account, url: URL): Response {
     const row = this.contactRow(account.id);
-    return json({ push: Boolean(row?.push), email: Boolean(row?.email), kinds: JSON.parse(row?.kinds ?? '{}') as LogKinds, key: this.env.VAPID_PUBLIC ?? null });
+    const devices = this.devicesOf(account.id);
+    const e = url.searchParams.get('e');
+    return json({ push: e ? devices.some((d) => d.hash === e) : devices.length > 0, devices: devices.length, email: Boolean(row?.email), kinds: JSON.parse(row?.kinds ?? '{}') as LogKinds, key: this.env.VAPID_PUBLIC ?? null });
   }
 
-  /** PUT /me/contact {push?: subscription | null, email?: boolean, kinds?: {exchange, hearts}, tz?: minutes}. */
+  /**
+   * PUT /me/contact {push?: {endpoint}, unpush?: {endpoint}, email?: boolean, kinds?: {exchange, hearts}, tz?: minutes}.
+   * `push` adds this device and `unpush` removes it; other devices are left alone.
+   */
   private async putContact(request: Request, account: Account): Promise<Response> {
-    const body = (await request.json().catch(() => null)) as { push?: { endpoint?: unknown } | null; email?: unknown; kinds?: Record<string, unknown>; tz?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as { push?: { endpoint?: unknown } | null; unpush?: { endpoint?: unknown }; email?: unknown; kinds?: Record<string, unknown>; tz?: unknown } | null;
     if (!body) return json({ error: 'Nothing to change' }, 400);
     const row = this.contactRow(account.id);
-    let push = row?.push ?? null;
-    if (body.push === null) push = null;
-    else if (body.push !== undefined) {
-      if (!isPushEndpoint(body.push.endpoint)) return json({ error: 'That isn’t a browser’s notification address' }, 400);
-      push = JSON.stringify({ endpoint: body.push.endpoint });
-    }
     const email = body.email === undefined ? (row?.email ?? 0) : body.email ? 1 : 0;
-    const hash = push ? await sha256((JSON.parse(push) as { endpoint: string }).endpoint) : null;
     this.sql.exec(
-      `INSERT INTO contact (account, push, push_hash, email, stop) VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(account) DO UPDATE SET push = excluded.push, push_hash = excluded.push_hash, email = excluded.email`,
-      account.id, push, hash, email, row?.stop ?? randomToken(),
+      `INSERT INTO contact (account, email, stop) VALUES (?, ?, ?) ON CONFLICT(account) DO UPDATE SET email = excluded.email`,
+      account.id, email, row?.stop ?? randomToken(),
     );
+    let here: boolean | undefined;
+    if (body.push) {
+      if (!isPushEndpoint(body.push.endpoint)) return json({ error: 'That isn’t a browser’s notification address' }, 400);
+      // A device belongs to whoever switched it on last.
+      this.sql.exec('INSERT OR REPLACE INTO devices (hash, account, endpoint, added) VALUES (?, ?, ?, ?)', await sha256(body.push.endpoint as string), account.id, body.push.endpoint, Date.now());
+      here = true;
+    }
+    if (body.unpush && typeof body.unpush.endpoint === 'string') {
+      this.sql.exec('DELETE FROM devices WHERE hash = ? AND account = ?', await sha256(body.unpush.endpoint), account.id);
+      here = false;
+    }
+    const devices = this.devicesOf(account.id).length;
     // The ship's log: which kinds, and the device's time zone (for quiet hours).
     const was = JSON.parse(this.contactRow(account.id)?.kinds ?? '{}') as LogKinds;
     const kinds: LogKinds = { exchange: body.kinds?.exchange === undefined ? was.exchange : body.kinds.exchange === true, hearts: body.kinds?.hearts === undefined ? was.hearts : body.kinds.hearts === true };
     const tz = typeof body.tz === 'number' && Number.isFinite(body.tz) ? Math.max(-840, Math.min(840, Math.round(body.tz))) : null;
     this.sql.exec('UPDATE contact SET kinds = ?, tz = COALESCE(?, tz) WHERE account = ?', JSON.stringify(kinds), tz, account.id);
-    if ((push || email) && !(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + 60_000);
-    return json({ push: Boolean(push), email: Boolean(email), kinds });
+    if ((devices || email) && !(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + 60_000);
+    return json({ push: here ?? devices > 0, devices, email: Boolean(email), kinds });
   }
 
   /** For the service worker: the latest message for its push address. */
   private latest(url: URL): Response {
-    const row = this.sql.exec('SELECT title, body FROM contact WHERE push_hash = ?', url.searchParams.get('e') ?? '').toArray()[0];
+    const row = this.sql.exec('SELECT c.title, c.body FROM devices d JOIN contact c ON c.account = d.account WHERE d.hash = ?', url.searchParams.get('e') ?? '').toArray()[0];
     return json(row?.title ? { title: row.title, body: row.body, url: `${SITE}/play/` } : { title: 'Witchspace', body: 'Someone would like a word, Commander.', url: `${SITE}/play/` });
   }
 
   /** One click from an email: no more contact. */
   private stop(url: URL): Response {
-    const done = this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL, email = 0 WHERE stop = ?', url.searchParams.get('t') ?? '').rowsWritten;
+    const who = this.sql.exec('SELECT account FROM contact WHERE stop = ?', url.searchParams.get('t') ?? '').toArray()[0];
+    const done = who ? this.sql.exec('UPDATE contact SET email = 0 WHERE account = ?', who.account).rowsWritten + this.sql.exec('DELETE FROM devices WHERE account = ?', who.account).rowsWritten : 0;
     const html = `<!doctype html><meta name="viewport" content="width=device-width"><body style="background:#05070d;color:#eaf0f6;font-family:Arial,sans-serif;padding:40px;text-align:center">
       <h1 style="color:#3dffb0">${done ? 'Understood, Commander.' : 'Nothing to stop.'}</h1><p>${done ? 'The companies won’t contact you again. You can change this in the game, under A · Account.' : 'That link has already been used.'}</p>
       <p><a style="color:#3dffb0" href="${SITE}/play/">Back to Witchspace</a></p></body>`;
@@ -511,7 +545,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
 
   /** Every hour: anyone with an assignment waiting hears from the company. */
   async alarm(): Promise<void> {
-    const rows = this.sql.exec('SELECT account, push, email, stop, sent, kinds, tz, logged, seen FROM contact WHERE push IS NOT NULL OR email = 1').toArray() as unknown as ContactRow[];
+    const rows = this.sql.exec(`SELECT account, email, stop, sent, kinds, tz, logged, seen FROM contact WHERE email = 1 OR ${HAS_DEVICE}`).toArray() as unknown as ContactRow[];
     const now = Date.now();
     for (const row of rows) {
       try {
@@ -545,12 +579,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const title = name;
     const body = `${subject}. An assignment is waiting: report to any ${name} station within 48 hours.`;
     let told = false;
-    if (row.push && this.env.VAPID_PUBLIC && this.env.VAPID_PRIVATE) {
-      this.sql.exec('UPDATE contact SET title = ?, body = ? WHERE account = ?', title, body, row.account);
-      const result = await sendPush((JSON.parse(row.push) as { endpoint: string }).endpoint, { publicKey: this.env.VAPID_PUBLIC, privateJwk: this.env.VAPID_PRIVATE });
-      if (result === 'gone') this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL WHERE account = ?', row.account);
-      told = result === 'sent';
-    }
+    told = await this.notify(row.account, title, body);
     if (!told && row.email && this.env.RESEND_API_KEY) told = await this.contactEmail(row, company, name, subject);
     if (told) this.sql.exec('UPDATE contact SET sent = ? WHERE account = ?', JSON.stringify([...week, { id: assignmentId(company, now), t: now }]), row.account);
   }
@@ -562,7 +591,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
    */
   private async shipsLog(row: ContactRow, now: number) {
     const kinds = JSON.parse(row.kinds ?? '{}') as LogKinds;
-    if (!row.push || !this.env.VAPID_PUBLIC || !this.env.VAPID_PRIVATE || !(kinds.exchange || kinds.hearts)) return;
+    if (!this.devicesOf(row.account).length || !(kinds.exchange || kinds.hearts)) return;
     if (now - (row.logged ?? 0) < LOG_EVERY || !awake(now, row.tz ?? 0)) return;
     const seen = new Set(JSON.parse(row.seen ?? '[]') as string[]);
     const items: LogItem[] = [];
@@ -575,10 +604,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const fresh = items.filter((i) => !seen.has(i.key));
     if (!fresh.length) return;
     const { title, body } = logMessage(fresh);
-    this.sql.exec('UPDATE contact SET title = ?, body = ? WHERE account = ?', title, body, row.account);
-    const result = await sendPush((JSON.parse(row.push) as { endpoint: string }).endpoint, { publicKey: this.env.VAPID_PUBLIC, privateJwk: this.env.VAPID_PRIVATE });
-    if (result === 'gone') this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL WHERE account = ?', row.account);
-    if (result === 'sent') this.sql.exec('UPDATE contact SET logged = ?, seen = ? WHERE account = ?', now, JSON.stringify([...seen, ...fresh.map((i) => i.key)].slice(-300)), row.account);
+    if (await this.notify(row.account, title, body)) this.sql.exec('UPDATE contact SET logged = ?, seen = ? WHERE account = ?', now, JSON.stringify([...seen, ...fresh.map((i) => i.key)].slice(-300)), row.account);
   }
 
   private async contactEmail(row: ContactRow, company: CompanyId, name: string, subject: string): Promise<boolean> {
@@ -599,7 +625,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
   }
 
   private deleteAccount(account: Account): Response {
-    for (const table of ['saves', 'sessions', 'contact', 'firsts']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
+    for (const table of ['saves', 'sessions', 'contact', 'devices', 'firsts']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM codes WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM accounts WHERE id = ?', account.id);
@@ -611,10 +637,11 @@ export class Accounts extends DurableObject<AccountsEnv> {
 
 const CONTACT_EVERY = 3600_000; // how often to look for waiting assignments
 const CONTACT_PER_WEEK = 2;
+/** SQL: the contact row's account has a device to notify. */
+const HAS_DEVICE = 'EXISTS (SELECT 1 FROM devices d WHERE d.account = contact.account)';
 
 interface ContactRow {
   account: string;
-  push: string | null;
   email: number;
   stop: string;
   sent: string;

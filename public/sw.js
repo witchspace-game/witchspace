@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
       } catch {
         // Show the default: a notification must always appear.
       }
-      await self.registration.showNotification(msg.title, { body: msg.body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', data: { url: msg.url }, tag: 'witchspace-contact' });
+      await self.registration.showNotification(msg.title, { body: msg.body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', data: { url: msg.url }, tag: 'witchspace-contact', renotify: true });
     })(),
   );
 });

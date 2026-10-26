@@ -28,7 +28,7 @@ let devCode = '';
 let choice: { local: Commander; cloud: Commander; updated: number } | null = null;
 let deleteArmed = false;
 /** Whether the companies may contact you (loaded when the panel opens). */
-let contact: { push: boolean; email: boolean; kinds?: acct.LogKinds } | null = null;
+let contact: acct.Contact | null = null;
 let turnstileToken = '';
 let turnstileWidget: string | undefined;
 
@@ -250,10 +250,8 @@ function wire() {
     const box = e.target as HTMLInputElement;
     box.disabled = true;
     try {
-      if (box.checked) await enablePush();
-      else await disablePush();
-      contact = { ...contact, email: contact?.email ?? false, push: box.checked };
-      hooks.flash(box.checked ? 'The companies can reach you on this device' : 'No more notifications', 3);
+      contact = box.checked ? await enablePush() : await disablePush();
+      hooks.flash(box.checked ? 'Notifications on for this device' : 'No more notifications on this device', 3);
     } catch (err) {
       hooks.flash((err as Error).message, 4);
     }
@@ -273,7 +271,7 @@ function wire() {
   panel.querySelector<HTMLInputElement>('[data-contact="email"]')?.addEventListener('change', async (e) => {
     const box = e.target as HTMLInputElement;
     try {
-      contact = await setEmailContact(box.checked);
+      contact = { ...(await setEmailContact(box.checked)), push: contact?.push ?? false }; // push: still this device
     } catch (err) {
       hooks.flash((err as Error).message, 4);
     }
@@ -309,6 +307,12 @@ function wire() {
  * Let the trading companies get in touch when a special assignment is
  * waiting (Modern rules): a notification on this device, or an email.
  */
+/** " Also on 2 other devices." */
+const others = (c: acct.Contact) => {
+  const n = c.devices - (c.push ? 1 : 0);
+  return n > 0 ? ` Also on ${n} other device${n === 1 ? '' : 's'}.` : '';
+};
+
 function contactSection(): string {
   if (!contact) {
     void getContact()
@@ -322,16 +326,16 @@ function contactSection(): string {
   const pushNote = needsHomeScreen()
     ? 'On iPhone: add Witchspace to your Home Screen (Share, then Add to Home Screen), open it from there, and switch this on.'
     : pushSupported()
-      ? 'A notification on this device.'
+      ? `A notification on this device.${others(contact)}`
       : 'This browser can’t show notifications.';
   return `<h3>Let the companies contact me</h3>
     <p class="meta">When Hexon Holdings or the others have a special assignment for you, they'll get in touch. At most a couple of times a week, and always in character.</p>
     <label class="contact-option"><input type="checkbox" data-contact="push" ${contact.push ? 'checked' : ''} ${pushSupported() || contact.push ? '' : 'disabled'} /> Notifications <small>${pushNote}</small></label>
     <label class="contact-option"><input type="checkbox" data-contact="email" ${contact.email ? 'checked' : ''} /> Email <small>To your sign-in address, with a one-click stop.</small></label>
     <h3>Your ship's log</h3>
-    <p class="meta">While you're away, what reaches your ship comes to you as one quiet notification a day at most, never between 10 pm and 8 am.${contact.push ? '' : ' Switch on notifications above first.'}</p>
-    <label class="contact-option"><input type="checkbox" data-kind="exchange" ${contact.kinds?.exchange ? 'checked' : ''} ${contact.push ? '' : 'disabled'} /> Bitcoin orders <small>When one of your limit orders fills.</small></label>
-    <label class="contact-option"><input type="checkbox" data-kind="hearts" ${contact.kinds?.hearts ? 'checked' : ''} ${contact.push ? '' : 'disabled'} /> Hearts on your clips <small>When a clip you shared passes 5, 10, 25, 50 hearts and on.</small></label>`;
+    <p class="meta">While you're away, what reaches your ship comes to you as one quiet notification a day at most, never between 10 pm and 8 am, on every device you've switched on.${contact.devices ? '' : ' Switch on notifications above first.'}</p>
+    <label class="contact-option"><input type="checkbox" data-kind="exchange" ${contact.kinds?.exchange ? 'checked' : ''} ${contact.devices ? '' : 'disabled'} /> Bitcoin orders <small>When one of your limit orders fills.</small></label>
+    <label class="contact-option"><input type="checkbox" data-kind="hearts" ${contact.kinds?.hearts ? 'checked' : ''} ${contact.devices ? '' : 'disabled'} /> Hearts on your clips <small>When a clip you shared passes 5, 10, 25, 50 hearts and on.</small></label>`;
 }
 
 // The last email you signed in with on this device, so you needn't type it again.
