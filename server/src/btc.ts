@@ -14,7 +14,8 @@ export async function btc(request: Request, path: keyof typeof KEEP, headers: Re
   if (request.method !== 'GET') return new Response('GET only', { status: 405, headers });
   const url = new URL(request.url);
   // Only the parameters the relay takes, so the cache can't be filled with junk.
-  const query = path === '/btc/candles' ? `?interval=${encodeURIComponent(url.searchParams.get('interval') ?? '1h')}&limit=${Math.min(500, Math.max(1, Number(url.searchParams.get('limit')) || 200))}` : '';
+  const start = Math.max(0, Math.round(Number(url.searchParams.get('start')) || 0)); // from a moment: judging a limit order
+  const query = path === '/btc/candles' ? `?interval=${encodeURIComponent(url.searchParams.get('interval') ?? '1h')}&limit=${Math.min(500, Math.max(1, Number(url.searchParams.get('limit')) || 200))}${start ? `&start=${start}` : ''}` : '';
   const key = new Request(`https://btc.cache${path}${query}`);
   const cache = caches.default;
   let res = await cache.match(key);

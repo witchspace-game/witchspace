@@ -28,7 +28,7 @@ let devCode = '';
 let choice: { local: Commander; cloud: Commander; updated: number } | null = null;
 let deleteArmed = false;
 /** Whether the companies may contact you (loaded when the panel opens). */
-let contact: { push: boolean; email: boolean } | null = null;
+let contact: { push: boolean; email: boolean; kinds?: acct.LogKinds } | null = null;
 let turnstileToken = '';
 let turnstileWidget: string | undefined;
 
@@ -252,13 +252,24 @@ function wire() {
     try {
       if (box.checked) await enablePush();
       else await disablePush();
-      contact = { email: contact?.email ?? false, push: box.checked };
+      contact = { ...contact, email: contact?.email ?? false, push: box.checked };
       hooks.flash(box.checked ? 'The companies can reach you on this device' : 'No more notifications', 3);
     } catch (err) {
       hooks.flash((err as Error).message, 4);
     }
     render();
   });
+  for (const kind of panel.querySelectorAll<HTMLInputElement>('[data-kind]'))
+    kind.addEventListener('change', async () => {
+      kind.disabled = true;
+      try {
+        const out = await acct.setContact({ kinds: { [kind.dataset.kind!]: kind.checked } });
+        contact = { ...contact!, kinds: out.kinds };
+      } catch (err) {
+        hooks.flash((err as Error).message, 4);
+      }
+      render();
+    });
   panel.querySelector<HTMLInputElement>('[data-contact="email"]')?.addEventListener('change', async (e) => {
     const box = e.target as HTMLInputElement;
     try {
@@ -316,7 +327,11 @@ function contactSection(): string {
   return `<h3>Let the companies contact me</h3>
     <p class="meta">When Hexon Holdings or the others have a special assignment for you, they'll get in touch. At most a couple of times a week, and always in character.</p>
     <label class="contact-option"><input type="checkbox" data-contact="push" ${contact.push ? 'checked' : ''} ${pushSupported() || contact.push ? '' : 'disabled'} /> Notifications <small>${pushNote}</small></label>
-    <label class="contact-option"><input type="checkbox" data-contact="email" ${contact.email ? 'checked' : ''} /> Email <small>To your sign-in address, with a one-click stop.</small></label>`;
+    <label class="contact-option"><input type="checkbox" data-contact="email" ${contact.email ? 'checked' : ''} /> Email <small>To your sign-in address, with a one-click stop.</small></label>
+    <h3>Your ship's log</h3>
+    <p class="meta">While you're away, what reaches your ship comes to you as one quiet notification a day at most, never between 10 pm and 8 am.${contact.push ? '' : ' Switch on notifications above first.'}</p>
+    <label class="contact-option"><input type="checkbox" data-kind="exchange" ${contact.kinds?.exchange ? 'checked' : ''} ${contact.push ? '' : 'disabled'} /> Bitcoin orders <small>When one of your limit orders fills.</small></label>
+    <label class="contact-option"><input type="checkbox" data-kind="hearts" ${contact.kinds?.hearts ? 'checked' : ''} ${contact.push ? '' : 'disabled'} /> Hearts on your clips <small>When a clip you shared passes 5, 10, 25, 50 hearts and on.</small></label>`;
 }
 
 // The last email you signed in with on this device, so you needn't type it again.

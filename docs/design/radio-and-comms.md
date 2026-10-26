@@ -191,6 +191,13 @@ Ofcom publishes guidance and tools for small services. This is a list of what to
 - **What it can't do:** web notifications on an iPhone carry no buttons, so there's no "Accept" in the notification itself. You open the game to act: the ship heard it, you decide.
 - **It makes the array worth fitting for traders**, not only explorers and fighters: the upgrade that keeps the galaxy alive for you between sessions.
 
+**As built (first part, October 2026):** the ship's log runs by push notification for two kinds, each with its own switch under *A · Account* ("Your ship's log"), both off until you turn them on:
+
+- **Bitcoin orders:** a limit order that filled while you were away ("Your Bitcoin buy filled at 80,327"). The server judges each order on the price history since it was placed (one-minute candles from the relay, then coarser), the same rule the game uses when you dock. These don't need an array: an exchange order is yours, wherever your ship is.
+- **Hearts on your clips:** when a shared clip passes 5, 10, 25, 50, 100, 250, 500 or 1,000 hearts.
+
+At most one log in about a day (20 hours, so it doesn't drift later each day), never between 10 pm and 8 am your device's time, and nothing is told twice. Not yet: the lanes, the galaxy's news, email, and the radio log on arrival.
+
 ## Building it in stages
 
 | Stage | What | Server |

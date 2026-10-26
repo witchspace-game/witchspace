@@ -154,10 +154,12 @@ export function cancelBtcOrder(c: Commander, id: number): TradeResult {
  * price was better all through that stretch (a buy set above the market buys
  * at the market). Returns what filled.
  */
-export function fillBtcOrders(c: Commander, spans: PriceSpan[]): { order: BtcOrder; at: number; trade: BtcTrade }[] {
+export function fillBtcOrders(c: Commander, spans: PriceSpan[] | ((o: BtcOrder) => PriceSpan[])): { order: BtcOrder; at: number; trade: BtcTrade }[] {
   const out: { order: BtcOrder; at: number; trade: BtcTrade }[] = [];
-  const sorted = [...spans].sort((a, b) => a.t - b.t);
+  const all = typeof spans === 'function' ? null : [...spans].sort((a, b) => a.t - b.t);
   for (const o of ordersOf(c)) {
+    // Each order judged on its own history (btcSpans.ts), or all on one list.
+    const sorted = all ?? [...(spans as (o: BtcOrder) => PriceSpan[])(o)].sort((a, b) => a.t - b.t);
     const hit = sorted.find((p) => p.t >= o.placed && (o.side === 'buy' ? p.l <= o.limit : p.h >= o.limit));
     if (!hit) continue;
     let trade: BtcTrade;

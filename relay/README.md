@@ -7,7 +7,7 @@ Binance refuses requests from Cloudflare's servers, where the game's server runs
 | Path | Returns |
 |---|---|
 | `GET /btc` | `{"symbol":"BTCUSDT","price":80251.27,"time":…,"source":"api.binance.com"}` |
-| `GET /btc/candles?interval=1h&limit=200` | `[{"t":…,"o":…,"h":…,"l":…,"c":…,"v":…}, …]`, for the exchange's chart. Intervals 1m, 5m, 15m, 1h, 4h, 1d, 1w; up to 500 candles |
+| `GET /btc/candles?interval=1h&limit=200` | `[{"t":…,"o":…,"h":…,"l":…,"c":…,"v":…}, …]`, for the exchange's chart. Intervals 1m, 5m, 15m, 1h, 4h, 1d, 1w; up to 500 candles. With `&start=<ms>`, the candles from that moment on (for judging a limit order from when it was placed) |
 | `GET /health` | 200 when it has a price under two minutes old |
 | anything else | 404 |
 
