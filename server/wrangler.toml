@@ -6,6 +6,11 @@ compatibility_date = "2026-10-01"
 # Served at our own address; Cloudflare adds the DNS record on deploy.
 routes = [{ pattern = "space.witchspace.org.uk", custom_domain = true }]
 
+# The MCP server's bundle of ships and documents (tools/mcp-data.ts), rebuilt on
+# every deploy and dev run, however wrangler is started, so it's never stale.
+[build]
+command = "npm run mcp-data"
+
 [[durable_objects.bindings]]
 name = "SYSTEMS"
 class_name = "SystemRoom"

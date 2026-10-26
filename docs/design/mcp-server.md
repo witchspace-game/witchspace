@@ -48,7 +48,7 @@ Tools:
 | `galaxy_system` | Any system by name or number: government, economy, tech level, population, position, neighbours within 7 light years, and its description, so stories and missions land somewhere real. |
 | `worldbuilding` | The tone guide, the companies and the people, for writing that sounds like Witchspace. |
 
-Resources: the ship schema, `AGENTS.md`, `CONTRIBUTING.md` and the worldbuilding guide, so an assistant can read them before it starts.
+Resources: the ship schema, `AGENTS.md`, `CONTRIBUTING.md`, the worldbuilding guide and the lore, so an assistant can read them before it starts.
 
 **How it's built.** A route on the existing Worker (`server/src`) speaking MCP's streamable HTTP transport. The JSON Schema check is compiled at build time (Ajv's standalone output), since Workers can't compile code at run time; the geometry checks, the galaxy generator and the doc headers are plain TypeScript the Worker can import. Previews are drawn as SVG on the server (the same projection the game uses, without WebGL), so no browser is needed. A small stdio wrapper (`npx tsx tools/mcp.ts`) serves the same tools locally.
 
