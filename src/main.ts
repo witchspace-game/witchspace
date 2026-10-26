@@ -80,7 +80,7 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
-import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
+import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
@@ -556,6 +556,14 @@ function enterDocked(newShip = false) {
   player.repair();
   showShip(cobraIndex);
   forgive(cmdr(), Date.now());
+  // Work that's due here is handed in however you arrived: docking does it
+  // first, but waking here in a new ship or loading the game docked must too
+  // (a survey finished just before a fight was never paid).
+  const handedIn = deliver(cmdr(), currentSystem());
+  if (handedIn.length) {
+    saveCommander(cmdr());
+    setTimeout(() => flash(handedIn.join(' · '), 6), newShip ? 6500 : 300);
+  }
   // The companies may have been in touch while you were away.
   if (checkMessages(cmdr(), currentSystem(), Date.now()).length) saveCommander(cmdr());
   markInbox(cmdr());
@@ -1204,11 +1212,14 @@ function renderDocked() {
   if (!dataRow.hidden) {
     // Wexley-Yorozu pays best, and is the only one the Science Division's report goes to.
     const wy = wyWorks(here);
-    const sellable = data.filter((d) => wy || !d.report);
+    // Moons a survey contract is for are the contract's: kept for it, never sold off cheap.
+    const kept = data.filter((d) => forContract(c, d));
+    const sellable = data.filter((d) => (wy || !d.report) && !kept.includes(d));
     const worth = sellable.reduce((sum, d) => sum + dataValue(d, here, wy), 0);
     // Say what's in it (a tooltip doesn't show on a phone), and that a company station pays more.
-    const names = data.map((d) => d.name).join(', ');
-    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${data.length ? ` <small>${escapeHtml(names)}${wy ? ' · Wexley-Yorozu pays 25% more here' : ''}</small>` : ''}</span>`;
+    const names = data.filter((d) => !kept.includes(d)).map((d) => d.name).join(', ');
+    const keptLine = kept.length ? `${kept.map((d) => d.name).join(', ')}: kept for your Wexley-Yorozu survey contract` : '';
+    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${data.length ? ` <small>${[escapeHtml(names), escapeHtml(keptLine), wy ? 'A Wexley-Yorozu station: it pays 25% more for data' : ''].filter(Boolean).join(' · ')}</small>` : ''}</span>`;
     dataRow.title = data.length ? data.map((d) => `${d.name}: ${dataValue(d, here, wy)} Cr`).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
     const sell = document.createElement('button');
     sell.textContent = sellable.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
@@ -1216,7 +1227,7 @@ function renderDocked() {
     if (wy && data.some((d) => d.report)) sell.title = `Includes the Ninefold report: the Science Division pays ${REPORT_PRICE.wy.toLocaleString()} Cr, remembers you kindly, and goes looking for Sam Dray`;
     sell.addEventListener('click', () => {
       const held = [...data];
-      const { credits, reports } = sellData(c, here, wy);
+      const { credits, reports } = sellData(c, here, wy, (d) => forContract(c, d));
       bringHome(held);
       if (reports) addStanding(c, 'wy', 3);
       saveCommander(c);

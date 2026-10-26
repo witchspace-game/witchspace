@@ -522,9 +522,9 @@ export function dataValue(d: SurveyData, here: StarSystem, wyHere = false): numb
  * its stations); elsewhere it stays aboard until you publish it. Returns the
  * credits, and how many reports went to the Science Division.
  */
-export function sellData(c: Commander, here: StarSystem, wyHere = false): { credits: number; reports: number } {
+export function sellData(c: Commander, here: StarSystem, wyHere = false, keep: (d: ExploreRecord['data'][number]) => boolean = () => false): { credits: number; reports: number } {
   const e = exploreOf(c);
-  const sold = e.data.filter((d) => wyHere || !d.report);
+  const sold = e.data.filter((d) => (wyHere || !d.report) && !keep(d));
   const credits = sold.reduce((sum, d) => sum + dataValue(d, here, wyHere), 0);
   c.credits += credits;
   e.earned += credits;
