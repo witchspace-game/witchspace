@@ -44,7 +44,7 @@ Each government runs its currency its own way. These are modelled on real system
 |---|---|---|---|
 | **Corporate State** | Pegged 1:1 to the credit, backed by reserves the system publishes | Fully-backed stablecoins | Safe to hold; tiny spreads; the peg rarely moves |
 | **Democracy** | Rule-based inflation (around 2% a game-year **(to tune)**), adjusted to the system's growth | Central banks | Steady, slowly losing value |
-| **Confederacy** | **Fixed supply**: new issuance halves on a schedule until it stops | Bitcoin | Volatile but scarce; holders gain as the economy grows |
+| **Confederacy** | **Fixed supply**: new issuance halves on a schedule until it stops (or real Bitcoin itself: [section 6b](#6b-bitcoin-against-the-witchspace-universe-mark-26-october-2026)) | Bitcoin | Volatile but scarce; holders gain as the economy grows |
 | **Communist** | Official fixed rate set by the state, with exchange limits per visit | Capital controls | A cheap official rate you can only use a little, and a black-market rate in nearby anarchies |
 | **Dictatorship** | Prints currency to cover spending, more so in a crisis | Inflationary fiat | Spend it, don't save it; hyperinflation is possible |
 | **Feudal** | Pegged by an algorithm that mints or burns to defend the peg, without full reserves | Algorithmic stablecoins (such as TerraUSD) | Works until it doesn't; a big enough sell-off breaks the peg and it spirals |
@@ -124,11 +124,137 @@ A powerful bloc pushes **one currency for many systems**, much like the euro. It
 - **Smuggle:** buy at the cheap independent rate and sell inside the union, where the Meridian is strong.
 - **Work for the Compact:** escort Meridian convoys, enforce embargoes, and take Compact combat missions. Playing the antagonist is a legitimate career, with its own rewards and enemies.
 
+### How stage 1 is built
+
+- **The price:** the relay ([relay/](../../relay/README.md), on fly.io in Tokyo) has it from Binance; the game's server (`server/src/btc.ts`) keeps each answer 15 seconds (candles a minute) and passes it on; the exchange asks only while it's open. When nobody is trading, nothing is asked.
+- **The exchange:** Bitcoin is the first row of the list. Picking it puts the real market's candles on the same chart (5 minute, 15 minute and hourly), the broker's two prices where the order book is, and a form to spend credits or sell sats. Your trades are marked on the chart.
+- **The wallet:** `sats` on the commander, with the last 50 trades. It takes no hold space and survives the ship.
+- **The rules:** `src/economy/bitcoin.ts`, with tests: the spread, fresh prices only, out of reach of fines and the insurers.
+- **Not yet:** the 1984 look's plain price list doesn't show Bitcoin; Classic never will.
+
 ### Guardrails
 
 - The Compact is an **NPC faction** run by the game, possibly with an AI-agent leadership as in [player-run stations](player-stations.md). Players can work for it but not take it over.
 - The **Co-operative credit** and the Bankers' Guild stay neutral; the Compact can't absorb them.
 - How far the Compact spreads depends on what players do, and it should never be able to take the whole galaxy.
+
+## 6b. Bitcoin against the Witchspace universe (Mark, 26 October 2026)
+
+*Status: **stage 1 built** (Bitcoin against credits on the exchange, 26 October 2026); the rest is Mark's idea, to think through before it's built. Reading: Saifedean Ammous, *The Bitcoin Standard*; Andreas Antonopoulos, [Bitcoin explained](https://www.youtube.com/watch?v=UlKZ83REIkA&list=PLPQwGV1aLnTthcG265_FYSaV24hFScvC0).*
+
+Every other money in this design belongs to someone: a system's government prints it, the Compact wants to absorb it, the Co-operative issues the credit. **Bitcoin belongs to nobody.** It's the same at every station, nobody can print it, and it weighs nothing. Set against 2,048 system currencies, the credit and the Compact, it's *The Bitcoin Standard* played out as a galaxy: easy money of every kind, government by government, against the one hard money.
+
+### Why it fits
+
+The book judges money by how well it holds value across **time**, **scale** and **space**. Space is Witchspace's whole problem: gold and platinum are cargo, they weigh a tonne, and pirates take them. Bitcoin takes **no room in the hold**, because it isn't goods, it's a balance.
+
+### Two moneys: credits and Bitcoin
+
+Credits stay the galaxy's everyday money and Bitcoin sits beside them. They're not the same thing.
+
+| | Credits | Bitcoin |
+|---|---|---|
+| Who makes it | The Co-operative, which can print more | Nobody; 21 million coins, ever |
+| Its value | Steady day to day | The live real-world price |
+| Used for | Prices: fuel, ships, goods, fines | Saving, and paying in sats where it's allowed |
+| Who holds it | Everyone, by default | Commanders who choose to |
+
+**Why not make credits Bitcoin?** Two ways were considered and set aside. If credits moved with the real price, every commander's savings would swing with the market whether they chose it or not. If credits *were* Bitcoin (a fixed number of sats each), prices would be set by the game's own supply and demand and the live price would change nothing. Holding Bitcoin has to be a **choice**, and the contrast between the two moneys is the point.
+
+**The credit could inflate, slowly** (to decide). If the Co-operative prints a little each game-year, prices in credits creep up about 2% a year: credits are safe from day to day but slowly lose value, and Bitcoin swings but can't be printed. That gives a reason to hold Bitcoin from inside the game, not only from the real market. Modern only, and slow enough to be felt over weeks, not in a session.
+
+### Holding Bitcoin instead of credits
+
+A commander can keep their savings in Bitcoin and hold almost no credits, the Bitcoin-standard way of living. Stations still price everything in credits, but where Bitcoin is allowed you can **pay in sats**: the station converts at the live price, less a small fee, so you never have to sell first. The bet is the real market: if the price doubles your savings double, and if it halves so do they.
+
+### On the exchange
+
+- **The real price.** It mirrors the live BTC price: Binance BTCUSDT, fetched by our server through [our relay in Tokyo](../../relay/README.md) (Binance refuses Cloudflare's servers) and passed on to every player. **1 Cr = 1 US dollar**, so the number on screen is the real number. A coin is about 80,000 Cr, more than half the dearest ship in the yard, so owning a whole one is a milestone.
+- **A Bitcoin row at the top of every exchange:** *Bitcoin · 80,251 Cr · the same everywhere · live*. The same chart as any good, with real Bitcoin candles and your trades marked on them.
+- **No price curve.** Buying furs moves a station's price; buying Bitcoin doesn't, because the station is only a broker for a market far bigger than us. You pay the live price plus a small spread.
+- **Traded in sats.** A new commander with 100 Cr buys about 125,000 sats; the screen shows both: *₿ 0.00125 · 100 Cr*.
+- **One price everywhere.** It's one network, so you can't profit by carrying it between systems, only by judging when to hold it.
+
+### Elsewhere in the game
+
+- **Zero tonnes.** It never uses hold space, cargo scans can't find it, and pirates and the Falcon can't scoop it.
+- **It survives your ship.** After a claim: *Your Bitcoin is safe: the keys were in your head.*
+- **Nobody can take it** (Mark). Credits are the Co-operative's money, centralised: fines and the insurers' excess are taken from them, with no say. Bitcoin is nobody's, so it can't be fined, seized or written off, and the law doesn't count it when it sets a fine to your means. That makes it the way to **preserve wealth** in a galaxy whose money can be taken from you. The price of that safety is the market's swings and the broker's spread. The law still has teeth: what your credits can't pay, it takes by holding your kit.
+- **On the commander card:** *Bitcoin ₿ 0.0412 · 3,307 Cr · 0 t*.
+- **Real news.** When the real price moves more than about 5% in a day, the news board carries it (*Bitcoin up 7%: celebrations in the anarchies*) and NPCs talk about it on the radio.
+
+### When Bitcoin meets the system currencies
+
+- **Dictatorships print, and their money collapses.** Their people and the traders there run to Bitcoin; the commanders who saw it coming did well.
+- **Feudal pegs break.** Whoever held Bitcoin instead of the pegged coin is left standing.
+- **Communist states ban it,** because it gets around their exchange controls: you can hold it there but not trade it, and smuggling sats out becomes a career.
+- **Confederacies run on it.** The table in section 2 gives them a fixed-supply coin modelled on Bitcoin; with this idea it becomes the real thing, as El Salvador did. The Confederacies are the Bitcoin-standard systems.
+- **Anarchies trade it freely,** with the thinnest spreads and no questions; corporate states charge fees.
+- **The Compact hates it most.** Bitcoin is the reason no system *needs* the Meridian, so Bitcoin against the Compact becomes the galaxy's central story: Compact members tax it, Compact patrols hunt the smugglers, holdout systems adopt it.
+- **Later:** a pirate can't scoop your sats, but can demand them as ransom when you surrender; anarchies pay bounties in sats.
+
+### The same everywhere: a yardstick (Mark)
+
+Jump to a new system and its money is different: a new name, a new rate, a policy you have to read. **Bitcoin stays Bitcoin.** A sat at Lave is a sat at Riedquat, so it's the one measure a commander can carry across the galaxy and know where they are.
+
+- **Prices in sats, as an option.** Any price can be shown in sats beside the local price: *Fuel 14 LVR · 2,100 sats*. A commander who thinks in sats compares systems at a glance, whatever their currencies are doing.
+- **Your worth in one number.** The commander card can total everything you hold (credits, local currencies, cargo, ship) in sats as well as credits.
+- **Reading a crisis.** When a currency is collapsing, its price in sats shows it plainly: what cost 2,000 sats last week costs 3,500 today.
+
+### Stablecoins: the other way out (Mark, 26 October 2026)
+
+When a real currency collapses (Argentina, Turkey, Lebanon), most people don't run to Bitcoin first. They run to **dollar stablecoins**. The galaxy works the same way: systems and their people want **stablecoins**, coins pegged 1:1 to the credit by an issuer who promises to hold the reserves. Section 2 already has two kinds (Corporate States' fully backed coins, Feudal worlds' algorithmic pegs); here they become the everyday escape from a failing system currency.
+
+**A real choice when a system's money fails:**
+
+| | Stablecoin | Bitcoin |
+|---|---|---|
+| Value | Steady, 1 Cr | The live real-world price |
+| The risk | The issuer: its reserves, or a freeze | Only the price |
+| Can someone freeze it? | Yes: the issuer can blacklist a wallet, as real issuers do | No |
+
+**Pegged to the credit.** The credit is the galaxy's dollar (on the exchange 1 Cr = 1 US dollar), so systems peg their stablecoins to it as real issuers peg to the dollar. Not everyone does: Compact members peg to the Meridian, multi-government systems to a basket of their neighbours, and systems that won't peg let their money float or use Bitcoin outright.
+
+**Three ways to hold the peg**, as in the real world:
+
+| Backed by | Real-world model | Who issues it | How it breaks |
+|---|---|---|---|
+| **Credits in reserve**, one for every coin | USDT, USDC | Corporate States: safe and dull | The issuer quietly holds less than it says, and the published reserves show it |
+| **Bitcoin locked up**, about 150% of every coin | DAI | Confederacies and the companies: no bank needed | A real Bitcoin fall forces loans to be sold off to keep the backing; a fast crash can outrun the sales |
+| **An algorithm**, nothing else | TerraUSD | Feudal worlds (section 2) | Confidence goes and it spirals to zero |
+
+The Bitcoin-backed kind ties the real price into the galaxy a second way: a real crash sets off forced sales in-game, and commanders who watch them can profit.
+
+**Who issues them:** Corporate States; the big companies (a new line of business for them, see [companies and contracts](companies-and-contracts.md)); player stations, later; and the Compact, whose Meridian starts life as "just a stablecoin", which is how it draws systems in before anyone notices they've joined.
+
+**The real market tests them.** An issuer's reserves can be partly **held in Bitcoin**, as some real issuers' are. Reserves are published on the ledger (section 7), so:
+
+- **A real Bitcoin crash** pushes an issuer's reserves below what it owes. Commanders who read the reserves see it first and sell, or bet on the break.
+- **The run.** The coin slips below 1 Cr, the news board carries it, and the system's economy shakes. Nobody scripted it: the real market did.
+- **A real rally** does the reverse: over-backed issuers grow bold and lend more, which sets up the next crisis.
+- **Freezes.** An issuer can freeze the wallets of commanders it doesn't like (smugglers, Compact enemies). Bitcoin can't be frozen; that's the trade.
+
+### Guardrails
+
+- **In-game only.** It's the real price, not real money: in-game Bitcoin can't be bought, sold or withdrawn for real coins or cash. The screen says so, in the game's own voice (*Witchspace Bitcoin stays in Witchspace: it can't be bought or cashed out for real money*); where the price comes from stays behind the scenes, so the galaxy stays the galaxy (Mark). Nothing here is financial advice.
+- **Fair fills.** Each trade fills at a price fetched at that moment, with a small spread, so watching Binance gains nothing.
+- **Stale means stopped.** If the price is more than a few minutes old, trading pauses: *The network is quiet: price 6 minutes old, trading paused.*
+- **Modern only.** Classic stays credits only, as in 1984.
+
+### Building it in steps
+
+1. **Bitcoin against credits** (built): the exchange row and chart, buying and selling in sats, the wallet on the commander card, surviving death, out of reach of fines and the insurers.
+2. **Paying in sats,** spreads and bans by government, the news headlines.
+3. **The system currencies** (section 10), **with stablecoins from day one**: Corporate State coins with published reserves, some held in Bitcoin, so a real crash can test them. Bitcoin and stablecoins become the two ways out of every crisis, prices can be shown in sats, and the Confederacies run on Bitcoin.
+4. **The Compact:** the Meridian starting as a stablecoin, frozen wallets, Bitcoin against the Meridian, ransoms and bounties in sats.
+5. **Shared galaxy:** paying other commanders in sats (escorts, wingmen's shares, bounties on players, contracts held until the job's done).
+
+### Open questions
+
+- **Credit inflation:** yes or no, and how fast.
+- **Custody:** only ever in your own wallet, or can the Bankers' Guild hold it for you, and can a guild fail with your coins in it?
+- **Stablecoin reserves:** how much of an issuer's reserves can be Bitcoin, and whether players can see every issuer's reserves or only those of systems they've visited.
+- **Real-world swings:** a real bull run makes holders rich without flying; a real crash halves their savings. That's the point, but it ties in-game wealth to the outside world.
 
 ## 7. A ledger anyone can check
 

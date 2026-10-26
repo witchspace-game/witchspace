@@ -220,6 +220,7 @@ import type { ActiveContract, CompanyLog } from './contracts';
 import type { AdriftCase, Message } from './assignments';
 import type { WorldEvent } from '../economy/events';
 import type { CompanyId } from './companies';
+import type { BtcTrade } from '../economy/bitcoin';
 
 export interface Commander {
   name: string;
@@ -284,6 +285,10 @@ export interface Commander {
   lasers: Partial<Record<Mount, LaserId>>;
   /** Where you've been, what you've surveyed and found (game/explore.ts). */
   explore?: ExploreRecord;
+  /** Bitcoin in your own wallet, in sats (Modern rules, economy/bitcoin.ts): no hold space, and it survives the ship. */
+  sats?: number;
+  /** Your recent Bitcoin trades, oldest first. */
+  btcTrades?: BtcTrade[];
 }
 
 const KEY = 'witchspace.commander.v1';

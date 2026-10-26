@@ -1,0 +1,22 @@
+# Witchspace's price relay on fly.io (see README.md).
+#
+# Tokyo (nrt), because Binance refuses Cloudflare's servers but answers here.
+# One small machine that sleeps when nobody asks: fly wakes it on the next
+# request (about a second), so it costs well under a dollar a month.
+
+app = "witchspace-relay"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
