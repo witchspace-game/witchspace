@@ -89,3 +89,99 @@ export function sellBitcoin(c: Commander, q: BtcQuote | null, sats: number, now 
   record(c, { t: now, side: 'sell', sats: n, price: bid, total });
   return { ok: true, message: `Sold ${formatSats(n)} for ${total.toLocaleString()} Cr` };
 }
+
+// --- Limit orders (Mark) -------------------------------------------------------------
+// Buy if the price falls to your limit, or sell if it rises to it. What you
+// put up (credits to spend, or sats to sell) is held until the order fills or
+// you cancel. Fills are judged against the real market's own price history
+// since the order was placed, minute by minute (news crosses the galaxy no
+// faster), so an order can fill while you're out flying, at your limit, with
+// the broker's spread as ever. Bitcoin is the same everywhere: an order placed
+// at one station fills wherever you are.
+
+export interface BtcOrder {
+  id: number;
+  side: 'buy' | 'sell';
+  /** The Bitcoin price, in credits a coin, that fills it. */
+  limit: number;
+  /** Held to spend (a buy) or to sell (a sell). */
+  credits?: number;
+  sats?: number;
+  placed: number;
+}
+
+/** A stretch of the real price: when it began, and its high and low. */
+export interface PriceSpan {
+  t: number;
+  h: number;
+  l: number;
+}
+
+export const ordersOf = (c: Commander) => c.btcOrders ?? [];
+
+/** Place a limit order: `amount` is credits to spend (buy) or sats to sell (sell). */
+export function placeBtcOrder(c: Commander, side: 'buy' | 'sell', amount: number, limit: number, now = Date.now()): TradeResult {
+  if (!(limit > 0) || !Number.isFinite(limit)) return { ok: false, message: 'Set the price it should fill at' };
+  if (side === 'buy') {
+    const credits = Math.floor(Math.min(amount, c.credits) * 10) / 10;
+    if (credits < 1) return { ok: false, message: 'Not enough credits' };
+    c.credits = tenth(c.credits - credits);
+    c.btcOrders = [...ordersOf(c), { id: now, side, limit, credits, placed: now }];
+    return { ok: true, message: `Buy order placed: ${credits.toLocaleString()} Cr if Bitcoin falls to ${Math.round(limit).toLocaleString()}` };
+  }
+  const sats = Math.min(Math.floor(amount), satsOf(c));
+  if (sats < 1) return { ok: false, message: 'No Bitcoin to sell' };
+  c.sats = satsOf(c) - sats;
+  c.btcOrders = [...ordersOf(c), { id: now, side, limit, sats, placed: now }];
+  return { ok: true, message: `Sell order placed: ${formatSats(sats)} if Bitcoin rises to ${Math.round(limit).toLocaleString()}` };
+}
+
+/** Cancel an order: what it held comes back. */
+export function cancelBtcOrder(c: Commander, id: number): TradeResult {
+  const o = ordersOf(c).find((x) => x.id === id);
+  if (!o) return { ok: false, message: 'No such order' };
+  if (o.credits) c.credits = tenth(c.credits + o.credits);
+  if (o.sats) c.sats = satsOf(c) + o.sats;
+  c.btcOrders = ordersOf(c).filter((x) => x.id !== id);
+  return { ok: true, message: 'Order cancelled' };
+}
+
+/**
+ * Fill the orders the real price has reached since they were placed. `spans`
+ * are stretches of real price history (candles, and the live price as one of
+ * its own); only those that began after an order was placed count. Each fills
+ * at the first moment the price got there, at its limit, or better if the
+ * price was better all through that stretch (a buy set above the market buys
+ * at the market). Returns what filled.
+ */
+export function fillBtcOrders(c: Commander, spans: PriceSpan[]): { order: BtcOrder; at: number; trade: BtcTrade }[] {
+  const out: { order: BtcOrder; at: number; trade: BtcTrade }[] = [];
+  const sorted = [...spans].sort((a, b) => a.t - b.t);
+  for (const o of ordersOf(c)) {
+    const hit = sorted.find((p) => p.t >= o.placed && (o.side === 'buy' ? p.l <= o.limit : p.h >= o.limit));
+    if (!hit) continue;
+    let trade: BtcTrade;
+    // The worst price that stretch offered, but never worse than the limit.
+    const at = o.side === 'buy' ? Math.min(o.limit, hit.h) : Math.max(o.limit, hit.l);
+    if (o.side === 'buy') {
+      const price = at * (1 + SPREAD);
+      const sats = Math.floor((o.credits! * SATS) / price);
+      c.sats = satsOf(c) + sats;
+      trade = { t: hit.t, side: 'buy', sats, price, total: o.credits! };
+    } else {
+      const price = at * (1 - SPREAD);
+      const total = Math.floor(((o.sats! * price) / SATS) * 10) / 10;
+      c.credits = tenth(c.credits + total);
+      trade = { t: hit.t, side: 'sell', sats: o.sats!, price, total };
+    }
+    record(c, trade);
+    out.push({ order: o, at: hit.t, trade });
+  }
+  if (out.length) c.btcOrders = ordersOf(c).filter((o) => !out.some((f) => f.order === o));
+  return out;
+}
+
+/** "Your Bitcoin buy filled at 78,000 at 14:32: 64,000 sats for 50 Cr". */
+export const describeBtcFill = (f: { order: BtcOrder; at: number; trade: BtcTrade }) =>
+  `Your Bitcoin ${f.order.side} filled at ${Math.round(f.trade.price / (f.order.side === 'buy' ? 1 + SPREAD : 1 - SPREAD)).toLocaleString()} at ${new Date(f.at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}: ${formatSats(f.trade.sats)} for ${f.trade.total.toLocaleString()} Cr`;
+

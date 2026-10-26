@@ -173,6 +173,7 @@ A commander can keep their savings in Bitcoin and hold almost no credits, the Bi
 - **A Bitcoin row at the top of every exchange:** *Bitcoin · 80,251 Cr · the same everywhere · live*. The same chart as any good, with real Bitcoin candles and your trades marked on them.
 - **No price curve.** Buying furs moves a station's price; buying Bitcoin doesn't, because the station is only a broker for a market far bigger than us. You pay the live price plus a small spread.
 - **Traded in sats.** A new commander with 100 Cr buys about 125,000 sats; the screen shows both: *₿ 0.00125 · 100 Cr*.
+- **Limit orders** *(Mark, built 26 October 2026)*: buy if the price falls to yours, or sell if it rises to it, with the credits or sats held until then. Fills are judged against the real market's own minute-by-minute history since the order was placed, so an order fills while you're out flying, and anywhere, since Bitcoin is the same everywhere; at your limit, or better if the price was better. A price that crosses the galaxy once a minute suits space, where news travels no faster.
 - **One price everywhere.** It's one network, so you can't profit by carrying it between systems, only by judging when to hold it.
 
 ### Elsewhere in the game

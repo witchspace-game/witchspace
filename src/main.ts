@@ -122,6 +122,7 @@ import { closeReplay, isReplayOpen, openReplay, renderFlightLog, setOutsideView 
 import { KillCam } from './ui/killCam';
 import { record, regularsAt, slotOf, talk, venue } from './game/saloon';
 import { hasBackRoom } from './economy/blackmarket';
+import { checkBtcOrders } from './net/bitcoin';
 import { btcValue, formatBtc, satsOf } from './economy/bitcoin';
 import './style.css';
 
@@ -566,6 +567,14 @@ function enterDocked(newShip = false) {
     saveCommander(cmdr());
     setTimeout(() => flash(handedIn.join(' · '), 6), newShip ? 6500 : 300);
   }
+  // Bitcoin limit orders that the real price reached while you were out filled then: say so.
+  if (cmdr().btcOrders?.length)
+    void checkBtcOrders(cmdr()).then((fills) => {
+      if (!fills.length) return;
+      saveCommander(cmdr());
+      if (state === 'docked') renderDocked();
+      setTimeout(() => flash(fills.join(' · '), 6), newShip ? 7000 : 1200);
+    });
   // The companies may have been in touch while you were away.
   if (checkMessages(cmdr(), currentSystem(), Date.now()).length) saveCommander(cmdr());
   markInbox(cmdr());
