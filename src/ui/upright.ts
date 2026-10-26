@@ -31,7 +31,8 @@ export async function isWide(video: Blob): Promise<boolean> {
 }
 
 async function load(video: Blob) {
-  const url = URL.createObjectURL(video);
+  // Copied into memory first: iPhone Safari won't play a video straight from the flight log's database.
+  const url = URL.createObjectURL(new Blob([await video.arrayBuffer()], { type: 'video/mp4' }));
   const el = document.createElement('video');
   el.muted = true;
   el.playsInline = true;
