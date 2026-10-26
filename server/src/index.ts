@@ -11,15 +11,17 @@ import { Accounts, type AccountsEnv } from './accounts';
 import { IdeasBoard, type IdeasEnv } from './ideas';
 import { mcp } from './mcp';
 import { btc, isBtc } from './btc';
+import { ClipBoard, type ClipsEnv } from './clips';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
 
-export interface Env extends IdeasEnv, AccountsEnv {
+export interface Env extends IdeasEnv, AccountsEnv, ClipsEnv {
   SYSTEMS: DurableObjectNamespace<SystemRoom>;
   IDEAS: DurableObjectNamespace<IdeasBoard>;
   ACCOUNTS: DurableObjectNamespace<Accounts>;
+  CLIPS: DurableObjectNamespace<ClipBoard>;
 }
 
-export { Accounts, IdeasBoard };
+export { Accounts, ClipBoard, IdeasBoard };
 
 /** The one Accounts object, which holds every account. */
 const accountsOf = (env: Env) => env.ACCOUNTS.get(env.ACCOUNTS.idFromName('accounts'));
@@ -45,6 +47,11 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
+    // Clip pages (server/src/clips.ts): moments shared as tracks. The card is for link previewers, so open to all.
+    const card = url.pathname.match(/^\/clip-card\/([a-z0-9]{8,12})$/);
+    if (card) return clipsOf(env).card(card[1]);
+    const clip = url.pathname.match(/^\/clips(?:\/([a-z0-9]{8,12})(?:\/(heart|report|admin))?)?$/);
+    if (clip) return clipRoute(request, env, clip[1], clip[2]);
     // The live Bitcoin price, for the exchange (server/src/btc.ts): our pages only.
     if (isBtc(url.pathname)) {
       const origin = request.headers.get('Origin') ?? '';
@@ -78,6 +85,48 @@ export default {
     return room.fetch(request);
   },
 } satisfies ExportedHandler<Env>;
+
+const clipsOf = (env: Env) => env.CLIPS.get(env.CLIPS.idFromName('clips'));
+
+/** /clips (share), /clips/<id> (watch), /clips/<id>/heart, /report, /admin. Our pages only, except the admin key. */
+async function clipRoute(request: Request, env: Env, id: string | undefined, action: string | undefined): Promise<Response> {
+  const origin = request.headers.get('Origin') ?? '';
+  const allowed = ORIGINS.some((o) => o.test(origin));
+  const headers: Record<string, string> = allowed ? cors(origin) : {};
+  const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...headers, 'Content-Type': 'application/json' } });
+  if (request.method === 'OPTIONS') return allowed ? new Response(null, { status: 204, headers }) : new Response('Forbidden', { status: 403 });
+  const clips = clipsOf(env);
+  if (action === 'admin' && id) {
+    const body = (await request.json().catch(() => null)) as { hidden?: unknown } | null;
+    const r = await clips.admin(id, request.headers.get('X-Admin-Key'), body?.hidden === true);
+    return reply(r, r.status);
+  }
+  if (!allowed) return new Response('Forbidden', { status: 403 });
+  const voter = request.headers.get('X-Voter');
+  const ip = request.headers.get('CF-Connecting-IP') ?? 'local';
+  if (!id && request.method === 'POST') {
+    // The credit is the signed-in account's callsign, never anything in the body.
+    const auth = request.headers.get('Authorization') ?? '';
+    const account = auth.startsWith('Bearer ') ? await accountsOf(env).whoIs(auth.slice(7)) : null;
+    const seconds = Number(new URL(request.url).searchParams.get('seconds'));
+    const r = await clips.share(await request.arrayBuffer(), seconds, voter, ip, account);
+    return reply(r, r.status);
+  }
+  if (id && !action && request.method === 'GET') {
+    const c = await clips.get(id, voter);
+    return c ? reply(c) : reply({ error: 'No such clip' }, 404);
+  }
+  if (id && action === 'heart' && request.method === 'POST') {
+    const body = (await request.json().catch(() => null)) as { on?: unknown } | null;
+    const r = await clips.heart(id, voter, ip, body?.on !== false);
+    return reply(r, r.status);
+  }
+  if (id && action === 'report' && request.method === 'POST') {
+    const r = await clips.report(id, voter);
+    return reply(r, r.status);
+  }
+  return reply({ error: 'Not found' }, 404);
+}
 
 /** What each connection carries through hibernation. */
 interface Attachment {

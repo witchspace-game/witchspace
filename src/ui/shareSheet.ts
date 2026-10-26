@@ -8,8 +8,10 @@
 //   sheet at once (iOS only allows it straight from a tap). Dismissing it
 //   does nothing: there is no fallback to downloading on a phone.
 // - On a desktop, the main button saves the file, as you'd expect there.
-// - The links (X, Bluesky, Facebook...) share the game, with the clip's
-//   title, until clips have pages of their own to link to.
+// - The links (X, Bluesky, Facebook...) share the game with the clip's title;
+//   or, for a clip with a flight track, a page of its own that replays it
+//   (docs/design/flight-recorder.md, "Clip pages"): the track goes up only
+//   after the player says yes, once, and never the video.
 
 import { escapeHtml } from './escape';
 import { copyText, destinations, ICONS } from './shareLinks';
@@ -27,7 +29,18 @@ export interface ShareMedia {
   name: string;
   /** For a wide clip: make its upright cut (for Shorts and Reels), resolving with it to share instead. */
   upright?: (onProgress: (f: number) => void) => Promise<ShareMedia | null>;
+  /** For a clip with a track: put its replay up as a page, resolving with the page's link. `shared` if it already is. */
+  replay?: { shared: string | null; put: () => Promise<{ url: string; title: string } | { error: string }> };
 }
+
+const CONSENT_KEY = 'witchspace.replay-consent';
+const consented = () => {
+  try {
+    return localStorage.getItem(CONSENT_KEY) === 'yes';
+  } catch {
+    return false;
+  }
+};
 
 const isPhone = () => matchMedia('(pointer: coarse)').matches;
 
@@ -96,20 +109,77 @@ export function openShareSheet(m: ShareMedia) {
             : `Saves the ${what} to this computer, ready to post.`
       }</p>
       <button type="button" class="ws-share-upright" hidden>Make an upright version <span>for Shorts, Reels and TikTok</span></button>
-      <p class="ws-share-or">Or share the game, with its title</p>
-      <div class="ws-share-links">
-        ${destinations(GAME, text)
-          .filter(([key]) => key !== 'email')
-          .map(([key, label, href]) => `<a href="${href}" target="_blank" rel="noopener" aria-label="${label}">${ICONS[key]}<span>${label}</span></a>`)
-          .join('')}
-        <button type="button" class="ws-share-copy" aria-label="Copy link">${ICONS.link}<span>Copy link</span></button>
+      <div class="ws-share-replay" hidden>
+        <button type="button" class="ws-share-put">${ICONS.link}Share a link that replays it</button>
+        <div class="ws-share-consent" hidden>
+          <p>Put this replay on witchspace.org.uk? Anyone with the link can watch it, rebuilt from your flight track. The video stays on this device.</p>
+          <p class="ws-share-consent-actions"><button type="button" class="primary" data-consent="yes">Put it up</button><button type="button" data-consent="no">Not now</button></p>
+        </div>
       </div>
+      <p class="ws-share-or">Or share the game, with its title</p>
+      <div class="ws-share-links"></div>
       <p class="ws-share-msg" aria-live="polite"></p>
     </div>`;
   document.body.append(el);
   open = { el, urls };
 
   const msg = el.querySelector<HTMLElement>('.ws-share-msg')!;
+  // The links: the game with the clip's title, or the clip's own page once it has one.
+  let linkUrl = GAME;
+  let linkText = text;
+  const links = el.querySelector<HTMLElement>('.ws-share-links')!;
+  const drawLinks = () => {
+    links.innerHTML =
+      destinations(linkUrl, linkText)
+        .filter(([key]) => key !== 'email')
+        .map(([key, label, href]) => `<a href="${href}" target="_blank" rel="noopener" aria-label="${label}">${ICONS[key]}<span>${label}</span></a>`)
+        .join('') + `<button type="button" class="ws-share-copy" aria-label="Copy link">${ICONS.link}<span>Copy link</span></button>`;
+    const copy = links.querySelector<HTMLButtonElement>('.ws-share-copy')!;
+    copy.onclick = async () => {
+      await copyText(linkUrl === GAME ? `${linkText} ${GAME}` : linkUrl);
+      copy.querySelector('span')!.textContent = 'Copied ✓';
+    };
+  };
+  const toPage = (url: string, title: string) => {
+    linkUrl = url;
+    linkText = `${title} · watch it from outside on Witchspace`;
+    el.querySelector('.ws-share-replay')!.setAttribute('hidden', '');
+    el.querySelector('.ws-share-or')!.textContent = 'Share the replay: the link plays it';
+    drawLinks();
+  };
+  drawLinks();
+  if (m.replay?.shared) toPage(m.replay.shared, m.title);
+  else if (m.replay) {
+    const box = el.querySelector<HTMLElement>('.ws-share-replay')!;
+    const consent = box.querySelector<HTMLElement>('.ws-share-consent')!;
+    const put = box.querySelector<HTMLButtonElement>('.ws-share-put')!;
+    box.hidden = false;
+    const go = async () => {
+      put.disabled = true;
+      put.textContent = 'Putting it up…';
+      const r = await m.replay!.put();
+      if (open?.el !== el) return;
+      if ('url' in r) toPage(r.url, r.title || m.title);
+      else {
+        put.disabled = false;
+        put.innerHTML = `${ICONS.link}Share a link that replays it`;
+        msg.textContent = r.error;
+      }
+    };
+    put.onclick = () => (consented() ? void go() : ((consent.hidden = false), (put.hidden = true)));
+    for (const b of consent.querySelectorAll<HTMLButtonElement>('[data-consent]'))
+      b.onclick = () => {
+        consent.hidden = true;
+        put.hidden = false;
+        if (b.dataset.consent !== 'yes') return;
+        try {
+          localStorage.setItem(CONSENT_KEY, 'yes');
+        } catch {
+          /* asked again next time */
+        }
+        void go();
+      };
+  }
   const shareFile = async () => {
     try {
       await navigator.share({ files: [file], title: m.title });
@@ -129,11 +199,6 @@ export function openShareSheet(m: ShareMedia) {
   el.querySelector<HTMLButtonElement>('.ws-share-main')!.onclick = () => (main === 'share' ? void shareFile() : save());
   const more = el.querySelector<HTMLButtonElement>('.ws-share-more');
   if (more) more.onclick = () => void shareFile();
-  const copy = el.querySelector<HTMLButtonElement>('.ws-share-copy')!;
-  copy.onclick = async () => {
-    await copyText(`${text} ${GAME}`);
-    copy.querySelector('span')!.textContent = 'Copied ✓';
-  };
   // A wide clip can be cut upright: offered once we know its shape.
   const up = el.querySelector<HTMLButtonElement>('.ws-share-upright')!;
   if (video && m.upright) void isWide(m.blob).then((wide) => open?.el === el && (up.hidden = !wide));

@@ -5,6 +5,7 @@ import { addMoment, BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes,
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
 import { uprightCut } from './upright';
+import { sharedLink, shareTrack } from '../net/clips';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 // Object URLs for the flight log's list, and separately for the replay player:
@@ -44,6 +45,8 @@ export function shareMoment(m: LoggedMoment, onChange?: () => void) {
     poster: m.poster ?? undefined,
     title: m.title,
     name: fileName(m),
+    // A clip with a track can have a page that replays it (net/clips.ts).
+    replay: m.track ? { shared: sharedLink(m.id), put: () => shareTrack(m.id, m.track!, m.seconds) } : undefined,
     upright:
       m.video && !recon
         ? async (onProgress) => {

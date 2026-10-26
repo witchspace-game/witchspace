@@ -122,6 +122,21 @@ A clip that people watch becomes part of the galaxy's story.
 - **Famous in the lanes.** A widely seen clip earns a mention in the saloons and on the radio: haulers who recognise your ship, a pirate who's seen how you fly. For the Falcon, it's one more thing she knows about you.
 - **The clip of the week** goes on the station board ([section 4](#4-the-station-board)) and the site's front page.
 
+## Clip pages: shared as tracks *(Mark, 26 October 2026)*
+
+*Status: **built** (26 October 2026: `server/src/clips.ts`, `server/src/clipCheck.ts`, `src/net/clips.ts`). Next: the founder's approval queue for the channel.* A moment can have its own page, **witchspace.org.uk/clip/…**, so a link to it on X, Bluesky, Facebook or WhatsApp plays it, not just the game.
+
+**Shared as a track, never as video.** The page replays the moment from its flight track (the numbers the kill cam already keeps: ship types, positions, shots, explosions) in the game's own renderer: behind the target, behind you, or orbiting, with hearts and the game one tap away. No video or picture a player made ever reaches our servers, so the online-safety position stays what it is: players can't upload images or files. (Mark chose this over uploading the cockpit video, which would have needed the risk assessments redone and every clip moderated: an upload address accepts whatever bytes it's sent, game footage or not.) The cockpit footage itself is still shared as a file, through the phone's share sheet.
+
+**How it works:**
+
+- **Put up by choice.** In the share sheet, *Share a link that replays it*: the game asks once, *"Put this replay on witchspace.org.uk? Anyone with the link can watch it."* Only then is the track sent.
+- **The server checks every number.** The track must unpack, its ships must be real ship types, its numbers finite and its colours colours. The server writes the page's words itself (the system, what happened, the ships), so nothing a player typed appears, and the credit is the **signed-in account's callsign** (moderated like any callsign), or *a commander* for anyone not signed in. About 85 KB a minute, kept in the game server's own database: no storage bucket.
+- **The page is the game.** /clip/… opens the play page straight into the kill cam on that track; closing it leaves you at the title screen, a key from playing.
+- **Links unfurl.** Link previewers (X, Bluesky, Facebook, WhatsApp, Discord...) are given a small page of their own with the title and the card of the ship involved, from the site's ship cards.
+- **Hearts** as below; **reports** from enough different browsers hide a clip until someone looks; the founder can take any clip down.
+- **Limits:** a few clips an hour per browser and network, and a size cap.
+
 ### Hearts *(Mark, 26 October 2026)*
 
 Commanders can **like a clip with a little heart**: on its clip page (`witchspace.org.uk/clip/…`), and in the game wherever clips are shown (the station board, the library).
