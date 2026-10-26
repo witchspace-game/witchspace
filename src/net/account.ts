@@ -173,11 +173,19 @@ export interface LogKinds {
   hearts?: boolean;
 }
 
-export function getContact() {
-  return call<{ push: boolean; email: boolean; kinds?: LogKinds; key: string | null }>('/me/contact');
+/** How you can be reached. `push` is whether this device (`device`, its address's hash) gets notifications; `devices`, how many do. */
+export interface Contact {
+  push: boolean;
+  devices: number;
+  email: boolean;
+  kinds?: LogKinds;
 }
 
-/** Change how you can be reached; the device's time zone goes too, for the log's quiet hours. */
-export function setContact(change: { push?: { endpoint: string } | null; email?: boolean; kinds?: LogKinds }) {
-  return call<{ push: boolean; email: boolean; kinds?: LogKinds }>('/me/contact', { method: 'PUT', body: JSON.stringify({ ...change, tz: -new Date().getTimezoneOffset() }) });
+export function getContact(device: string) {
+  return call<Contact & { key: string | null }>(`/me/contact?e=${encodeURIComponent(device)}`);
+}
+
+/** Change how you can be reached (`push` adds this device, `unpush` removes it); the device's time zone goes too, for the log's quiet hours. */
+export function setContact(change: { push?: { endpoint: string }; unpush?: { endpoint: string }; email?: boolean; kinds?: LogKinds }) {
+  return call<Contact>('/me/contact', { method: 'PUT', body: JSON.stringify({ ...change, tz: -new Date().getTimezoneOffset() }) });
 }
