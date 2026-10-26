@@ -120,6 +120,16 @@ A clip that people watch becomes part of the galaxy's story.
 - **Famous in the lanes.** A widely seen clip earns a mention in the saloons and on the radio: haulers who recognise your ship, a pirate who's seen how you fly. For the Falcon, it's one more thing she knows about you.
 - **The clip of the week** goes on the station board ([section 4](#4-the-station-board)) and the site's front page.
 
+### Hearts *(Mark, 26 October 2026)*
+
+Commanders can **like a clip with a little heart**: on its clip page (`witchspace.org.uk/clip/…`), and in the game wherever clips are shown (the station board, the library).
+
+- **One heart per person, no dislikes, no comments** to begin with: hearts are kind, and they need no moderation. A tap gives one, a second tap takes it back, and the count sits under the clip.
+- **Hard to stuff.** The same protection as the ideas board's votes: one heart per device, a cap per network, and the server keeps the count. A heart from a signed-in commander counts the same, but shows who: *liked by CMDR Kestrel and 214 others*.
+- **Hearts are how the galaxy notices.** They feed the clip of the week and the newsroom's thresholds alongside views ([when a clip takes off](#when-a-clip-takes-off)), and the queue of clips the founder approves for YouTube is sorted by them, so the best rise to the top.
+- **The maker hears about it.** *Your clip from Riedquat has 50 hearts* arrives as a message at the next station, and a clip that keeps collecting them earns its newsroom bonus.
+- **Your own clips show their hearts** in the flight log.
+
 ## Proof: things nobody would believe
 
 *(Mark: "capture things that no one would believe!" The playful version of a picture painting a thousand words: the shot your friends won't believe, which the game can prove is real.)*
