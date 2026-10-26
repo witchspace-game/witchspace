@@ -8,6 +8,7 @@ import { Beams } from '../game/weapons';
 import { bracket, focusOf, killerOf, type TrackData } from '../game/track';
 import { encodeVideo } from './encodeVideo';
 import { escapeHtml } from './escape';
+import { ICONS } from './shareLinks';
 import { openShareSheet } from './shareSheet';
 import { fontFamily, houseCard, loadIcon, stamp, still } from './videoCards';
 
@@ -17,6 +18,13 @@ import { fontFamily, houseCard, loadIcon, stamp, still } from './videoCards';
 // fighting; or behind you, or orbiting the fight; paused, scrubbed or slowed,
 // and saved upright for Shorts or wide. Always labelled a reconstruction: the
 // video is what you saw, this is the assessors' account of what happened.
+
+/** The play button's three faces. */
+const TRANSPORT: Record<'Play' | 'Pause' | 'Again', string> = {
+  Play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
+  Pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>',
+  Again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5a7 7 0 1 1-6.6 4.7l1.9.6A5 5 0 1 0 12 7v3L7.5 6 12 2z"/></svg>',
+};
 
 type View = 'killer' | 'you' | 'orbit';
 export type Shape = 'wide' | 'upright';
@@ -347,7 +355,11 @@ export class KillCam {
       time.textContent = !this.death ? `${(this.t - this.start).toFixed(1)} s` : left > 0 ? `${left.toFixed(1)} s before` : 'Ship destroyed';
     }
     const play = this.el.querySelector<HTMLButtonElement>('[data-act="play"]');
-    if (play) play.textContent = this.playing ? 'Pause' : this.t >= this.end ? 'Again' : 'Play';
+    const state = this.playing ? 'Pause' : this.t >= this.end ? 'Again' : 'Play';
+    if (play && play.getAttribute('aria-label') !== state) {
+      play.setAttribute('aria-label', state);
+      play.innerHTML = TRANSPORT[state];
+    }
   }
 
   private renderControls() {
@@ -366,22 +378,25 @@ export class KillCam {
           ? `<div class="killcam-shared"><button type="button" class="killcam-heart" data-act="heart" aria-pressed="${this.shared.mine}" aria-label="Heart this clip">♥ <b>${this.shared.hearts}</b></button><button type="button" class="primary" data-act="play-free">Play Witchspace free</button><button type="button" class="killcam-report" data-act="report">Report</button></div>`
           : ''
       }</div>
+      <button type="button" class="killcam-close" data-act="close" aria-label="Close">${ICONS.close}</button>
       <div class="killcam-bar">
-        <div class="killcam-views" role="group" aria-label="Camera">
-          <button type="button" data-view="killer"${this.killer === undefined ? ' disabled' : ''}>${this.death ? 'Behind the killer' : 'Behind the target'}</button>
-          <button type="button" data-view="you">Behind you</button>
-          <button type="button" data-view="orbit">Orbit</button>
-          <span class="killcam-save">
-            <button type="button" data-save="upright" title="Upright, for Shorts, Reels and TikTok">Save video · upright</button>
-            <button type="button" data-save="wide">Save video · wide</button>
-          </span>
-        </div>
         <div class="killcam-time-row">
-          <button type="button" data-act="play">Pause</button>
-          <button type="button" data-act="slow" aria-pressed="false">¼ speed</button>
+          <button type="button" class="killcam-play" data-act="play" aria-label="Pause">${TRANSPORT.Pause}</button>
           <input class="killcam-scrub" type="range" min="${this.start}" max="${this.end}" step="0.05" value="${this.start}" aria-label="Time" />
           <span class="killcam-time"></span>
-          <button type="button" data-act="close">Close</button>
+          <button type="button" class="killcam-slow" data-act="slow" aria-pressed="false" title="Quarter speed">¼×</button>
+        </div>
+        <div class="killcam-row">
+          <div class="killcam-seg killcam-views" role="group" aria-label="Camera">
+            <button type="button" data-view="killer" title="${this.death ? 'Behind the ship that got you' : 'Behind the ship you fought'}"${this.killer === undefined ? ' disabled' : ''}>${this.death ? 'Killer' : 'Target'}</button>
+            <button type="button" data-view="you" title="Behind your ship">You</button>
+            <button type="button" data-view="orbit" title="Around the fight: drag to turn, scroll to zoom">Orbit</button>
+          </div>
+          <div class="killcam-seg killcam-save" role="group" aria-label="Save video">
+            <span>Save</span>
+            <button type="button" data-save="wide">Wide</button>
+            <button type="button" data-save="upright" title="Upright, for Shorts, Reels and TikTok">Upright</button>
+          </div>
         </div>
       </div>`,
     );
@@ -436,7 +451,7 @@ export class KillCam {
     this.el.querySelectorAll<HTMLButtonElement>('[data-save]').forEach((b) => (b.onclick = () => void this.save(b.dataset.save as Shape)));
     // Drag to turn the orbit, scroll to zoom it.
     this.el.onpointerdown = (e) => {
-      if ((e.target as HTMLElement).closest('.killcam-bar, .killcam-shared')) return;
+      if ((e.target as HTMLElement).closest('.killcam-bar, .killcam-shared, .killcam-close')) return;
       this.orbit.dragging = true;
       this.orbit.auto = false;
       if (this.view !== 'orbit') {
