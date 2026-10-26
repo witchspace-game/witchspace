@@ -7,10 +7,11 @@ Binance refuses requests from Cloudflare's servers, where the game's server runs
 | Path | Returns |
 |---|---|
 | `GET /btc` | `{"symbol":"BTCUSDT","price":80251.27,"time":…,"source":"api.binance.com"}` |
+| `GET /btc/candles?interval=1h&limit=200` | `[{"t":…,"o":…,"h":…,"l":…,"c":…,"v":…}, …]`, for the exchange's chart. Intervals 1m, 5m, 15m, 1h, 4h, 1d, 1w; up to 500 candles |
 | `GET /health` | 200 when it has a price under two minutes old |
 | anything else | 404 |
 
-It only serves the price; it isn't a general forwarder. The price is kept for 15 seconds, so Binance is asked at most four times a minute however busy the game is. If Binance doesn't answer, `/btc` returns the last price it had, with its time.
+It only serves the price and its history; it isn't a general forwarder. The price is kept for 15 seconds and candles for a minute, so Binance is asked only a few times a minute however busy the game is. If Binance doesn't answer, `/btc` returns the last price it had, with its time.
 
 ## Run it locally
 
