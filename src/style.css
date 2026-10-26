@@ -1335,6 +1335,10 @@ body.retro .contracts li small, body.retro .risk { font-size: 8px; }
 .contracts li.special { border-left-color: var(--company, var(--amber)); background: rgba(255, 179, 71, 0.06); }
 .contracts li.message { border-left-color: var(--dim); }
 .contracts li.message.unread { border-left-color: var(--amber); background: rgba(255, 179, 71, 0.08); }
+.contracts li.message.receipt { padding-top: 5px; padding-bottom: 5px; }
+.contracts li.message-earlier { padding: 0; border-left: 0; background: none; }
+.message-earlier summary { padding: 6px 2px; color: var(--dim); font-size: 13px; cursor: pointer; }
+.message-earlier .contracts { margin-top: 4px; }
 .files { display: flex; flex-wrap: wrap; gap: 6px; }
 .files button { font-size: 12px; padding: 4px 10px; }
 .file { margin: 8px 0; padding: 12px 14px; border: 1px solid var(--company, var(--edge)); background: rgba(0, 0, 0, 0.5); font-family: 'Courier New', monospace; font-size: 13px; letter-spacing: 0; }

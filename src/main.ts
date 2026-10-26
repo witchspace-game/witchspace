@@ -81,7 +81,7 @@ import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
-import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
+import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase, type Message } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
 import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
@@ -779,10 +779,17 @@ function renderContracts() {
   const hoursLeft = (t: number) => Math.max(1, Math.round((t - now) / 3600_000));
   const goodName = (id: string) => escapeHtml(commodityById(id)?.name ?? id);
   const place = (s: StarSystem) => `${escapeHtml(s.name)} <small>${distanceLy(here, s).toFixed(1)} LY</small>${riskTag(s)}`;
-  const messages = (c.messages ?? [])
-    .slice(0, 5)
-    .map((m) => `<li class="message${m.read ? '' : ' unread'}">${m.from ? `<b class="company">${escapeHtml(m.from)}</b>` : companyMark(m.company)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small></li>`)
-    .join('');
+  // Messages: what's new in full; receipts (paid, handed in) in a line each; anything
+  // already read folded away, so the tab opens on the work, not on old news.
+  const sender = (m: Message) => (m.from ? `<b class="company">${escapeHtml(m.from)}</b>` : companyMark(m.company));
+  const receipt = (m: Message) => /:delivered$/.test(m.id);
+  const line = (m: Message) => `<li class="message receipt${m.read ? '' : ' unread'}">${sender(m)} · <small>${escapeHtml(m.body.replace(/^Your /, '').replace(/ was handed in: /, ' handed in · ').replace(/: ([\d,]+ Cr) paid\./, ' · $1').replace(/\.$/, ''))}</small></li>`;
+  const full = (m: Message) => `<li class="message${m.read ? '' : ' unread'}">${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small></li>`;
+  const unread = (c.messages ?? []).filter((m) => !m.read);
+  const earlier = (c.messages ?? []).filter((m) => m.read).slice(0, 10);
+  const messages =
+    unread.map((m) => (receipt(m) ? line(m) : full(m))).join('') +
+    (earlier.length ? `<li class="message-earlier"><details><summary>Earlier messages (${earlier.length})</summary><ul class="contracts">${earlier.map((m) => (receipt(m) ? line(m) : full(m))).join('')}</ul></details></li>` : '');
   for (const m of c.messages ?? []) m.read = true;
   markInbox(c);
   const hello = welcomeHere(c, here, now);
