@@ -352,6 +352,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
         callsign: who.callsign,
         alarm: await this.ctx.storage.getAlarm(),
         push: Boolean(row?.push),
+        // Which kind of device it reaches (Apple's service is an iPhone, iPad or Safari on a Mac; Google's is Chrome).
+        pushService: row?.push ? new URL((JSON.parse(row.push) as { endpoint: string }).endpoint).hostname : null,
         kinds: JSON.parse(row?.kinds ?? '{}'),
         tz: row?.tz ?? null,
         awake: awake(now, row?.tz ?? 0),
@@ -362,6 +364,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
         orders: orders.map((o) => ({ id: o.id, side: o.side, limit: o.limit, placed: o.placed })),
         wouldSay: orders.length ? await btcItems(orders, now, relayCandles, await relayPrice()) : [],
       });
+    }
+    // Send one commander a test ship's log now, to see whether their device shows it.
+    if (request.method === 'POST' && path === '/admin/log/test') {
+      const key = (new URL(request.url).searchParams.get('callsign') ?? '').trim().toLowerCase();
+      const who = this.sql.exec('SELECT id FROM accounts WHERE callsign_key = ?', key).toArray()[0];
+      const row = who ? this.contactRow(who.id as string) : null;
+      if (!row?.push || !this.env.VAPID_PUBLIC || !this.env.VAPID_PRIVATE) return json({ error: 'No notification address for that commander' }, 404);
+      this.sql.exec('UPDATE contact SET title = ?, body = ? WHERE account = ?', "Ship's log · test", 'If you can read this, notifications reach you, Commander.', row.account);
+      const result = await sendPush((JSON.parse(row.push) as { endpoint: string }).endpoint, { publicKey: this.env.VAPID_PUBLIC, privateJwk: this.env.VAPID_PRIVATE });
+      if (result === 'gone') this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL WHERE account = ?', row.account);
+      return json({ result });
     }
     // Run the companies' hourly check now (testing), and see how many have asked to be contacted.
     if (request.method === 'POST' && path === '/admin/contact/run') {
