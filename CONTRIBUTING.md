@@ -6,7 +6,7 @@ Welcome, Commander. 🚀 Whether you design ships, write lore, build missions or
 
 1. Copy an existing ship, e.g. `content/ships/viper.json`, to `content/ships/<your-ship-id>.json`.
 2. Change the `id` to match the file name. Ids are kebab-case, like `asp-mk2`.
-3. Edit the name, description, stats and geometry. Put yourself in `credits.authors`.
+3. Edit the name, description, stats and geometry. Put yourself in `credits.authors`. Set `stats.ratingValue` (combat rating points for a kill) in line with ships of similar strength: a Sidewinder is 0.33, a Cobra Mk III 0.91 (see [combat rating](docs/design/combat-rating.md#ship-value)).
 4. Run `npm run dev` and press → until your ship appears. Drag to rotate it.
 5. Run `npm run validate -- --fix` until every file shows ✓.
 6. Open a pull request with a screenshot of your ship.

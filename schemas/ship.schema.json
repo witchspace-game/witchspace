@@ -154,7 +154,8 @@
         "hull",
         "shields",
         "cargo",
-        "price"
+        "price",
+        "ratingValue"
       ],
       "properties": {
         "maxSpeed": {
@@ -203,6 +204,12 @@
           "description": "Credits. 0 = not for sale.",
           "type": "number",
           "minimum": 0
+        },
+        "ratingValue": {
+          "description": "Combat rating points for destroying one, before role, threat and experience (docs/design/combat-rating.md). Start from the original's values: Sidewinder 0.33, Mamba 0.5, Cobra Mk III 0.91, Thargoid 2.66; 0 for anything that isn't a fight.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10
         },
         "bounty": {
           "description": "Credits paid for destroying one, if wanted.",

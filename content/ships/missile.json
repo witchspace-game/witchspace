@@ -42,7 +42,8 @@
     "shields": 0,
     "cargo": 0,
     "missiles": 0,
-    "price": 30
+    "price": 30,
+    "ratingValue": 0
   },
   "style": { "lineColor": "#ff6b6b", "glow": 1.2 }
 }

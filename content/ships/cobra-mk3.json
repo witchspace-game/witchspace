@@ -52,7 +52,8 @@
     "shields": 100,
     "cargo": 20,
     "missiles": 3,
-    "price": 100000
+    "price": 100000,
+    "ratingValue": 0.91
   },
   "style": { "lineColor": "#3dffb0", "glow": 1 }
 }
