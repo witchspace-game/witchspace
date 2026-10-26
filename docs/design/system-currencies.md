@@ -124,6 +124,14 @@ A powerful bloc pushes **one currency for many systems**, much like the euro. It
 - **Smuggle:** buy at the cheap independent rate and sell inside the union, where the Meridian is strong.
 - **Work for the Compact:** escort Meridian convoys, enforce embargoes, and take Compact combat missions. Playing the antagonist is a legitimate career, with its own rewards and enemies.
 
+### How stage 1 is built
+
+- **The price:** the relay ([relay/](../../relay/README.md), on fly.io in Tokyo) has it from Binance; the game's server (`server/src/btc.ts`) keeps each answer 15 seconds (candles a minute) and passes it on; the exchange asks only while it's open. When nobody is trading, nothing is asked.
+- **The exchange:** Bitcoin is the first row of the list. Picking it puts the real market's candles on the same chart (5 minute, 15 minute and hourly), the broker's two prices where the order book is, and a form to spend credits or sell sats. Your trades are marked on the chart.
+- **The wallet:** `sats` on the commander, with the last 50 trades. It takes no hold space and survives the ship.
+- **The rules:** `src/economy/bitcoin.ts`, with tests: the spread, fresh prices only, paying debts.
+- **Not yet:** the 1984 look's plain price list doesn't show Bitcoin; Classic never will.
+
 ### Guardrails
 
 - The Compact is an **NPC faction** run by the game, possibly with an AI-agent leadership as in [player-run stations](player-stations.md). Players can work for it but not take it over.
@@ -132,7 +140,7 @@ A powerful bloc pushes **one currency for many systems**, much like the euro. It
 
 ## 6b. Bitcoin against the Witchspace universe (Mark, 26 October 2026)
 
-*Status: **idea**, Mark's, to think through before anything is built. Reading: Saifedean Ammous, *The Bitcoin Standard*; Andreas Antonopoulos, [Bitcoin explained](https://www.youtube.com/watch?v=UlKZ83REIkA&list=PLPQwGV1aLnTthcG265_FYSaV24hFScvC0).*
+*Status: **stage 1 built** (Bitcoin against credits on the exchange, 26 October 2026); the rest is Mark's idea, to think through before it's built. Reading: Saifedean Ammous, *The Bitcoin Standard*; Andreas Antonopoulos, [Bitcoin explained](https://www.youtube.com/watch?v=UlKZ83REIkA&list=PLPQwGV1aLnTthcG265_FYSaV24hFScvC0).*
 
 Every other money in this design belongs to someone: a system's government prints it, the Compact wants to absorb it, the Co-operative issues the credit. **Bitcoin belongs to nobody.** It's the same at every station, nobody can print it, and it weighs nothing. Set against 2,048 system currencies, the credit and the Compact, it's *The Bitcoin Standard* played out as a galaxy: easy money of every kind, government by government, against the one hard money.
 
@@ -170,7 +178,8 @@ A commander can keep their savings in Bitcoin and hold almost no credits, the Bi
 ### Elsewhere in the game
 
 - **Zero tonnes.** It never uses hold space, cargo scans can't find it, and pirates and the Falcon can't scoop it.
-- **It survives your ship.** The claim screen says *Your bitcoin is safe: the keys were in your head.*
+- **It survives your ship.** After a claim: *Your Bitcoin is safe: the keys were in your head.*
+- **Nobody can seize it, but it pays what you owe** (Mark). If you owe a fine or the insurers' excess and your credits fall short, enough of your Bitcoin is sold for you at the market price to pay it, and the game tells you: *Short of credits: sold 62,000 sats of your Bitcoin at the market price (49.3 Cr) to pay your fine.* Sell some yourself first if you'd rather choose the moment. Your Bitcoin counts towards your means, so holding it doesn't shrink a fine.
 - **On the commander card:** *Bitcoin ₿ 0.0412 · 3,307 Cr · 0 t*.
 - **Real news.** When the real price moves more than about 5% in a day, the news board carries it (*Bitcoin up 7%: celebrations in the anarchies*) and NPCs talk about it on the radio.
 
@@ -234,7 +243,7 @@ The Bitcoin-backed kind ties the real price into the galaxy a second way: a real
 
 ### Building it in steps
 
-1. **Bitcoin against credits:** the exchange row and chart, buying and selling in sats, the wallet on the commander card, surviving death. About a day; fun on its own.
+1. **Bitcoin against credits** (built): the exchange row and chart, buying and selling in sats, the wallet on the commander card, surviving death, debts paid from it when credits fall short.
 2. **Paying in sats,** spreads and bans by government, the news headlines.
 3. **The system currencies** (section 10), **with stablecoins from day one**: Corporate State coins with published reserves, some held in Bitcoin, so a real crash can test them. Bitcoin and stablecoins become the two ways out of every crisis, prices can be shown in sats, and the Confederacies run on Bitcoin.
 4. **The Compact:** the Meridian starting as a stablecoin, frozen wallets, Bitcoin against the Meridian, ransoms and bounties in sats.

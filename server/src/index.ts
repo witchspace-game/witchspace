@@ -10,6 +10,7 @@ import { nameRule } from './names';
 import { Accounts, type AccountsEnv } from './accounts';
 import { IdeasBoard, type IdeasEnv } from './ideas';
 import { mcp } from './mcp';
+import { btc, isBtc } from './btc';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
 
 export interface Env extends IdeasEnv, AccountsEnv {
@@ -41,9 +42,15 @@ const MAX_PER_SYSTEM = 64; // commanders closely simulated in one system (stage 
 const MAX_MESSAGES_PER_SECOND = 30;
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
+    // The live Bitcoin price, for the exchange (server/src/btc.ts): our pages only.
+    if (isBtc(url.pathname)) {
+      const origin = request.headers.get('Origin') ?? '';
+      if (!ORIGINS.some((o) => o.test(origin))) return new Response('Forbidden', { status: 403 });
+      return btc(request, url.pathname, cors(origin), ctx);
+    }
     // The MCP server for AI assistants: public and read-only, so open to any caller (server/src/mcp.ts).
     if (url.pathname === '/mcp') return mcp(request);
     // A link in an email, so no Origin: stop the companies getting in touch.

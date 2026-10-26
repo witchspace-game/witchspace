@@ -22,6 +22,8 @@ import { BROKER_FEE, cancelOrder, collect, describeFill, placeOrder, sendOrder, 
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
 import { bestKnownElsewhere, bestOutlets, bestRoutes, checkSentOrders, knownAt, marketsForOrders } from '../economy/routes';
 import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
+import { askPrice, bidPrice, btcValue, buyBitcoin, formatBtc, formatSats, isFresh, satsOf, sellBitcoin, SPREAD } from '../economy/bitcoin';
+import { btcCandles, btcQuote, heardCandles, heardQuote } from '../net/bitcoin';
 
 // The station market as a trading exchange, in the style of today's crypto
 // exchanges: a list of pairs against the credit, a candlestick chart, the
@@ -29,6 +31,10 @@ import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/ge
 // itself: the book is the station's real pricing curve, the chart is the
 // market's real price history (TradingView's open-source Lightweight
 // Charts), and the trades feed is every trade, other traders' and yours.
+//
+// Bitcoin sits at the top of the list (docs/design/system-currencies.md, 6b):
+// the same chart, but its candles are the real market's, and the station is a
+// broker at the live price, not a market with a curve of its own.
 //
 // TradingView Lightweight Charts™ Copyright (c) TradingView, Inc. https://www.tradingview.com/
 // Licensed under the Apache License 2.0; the chart shows TradingView's attribution logo.
@@ -80,6 +86,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   /** Storage at the market on screen (remote sells come from there). */
   const storedThere = (ctx: TradeContext, id: string) => (marketState(ctx) as OrderState).storage?.[id] ?? 0;
   let selected = 'food';
+  const BTC = 'btc';
+  const isBtc = () => selected === BTC;
   let side: 'buy' | 'sell' = 'buy';
   let interval: Interval = '15m';
   let message = '';
@@ -184,6 +192,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   const index = () => COMMODITIES.findIndex((c) => c.id === selected);
   const limitPrice = () => Number(priceInput.value) || 0;
   const maxQty = (ctx: TradeContext) => {
+    // Bitcoin: credits to spend, or sats to sell.
+    if (isBtc()) return side === 'buy' ? Math.floor(ctx.commander.credits) : satsOf(ctx.commander);
     if (remote()) {
       if (side === 'sell') return storedThere(ctx, selected);
       return limitPrice() > 0 ? Math.floor(ctx.commander.credits / (limitPrice() * (1 + BROKER_FEE))) : 0;
@@ -196,6 +206,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   };
   /** Start the limit price a little better than the market: below it to buy, above it to sell. */
   const suggestPrice = (ctx: TradeContext) => {
+    if (isBtc()) return;
     const p = quotes(ctx).find((x) => x.commodity.id === selected)!.price;
     priceInput.value = (p * (side === 'buy' ? 0.98 : 1.02)).toFixed(2);
   };
@@ -294,6 +305,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const u = (r: Row) => unitLabel(r.q.commodity);
     const section = (title: string, list: string) => (list ? `<h5 class="ex-list-head">${title}</h5>${list}` : '');
     $('.ex-pairs-list').innerHTML =
+      (away ? '' : section('Bitcoin', btcPair(ctx))) +
       section(
         away ? `In storage at ${ctx.system.name}` : 'Your hold',
         hold.map((r) => row(r, r.off ? '' : 'sell', [`${r.held.toLocaleString()} ${u(r)} ${away ? 'in storage' : 'aboard'}`, there(r)].filter(Boolean).join(' · '))).join(''),
@@ -302,6 +314,23 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       section(away ? `Sells well at ${ctx.system.name}` : 'Sells well here', wanted.map((r) => row(r, '', r.order?.side === 'buy' ? `short · station buying ${r.order.qty.toLocaleString()} ${u(r)}` : `wanted ${away ? 'there' : 'here'}`)).join('')) +
       `<button class="ex-rest-toggle" aria-expanded="${restOpen}">${restOpen ? '▾' : '▸'} All other goods (${rest.length})</button>` +
       (restOpen ? rest.map((r) => row(r, '', r.off ? `not traded ${away ? 'there' : 'here'}` : '')).join('') : '');
+  }
+
+  /** Bitcoin's row: the live price, and your wallet if you hold any. */
+  function btcPair(ctx: TradeContext) {
+    const q = heardQuote();
+    const sats = satsOf(ctx.commander);
+    const cs = heardCandles('5m', 60)?.slice(-7);
+    let spark = '';
+    if (cs && cs.length > 1) {
+      const pts = cs.map((k) => k.c);
+      const lo = Math.min(...pts);
+      const span = Math.max(...pts) - lo || 1;
+      spark = `<svg class="ex-spark" viewBox="0 0 36 14" aria-hidden="true"><polyline points="${pts.map((p, k) => `${k * 6},${(13 - ((p - lo) / span) * 12).toFixed(1)}`).join(' ')}" class="${pts[pts.length - 1] >= pts[0] ? 'up' : 'down'}"/></svg>`;
+    }
+    const sub = sats ? `${formatBtc(sats)} · ${fmt(btcValue(ctx.commander, q))} Cr · 0 t` : 'The same price at every station';
+    return `<button class="ex-pair btc${isBtc() ? ' active' : ''}" data-id="${BTC}" title="Bitcoin: the live price of the real coin, the same at every station">
+      <span class="ex-sym"><b>Bitcoin</b><i class="ex-live">Live</i></span>${spark}<span class="num">${q ? fmt(q.price) : '…'}</span><small class="ex-sub">${sub}</small></button>`;
   }
 
   // --- Header -----------------------------------------------------------------
@@ -346,6 +375,30 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       <p class="ex-why">${why(ctx, c, balance, order, touched ? event : null)}</p>`;
   }
 
+  function renderBtcHead(ctx: TradeContext) {
+    const q = heardQuote();
+    const day = heardCandles('1h', 48)?.slice(-24);
+    const open = day?.[0]?.o;
+    const change = q && open ? (q.price - open) / open : 0;
+    const sats = satsOf(ctx.commander);
+    const now = Date.now();
+    const quiet = q && !isFresh(q, now);
+    $('.ex-head').innerHTML = `
+      ${quiet ? `<div class="ex-event hit">Network quiet · price ${age(now - q!.time)} old · trading paused</div>` : ''}
+      <div class="ex-title"><b>Bitcoin</b><span>/CR</span><small>per coin · live · the same at every station</small></div>
+      <div class="ex-last ${change >= 0 ? 'up' : 'down'}">${q ? fmt(q.price) : '…'}<small>Cr</small></div>
+      <dl>
+        <div><dt>24h change</dt><dd class="${change >= 0 ? 'up' : 'down'}">${day ? pct(change) : '-'}</dd></div>
+        <div><dt>24h high</dt><dd>${day ? fmt(Math.max(...day.map((k) => k.h))) : '-'}</dd></div>
+        <div><dt>24h low</dt><dd>${day ? fmt(Math.min(...day.map((k) => k.l))) : '-'}</dd></div>
+        <div><dt>You buy at</dt><dd>${q ? fmt(askPrice(q)) : '-'}</dd></div>
+        <div><dt>You sell at</dt><dd>${q ? fmt(bidPrice(q)) : '-'}</dd></div>
+        <div><dt>In your wallet</dt><dd>${formatBtc(sats)}${sats ? ` <small>${formatSats(sats)} · ${fmt(btcValue(ctx.commander, q))} Cr</small>` : ''}</dd></div>
+        <div><dt>Hold space</dt><dd>None</dd></div>
+      </dl>
+      <p class="ex-why">One network, so one price at every station: you can't profit by carrying it, only by choosing when to hold it. It takes no hold space, pirates can't scoop it, and nobody can take it from you, the law included. <span class="ex-honest">Live price from Binance · in-game only · not real money.</span></p>`;
+  }
+
   /** Why the price is what it is, in a sentence. */
   function why(ctx: TradeContext, c: Commodity, balance: number, order: ReturnType<typeof stationOrder>, event: ReturnType<typeof activeEvent>): string {
     const here = ctx.system.name;
@@ -369,6 +422,53 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     }
     if (!k) return;
     $('.ex-ohlc').innerHTML = `<span>${clock(fromChartTime(time as UTCTimestamp))}</span> O <b>${fmt(k.open)}</b> H <b>${fmt(k.high)}</b> L <b>${fmt(k.low)}</b> C <b class="${k.close >= k.open ? 'up' : 'down'}">${fmt(k.close)}</b>`;
+  }
+
+  function renderBtcChart(ctx: TradeContext) {
+    const [ms, count] = INTERVALS[interval];
+    root.querySelectorAll<HTMLButtonElement>('[data-interval]').forEach((b) => b.classList.toggle('active', b.dataset.interval === interval));
+    for (const l of orderLines) candleSeries.removePriceLine(l);
+    orderLines = [];
+    if (fairLine) candleSeries.removePriceLine(fairLine);
+    fairLine = null;
+    const cs = heardCandles(interval, count)?.map((k) => ({ ...k }));
+    const key = `${BTC}:${interval}`;
+    if (!cs) {
+      candleSeries.setData([]);
+      volumeSeries.setData([]);
+      markers.setMarkers([]);
+      chartKey = '';
+      $('.ex-ohlc').textContent = 'Asking the network…';
+      void btcCandles(interval, count).then((got) => got && isBtc() && renderBtcChart(view()));
+      return;
+    }
+    const q = heardQuote();
+    const last = cs[cs.length - 1];
+    if (q && q.time >= last.t) {
+      last.c = q.price;
+      last.h = Math.max(last.h, q.price);
+      last.l = Math.min(last.l, q.price);
+    }
+    const range = key === chartKey ? chart.timeScale().getVisibleLogicalRange() : null;
+    candleSeries.applyOptions({ priceFormat: { type: 'price', precision: 1, minMove: 0.1 } });
+    candleSeries.setData(cs.map((k) => ({ time: toChartTime(k.t), open: k.o, high: k.h, low: k.l, close: k.c })));
+    volumeSeries.setData(cs.map((k) => ({ time: toChartTime(k.t), value: k.v, color: k.c >= k.o ? 'rgba(46,189,133,0.35)' : 'rgba(246,70,93,0.35)' })));
+    if (range) chart.timeScale().setVisibleLogicalRange(range);
+    else requestAnimationFrame(() => chart.timeScale().fitContent());
+    chartKey = key;
+    const start = cs[0].t;
+    markers.setMarkers(
+      (ctx.commander.btcTrades ?? [])
+        .filter((t) => t.t >= start)
+        .map((t) => ({
+          time: toChartTime(start + Math.min(Math.floor((t.t - start) / ms), cs.length - 1) * ms),
+          position: t.side === 'buy' ? 'belowBar' : 'aboveBar',
+          shape: t.side === 'buy' ? 'arrowUp' : 'arrowDown',
+          color: t.side === 'buy' ? UP : DOWN,
+          text: `${t.side === 'buy' ? 'B' : 'S'} ${fmt(t.total, 0)} Cr`,
+        })),
+    );
+    legend(undefined);
   }
 
   function renderChart(ctx: TradeContext) {
@@ -442,7 +542,19 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   // --- Order book --------------------------------------------------------------
 
+  function renderBtcBook() {
+    const q = heardQuote();
+    $('.ex-book h4').textContent = 'The broker';
+    $('.ex-book-head').hidden = true;
+    $('.ex-asks').innerHTML = `<div class="ex-quote ask"><span>You buy at</span><b class="num">${q ? fmt(askPrice(q)) : '-'}</b></div>`;
+    $('.ex-mid').innerHTML = `<b>${q ? fmt(q.price) : '…'}</b><span>Live · ${(SPREAD * 100).toFixed(1)}% each way</span>`;
+    $('.ex-bids').innerHTML = `<div class="ex-quote bid"><span>You sell at</span><b class="num">${q ? fmt(bidPrice(q)) : '-'}</b></div>
+      <p class="ex-note">The station is a broker for a market far bigger than any station: your trades don't move the price.</p>`;
+  }
+
   function renderBook(ctx: TradeContext) {
+    $('.ex-book h4').textContent = 'Order book';
+    $('.ex-book-head').hidden = false;
     const state = marketState(ctx);
     // As many levels as fit: the book grows with the screen.
     const room = $('.ex-book').clientHeight - 130;
@@ -475,7 +587,44 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   // --- Trade form ---------------------------------------------------------------
 
+  function renderBtcForm(ctx: TradeContext) {
+    orderType = 'market';
+    $('.ex-types').hidden = true;
+    $('.ex-price').hidden = true;
+    root.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => b.classList.toggle('active', b.dataset.side === side));
+    $('.ex-form').classList.toggle('selling', side === 'sell');
+    $('.ex-ordertype').innerHTML = `Market order <span>fills now, at the live price</span>`;
+    const max = maxQty(ctx);
+    if (qty() > max) setQty(max, ctx);
+    const buying = side === 'buy';
+    $('.ex-qty-unit').textContent = buying ? 'Cr' : 'sats';
+    $('.ex-qty span').textContent = buying ? 'Spend' : 'Sell';
+    const sats = satsOf(ctx.commander);
+    $('.ex-avail').innerHTML = buying
+      ? `Available <b>${fmt(ctx.commander.credits)} Cr</b> · takes no hold space`
+      : `In your wallet <b>${formatBtc(sats)}</b> ${formatSats(sats)}`;
+    const q = heardQuote();
+    const n = qty();
+    const fresh = isFresh(q);
+    const get = buying ? (q && n ? Math.floor((n * 1e8) / askPrice(q)) : 0) : q && n ? Math.floor(((n * bidPrice(q)) / 1e8) * 10) / 10 : 0;
+    $('.ex-est').innerHTML = `
+      <div><dt>${buying ? 'You buy at' : 'You sell at'}</dt><dd>${q ? `${fmt(buying ? askPrice(q) : bidPrice(q))} Cr` : '-'}</dd></div>
+      <div><dt>Spread</dt><dd>${(SPREAD * 100).toFixed(1)}%</dd></div>
+      <div><dt>${buying ? 'You get, about' : 'You receive, about'}</dt><dd><b>${get ? (buying ? formatSats(get) : `${fmt(get)} Cr`) : '-'}</b></dd></div>`;
+    let reason = '';
+    if (!q) reason = 'Waiting for the price';
+    else if (!fresh) reason = 'Trading paused: the network is quiet';
+    else if (buying && max === 0) reason = 'Not enough credits';
+    else if (!buying && sats === 0) reason = 'No Bitcoin in your wallet';
+    const submit = $<HTMLButtonElement>('.ex-submit');
+    submit.disabled = Boolean(reason) || n === 0 || submitting;
+    submit.textContent = submitting ? 'Checking the price…' : reason || (buying ? `Buy Bitcoin${n ? ` · ${n.toLocaleString()} Cr` : ''}` : `Sell ${n ? formatSats(n) : 'Bitcoin'}`);
+    $('.ex-msg').textContent = message;
+  }
+
   function renderForm(ctx: TradeContext) {
+    if (isBtc()) return renderBtcForm(ctx);
+    $('.ex-qty span').textContent = 'Quantity';
     const c = commodity();
     const u = unitLabel(c);
     if (remote() && orderType !== 'limit') {
@@ -555,6 +704,19 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   }
 
   // --- Your trades ----------------------------------------------------------------
+
+  function renderBtcTrades(ctx: TradeContext) {
+    const trades = (ctx.commander.btcTrades ?? []).slice().reverse();
+    $('.ex-mine h4').textContent = 'Your Bitcoin trades';
+    $('.ex-trades-list').innerHTML = trades.length
+      ? `<table><thead><tr><th>Time</th><th>Side</th><th class="num">Sats</th><th class="num">Price</th><th class="num">Total</th></tr></thead><tbody>${trades
+          .map(
+            (t) => `<tr><td>${clock(t.t)}</td><td class="${t.side === 'buy' ? 'up' : 'down'}">${t.side === 'buy' ? 'Buy' : 'Sell'}</td>
+            <td class="num">${t.sats.toLocaleString()}</td><td class="num">${fmt(t.price)}</td><td class="num">${fmt(t.total)}</td></tr>`,
+          )
+          .join('')}</tbody></table>`
+      : '<p class="ex-empty">No Bitcoin trades yet. They follow you to every station.</p>';
+  }
 
   function renderFeed(ctx: TradeContext) {
     const u = unitLabel(commodity());
@@ -739,9 +901,20 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       deps.traded({ ok: true, message: notes.join(' · ') });
       return;
     }
+    if (isBtc() && remote()) selected = 'food'; // one price everywhere: Bitcoin is traded where you are
     renderBackRoom(ctx);
     renderRoutes(ctx);
     renderPairs(ctx);
+    root.querySelector('.ex')!.classList.toggle('btc', isBtc());
+    $('.ex-feed').hidden = isBtc();
+    if (isBtc()) {
+      renderBtcHead(ctx);
+      renderBtcChart(ctx);
+      renderBtcBook();
+      renderForm(ctx);
+      renderBtcTrades(ctx);
+      return;
+    }
     renderHead(ctx);
     renderChart(ctx);
     renderBook(ctx);
@@ -749,6 +922,16 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     renderFeed(ctx);
     renderTrades(ctx);
   }
+
+  /** The price and candles, asked again as they age (each is kept a while, so this is cheap). */
+  let refreshing = false;
+  function refreshBtc() {
+    if (refreshing) return;
+    refreshing = true;
+    const [, count] = INTERVALS[interval];
+    void Promise.all([btcQuote(), btcCandles('5m', 60), btcCandles('1h', 48), isBtc() ? btcCandles(interval, count) : null]).finally(() => (refreshing = false));
+  }
+  let submitting = false;
 
   // --- Events ------------------------------------------------------------------------
 
@@ -805,6 +988,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       restOpen = !restOpen;
     } else if (el.dataset.id) {
       selected = el.dataset.id;
+      if (isBtc()) {
+        orderType = 'market';
+        refreshBtc();
+      }
       if (orderType === 'limit') queueMicrotask(() => suggestPrice(view()));
       message = '';
       qtyInput.value = '';
@@ -848,6 +1035,24 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       // Clicking a level fills the form: asks to buy, bids to sell, down to that level.
       side = el.dataset.kind === 'ask' ? 'buy' : 'sell';
       setQty(Number(el.dataset.total));
+    } else if (el.classList.contains('ex-submit') && isBtc()) {
+      // Fair fills: the trade goes through at the price as it is now, asked fresh.
+      const n = qty();
+      const buying = side === 'buy';
+      submitting = true;
+      renderBtcForm(view());
+      void btcQuote(0).then((q) => {
+        submitting = false;
+        const ctx = view();
+        const result = buying ? buyBitcoin(ctx.commander, q, n) : sellBitcoin(ctx.commander, q, n);
+        if (result.ok) {
+          qtyInput.value = '';
+          slider.value = '0';
+        }
+        message = result.message;
+        deps.traded(result);
+      });
+      return;
     } else if (el.classList.contains('ex-submit')) {
       const ctx = view();
       const n = qty();
@@ -897,9 +1102,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     /** Prices move while you watch: refresh every couple of seconds while open. */
     start() {
       if (timer) return;
+      refreshBtc();
       timer = window.setInterval(() => {
         // Everything, including orders that have filled and goods to collect.
-        if (root.offsetParent && !document.hidden) render();
+        if (root.offsetParent && !document.hidden) {
+          refreshBtc();
+          render();
+        }
       }, 2000);
     },
     stop() {

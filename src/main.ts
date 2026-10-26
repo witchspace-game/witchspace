@@ -120,6 +120,7 @@ import { readTrack, TrackRecorder, trackBlob, type Pose } from './game/track';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
 import { closeReplay, isReplayOpen, openReplay, renderFlightLog, setOutsideView } from './ui/flightLog';
 import { KillCam } from './ui/killCam';
+import { btcValue, formatBtc, formatSats, onSold, satsOf } from './economy/bitcoin';
 import './style.css';
 
 type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
@@ -608,6 +609,7 @@ function setDockTab(tab: DockTab) {
   dockTab = tab;
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
+  if (tab === 'station' && state === 'docked') renderDocked(); // credits, hold and wallet may have changed at the exchange
   $('#tab-log').hidden = tab !== 'log';
   if (tab === 'log') {
     refreshFlightLog();
@@ -1009,6 +1011,14 @@ const exchange = mountExchange($('#exchange'), {
 });
 const useExchange = () => cmdr().difficulty === 'modern' && !isRetro();
 
+// Short of credits for a fine, enough Bitcoin is sold at the market price to
+// pay it (economy/bitcoin.ts cover): say so, after the fine's own message. The
+// insurers' excess says so in the claim itself.
+onSold(({ sats, total, reason }) => {
+  if (reason === "the insurers' excess") return;
+  setTimeout(() => flash(`Short of credits: sold ${formatSats(sats)} of your Bitcoin at the market price (${total.toLocaleString()} Cr) to pay ${reason}`, 6), 5200);
+});
+
 function renderMarket(message = '') {
   const ex = useExchange();
   $('.panel.docked').classList.toggle('exchange', ex);
@@ -1017,7 +1027,8 @@ function renderMarket(message = '') {
   if (ex) {
     const ctx = tradeContext();
     const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    $('#dock-funds').innerHTML = `Credits <b>${fmt(ctx.commander.credits)} Cr</b> · Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>`;
+    const sats = satsOf(ctx.commander);
+    $('#dock-funds').innerHTML = `Credits <b>${fmt(ctx.commander.credits)} Cr</b>${sats ? ` · Bitcoin <b>${formatBtc(sats)}</b>` : ''} · Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>`;
   }
   $('#exchange').hidden = !ex;
   for (const id of ['#market-summary', '#market-table', '#market-message']) $(id).hidden = ex;
@@ -1141,6 +1152,7 @@ function renderDocked() {
     ['Commander', `${escapeHtml(c.name)} <button type="button" class="rename" title="Change your callsign">Rename</button>`],
     ['Rules', DIFFICULTIES[c.difficulty].name],
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
+    ...(satsOf(c) ? ([['Bitcoin', `${formatBtc(satsOf(c))} · ${btcValue(c).toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr · no hold space`]] as [string, string][]) : []),
     ['Ship', player.def.name],
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
@@ -5594,10 +5606,14 @@ function die() {
         if (claim.stake) message += ` and ${claim.stake.toLocaleString()} Cr to start again`;
         message += ' · settle with the law before you launch';
       } else {
-        message = `${claim.pod ? 'Picked up. ' : ''}Insurance paid out · excess ${claim.paid.toLocaleString()} Cr`;
-        if (claim.paid < claim.excess) message += ` (the rest written off)`;
+        message = `${claim.pod ? 'Picked up. ' : ''}Insurance paid out · excess ${(claim.paid + claim.owed).toLocaleString()} Cr`;
+        if (claim.sold) message += ` · paid by selling ${formatSats(claim.sold)} of your Bitcoin at the market price`;
+        if (claim.owed) message += ` · ${claim.owed.toLocaleString()} Cr owed: your kit is held here until you pay`;
+        else if (claim.paid < claim.excess) message += ` (the rest written off)`;
       }
     }
+    // Bitcoin isn't in the hold: the keys were in your head.
+    if (c.sats) setTimeout(() => flash('Your Bitcoin is safe: the keys were in your head', 4), 11_000);
     saveCommander(c);
     marshalsStandDown();
     enterDocked(true); // a new ship from the insurers
