@@ -5549,15 +5549,9 @@ function die() {
   const killer = lastHitBy && elapsed - lastHitBy.at < 5 ? lastHitBy.npc : null;
   track.event({ t: elapsed, kind: 'boom', id: trackId(player), p: player.obj.position.toArray() });
   track.event({ t: elapsed, kind: 'death', ...(killer ? { by: trackId(killer) } : {}) });
-  // The kill cam: the fight's track, kept with the black box once the explosion has played out.
-  void blackBox.then(async (m) => {
-    const data = m && classicRules() ? null : track.snapshot(trackScene());
-    if (m && data) {
-      m.track = await trackBlob(data);
-      await attachTrack(m.id, m.track).catch(() => undefined);
-    }
-    track.clear();
-  });
+  // The kill cam: the black box keeps the fight's track as every clip does
+  // (logMoment); once it's kept, the old fight is over.
+  void blackBox.then(() => track.clear());
   setView('front');
   setAutopilot(false);
   setState('dead');
@@ -6569,9 +6563,18 @@ async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 
     ...media,
     saved: false,
   };
-  if (await addMoment(m)) return m;
-  flash('Flight log full · delete or unkeep something in the flight log', 3);
-  return null;
+  if (!(await addMoment(m))) {
+    flash('Flight log full · delete or unkeep something in the flight log', 3);
+    return null;
+  }
+  // Every clip keeps its fight's track (the last minute, as numbers), so any
+  // moment can be watched from outside and filmed upright, not only a death.
+  const data = media.video && !classicRules() ? track.snapshot(trackScene()) : null;
+  if (data) {
+    m.track = await trackBlob(data);
+    await attachTrack(m.id, m.track).catch(() => undefined);
+  }
+  return m;
 }
 
 // Moments that land together share one clip: each clip is logged once, whoever asked for it.
@@ -6639,7 +6642,7 @@ function introduceRecorder(m: LoggedMoment) {
 function refreshFlightLog() {
   void renderFlightLog({
     available: recorder.available && !classicRules(),
-    unavailable: classicRules() ? 'Classic rules, as in 1984: no flight recorder.' : "This browser can't record video, so there's no flight recorder here.",
+    unavailable: classicRules() ? 'Classic rules, as in 1984: no flight recorder.' : `This browser can't record video, so there's no flight recorder here${recorder.why ? ` (${recorder.why})` : ''}.`,
     enabled: recorderOn(),
     intro: !recorderIntroduced(),
     onToggle: (on = !recorderOn()) => {
@@ -6659,7 +6662,7 @@ void recorder.ready.then(() => state === 'docked' && refreshFlightLog());
 function keepByHand() {
   if (state !== 'flying') return;
   if (classicRules()) return flash('Classic rules: no flight recorder', 2);
-  if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the flight log' : "This browser can't record video", 2.5);
+  if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the flight log' : `This browser can't record video${recorder.why ? ` · ${recorder.why}` : ''}`, 4);
   flash('Flight recorder · last 30 seconds kept', 2);
   sfx.shutter();
   void keepMoment({ kind: 'kept', text: 'Kept by hand' }, 30, 0);
@@ -6704,7 +6707,7 @@ setOutsideView(async (m) => {
   const data = m.track ? await readTrack(m.track).catch(() => null) : null;
   if (!data) return flash("This reconstruction is from an older version of the game and can't be rebuilt", 3);
   document.querySelector<HTMLVideoElement>('#replay video')?.pause();
-  killCam.open(data);
+  killCam.open(data, { seconds: m.seconds, title: m.title });
 });
 
 // --- Main loop --------------------------------------------------------------

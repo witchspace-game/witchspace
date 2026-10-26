@@ -223,3 +223,19 @@ export function killerOf(d: TrackData): number | undefined {
   const last = hits[hits.length - 1];
   return last && last.kind === 'beam' ? last.from : undefined;
 }
+
+/**
+ * Who a moment was about, when it wasn't a death: the last ship you hit in
+ * the window, or else the last ship that went up in it. The kill cam follows it.
+ */
+export function focusOf(d: TrackData, start: number, end: number): number | undefined {
+  const you = d.scene.you;
+  const inWindow = d.events.filter((e) => e.t >= start && e.t <= end);
+  const hits = inWindow.filter((e) => e.kind === 'beam' && e.from === you && e.hit !== undefined && e.hit !== you);
+  const hit = hits[hits.length - 1];
+  if (hit && hit.kind === 'beam') return hit.hit;
+  const booms = inWindow.filter((e) => e.kind === 'boom' && e.id !== you);
+  const boom = booms[booms.length - 1];
+  return boom && boom.kind === 'boom' ? boom.id : undefined;
+}
+

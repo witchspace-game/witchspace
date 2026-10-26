@@ -5,16 +5,18 @@ import { Explosion } from '../render/explosion';
 import { atSize, makeSpace, render, type Space } from '../render/renderer';
 import { buildShip, disposeShip, showUnidentified, type ShipModel } from '../render/shipModel';
 import { Beams } from '../game/weapons';
-import { bracket, killerOf, type TrackData } from '../game/track';
+import { bracket, focusOf, killerOf, type TrackData } from '../game/track';
 import { encodeVideo } from './encodeVideo';
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
+import { fontFamily, houseCard, loadIcon, stamp, still } from './videoCards';
 
-// The kill cam (docs/design/kill-cam.md, stage 2): your death rebuilt from the
-// track, in the game's own renderer, so you can watch it from outside. Behind
-// the ship that got you, behind you, or orbiting the fight; paused, scrubbed or
-// slowed. Always labelled a reconstruction: the video is what you saw, this is
-// the assessors' account of what happened.
+// The kill cam (docs/design/kill-cam.md, stage 2): a moment rebuilt from its
+// track, in the game's own renderer, so you can watch it from outside. A death,
+// behind the ship that got you; any other clip, behind the ship you were
+// fighting; or behind you, or orbiting the fight; paused, scrubbed or slowed,
+// and saved upright for Shorts or wide. Always labelled a reconstruction: the
+// video is what you saw, this is the assessors' account of what happened.
 
 type View = 'killer' | 'you' | 'orbit';
 export type Shape = 'wide' | 'upright';
@@ -51,7 +53,12 @@ export class KillCam {
   private start = 0;
   private end = 0;
   private deathAt = 0;
+  /** The other ship: whoever got you (a death), or the ship you were fighting. */
   private killer: number | undefined;
+  /** A death, or any other moment. */
+  private death = false;
+  /** The moment's own title, for a clip that isn't a death. */
+  private named: string | undefined;
   private playing = true;
   private speed = 1;
   private view: View = 'killer';
@@ -75,17 +82,26 @@ export class KillCam {
     document.body.append(this.el);
   }
 
-  open(data: TrackData, onClose?: () => void) {
+  /** Open a track: a death's, or any clip's (`seconds` long, ending where the track ends, titled `title`). */
+  open(data: TrackData, opts: { seconds?: number; title?: string; onClose?: () => void } = {}) {
     this.close(false);
     this.data = data;
-    this.onClose = onClose ?? null;
+    this.onClose = opts.onClose ?? null;
     const death = data.events.find((e) => e.kind === 'death');
     const last = data.samples[data.samples.length - 1]?.t ?? 0;
-    this.deathAt = death ? death.t : last;
-    this.end = Math.min(last, this.deathAt + AFTER_DEATH);
-    this.start = Math.max(0, this.deathAt - BEFORE_DEATH);
+    this.death = Boolean(death);
+    this.named = opts.title;
+    if (death) {
+      this.deathAt = death.t;
+      this.end = Math.min(last, this.deathAt + AFTER_DEATH);
+      this.start = Math.max(0, this.deathAt - BEFORE_DEATH);
+      this.killer = killerOf(data);
+    } else {
+      this.end = this.deathAt = last;
+      this.start = Math.max(0, last - (opts.seconds ?? BEFORE_DEATH));
+      this.killer = focusOf(data, this.start, this.end);
+    }
     this.t = this.start;
-    this.killer = killerOf(data);
     this.view = this.killer !== undefined ? 'killer' : 'orbit';
     this.playing = true;
     this.speed = 1;
@@ -303,9 +319,9 @@ export class KillCam {
       }
       const ship = d.ships.find((s) => s.id === id)!;
       const text = this.unknown.get(id) ? 'Unidentified contact' : id === d.scene.you ? `${ship.label} (you)` : ship.label;
-      const killing = id === this.killer ? ' · fired the killing shot' : '';
+      const killing = this.death && id === this.killer ? ' · fired the killing shot' : '';
       el.textContent = text + killing;
-      el.classList.toggle('killer', id === this.killer);
+      el.classList.toggle('killer', this.death && id === this.killer);
       el.hidden = false;
       el.style.transform = `translate(${((v.x + 1) / 2) * innerWidth}px, ${((1 - v.y) / 2) * innerHeight}px) translate(-50%, -160%)`;
     }
@@ -317,7 +333,7 @@ export class KillCam {
     const time = this.el.querySelector<HTMLElement>('.killcam-time');
     if (time) {
       const left = this.deathAt - this.t;
-      time.textContent = left > 0 ? `${left.toFixed(1)} s before` : 'Ship destroyed';
+      time.textContent = !this.death ? `${(this.t - this.start).toFixed(1)} s` : left > 0 ? `${left.toFixed(1)} s before` : 'Ship destroyed';
     }
     const play = this.el.querySelector<HTMLButtonElement>('[data-act="play"]');
     if (play) play.textContent = this.playing ? 'Pause' : this.t >= this.end ? 'Again' : 'Play';
@@ -328,10 +344,14 @@ export class KillCam {
     const killerName = this.killer !== undefined ? d.ships.find((s) => s.id === this.killer)?.label.split(' · ')[0] : undefined;
     this.el.insertAdjacentHTML(
       'afterbegin',
-      `<div class="killcam-head"><strong>Reconstruction</strong><span>Our assessors have reconstructed the incident at ${escapeHtml(d.scene.system)} from your flight recorder${killerName ? `. The killing shot: the ${escapeHtml(killerName)}` : ''}.</span></div>
+      `<div class="killcam-head"><strong>Reconstruction</strong><span>${
+        this.death
+          ? `Our assessors have reconstructed the incident at ${escapeHtml(d.scene.system)} from your flight recorder${killerName ? `. The killing shot: the ${escapeHtml(killerName)}` : ''}.`
+          : `Rebuilt from your flight recorder at ${escapeHtml(d.scene.system)}${killerName ? `, following the ${escapeHtml(killerName)}` : ''}.`
+      }</span></div>
       <div class="killcam-bar">
         <div class="killcam-views" role="group" aria-label="Camera">
-          <button type="button" data-view="killer"${this.killer === undefined ? ' disabled' : ''}>Behind the killer</button>
+          <button type="button" data-view="killer"${this.killer === undefined ? ' disabled' : ''}>${this.death ? 'Behind the killer' : 'Behind the target'}</button>
           <button type="button" data-view="you">Behind you</button>
           <button type="button" data-view="orbit">Orbit</button>
           <span class="killcam-save">
@@ -469,6 +489,7 @@ export class KillCam {
 
   /** "CMDR Kestrel: shot down by a Mamba at Riedquat". */
   private title(d: TrackData): string {
+    if (!this.death && this.named) return this.named;
     const you = d.ships.find((s) => s.id === d.scene.you)?.label ?? 'A commander';
     const killer = this.killer !== undefined ? d.ships.find((s) => s.id === this.killer) : undefined;
     const who = killer ? (killer.def === 'falcon' ? 'the Falcon' : `a ${killer.label.split(' · ')[0]}`) : null;
@@ -488,13 +509,14 @@ export class KillCam {
       v.copy(m.root.position).project(this.camera);
       if (v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) continue;
       const ship = d.ships.find((s) => s.id === id)!;
-      const text = (this.unknown.get(id) ? 'Unidentified contact' : id === d.scene.you ? `${ship.label} (you)` : ship.label) + (id === this.killer ? ' · fired the killing shot' : '');
+      const killing = this.death && id === this.killer;
+      const text = (this.unknown.get(id) ? 'Unidentified contact' : id === d.scene.you ? `${ship.label} (you)` : ship.label) + (killing ? ' · fired the killing shot' : '');
       const x = ((v.x + 1) / 2) * w;
       const y = ((1 - v.y) / 2) * h - size * 1.6;
       const tw = g.measureText(text).width;
       g.fillStyle = 'rgba(0, 6, 4, 0.6)';
       g.fillRect(x - tw / 2 - size * 0.4, y - size * 1.25, tw + size * 0.8, size * 1.5);
-      g.fillStyle = id === this.killer ? '#ff8da1' : '#d8e2f0';
+      g.fillStyle = killing ? '#ff8da1' : '#d8e2f0';
       g.fillText(text, x, y);
     }
   }
@@ -509,64 +531,6 @@ export class KillCam {
     } else return false;
     return true;
   }
-}
-
-const fontFamily = () => getComputedStyle(document.body).fontFamily || 'sans-serif';
-
-/** Always labelled: RECONSTRUCTION and whose, top left; the way back to the game, bottom right. */
-function stamp(g: OffscreenCanvasRenderingContext2D, w: number, h: number, title: string) {
-  const s = Math.min(w, h) / 36;
-  const pad = s * 1.2;
-  g.textAlign = 'left';
-  g.textBaseline = 'top';
-  g.fillStyle = '#ffd28a';
-  g.font = `700 ${s}px ${fontFamily()}`;
-  g.fillText('R E C O N S T R U C T I O N', pad, pad);
-  g.fillStyle = 'rgba(216, 226, 240, 0.85)';
-  g.font = `400 ${s * 0.85}px ${fontFamily()}`;
-  g.fillText(title, pad, pad + s * 1.4, w - pad * 2);
-  g.textAlign = 'right';
-  g.textBaseline = 'bottom';
-  g.fillStyle = 'rgba(61, 255, 176, 0.9)';
-  g.font = `600 ${s * 0.9}px ${fontFamily()}`;
-  g.fillText('witchspace.org.uk', w - pad, h - pad);
-}
-
-/** The house card the video ends on: the mark, the name, and where to play. */
-function houseCard(g: OffscreenCanvasRenderingContext2D, w: number, h: number, title: string, icon: ImageBitmap | null) {
-  g.fillStyle = '#000';
-  g.fillRect(0, 0, w, h);
-  const s = Math.min(w, h) / 20;
-  const cy = h / 2;
-  if (icon) g.drawImage(icon, w / 2 - s * 1.6, cy - s * 5, s * 3.2, s * 3.2);
-  g.textAlign = 'center';
-  g.textBaseline = 'middle';
-  g.fillStyle = '#e8fff6';
-  g.font = `700 ${s * 1.3}px ${fontFamily()}`;
-  g.fillText('W I T C H S P A C E', w / 2, cy);
-  g.fillStyle = 'rgba(216, 226, 240, 0.8)';
-  g.font = `400 ${s * 0.62}px ${fontFamily()}`;
-  g.fillText(title, w / 2, cy + s * 1.4, w * 0.9);
-  g.fillStyle = '#3dffb0';
-  g.font = `600 ${s * 0.8}px ${fontFamily()}`;
-  g.fillText('witchspace.org.uk/play', w / 2, cy + s * 2.9);
-  g.fillStyle = 'rgba(216, 226, 240, 0.6)';
-  g.font = `400 ${s * 0.55}px ${fontFamily()}`;
-  g.fillText('Free · open source · plays in your browser', w / 2, cy + s * 4);
-}
-
-async function loadIcon(): Promise<ImageBitmap | null> {
-  try {
-    return await createImageBitmap(await (await fetch('/icons/icon-512.png')).blob());
-  } catch {
-    return null;
-  }
-}
-
-async function still(g: OffscreenCanvasRenderingContext2D, w: number, h: number): Promise<Blob | null> {
-  const c = new OffscreenCanvas(480, Math.round((480 * h) / w));
-  c.getContext('2d')!.drawImage(g.canvas, 0, 0, c.width, c.height);
-  return c.convertToBlob({ type: 'image/jpeg', quality: 0.8 }).catch(() => null);
 }
 
 /** Share a saved reconstruction: the share sheet, with its card (ui/shareSheet.ts). */
