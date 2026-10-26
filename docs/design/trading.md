@@ -6,7 +6,8 @@ summary: Simple to start, deep to master: a trader's screen round the charts, pr
 card: cobra-mk3
 stages:
   - The trader's screen, prices you know, trading from the station | built
-  - The saloon: tips, insiders and the inspectors | proposed
+  - The saloon: regulars and tips | built
+  - The saloon: insiders and the inspectors | proposed
   - The news cycle: overshoot and aftermath | proposed
   - Limit orders on the trader's screen; Ma Reyes's lessons; a Merchant rank | proposed
   - Working the market: cornering, planted rumours | proposed
@@ -112,6 +113,8 @@ Every station has somewhere traders rest: **the saloon** (a bar on a Coriolis; a
 **Telling them apart** is the skill: who's telling you, why, and how they feel about it; whether it fits what you know; a trader's reputation in the saloon builds as their tips come true or don't. Nothing is labelled true.
 
 **Tips are legal.** Overhearing a laid-off miner is gossip, not a crime, however true it turns out: the only risk is believing the wrong person.
+
+*(Stage 1 built, 26 October 2026, `src/game/saloon.ts`: a Saloon tab beside News, named for the station's people (a saloon, a club, a tea room or a shebeen); two to four regulars, a dozen per station coming and going every two hours, each with a name, a trade, a mood you read from how they're behaving, and a drink price. Tips come from the galaxy's own events within 15 LY: glad regulars tell stale news, sad and mad ones early news (true, before it reaches the board), and about one regular in five is a liar who plants it. A drink buys the talk; the sad and the liars want paying properly (40–160 Cr) before they name the system. Once the news, or the silence, would have reached you, a regular's card shows how many of their tips came true. A door at the back leads to the back room. Insiders, the inspectors and Ma Reyes are still to come.)*
 
 **Insiders are another matter.** Some people in the saloon have information that isn't theirs to sell: a station clerk who sees the price reports before they're posted, a company contact who knows a shipping schedule, a port official who knows a crackdown is coming. Paying one of them is **insider trading**: more reliable than bar talk, dearer **(to tune: 200–1,000 Cr)**, and illegal in lawful systems (corporate state, democracy, confederacy). Big trades on what they told you, made before it was public, can be noticed afterwards: the Co-operative's market inspectors may fine you and give you a record (an Offender, as for smuggling) **(to tune: chance by size and government)**, and the insider loses their job, which they'll remember. Anarchies and feudal worlds don't care. The risk is the price of the edge.
 
