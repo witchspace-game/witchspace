@@ -1337,6 +1337,11 @@ body.retro .contracts li small, body.retro .risk { font-size: 8px; }
 .contracts li.message.unread { border-left-color: var(--amber); background: rgba(255, 179, 71, 0.08); }
 .contracts li.message.receipt { padding-top: 5px; padding-bottom: 5px; }
 .contracts li.message-earlier { padding: 0; border-left: 0; background: none; }
+.contracts li.message { padding-right: 40px; }
+.message-archive { position: absolute; top: 4px; right: 4px; width: 30px; height: 30px; min-height: 0; padding: 0; border: 0; background: none; color: var(--dim); font-size: 18px; line-height: 1; cursor: pointer; }
+.message-archive:hover { color: var(--fg); }
+.contracts li.message-earlier { position: relative; }
+.message-archive-all { position: absolute; top: 3px; right: 0; z-index: 1; min-height: 0; padding: 2px 10px; font-size: 12px; }
 .message-earlier summary { padding: 6px 2px; color: var(--dim); font-size: 13px; cursor: pointer; }
 .message-earlier .contracts { margin-top: 4px; }
 .files { display: flex; flex-wrap: wrap; gap: 6px; }
