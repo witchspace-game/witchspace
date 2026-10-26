@@ -52,6 +52,8 @@ P, or the camera button on touch screens (beside the drawer tab, always to hand)
 
 Sharing works everywhere a commander can see a photo or a kept moment: the camera button, the death replay, the flight log, the station board.
 
+*(Built, 26 October 2026: **one share sheet** (`src/ui/shareSheet.ts`) for the flight log, the death replay and the kill cam. The card first, with the clip playing and its title; then **Share video…** on a phone, which hands the file itself to the phone's share sheet, Save Video included, or **Save video** on a desktop; then X, Bluesky, Facebook, WhatsApp, Reddit and copy link, which share the game with the clip's title until clips have pages of their own. The file is made before the sheet opens, so the tap opens the phone's sheet at once, and dismissing it never falls back to downloading: that fallback was what opened the Files menu on iPhones (Mark's report). On a phone held sideways the card and the buttons sit side by side.)*
+
 - **One tap to your socials.** On phones, the share sheet (WhatsApp, Instagram, TikTok, Messages...) with the picture or clip itself; on desktop, the site's share buttons (Facebook, X, WhatsApp) and a link to copy.
 - **Branded, always.** Photos carry the WITCHSPACE mark; clips end on a short card: the wordmark, *Trade. Fight. Explore. Build.*, witchspace.org.uk.
 - **A link that sells the game.** Shared from an account, a moment gets its own page on the site (as press kit items do): the clip playing, your callsign, the system, what happened ("Jameson vs a pirate pack at Riedquat"), a Play free button, and a branded preview card so it unfurls properly on every platform.

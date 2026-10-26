@@ -39,13 +39,14 @@ export function takePhoto(canvas: HTMLCanvasElement, retro: boolean): Promise<Bl
 export async function savePhoto(blob: Blob): Promise<string> {
   const name = `witchspace-${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '').replace(/^(\d{8})/, '$1-')}.${blob.type === 'image/png' ? 'png' : 'jpg'}`;
   const file = new File([blob], name, { type: blob.type });
-  // Phones: hand it to the share sheet. Dismissing it falls back to saving.
+  // Phones: hand it to the share sheet. Dismissing it is a choice, not a cue
+  // to download (that's what opened the Files menu on iPhones).
   if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
     try {
-      await navigator.share({ files: [file], title: 'Witchspace', text: 'witchspace.org.uk' });
+      await navigator.share({ files: [file], title: 'Witchspace' });
       return 'Photo shared';
     } catch {
-      // Dismissed, or not allowed: save it instead.
+      return 'Photo not shared';
     }
   }
   const a = document.createElement('a');
