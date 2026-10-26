@@ -6645,6 +6645,7 @@ function refreshFlightLog() {
     unavailable: classicRules() ? 'Classic rules, as in 1984: no flight recorder.' : `This browser can't record video, so there's no flight recorder here${recorder.why ? ` (${recorder.why})` : ''}.`,
     enabled: recorderOn(),
     intro: !recorderIntroduced(),
+    quality: { hd: recorder.quality === 'hd', canRetry: !recorder.hdUnsupported, retry: () => recorder.tryHd() },
     onToggle: (on = !recorderOn()) => {
       try {
         localStorage.setItem(RECORDER_KEY, on ? 'on' : 'off');

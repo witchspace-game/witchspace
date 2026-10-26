@@ -39,7 +39,7 @@ A picture paints a thousand words. Seeing something amazing in space, catching i
 - **Never ask the player to press record.** The recorder keeps the last minute, always; you decide afterwards what was worth keeping.
 - **Footage is worth something in the game,** not just outside it: evidence for the law, news for the newsroom, proof for explorers.
 - **Yours until you say otherwise.** Everything stays on your device. Nothing is uploaded unless you post it, deliberately, signed in.
-- **Light on the phone.** 720p on a desktop and 480p at 24 fps on a phone (phones were getting warm: Mark, 25 October 2026), only while flying and only with something about, a setting to switch it off, a log with a space limit, and nothing left lying around: what you don't keep clears after a week.
+- **Light on the phone, sharp where it can be.** Every device starts in HD (720p, 30 fps) and steps down to 480p at 24 fps by itself if the game's frame rate sags while recording, remembering it; the flight log says which, and offers to try HD again (adaptive: Mark, 26 October 2026, after phones had been fixed at 480p because they were getting warm), only while flying and only with something about, a setting to switch it off, a log with a space limit, and nothing left lying around: what you don't keep clears after a week.
 - **Told, not hidden.** The first time it keeps something, the game says so, and the flight log asks once whether to keep it on.
 - **Never in the way.** Nothing pops up mid-flight: photos and clips go to the log quietly, to share once you're docked.
 - **The picture is the game's own.** Only the 3D view is recorded: no HUD, no other apps, nothing personal.
@@ -67,7 +67,7 @@ Sharing works everywhere a commander can see a photo or a kept moment: the camer
 
 *And it rests (Mark, 25 October 2026): in open space with nothing about, it stops recording, saving battery, and wakes the moment anything is near: a ship or missile within scanner range, the station, a planet, a rift, or a Legend anywhere in the system (the Falcon runs dark, so "near" is what the game knows is there, not what the scanner shows). It carries on 8 seconds after the last thing goes, so clips finish, and the minute in memory is the last minute worth having. `src/game/recorderWatch.ts`.*
 
-**The recorder.** While flying, the view is encoded at 720p, 30 fps (480p, 24 fps on a phone), into a rolling buffer of the last minute in memory (a keyframe every second, so any second can start a clip). Nothing is written until something is kept. The encoder is WebCodecs, already used to make the trailer (`tools/trailer.ts`), with MP4 output; it needs Chrome, Edge or Safari 16.4 and later. Where it isn't available, the recorder quietly isn't there and photos still work.
+**The recorder.** While flying, the view is encoded at 720p, 30 fps (480p, 24 fps on a device that can't keep up), into a rolling buffer of the last minute in memory (a keyframe every second, so any second can start a clip). Nothing is written until something is kept. The encoder is WebCodecs, already used to make the trailer (`tools/trailer.ts`), with MP4 output; it needs Chrome, Edge or Safari 16.4 and later. Where it isn't available, the recorder quietly isn't there and photos still work.
 
 **Moments.** The recorder keeps the buffer, by itself, when something worth keeping happens:
 

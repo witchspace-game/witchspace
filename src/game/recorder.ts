@@ -1,6 +1,7 @@
 // The flight recorder (docs/design/flight-recorder.md, stage 2): every ship's
-// black box. While flying, the view is encoded (H.264, 720p, 30 fps, in the
-// browser with WebCodecs; 480p at 24 fps on phones) into a rolling buffer of the last minute, held in
+// black box. While flying, the view is encoded (H.264, in the browser with
+// WebCodecs: HD, 720p at 30 fps, stepping down to 480p at 24 fps on a device
+// that can't keep up) into a rolling buffer of the last minute, held in
 // memory (a few MB). Nothing is written until a moment happens (a kill, a Legend, the
 // Marshals, a discovery, your death, or you keep it yourself); then the
 // seconds around it become an MP4 for the flight log. Where WebCodecs or
@@ -9,16 +10,32 @@
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 
 const SECONDS = 60; // what the buffer holds: the longest clip (a whole fight)
-// On a phone, copying and encoding the view is real work, and phones get warm:
-// 480p at 24 fps is about 60% less of it, and still sharp on a phone's screen.
-const PHONE = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
-const FPS = PHONE ? 24 : 30;
-const HEIGHT = PHONE ? 480 : 720;
-const BITRATE = PHONE ? 700_000 : 1_200_000; // glowing lines on black: half of what a busy scene needs
 const CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42e028', 'avc1.42001f'];
+
+// Adaptive quality (Mark): every device starts in HD. Copying and encoding the
+// view is real work, so if the game's frame rate sags while recording (under
+// SLOW_FPS for STRUGGLE seconds), the recorder steps down to SD: about 60% less
+// work, and still sharp on a phone's screen. The device remembers, and the
+// flight log offers to try HD again.
+export type Quality = 'hd' | 'sd';
+const QUALITY: Record<Quality, { height: number; fps: number; bitrate: number }> = {
+  hd: { height: 720, fps: 30, bitrate: 1_200_000 }, // glowing lines on black: half of what a busy scene needs
+  sd: { height: 480, fps: 24, bitrate: 700_000 },
+};
+const SLOW_FPS = 40;
+const STRUGGLE = 4; // seconds
+const WARM_UP = 5; // seconds of recording before judging (the first frames are always slow)
+const QUALITY_KEY = 'witchspace-recorder-quality';
 // H.264 needs even dimensions: 480 × 16/9 is 853.3, and Safari refuses 853 (so
 // iPhones said they couldn't record). Ask for the size we'll really encode.
-const PROBE_WIDTH = Math.round((HEIGHT * 16) / 9) & ~1;
+const probeWidth = (q: Quality) => Math.round((QUALITY[q].height * 16) / 9) & ~1;
+const remembered = (): Quality => {
+  try {
+    return localStorage.getItem(QUALITY_KEY) === 'sd' ? 'sd' : 'hd';
+  } catch {
+    return 'hd';
+  }
+};
 
 interface Chunk {
   chunk: EncodedVideoChunk;
@@ -58,6 +75,13 @@ export class FlightRecorder<M> {
   private codec: string | null = null;
   /** Why it can't record, if it can't: for the message the player sees. */
   why = '';
+  /** HD or SD, as this device manages (see QUALITY). */
+  quality: Quality = remembered();
+  /** HD isn't possible here at all (no encoder for it): SD it is, and no offer to try HD again. */
+  hdUnsupported = false;
+  private smooth = 1 / 60; // the game's frame time, smoothed
+  private recorded = 0; // seconds recorded at this quality
+  private slowFor = 0;
   /** Whether this browser can record at all (decided once, asynchronously). */
   ready: Promise<boolean>;
 
@@ -68,19 +92,53 @@ export class FlightRecorder<M> {
   private async probe(): Promise<boolean> {
     if (typeof VideoEncoder === 'undefined') return (this.why = 'no video encoder in this browser (Safari 16.4 or later has one)'), false;
     if (typeof OffscreenCanvas === 'undefined') return (this.why = 'no OffscreenCanvas in this browser'), false;
-    for (const codec of CODECS) {
-      try {
-        const r = await VideoEncoder.isConfigSupported({ codec, width: PROBE_WIDTH, height: HEIGHT, bitrate: BITRATE, framerate: FPS });
-        if (r.supported) {
-          this.codec = codec;
-          return true;
+    // HD if this browser can encode it, else SD.
+    for (const q of ['hd', 'sd'] as Quality[]) {
+      const { height, fps, bitrate } = QUALITY[q];
+      for (const codec of CODECS) {
+        try {
+          const r = await VideoEncoder.isConfigSupported({ codec, width: probeWidth(q), height, bitrate, framerate: fps });
+          if (r.supported) {
+            this.codec = codec;
+            if (q === 'sd') {
+              this.quality = 'sd';
+              this.hdUnsupported = true;
+            }
+            return true;
+          }
+        } catch {
+          /* try the next */
         }
-      } catch {
-        /* try the next */
       }
     }
-    this.why = `no H.264 encoder for ${PROBE_WIDTH}×${HEIGHT}`;
+    this.why = `no H.264 encoder for ${probeWidth('sd')}×${QUALITY.sd.height}`;
     return false;
+  }
+
+  /** Try HD again (from the flight log), after it stepped down. */
+  tryHd() {
+    if (this.hdUnsupported) return;
+    this.setQuality('hd');
+  }
+
+  private setQuality(q: Quality) {
+    this.quality = q;
+    this.recorded = 0;
+    this.slowFor = 0;
+    try {
+      localStorage.setItem(QUALITY_KEY, q);
+    } catch {
+      /* storage blocked: decided again next time */
+    }
+  }
+
+  /** Watch the game's frame rate while recording in HD; if it sags, step down to SD (between clips, never in one). */
+  private judge(dt: number) {
+    this.smooth += (Math.min(dt, 0.25) - this.smooth) * 0.05;
+    this.recorded += dt;
+    if (this.quality !== 'hd' || this.recorded < WARM_UP) return;
+    this.slowFor = this.smooth > 1 / SLOW_FPS ? this.slowFor + dt : 0;
+    if (this.slowFor >= STRUGGLE && !this.pending.length) this.setQuality('sd');
   }
 
   /** The recorder's clock, in seconds of recorded flight: what keep()'s `before` counts back from. */
@@ -104,6 +162,8 @@ export class FlightRecorder<M> {
       return;
     }
     this.mediaTime += Math.min(dt, 0.1);
+    this.judge(dt);
+    const { height: HEIGHT, fps: FPS } = QUALITY[this.quality];
     this.sinceFrame += dt;
     if (this.sinceFrame < 1 / FPS - 0.002) return;
     this.sinceFrame = 0;
@@ -127,7 +187,8 @@ export class FlightRecorder<M> {
     this.chunks = [];
     this.frames = 0;
     this.frame = new OffscreenCanvas(width, height);
-    this.config = { codec: this.codec!, width, height, bitrate: BITRATE, framerate: FPS, latencyMode: 'realtime', hardwareAcceleration: 'prefer-hardware', avc: { format: 'avc' } };
+    const { fps, bitrate } = QUALITY[this.quality];
+    this.config = { codec: this.codec!, width, height, bitrate, framerate: fps, latencyMode: 'realtime', hardwareAcceleration: 'prefer-hardware', avc: { format: 'avc' } };
     try {
       this.encoder = new VideoEncoder({
         output: (chunk, meta) => {
@@ -213,9 +274,10 @@ export class FlightRecorder<M> {
     if (first < 0) first = this.chunks.findIndex((c) => c.key);
     if (first < 0) return null;
     const take = this.chunks.slice(first).filter((c) => c.t <= p.end + 0.001);
-    if (take.length < FPS / 2) return null; // under half a second: nothing worth keeping
+    const fps = this.config.framerate ?? 30;
+    if (take.length < fps / 2) return null; // under half a second: nothing worth keeping
     const target = new ArrayBufferTarget();
-    const muxer = new Muxer({ target, video: { codec: 'avc', width: this.config.width, height: this.config.height, frameRate: FPS }, fastStart: 'in-memory', firstTimestampBehavior: 'offset' });
+    const muxer = new Muxer({ target, video: { codec: 'avc', width: this.config.width, height: this.config.height, frameRate: fps }, fastStart: 'in-memory', firstTimestampBehavior: 'offset' });
     take.forEach((c, i) => muxer.addVideoChunk(c.chunk, i === 0 ? { decoderConfig: this.decoderConfig! } : undefined));
     muxer.finalize();
     return { video: new Blob([target.buffer], { type: 'video/mp4' }), poster: await p.poster, seconds: take[take.length - 1].t - take[0].t, meta: p.meta };
