@@ -22,7 +22,7 @@ import { BROKER_FEE, cancelOrder, collect, describeFill, placeOrder, sendOrder, 
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
 import { bestKnownElsewhere, bestOutlets, bestRoutes, checkSentOrders, knownAt, marketsForOrders } from '../economy/routes';
 import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
-import { askPrice, bidPrice, btcValue, buyBitcoin, cancelBtcOrder, formatBtc, formatSats, isFresh, ordersOf, placeBtcOrder, satsOf, sellBitcoin, SPREAD } from '../economy/bitcoin';
+import { btcValue, buyAt, buyBitcoin, cancelBtcOrder, formatBtc, formatSats, isFresh, ordersOf, placeBtcOrder, satsOf, sellAt, sellBitcoin, FEE } from '../economy/bitcoin';
 import { btcCandles, btcQuote, checkBtcOrders, heardCandles, heardQuote } from '../net/bitcoin';
 
 // The station market as a trading exchange, in the style of today's crypto
@@ -64,6 +64,7 @@ const ROW = 19; // px: one order-book level
 
 const fmt = (n: number, dp = 1) => n.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
 const pct = (n: number) => `${n >= 0 ? '+' : ''}${(n * 100).toFixed(2)}%`;
+const pctFee = (n: number) => `${+(n * 100).toFixed(3)}%`;
 const unitLabel = (c: Commodity) => (c.unit === 't' ? 't' : c.unit);
 const clock = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 /** How old a price is, briefly: "12 min", "1 h 20". */
@@ -396,8 +397,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div><dt>24h change</dt><dd class="${change >= 0 ? 'up' : 'down'}">${day ? pct(change) : '-'}</dd></div>
         <div><dt>24h high</dt><dd>${day ? fmt(Math.max(...day.map((k) => k.h))) : '-'}</dd></div>
         <div><dt>24h low</dt><dd>${day ? fmt(Math.min(...day.map((k) => k.l))) : '-'}</dd></div>
-        <div><dt>You buy at</dt><dd>${q ? fmt(askPrice(q)) : '-'}</dd></div>
-        <div><dt>You sell at</dt><dd>${q ? fmt(bidPrice(q)) : '-'}</dd></div>
+        <div><dt>Broker's fee</dt><dd>${FEE.limit === FEE.market ? `${pctFee(FEE.limit)} a trade` : `${pctFee(FEE.limit)} limit · ${pctFee(FEE.market)} market`}</dd></div>
         <div><dt>In your wallet</dt><dd>${formatBtc(sats)}${sats ? ` <small>${formatSats(sats)} · ${fmt(btcValue(ctx.commander, q))} Cr</small>` : ''}</dd></div>
         <div><dt>Hold space</dt><dd>None</dd></div>
       </dl>
@@ -552,9 +552,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const q = heardQuote();
     $('.ex-book h4').textContent = 'The broker';
     $('.ex-book-head').hidden = true;
-    $('.ex-asks').innerHTML = `<div class="ex-quote ask"><span>You buy at</span><b class="num">${q ? fmt(askPrice(q)) : '-'}</b></div>`;
-    $('.ex-mid').innerHTML = `<b>${q ? fmt(q.price) : '…'}</b><span>Live · ${(SPREAD * 100).toFixed(1)}% each way</span>`;
-    $('.ex-bids').innerHTML = `<div class="ex-quote bid"><span>You sell at</span><b class="num">${q ? fmt(bidPrice(q)) : '-'}</b></div>
+    $('.ex-asks').innerHTML = `<div class="ex-quote"><span>Limit order fee</span><b class="num">${pctFee(FEE.limit)}</b></div>`;
+    $('.ex-mid').innerHTML = `<b>${q ? fmt(q.price) : '…'}</b><span>Live · you trade at this price</span>`;
+    $('.ex-bids').innerHTML = `<div class="ex-quote"><span>Market order fee</span><b class="num">${pctFee(FEE.market)}</b></div>
       <p class="ex-note">The station is a broker for a market far bigger than any station: your trades don't move the price.</p>`;
   }
 
@@ -615,20 +615,22 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const q = heardQuote();
     const n = qty();
     const fresh = isFresh(q);
-    const get = buying ? (q && n ? Math.floor((n * 1e8) / askPrice(q)) : 0) : q && n ? Math.floor(((n * bidPrice(q)) / 1e8) * 10) / 10 : 0;
     const at = limitPrice();
-    if (limit) {
-      const fillAt = buying ? at * (1 + SPREAD) : at * (1 - SPREAD);
-      const gets = at && n ? (buying ? Math.floor((n * 1e8) / fillAt) : Math.floor(((n * fillAt) / 1e8) * 10) / 10) : 0;
+    // What you'd get at a price, after the fee: sats for credits, or credits for sats.
+    const estimate = (price: number, fee: number) =>
+      !price || !n ? null : buying ? { get: formatSats(buyAt(n, price, fee).sats), fee: buyAt(n, price, fee).fee } : { get: `${fmt(sellAt(n, price, fee).total)} Cr`, fee: sellAt(n, price, fee).fee };
+    const est = limit ? estimate(at, FEE.limit) : estimate(q?.price ?? 0, FEE.market);
+    const feeLine = `<div><dt>Fee · ${pctFee(limit ? FEE.limit : FEE.market)}</dt><dd>${est ? `${fmt(est.fee, 2)} Cr` : '-'}</dd></div>`;
+    const getLine = `<div><dt>${buying ? 'You get, about' : 'You receive, about'}</dt><dd><b>${est ? est.get : '-'}</b></dd></div>`;
+    if (limit)
       $('.ex-est').innerHTML = `
         <div><dt>Fills at</dt><dd>${at ? `${fmt(at)} Cr` : '-'}</dd></div>
         <div><dt>Bitcoin now</dt><dd>${q ? `${fmt(q.price)} Cr` : '-'}</dd></div>
-        <div><dt>${buying ? 'You get, about' : 'You receive, about'}</dt><dd><b>${gets ? (buying ? formatSats(gets) : `${fmt(gets)} Cr`) : '-'}</b></dd></div>`;
-    } else
+        ${feeLine}${getLine}`;
+    else
       $('.ex-est').innerHTML = `
-      <div><dt>${buying ? 'You buy at' : 'You sell at'}</dt><dd>${q ? `${fmt(buying ? askPrice(q) : bidPrice(q))} Cr` : '-'}</dd></div>
-      <div><dt>Spread</dt><dd>${(SPREAD * 100).toFixed(1)}%</dd></div>
-      <div><dt>${buying ? 'You get, about' : 'You receive, about'}</dt><dd><b>${get ? (buying ? formatSats(get) : `${fmt(get)} Cr`) : '-'}</b></dd></div>`;
+      <div><dt>${buying ? 'You buy at' : 'You sell at'}</dt><dd>${q ? `${fmt(q.price)} Cr` : '-'}</dd></div>
+      ${feeLine}${getLine}`;
     let reason = '';
     if (limit && !at) reason = 'Set the price it should fill at';
     else if (!q && !limit) reason = 'Waiting for the price';
@@ -744,10 +746,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
           .join('')}</tbody></table>`
       : '';
     $('.ex-trades-list').innerHTML = open + (trades.length
-      ? `<table><thead><tr><th>Time</th><th>Side</th><th class="num">Sats</th><th class="num">Price</th><th class="num">Total</th></tr></thead><tbody>${trades
+      ? `<table><thead><tr><th>Time</th><th>Side</th><th class="num">Sats</th><th class="num">Price</th><th class="num">Fee</th><th class="num">Total</th></tr></thead><tbody>${trades
           .map(
             (t) => `<tr><td>${clock(t.t)}</td><td class="${t.side === 'buy' ? 'up' : 'down'}">${t.side === 'buy' ? 'Buy' : 'Sell'}</td>
-            <td class="num">${t.sats.toLocaleString()}</td><td class="num">${fmt(t.price)}</td><td class="num">${fmt(t.total)}</td></tr>`,
+            <td class="num">${t.sats.toLocaleString()}</td><td class="num">${fmt(t.price)}</td><td class="num">${t.fee !== undefined ? fmt(t.fee, 2) : '-'}</td><td class="num">${fmt(t.total)}</td></tr>`,
           )
           .join('')}</tbody></table>`
       : orders.length ? '' : '<p class="ex-empty">No Bitcoin trades yet. They follow you to every station.</p>');

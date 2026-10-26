@@ -42,7 +42,7 @@ export async function btcItems(orders: BtcOrder[], now: number, fetch: CandleFet
     const copy = { btcOrders: [{ ...o }], credits: 0, sats: 0, btcTrades: [] } as unknown as Parameters<typeof fillBtcOrders>[0];
     const [fill] = fillBtcOrders(copy, spans);
     if (!fill) continue;
-    const at = Math.round(fill.trade.price / (o.side === 'buy' ? 1.005 : 0.995));
+    const at = Math.round(fill.trade.price);
     out.push({ key: `btc:${o.id}`, text: `your Bitcoin ${o.side} filled at ${at.toLocaleString('en-GB')}` });
   }
   return out;
