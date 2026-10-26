@@ -18,6 +18,9 @@ import { isHuman, json, networkOf, randomToken, sha256 } from './http';
 import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES, type CompanyId } from './contact';
 import { companyEmail, signInEmail } from './emails';
 import { isPushEndpoint, sendPush } from './push';
+import type { ClipBoard } from './clips';
+import { awake, btcItems, heartItems, LOG_EVERY, logMessage, type LogItem, type LogKinds } from './shipsLog';
+import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
 
 export interface AccountsEnv {
   /** Resend, for sign-in emails. Without it (local development) the link is returned instead of sent. */
@@ -27,6 +30,8 @@ export interface AccountsEnv {
   /** Web Push (VAPID): the public key (a var) and the private key as a P-256 JWK (a secret). */
   VAPID_PUBLIC?: string;
   VAPID_PRIVATE?: string;
+  /** Shared clips (clips.ts): their hearts go in the ship's log. */
+  CLIPS?: DurableObjectNamespace<ClipBoard>;
 }
 
 export interface Account {
@@ -67,6 +72,14 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS contact (
       account TEXT PRIMARY KEY, push TEXT, push_hash TEXT, email INTEGER NOT NULL DEFAULT 0, stop TEXT NOT NULL,
       sent TEXT NOT NULL DEFAULT '[]', title TEXT, body TEXT)`);
+    // The ship's log (shipsLog.ts): which kinds, your time zone for quiet hours, when the last went, what it's said.
+    for (const col of ["kinds TEXT NOT NULL DEFAULT '{}'", 'tz INTEGER NOT NULL DEFAULT 0', 'logged INTEGER NOT NULL DEFAULT 0', "seen TEXT NOT NULL DEFAULT '[]'"]) {
+      try {
+        this.sql.exec(`ALTER TABLE contact ADD COLUMN ${col}`);
+      } catch {
+        /* already there */
+      }
+    }
     // Your name on the galaxy: the first account to bring each world's, moon's or signal's data home.
     // The name shown is the account's callsign now, so a rename follows and a deleted account drops out.
     this.sql.exec(`CREATE TABLE IF NOT EXISTS firsts (
@@ -408,17 +421,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
   // --- The companies get in touch (opt-in) ------------------------------------------
 
   private contactRow(id: string): ContactRow | null {
-    return (this.sql.exec('SELECT account, push, email, stop, sent FROM contact WHERE account = ?', id).toArray()[0] as unknown as ContactRow | undefined) ?? null;
+    return (this.sql.exec('SELECT account, push, email, stop, sent, kinds, tz, logged, seen FROM contact WHERE account = ?', id).toArray()[0] as unknown as ContactRow | undefined) ?? null;
   }
 
   private getContact(account: Account): Response {
     const row = this.contactRow(account.id);
-    return json({ push: Boolean(row?.push), email: Boolean(row?.email), key: this.env.VAPID_PUBLIC ?? null });
+    return json({ push: Boolean(row?.push), email: Boolean(row?.email), kinds: JSON.parse(row?.kinds ?? '{}') as LogKinds, key: this.env.VAPID_PUBLIC ?? null });
   }
 
-  /** PUT /me/contact {push?: subscription | null, email?: boolean}. */
+  /** PUT /me/contact {push?: subscription | null, email?: boolean, kinds?: {exchange, hearts}, tz?: minutes}. */
   private async putContact(request: Request, account: Account): Promise<Response> {
-    const body = (await request.json().catch(() => null)) as { push?: { endpoint?: unknown } | null; email?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as { push?: { endpoint?: unknown } | null; email?: unknown; kinds?: Record<string, unknown>; tz?: unknown } | null;
     if (!body) return json({ error: 'Nothing to change' }, 400);
     const row = this.contactRow(account.id);
     let push = row?.push ?? null;
@@ -434,8 +447,13 @@ export class Accounts extends DurableObject<AccountsEnv> {
        ON CONFLICT(account) DO UPDATE SET push = excluded.push, push_hash = excluded.push_hash, email = excluded.email`,
       account.id, push, hash, email, row?.stop ?? randomToken(),
     );
+    // The ship's log: which kinds, and the device's time zone (for quiet hours).
+    const was = JSON.parse(this.contactRow(account.id)?.kinds ?? '{}') as LogKinds;
+    const kinds: LogKinds = { exchange: body.kinds?.exchange === undefined ? was.exchange : body.kinds.exchange === true, hearts: body.kinds?.hearts === undefined ? was.hearts : body.kinds.hearts === true };
+    const tz = typeof body.tz === 'number' && Number.isFinite(body.tz) ? Math.max(-840, Math.min(840, Math.round(body.tz))) : null;
+    this.sql.exec('UPDATE contact SET kinds = ?, tz = COALESCE(?, tz) WHERE account = ?', JSON.stringify(kinds), tz, account.id);
     if ((push || email) && !(await this.ctx.storage.getAlarm())) await this.ctx.storage.setAlarm(Date.now() + 60_000);
-    return json({ push: Boolean(push), email: Boolean(email) });
+    return json({ push: Boolean(push), email: Boolean(email), kinds });
   }
 
   /** For the service worker: the latest message for its push address. */
@@ -455,11 +473,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
 
   /** Every hour: anyone with an assignment waiting hears from the company. */
   async alarm(): Promise<void> {
-    const rows = this.sql.exec('SELECT account, push, email, stop, sent FROM contact WHERE push IS NOT NULL OR email = 1').toArray() as unknown as ContactRow[];
+    const rows = this.sql.exec('SELECT account, push, email, stop, sent, kinds, tz, logged, seen FROM contact WHERE push IS NOT NULL OR email = 1').toArray() as unknown as ContactRow[];
     const now = Date.now();
     for (const row of rows) {
       try {
         await this.contactOne(row, now);
+        await this.shipsLog(row, now);
       } catch (e) {
         console.error('contact failed', row.account, e);
       }
@@ -496,6 +515,32 @@ export class Accounts extends DurableObject<AccountsEnv> {
     }
     if (!told && row.email && this.env.RESEND_API_KEY) told = await this.contactEmail(row, company, name, subject);
     if (told) this.sql.exec('UPDATE contact SET sent = ? WHERE account = ?', JSON.stringify([...week, { id: assignmentId(company, now), t: now }]), row.account);
+  }
+
+  /**
+   * The ship's log (shipsLog.ts): Bitcoin orders filled and hearts on your
+   * clips, as you've chosen, in one notification at most a day, never in quiet
+   * hours. Each thing is said once.
+   */
+  private async shipsLog(row: ContactRow, now: number) {
+    const kinds = JSON.parse(row.kinds ?? '{}') as LogKinds;
+    if (!row.push || !this.env.VAPID_PUBLIC || !this.env.VAPID_PRIVATE || !(kinds.exchange || kinds.hearts)) return;
+    if (now - (row.logged ?? 0) < LOG_EVERY || !awake(now, row.tz ?? 0)) return;
+    const seen = new Set(JSON.parse(row.seen ?? '[]') as string[]);
+    const items: LogItem[] = [];
+    if (kinds.exchange) {
+      const save = this.sql.exec('SELECT data FROM saves WHERE account = ?', row.account).toArray()[0];
+      const orders = save ? ((JSON.parse(save.data as string) as { btcOrders?: BtcOrder[] }).btcOrders ?? []) : [];
+      if (orders.length) items.push(...(await btcItems(orders, now, relayCandles, await relayPrice())));
+    }
+    if (kinds.hearts && this.env.CLIPS) items.push(...heartItems(await this.env.CLIPS.get(this.env.CLIPS.idFromName('clips')).heartsFor(row.account)));
+    const fresh = items.filter((i) => !seen.has(i.key));
+    if (!fresh.length) return;
+    const { title, body } = logMessage(fresh);
+    this.sql.exec('UPDATE contact SET title = ?, body = ? WHERE account = ?', title, body, row.account);
+    const result = await sendPush((JSON.parse(row.push) as { endpoint: string }).endpoint, { publicKey: this.env.VAPID_PUBLIC, privateJwk: this.env.VAPID_PRIVATE });
+    if (result === 'gone') this.sql.exec('UPDATE contact SET push = NULL, push_hash = NULL WHERE account = ?', row.account);
+    if (result === 'sent') this.sql.exec('UPDATE contact SET logged = ?, seen = ? WHERE account = ?', now, JSON.stringify([...seen, ...fresh.map((i) => i.key)].slice(-300)), row.account);
   }
 
   private async contactEmail(row: ContactRow, company: CompanyId, name: string, subject: string): Promise<boolean> {
@@ -535,5 +580,22 @@ interface ContactRow {
   email: number;
   stop: string;
   sent: string;
+  kinds?: string;
+  tz?: number;
+  logged?: number;
+  seen?: string;
 }
+
+// The real price, straight from our relay in Tokyo (the Worker's /btc routes are for our pages).
+const RELAY = 'https://witchspace-relay.fly.dev';
+const relayCandles = async (interval: string, limit: number, start: number): Promise<PriceSpan[] | null> =>
+  (await fetch(`${RELAY}/btc/candles?interval=${interval}&limit=${limit}&start=${start}`, { signal: AbortSignal.timeout(8_000) })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)) as PriceSpan[] | null;
+const relayPrice = async (): Promise<PriceSpan | null> => {
+  const q = (await fetch(`${RELAY}/btc`, { signal: AbortSignal.timeout(8_000) })
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)) as { price?: number; time?: number } | null;
+  return q?.price && q.time ? { t: q.time, h: q.price, l: q.price } : null;
+};
 

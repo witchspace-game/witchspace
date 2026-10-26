@@ -51,10 +51,10 @@ const INTERVALS = new Set(['1m', '5m', '15m', '1h', '4h', '1d', '1w']);
 const CANDLES_MS = 60_000;
 const candleCache = new Map(); // `${interval}:${limit}` → { time, candles }
 
-async function fetchCandles(interval, limit) {
+async function fetchCandles(interval, limit, start) {
   for (const host of SOURCES) {
     try {
-      const r = await fetch(`${host}/api/v3/klines?symbol=BTCUSDT&interval=${interval}&limit=${limit}`, { signal: AbortSignal.timeout(5_000) });
+      const r = await fetch(`${host}/api/v3/klines?symbol=BTCUSDT&interval=${interval}&limit=${limit}${start ? `&startTime=${start}` : ''}`, { signal: AbortSignal.timeout(5_000) });
       if (!r.ok) continue;
       // Binance's rows: [open time, open, high, low, close, volume, …]
       return (await r.json()).map((k) => ({ t: k[0], o: Number(k[1]), h: Number(k[2]), l: Number(k[3]), c: Number(k[4]), v: Number(k[5]) }));
@@ -65,11 +65,12 @@ async function fetchCandles(interval, limit) {
   return null;
 }
 
-async function candles(interval, limit) {
-  const key = `${interval}:${limit}`;
+async function candles(interval, limit, start) {
+  const key = `${interval}:${limit}:${start}`;
   const kept = candleCache.get(key);
   if (kept && Date.now() - kept.time < CANDLES_MS) return kept.candles;
-  const fresh = await fetchCandles(interval, limit);
+  if (candleCache.size > 500) candleCache.clear(); // a start time per order: don't keep them all
+  const fresh = await fetchCandles(interval, limit, start);
   if (fresh) candleCache.set(key, { time: Date.now(), candles: fresh });
   return fresh ?? kept?.candles ?? null;
 }
@@ -91,7 +92,9 @@ createServer(async (req, res) => {
     const interval = url.searchParams.get('interval') ?? '1h';
     const limit = Math.min(500, Math.max(1, Math.round(Number(url.searchParams.get('limit') ?? 200)) || 200));
     if (!INTERVALS.has(interval)) return send(res, 400, { error: `interval must be one of ${[...INTERVALS].join(', ')}` });
-    const c = await candles(interval, limit);
+    // From a moment (ms), for judging a limit order from when it was placed; otherwise the latest.
+    const start = Math.max(0, Math.round(Number(url.searchParams.get('start')) || 0));
+    const c = await candles(interval, limit, start);
     return c ? send(res, 200, c) : send(res, 503, { error: 'no candles from Binance' });
   }
   if (path === '/health') {

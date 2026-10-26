@@ -167,10 +167,17 @@ export function queueSave(c: Commander, onConflict: () => void) {
 }
 
 /** Whether the companies may contact you: notifications on some device, and email. */
-export function getContact() {
-  return call<{ push: boolean; email: boolean; key: string | null }>('/me/contact');
+/** The ship's log's kinds (server/src/shipsLog.ts): Bitcoin orders filling, hearts on your clips. */
+export interface LogKinds {
+  exchange?: boolean;
+  hearts?: boolean;
 }
 
-export function setContact(change: { push?: { endpoint: string } | null; email?: boolean }) {
-  return call<{ push: boolean; email: boolean }>('/me/contact', { method: 'PUT', body: JSON.stringify(change) });
+export function getContact() {
+  return call<{ push: boolean; email: boolean; kinds?: LogKinds; key: string | null }>('/me/contact');
+}
+
+/** Change how you can be reached; the device's time zone goes too, for the log's quiet hours. */
+export function setContact(change: { push?: { endpoint: string } | null; email?: boolean; kinds?: LogKinds }) {
+  return call<{ push: boolean; email: boolean; kinds?: LogKinds }>('/me/contact', { method: 'PUT', body: JSON.stringify({ ...change, tz: -new Date().getTimezoneOffset() }) });
 }

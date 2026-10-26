@@ -1,5 +1,6 @@
 import type { Commander } from '../game/commander';
 import { describeBtcFill, fillBtcOrders, ordersOf, setQuote, type BtcQuote, type PriceSpan } from '../economy/bitcoin';
+import { spansSince, type CandleFetch } from '../economy/btcSpans';
 import { API } from './account';
 
 // The live Bitcoin price and its candles, from the game's server
@@ -65,20 +66,30 @@ export function btcCandles(interval: string, limit: number): Promise<BtcCandle[]
 /** Candles already to hand, without asking. */
 export const heardCandles = (interval: string, limit: number) => candleCache.get(`${interval}:${limit}`)?.candles ?? null;
 
+/** Candles from a moment (for judging a limit order), kept a minute. */
+const fetchSpans: CandleFetch = async (interval, limit, start) => {
+  const key = `${interval}:${limit}:${start}`;
+  const kept = candleCache.get(key);
+  if (kept && Date.now() - kept.at < 60_000) return kept.candles;
+  const list = (await fetch(`${API}/btc/candles?interval=${interval}&limit=${limit}&start=${start}`)
+    .then((r) => (r.ok ? r.json() : null))
+    .catch(() => null)) as BtcCandle[] | null;
+  if (Array.isArray(list)) candleCache.set(key, { at: Date.now(), candles: list });
+  return list;
+};
+
 /**
  * Fill any Bitcoin limit orders the real price has reached since they were
- * placed, from the finest candles that reach back to the oldest: minutes for
- * up to eight hours, five minutes for up to 41, hours for up to 20 days, then
- * days. Returns what filled, in words; the caller saves.
+ * placed (economy/btcSpans.ts: the same reckoning the server's notifications
+ * use), and the live price. Returns what filled, in words; the caller saves.
  */
 export async function checkBtcOrders(c: Commander): Promise<string[]> {
   const orders = ordersOf(c);
   if (!orders.length) return [];
-  const age = Date.now() - Math.min(...orders.map((o) => o.placed));
-  const interval = age <= 8 * 3600_000 ? '1m' : age <= 41 * 3600_000 ? '5m' : age <= 20 * 86_400_000 ? '1h' : '1d';
-  const [candles, quote] = await Promise.all([btcCandles(interval, 500), btcQuote()]);
-  const spans: PriceSpan[] = (candles ?? []).map((k) => ({ t: k.t, h: k.h, l: k.l }));
-  if (quote) spans.push({ t: quote.time, h: quote.price, l: quote.price });
-  return fillBtcOrders(c, spans).map(describeBtcFill);
+  const now = Date.now();
+  const quote = await btcQuote();
+  const live: PriceSpan[] = quote ? [{ t: quote.time, h: quote.price, l: quote.price }] : [];
+  const history = new Map<number, PriceSpan[]>();
+  for (const o of orders) history.set(o.id, [...(await spansSince(o.placed, now, fetchSpans)), ...live]);
+  return fillBtcOrders(c, (o) => history.get(o.id) ?? []).map(describeBtcFill);
 }
-

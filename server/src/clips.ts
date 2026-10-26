@@ -107,6 +107,11 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     return { ok: true, status: 200 };
   }
 
+  /** A commander's shared clips and their hearts, for the ship's log. */
+  heartsFor(account: string): { id: string; title: string; hearts: number }[] {
+    return this.sql.exec('SELECT id, title, hearts FROM clips WHERE account = ? AND hidden = 0', account).toArray().map((r) => ({ id: r.id as string, title: r.title as string, hearts: r.hearts as number }));
+  }
+
   /** The admin key hides or restores a clip. */
   admin(id: string, key: string | null, hidden: boolean) {
     if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return { error: 'Not allowed', status: 403 };
