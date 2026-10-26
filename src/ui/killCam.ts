@@ -8,6 +8,7 @@ import { Beams } from '../game/weapons';
 import { bracket, killerOf, type TrackData } from '../game/track';
 import { encodeVideo } from './encodeVideo';
 import { escapeHtml } from './escape';
+import { openShareSheet } from './shareSheet';
 
 // The kill cam (docs/design/kill-cam.md, stage 2): your death rebuilt from the
 // track, in the game's own renderer, so you can watch it from outside. Behind
@@ -457,8 +458,8 @@ export class KillCam {
     this.lastVideo = { video, poster, seconds: span + CARD, title, description: `Reconstructed from the flight recorder at ${d.scene.system}`, system: d.scene.system };
     await this.onVideo?.(this.lastVideo).catch(() => undefined);
     box.innerHTML = `<button type="button" class="primary" data-act="share-video">Share the video</button><span class="killcam-saving">Saved to your flight log</span>`;
-    box.querySelector<HTMLButtonElement>('[data-act="share-video"]')!.onclick = async (e) => {
-      (e.target as HTMLButtonElement).textContent = await shareVideo(this.lastVideo!);
+    box.querySelector<HTMLButtonElement>('[data-act="share-video"]')!.onclick = () => {
+      shareVideo(this.lastVideo!);
     };
   }
 
@@ -568,22 +569,7 @@ async function still(g: OffscreenCanvasRenderingContext2D, w: number, h: number)
   return c.convertToBlob({ type: 'image/jpeg', quality: 0.8 }).catch(() => null);
 }
 
-/** Share a saved video: the share sheet where there is one (phones), otherwise download it. */
-export async function shareVideo(v: KillCamVideo): Promise<string> {
-  const name = `witchspace-reconstruction-${v.system.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.mp4`;
-  const file = new File([v.video], name, { type: 'video/mp4' });
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: v.title, text: `${v.title} · Witchspace, free in your browser: https://witchspace.org.uk/play` });
-      return 'Shared';
-    } catch {
-      /* dismissed: fall back to saving */
-    }
-  }
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(v.video);
-  a.download = name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
-  return 'Saved to your downloads';
+/** Share a saved reconstruction: the share sheet, with its card (ui/shareSheet.ts). */
+export function shareVideo(v: KillCamVideo) {
+  openShareSheet({ blob: v.video, poster: v.poster ?? undefined, title: v.title, name: `witchspace-reconstruction-${v.system.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.mp4` });
 }

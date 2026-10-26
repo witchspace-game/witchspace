@@ -3,6 +3,7 @@
 
 import { BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
 import { escapeHtml } from './escape';
+import { openShareSheet } from './shareSheet';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 // Object URLs for the flight log's list, and separately for the replay player:
@@ -30,23 +31,8 @@ const megabytes = (bytes: number) => `${Math.max(1, Math.round(bytes / 1048576))
 let outsideView: ((m: LoggedMoment) => void) | null = null;
 export const setOutsideView = (fn: (m: LoggedMoment) => void) => (outsideView = fn);
 
-/** Share a moment: the share sheet where there is one (phones), otherwise download it. */
-export async function shareMoment(m: LoggedMoment): Promise<string> {
-  const file = new File([media(m)], fileName(m), { type: media(m).type });
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: m.title, text: `${m.title} · Witchspace, free in your browser: https://witchspace.org.uk/play` });
-      return 'Shared';
-    } catch {
-      /* dismissed: fall back to saving */
-    }
-  }
-  const a = document.createElement('a');
-  a.href = url(media(m));
-  a.download = fileName(m);
-  a.click();
-  return 'Saved to your downloads';
-}
+/** Share a moment: the share sheet, with its card (ui/shareSheet.ts). */
+export const shareMoment = (m: LoggedMoment) => openShareSheet({ blob: media(m), poster: m.poster ?? undefined, title: m.title, name: fileName(m) });
 
 /** The replay player over everything: the death replay, or a moment from the log. `note` replaces the line under it. */
 export function openReplay(m: LoggedMoment, heading: string, onChange?: () => void, note = 'Only the view is recorded. It stays on this device unless you share it.') {
@@ -72,9 +58,7 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
     box.innerHTML = '';
     revoke(replayUrls);
   };
-  box.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = async (e) => {
-    (e.target as HTMLButtonElement).textContent = await shareMoment(m);
-  };
+  box.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = () => shareMoment(m);
   box.querySelector<HTMLButtonElement>('[data-act="keep"]')!.onclick = async (e) => {
     m.saved = !m.saved;
     await setSaved(m.id, m.saved);
@@ -144,9 +128,7 @@ export async function renderFlightLog(opts: { available: boolean; unavailable: s
     li.querySelector<HTMLButtonElement>('.log-play')!.onclick = () => openReplay(m, 'From the flight log', refresh, m.photo ? 'Taken with your ship camera. It stays on this device unless you share it.' : undefined);
     const outside = li.querySelector<HTMLButtonElement>('[data-act="outside"]');
     if (outside) outside.onclick = () => outsideView?.(m);
-    li.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = async (e) => {
-      (e.target as HTMLButtonElement).textContent = await shareMoment(m);
-    };
+    li.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = () => shareMoment(m);
     li.querySelector<HTMLButtonElement>('[data-act="keep"]')!.onclick = async () => {
       await setSaved(m.id, !m.saved);
       refresh();

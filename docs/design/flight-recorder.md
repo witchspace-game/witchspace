@@ -52,6 +52,8 @@ P, or the camera button on touch screens (beside the drawer tab, always to hand)
 
 Sharing works everywhere a commander can see a photo or a kept moment: the camera button, the death replay, the flight log, the station board.
 
+*(Built, 26 October 2026: **one share sheet** (`src/ui/shareSheet.ts`) for the flight log, the death replay and the kill cam. The card first, with the clip playing and its title; then **Share video…** on a phone, which hands the file itself to the phone's share sheet, Save Video included, or **Save video** on a desktop; then X, Bluesky, Facebook, WhatsApp, Reddit and copy link, which share the game with the clip's title until clips have pages of their own. The file is made before the sheet opens, so the tap opens the phone's sheet at once, and dismissing it never falls back to downloading: that fallback was what opened the Files menu on iPhones (Mark's report). On a phone held sideways the card and the buttons sit side by side.)*
+
 - **One tap to your socials.** On phones, the share sheet (WhatsApp, Instagram, TikTok, Messages...) with the picture or clip itself; on desktop, the site's share buttons (Facebook, X, WhatsApp) and a link to copy.
 - **Branded, always.** Photos carry the WITCHSPACE mark; clips end on a short card: the wordmark, *Trade. Fight. Explore. Build.*, witchspace.org.uk.
 - **A link that sells the game.** Shared from an account, a moment gets its own page on the site (as press kit items do): the clip playing, your callsign, the system, what happened ("Jameson vs a pirate pack at Riedquat"), a Play free button, and a branded preview card so it unfurls properly on every platform.
@@ -119,6 +121,16 @@ A clip that people watch becomes part of the galaxy's story.
 - **Paid again.** The newsroom pays a bonus as a clip passes each threshold.
 - **Famous in the lanes.** A widely seen clip earns a mention in the saloons and on the radio: haulers who recognise your ship, a pirate who's seen how you fly. For the Falcon, it's one more thing she knows about you.
 - **The clip of the week** goes on the station board ([section 4](#4-the-station-board)) and the site's front page.
+
+### Hearts *(Mark, 26 October 2026)*
+
+Commanders can **like a clip with a little heart**: on its clip page (`witchspace.org.uk/clip/…`), and in the game wherever clips are shown (the station board, the library).
+
+- **One heart per person, no dislikes, no comments** to begin with: hearts are kind, and they need no moderation. A tap gives one, a second tap takes it back, and the count sits under the clip.
+- **Hard to stuff.** The same protection as the ideas board's votes: one heart per device, a cap per network, and the server keeps the count. A heart from a signed-in commander counts the same, but shows who: *liked by CMDR Kestrel and 214 others*.
+- **Hearts are how the galaxy notices.** They feed the clip of the week and the newsroom's thresholds alongside views ([when a clip takes off](#when-a-clip-takes-off)), and the queue of clips the founder approves for YouTube is sorted by them, so the best rise to the top.
+- **The maker hears about it.** *Your clip from Riedquat has 50 hearts* arrives as a message at the next station, and a clip that keeps collecting them earns its newsroom bonus.
+- **Your own clips show their hearts** in the flight log.
 
 ## Proof: things nobody would believe
 

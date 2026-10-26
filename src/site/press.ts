@@ -4,7 +4,8 @@
 // so copying the URL shares that item; Back closes the viewer. Without
 // JavaScript every card is simply a link to that page.
 
-import { copyText, openShare } from './share';
+import { openShare } from './share';
+import { copyText } from '../ui/shareLinks';
 
 interface Item {
   id: string;
