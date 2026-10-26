@@ -13,6 +13,7 @@
 
 import { escapeHtml } from './escape';
 import { copyText, destinations, ICONS } from './shareLinks';
+import { isWide } from './upright';
 
 const GAME = 'https://witchspace.org.uk/play';
 
@@ -24,6 +25,8 @@ export interface ShareMedia {
   title: string;
   /** The file's name when saved or shared. */
   name: string;
+  /** For a wide clip: make its upright cut (for Shorts and Reels), resolving with it to share instead. */
+  upright?: (onProgress: (f: number) => void) => Promise<ShareMedia | null>;
 }
 
 const isPhone = () => matchMedia('(pointer: coarse)').matches;
@@ -92,6 +95,7 @@ export function openShareSheet(m: ShareMedia) {
             ? `Saves the ${what} to this computer. <button type="button" class="ws-share-more">Or share it…</button>`
             : `Saves the ${what} to this computer, ready to post.`
       }</p>
+      <button type="button" class="ws-share-upright" hidden>Make an upright version <span>for Shorts, Reels and TikTok</span></button>
       <p class="ws-share-or">Or share the game, with its title</p>
       <div class="ws-share-links">
         ${destinations(GAME, text)
@@ -129,6 +133,21 @@ export function openShareSheet(m: ShareMedia) {
   copy.onclick = async () => {
     await copyText(`${text} ${GAME}`);
     copy.querySelector('span')!.textContent = 'Copied ✓';
+  };
+  // A wide clip can be cut upright: offered once we know its shape.
+  const up = el.querySelector<HTMLButtonElement>('.ws-share-upright')!;
+  if (video && m.upright) void isWide(m.blob).then((wide) => open?.el === el && (up.hidden = !wide));
+  up.onclick = async () => {
+    up.disabled = true;
+    const label = up.innerHTML;
+    const result = await m.upright!((f) => (up.textContent = `Making the upright version · ${Math.round(f * 100)}%`)).catch(() => null);
+    if (open?.el !== el) return; // closed meanwhile
+    if (result) openShareSheet(result);
+    else {
+      up.disabled = false;
+      up.innerHTML = label;
+      msg.textContent = "This browser can't make video, so there's no upright version here.";
+    }
   };
   el.querySelector<HTMLButtonElement>('[data-close]')!.onclick = closeShareSheet;
   el.addEventListener('pointerdown', (e) => e.target === el && closeShareSheet());

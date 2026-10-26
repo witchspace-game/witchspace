@@ -57,7 +57,7 @@ Sharing works everywhere a commander can see a photo or a kept moment: the camer
 - **One tap to your socials.** On phones, the share sheet (WhatsApp, Instagram, TikTok, Messages...) with the picture or clip itself; on desktop, the site's share buttons (Facebook, X, WhatsApp) and a link to copy.
 - **Branded, always.** Photos carry the WITCHSPACE mark; clips end on a short card: the wordmark, *Trade. Fight. Explore. Build.*, witchspace.org.uk.
 - **A link that sells the game.** Shared from an account, a moment gets its own page on the site (as press kit items do): the clip playing, your callsign, the system, what happened ("Jameson vs a pirate pack at Riedquat"), a Play free button, and a branded preview card so it unfurls properly on every platform.
-- **Vertical too.** Clips are offered upright for stories and reels as well as wide, cropped to the action.
+- **Vertical too.** Clips are offered upright for stories and reels as well as wide, cropped to the action. *(Built, 26 October 2026: on a wide clip, the share sheet's **Make an upright version** cuts it to 720×1280 in the browser, the cockpit view enlarged and trimmed at the sides under FLIGHT RECORDER and its title, witchspace.org.uk below, ending on the house card; the cut joins the flight log beside the original (`src/ui/upright.ts`). The kill cam's reconstructions are filmed upright directly.)*
 
 ## 2. The recorder, the death replay and the flight log *(built)*
 

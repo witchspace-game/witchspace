@@ -1,9 +1,10 @@
 // The flight log, full screen from the button beside the galaxy map, and the replay player (the death replay
 // too): watch, share, keep or delete the clips and photos the ship kept.
 
-import { BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
+import { addMoment, BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
+import { uprightCut } from './upright';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 // Object URLs for the flight log's list, and separately for the replay player:
@@ -31,8 +32,32 @@ const megabytes = (bytes: number) => `${Math.max(1, Math.round(bytes / 1048576))
 let outsideView: ((m: LoggedMoment) => void) | null = null;
 export const setOutsideView = (fn: (m: LoggedMoment) => void) => (outsideView = fn);
 
-/** Share a moment: the share sheet, with its card (ui/shareSheet.ts). */
-export const shareMoment = (m: LoggedMoment) => openShareSheet({ blob: media(m), poster: m.poster ?? undefined, title: m.title, name: fileName(m) });
+/**
+ * Share a moment: the share sheet, with its card (ui/shareSheet.ts). A cockpit
+ * clip can be cut upright there (ui/upright.ts); the cut joins the flight log
+ * beside the original. Reconstructions are made upright by the kill cam itself.
+ */
+export function shareMoment(m: LoggedMoment, onChange?: () => void) {
+  const recon = m.tags.includes('reconstruction') || m.tags.includes('upright');
+  openShareSheet({
+    blob: media(m),
+    poster: m.poster ?? undefined,
+    title: m.title,
+    name: fileName(m),
+    upright:
+      m.video && !recon
+        ? async (onProgress) => {
+            const cut = await uprightCut(m.video!, m.title, onProgress);
+            if (!cut) return null;
+            const when = Date.now();
+            const made: LoggedMoment = { ...m, id: `${when}-upright`, created: when, tags: [...m.tags, 'upright'], video: cut.video, poster: cut.poster, seconds: cut.seconds, photo: undefined, track: undefined, saved: false };
+            await addMoment(made).catch(() => false);
+            onChange?.();
+            return { blob: cut.video, poster: cut.poster ?? undefined, title: m.title, name: fileName(made).replace(/\.mp4$/, '-upright.mp4') };
+          }
+        : undefined,
+  });
+}
 
 /** The replay player over everything: the death replay, or a moment from the log. `note` replaces the line under it. */
 export function openReplay(m: LoggedMoment, heading: string, onChange?: () => void, note = 'Only the view is recorded. It stays on this device unless you share it.') {
@@ -58,7 +83,7 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
     box.innerHTML = '';
     revoke(replayUrls);
   };
-  box.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = () => shareMoment(m);
+  box.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = () => shareMoment(m, onChange);
   box.querySelector<HTMLButtonElement>('[data-act="keep"]')!.onclick = async (e) => {
     m.saved = !m.saved;
     await setSaved(m.id, m.saved);
@@ -115,7 +140,7 @@ export async function renderFlightLog(opts: {
       <ul class="log-list">${moments
         .map(
           (m) => `<li data-id="${m.id}">
-          <button type="button" class="log-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${url(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s` : 'Photo'}</span></button>
+          <button type="button" class="log-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${url(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s${m.tags.includes('upright') ? ' · upright' : ''}` : 'Photo'}</span></button>
           <div><strong>${escapeHtml(m.title.replace(/^CMDR [^:]+: /, ''))}</strong><small>${escapeHtml(m.events.map((e) => e.text).join(' · '))}</small>
           <span class="log-actions">${m.track && outsideView ? '<button type="button" data-act="outside">From outside</button>' : ''}<button type="button" data-act="share">Share</button><button type="button" data-act="keep" aria-pressed="${m.saved}">${m.saved ? 'Kept' : 'Keep'}</button><button type="button" data-act="delete">Delete</button></span></div>
         </li>`,
@@ -146,7 +171,7 @@ export async function renderFlightLog(opts: {
     li.querySelector<HTMLButtonElement>('.log-play')!.onclick = () => openReplay(m, 'From the flight log', refresh, m.photo ? 'Taken with your ship camera. It stays on this device unless you share it.' : undefined);
     const outside = li.querySelector<HTMLButtonElement>('[data-act="outside"]');
     if (outside) outside.onclick = () => outsideView?.(m);
-    li.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = () => shareMoment(m);
+    li.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = () => shareMoment(m, refresh);
     li.querySelector<HTMLButtonElement>('[data-act="keep"]')!.onclick = async () => {
       await setSaved(m.id, !m.saved);
       refresh();
