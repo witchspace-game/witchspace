@@ -1,8 +1,8 @@
 // Bundles what the MCP server reads (the fleet, the design documents, AGENTS.md,
 // CONTRIBUTING.md and the ship schema) for the Worker, which can't read files,
 // and compiles the ship schema check ahead of time, since Workers can't compile
-// code at run time. Run before deploying the Worker (server: npm run deploy
-// does it), and by the local server (tools/mcp.ts) directly.
+// code at run time. Run before deploying the Worker (wrangler's build step
+// in server/wrangler.toml does it), and by the local server (tools/mcp.ts) directly.
 //
 //   npx tsx tools/mcp-data.ts     writes server/src/mcp-data.json and server/src/mcp-schema.js
 

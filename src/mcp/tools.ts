@@ -369,4 +369,5 @@ export const RESOURCES = [
   { uri: 'witchspace://contributing', name: 'CONTRIBUTING.md', title: 'How to contribute', mimeType: 'text/markdown', read: (d: McpData) => d.texts.contributing },
   { uri: 'witchspace://schema/ship', name: 'ship.schema.json', title: 'The ship file schema', mimeType: 'application/schema+json', read: (d: McpData) => d.texts.schema },
   { uri: 'witchspace://design/worldbuilding', name: 'worldbuilding.md', title: 'The worldbuilding guide: tone, people, companies', mimeType: 'text/markdown', read: (d: McpData) => d.docs.find((x) => x.slug === 'worldbuilding')?.body ?? '' },
+  { uri: 'witchspace://lore', name: 'lore.md', title: 'The lore of Witchspace: the canon, by Trade, Fight, Explore and Build', mimeType: 'text/markdown', read: (d: McpData) => d.docs.find((x) => x.slug === 'lore')?.body ?? '' },
 ];

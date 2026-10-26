@@ -8,8 +8,6 @@
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "mcp-data": "cd .. && npx tsx tools/mcp-data.ts",
-    "predev": "npm run mcp-data",
-    "predeploy": "npm run mcp-data",
     "pretypecheck": "npm run mcp-data"
   },
   "license": "GPL-3.0-only",
