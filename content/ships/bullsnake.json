@@ -20,7 +20,8 @@
     "hull": 260,
     "shields": 80,
     "cargo": 60,
-    "price": 0
+    "price": 0,
+    "ratingValue": 0.5
   },
   "style": {
     "lineColor": "#ffd23d",

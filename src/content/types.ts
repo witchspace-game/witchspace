@@ -33,6 +33,8 @@ export interface ShipDef {
     cargo: number;
     missiles?: number;
     price: number;
+    /** Combat rating points for destroying one, before role, threat and experience (game/rating.ts). */
+    ratingValue: number;
     bounty?: number;
   };
   style: { lineColor: string; glow?: number };

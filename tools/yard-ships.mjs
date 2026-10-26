@@ -100,7 +100,7 @@ function fmt(obj) {
     description:
       "Wexley-Yorozu's workhorse: short, square and slow, with an ore hopper under its belly and tractor booms where the guns should be. At a yard they run between the moon and the constructor all day, every day, and don't stop to chat.",
     credits: { authors: ['Witchspace contributors'], license: 'CC-BY-SA-4.0', aiAssisted: true, notes: 'Original design, 70 m. Scenery at Wexley-Yorozu yards, not for sale.' },
-    stats: { maxSpeed: 140, pitchRate: 0.6, rollRate: 0.8, hull: 260, shields: 80, cargo: 60, price: 0 },
+    stats: { maxSpeed: 140, pitchRate: 0.6, rollRate: 0.8, hull: 260, shields: 80, cargo: 60, price: 0, ratingValue: 0.5 },
     style: { lineColor: '#ffd23d', glow: 1 },
     geometry: { vertices: m.verts, faces: m.faces, details: { vertices: d.vertices, lines: d.lines } },
     insignia: { color: '#f4f1e4', vertices: ins.vertices, lines: ins.lines },

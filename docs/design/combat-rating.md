@@ -1,12 +1,12 @@
 ---
 title: Combat rating and missions
-status: designed
+status: building
 pillar: fight
 summary: The road from Harmless to Elite: points weighted by danger, nothing for crimes or easy targets, player kills, and combat missions as the main way up.
 card: mamba
 stages:
   - Ranks, shown in the game | built
-  - Points weighted by danger | designed
+  - Points weighted by danger | built
   - Combat missions | proposed
   - Player kills (shared galaxy) | proposed
 help:
@@ -83,6 +83,8 @@ The lesson is that a fixed value per ship type is a big improvement, but players
 
 Each ship's JSON file gets a `ratingValue`, starting from the original's table above. New ships take a value in line with ships of similar strength. Community-designed ships need one too, checked by `npm run validate`.
 
+*(Built, 26 October 2026: Sidewinder 0.33, Mamba 0.5, Cobra Mk III 0.91, Viper 0.1, Bullsnake 0.5, Lancer 1.25, Falcon 2.0, Bastion 5.33, cargo canister 0.04; the station, the Titanoboa and missiles 0.)*
+
 ### Role
 
 | Target | Multiplier |
@@ -119,7 +121,11 @@ A Deadly pilot gets nothing for Sidewinders, but every fight with a real threat 
 
 ### The combat computer
 
-Kills made while the combat computer flies the ship count **× 0.5**: the rating should mean you flew the fight yourself. (Built: today a kill counts 1, or 0.5 with the computer on.)
+Kills made while the combat computer flies the ship count **× 0.5**: the rating should mean you flew the fight yourself.
+
+### How it's built
+
+Sections 1–3 and 7 are built for Modern rules (`src/game/rating.ts`, with tests): ship value × role × threat × the odds × experience, halved for the combat computer. Threat counts the laser (beam × 1.2, military × 1.5), an ECM (+0.15) and missiles (+0.05 each, up to four), up to × 2. The odds count the other ships fighting you when it died. A foe's threat rank comes from the same numbers: a lone Sidewinder pirate is Poor, a pirate Cobra with a beam laser Competent. Destroying another commander earns nothing for now, because the game treats it as a crime (section 4 comes with legitimate fights). Driving off the Falcon counts as a kill. From Harmless, Average now takes about 70 lone Sidewinder pirates rather than 32 kills of anything.
 
 ## 4. Points for player kills (multiplayer)
 
@@ -214,11 +220,13 @@ Elite has no twin.
 
 ## 8. Classic rules
 
+*(For now Classic still counts one point a kill, as the first BBC version did: Classic stays as it is until Mark decides on the per-ship values below.)*
+
 Classic uses the **original per-ship values** from section 2, as the Commodore 64, BBC Master, Apple II and NES versions did, rather than the first BBC version's one point per kill. Every kill counts, police and traders included, at their original (low) values: it's a crime, but the rating doesn't judge. There's no role, threat or experience multiplier, and no player kills, because Classic is single-player. Combat missions may appear under Classic later, as one-off campaigns in the spirit of the original's missions.
 
 ## 9. Moving existing commanders over
 
-Existing commanders keep their kills, converted one-for-one into rating points, so nobody loses rank when weighted points arrive.
+Existing commanders keep their kills, converted one-for-one into rating points, so nobody loses rank when weighted points arrive. *(Built: the commander's `kills` already holds points, so nothing needed converting.)*
 
 ---
 

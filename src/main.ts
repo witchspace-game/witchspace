@@ -72,7 +72,7 @@ import { cleanName } from '../server/src/protocol';
 import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
-import { combatRating, rankInsignia } from './game/rating';
+import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rightOn, type Foe } from './game/rating';
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
@@ -1150,7 +1150,7 @@ function renderDocked() {
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
     ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
     ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
-    ['Rating', combatRating(c.kills)],
+    ['Rating', c.difficulty === 'classic' ? combatRating(c.kills) : ratingProgress(c.kills)],
     ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited${myFirsts(here.galaxy) ? ` · ${myFirsts(here.galaxy)} first${myFirsts(here.galaxy) === 1 ? '' : 's'} on the chart` : ''}`],
     ...trailsUnderWay(c, here.galaxy).map((t): [string, string] => ['Trail', `${escapeHtml(t.title)} · ${t.found} of ${t.of} found · the clue points to ${escapeHtml(t.next)}`]),
     ...explorerTips(c, here),
@@ -1752,13 +1752,13 @@ function updateLegends(dt: number) {
       flash('Falcon driven off · no bounty: you beat her less than a day ago', 3);
     } else if (npc.attacker === player && commander) {
       const c = cmdr();
-      c.kills += combatComputer ? 0.5 : 1;
+      const rated = rateKill(npc);
       c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
       c.falconDrivenOff = Date.now();
       addStanding(c, 'wy', 2);
       addStanding(c, 'hexon', 2);
       saveCommander(c);
-      flash(`Falcon driven off · Bounty ${npc.bounty} Cr`, 3);
+      flash(`Falcon driven off · Bounty ${npc.bounty} Cr${rated ? ` · ${rated}` : ''}`, 3);
       void keepCombat({ kind: 'kill', text: `Drove off the Falcon · bounty ${npc.bounty} Cr`, subject: 'Falcon' }, 20, 6);
     }
   }
@@ -2771,16 +2771,14 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   if (npc.role === 'pirate') pirateLost();
 
   const c = cmdr();
-  const before = combatRating(c.kills);
-  // Kills made while the combat computer flies count for half: the rating
-  // should mean you flew the fight yourself.
-  c.kills += combatComputer ? 0.5 : 1;
+  const rated = rateKill(npc);
+  const note = rated ? ` · ${rated}` : '';
   if (npc.role === 'pirate') {
     c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
-    flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr`, 2.5);
+    flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr${note}`, 2.5);
     void keepCombat({ kind: 'kill', text: `${npc.def.name} destroyed · bounty ${npc.bounty} Cr`, subject: npc.def.name }, 20, 4);
   } else {
-    flash(`${npc.def.name} destroyed`, 1.5);
+    flash(`${npc.def.name} destroyed${note}`, 1.5);
     // Killing police or an innocent trader is a serious crime. Under Classic
     // rules, as in 1984, a trader only counts if the station sees it happen;
     // under Modern, only if anyone saw (the victim can't tell anyone now).
@@ -2790,10 +2788,37 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
     } else if (witnessed(npc.obj.position, npc)) becomeFugitive(true);
     else flash('No witnesses · but its cargo is stolen goods', 3);
   }
-  // As in 1984, every 256th kill earns the old salute.
-  if (Math.floor(c.kills / 256) > Math.floor((c.kills - (combatComputer ? 0.5 : 1)) / 256)) setTimeout(() => flash('Right On Commander!', 3), 1200);
-  if (combatRating(c.kills) !== before) setTimeout(() => flash(`Combat rating: ${combatRating(c.kills)}`, 3), 2600);
   saveCommander(c);
+}
+
+/** What the rating needs to know about a ship you destroyed. */
+const foeOf = (npc: NpcShip): Foe => ({
+  value: npc.def.stats.ratingValue,
+  role: npc.role,
+  bounty: npc.bounty,
+  firedFirst: Boolean(npc.firedOnPlayer),
+  laser: npc.laser.name,
+  missiles: npc.missiles,
+  ecm: npc.ecm,
+  wingmen: npcs.filter((n) => n !== npc && n.hostile && n.target === player).length,
+});
+
+/**
+ * Rate a kill (docs/design/combat-rating.md). Modern: points weighted by the
+ * ship, its role, how well armed it was, the odds and how far it was beneath
+ * you, nothing for a crime; Classic: one a kill, as in 1984. Kills the combat
+ * computer flew count half. Says when you reach a new rank, and every 256
+ * points the old salute. Returns the note for the kill's flash (Modern).
+ */
+function rateKill(npc: NpcShip | 'crime'): string {
+  const c = cmdr();
+  const before = c.kills;
+  const classic = c.difficulty === 'classic';
+  const r = classic ? { points: combatComputer ? 0.5 : 1 } : npc === 'crime' ? { points: 0, none: 'crime' as const } : killPoints(foeOf(npc), c.kills, Boolean(combatComputer));
+  c.kills = Math.round((c.kills + r.points) * 100) / 100;
+  if (rightOn(before, c.kills)) setTimeout(() => flash('Right On Commander!', 3), 1200);
+  if (combatRating(c.kills) !== combatRating(before)) setTimeout(() => flash(`Combat rating: ${combatRating(c.kills)}`, 3), 2600);
+  return classic ? '' : pointsNote(r);
 }
 
 /**
@@ -5741,11 +5766,8 @@ function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
     return;
   }
   const c = cmdr();
-  const before = combatRating(c.kills);
-  c.kills += combatComputer ? 0.5 : 1;
-  flash(`Commander ${r.name} destroyed`, 2.5);
-  becomeFugitive(true); // killing a clean commander is a serious crime
-  if (combatRating(c.kills) !== before) setTimeout(() => flash(`Combat rating: ${combatRating(c.kills)}`, 3), 2600);
+  flash(`Commander ${r.name} destroyed · ${rateKill('crime')}`, 2.5);
+  becomeFugitive(true); // killing a clean commander is a serious crime: no rating
   saveCommander(c);
 }
 
