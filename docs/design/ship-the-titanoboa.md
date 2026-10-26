@@ -5,9 +5,9 @@ pillar: world
 summary: Wexley-Yorozu's constructor rebuilt as a factory of modules on a common coupling - maw, furnaces, hold, habitat, fabricator, science, reactor - each a single clear shape in glowing line, brought by tug teams and assembled where the work is. We designed the core; the standard is open, so anyone can design a module. It's as big as the job needs, new modules are sent where they're needed and can stay on the finished station, sections are swapped when they fail, and a reactor towed between stars is work for commanders.
 card: titanoboa
 stages:
-  - The core modules, the coupling standard, and the standard line-up on the ship page | done
+  - The core modules, the coupling standard, and the standard line-up on the ship page | built
   - Community modules - anyone designs a section to the standard, checked by validate and the MCP server | proposed
-  - Yards assemble the line-up the job needs (a station, a refinery, an atmosphere processor) | started
+  - Yards assemble the line-up the job needs (a station, a refinery, an atmosphere processor) | building
   - Modules sent where they're needed - a science module for exotic organisms couples on, and stays with the station | proposed
   - Sections swapped in the yard - a failed reactor towed away, a new one fitted | proposed
   - Module work for commanders - haul, escort and salvage a section | proposed

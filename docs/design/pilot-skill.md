@@ -5,7 +5,7 @@ pillar: fight
 summary: Pirates who fly better as you do: rookies and aces, set by your combat rating and how lawless the system is, and the Falcon never less than an ace.
 card: sidewinder
 stages:
-  - Skill in the pirate AI, set by rating and government; the Falcon an ace | started
+  - Skill in the pirate AI, set by rating and government; the Falcon an ace | building
   - Missile craft, wingmen, and each Falcon brother's style | proposed
   - Aces who read your combat computer's routines | proposed
 ---

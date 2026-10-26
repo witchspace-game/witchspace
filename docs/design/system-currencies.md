@@ -1,9 +1,15 @@
 ---
 title: System currencies
-status: designed
+status: building
 pillar: trade
 summary: A currency for every system, modelled on real crypto: government monetary policies, liquidity pools, pegs and crises, and a ledger anyone can verify. Virtual only.
 card: coriolis
+stages:
+  - Bitcoin on the exchange, priced from the real market; it can't be taken from you | built
+  - Bitcoin limit orders, filled against the real price, even while you're away | built
+  - Single-player system currencies: policies, minting and burning, a pool per station | proposed
+  - Shared galaxy: a ledger anyone can check, player liquidity, order books | proposed
+  - Later: crises driven by players, currency futures, stablecoins pegged to the credit | proposed
 help:
   - Model a currency crisis for one government type | design
 ---
@@ -140,7 +146,7 @@ A powerful bloc pushes **one currency for many systems**, much like the euro. It
 
 ## 6b. Bitcoin against the Witchspace universe (Mark, 26 October 2026)
 
-*Status: **stage 1 built** (Bitcoin against credits on the exchange, 26 October 2026); the rest is Mark's idea, to think through before it's built. Reading: Saifedean Ammous, *The Bitcoin Standard*; Andreas Antonopoulos, [Bitcoin explained](https://www.youtube.com/watch?v=UlKZ83REIkA&list=PLPQwGV1aLnTthcG265_FYSaV24hFScvC0).*
+*Status: **stage 1 built** (Bitcoin against credits on the exchange, with limit orders, 26 October 2026); the rest is Mark's idea, to think through before it's built. Reading: Saifedean Ammous, *The Bitcoin Standard*; Andreas Antonopoulos, [Bitcoin explained](https://www.youtube.com/watch?v=UlKZ83REIkA&list=PLPQwGV1aLnTthcG265_FYSaV24hFScvC0).*
 
 Every other money in this design belongs to someone: a system's government prints it, the Compact wants to absorb it, the Co-operative issues the credit. **Bitcoin belongs to nobody.** It's the same at every station, nobody can print it, and it weighs nothing. Set against 2,048 system currencies, the credit and the Compact, it's *The Bitcoin Standard* played out as a galaxy: easy money of every kind, government by government, against the one hard money.
 

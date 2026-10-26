@@ -8,7 +8,7 @@ stages:
   - The track - the last minute of every ship's position and every shot, logged as you fly | built
   - The replay - watch your death from outside, from the insurers' screen | built
   - Keep and share - tracks kept with their moments in the flight log, and a chosen camera saved as a video | built
-  - The library - send a track, and anyone can open the fight in their browser from a link | idea
+  - The library - send a track, and anyone can open the fight in their browser from a link | built
   - Shared space - other commanders' ships in the replay, from what your scanner saw | idea
 help:
   - Playtest the replay - did it show you what killed you, and did you learn anything from it? | playtest
