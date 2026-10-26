@@ -95,7 +95,7 @@ export function openShareSheet(m: ShareMedia) {
       <figure class="ws-share-card">
         ${
           video
-            ? `<video src="${objectUrl(m.blob)}" ${m.poster ? `poster="${objectUrl(m.poster)}"` : ''} autoplay muted loop playsinline></video>`
+            ? `<video ${m.poster ? `poster="${objectUrl(m.poster)}"` : ''} autoplay muted loop playsinline></video>`
             : `<img src="${objectUrl(m.blob)}" alt="" />`
         }
         <figcaption><strong>${escapeHtml(m.title)}</strong><span>witchspace.org.uk</span></figcaption>
@@ -122,6 +122,12 @@ export function openShareSheet(m: ShareMedia) {
     </div>`;
   document.body.append(el);
   open = { el, urls };
+  // Copied into memory first: iPhone Safari won't play a video straight from the flight log's database.
+  const preview = el.querySelector('video');
+  if (preview)
+    void m.blob.arrayBuffer().then((bytes) => {
+      if (preview.isConnected) preview.src = objectUrl(new Blob([bytes], { type: m.blob.type || 'video/mp4' }));
+    });
 
   const msg = el.querySelector<HTMLElement>('.ws-share-msg')!;
   // The links: the game with the clip's title, or the clip's own page once it has one.

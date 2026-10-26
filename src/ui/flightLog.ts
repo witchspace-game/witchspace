@@ -69,7 +69,7 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
   const kept = () => (m.saved ? 'Kept' : 'Keep');
   box.innerHTML = `<div class="replay-card" role="dialog" aria-modal="true" aria-label="${escapeHtml(heading)}">
     <p class="replay-heading">${escapeHtml(heading)}</p>
-    ${m.video ? `<video src="${replayUrl(m.video)}" ${m.poster ? `poster="${replayUrl(m.poster)}"` : ''} controls autoplay playsinline muted></video>` : `<img src="${replayUrl(media(m))}" alt="${escapeHtml(m.title)}" />`}
+    ${m.video ? `<video ${m.poster ? `poster="${replayUrl(m.poster)}"` : ''} controls autoplay playsinline muted></video>` : `<img src="${replayUrl(media(m))}" alt="${escapeHtml(m.title)}" />`}
     <h3>${escapeHtml(m.title)}</h3>
     <p class="replay-meta">${m.events.map((e) => escapeHtml(e.text)).join(' · ')}</p>
     <div class="replay-actions">
@@ -81,6 +81,14 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
     <p class="replay-note">${escapeHtml(note)}</p>
   </div>`;
   box.hidden = false;
+  // iPhone Safari won't play a video straight from the flight log's database
+  // (it reads it a range at a time, and a stored blob can't serve ranges), but
+  // the same file plays once it's copied into memory: so copy it first.
+  const video = box.querySelector('video');
+  if (video && m.video)
+    void m.video.arrayBuffer().then((bytes) => {
+      if (video.isConnected) video.src = replayUrl(new Blob([bytes], { type: 'video/mp4' }));
+    });
   const close = () => {
     box.hidden = true;
     box.innerHTML = '';
