@@ -338,6 +338,31 @@ export class Accounts extends DurableObject<AccountsEnv> {
       const wiped = this.sql.exec('DELETE FROM firsts WHERE account = ?', who.id).rowsWritten;
       return json({ wiped, callsign: who.callsign });
     }
+    // Why a ship's log didn't arrive: each thing it needs, for one commander. No addresses or keys, just yes or no.
+    if (request.method === 'GET' && path === '/admin/log') {
+      const key = (new URL(request.url).searchParams.get('callsign') ?? '').trim().toLowerCase();
+      const who = this.sql.exec('SELECT id, callsign FROM accounts WHERE callsign_key = ?', key).toArray()[0];
+      if (!who) return json({ error: 'No commander with that callsign' }, 404);
+      const row = this.contactRow(who.id as string);
+      const said = this.sql.exec('SELECT title, body FROM contact WHERE account = ?', who.id).toArray()[0];
+      const save = this.sql.exec('SELECT data, updated FROM saves WHERE account = ?', who.id).toArray()[0];
+      const orders = save ? ((JSON.parse(save.data as string) as { btcOrders?: BtcOrder[] }).btcOrders ?? []) : [];
+      const now = Date.now();
+      return json({
+        callsign: who.callsign,
+        alarm: await this.ctx.storage.getAlarm(),
+        push: Boolean(row?.push),
+        kinds: JSON.parse(row?.kinds ?? '{}'),
+        tz: row?.tz ?? null,
+        awake: awake(now, row?.tz ?? 0),
+        logged: row?.logged ?? 0,
+        seen: JSON.parse(row?.seen ?? '[]'),
+        last: said?.title ? { title: said.title, body: said.body } : null,
+        saved: save ? (save.updated as number) : null,
+        orders: orders.map((o) => ({ id: o.id, side: o.side, limit: o.limit, placed: o.placed })),
+        wouldSay: orders.length ? await btcItems(orders, now, relayCandles, await relayPrice()) : [],
+      });
+    }
     // Run the companies' hourly check now (testing), and see how many have asked to be contacted.
     if (request.method === 'POST' && path === '/admin/contact/run') {
       await this.alarm();
