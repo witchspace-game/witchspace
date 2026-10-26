@@ -236,7 +236,7 @@ The Bitcoin-backed kind ties the real price into the galaxy a second way: a real
 
 ### Guardrails
 
-- **In-game only.** It's the real price, not real money: in-game Bitcoin can't be bought, sold or withdrawn for real coins or cash. The screen says so (*Live price from Binance · in-game only · not real money*). Nothing here is financial advice.
+- **In-game only.** It's the real price, not real money: in-game Bitcoin can't be bought, sold or withdrawn for real coins or cash. The screen says so, in the game's own voice (*Witchspace Bitcoin stays in Witchspace: it can't be bought or cashed out for real money*); where the price comes from stays behind the scenes, so the galaxy stays the galaxy (Mark). Nothing here is financial advice.
 - **Fair fills.** Each trade fills at a price fetched at that moment, with a small spread, so watching Binance gains nothing.
 - **Stale means stopped.** If the price is more than a few minutes old, trading pauses: *The network is quiet: price 6 minutes old, trading paused.*
 - **Modern only.** Classic stays credits only, as in 1984.

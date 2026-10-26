@@ -396,7 +396,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div><dt>In your wallet</dt><dd>${formatBtc(sats)}${sats ? ` <small>${formatSats(sats)} · ${fmt(btcValue(ctx.commander, q))} Cr</small>` : ''}</dd></div>
         <div><dt>Hold space</dt><dd>None</dd></div>
       </dl>
-      <p class="ex-why">One network, so one price at every station: you can't profit by carrying it, only by choosing when to hold it. It takes no hold space, pirates can't scoop it, and nobody can take it from you, the law included. <span class="ex-honest">Live price from Binance · in-game only · not real money.</span></p>`;
+      <p class="ex-why">One network, so one price at every station: you can't profit by carrying it, only by choosing when to hold it. It takes no hold space, pirates can't scoop it, and nobody can seize it, though it pays your fines if your credits run short. <span class="ex-honest">Witchspace Bitcoin stays in Witchspace: it can't be bought or cashed out for real money.</span></p>`;
   }
 
   /** Why the price is what it is, in a sentence. */
