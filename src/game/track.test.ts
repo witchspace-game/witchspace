@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bracket, killerOf, packTrack, SAMPLE_RATE, TrackRecorder, unpackTrack, type Pose } from './track';
+import { bracket, focusOf, killerOf, packTrack, SAMPLE_RATE, TrackRecorder, unpackTrack, type Pose } from './track';
 
 const scene = { system: 'Riedquat', when: 0, you: 1 };
 const pose = (id: number, x: number, unknown = false): Pose => ({ id, p: [100000 + x, 5000, -20000], q: [0, 0, 0, 1], ...(unknown ? { unknown } : {}) });
@@ -75,5 +75,18 @@ describe('the kill cam track', () => {
   it('refuses a track from a version it cannot read', () => {
     const d = fight(2).snapshot(scene)!;
     expect(unpackTrack(packTrack({ ...d, v: 99 }))).toBeNull();
+  });
+
+  it('follows the ship you were fighting in a clip that is not a death', () => {
+    const r = fight(20);
+    r.event({ t: 6, kind: 'beam', from: 1, a: [0, 0, 0], b: [1, 0, 0], color: '#0f0', hit: 2 });
+    r.event({ t: 12, kind: 'beam', from: 1, a: [0, 0, 0], b: [1, 0, 0], color: '#0f0', hit: 3 });
+    r.event({ t: 13, kind: 'beam', from: 2, a: [0, 0, 0], b: [1, 0, 0], color: '#f00', hit: 1 }); // shot at you: not the focus
+    const d = r.snapshot(scene)!;
+    expect(focusOf(d, 0, 20)).toBe(3); // the last ship you hit
+    expect(focusOf(d, 0, 10)).toBe(2);
+    expect(focusOf(d, 14, 20)).toBeUndefined();
+    r.event({ t: 18, kind: 'boom', id: 2, p: [0, 0, 0] });
+    expect(focusOf(r.snapshot(scene)!, 14, 20)).toBe(2); // or the last ship that went up
   });
 });

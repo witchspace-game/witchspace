@@ -16,6 +16,9 @@ const FPS = PHONE ? 24 : 30;
 const HEIGHT = PHONE ? 480 : 720;
 const BITRATE = PHONE ? 700_000 : 1_200_000; // glowing lines on black: half of what a busy scene needs
 const CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42e028', 'avc1.42001f'];
+// H.264 needs even dimensions: 480 × 16/9 is 853.3, and Safari refuses 853 (so
+// iPhones said they couldn't record). Ask for the size we'll really encode.
+const PROBE_WIDTH = Math.round((HEIGHT * 16) / 9) & ~1;
 
 interface Chunk {
   chunk: EncodedVideoChunk;
@@ -53,6 +56,8 @@ export class FlightRecorder<M> {
   /** Resting (nothing about): the next frame recorded starts afresh with a keyframe. */
   private rested = false;
   private codec: string | null = null;
+  /** Why it can't record, if it can't: for the message the player sees. */
+  why = '';
   /** Whether this browser can record at all (decided once, asynchronously). */
   ready: Promise<boolean>;
 
@@ -61,10 +66,11 @@ export class FlightRecorder<M> {
   }
 
   private async probe(): Promise<boolean> {
-    if (typeof VideoEncoder === 'undefined' || typeof OffscreenCanvas === 'undefined') return false;
+    if (typeof VideoEncoder === 'undefined') return (this.why = 'no video encoder in this browser (Safari 16.4 or later has one)'), false;
+    if (typeof OffscreenCanvas === 'undefined') return (this.why = 'no OffscreenCanvas in this browser'), false;
     for (const codec of CODECS) {
       try {
-        const r = await VideoEncoder.isConfigSupported({ codec, width: Math.round((HEIGHT * 16) / 9), height: HEIGHT, bitrate: BITRATE, framerate: FPS });
+        const r = await VideoEncoder.isConfigSupported({ codec, width: PROBE_WIDTH, height: HEIGHT, bitrate: BITRATE, framerate: FPS });
         if (r.supported) {
           this.codec = codec;
           return true;
@@ -73,6 +79,7 @@ export class FlightRecorder<M> {
         /* try the next */
       }
     }
+    this.why = `no H.264 encoder for ${PROBE_WIDTH}×${HEIGHT}`;
     return false;
   }
 
@@ -128,14 +135,16 @@ export class FlightRecorder<M> {
           this.chunks.push({ chunk, t: chunk.timestamp / 1e6, key: chunk.type === 'key' });
           this.trim();
         },
-        error: () => {
+        error: (e) => {
           this.broken = true; // the encoder gave up: the game carries on without a recorder
+          this.why = `the video encoder stopped (${e?.message || 'error'})`;
           this.encoder = null;
         },
       });
       this.encoder.configure(this.config);
-    } catch {
+    } catch (e) {
       this.broken = true;
+      this.why = `the video encoder wouldn't start (${(e as Error)?.message || 'error'})`;
       this.encoder = null;
     }
   }
