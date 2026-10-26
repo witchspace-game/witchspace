@@ -11,7 +11,8 @@
     "site": "tsx tools/build-site.ts",
     "cards": "tsx tools/build-site.ts && node tools/share-cards.mjs",
     "test": "vitest run",
-    "preview:headers": "npm run build && tsx tools/serve-dist.ts"
+    "preview:headers": "npm run build && tsx tools/serve-dist.ts",
+    "notebook": "tsx tools/notebook.ts"
   },
   "license": "GPL-3.0-only",
   "description": "An open-source, browser-based space trading game - a love letter to Elite (1984).",
