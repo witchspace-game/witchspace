@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
-import { cycleSoundMode, danube, preloadRecording, sfx, unlockAudio } from './audio/sound';
+import { cycleSoundMode, danube, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
 import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
 import { withLineUp } from './content/moduleFiles';
 import { shipById, ships } from './content/ships';
@@ -132,6 +132,7 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 function setState(next: State) {
   if (next !== 'title' && isAccountPanelOpen()) toggleAccountPanel(false);
   if (next !== 'docked' && logOpen) setFlightLog(false);
+  if (next !== 'flying') music.stop(); // the moment's over: docked, jumped or dead
   if (next !== 'flying') {
     countdown = null; // leaving flight cancels a hyperspace countdown
     combatComputer = null;
@@ -1821,7 +1822,10 @@ function updateIdentities() {
     npc.shownUnidentified = unknown;
     if (first && !unknown) {
       sfx.lock();
-      if (npc.def.id === 'falcon') void keepMoment({ kind: 'legend', text: 'Hull read: the Falcon', subject: 'The Falcon' }, 15, 10);
+      if (npc.def.id === 'falcon') {
+        void keepMoment({ kind: 'legend', text: 'Hull read: the Falcon', subject: 'The Falcon' }, 15, 10);
+        music.play('falcon', !isRetro()); // the Witches' Sabbath
+      }
       flash(npc.def.id === 'falcon' ? 'Hull read · FALCON · the one the haulers warn you about' : `Hull read · ${npc.def.name}`, 3.5);
     }
   }
@@ -2107,6 +2111,7 @@ function updateMarshals(dt: number) {
       c.phase = 'emerging';
       c.t = 0;
       void keepMoment({ kind: 'marshals', text: 'A witchspace rift: the Co-operative Marshals came through', subject: 'Bastion' }, 8, 21);
+      music.play('marshals', !isRetro()); // Semper Fidelis, by the Marshals' own kind of band
       c.npc.obj.visible = true;
       clipShip(c.npc, c.mouth);
       // The nose punches through, and the drone dies away as it comes.
@@ -4359,6 +4364,9 @@ function updateSpace(dt: number) {
   updateCombat(dt, input);
   updateSharedSpace(dt, input);
   if (state === 'flying' || state === 'dead') recordTrack();
+  // A cue ends with its moment: the Falcon gone (jumped, driven off), the Marshals gone.
+  if (music.playing === 'falcon' && !npcs.some((n) => n.def.id === 'falcon')) music.stop('falcon');
+  if (music.playing === 'marshals' && !carrier) music.stop('marshals');
   if (state === 'flying') {
     updateClearance();
     updateSurrender(dt);
@@ -6761,7 +6769,7 @@ function frame(now?: number) {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, recorder, recorderWatch, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier,
       get carrier() { return carrier; },
       get commander() { return commander; },
       get state() { return state; },

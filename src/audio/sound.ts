@@ -1,5 +1,6 @@
-// Sound effects are synthesised with Web Audio. The only recording is the
-// orchestral Blue Danube used in neo-vector mode (see public/audio/CREDITS.md).
+// Sound effects are synthesised with Web Audio. The recordings are the United
+// States Marine Band's, in neo-vector mode: the Blue Danube when the docking
+// computer flies, and the music cues below (see public/audio/CREDITS.md).
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -338,6 +339,7 @@ export function preloadRecording() {
 export const danube = {
   start(orchestral: boolean) {
     if (playing) return;
+    music.stop(); // the waltz takes over
     const { ctx, master } = audio();
     const bus = ctx.createGain();
     bus.connect(master);
@@ -384,3 +386,64 @@ export const danube = {
     playing = null;
   },
 };
+
+// --- Music cues: the Marine Band for the galaxy's big moments ----------------
+// Streamed recordings (public/audio/CREDITS.md), for neo-vector mode with the
+// sound full on: Sousa's "Semper Fidelis" when the Co-operative Marshals come
+// through a rift, and Berlioz's "Dream of a Witches' Sabbath" when the
+// Falcon's hull is read. Each fades in, plays once, and fades out when the
+// moment is over.
+
+export type Cue = 'marshals' | 'falcon';
+const CUES: Record<Cue, { url: string; gain: number }> = {
+  marshals: { url: '/audio/semper-fidelis.mp3', gain: 0.7 },
+  falcon: { url: '/audio/witches-sabbath.mp3', gain: 1 },
+};
+const cueSources = new Map<Cue, { el: HTMLAudioElement; node: MediaElementAudioSourceNode }>();
+let cueOn: { name: Cue; el: HTMLAudioElement; bus: GainNode } | null = null;
+
+export const music = {
+  /** Play a cue from the start, unless it's already playing, the docking waltz is, or sound isn't full on. */
+  play(name: Cue, orchestral: boolean) {
+    if (!orchestral || soundMode !== 'full' || playing || cueOn?.name === name) return;
+    music.stop();
+    const { ctx, master } = audio();
+    let src = cueSources.get(name);
+    if (!src) {
+      const el = new Audio(CUES[name].url);
+      el.preload = 'auto';
+      src = { el, node: ctx.createMediaElementSource(el) };
+      cueSources.set(name, src);
+    }
+    const bus = ctx.createGain();
+    bus.connect(master);
+    src.node.disconnect();
+    src.node.connect(bus);
+    bus.gain.setValueAtTime(0, ctx.currentTime);
+    bus.gain.linearRampToValueAtTime(CUES[name].gain, ctx.currentTime + 2);
+    const el = src.el;
+    el.currentTime = 0;
+    const on = { name, el, bus };
+    cueOn = on;
+    el.onended = () => cueOn === on && music.stop();
+    el.play().catch(() => cueOn === on && music.stop()); // offline or blocked: silence, as before
+  },
+  /** Fade a cue out (any cue, or only `name` if it's the one playing). */
+  stop(name?: Cue) {
+    if (!cueOn || (name && cueOn.name !== name)) return;
+    const { ctx } = audio();
+    const { el, bus } = cueOn;
+    cueOn = null;
+    bus.gain.cancelScheduledValues(ctx.currentTime);
+    bus.gain.setTargetAtTime(0, ctx.currentTime, 0.8);
+    setTimeout(() => {
+      if (cueOn?.el !== el) el.pause();
+      bus.disconnect();
+    }, 4000);
+  },
+  /** The cue playing, if any. */
+  get playing(): Cue | null {
+    return cueOn?.name ?? null;
+  },
+};
+
