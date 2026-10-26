@@ -26,6 +26,8 @@ export interface Message {
   body: string;
   at: number;
   read?: boolean;
+  /** Archived by the player: out of the list, but remembered, so it isn't sent again. */
+  archived?: boolean;
 }
 
 interface Voice {

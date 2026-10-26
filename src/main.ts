@@ -771,6 +771,9 @@ function markInbox(c: Commander) {
   $('.tabs [data-tab="contracts"]').textContent = unread ? `Contracts · ${unread} new` : 'Contracts';
 }
 
+/** Earlier messages stays open while you archive from it. */
+let earlierOpen = false;
+
 function renderContracts() {
   const c = cmdr();
   const here = currentSystem();
@@ -783,13 +786,15 @@ function renderContracts() {
   // already read folded away, so the tab opens on the work, not on old news.
   const sender = (m: Message) => (m.from ? `<b class="company">${escapeHtml(m.from)}</b>` : companyMark(m.company));
   const receipt = (m: Message) => /:delivered$/.test(m.id);
-  const line = (m: Message) => `<li class="message receipt${m.read ? '' : ' unread'}">${sender(m)} · <small>${escapeHtml(m.body.replace(/^Your /, '').replace(/ was handed in: /, ' handed in · ').replace(/: ([\d,]+ Cr) paid\./, ' · $1').replace(/\.$/, ''))}</small></li>`;
-  const full = (m: Message) => `<li class="message${m.read ? '' : ' unread'}">${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small></li>`;
-  const unread = (c.messages ?? []).filter((m) => !m.read);
-  const earlier = (c.messages ?? []).filter((m) => m.read).slice(0, 10);
+  const archive = (m: Message) => `<button type="button" class="message-archive" data-archive="${escapeHtml(m.id)}" aria-label="Archive this message" title="Archive">×</button>`;
+  const line = (m: Message) => `<li class="message receipt${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <small>${escapeHtml(m.body.replace(/^Your /, '').replace(/ was handed in: /, ' handed in · ').replace(/: ([\d,]+ Cr) paid\./, ' · $1').replace(/\.$/, ''))}</small></li>`;
+  const full = (m: Message) => `<li class="message${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small></li>`;
+  const shown = (c.messages ?? []).filter((m) => !m.archived);
+  const unread = shown.filter((m) => !m.read);
+  const earlier = shown.filter((m) => m.read).slice(0, 10);
   const messages =
     unread.map((m) => (receipt(m) ? line(m) : full(m))).join('') +
-    (earlier.length ? `<li class="message-earlier"><details><summary>Earlier messages (${earlier.length})</summary><ul class="contracts">${earlier.map((m) => (receipt(m) ? line(m) : full(m))).join('')}</ul></details></li>` : '');
+    (earlier.length ? `<li class="message-earlier"><button type="button" class="message-archive-all" data-archive="read">Archive all</button><details${earlierOpen ? ' open' : ''}><summary>Earlier messages (${earlier.length})</summary><ul class="contracts">${earlier.map((m) => (receipt(m) ? line(m) : full(m))).join('')}</ul></details></li>` : '');
   for (const m of c.messages ?? []) m.read = true;
   markInbox(c);
   const hello = welcomeHere(c, here, now);
@@ -908,6 +913,14 @@ $('#contracts').addEventListener('click', (e) => {
   if (!b) return;
   b.blur();
   const c = cmdr();
+  // Archive a message, or every one already read: out of the list, remembered so it isn't sent again.
+  if (b.dataset.archive) {
+    earlierOpen = Boolean(b.closest('details')?.open);
+    for (const m of c.messages ?? []) if (b.dataset.archive === 'read' ? m.read : m.id === b.dataset.archive) m.archived = true;
+    saveCommander(c);
+    renderContracts();
+    return;
+  }
   if (b.dataset.take) {
     const now = Date.now();
     const hello = welcomeHere(c, currentSystem(), now);
