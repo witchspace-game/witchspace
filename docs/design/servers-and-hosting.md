@@ -1,7 +1,7 @@
 ---
 title: Servers and hosting
 status: building
-pillar: shared
+pillar: build
 summary: How the shared galaxy runs: a small server-authoritative setup, what it costs, community-run servers later, and why not peer-to-peer.
 card: lancer
 stages:

@@ -1,7 +1,7 @@
 ---
 title: Ship condition and servicing
 status: proposed
-pillar: core
+pillar: build
 summary: Ships wear with use: condition, readable symptoms and breakdowns, servicing at stations, second-hand ships with a history, and engineering. Modern rules only.
 card: sidewinder
 help:

@@ -1,7 +1,7 @@
 ---
 title: The radio and comms
 status: building
-pillar: core
+pillar: trade
 summary: A radio log for everything that talks to you, hails, a comms array that lets the companies reach you anywhere, an emergency beacon, and (next) talking to other commanders safely.
 card: lancer
 stages:

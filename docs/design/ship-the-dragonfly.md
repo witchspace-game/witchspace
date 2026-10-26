@@ -1,7 +1,7 @@
 ---
 title: The Dragonfly
 status: designed
-pillar: world
+pillar: build
 summary: An information runner with wings that fold: the tightest turn in the game spread, fast folded, charging in sunlight, and one day the first ship to dip into a planet's air.
 card: cobra-mk3
 stages:

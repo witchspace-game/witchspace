@@ -7,7 +7,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 export type Status = 'idea' | 'proposed' | 'designed' | 'building' | 'built' | 'guide';
-export type Pillar = 'trade' | 'fight' | 'explore' | 'core' | 'world' | 'shared' | 'platform';
+export type Pillar = 'trade' | 'fight' | 'explore' | 'build';
 
 export interface Doc {
   file: string; // relative to the repo
@@ -32,13 +32,10 @@ export const STATUS: Record<Status, { label: string; order: number }> = {
 };
 
 export const PILLARS: Record<Pillar, { name: string; blurb: string }> = {
-  trade: { name: 'Trade', blurb: 'Markets, companies and contracts, and the money that moves between the stars.' },
-  fight: { name: 'Fight', blurb: 'Pirates, police and Marshals, the law, and the road to Elite.' },
+  trade: { name: 'Trade', blurb: 'Markets, companies and contracts, and the money and messages that move between the stars.' },
+  fight: { name: 'Fight', blurb: 'Pirates, police and Marshals, the law, the Falcons, and the road to Elite.' },
   explore: { name: 'Explore', blurb: 'Surveys, signals, trails and the worlds beyond the lanes.' },
-  core: { name: 'Flight and the ship', blurb: 'How it flies, what you see, and the ship you live in.' },
-  world: { name: 'The world', blurb: 'The ships, stations, companies and people of the eight galaxies.' },
-  shared: { name: 'Shared space', blurb: 'Flying with other commanders, and the galaxy you share.' },
-  platform: { name: 'The platform', blurb: 'How Witchspace is built in the open, and how you can help.' },
+  build: { name: 'Build', blurb: 'Ships, yards and stations, and the galaxy we build together.' },
 };
 
 export const SKILLS: Record<string, string> = {
@@ -58,6 +55,7 @@ export function loadDocs(root: string): Doc[] {
       .map((f) => `docs/design/${f}`),
     'docs/companies.md',
     'docs/worldbuilding.md',
+    'docs/lore.md',
     'docs/ideas.md',
   ];
   return files.flatMap((file) => {
@@ -97,7 +95,7 @@ export function parseDoc(file: string, text: string): Doc | null {
     slug,
     title: fields.title ?? slug,
     status: (fields.status as Status) ?? 'proposed',
-    pillar: (fields.pillar as Pillar) ?? 'platform',
+    pillar: (fields.pillar as Pillar) in PILLARS ? (fields.pillar as Pillar) : 'build',
     summary: fields.summary ?? '',
     card: fields.card ?? 'cobra-mk3',
     stages: (lists.stages ?? []).map((s) => {

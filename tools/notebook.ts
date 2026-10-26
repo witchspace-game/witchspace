@@ -15,13 +15,31 @@ const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'l
 
 /** The themed files, in reading order, and the documents in each (by slug, or a repo path). */
 const PACK: { file: string; title: string; about: string; parts: string[] }[] = [
-  { file: '01-the-setting.md', title: 'The setting: the galaxy, its companies and its Legends', about: 'The tone of the world, the four trading companies and their people, and the Falcons.', parts: ['worldbuilding', 'companies', 'legends-the-falcon'] },
-  { file: '02-trade-and-money.md', title: 'Trade and money', about: 'Trading, markets, the exchange, news that travels, the saloon, Bitcoin and system currencies.', parts: ['trading', 'markets-and-trade', 'economy-and-exchanges', 'system-currencies'] },
-  { file: '03-work-law-and-combat.md', title: 'Work, law and combat', about: 'Company contracts, the law, debt and capture, the combat rating, and how pirates fight.', parts: ['companies-and-contracts', 'law-and-travel', 'combat-rating', 'combat-computer-routines', 'pilot-skill'] },
-  { file: '04-exploring-the-galaxy.md', title: 'Exploring the galaxy', about: 'Exploration, surveys, trails, discovery to development, the galaxy chart, stations and worlds, and stations run by players.', parts: ['exploration', 'discovery-to-development', 'galaxy-chart', 'stations-and-worlds', 'player-stations'] },
-  { file: '05-ships.md', title: 'Ships', about: 'Classes and makers, the modular Titanoboa, the Dragonfly, the Shrike, and keeping a ship in condition.', parts: ['ships-and-classes', 'ship-the-titanoboa', 'ship-the-dragonfly', 'ship-the-shrike', 'ship-condition'] },
-  { file: '06-flying-sharing-and-talking.md', title: 'Flying, sharing and talking', about: 'The flight HUD and touch controls, the flight recorder and clip pages, the kill cam, and the radio (including the ship\'s log by notification).', parts: ['flight-hud-and-touch', 'flight-recorder', 'kill-cam', 'radio-and-comms'] },
-  { file: '07-platform-and-community.md', title: 'The platform and the community', about: 'How Witchspace is built in the open: the project, contributing, the servers, the MCP server for AI assistants, and the ideas backlog.', parts: ['README.md', 'community-platform', 'servers-and-hosting', 'mcp-server', 'CONTRIBUTING.md', 'AGENTS.md', 'ideas', 'CREDITS.md'] },
+  { file: '01-lore.md', title: 'The lore of Witchspace', about: 'The galaxy as the people in it know it, by the four lives a commander can lead: Trade, Fight, Explore and Build.', parts: ['lore'] },
+  {
+    file: '02-trade.md',
+    title: 'Trade',
+    about: 'Trader to trading house: the trading companies and their contracts, markets and the exchange, news that travels, the saloon, Bitcoin and system currencies, and the comms that reach you while you\'re away.',
+    parts: ['trading', 'markets-and-trade', 'economy-and-exchanges', 'companies', 'companies-and-contracts', 'system-currencies', 'radio-and-comms'],
+  },
+  {
+    file: '03-fight.md',
+    title: 'Fight',
+    about: 'Harmless to Elite: the law, debt and capture, the Marshals, the combat rating, how pirates fight, the Falcons, the flight HUD, and the flight recorder and kill cam.',
+    parts: ['law-and-travel', 'combat-rating', 'pilot-skill', 'combat-computer-routines', 'legends-the-falcon', 'flight-hud-and-touch', 'flight-recorder', 'kill-cam'],
+  },
+  {
+    file: '04-explore.md',
+    title: 'Explore',
+    about: 'Tourist to Voyager: surveys, signals and trails, discovery to development, the galaxy chart, and stations and worlds.',
+    parts: ['exploration', 'discovery-to-development', 'galaxy-chart', 'stations-and-worlds'],
+  },
+  {
+    file: '05-build.md',
+    title: 'Build',
+    about: 'Contributor to station charter: the ships and their makers, the modular Titanoboa, keeping a ship flying, stations run by players, and building the galaxy together (the worldbuilding rules, the platform, the servers and the ideas).',
+    parts: ['worldbuilding', 'ships-and-classes', 'ship-the-titanoboa', 'ship-the-dragonfly', 'ship-the-shrike', 'ship-condition', 'player-stations', 'community-platform', 'README.md', 'CONTRIBUTING.md', 'AGENTS.md', 'servers-and-hosting', 'mcp-server', 'ideas', 'CREDITS.md'],
+  },
 ];
 
 /** A document's text for reading: no front matter, links made absolute, HTML comments gone. */

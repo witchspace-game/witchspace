@@ -1,7 +1,7 @@
 ---
 title: The flight recorder
 status: building
-pillar: core
+pillar: fight
 summary: Every ship's black box keeps the last minute, and sharing what you saw is part of the game. Watch how you died, keep the great moments, share them to your socials with a link back, use footage as evidence or sell it to the news, and post the best to the station board.
 card: cobra-mk3
 stages:

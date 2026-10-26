@@ -1,7 +1,7 @@
 ---
 title: The Shrike
 status: idea
-pillar: world
+pillar: build
 summary: Bram Solo's interceptor, built to disable rather than kill. Leaked plans from the hidden Solo yard, and the first ship to bring disabling and capture into the game.
 card: falcon
 stages:

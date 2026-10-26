@@ -1,7 +1,7 @@
 ---
 title: The Witchspace MCP server
 status: building
-pillar: platform
+pillar: build
 summary: Bring your own AI. One web address lets Claude, ChatGPT or Cursor validate, preview and balance-check a ship, read every design and help-wanted task, and look up any system in the galaxy. Later, the live galaxy for players, public news only.
 card: coriolis
 stages:

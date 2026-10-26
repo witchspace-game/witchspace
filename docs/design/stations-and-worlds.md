@@ -1,7 +1,7 @@
 ---
 title: Stations and worlds
 status: proposed
-pillar: world
+pillar: explore
 summary: Physical limits: station classes, ship sizes, docking capacity, how many stations a world can support, supply and decline, rivals and allies.
 card: coriolis
 help:
