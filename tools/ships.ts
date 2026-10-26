@@ -70,9 +70,11 @@ export function loadShips(root: string): ShipFile[] {
  * A wireframe drawing of the ship, seen from above and to one side, as an
  * SVG: drawn when the site is built, so the index costs nothing to load.
  */
+/** Ships drawn from another side: the station faces you, slot and all. */
+const VIEW: Record<string, { yaw: number; pitch: number }> = { coriolis: { yaw: -0.7 + Math.PI, pitch: 0.3 } };
+
 export function shipSvg(s: ShipFile, cls = 'ship-svg'): string {
-  const yaw = -0.7;
-  const pitch = 0.45;
+  const { yaw, pitch } = VIEW[s.id] ?? { yaw: -0.7, pitch: 0.45 };
   // Screen x and y, and depth (smaller is nearer the viewer).
   const project = ([x, y, z]: number[]) => {
     const x1 = x * Math.cos(yaw) - z * Math.sin(yaw);

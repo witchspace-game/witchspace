@@ -1,47 +1,68 @@
 <!-- {"path": "/careers/", "title": "Careers in the eight galaxies · Witchspace", "description": "Hexon Holdings, Vorg Industries, the Carriers' Mutual and Wexley-Yorozu are hiring pilots. These are jobs in Witchspace, a free game: no CV needed, and your Cobra is waiting.", "image": "https://witchspace.org.uk/email/hexon.jpg", "bodyClass": "careers"} -->
 <style>
-  .careers-intro { text-align: center; }
-  .careers-intro .note { display: inline-block; margin-top: 18px; padding: 8px 14px; border: 1px dashed var(--border-strong); border-radius: 999px; color: var(--muted); font-size: 14px; }
-  .firms { display: grid; gap: clamp(28px, 4vw, 44px); }
-  .firm { border: 1px solid var(--border); border-top: 4px solid var(--c); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
-  .firm-hero { display: block; width: 100%; aspect-ratio: 1040 / 440; object-fit: cover; }
-  .firm-body { padding: clamp(20px, 3vw, 34px); }
-  .firm-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-  .firm-mark { width: 52px; height: 52px; border: 2px solid var(--c); border-radius: 10px; display: grid; place-items: center; font: 700 18px var(--display); color: var(--c); letter-spacing: 1px; }
-  .firm h2 { margin: 0; font-size: clamp(26px, 3.4vw, 38px); }
-  .firm .motto { margin: 4px 0 0; color: var(--c); font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600; }
-  .firm .pitch { margin: 18px 0 22px; color: var(--muted); font-size: 17px; line-height: 1.6; max-width: 68ch; }
-  .firm .speech { border-left: 3px solid var(--c); padding: 4px 0 4px 16px; font-style: italic; }
-  .jobs { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-  .job { display: grid; grid-template-columns: 1fr auto; gap: 6px 18px; align-items: center; padding: 16px 18px; border: 1px solid var(--border); border-radius: 12px; background: rgba(0, 0, 0, 0.25); }
-  .job h3 { margin: 0; font-size: 19px; }
-  .job p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
-  .job .meta { grid-column: 1; font-size: 12.5px; letter-spacing: 0.06em; color: var(--c); text-transform: uppercase; }
-  .job .apply { grid-column: 2; grid-row: 1 / span 3; white-space: nowrap; border-color: var(--c); color: var(--c); }
-  .job .apply:hover { background: var(--c); color: #05070d; }
-  .perks { margin: 18px 0 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px; }
-  .perks li { padding: 6px 12px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 13.5px; }
-  .terms { margin-top: 18px; max-height: 190px; overflow-y: auto; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; background: rgba(0, 0, 0, 0.35); font: 12.5px/1.55 'Courier New', monospace; color: #8b97a8; }
+  .careers-intro .note { margin-top: 18px; color: var(--muted); font-size: 14px; }
+  /* The four employers at a glance: each a mark in its colour. */
+  .firm-index { list-style: none; margin: clamp(28px, 4vw, 40px) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .firm-index a { display: flex; align-items: center; gap: 12px; padding: 16px 18px; background: var(--bg); color: var(--fg); text-decoration: none; transition: background 0.2s; }
+  .firm-index a:hover { background: color-mix(in srgb, var(--c) 8%, var(--bg)); }
+  .firm-index b { display: block; font: 600 15px var(--display); }
+  .firm-index small { display: block; color: var(--muted); font-size: 12.5px; }
+  .firm-mark { flex: none; width: 40px; height: 40px; border: 1.5px solid var(--c); border-radius: 50%; display: grid; place-items: center; font: 700 13px var(--display); color: var(--c); letter-spacing: 0.5px; box-shadow: 0 0 14px color-mix(in srgb, var(--c) 35%, transparent); }
+  /* Each employer: a picture and its page, side by side, alternating. */
+  .firm { display: grid; grid-template-columns: 5fr 7fr; gap: clamp(24px, 4vw, 56px); align-items: start; padding: clamp(40px, 6vw, 72px) 0; border-top: 1px solid var(--border); scroll-margin-top: 80px; }
+  .firm:nth-child(even) .firm-pic { order: 2; }
+  .firm-pic { position: sticky; top: 96px; }
+  .firm-pic img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); }
+  .firm-head { display: flex; align-items: center; gap: 14px; }
+  .firm h2 { margin: 0; font-size: clamp(26px, 3vw, 34px); }
+  .firm .motto { margin: 2px 0 0; color: var(--c); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600; }
+  .firm .pitch { margin: 20px 0 8px; color: var(--muted); font-size: 16.5px; line-height: 1.65; }
+  .firm .speech { font-style: italic; color: var(--fg); opacity: 0.85; }
+  .firm .speech cite { display: block; margin-top: 8px; font-style: normal; font-size: 13.5px; color: var(--muted); }
+  .jobs { list-style: none; margin: 18px 0 0; padding: 0; }
+  .job { display: grid; grid-template-columns: 1fr auto; gap: 4px 20px; padding: 18px 0; border-top: 1px solid var(--border); }
+  .job h3 { margin: 0; font-size: 17.5px; }
+  .job p { margin: 0; grid-column: 1; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+  .job .meta { margin-top: 4px; font-size: 11.5px; letter-spacing: 0.08em; color: var(--c); text-transform: uppercase; opacity: 0.9; }
+  .job .apply { grid-column: 2; grid-row: 1; align-self: baseline; color: var(--c); font-weight: 600; font-size: 14.5px; text-decoration: none; white-space: nowrap; }
+  .job .apply span { display: inline-block; transition: transform 0.2s; }
+  .job .apply:hover span { transform: translateX(4px); }
+  .perks { margin: 4px 0 0; padding-top: 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 13.5px; }
+  .terms { margin-top: 18px; max-height: 150px; overflow-y: auto; padding: 14px 16px; border-left: 2px solid var(--c); background: rgba(0, 0, 0, 0.3); font: 12px/1.6 'Courier New', monospace; color: #7d8999; }
   .terms p { margin: 0 0 8px; }
   .terms .last { color: var(--c); }
-  @media (max-width: 640px) {
-    .job { grid-template-columns: 1fr; }
-    .job .apply { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 6px; }
+  .firms { padding-top: 0; }
+  .independent { text-align: center; border-top: 1px solid var(--border); }
+  @media (max-width: 860px) {
+    .firm-index { grid-template-columns: 1fr 1fr; }
+    .firm { grid-template-columns: 1fr; }
+    .firm:nth-child(even) .firm-pic { order: 0; }
+    .firm-pic { position: static; }
+    .firm-pic img { aspect-ratio: 16 / 9; }
+  }
+  @media (max-width: 420px) {
+    .firm-index a { padding: 12px; gap: 10px; }
+    .firm-index small { display: none; }
   }
 </style>
 
 <section class="section careers-intro">
   <p class="kicker">Careers</p>
   <h1>The eight galaxies are hiring</h1>
-  <p class="lede center">Four companies move the freight that keeps 2,048 worlds alive. They supply the cargo, you fly it there, they pay on delivery. Pick an employer, press <b>Apply</b>, and your first job is waiting at the station.</p>
+  <p class="lede">Four companies move the freight that keeps 2,048 worlds alive. They supply the cargo, you fly it there, they pay on delivery. Pick an employer, press <b>Apply</b>, and your first job is waiting at the station.</p>
   <p class="note">These are jobs in <a href="/">Witchspace</a>, a free game you play in your browser. Nobody will ask for your CV.</p>
+  <ul class="firm-index">
+    <li><a href="#hexon" style="--c: #bfefff"><span class="firm-mark" aria-hidden="true">HH</span><span><b>Hexon Holdings</b><small>Medicine and luxuries</small></span></a></li>
+    <li><a href="#vorg" style="--c: #ff8a3d"><span class="firm-mark" aria-hidden="true">V</span><span><b>Vorg Industries</b><small>The frontier</small></span></a></li>
+    <li><a href="#mutual" style="--c: #7fb2ff"><span class="firm-mark" aria-hidden="true">28</span><span><b>The Carriers’ Mutual</b><small>Owned by its members</small></span></a></li>
+    <li><a href="#wy" style="--c: #ffd23d"><span class="firm-mark" aria-hidden="true">WY</span><span><b>Wexley-Yorozu</b><small>Colonies and surveys</small></span></a></li>
+  </ul>
 </section>
 
-<section class="section">
-  <div class="firms">
+<section class="section firms">
 
     <article class="firm" id="hexon" style="--c: #bfefff">
-      <img class="firm-hero" src="/email/hexon.jpg" alt="A wireframe Coriolis station in orbit above a glowing planet" loading="lazy" />
+      <div class="firm-pic"><img src="/email/hexon.jpg" alt="A wireframe Coriolis station in orbit above a glowing planet" loading="lazy" /></div>
       <div class="firm-body">
         <div class="firm-head">
           <span class="firm-mark" aria-hidden="true">HH</span>
@@ -53,59 +74,59 @@
             <h3>Discreet Medical Courier</h3>
             <p>Carry medical supplies between Corporate States and Democracies. Punctuality essential. Curiosity discouraged.</p>
             <p class="meta">Safe core · Supplied cargo · From 300 Cr a run</p>
-            <a class="button apply" href="/play/?company=hexon">Apply</a>
+            <a class="apply" href="/play/?company=hexon">Apply <span aria-hidden="true">→</span></a>
           </li>
           <li class="job">
             <h3>Luxury Goods Haulier</h3>
             <p>Fine wines, furs and computers for discerning worlds. You will be trusted with valuable cargo once we trust you.</p>
             <p class="meta">Contractor standing and above · Up to 600 Cr a run</p>
-            <a class="button apply" href="/play/?company=hexon">Apply</a>
+            <a class="apply" href="/play/?company=hexon">Apply <span aria-hidden="true">→</span></a>
           </li>
           <li class="job">
             <h3>Specimen Transport Associate</h3>
             <p>Sealed class-4 biologicals, by invitation only. No prior biology required. No later biology permitted.</p>
             <p class="meta">By invitation · Very well paid · Do not open</p>
-            <a class="button apply" href="/play/?company=hexon">Apply</a>
+            <a class="apply" href="/play/?company=hexon">Apply <span aria-hidden="true">→</span></a>
           </li>
         </ul>
-        <ul class="perks"><li>Comprehensive health cover (Hexon products only)</li><li>A personal file, kept for you</li><li>Messages from us on your phone</li></ul>
+        <p class="perks">Comprehensive health cover (Hexon products only) · A personal file, kept for you · Messages from us on your phone</p>
       </div>
     </article>
 
     <article class="firm" id="vorg" style="--c: #ff8a3d">
-      <img class="firm-hero" src="/email/vorg.jpg" alt="A pirate dogfight in orange and violet laser fire" loading="lazy" />
+      <div class="firm-pic"><img src="/email/vorg.jpg" alt="A pirate dogfight in orange and violet laser fire" loading="lazy" /></div>
       <div class="firm-body">
         <div class="firm-head">
           <span class="firm-mark" aria-hidden="true">V</span>
           <div><h2>Vorg Industries</h2><p class="motto">We build. You survive.</p></div>
         </div>
-        <p class="pitch speech">“They told me nobody would fly to the frontier. Nobody would carry freight where the law is thin. Nobody would buy a hull rebuilt from three others. They were right about nobody. They were wrong about <em>you</em>.” <br>· Aurelius Vorg, from his annual address (abridged; the original runs to four hours)</p>
+        <p class="pitch speech">“They told me nobody would fly to the frontier. Nobody would carry freight where the law is thin. Nobody would buy a hull rebuilt from three others. They were right about nobody. They were wrong about <em>you</em>.” <cite>Aurelius Vorg, from his annual address (abridged; the original runs to four hours)</cite></p>
         <ul class="jobs">
           <li class="job">
             <h3>Frontier Freight Pilot</h3>
             <p>Alloys, machinery and minerals through Anarchies and Feudal worlds. Big danger bonuses. Pirates included at no extra charge.</p>
             <p class="meta">The frontier · Supplied cargo · Danger pay</p>
-            <a class="button apply" href="/play/?company=vorg">Apply</a>
+            <a class="apply" href="/play/?company=vorg">Apply <span aria-hidden="true">→</span></a>
           </li>
           <li class="job">
             <h3>Irregular Cargo Specialist</h3>
             <p>Some of our crates tick. Applicants must not mind ticking, ask about ticking, or report ticking to the police.</p>
             <p class="meta">By invitation · Generous · Questions not answered</p>
-            <a class="button apply" href="/play/?company=vorg">Apply</a>
+            <a class="apply" href="/play/?company=vorg">Apply <span aria-hidden="true">→</span></a>
           </li>
           <li class="job">
             <h3>Pest Control Operative</h3>
             <p>Our pest control division answers Thargoid incursions very quickly. Some say before. Apply now to find out.</p>
             <p class="meta">Coming soon · Combat experience preferred</p>
-            <a class="button apply" href="/play/?company=vorg">Apply</a>
+            <a class="apply" href="/play/?company=vorg">Apply <span aria-hidden="true">→</span></a>
           </li>
         </ul>
-        <ul class="perks"><li>A ship that was someone else’s once</li><li>Mr Vorg’s gratitude (worth more than money)</li><li>Speeches on request (please don’t)</li></ul>
+        <p class="perks">A ship that was someone else’s once · Mr Vorg’s gratitude (worth more than money) · Speeches on request (please don’t)</p>
       </div>
     </article>
 
     <article class="firm" id="mutual" style="--c: #7fb2ff">
-      <img class="firm-hero" src="/email/mutual.jpg" alt="A Cobra Mk III resting in its berth in a station hangar" loading="lazy" />
+      <div class="firm-pic"><img src="/email/mutual.jpg" alt="A Cobra Mk III resting in its berth in a station hangar" loading="lazy" /></div>
       <div class="firm-body">
         <div class="firm-head">
           <span class="firm-mark" aria-hidden="true">28</span>
@@ -117,21 +138,21 @@
             <h3>Member-Haulier</h3>
             <p>Food, textiles, water and furs, wherever there’s a government and a need. The friendliest first job in the galaxy.</p>
             <p class="meta">Almost everywhere · Supplied cargo · Fair rates</p>
-            <a class="button apply" href="/play/?company=mutual">Apply</a>
+            <a class="apply" href="/play/?company=mutual">Apply <span aria-hidden="true">→</span></a>
           </li>
           <li class="job">
             <h3>Relief Runner</h3>
             <p>When a member is stranded with sick crew, someone has to get there first. The treasurer always finds the money.</p>
             <p class="meta">By invitation · Urgent · Remembered</p>
-            <a class="button apply" href="/play/?company=mutual">Apply</a>
+            <a class="apply" href="/play/?company=mutual">Apply <span aria-hidden="true">→</span></a>
           </li>
         </ul>
-        <ul class="perks"><li>A membership card, kept for you</li><li>Members answer each other’s distress calls</li><li>An empty chair at every meeting (ask why)</li></ul>
+        <p class="perks">A membership card, kept for you · Members answer each other’s distress calls · An empty chair at every meeting (ask why)</p>
       </div>
     </article>
 
     <article class="firm" id="wy" style="--c: #ffd23d">
-      <img class="firm-hero" src="/email/wy.jpg" alt="A rift in space, its rim bright white against the stars" loading="lazy" />
+      <div class="firm-pic"><img src="/email/wy.jpg" alt="A rift in space, its rim bright white against the stars" loading="lazy" /></div>
       <div class="firm-body">
         <div class="firm-head">
           <span class="firm-mark" aria-hidden="true">WY</span>
@@ -143,19 +164,19 @@
             <h3>Colony Supply Pilot</h3>
             <p>Machinery, electronics and medicine for frontier colonies with moons to build from. Long routes, steady work.</p>
             <p class="meta">Thinly settled worlds · Supplied cargo</p>
-            <a class="button apply" href="/play/?company=wy">Apply</a>
+            <a class="apply" href="/play/?company=wy">Apply <span aria-hidden="true">→</span></a>
           </li>
           <li class="job">
             <h3>Survey Contractor</h3>
             <p>Fly low over planets, close to moons and hot by stars, and sell the data at any station: the further it travels, the more it’s worth.</p>
             <p class="meta">Explorers welcome · Paid by the survey</p>
-            <a class="button apply" href="/play/?company=wy">Apply</a>
+            <a class="apply" href="/play/?company=wy">Apply <span aria-hidden="true">→</span></a>
           </li>
           <li class="job">
             <h3>Science Division Courier</h3>
             <p>Special orders, delivered intact. Crew safety is a secondary consideration.</p>
             <p class="meta">By invitation · Exceptional pay · See clause 214</p>
-            <a class="button apply" href="/play/?company=wy">Apply</a>
+            <a class="apply" href="/play/?company=wy">Apply <span aria-hidden="true">→</span></a>
           </li>
         </ul>
         <div class="terms" tabindex="0" aria-label="Terms and conditions">
@@ -168,10 +189,9 @@
       </div>
     </article>
 
-  </div>
 </section>
 
-<section class="section center">
+<section class="section independent">
   <h2>Not one for employers?</h2>
   <p class="lede center">Fly independent: buy low, sell high on the exchange, and keep every credit (and every loss). <a href="/play/">Start playing</a>.</p>
 </section>

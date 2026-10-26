@@ -1,74 +1,70 @@
 <!-- {"path": "/get-involved/", "title": "Get involved · Witchspace", "description": "Design ships, write characters and stories, playtest, shape the design or code. Most of it needs no code, and every kind of contribution counts."} -->
+<style>
+  .ways { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: clamp(28px, 4vw, 40px); background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .ways a { display: block; padding: 22px 22px 24px; background: var(--bg); color: var(--fg); text-decoration: none; transition: background 0.2s; }
+  .ways a:hover { background: var(--surface); }
+  .ways h3 { margin: 0 0 6px; font-size: 17px; }
+  .ways p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+  .ext { margin-left: 6px; padding: 1px 7px; border: 1px solid var(--border-strong); border-radius: 6px; color: var(--muted); font: 600 11px var(--font); letter-spacing: 0.04em; vertical-align: 2px; white-space: nowrap; }
+  .steps { list-style: none; counter-reset: step; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(18px, 3vw, 32px); }
+  .steps li { counter-increment: step; color: var(--muted); font-size: 15px; line-height: 1.6; }
+  .steps li::before { content: counter(step); display: grid; place-items: center; width: 32px; height: 32px; margin-bottom: 12px; border: 1.5px solid var(--accent); border-radius: 50%; color: var(--accent); font: 700 14px var(--display); }
+  .steps b { display: block; color: var(--fg); font-size: 16px; margin-bottom: 4px; }
+  .ai-setup { margin-top: 18px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .ai-setup summary { padding: 16px 4px; cursor: pointer; font-weight: 600; }
+  .ai-setup[open] summary { color: var(--accent); }
+  .ai-setup > div { padding: 0 4px 18px; }
+  @media (max-width: 860px) { .ways { grid-template-columns: 1fr 1fr; } .steps { grid-template-columns: 1fr; } }
+  @media (max-width: 520px) { .ways { grid-template-columns: 1fr; } }
+</style>
+
 <section class="section">
   <div class="section-head">
     <p class="kicker">Get involved</p>
     <h1>Build it with us</h1>
-    <p class="lede">
-      Witchspace is built in the open by the people who love it. <strong>Most of what it needs isn't code</strong>: ships, characters, stories, playtesting and good arguments about design. In time, contributing is also how you earn the right to run a station.
-    </p>
-    <p><a class="button primary small" href="#help-wanted">See what's wanted</a> <a class="button ghost small" href="/roadmap/">The roadmap</a> <a class="button ghost small" href="/ideas/">Suggest an idea</a></p>
+    <p class="lede">Witchspace is built in the open by the people who love it, and <strong>most of what it needs isn't code</strong>: ships, characters, stories, playtesting and good arguments about design.</p>
   </div>
 
-  <div class="grid">
-    <a class="card link" href="/ships/">
-      <h3>Design a ship</h3>
-      <p>Every ship is a small file of points, faces and a glow colour. Browse the fleet, suggest improvements on any ship's page, or draw your own. A ship editor in the browser is on the way, so you won't need GitHub for this.</p>
-    </a>
-    <a class="card link" href="/design/worldbuilding/">
-      <h3>Write the galaxy</h3>
-      <p>Saloon regulars, company people, trail stories, beacon logs, rumours. Dry, wry and a little lawless, and every story has people in it. Start with the worldbuilding guide.</p>
-    </a>
-    <a class="card link" href="/design/legends-the-falcon/">
-      <h3>Build a Legend</h3>
-      <p>Rare easter-egg ships that tip their hat to great science fiction. Evoke the idea, never copy the design.</p>
-    </a>
-    <a class="card link" href="/play/">
-      <h3>Playtest</h3>
-      <p>Fly it, break it, tell us how it feels. Press P for a clean photo of what you saw. Good bug reports are gold.</p>
-    </a>
-    <a class="card link" href="/roadmap/">
-      <h3>Shape the design</h3>
-      <p>Every feature is designed in the open before it's built. Read the designs, argue for your ideas, and vote on what comes next.</p>
-    </a>
-    <a class="card link" href="https://github.com/witchspace-game/witchspace">
-      <h3>Code</h3>
-      <p>TypeScript and three.js: flight, combat, the economy, the shared galaxy, tools. There's plenty to build.</p>
-    </a>
+  <div class="ways">
+    <a href="/ships/"><h3>Design a ship</h3><p>Every ship is a small file of points, faces and a glow colour. Browse the fleet and improve one, or draw your own.</p></a>
+    <a href="/design/worldbuilding/"><h3>Write the galaxy</h3><p>Saloon regulars, company people, trail stories, rumours. Dry, wry and a little lawless.</p></a>
+    <a href="/design/legends-the-falcon/"><h3>Build a Legend</h3><p>Rare ships that tip their hat to great science fiction. Evoke the idea, never copy the design.</p></a>
+    <a href="/play/"><h3>Playtest</h3><p>Fly it, break it, tell us how it feels. Good bug reports are gold.</p></a>
+    <a href="/ideas/"><h3>Shape the design</h3><p>Suggest ideas and vote on what comes next. Every feature is designed in the open first.</p></a>
+    <a href="https://github.com/witchspace-game/witchspace"><h3>Code <span class="ext">GitHub ↗</span></h3><p>TypeScript and three.js: flight, combat, the economy, the shared galaxy. Plenty to build.</p></a>
   </div>
+</section>
+
+<section class="section">
+  <h2>How to start</h2>
+  <ol class="steps">
+    <li><b>Play</b>Fly a few runs, so you know what it feels like.</li>
+    <li><b>Pick something</b>From <a href="#help-wanted">help wanted</a> below, or something you'd love to see.</li>
+    <li><b>Say hello</b>Email <a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a> or post on the <a href="/ideas/">ideas board</a>, and we'll help you get going. No GitHub needed.</li>
+  </ol>
 </section>
 
 <!-- help:wanted -->
 
 <section class="section">
   <h2>Bring your own AI</h2>
-  <p class="lede">
-    Witchspace is built to work with AI assistants such as Claude, ChatGPT, Grok and Cursor. Every content type has a strict schema, and an <code>AGENTS.md</code> guide tells any assistant how to contribute well.
-  </p>
-  <p>
-    Ask yours to <em>"design a pirate gunship for Witchspace"</em> and it will write against the schema and check its work with the validator. Please tick the "AI-assisted" box on your pull request, and play-test what you submit: you're the author.
-  </p>
-  <div class="card mcp-card">
-    <h3>Add Witchspace to your assistant</h3>
-    <p>One web address gives your assistant the game's own tools: check a ship against the rules, draw it beside a Cobra for scale, compare it with the fleet, read every design and help-wanted task, and look up any system in the eight galaxies.</p>
-    <p><code class="mcp-url">https://space.witchspace.org.uk/mcp</code> <button type="button" class="button small" data-copy="https://space.witchspace.org.uk/mcp">Copy</button></p>
-    <ul class="doc">
-      <li><strong>Claude:</strong> Settings, Connectors, Add custom connector, and paste the address.</li>
-      <li><strong>ChatGPT:</strong> Settings, Connectors (developer mode), Create, and paste the address.</li>
-      <li><strong>Claude Code:</strong> <code>claude mcp add --transport http witchspace https://space.witchspace.org.uk/mcp</code></li>
-      <li><strong>Cursor and others:</strong> add it as a remote MCP server (streamable HTTP).</li>
-    </ul>
-    <p class="muted small">It only reads: nothing you do with it changes anything. <a href="/design/mcp-server/">How it works, and what's next</a>. A plain summary of the project for any AI lives at <a href="/llms.txt">/llms.txt</a>.</p>
-  </div>
+  <p class="lede">Witchspace is built to work with AI assistants such as Claude, ChatGPT and Cursor. Ask yours to <em>"design a pirate gunship for Witchspace"</em> and it will check its work against the game's own rules. You're still the author: play-test what you submit, and say it was AI-assisted.</p>
+  <details class="ai-setup">
+    <summary>Add Witchspace to your assistant</summary>
+    <div>
+      <p class="muted">One web address gives your assistant the game's own tools: check a ship against the rules, draw it beside a Cobra for scale, read every design and help-wanted task, and look up any system. It only reads: nothing you do with it changes anything.</p>
+      <p><code class="mcp-url">https://space.witchspace.org.uk/mcp</code> <button type="button" class="button small" data-copy="https://space.witchspace.org.uk/mcp">Copy</button></p>
+      <ul class="doc">
+        <li><strong>Claude:</strong> Settings, Connectors, Add custom connector, and paste the address.</li>
+        <li><strong>ChatGPT:</strong> Settings, Connectors (developer mode), Create, and paste the address.</li>
+        <li><strong>Claude Code:</strong> <code>claude mcp add --transport http witchspace https://space.witchspace.org.uk/mcp</code></li>
+        <li><strong>Cursor and others:</strong> add it as a remote MCP server (streamable HTTP).</li>
+      </ul>
+      <p class="muted small"><a href="/design/mcp-server/">How it works, and what's next</a>. A plain summary of the project for any AI lives at <a href="/llms.txt">/llms.txt</a>.</p>
+    </div>
+  </details>
 </section>
 
 <section class="section">
-  <h2>How to start</h2>
-  <ol class="doc">
-    <li>Play the game, then pick something from <a href="#help-wanted">help wanted</a>, or something you'd love to see.</li>
-    <li>Say which in <a href="https://github.com/witchspace-game/witchspace/discussions">Discussions</a>, or email <a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a>, and we'll help you get going.</li>
-    <li>If you're comfortable with GitHub, the <a href="https://github.com/witchspace-game/witchspace/blob/main/CONTRIBUTING.md">contributing guide</a> has the details. If you're not, you don't need it.</li>
-  </ol>
-  <p class="muted">
-    Everyone taking part agrees to the code of conduct. Problems can be reported privately to <a href="mailto:conduct@witchspace.org.uk">conduct@witchspace.org.uk</a>.
-  </p>
+  <p class="muted">Comfortable with GitHub? The <a href="https://github.com/witchspace-game/witchspace/blob/main/CONTRIBUTING.md">contributing guide</a> <span class="ext">GitHub ↗</span> and <a href="https://github.com/witchspace-game/witchspace/discussions">Discussions</a> <span class="ext">GitHub ↗</span> are there too. Everyone taking part agrees to the code of conduct; problems can be reported privately to <a href="mailto:conduct@witchspace.org.uk">conduct@witchspace.org.uk</a>.</p>
 </section>
