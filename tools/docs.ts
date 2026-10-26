@@ -211,22 +211,23 @@ export function helpWantedHtml(docs: Doc[]): string {
   const bySkill = new Map<string, { task: string; doc: Doc }[]>();
   for (const d of docs) for (const h of d.help) bySkill.set(h.skill, [...(bySkill.get(h.skill) ?? []), { task: h.task, doc: d }]);
   const skills = Object.keys(SKILLS).filter((s) => bySkill.has(s));
+  // One row per skill, closed: open the one you're good at.
   return `<section class="section" id="help-wanted">
   <div class="section-head">
     <p class="kicker">Help wanted</p>
     <h2>Pick something up</h2>
-    <p class="lede">Every design lists what it needs. Here's all of it, by what you're good at. Say which you'd like in <a href="https://github.com/witchspace-game/witchspace/discussions">Discussions</a> or at <a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a>, and we'll help you get started. No code needed for most of it.</p>
+    <p class="lede">Every design lists what it needs. Open what you're good at; most of it needs no code.</p>
   </div>
-  <div class="help-grid">
+  <div class="help-list">
 ${skills
   .map(
-    (s) => `    <div class="card help-skill">
-      <h3><span class="skill ${s}">${SKILLS[s]}</span></h3>
+    (s) => `    <details class="help-skill ${s}">
+      <summary><span class="skill ${s}">${SKILLS[s]}</span><small>${bySkill.get(s)!.length} ${bySkill.get(s)!.length === 1 ? 'task' : 'tasks'}</small></summary>
       <ul>${bySkill
         .get(s)!
-        .map((h) => `<li>${esc(h.task)} <a href="/design/${h.doc.slug}/">${esc(h.doc.title)}</a></li>`)
+        .map((h) => `<li><span>${esc(h.task)}</span><a href="/design/${h.doc.slug}/">${esc(h.doc.title)}</a></li>`)
         .join('')}</ul>
-    </div>`,
+    </details>`,
   )
   .join('\n')}
   </div>

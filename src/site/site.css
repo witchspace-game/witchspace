@@ -887,14 +887,23 @@ button.button { cursor: pointer; }
 .skill.design { color: var(--violet); }
 .skill.code { color: #9fb4ff; }
 
-.help-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
-.help-skill h3 { margin: 0 0 10px; }
-.help-skill h3 .skill { font-size: 14px; padding: 3px 10px; }
-.help-skill ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; color: var(--fg); font-size: 15px; }
-.help-skill li a { margin-left: 4px; font-size: 13.5px; color: var(--muted); }
+.help-list { border-top: 1px solid var(--border); }
+.help-skill { border-bottom: 1px solid var(--border); }
+.help-skill summary { display: flex; align-items: center; gap: 12px; padding: 18px 4px; cursor: pointer; list-style: none; }
+.help-skill summary::-webkit-details-marker { display: none; }
+.help-skill summary .skill { font-size: 15px; padding: 4px 12px; }
+.help-skill summary small { color: var(--muted); font-size: 13.5px; }
+.help-skill summary::after { content: '+'; margin-left: auto; color: var(--muted); font-size: 22px; line-height: 1; transition: transform 0.2s; }
+.help-skill[open] summary::after { transform: rotate(45deg); }
+.help-skill ul { margin: 0 0 20px; padding: 0; list-style: none; display: grid; gap: 2px; }
+.help-skill li { display: flex; justify-content: space-between; align-items: baseline; gap: 6px 20px; padding: 10px 4px; border-top: 1px solid rgba(255, 255, 255, 0.04); font-size: 15px; line-height: 1.5; }
+.help-skill li a { flex: none; max-width: 40%; text-align: right; font-size: 13px; color: var(--muted); }
+.help-skill li a:hover { color: var(--accent); }
 
 @media (max-width: 640px) {
-  .road-items, .help-grid { grid-template-columns: 1fr; }
+  .road-items { grid-template-columns: 1fr; }
+  .help-skill li { flex-direction: column; }
+  .help-skill li a { max-width: none; text-align: left; }
 }
 
 /* --- The phone menu (src/site/nav.ts) --------------------------------------- */
