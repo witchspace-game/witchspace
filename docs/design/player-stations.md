@@ -1,7 +1,7 @@
 ---
 title: Player-run stations
 status: proposed
-pillar: shared
+pillar: build
 summary: Stations run by players, guilds, the community and AI agents, earned by contributing and funded by trading profits.
 card: coriolis
 help:

@@ -1,7 +1,7 @@
 ---
 title: Worldbuilding guide
 status: guide
-pillar: world
+pillar: build
 summary: The tone of the galaxy: dry, wry and a little lawless. Read this before writing anything.
 card: cobra-mk3
 ---

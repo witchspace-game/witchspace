@@ -1,7 +1,7 @@
 ---
 title: Ships, classes and makers
 status: proposed
-pillar: world
+pillar: build
 summary: Why you'd choose one ship over another. Classes for every kind of life, makers with a character every hull carries, ships earned by careers (a Lancer for a Marshal, a Falcon for a pirate the Solos trust), upgrades, and buying and selling.
 card: cobra-mk3
 stages:

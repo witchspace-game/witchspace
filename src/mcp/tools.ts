@@ -312,7 +312,7 @@ export const TOOLS: Tool[] = [
       type: 'object',
       properties: {
         status: { type: 'string', enum: ['idea', 'proposed', 'designed', 'building', 'built', 'guide'] },
-        pillar: { type: 'string', enum: ['trade', 'fight', 'explore', 'core', 'world', 'shared', 'platform'] },
+        pillar: { type: 'string', enum: ['trade', 'fight', 'explore', 'build'] },
       },
     },
     run: (args, data) =>

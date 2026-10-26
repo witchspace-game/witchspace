@@ -1,7 +1,7 @@
 ---
 title: The trading companies
 status: designed
-pillar: world
+pillar: trade
 summary: Hexon Holdings, Vorg Industries, the Carriers' Mutual and Wexley-Yorozu: where they came from, what they want, the people inside them, and their ships.
 card: bullsnake
 help:

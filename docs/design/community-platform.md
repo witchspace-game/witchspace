@@ -1,7 +1,7 @@
 ---
 title: The community platform
 status: building
-pillar: platform
+pillar: build
 summary: How people find their way in and help build Witchspace. One source of truth for what's built and what's next, help wanted on everything, ways to contribute without GitHub, and credit where it's due.
 card: coriolis
 stages:
@@ -38,7 +38,7 @@ Every design document starts with a short header:
 ---
 title: Exploration
 status: building          # idea, proposed, designed, building or built (or guide)
-pillar: explore           # trade, fight, explore, core, world, shared or platform
+pillar: explore           # trade, fight, explore or build
 summary: One or two sentences for the roadmap and the library.
 card: cobra-mk3           # the ship on its share card
 stages:                   # optional: a design built in stages
@@ -51,7 +51,7 @@ help:                     # what someone could pick up, and the skill it needs
 
 From those headers the site makes:
 
-- **The roadmap** (`/roadmap/`): every feature by pillar (Trade, Fight, Explore, Flight and the ship, The world, Shared space, The platform), with its status, its stages as a row of steps, and how much help it wants. Building first, then designed, proposed, ideas; built last.
+- **The roadmap** (`/roadmap/`): every feature under one of the four things a commander does (Trade, Fight, Explore and Build), with its status, its stages as a row of steps, and how much help it wants. Building first, then designed, proposed, ideas; built last.
 - **The design library** (`/design/`): every design document, all of them now, with its status.
 - **Help wanted** (on `/get-involved/`): every task from every design, grouped by skill (ships, writing, art, playtesting, design, code), each linked to its design.
 - **Each design's page** shows its status, stages and help wanted above the text.

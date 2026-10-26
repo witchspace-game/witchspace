@@ -1,7 +1,7 @@
 ---
 title: Ideas backlog
 status: idea
-pillar: platform
+pillar: build
 summary: Ideas that aren't designed yet, from multicrew ships to a streamer mode. The community votes on what comes next.
 card: cobra-mk3
 ---

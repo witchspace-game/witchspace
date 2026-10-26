@@ -1,7 +1,7 @@
 ---
 title: Flight HUD and touch
 status: built
-pillar: core
+pillar: fight
 summary: The job strip that always says what's next, and a touch drawer made for thumbs.
 card: cobra-mk3
 help:

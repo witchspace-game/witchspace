@@ -1,7 +1,7 @@
 ---
 title: The Titanoboa, a modular factory
 status: designed
-pillar: world
+pillar: build
 summary: Wexley-Yorozu's constructor rebuilt as a factory of modules on a common coupling - maw, furnaces, hold, habitat, fabricator, science, reactor - each a single clear shape in glowing line, brought by tug teams and assembled where the work is. We designed the core; the standard is open, so anyone can design a module. It's as big as the job needs, new modules are sent where they're needed and can stay on the finished station, sections are swapped when they fail, and a reactor towed between stars is work for commanders.
 card: titanoboa
 stages:

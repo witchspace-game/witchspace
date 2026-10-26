@@ -1,7 +1,7 @@
 ---
 title: The galaxy chart
 status: building
-pillar: core
+pillar: explore
 summary: Where every career starts a decision: the route drawn, danger at a glance, a proper key, links in from everywhere, zoom, and trade on the chart.
 card: coriolis
 stages:
