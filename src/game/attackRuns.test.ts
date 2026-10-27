@@ -8,6 +8,9 @@ import { PULSE_LASER } from './weapons';
 // Attack runs, not rams (Mark: "I hate the way the pirates come in nose first and literally
 // smash into you"). Fly a pirate at a Cobra, many times over, and watch the gap.
 
+/** The mode as it is now (update() changes it; a function keeps TypeScript from narrowing it). */
+const modeOf = (n: NpcShip): NpcMode => n.mode;
+
 function fight(pirateId: string, cobraSpeed: number, seconds: number) {
   const cobra = new PlayerShip(shipById('cobra-mk3')!);
   cobra.speed = cobraSpeed;
@@ -20,13 +23,13 @@ function fight(pirateId: string, cobraSpeed: number, seconds: number) {
   pirate.mode = 'attack';
   let closest = Infinity;
   let runs = 0;
-  let was: NpcMode = pirate.mode;
+  let was = modeOf(pirate);
   const dt = 1 / 60;
   for (let t = 0; t < seconds; t += dt) {
     pirate.update(dt);
     cobra.move(dt);
     closest = Math.min(closest, pirate.obj.position.distanceTo(cobra.obj.position));
-    const now: NpcMode = pirate.mode; // read afresh: update() changes it
+    const now = modeOf(pirate);
     if (was === 'attack' && now === 'breakoff') runs++;
     was = now;
   }
