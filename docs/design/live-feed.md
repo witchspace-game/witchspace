@@ -74,7 +74,7 @@ Nothing that isn't already public elsewhere: callsigns and firsts are on the gal
 
 ### Caching and CORS
 
-- The Worker caches the whole response at the edge for 60 seconds (`Cache-Control: public, max-age=60`), so however often the home page asks, the Durable Objects are asked at most about once a minute per Cloudflare location.
+- The Worker caches the whole response at the edge for 60 seconds (`Cache-Control: public, max-age=60`), so however often the home page asks, the Durable Objects are asked at most about once a minute per Cloudflare location. A copy served from the cache comes back with the zone's browser TTL (four hours) in its place, so the Worker sets the 60 seconds again on the way out; otherwise a returning visitor's browser would show a feed hours old.
 - Anyone may read it (it's public, and `curl` works), but the browser CORS header is only sent to witchspace.org.uk and localhost, so other sites can't build on it from a browser.
 - Only `GET` (and the `OPTIONS` preflight).
 

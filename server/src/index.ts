@@ -115,6 +115,8 @@ async function feedRoute(request: Request, env: Env, ctx: ExecutionContext): Pro
   const out = new Response(res.body, res);
   for (const [k, v] of Object.entries(headers)) out.headers.set(k, v);
   out.headers.set('Vary', 'Origin');
+  // A cached copy comes back with the zone's four-hour browser TTL in place of ours: put the minute back.
+  out.headers.set('Cache-Control', `public, max-age=${FEED_MAX_AGE}`);
   return out;
 }
 
