@@ -4,7 +4,7 @@
 // Cursor as a connector. The tools are shared with the local server in
 // src/mcp; the data is bundled by tools/mcp-data.ts before deploying.
 
-import { handle, type Message } from '../../src/mcp/protocol';
+import { handle, type Extra, type Message } from '../../src/mcp/protocol';
 import type { McpData } from '../../src/mcp/tools';
 import bundle from './mcp-data.json';
 // Compiled from the ship schema by tools/mcp-data.ts (Workers can't compile it at run time).
@@ -44,16 +44,17 @@ function limited(ip: string): boolean {
 }
 
 // Anyone may call it, from anywhere: it's public and read-only.
-const CORS = {
+export const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Accept, Mcp-Protocol-Version, Mcp-Session-Id, Authorization',
-  'Access-Control-Expose-Headers': 'Mcp-Protocol-Version',
+  'Access-Control-Expose-Headers': 'Mcp-Protocol-Version, WWW-Authenticate',
 };
 
 const reply = (body: unknown, status = 200) => new Response(body === null ? null : JSON.stringify(body), { status, headers: { ...CORS, ...(body === null ? {} : { 'Content-Type': 'application/json' }) } });
 
-export async function mcp(request: Request): Promise<Response> {
+/** POST /mcp (public), and /mcp/build with the signed-in tools as `extra` (index.ts checks the token first). */
+export async function mcp(request: Request, extra?: Extra): Promise<Response> {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   if (request.method === 'GET') {
     // No server-to-client stream: everything is a plain answer to a POST. A browser gets a pointer.
@@ -71,7 +72,7 @@ export async function mcp(request: Request): Promise<Response> {
   } catch {
     return reply({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error' } }, 400);
   }
-  const replies = (await Promise.all((Array.isArray(msg) ? msg : [msg]).map((m) => handle(m, data, VERSION)))).filter((r) => r !== null);
+  const replies = (await Promise.all((Array.isArray(msg) ? msg : [msg]).map((m) => handle(m, data, VERSION, extra)))).filter((r) => r !== null);
   // Only notifications: accepted, nothing to say.
   if (!replies.length) return new Response(null, { status: 202, headers: CORS });
   return reply(Array.isArray(msg) ? replies : replies[0]);

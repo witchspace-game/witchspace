@@ -9,7 +9,9 @@ import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMA
 import { nameRule } from './names';
 import { Accounts, type AccountsEnv } from './accounts';
 import { IdeasBoard, type IdeasEnv } from './ideas';
-import { mcp } from './mcp';
+import { CORS as MCP_CORS, mcp } from './mcp';
+import { buildTools } from './mcpBuild';
+import { authServerMetadata, BUILD_PATH, issuerOf, protectedResourceMetadata } from './oauth';
 import { btc, isBtc } from './btc';
 import { ClipBoard, type ClipsEnv } from './clips';
 import { buildFeed, FEED_MAX_AGE, FEED_WINDOW } from './feed';
@@ -20,6 +22,8 @@ export interface Env extends IdeasEnv, AccountsEnv, ClipsEnv {
   IDEAS: DurableObjectNamespace<IdeasBoard>;
   ACCOUNTS: DurableObjectNamespace<Accounts>;
   CLIPS: DurableObjectNamespace<ClipBoard>;
+  /** Only for `wrangler dev`: the local address, as the OAuth issuer (oauth.ts). */
+  OAUTH_ISSUER?: string;
 }
 
 export { Accounts, ClipBoard, IdeasBoard };
@@ -61,13 +65,16 @@ export default {
     }
     // The MCP server for AI assistants: public and read-only, so open to any caller (server/src/mcp.ts).
     if (url.pathname === '/mcp') return mcp(request);
+    // Signing in from an assistant (server/src/oauth.ts), and the signed-in MCP address that needs it.
+    if (url.pathname === BUILD_PATH) return mcpBuild(request, env);
+    if (url.pathname.startsWith('/.well-known/oauth-') || ['/oauth/register', '/oauth/authorize', '/oauth/token'].includes(url.pathname)) return oauthRoute(request, env, url);
     // The live feed for the home page (server/src/feed.ts): public, cached at the edge.
     if (url.pathname === '/feed') return feedRoute(request, env, ctx);
     // A link in an email, so no Origin: stop the companies getting in touch.
     if (url.pathname === '/contact/stop') return accountsOf(env).fetch(request);
     // The ideas board (/ideas…) and accounts (/auth…, /me…, /admin…, /submissions…), called from our pages and tools.
     const ideas = url.pathname === '/ideas' || url.pathname.startsWith('/ideas/');
-    const accounts = ['/auth/', '/me/', '/admin/', '/contact/', '/push/', '/stats/', '/firsts/'].some((p) => url.pathname.startsWith(p)) || url.pathname === '/me' || url.pathname === '/submissions' || url.pathname.startsWith('/submissions/');
+    const accounts = ['/auth/', '/me/', '/admin/', '/contact/', '/push/', '/stats/', '/firsts/', '/oauth/request/'].some((p) => url.pathname.startsWith(p)) || url.pathname === '/me' || url.pathname === '/submissions' || url.pathname.startsWith('/submissions/');
     if (ideas || accounts) {
       const origin = request.headers.get('Origin') ?? '';
       const allowed = ORIGINS.some((o) => o.test(origin));
@@ -90,6 +97,54 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 const clipsOf = (env: Env) => env.CLIPS.get(env.CLIPS.idFromName('clips'));
+
+/** The authorisation server's public side: metadata, registration, the start of a sign-in, and tokens. Any client, from anywhere. */
+async function oauthRoute(request: Request, env: Env, url: URL): Promise<Response> {
+  const issuer = issuerOf(env.OAUTH_ISSUER);
+  const open = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization, Mcp-Protocol-Version' };
+  const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { ...open, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: open });
+  const p = url.pathname;
+  if (request.method === 'GET' && p === '/.well-known/oauth-authorization-server') return reply(authServerMetadata(issuer));
+  if (request.method === 'GET' && (p === '/.well-known/oauth-protected-resource' || p === `/.well-known/oauth-protected-resource${BUILD_PATH}`)) return reply(protectedResourceMetadata(issuer));
+  if (request.method === 'POST' && p === '/oauth/register') {
+    const r = await accountsOf(env).oauthRegister(((await request.json().catch(() => null)) ?? {}) as Record<string, string>);
+    return reply(JSON.parse(r.body), r.status);
+  }
+  if (request.method === 'GET' && p === '/oauth/authorize') {
+    const r = await accountsOf(env).oauthStart(Object.fromEntries(url.searchParams), issuer);
+    if ('redirect' in r) return Response.redirect(r.redirect, 302);
+    return new Response(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Witchspace</title><body style="font:16px system-ui;max-width:32em;margin:3em auto;padding:0 1em"><h1>Can't sign in</h1><p>${r.page}</p>`, { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  }
+  if (request.method === 'POST' && p === '/oauth/token') {
+    const type = request.headers.get('Content-Type') ?? '';
+    const form = type.includes('json') ? (((await request.json().catch(() => null)) ?? {}) as Record<string, string>) : Object.fromEntries(new URLSearchParams(await request.text()));
+    const r = await accountsOf(env).oauthToken(form);
+    return reply(JSON.parse(r.body), r.status);
+  }
+  return reply({ error: 'Not found' }, 404);
+}
+
+/** /mcp/build: the public tools and the signed-in ones, for an access token from oauthToken. */
+async function mcpBuild(request: Request, env: Env): Promise<Response> {
+  if (request.method === 'OPTIONS') return mcp(request);
+  const auth = request.headers.get('Authorization') ?? '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const who = token ? await accountsOf(env).oauthAccount(token) : null;
+  if (!who) {
+    const meta = `${issuerOf(env.OAUTH_ISSUER)}/.well-known/oauth-protected-resource${BUILD_PATH}`;
+    return new Response(JSON.stringify({ error: 'Sign in to hand in work' }), {
+      status: 401,
+      headers: { ...MCP_CORS, 'Content-Type': 'application/json', 'WWW-Authenticate': `Bearer resource_metadata="${meta}"${token ? ', error="invalid_token"' : ''}` },
+    });
+  }
+  const accounts = accountsOf(env);
+  const as = async (method: string, path: string, body?: unknown) => {
+    const r = await accounts.asAccount(who.id, method, path, body === undefined ? undefined : JSON.stringify(body));
+    return { status: r.status, data: JSON.parse(r.data) as Record<string, unknown> };
+  };
+  return mcp(request, buildTools(as, who.callsign));
+}
 
 /**
  * GET /feed: anyone may read it (it's all public elsewhere), but only our pages get
