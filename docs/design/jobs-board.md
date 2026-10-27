@@ -10,6 +10,7 @@ stages:
   - Careers becomes Jobs - /careers/ redirects to /jobs/; the nav says Jobs | built
   - A rolling board - contracts posted one at a time in the game, each with a notice on the site | building
   - Take this job - a link that opens the game on that exact contract | building
+  - Build jobs - Wexley-Yorozu's design commissions on the board (Mark) | proposed
 ---
 
 # The jobs board and company pages
@@ -195,6 +196,28 @@ One for each company: `hexon`, `vorg`, `mutual` and `wy`, the ids the game uses.
 6. **Between them:** its line from "Between them", and links to the other three.
 
 **Off the company pages:** the logo and concept-art prompts, and the story hooks. They're for builders, and stay on the full design page.
+
+## Build jobs: Wexley-Yorozu's design commissions (Mark)
+
+*Mark: "We do also offer Build jobs where users can contribute to the Witchspace universe! I think 5000 credits for an approved design from Wexley-Y!"*
+
+These match the commission already designed in [the Titanoboa](ship-the-titanoboa.md#paid-on-commission-mark-25-october-2026):
+- 5,000 Cr, once, when an accepted module is first fitted at a yard
+- 2,000 Cr for an accepted revision
+
+On the site:
+- **Where they go:**
+  - their own section on /jobs/ ("Design commissions", `#build`), after the companies' adverts
+  - repeated on the Wexley-Yorozu page
+- **Kept apart from the contracts:** kind `build` is never on a station's board, so it has no filter chip and no live count.
+- **Apply** goes to the Titanoboa design page (the coupling standard), or to the no-GitHub submit page once there is one.
+- **Honest about it:**
+  - Every pay line says "when it's first fitted".
+  - The section says the payout isn't built yet and no community module has been fitted.
+  - Pay is in credits, in the game. Contributors keep their copyright (CC BY-SA 4.0).
+  - How to submit today: a GitHub pull request, or the ideas board without GitHub.
+- **Words** from the marketing session, checked by the game dev session.
+- **Waiting on Mark:** whether the adverts go up before the payout is built. Building the payout is about a day's work for the game dev session.
 
 ## Careers becomes Jobs
 

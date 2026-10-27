@@ -1136,3 +1136,5 @@ iframe.yt { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border
   .offer.new, .notice { animation: none; }
   .offer, .notice { transition: none; }
 }
+.build-ads .lede { margin-bottom: 8px; }
+.build-note { margin: 14px 0 0; color: var(--muted); font-size: 14px; max-width: var(--measure); }
