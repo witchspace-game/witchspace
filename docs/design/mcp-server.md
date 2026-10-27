@@ -142,7 +142,8 @@ Only the hashes of codes and tokens are kept. Signing out of the game doesn't re
 - The issuer is always `https://space.witchspace.org.uk`. To try it locally: `npx wrangler dev --var OAUTH_ISSUER:http://127.0.0.1:8787`, with the site on `npm run dev` for the connect page.
 - Tested end to end against `wrangler dev` with a script playing the client: told to sign in, register, authorise, the connect page's two calls, a wrong PKCE verifier (refused, and the code spent), tokens, the signed-in tools handing a module in, refresh (and the old refresh token refused), a bad token, and saying no.
 - The connect page is `site/pages/connect.html` and `src/site/connect.ts` (the site's).
-- **Still to do before it's announced:** the connect page live on the site, then trying every tool in the real Claude client. `review_queue` and `review` for maintainers come later; `npx tsx tools/submissions.ts` does that meanwhile.
+- **Tried in the real client (Claude Code, 27 October 2026):** Mark connected `/mcp/build`, and every tool worked as CMDR Jameson: `my_submissions`, `submit` (credited, designer set to the callsign), `submission`, `revise` (version 2), `withdraw`, and a broken file's problems coming back as a list with nothing kept. Two fixes came out of it: Claude Code registers its local return addresses without a port (RFC 8252 lets the port vary, #234), and `submission` now returns the file compactly.
+- **Still to try:** claude.ai in the browser, which registers itself and signs in through `https://claude.ai/api/mcp/auth_callback`. `review_queue` and `review` for maintainers come later; `npx tsx tools/submissions.ts` does that meanwhile.
 
 ### The connect page: the contract with the site
 
