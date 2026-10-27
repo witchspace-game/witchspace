@@ -53,7 +53,7 @@ While you fly, a ring buffer holds the last minute of the fight as numbers, samp
 
 ## 2. The replay
 
-*Built, 25 October 2026: `src/ui/killCam.ts`. **Watch it from outside** on the insurers' screen, and **From outside** on a death in the flight log. It opens on the last 14 seconds before your death, behind the ship that fired the killing shot (labelled in red), with Behind you and Orbit (drag to turn, scroll to zoom), play and pause (Space), a quarter speed, a scrubber, and RECONSTRUCTION with the assessors' line at the top. Escape closes it. The camera follows its ship and eases only around it, so a fighter can't outrun it.*
+*Built, 25 October 2026: `src/ui/killCam.ts`. **Watch it from outside** on the insurers' screen, and **From outside** on a death in the flight log. It opens on the last 14 seconds before your death, behind the ship that fired the killing shot (labelled in red), with RECONSTRUCTION and the assessors' line at the top. The controls are two tidy lines (Mark, 27 October 2026): play/pause (Space), the scrubber, the time and a quarter speed; then one camera switch (**Killer** or **Target**, **You**, **Orbit**: drag to turn, scroll to zoom) and **Save** as Wide or Upright. A × or Escape closes it. The camera follows its ship and eases only around it, so a fighter can't outrun it.*
 
 When you die, the insurers' screen offers **Watch it from outside** beside the video. The replay builds the scene from the track in a second camera (the game isn't running underneath), and plays it with:
 
