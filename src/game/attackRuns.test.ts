@@ -26,8 +26,9 @@ function fight(pirateId: string, cobraSpeed: number, seconds: number) {
     pirate.update(dt);
     cobra.move(dt);
     closest = Math.min(closest, pirate.obj.position.distanceTo(cobra.obj.position));
-    if (was === 'attack' && pirate.mode === 'breakoff') runs++;
-    was = pirate.mode;
+    const now: NpcMode = pirate.mode; // read afresh: update() changes it
+    if (was === 'attack' && now === 'breakoff') runs++;
+    was = now;
   }
   return { closest, runs, touching: pirate.radius + 30 };
 }
