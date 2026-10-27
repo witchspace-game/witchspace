@@ -39,6 +39,8 @@ export const setOutsideView = (fn: (m: LoggedMoment) => void) => (outsideView = 
  * beside the original. Reconstructions are made upright by the kill cam itself.
  */
 export function shareMoment(m: LoggedMoment, onChange?: () => void) {
+  // One video at a time: an iPhone can be short of decoders, and the share sheet has its own preview.
+  document.querySelector<HTMLVideoElement>('#replay video')?.pause();
   const recon = m.tags.includes('reconstruction') || m.tags.includes('upright');
   openShareSheet({
     blob: media(m),
@@ -62,6 +64,33 @@ export function shareMoment(m: LoggedMoment, onChange?: () => void) {
   });
 }
 
+/** Put a playing video into `holder` once its bytes are in memory; a short note there if it can't play. */
+async function mountVideo(holder: HTMLElement, clip: Blob, poster: Blob | null) {
+  const say = (why: string) => {
+    const note = holder.querySelector('.replay-loading');
+    if (note) note.textContent = `This clip won't play here (${why}). Share or save it to watch it.`;
+  };
+  let bytes: ArrayBuffer;
+  try {
+    bytes = await clip.arrayBuffer();
+  } catch (e) {
+    return say(`it couldn't be read from this device: ${(e as Error).name || 'error'}`);
+  }
+  if (!holder.isConnected) return;
+  const video = document.createElement('video');
+  Object.assign(video, { controls: true, muted: true, playsInline: true, autoplay: true, loop: false });
+  video.setAttribute('playsinline', '');
+  if (poster) video.poster = replayUrl(poster);
+  video.src = replayUrl(new Blob([bytes], { type: clip.type || 'video/mp4' }));
+  // In as soon as its file is ready, with the still as its poster (a phone may not load it until tapped).
+  const note = holder.querySelector('.replay-loading');
+  holder.replaceChildren(video, ...(note ? [note] : []));
+  if (note) note.textContent = '';
+  video.onerror = () => say(`the player said ${['', 'aborted', 'network', 'decode', 'unsupported'][video.error?.code ?? 0] || 'error'}`);
+  video.load();
+  void video.play().catch(() => {}); // muted autoplay; if the browser holds it, the controls are there
+}
+
 /** The replay player over everything: the death replay, or a moment from the log. `note` replaces the line under it. */
 export function openReplay(m: LoggedMoment, heading: string, onChange?: () => void, note = 'Only the view is recorded. It stays on this device unless you share it.') {
   const box = $('#replay');
@@ -69,7 +98,7 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
   const kept = () => (m.saved ? 'Kept' : 'Keep');
   box.innerHTML = `<div class="replay-card" role="dialog" aria-modal="true" aria-label="${escapeHtml(heading)}">
     <p class="replay-heading">${escapeHtml(heading)}</p>
-    ${m.video ? `<video ${m.poster ? `poster="${replayUrl(m.poster)}"` : ''} controls autoplay playsinline muted></video>` : `<img src="${replayUrl(media(m))}" alt="${escapeHtml(m.title)}" />`}
+    ${m.video ? `<div class="replay-video">${m.poster ? `<img src="${replayUrl(m.poster)}" alt="" />` : ''}<p class="replay-loading">Loading the clip&hellip;</p></div>` : `<img src="${replayUrl(media(m))}" alt="${escapeHtml(m.title)}" />`}
     <h3>${escapeHtml(m.title)}</h3>
     <p class="replay-meta">${m.events.map((e) => escapeHtml(e.text)).join(' · ')}</p>
     <div class="replay-actions">
@@ -83,12 +112,12 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
   box.hidden = false;
   // iPhone Safari won't play a video straight from the flight log's database
   // (it reads it a range at a time, and a stored blob can't serve ranges), but
-  // the same file plays once it's copied into memory: so copy it first.
-  const video = box.querySelector('video');
-  if (video && m.video)
-    void m.video.arrayBuffer().then((bytes) => {
-      if (video.isConnected) video.src = replayUrl(new Blob([bytes], { type: 'video/mp4' }));
-    });
+  // the same file plays once it's copied into memory: so copy it first. The
+  // player goes in only once its file is ready, with the still showing till
+  // then: an empty player on an iPhone shows "can't play" and may stay that
+  // way (Mark's screenshots). If it fails, say why, so it can be fixed.
+  const holder = box.querySelector<HTMLElement>('.replay-video');
+  if (holder && m.video) void mountVideo(holder, m.video, m.poster);
   const close = () => {
     box.hidden = true;
     box.innerHTML = '';
