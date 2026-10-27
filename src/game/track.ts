@@ -275,7 +275,15 @@ export const MAX_GAP = 1;
  * Up to `extend` seconds past its last pose it carries on at its last speed
  * (a track ends a few seconds after a death, and ships shouldn't freeze there).
  */
-export function poseAt(tl: Timeline, t: number, maxGap = MAX_GAP, extend = 0): { a: Pose; b: Pose; f: number } | null {
+/** Two samples and how far between them; `around`, the samples either side, for a smooth curve. */
+export interface PoseAt {
+  a: Pose;
+  b: Pose;
+  f: number;
+  around?: { pa: Pose; nb: Pose; ta: number; tb: number; tpa: number; tnb: number };
+}
+
+export function poseAt(tl: Timeline, t: number, maxGap = MAX_GAP, extend = 0): PoseAt | null {
   const ts = tl.t;
   const n = ts.length;
   if (!n) return null;
@@ -296,5 +304,36 @@ export function poseAt(tl: Timeline, t: number, maxGap = MAX_GAP, extend = 0): {
     else hi = mid;
   }
   if (ts[hi] - ts[lo] > maxGap) return null;
-  return { a: tl.poses[lo], b: tl.poses[hi], f: (t - ts[lo]) / (ts[hi] - ts[lo] || 1) };
+  return {
+    a: tl.poses[lo],
+    b: tl.poses[hi],
+    f: (t - ts[lo]) / (ts[hi] - ts[lo] || 1),
+    // The samples either side, for a smooth curve through them (smoothPosition).
+    around: { pa: tl.poses[Math.max(0, lo - 1)], nb: tl.poses[Math.min(n - 1, hi + 1)], ta: ts[lo], tb: ts[hi], tpa: ts[Math.max(0, lo - 1)], tnb: ts[Math.min(n - 1, hi + 1)] },
+  };
+}
+
+/**
+ * Where a ship is between two samples, on a smooth curve through them (a Hermite spline with each
+ * sample's real time): a straight line between samples changes speed with a jolt at every one,
+ * which showed as a judder in the replay (Mark's Orgetibe clip). Falls back to a straight line where
+ * there's nothing either side (the ends, extrapolating).
+ */
+export function smoothPosition(at: PoseAt): [number, number, number] {
+  const { a, b, f, around } = at;
+  if (!around || f < 0 || f > 1 || around.tb <= around.ta) return [0, 1, 2].map((i) => a.p[i] + (b.p[i] - a.p[i]) * f) as [number, number, number];
+  const { pa, nb, ta, tb, tpa, tnb } = around;
+  const h = tb - ta;
+  const f2 = f * f;
+  const f3 = f2 * f;
+  const h00 = 2 * f3 - 3 * f2 + 1;
+  const h10 = f3 - 2 * f2 + f;
+  const h01 = -2 * f3 + 3 * f2;
+  const h11 = f3 - f2;
+  return [0, 1, 2].map((i) => {
+    // Velocity at each sample, from its neighbours (one-sided at the ends).
+    const ma = (b.p[i] - pa.p[i]) / (tb - tpa || h);
+    const mb = (nb.p[i] - a.p[i]) / (tnb - ta || h);
+    return h00 * a.p[i] + h10 * h * ma + h01 * b.p[i] + h11 * h * mb;
+  }) as [number, number, number];
 }

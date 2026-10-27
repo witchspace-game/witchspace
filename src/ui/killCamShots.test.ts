@@ -36,6 +36,17 @@ describe('the two-shot', () => {
     }
   }
 
+  it('keeps the far ship near the near one in size: back further, longer lens (Mark)', () => {
+    for (const aspect of [16 / 9, 9 / 16]) {
+      for (const y of [v(0, 0, 400), v(300, -100, 1500)]) {
+        const shot = twoShot({ p: v(0, 0, 0), r: 20 }, { p: y, r: 18 }, aspect);
+        const ratio = shot.pos.distanceTo(y) / shot.pos.distanceTo(v(0, 0, 0));
+        expect(ratio).toBeGreaterThan(1); // the lead nearer, still
+        expect(ratio).toBeLessThan(2); // but not three times as near
+      }
+    }
+  });
+
   it('zooms in when the ships are far apart, so the far one is still a ship', () => {
     const near = twoShot({ p: v(0, 0, 0), r: 20 }, { p: v(0, 0, 150), r: 20 }, 16 / 9);
     const far = twoShot({ p: v(0, 0, 0), r: 20 }, { p: v(0, 0, 2500), r: 20 }, 16 / 9);

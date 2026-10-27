@@ -5,7 +5,7 @@ import { Explosion } from '../render/explosion';
 import { atSize, makeSpace, render, type Space } from '../render/renderer';
 import { buildShip, disposeShip, showUnidentified, type ShipModel } from '../render/shipModel';
 import { Beams } from '../game/weapons';
-import { focusOf, killerOf, poseAt, SAMPLE_RATE, timelines, type Timeline, type TrackData } from '../game/track';
+import { focusOf, killerOf, poseAt, SAMPLE_RATE, smoothPosition, timelines, type Timeline, type TrackData } from '../game/track';
 import { encodeVideo } from './encodeVideo';
 import { escapeHtml } from './escape';
 import { aftermathShot, assessorsNote, CameraRig, labelText, pickLabels, twoShot, type LabelBox, type Shot } from './killCamShots';
@@ -58,6 +58,9 @@ export interface KillCamVideo {
 const BEFORE_DEATH = 14; // seconds of the fight shown before the end, at first
 /** How long a kill cam explosion lasts, seconds: done well before the end card fades up. */
 const BOOM_LASTS = 2.6;
+/** A ship whose radius is this share of half the frame or more is drawn at full brightness; smaller, dimmer, down to DIMMEST. */
+const SHARP_SHARE = 0.1;
+const DIMMEST = 0.4;
 const AFTER_DEATH = 4.4; // long enough for the explosion to play out into the end card
 const SLOW = 0.25;
 const BOOM = 4.5; // seconds an explosion lasts
@@ -268,10 +271,22 @@ export class KillCam {
         continue;
       }
       const { a, b, f } = at;
-      m.root.position.set(a.p[0] + (b.p[0] - a.p[0]) * f, a.p[1] + (b.p[1] - a.p[1]) * f, a.p[2] + (b.p[2] - a.p[2]) * f);
+      m.root.position.set(...smoothPosition(at));
       m.root.quaternion.copy(q.set(...a.q)).slerp(qb.set(...b.q), Math.min(1, f));
       // A ship that blew up is gone from that moment: its debris takes over.
       m.root.visible = !d.events.some((e) => e.kind === 'boom' && e.id === id && e.t <= this.t);
+      // Small on screen, dimmer: the glow is the same size whatever the ship's, so a distant ship's glow
+      // swamped its lines and a Cobra read as a green smear (Mark's Orgetibe clip). Dimmed, it stays a wireframe.
+      if (m.root.visible) {
+        const dist = Math.max(1, this.camera.position.distanceTo(m.root.position));
+        // Its radius as a share of half the frame's height: the same at any screen or video size.
+        const share = m.radius / (dist * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2));
+        const k = THREE.MathUtils.clamp(share / SHARP_SHARE, DIMMEST, 1);
+        if (m.root.userData.dim !== k) {
+          for (const l of m.lines) l.material.color.copy(l.base).multiplyScalar(k);
+          m.root.userData.dim = k;
+        }
+      }
       const unknown = Boolean(a.unknown);
       if (this.unknown.get(id) !== unknown) {
         showUnidentified(m, unknown);
@@ -316,8 +331,7 @@ export class KillCam {
     const tl = id === undefined ? undefined : this.tracks.get(id);
     const at = tl && poseAt(tl, t, undefined, EXTEND);
     if (!at) return null;
-    const { a, b, f } = at;
-    return new THREE.Vector3(a.p[0] + (b.p[0] - a.p[0]) * f, a.p[1] + (b.p[1] - a.p[1]) * f, a.p[2] + (b.p[2] - a.p[2]) * f);
+    return new THREE.Vector3(...smoothPosition(at));
   }
 
   private radiusOf(id: number | undefined): number {

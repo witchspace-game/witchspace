@@ -80,9 +80,12 @@ export function twoShot(lead: Subject, other: Subject, aspect: number, key = 'le
   const dir = gap > 1 ? d.divideScalar(gap) : new THREE.Vector3(0, 0, 1);
   const up = upAcross(dir);
   const side = dir.clone().cross(up);
-  const lift = aspect < 1 ? 0.42 : 0.26;
-  const swing = aspect < 1 ? 0.1 : 0.32;
-  let back = Math.max(lead.r * 5, 70, gap * 0.45);
+  // Higher, to look down on the ships: a flat ship like the Cobra seen edge-on was just a glowing smear.
+  const lift = aspect < 1 ? 0.5 : 0.42;
+  const swing = aspect < 1 ? 0.12 : 0.36;
+  // Further back with a longer lens: the far ship comes out nearly the size of the near one, not a third of it
+  // (Mark's Orgetibe clip: "CMDR Jameson (you)" was a flat green ellipse the whole clip). fitFov zooms to fit.
+  let back = Math.max(lead.r * 5, 70, gap * 1.3);
   const look = lead.p.clone().addScaledVector(dir, gap * 0.5);
   const pos = new THREE.Vector3();
   let fov = Infinity;
