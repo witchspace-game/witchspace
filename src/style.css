@@ -1567,13 +1567,15 @@ body.retro #replay { backdrop-filter: none; }
 body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibility: hidden !important; }
 .killcam-shared { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; pointer-events: auto; }
 .killcam-shared button { min-height: 36px; padding: 4px 14px; }
-/* The heart: on the right edge, above the controls, in thumb's reach; an outline until you've hearted it (Mark). */
-#killcam .killcam-heart { position: absolute; right: max(14px, env(safe-area-inset-right)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 0; padding: 8px; border: 0; background: rgba(0, 0, 0, 0.35); border-radius: 28px; color: #ff8da1; }
+/* The heart: the bottom-right corner, under your thumb; an outline until you've hearted it (Mark). Beside the controls
+   where there's room, just above them where they fill the width. */
+#killcam .killcam-heart { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 0; padding: 8px; border: 0; background: rgba(0, 0, 0, 0.35); border-radius: 28px; color: #ff8da1; }
 #killcam .killcam-heart svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 1.8; transition: transform 0.15s ease; }
 #killcam .killcam-heart b { font-size: 13px; font-weight: 600; color: #f2d6dc; }
 #killcam .killcam-heart[aria-pressed='true'] { color: #ff4d6d; }
 #killcam .killcam-heart[aria-pressed='true'] svg { fill: currentColor; }
 #killcam .killcam-heart:active svg { transform: scale(0.88); }
+@media (max-width: 759px) { #killcam .killcam-heart { bottom: calc(max(14px, env(safe-area-inset-bottom)) + var(--killcam-bar-h, 120px) + 10px); } }
 /* A phone held sideways: one line of description, and the controls tuck away while it plays; a touch brings them back. */
 @media (max-height: 500px) {
   .killcam-head > span:not(:first-of-type), .killcam-note { display: none; }

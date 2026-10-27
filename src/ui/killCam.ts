@@ -56,6 +56,8 @@ export interface KillCamVideo {
 }
 
 const BEFORE_DEATH = 14; // seconds of the fight shown before the end, at first
+/** How long a kill cam explosion lasts, seconds: done well before the end card fades up. */
+const BOOM_LASTS = 2.6;
 const AFTER_DEATH = 4.4; // long enough for the explosion to play out into the end card
 const SLOW = 0.25;
 const BOOM = 4.5; // seconds an explosion lasts
@@ -297,7 +299,8 @@ export class KillCam {
         const at = new THREE.Object3D();
         at.position.set(...e.p);
         // Line debris and a soft glow: the solid flash ball read as a white disc up close.
-        const boom = new Explosion(def, at, new THREE.Vector3(), { flash: 'glow' });
+        // Burnt out in 2.6 s, so the screen is clear before the end card (Mark: the wreckage hanging there looked untidy).
+        const boom = new Explosion(def, at, new THREE.Vector3(), { flash: 'glow', lasts: BOOM_LASTS });
         this.space.scene.add(boom.group);
         // Catch up to where it should be.
         for (let age = 0; age < this.t - e.t; age += 1 / 30) boom.update(Math.min(1 / 30, this.t - e.t - age));
@@ -608,6 +611,9 @@ export class KillCam {
     };
     this.el.querySelector<HTMLButtonElement>('[data-act="close"]')!.onclick = () => this.close();
     this.touchedAt = performance.now();
+    // The heart sits just above the controls where they fill the width: it needs their height.
+    const barEl = this.el.querySelector<HTMLElement>('.killcam-bar');
+    if (barEl) new ResizeObserver(() => this.el.style.setProperty('--killcam-bar-h', `${barEl.offsetHeight}px`)).observe(barEl);
     for (const ev of ['pointerdown', 'pointermove', 'keydown'] as const) this.el.addEventListener(ev, () => (this.touchedAt = performance.now()));
     const shared = this.shared;
     if (shared) {

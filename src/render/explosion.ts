@@ -24,6 +24,8 @@ const rand = (min: number, max: number) => min + Math.random() * (max - min);
 export class Explosion {
   readonly group = new THREE.Group();
   private age = 0;
+  /** Seconds until it's gone: DURATION in the game; shorter in the kill cam. */
+  private readonly lasts: number;
   private readonly fragments: Fragment[] = [];
   private readonly sparks: { neo: THREE.Points; retro: THREE.Points; velocities: Float32Array };
   private readonly flash: THREE.Mesh | THREE.Sprite;
@@ -39,7 +41,12 @@ export class Explosion {
    * smaller and a little longer: seen up close from outside, the ball filled
    * the frame as a hard white disc (Mark's first reconstruction, 27 October 2026).
    */
-  constructor(def: ShipDef, at: THREE.Object3D, inheritVelocity: THREE.Vector3, opts: { flash?: 'ball' | 'glow' } = {}) {
+  /**
+   * `lasts` (the kill cam) burns it out sooner: the wreckage hanging in the shot up to the end card
+   * looked untidy (Mark, 27 October 2026).
+   */
+  constructor(def: ShipDef, at: THREE.Object3D, inheritVelocity: THREE.Vector3, opts: { flash?: 'ball' | 'glow'; lasts?: number } = {}) {
+    this.lasts = opts.lasts ?? DURATION;
     this.group.position.copy(at.getWorldPosition(new THREE.Vector3()));
     this.group.quaternion.copy(at.getWorldQuaternion(new THREE.Quaternion()));
     this.drift = inheritVelocity.clone().multiplyScalar(0.6);
@@ -129,7 +136,7 @@ export class Explosion {
   /** Returns false once the explosion has finished and been cleaned up. */
   update(dt: number): boolean {
     this.age += dt;
-    const t = this.age / DURATION;
+    const t = this.age / this.lasts;
     if (t >= 1) {
       this.dispose();
       return false;

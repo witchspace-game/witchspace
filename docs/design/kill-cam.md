@@ -88,7 +88,8 @@ The track is kept with the death's moment in the flight log (it adds a few per c
 
 ### On a phone *(27 October 2026)*
 
-- **The heart** *(Mark: "the heart should be empty until checked and it should be bottom right or top right")*: on a shared clip it sits on the right edge, above the controls, within thumb's reach as on Reels and TikTok; an outline until this browser has hearted the clip, then filled.
+- **The heart** *(Mark: "the heart should be empty until checked and it should be bottom right or top right … easy for the user to click with their thumb")*: on a shared clip it sits in the bottom-right corner, beside the controls where there's room and just above them where they fill the width (a phone held upright); an outline until this browser has hearted the clip, then filled.
+- **The wreckage clears** *(Mark: "the sidewinder's destruction and leaving it on the screen looks untidy")*: a kill cam explosion burns out in 2.6 seconds (4.5 in the game), so the screen is clear and calm before the end card fades up.
 - **A phone held sideways** (screens under 500 px tall), from Marketing's check at 844×390: the description shrinks to one line; the controls and title fade away after 2.5 seconds untouched while it plays, and any touch brings them back; only the killer and you are labelled; and the end card is laid out in the room above the controls, on a dark screen, so its last line and the address aren't under them.
 
 ### Which camera angles read
