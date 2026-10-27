@@ -34,6 +34,7 @@ describe('a new module', () => {
     const m = prepared!.file as ModuleDef;
     expect(m.designer).toBe('NOVA');
     expect(m.inService).toBeUndefined();
+    expect(prepare('module', { ...copy(sent), insignia: { face: 0 } }, 'NOVA', true, checks).prepared!.file).not.toHaveProperty('insignia');
     expect(m.credits).toEqual({ authors: ['NOVA', 'A friend'], license: 'CC-BY-SA-4.0', aiAssisted: true });
     expect(prepared).toMatchObject({ itemId: 'ice-hold', title: 'Ice hold', revises: false });
   });
