@@ -43,6 +43,7 @@ dist/
 # Generated for the MCP server by tools/mcp-data.ts before the Worker runs or deploys.
 /server/src/mcp-data.json
 /server/src/mcp-schema.js
+/server/src/module-schema.js
 
 # The notebook pack (npm run notebook)
 notebook/

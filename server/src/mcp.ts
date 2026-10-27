@@ -16,15 +16,18 @@ const MAX_BODY = 512 * 1024; // a ship file is a few KB; this is plenty
 const PER_MINUTE = 120;
 
 type AjvError = { instancePath?: string; message?: string; params?: Record<string, unknown> };
-const data: McpData = {
+/** A compiled schema check's errors, as plain sentences an assistant (or a person) can act on. */
+export function schemaErrors(check: (v: unknown) => boolean, value: unknown, what: string): string[] {
+  if (check(value)) return [];
+  return ((check as { errors?: AjvError[] }).errors ?? []).map((e) => {
+    const extra = e.params?.additionalProperty ? ` ("${e.params.additionalProperty}")` : e.params?.allowedValues ? ` (one of: ${(e.params.allowedValues as string[]).join(', ')})` : '';
+    return `${e.instancePath || `(the ${what})`} ${e.message ?? 'is invalid'}${extra}`;
+  });
+}
+
+export const data: McpData = {
   ...(bundle as unknown as Omit<McpData, 'checkSchema'>),
-  checkSchema: (ship) => {
-    if (checkShip(ship)) return [];
-    return ((checkShip as { errors?: AjvError[] }).errors ?? []).map((e) => {
-      const extra = e.params?.additionalProperty ? ` ("${e.params.additionalProperty}")` : e.params?.allowedValues ? ` (one of: ${(e.params.allowedValues as string[]).join(', ')})` : '';
-      return `${e.instancePath || '(the ship)'} ${e.message ?? 'is invalid'}${extra}`;
-    });
-  },
+  checkSchema: (ship) => schemaErrors(checkShip, ship, 'ship'),
 };
 
 // A rough per-address limit, per Worker instance: enough to stop a runaway loop.
