@@ -14,6 +14,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
 import { NAMES, nameKey, nameRule } from './names';
 import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
+import { FEED_EACH, FLYING_NOW, type FirstEvent, type Flying } from './feed';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
 import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES, type CompanyId } from './contact';
 import { companyEmail, signInEmail } from './emails';
@@ -135,6 +136,18 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const res = json({ firsts: rows });
     res.headers.set('Cache-Control', 'public, max-age=300');
     return res;
+  }
+
+  /** For the live feed (feed.ts): firsts since `since` by commanders with a callsign, and how many are flying. Public totals only. */
+  feed(since: number): { firsts: FirstEvent[]; flying: Flying } {
+    const firsts = this.sql
+      .exec('SELECT f.at, f.galaxy, f.system, f.body, a.callsign FROM firsts f JOIN accounts a ON a.id = f.account WHERE f.at > ? AND a.callsign IS NOT NULL ORDER BY f.at DESC LIMIT ?', since, FEED_EACH)
+      .toArray()
+      .map((r): FirstEvent => ({ kind: 'first', t: r.at as number, callsign: r.callsign as string, galaxy: r.galaxy as number, system: r.system as number, body: r.body as string }));
+    const now = this.sql.exec('SELECT COUNT(*) AS n FROM saves WHERE updated > ?', Date.now() - FLYING_NOW).one().n as number;
+    const day = new Date().toISOString().slice(0, 10);
+    const today = (this.sql.exec("SELECT n FROM stats WHERE day = ? AND key = 'devices'", day).toArray()[0]?.n as number | undefined) ?? 0;
+    return { firsts, flying: { now, today } };
   }
 
   /** POST /me/firsts {claims: [{galaxy, system, body}]}: data you just brought home. Returns the ones that are yours. */

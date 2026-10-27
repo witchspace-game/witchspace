@@ -10,6 +10,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { json, networkOf } from './http';
 import { checkTrack, MAX_TRACK_BYTES } from './clipCheck';
+import { FEED_EACH, type ClipEvent } from './feed';
 import data from './mcp-data.json';
 
 export interface ClipsEnv {
@@ -110,6 +111,14 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
   /** A commander's shared clips and their hearts, for the ship's log. */
   heartsFor(account: string): { id: string; title: string; hearts: number }[] {
     return this.sql.exec('SELECT id, title, hearts FROM clips WHERE account = ? AND hidden = 0', account).toArray().map((r) => ({ id: r.id as string, title: r.title as string, hearts: r.hearts as number }));
+  }
+
+  /** Clips shared since `since`, newest first, never hidden ones: for the live feed (feed.ts). */
+  latest(since: number): ClipEvent[] {
+    return this.sql
+      .exec('SELECT id, created, title, system, hearts FROM clips WHERE hidden = 0 AND created > ? ORDER BY created DESC LIMIT ?', since, FEED_EACH)
+      .toArray()
+      .map((r) => ({ kind: 'clip', t: r.created as number, id: r.id as string, title: r.title as string, system: r.system as string, hearts: r.hearts as number }));
   }
 
   /** The admin key hides or restores a clip. */
