@@ -4,6 +4,7 @@
   "name": "Bastion",
   "manufacturer": "Co-operative Naval Yards",
   "role": "marshal",
+  "docks": false,
   "description": "A Marshals' patrol carrier, eight hundred metres of it: five times the width of the station it guards. It doesn't chase anyone. It arrives, opens the bay in its bow, and launches its wing of eight Lancers two at a time. Far too big to dock; it waits off the station like a second moon.",
   "credits": {
     "authors": [

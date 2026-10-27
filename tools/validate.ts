@@ -10,6 +10,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { checkGeometry, fixWinding } from '../src/content/geometry';
 import { assemble, checkModule, checkService } from '../src/content/modules';
+import { slotProblem } from '../src/content/slot';
 import type { ModuleDef, ShipDef } from '../src/content/types';
 
 const root = resolve(import.meta.dirname, '..');
@@ -81,6 +82,9 @@ for (const file of files) {
     }
     errors.push(...report.errors);
     warnings.push(...report.warnings);
+    // A ship that flies must fit the docking slot, unless it never docks.
+    const slot = slotProblem(ship);
+    if (slot) errors.push(`dock: ${slot}`);
     // A modular hull is generated from its modules: it must match them exactly.
     if (ship.modules) {
       const missing = ship.modules.filter((id) => !allModules.has(id));

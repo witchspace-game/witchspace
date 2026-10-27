@@ -11,6 +11,8 @@ export interface ShipDef {
   name: string;
   manufacturer?: string;
   role: ShipRole;
+  /** False for a ship that never docks (a carrier, a yard hauler): it needn't fit the slot (src/content/slot.ts). */
+  docks?: boolean;
   description: string;
   credits: {
     authors: string[];

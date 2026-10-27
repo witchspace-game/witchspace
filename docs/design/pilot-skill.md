@@ -2,10 +2,10 @@
 title: Pilot skill
 status: proposed
 pillar: fight
-summary: Pirates who fly better as you do: the system sets how good its pirates are, the same for everyone, and your fame brings named hunters after you. The Falcon never less than an ace.
+summary: Pirates who fly better as you do: rookies and aces, set by your combat rating and how lawless the system is, and the Falcon never less than an ace.
 card: sidewinder
 stages:
-  - Skill in the pirate AI, set by the system; hunters drawn by your fame; the Falcon an ace | building
+  - Skill in the pirate AI, set by rating and government; the Falcon an ace | building
   - Missile craft, wingmen, and each Falcon brother's style | proposed
   - Aces who read your combat computer's routines | proposed
 ---
@@ -19,6 +19,7 @@ Every pirate flew the same way: straight at you, firing when lined up, peeling o
 ## Principles
 
 - **Skill changes how a ship flies, never its stats.** Same hull, same lasers; a better pilot makes more of them.
+- **Why the danger follows you** *(Mark, 27 October 2026)*: "Our universe is slightly different. It's designed to stop rapid advancement by squatting and/or killing newbie low value targets." Aces that grow likelier with your rating mean a veteran can't sit in a safe system farming easy kills to climb the ranks: wherever they go, better pilots come for them. Keep it that way: setting pirate skill by the place alone was considered and turned down. The same idea runs through the rest of the game: easy targets earn less and less as you improve ([combat rating, experience](combat-rating.md)); in shared space, killing a commander two or more ranks below you earns nothing and the law takes a dim view, repeat kills of the same commander count for less, and the victim must have been able to fight back ([combat rating, section 4](combat-rating.md)); and the core systems around the starting stations have heavy patrols, a standing Marshal presence and harsher penalties, so newcomers can learn without being farmed ([law and travel, protected starter systems](law-and-travel.md)).
 - **The world reacts to your reputation, it doesn't level with you.** Most pirates stay ordinary, so you feel how much better you've become. What changes is who comes for you: word gets round, and the gangs send better pilots after a Dangerous commander. A Deadly commander should still cut through an anarchy's rabble, and be properly tested by the pilot they sent.
 - **Traders, police and Marshals don't change.** Only the ships that hunt you.
 - **Classic is untouched.** 1984's pirates fly as they did.
@@ -40,8 +41,7 @@ Each pirate has a skill from 0 (a rookie, exactly today's AI) to 1 (an ace).
 ## Who gets a good pilot
 
 - **Rookies:** most pirates, skill 0 to 0.4.
-- **One good pilot in a pack, sometimes, set by the place:** a pack's leader is an ace (0.5 to 1) with a chance set by **how lawless the system is**, the same for every commander: about 1 in 10 in a safe system, about 1 in 3 in an anarchy. Your rating doesn't change the background: a Deadly commander cuts through an anarchy's rabble, as they should.
-- **Hunters, drawn by your fame** *(Mark, 27 October 2026: danger set by the place, not by your rating)*: from Dangerous upwards, word gets round, and now and then a named ace comes looking for you, more often the higher your rating. They hunt by your transponder: they find you when it's on, or in systems where your record is known, so running dark ([law and travel](law-and-travel.md)) is a real answer, at its own price. The radio says who they are before they arrive.
+- **One good pilot in a pack, sometimes:** a pack's leader is an ace (0.5 to 1) with a chance that grows with **your combat rating** and **how lawless the system is**: about 1 in 10 for a Harmless commander in a safe system, about 1 in 3 in an anarchy, and most packs once you're Deadly or Elite. The higher your rating, the closer the ace's skill to 1.
 - **The Falcon is never a rookie.** Her skill is 0.7 at Harmless, rising with your rating to 1 at Elite, and in the redesign, she [learns how you beat her](legends-the-falcon.md#she-remembers-you) on top.
 
 ## What the first pass taught us
@@ -69,7 +69,7 @@ Test duels in the browser, a bot flying a Cobra at a Cobra's turn rate, scoring 
 
 | Stage | What |
 |---|---|
-| **1** | The skill dial in the pirate AI (aim, pursuit, jinking, no joust, breaking across, shields); skill set by the system's government; hunters drawn by your fame (rating, transponder), one ace a pack; the Falcon an ace, rising with your rating. |
+| **1** | The skill dial in the pirate AI (aim, pursuit, jinking, no joust, breaking across, shields); skill set by rating and government, one ace a pack; the Falcon an ace, rising with your rating. |
 | **2** | Missile craft (waiting for your shields to drop, baiting your ECM); wingmen who split to take you from two sides; each Falcon brother's style: Bram precise, Kit showing off with close passes, Jory careful at range, Tobin dirty, with more missiles. |
 | **3** | Aces who read your combat computer: they learn each routine's pattern and answer it ([combat computer routines](combat-computer-routines.md)). |
 

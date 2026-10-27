@@ -94,4 +94,27 @@ describe('MCP server', () => {
     expect((await call('view_ship', { id: 'cobra-mk3' })).isError).toBeUndefined();
     expect((await call('view_ship', { id: 'no-such-ship' })).isError).toBe(true);
   });
+
+  it('wants a ship that flies to fit the docking slot, unless it never docks', async () => {
+    const tall = cobra();
+    tall.id = 'tall-cobra';
+    tall.geometry.vertices = tall.geometry.vertices.map(([x, y, z]) => [x, y * 3, z]);
+    const r = await parsed('validate_ship', { ship: tall });
+    expect(r.errors.join()).toMatch(/^dock: at 48 m tall .*can't fit the docking slot, 90 m wide and 26 m tall/);
+    const hauler = { ...tall, docks: false };
+    const h = await parsed('validate_ship', { ship: hauler });
+    expect(h.errors).toEqual([]);
+    expect(h.warnings.join()).toMatch(/docks: false, so no commander can fly it/);
+    for (const id of ['bullsnake', 'bastion', 'titanoboa']) expect(data.ships.find((s) => s.id === id)!.docks, id).toBe(false);
+  });
+
+  it('notices a hold too big for the hull', async () => {
+    const dart = cobra();
+    dart.id = 'dart';
+    dart.geometry.vertices = dart.geometry.vertices.map(([x, y, z]) => [x * 0.4, y * 0.4, z * 0.4]);
+    dart.stats.cargo = 60;
+    const notes = (await parsed('balance_check', { ship: dart })).notes.join(' ');
+    expect(notes).toMatch(/Its hold \(60 t\) is big for its size/);
+    expect((await parsed('balance_check', { ship: cobra() })).notes.join(' ')).not.toMatch(/big for its size/);
+  });
 });

@@ -63,6 +63,14 @@ A short list, so every ship's job is obvious. It draws on **Samuel Penn's Ships 
 
 **Proportions** (from Penn's Traveller holds, scaled so the Cobra keeps its 20 t): Adder about 9 t, Python about 105 t, Boa about 140 t, Anaconda about 350 t; Asp II and Fer-de-lance under 10 t. Big holds come with slow turns, and need big stations ([stations and worlds](stations-and-worlds.md)).
 
+### Shape and size *(Mark, 27 October 2026)*
+
+A ship's shape is checked against the game, not only drawn:
+
+- **It must fit the docking slot,** 90 m wide and 26 m tall, with its wings level: every ship a commander might fly has to get into a station. A ship that never docks (a Marshals carrier, a yard hauler like the Bullsnake, the Titanoboa) says `"docks": false` in its file instead, and the checks remind the reviewer that no commander can fly it from a station. The rule is `src/content/slot.ts`, used by the game, `validate_ship`, the submission checks and CI.
+- **Its hold has to suit its hull:** the fleet carries about 1 to 1.5 t of cargo per 1,000 m³ of hull, and `balance_check` (and the ship editor's balance notes) points out a hold half as big again as the roomiest ship for its size would carry.
+- **Its size sets how easy it is to hit:** lasers and missiles aim at a sphere as far out as its furthest point, so a long nose or wide wings make a bigger target.
+
 ## 2. Makers and their line-ups
 
 Each maker has a character, and a line-up in the Porsche way: a way in, the icon, the practical one, and a halo. Assignments below are proposals.

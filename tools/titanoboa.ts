@@ -263,6 +263,7 @@ const ship = {
   name: 'Titanoboa',
   manufacturer: 'Wexley-Yorozu',
   role: 'freighter',
+  docks: false, // scenery at the yards: far too big for a docking slot, and never docks
   description:
     'A factory in sections on one coupling: a maw that eats a moon, furnaces, a hold, a wheel for the crew, a fabricator and a reactor. Tug teams assemble it where the work is; it leaves a station behind and comes apart to move on. Nobody has ever seen one hurry.',
   credits: {

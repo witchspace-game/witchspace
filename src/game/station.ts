@@ -4,8 +4,9 @@ import { buildShip, type ShipModel } from '../render/shipModel';
 import { neoLines, registerParts } from '../render/wire';
 import type { PlayerShip } from './playerShip';
 
-/** Docking slot on the station's +Z face, in station-local metres. */
-export const SLOT = { z: 80, halfW: 45, halfH: 13 };
+import { SLOT } from '../content/slot';
+
+export { SLOT };
 
 /** Rough collision radius of the station hull. */
 const HULL_RADIUS = 95;
