@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bracket, focusOf, killerOf, packTrack, poseAt, SAMPLE_RATE, timelines, TrackRecorder, unpackTrack, type Pose } from './track';
+import { bracket, focusOf, killerOf, packTrack, poseAt, SAMPLE_RATE, smoothPosition, timelines, TrackRecorder, unpackTrack, type Pose, type Timeline } from './track';
 
 const scene = { system: 'Riedquat', when: 0, you: 1 };
 const pose = (id: number, x: number, unknown = false): Pose => ({ id, p: [100000 + x, 5000, -20000], q: [0, 0, 0, 1], ...(unknown ? { unknown } : {}) });
@@ -122,3 +122,29 @@ describe('one ship at a time', () => {
     expect(x(poseAt(tl.get(1)!, 4.5, 1, 1))).toBeCloseTo(45, 3);
   });
 });
+
+describe('smooth positions between samples (Mark: the judder)', () => {
+  // A ship flying straight at 200 m/s, sampled at uneven times (as the game samples, on its own frames).
+  const ts = [0, 0.05, 0.117, 0.167, 0.233, 0.283, 0.35];
+  const tl = { t: ts, poses: ts.map((t) => ({ id: 1, p: [t * 200, 0, 0] as [number, number, number], q: [0, 0, 0, 1] as [number, number, number, number] })) } as unknown as Timeline;
+  const x = (t: number) => smoothPosition(poseAt(tl, t)!)[0];
+
+  it('passes through every sample', () => {
+    for (const t of ts.slice(1, -1)) expect(x(t)).toBeCloseTo(t * 200, 6);
+  });
+
+  it('stays on the line for a ship flying straight, however uneven the samples', () => {
+    for (let t = 0.06; t < 0.3; t += 0.013) expect(x(t)).toBeCloseTo(t * 200, 3);
+  });
+
+  it('keeps an even speed across a sample, without a jolt', () => {
+    // Turning: a curve through uneven samples; the speed just before and just after a sample match.
+    const tl2 = { t: ts, poses: ts.map((t) => ({ id: 1, p: [Math.sin(t * 6) * 300, Math.cos(t * 6) * 300, 0] as [number, number, number], q: [0, 0, 0, 1] as [number, number, number, number] })) } as unknown as Timeline;
+    const at = (t: number) => smoothPosition(poseAt(tl2, t)!);
+    const e = 1e-4;
+    const speed = (t: number) => Math.hypot(...at(t + e).map((v, i) => (v - at(t)[i]) / e));
+    const s = 0.167;
+    expect(Math.abs(speed(s - 2 * e) - speed(s + e))).toBeLessThan(speed(s) * 0.02);
+  });
+});
+

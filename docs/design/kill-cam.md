@@ -86,6 +86,14 @@ The track is kept with the death's moment in the flight log (it adds a few per c
 
 **The assessors' note.** A death's reconstruction now says what the assessors found, from the track and nothing else: *"The Sidewinder hit you nine times in six seconds, seven of them from behind; the last from 640 m."* It sits under the assessors' line in the replay and comes up as a caption over the explosion in a saved video, before the end card. Which quarter the hits came from is worked out in your ship's own frame, so "from behind" means behind you.
 
+### On a phone *(27 October 2026)*
+
+- **The heart** *(Mark: "the heart should be empty until checked and it should be bottom right or top right … easy for the user to click with their thumb")*: on a shared clip it sits in the bottom-right corner, beside the controls where there's room and just above them where they fill the width (a phone held upright); an outline until this browser has hearted the clip, then filled.
+- **Your ship, a ship** *(Mark's Orgetibe clip: "CMDR Jameson (you)" read as a flat green ellipse)*: the two-shot stood right behind the killer, so you were two or three times further off, small, often edge-on, and the glow (the same size whatever the ship's) swamped your lines. It now stands further back with a longer lens and looks down more, so you come out nearly the killer's size and seen from above; and a ship small in the frame is drawn dimmer, so its glow doesn't smear its outline. At a kilometre and more apart both ships are still small in one shot: that's the distance.
+- **No judder** *(the same clip, its first seconds)*: between the recorder's 20-a-second samples ships now move on a smooth curve through them (a Hermite spline with each sample's real time), not a straight line that changed speed with a jolt at every sample.
+- **The wreckage clears** *(Mark: "the sidewinder's destruction and leaving it on the screen looks untidy")*: a kill cam explosion burns out in 2.6 seconds (4.5 in the game), so the screen is clear and calm before the end card fades up.
+- **A phone held sideways** (screens under 500 px tall), from Marketing's check at 844×390: the description shrinks to one line; the controls and title fade away after 2.5 seconds untouched while it plays, and any touch brings them back; only the killer and you are labelled; and the end card is laid out in the room above the controls, on a dark screen, so its last line and the address aren't under them.
+
 ### Which camera angles read
 
 Worked out on Mark's clip and test fights, for a death seen in a few seconds on a phone:

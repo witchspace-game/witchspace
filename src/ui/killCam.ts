@@ -5,11 +5,17 @@ import { Explosion } from '../render/explosion';
 import { atSize, makeSpace, render, type Space } from '../render/renderer';
 import { buildShip, disposeShip, showUnidentified, type ShipModel } from '../render/shipModel';
 import { Beams } from '../game/weapons';
-import { focusOf, killerOf, poseAt, SAMPLE_RATE, timelines, type Timeline, type TrackData } from '../game/track';
+import { focusOf, killerOf, poseAt, SAMPLE_RATE, smoothPosition, timelines, type Timeline, type TrackData } from '../game/track';
 import { encodeVideo } from './encodeVideo';
 import { escapeHtml } from './escape';
 import { aftermathShot, assessorsNote, CameraRig, labelText, pickLabels, twoShot, type LabelBox, type Shot } from './killCamShots';
 import { ICONS } from './shareLinks';
+
+/** A heart, drawn as an outline; filled by CSS once you've hearted the clip. */
+const HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 7.9 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.6 3.4 4.3 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg>';
+/** On a short screen (a phone held sideways), the controls tuck away after this long untouched while it plays. */
+const IDLE_AFTER = 2500;
+const shortScreen = () => window.matchMedia('(max-height: 500px)').matches;
 import { openShareSheet } from './shareSheet';
 import { caption, cardAlpha, endCard, fontFamily, loadIcon, stamp, still, uprightBand, videoFrames } from './videoCards';
 
@@ -50,6 +56,11 @@ export interface KillCamVideo {
 }
 
 const BEFORE_DEATH = 14; // seconds of the fight shown before the end, at first
+/** How long a kill cam explosion lasts, seconds: done well before the end card fades up. */
+const BOOM_LASTS = 2.6;
+/** A ship whose radius is this share of half the frame or more is drawn at full brightness; smaller, dimmer, down to DIMMEST. */
+const SHARP_SHARE = 0.1;
+const DIMMEST = 0.4;
 const AFTER_DEATH = 4.4; // long enough for the explosion to play out into the end card
 const SLOW = 0.25;
 const BOOM = 4.5; // seconds an explosion lasts
@@ -101,6 +112,8 @@ export class KillCam {
   /** Watching someone's shared clip (from its link): its hearts, a report, and the way into the game. */
   private shared: SharedView | null = null;
   private playing = true;
+  /** When the viewer last touched anything: the controls tuck away on a short screen after a while (Marketing's check). */
+  private touchedAt = 0;
   private speed = 1;
   private view: View = 'killer';
   private orbit = { yaw: 0.6, pitch: 0.25, dist: 0, dragging: false, auto: true };
@@ -235,6 +248,8 @@ export class KillCam {
       for (const e of d.events) if (e.kind === 'beam' && e.t > before && e.t <= this.t) this.beams.fire(new THREE.Vector3(...e.a), new THREE.Vector3(...e.b), e.color);
     }
     this.beams.update(step);
+    const idle = this.playing && shortScreen() && performance.now() - this.touchedAt > IDLE_AFTER;
+    if (this.el.classList.contains('idle') !== idle) this.el.classList.toggle('idle', idle);
     this.placeShips(d);
     this.updateBooms(d, step);
     this.aimCamera(d, step, dt);
@@ -256,10 +271,22 @@ export class KillCam {
         continue;
       }
       const { a, b, f } = at;
-      m.root.position.set(a.p[0] + (b.p[0] - a.p[0]) * f, a.p[1] + (b.p[1] - a.p[1]) * f, a.p[2] + (b.p[2] - a.p[2]) * f);
+      m.root.position.set(...smoothPosition(at));
       m.root.quaternion.copy(q.set(...a.q)).slerp(qb.set(...b.q), Math.min(1, f));
       // A ship that blew up is gone from that moment: its debris takes over.
       m.root.visible = !d.events.some((e) => e.kind === 'boom' && e.id === id && e.t <= this.t);
+      // Small on screen, dimmer: the glow is the same size whatever the ship's, so a distant ship's glow
+      // swamped its lines and a Cobra read as a green smear (Mark's Orgetibe clip). Dimmed, it stays a wireframe.
+      if (m.root.visible) {
+        const dist = Math.max(1, this.camera.position.distanceTo(m.root.position));
+        // Its radius as a share of half the frame's height: the same at any screen or video size.
+        const share = m.radius / (dist * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2));
+        const k = THREE.MathUtils.clamp(share / SHARP_SHARE, DIMMEST, 1);
+        if (m.root.userData.dim !== k) {
+          for (const l of m.lines) l.material.color.copy(l.base).multiplyScalar(k);
+          m.root.userData.dim = k;
+        }
+      }
       const unknown = Boolean(a.unknown);
       if (this.unknown.get(id) !== unknown) {
         showUnidentified(m, unknown);
@@ -287,7 +314,8 @@ export class KillCam {
         const at = new THREE.Object3D();
         at.position.set(...e.p);
         // Line debris and a soft glow: the solid flash ball read as a white disc up close.
-        const boom = new Explosion(def, at, new THREE.Vector3(), { flash: 'glow' });
+        // Burnt out in 2.6 s, so the screen is clear before the end card (Mark: the wreckage hanging there looked untidy).
+        const boom = new Explosion(def, at, new THREE.Vector3(), { flash: 'glow', lasts: BOOM_LASTS });
         this.space.scene.add(boom.group);
         // Catch up to where it should be.
         for (let age = 0; age < this.t - e.t; age += 1 / 30) boom.update(Math.min(1 / 30, this.t - e.t - age));
@@ -303,8 +331,7 @@ export class KillCam {
     const tl = id === undefined ? undefined : this.tracks.get(id);
     const at = tl && poseAt(tl, t, undefined, EXTEND);
     if (!at) return null;
-    const { a, b, f } = at;
-    return new THREE.Vector3(a.p[0] + (b.p[0] - a.p[0]) * f, a.p[1] + (b.p[1] - a.p[1]) * f, a.p[2] + (b.p[2] - a.p[2]) * f);
+    return new THREE.Vector3(...smoothPosition(at));
   }
 
   private radiusOf(id: number | undefined): number {
@@ -448,7 +475,8 @@ export class KillCam {
       if (ly < top) ly = sy + gap; // under its ship if the top band would cover it
       boxes.push({ id, rank: isKiller ? 0 : isYou ? 1 : 2 + near, x, y: ly, w: bw, h: bh, altY: sy + gap, text, killer: this.death && isKiller });
     }
-    const chosen = pickLabels(boxes);
+    // A short screen has room for the two that matter: the killer and you.
+    const chosen = pickLabels(h < 500 ? boxes.filter((b) => b.rank < 2) : boxes);
     const out: Placed[] = [];
     const ease = dt <= 0 ? 1 : Math.min(1, dt / 0.25);
     const seen = new Set<number>();
@@ -514,10 +542,22 @@ export class KillCam {
     const over = !this.playing && this.t >= this.end;
     if (over && card.dataset.shown !== '1') {
       const dpr = Math.min(2, devicePixelRatio || 1);
+      // On a short screen the card fits above the controls, so its last line and the address aren't under them.
+      const bar = this.el.querySelector<HTMLElement>('.killcam-bar');
+      const room = shortScreen() && bar ? Math.max(200, Math.floor(bar.getBoundingClientRect().top) - 8) : innerHeight;
       card.width = Math.round(innerWidth * dpr);
       card.height = Math.round(innerHeight * dpr);
       const g = card.getContext('2d')!;
-      endCard(g, card.width, card.height, this.title(this.data), this.icon);
+      if (room < innerHeight) {
+        // The whole screen goes dark; the card itself is laid out in the room above the controls.
+        const top = document.createElement('canvas');
+        top.width = card.width;
+        top.height = Math.round(room * dpr);
+        endCard(top.getContext('2d')!, top.width, top.height, this.title(this.data), this.icon);
+        g.fillStyle = '#000';
+        g.fillRect(0, 0, card.width, card.height);
+        g.drawImage(top, 0, 0);
+      } else endCard(g, card.width, card.height, this.title(this.data), this.icon);
       card.dataset.shown = '1';
     } else if (!over && card.dataset.shown === '1') card.dataset.shown = '';
   }
@@ -535,10 +575,13 @@ export class KillCam {
             : `Rebuilt from your flight recorder at ${escapeHtml(d.scene.system)}${killerName ? `, following the ${escapeHtml(killerName)}` : ''}.`
       }</span>${this.note ? `<span class="killcam-note">${escapeHtml(this.note)}</span>` : ''}${
         this.shared
-          ? `<div class="killcam-shared"><button type="button" class="killcam-heart" data-act="heart" aria-pressed="${this.shared.mine}" aria-label="Heart this clip">♥ <b>${this.shared.hearts}</b></button><button type="button" class="primary" data-act="play-free">Play Witchspace free</button><button type="button" class="killcam-report" data-act="report">Report</button></div>`
+          ? `<div class="killcam-shared"><button type="button" class="primary" data-act="play-free">Play Witchspace free</button><button type="button" class="killcam-report" data-act="report">Report</button></div>`
           : ''
       }</div>
-      <button type="button" class="killcam-close" data-act="close" aria-label="Close">${ICONS.close}</button>
+      <button type="button" class="killcam-close" data-act="close" aria-label="Close">${ICONS.close}</button>${
+        // The heart on the right edge, in thumb's reach as on Reels; an outline until you've hearted it (Mark).
+        this.shared ? `<button type="button" class="killcam-heart" data-act="heart" aria-pressed="${this.shared.mine}" aria-label="Heart this clip">${HEART}<b>${this.shared.hearts}</b></button>` : ''
+      }
       <div class="killcam-bar">
         <div class="killcam-time-row">
           <button type="button" class="killcam-play" data-act="play" aria-label="Pause">${TRANSPORT.Pause}</button>
@@ -581,6 +624,11 @@ export class KillCam {
       this.rig.reset(); // a scrubbed frame shows the shot as it is then
     };
     this.el.querySelector<HTMLButtonElement>('[data-act="close"]')!.onclick = () => this.close();
+    this.touchedAt = performance.now();
+    // The heart sits just above the controls where they fill the width: it needs their height.
+    const barEl = this.el.querySelector<HTMLElement>('.killcam-bar');
+    if (barEl) new ResizeObserver(() => this.el.style.setProperty('--killcam-bar-h', `${barEl.offsetHeight}px`)).observe(barEl);
+    for (const ev of ['pointerdown', 'pointermove', 'keydown'] as const) this.el.addEventListener(ev, () => (this.touchedAt = performance.now()));
     const shared = this.shared;
     if (shared) {
       const heart = this.el.querySelector<HTMLButtonElement>('[data-act="heart"]')!;
