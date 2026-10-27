@@ -10,6 +10,12 @@ import { encodeVideo } from './encodeVideo';
 import { escapeHtml } from './escape';
 import { aftermathShot, assessorsNote, CameraRig, labelText, pickLabels, twoShot, type LabelBox, type Shot } from './killCamShots';
 import { ICONS } from './shareLinks';
+
+/** A heart, drawn as an outline; filled by CSS once you've hearted the clip. */
+const HEART = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.5-4.6-9.3-9.2C1.4 7.9 3.6 4.5 7 4.5c2 0 3.5 1.1 5 3 1.5-1.9 3-3 5-3 3.4 0 5.6 3.4 4.3 6.8-1.8 4.6-9.3 9.2-9.3 9.2z"/></svg>';
+/** On a short screen (a phone held sideways), the controls tuck away after this long untouched while it plays. */
+const IDLE_AFTER = 2500;
+const shortScreen = () => window.matchMedia('(max-height: 500px)').matches;
 import { openShareSheet } from './shareSheet';
 import { caption, cardAlpha, endCard, fontFamily, loadIcon, stamp, still, uprightBand, videoFrames } from './videoCards';
 
@@ -101,6 +107,8 @@ export class KillCam {
   /** Watching someone's shared clip (from its link): its hearts, a report, and the way into the game. */
   private shared: SharedView | null = null;
   private playing = true;
+  /** When the viewer last touched anything: the controls tuck away on a short screen after a while (Marketing's check). */
+  private touchedAt = 0;
   private speed = 1;
   private view: View = 'killer';
   private orbit = { yaw: 0.6, pitch: 0.25, dist: 0, dragging: false, auto: true };
@@ -235,6 +243,8 @@ export class KillCam {
       for (const e of d.events) if (e.kind === 'beam' && e.t > before && e.t <= this.t) this.beams.fire(new THREE.Vector3(...e.a), new THREE.Vector3(...e.b), e.color);
     }
     this.beams.update(step);
+    const idle = this.playing && shortScreen() && performance.now() - this.touchedAt > IDLE_AFTER;
+    if (this.el.classList.contains('idle') !== idle) this.el.classList.toggle('idle', idle);
     this.placeShips(d);
     this.updateBooms(d, step);
     this.aimCamera(d, step, dt);
@@ -448,7 +458,8 @@ export class KillCam {
       if (ly < top) ly = sy + gap; // under its ship if the top band would cover it
       boxes.push({ id, rank: isKiller ? 0 : isYou ? 1 : 2 + near, x, y: ly, w: bw, h: bh, altY: sy + gap, text, killer: this.death && isKiller });
     }
-    const chosen = pickLabels(boxes);
+    // A short screen has room for the two that matter: the killer and you.
+    const chosen = pickLabels(h < 500 ? boxes.filter((b) => b.rank < 2) : boxes);
     const out: Placed[] = [];
     const ease = dt <= 0 ? 1 : Math.min(1, dt / 0.25);
     const seen = new Set<number>();
@@ -514,10 +525,22 @@ export class KillCam {
     const over = !this.playing && this.t >= this.end;
     if (over && card.dataset.shown !== '1') {
       const dpr = Math.min(2, devicePixelRatio || 1);
+      // On a short screen the card fits above the controls, so its last line and the address aren't under them.
+      const bar = this.el.querySelector<HTMLElement>('.killcam-bar');
+      const room = shortScreen() && bar ? Math.max(200, Math.floor(bar.getBoundingClientRect().top) - 8) : innerHeight;
       card.width = Math.round(innerWidth * dpr);
       card.height = Math.round(innerHeight * dpr);
       const g = card.getContext('2d')!;
-      endCard(g, card.width, card.height, this.title(this.data), this.icon);
+      if (room < innerHeight) {
+        // The whole screen goes dark; the card itself is laid out in the room above the controls.
+        const top = document.createElement('canvas');
+        top.width = card.width;
+        top.height = Math.round(room * dpr);
+        endCard(top.getContext('2d')!, top.width, top.height, this.title(this.data), this.icon);
+        g.fillStyle = '#000';
+        g.fillRect(0, 0, card.width, card.height);
+        g.drawImage(top, 0, 0);
+      } else endCard(g, card.width, card.height, this.title(this.data), this.icon);
       card.dataset.shown = '1';
     } else if (!over && card.dataset.shown === '1') card.dataset.shown = '';
   }
@@ -535,10 +558,13 @@ export class KillCam {
             : `Rebuilt from your flight recorder at ${escapeHtml(d.scene.system)}${killerName ? `, following the ${escapeHtml(killerName)}` : ''}.`
       }</span>${this.note ? `<span class="killcam-note">${escapeHtml(this.note)}</span>` : ''}${
         this.shared
-          ? `<div class="killcam-shared"><button type="button" class="killcam-heart" data-act="heart" aria-pressed="${this.shared.mine}" aria-label="Heart this clip">♥ <b>${this.shared.hearts}</b></button><button type="button" class="primary" data-act="play-free">Play Witchspace free</button><button type="button" class="killcam-report" data-act="report">Report</button></div>`
+          ? `<div class="killcam-shared"><button type="button" class="primary" data-act="play-free">Play Witchspace free</button><button type="button" class="killcam-report" data-act="report">Report</button></div>`
           : ''
       }</div>
-      <button type="button" class="killcam-close" data-act="close" aria-label="Close">${ICONS.close}</button>
+      <button type="button" class="killcam-close" data-act="close" aria-label="Close">${ICONS.close}</button>${
+        // The heart on the right edge, in thumb's reach as on Reels; an outline until you've hearted it (Mark).
+        this.shared ? `<button type="button" class="killcam-heart" data-act="heart" aria-pressed="${this.shared.mine}" aria-label="Heart this clip">${HEART}<b>${this.shared.hearts}</b></button>` : ''
+      }
       <div class="killcam-bar">
         <div class="killcam-time-row">
           <button type="button" class="killcam-play" data-act="play" aria-label="Pause">${TRANSPORT.Pause}</button>
@@ -581,6 +607,8 @@ export class KillCam {
       this.rig.reset(); // a scrubbed frame shows the shot as it is then
     };
     this.el.querySelector<HTMLButtonElement>('[data-act="close"]')!.onclick = () => this.close();
+    this.touchedAt = performance.now();
+    for (const ev of ['pointerdown', 'pointermove', 'keydown'] as const) this.el.addEventListener(ev, () => (this.touchedAt = performance.now()));
     const shared = this.shared;
     if (shared) {
       const heart = this.el.querySelector<HTMLButtonElement>('[data-act="heart"]')!;

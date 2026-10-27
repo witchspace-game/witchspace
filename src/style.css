@@ -1567,8 +1567,20 @@ body.retro #replay { backdrop-filter: none; }
 body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibility: hidden !important; }
 .killcam-shared { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; pointer-events: auto; }
 .killcam-shared button { min-height: 36px; padding: 4px 14px; }
-#killcam .killcam-heart { color: #ff8da1; border-color: rgba(255, 77, 109, 0.5); }
-#killcam .killcam-heart[aria-pressed='true'] { border-color: #ff4d6d; background: rgba(255, 77, 109, 0.18); }
+/* The heart: on the right edge, above the controls, in thumb's reach; an outline until you've hearted it (Mark). */
+#killcam .killcam-heart { position: absolute; right: max(14px, env(safe-area-inset-right)); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 0; padding: 8px; border: 0; background: rgba(0, 0, 0, 0.35); border-radius: 28px; color: #ff8da1; }
+#killcam .killcam-heart svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 1.8; transition: transform 0.15s ease; }
+#killcam .killcam-heart b { font-size: 13px; font-weight: 600; color: #f2d6dc; }
+#killcam .killcam-heart[aria-pressed='true'] { color: #ff4d6d; }
+#killcam .killcam-heart[aria-pressed='true'] svg { fill: currentColor; }
+#killcam .killcam-heart:active svg { transform: scale(0.88); }
+/* A phone held sideways: one line of description, and the controls tuck away while it plays; a touch brings them back. */
+@media (max-height: 500px) {
+  .killcam-head > span:not(:first-of-type), .killcam-note { display: none; }
+  .killcam-head > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .killcam-bar, .killcam-head { transition: opacity 0.4s ease; }
+  #killcam.idle .killcam-bar, #killcam.idle .killcam-head { opacity: 0; pointer-events: none; }
+}
 .killcam-report { opacity: 0.7; font-size: 13px; }
 #killcam { position: fixed; inset: 0; z-index: 70; cursor: grab; touch-action: none; }
 #killcam[hidden] { display: none; }
@@ -1601,7 +1613,7 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
 .killcam-label { position: absolute; left: 0; top: 0; padding: 3px 7px; font-size: 13px; white-space: nowrap; color: #d8e2f0; background: rgba(0, 6, 4, 0.66); border-radius: 4px; pointer-events: none; }
 .killcam-note { color: #e8f0fa; font-size: 13px; }
 /* The end card, faded up once the replay has played out (the same card the videos end on). */
-.killcam-end { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 1.2s ease; }
+.killcam-end { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 1.2s ease; }
 .killcam-end[data-shown='1'] { opacity: 1; }
 .killcam-label.killer { color: #ff8da1; border: 1px solid rgba(255, 77, 109, 0.6); }
 
