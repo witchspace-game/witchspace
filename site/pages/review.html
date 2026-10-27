@@ -1,0 +1,49 @@
+<!-- {"path": "/review/", "title": "Review submissions · Witchspace", "description": "For Witchspace's maintainers: the ships and Titanoboa modules handed in, to accept or send back with notes.", "scripts": ["/src/site/review.ts"], "bodyClass": "submit-page review-page", "head": "    <meta name=\"robots\" content=\"noindex\" />\n"} -->
+<section class="section review-desk">
+  <div class="section-head">
+    <p class="kicker">Build</p>
+    <h2>Review submissions</h2>
+    <p class="lede">The ships and Titanoboa modules people have handed in. Accept one to open its pull request, or send it back with notes for its author.</p>
+  </div>
+
+  <div class="submit-step" id="step-account">
+    <h3>Sign in</h3>
+    <div id="account"><p class="muted">Checking whether you're signed in…</p></div>
+  </div>
+
+  <div class="submit-step" id="not-maintainer" hidden>
+    <p class="muted">This page is for Witchspace's maintainers. To hand in a design of your own, go to <a href="/submit/">Hand in a design</a>.</p>
+  </div>
+
+  <div id="queue" hidden>
+    <div class="review-tabs" role="tablist" aria-label="Submissions">
+      <button type="button" role="tab" data-status="submitted" aria-selected="true">Waiting</button>
+      <button type="button" role="tab" data-status="changes" aria-selected="false">Sent back</button>
+      <button type="button" role="tab" data-status="accepted" aria-selected="false">Accepted</button>
+    </div>
+    <div class="review-list" id="list" aria-live="polite"></div>
+  </div>
+
+  <article class="submit-step review-one" id="one" hidden>
+    <button type="button" class="link review-back" id="back">← All of them</button>
+    <div id="one-head"></div>
+    <div class="preview" id="preview">
+      <canvas id="preview-canvas" aria-label="The design, turning. Drag to turn it."></canvas>
+      <p class="small muted" id="preview-note" hidden></p>
+    </div>
+    <div id="one-body"></div>
+    <details class="review-file">
+      <summary>The file</summary>
+      <pre id="file"></pre>
+    </details>
+    <div id="decide">
+      <label>Your notes <textarea id="notes" rows="4" maxlength="2000" placeholder="What to change, or what you liked. The author sees these."></textarea></label>
+      <div class="connect-buttons">
+        <button type="button" class="button primary" id="accept">Accept</button>
+        <button type="button" class="button ghost" id="send-back" disabled>Send back</button>
+      </div>
+      <p class="small muted" id="decide-hint">Accepting opens a public pull request in the repository. Sending back needs notes.</p>
+    </div>
+    <p class="send-result" id="decided" aria-live="polite"></p>
+  </article>
+</section>
