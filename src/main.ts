@@ -829,7 +829,7 @@ function markInbox(c: Commander) {
   const unread = (c.messages ?? []).filter((m) => !m.read).length + (state === 'docked' && dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
   // A small badge, not words: "Contracts · 2 new" spilled out of the tab on a phone (Mark).
   const tab = $('.tabs [data-tab="contracts"]');
-  tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}</b>` : 'Contracts';
+  tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}<span class="tab-badge-word"> new</span></b>` : 'Contracts'; // "2 new" where there's room, "2" on a phone
   tab.setAttribute('aria-label', unread ? `Contracts, ${unread} new` : 'Contracts');
 }
 
