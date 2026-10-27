@@ -63,7 +63,7 @@ function renderAccount() {
         <p class="small"><button type="button" class="link" id="again">Use a different email</button></p>`
       : `<p class="muted">The same account as the game: no password, we email you a code. Your design is credited to your callsign.</p>
         <form class="inline-form" id="email-form"><input type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email" /><button type="submit" class="button primary small">Email me a code</button></form>
-        <div class="turnstile" id="turnstile"></div>
+        <div class="turnstile" id="signin-check"></div>
         <p class="small"><a href="/privacy/">How we use your email</a></p>`;
   } else if (!a.callsign) {
     accountBox.innerHTML = `<p>Signed in as ${escapeHtml(a.email)}. Choose your callsign: it's the name your design is credited to, here and in the game.</p>
@@ -133,14 +133,15 @@ function wireAccount() {
   mountTurnstile();
 }
 
+/** The human check on the email form. Not id="turnstile": an element's id is also a global, and would hide Turnstile's own. */
 function mountTurnstile() {
-  const el = document.querySelector<HTMLElement>('#turnstile');
+  const el = document.querySelector<HTMLElement>('#signin-check');
   if (!el || !TURNSTILE_SITE_KEY) return;
   const draw = () => {
     turnstileToken = '';
     turnstile?.render(el, { sitekey: TURNSTILE_SITE_KEY, theme: 'dark', size: 'flexible', callback: (t: string) => (turnstileToken = t) });
   };
-  if (typeof turnstile !== 'undefined') return draw();
+  if (typeof turnstile !== 'undefined' && typeof turnstile.render === 'function') return draw();
   (window as unknown as Record<string, unknown>).onSubmitTurnstile = draw;
   if (!document.querySelector('script[data-turnstile]')) {
     const s = document.createElement('script');
