@@ -75,4 +75,23 @@ describe('MCP server', () => {
     const doc = await call('get_design', { slug: 'mcp-server' });
     expect(doc.content[0].text).toMatch(/Witchspace MCP server/);
   });
+
+  it('shows a ship turning in the chat: the view named on the tool, the page served, the geometry for it', async () => {
+    const list = await handle({ jsonrpc: '2.0', id: 2, method: 'tools/list' }, data, 'test');
+    const tool = (list!.result as { tools: { name: string; _meta?: { ui?: { resourceUri: string } } }[] }).tools.find((t) => t.name === 'view_ship')!;
+    expect(tool._meta?.ui?.resourceUri).toBe('ui://witchspace/viewer.html');
+    const page = await handle({ jsonrpc: '2.0', id: 3, method: 'resources/read', params: { uri: 'ui://witchspace/viewer.html' } }, data, 'test');
+    const content = (page!.result as { contents: { mimeType: string; text: string }[] }).contents[0];
+    expect(content.mimeType).toBe('text/html;profile=mcp-app');
+    expect(content.text).toContain("request('ui/initialize'");
+    expect(content.text).toContain('ui/notifications/tool-result');
+    expect([...content.text].every((c) => c.charCodeAt(0) < 128)).toBe(true); // plain ASCII, whatever the host's encoding
+    expect(content.text).not.toMatch(/<script[^>]+src=|https?:\/\/(?!www\.w3)/); // self-contained: no network
+    const r = (await handle({ jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'view_ship', arguments: { id: 'falcon' } } }, data, 'test'))!.result as { content: { text: string }[]; structuredContent: { name: string; vertices: unknown[]; scale?: { name: string } } };
+    expect(r.content[0].text).toMatch(/^Showing .+ turning in 3D/);
+    expect(r.structuredContent.vertices.length).toBe(data.ships.find((s) => s.id === 'falcon')!.geometry.vertices.length);
+    expect(r.structuredContent.scale?.name).toBe('Cobra Mk III');
+    expect((await call('view_ship', { id: 'cobra-mk3' })).isError).toBeUndefined();
+    expect((await call('view_ship', { id: 'no-such-ship' })).isError).toBe(true);
+  });
 });

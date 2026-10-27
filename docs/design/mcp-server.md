@@ -9,7 +9,7 @@ stages:
   - Hand it in - sign in, submit, follow it, revise it; the review queue and a pull request made for you | building
   - Guided workshops - prompts for a first ship, a module, a saloon regular | proposed
   - Every content type - Titanoboa modules, characters, news events, trails, company files | proposed
-  - Try it - the live viewer in the chat, and a link that flies your draft in the game, in a test system | proposed
+  - Try it - the live viewer in the chat, and a link that flies your draft in the game, in a test system | building
   - The community - claim a task, post and vote on ideas, see your credits and commissions | proposed
   - Players - the live galaxy, public news only | proposed
 help:
@@ -142,7 +142,17 @@ Only the hashes of codes and tokens are kept. Signing out of the game doesn't re
 - The issuer is always `https://space.witchspace.org.uk`. To try it locally: `npx wrangler dev --var OAUTH_ISSUER:http://127.0.0.1:8787`, with the site on `npm run dev` for the connect page.
 - Tested end to end against `wrangler dev` with a script playing the client: told to sign in, register, authorise, the connect page's two calls, a wrong PKCE verifier (refused, and the code spent), tokens, the signed-in tools handing a module in, refresh (and the old refresh token refused), a bad token, and saying no.
 - The connect page is `site/pages/connect.html` and `src/site/connect.ts` (the site's).
-- **Still to do before it's announced:** the connect page live on the site, then trying every tool in the real Claude client. `review_queue` and `review` for maintainers come later; `npx tsx tools/submissions.ts` does that meanwhile.
+- **Tried in the real client (Claude Code, 27 October 2026):** Mark connected `/mcp/build`, and every tool worked as CMDR Jameson: `my_submissions`, `submit` (credited, designer set to the callsign), `submission`, `revise` (version 2), `withdraw`, and a broken file's problems coming back as a list with nothing kept. Two fixes came out of it: Claude Code registers its local return addresses without a port (RFC 8252 lets the port vary, #234), and `submission` now returns the file compactly.
+- **Tried in claude.ai too (27 October 2026):** adding the connector, Claude found the sign-in settings itself and chose its published identity (a client metadata document); the connect page showed it as Claude, Allow brought it back connected, and in a chat it used `my_submissions` (after Claude's usual "allow once") and answered correctly. claude.ai also offers "sign in when needed", which could later let one address serve signed-out reading and signed-in handing in. `review_queue` and `review` for maintainers come later; `npx tsx tools/submissions.ts` does that meanwhile.
+
+### The live viewer *(built, 27 October 2026; Mark: "the wow moment")*
+
+`view_ship` (on both addresses: it only reads) shows a ship turning in 3D inside the chat, where the client shows MCP Apps (claude.ai, Claude Desktop, ChatGPT). Pass a ship file or a fleet ship's id.
+
+- The tool names its view in `_meta.ui.resourceUri` (`ui://witchspace/viewer.html`), served as `text/html;profile=mcp-app` from `src/mcp/viewer.ts`. The answer's `structuredContent` carries the geometry and colour for the view; its text tells the model what's shown, and clients without views (Claude Code in a terminal) get that text alone.
+- The page is self-contained (no network, plain ASCII) and speaks the MCP Apps protocol by hand: `ui/initialize`, `ui/notifications/initialized`, then the tool result; it reports its size and offers full screen where the host has it.
+- It draws in neo glow on a canvas, with the game's hidden-line look (faces filled dark and drawn far to near, so near faces hide far lines) and a Cobra Mk III beside it in grey for scale; it turns slowly until touched, and you drag (mouse or finger) to turn it and pinch or scroll to zoom. A light drawing of the same geometry and colours, not the game's three.js renderer, so it's small and quick on a phone.
+- Next: modules and a Titanoboa line-up in the same view, with `validate_module` and `preview_module`.
 
 ### The connect page: the contract with the site
 

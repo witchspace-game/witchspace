@@ -8,7 +8,7 @@ export const VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 const INSTRUCTIONS = `Witchspace is a free, open-source browser tribute to Elite (1984): trade, fight, explore and build in eight galaxies of glowing vector space (https://witchspace.org.uk). These tools help you contribute well.
 
-Before writing content, read witchspace://agents (the rules for AI assistants) and, for writing, the worldbuilding guide. For a ship: start from a real one (list_ships, get_ship), keep it original (evoke an idea, never trace an on-screen design), give it a maker and a reason to exist, then run validate_ship and preview_ship and fix what they find, and balance_check it against the fleet. The person you're helping is the author; mark contributions as AI-assisted.
+Before writing content, read witchspace://agents (the rules for AI assistants) and, for writing, the worldbuilding guide. For a ship: start from a real one (list_ships, get_ship), keep it original (evoke an idea, never trace an on-screen design), give it a maker and a reason to exist, then run validate_ship and preview_ship and fix what they find, and balance_check it against the fleet. view_ship shows it turning in 3D inside the chat, where the client can show it: use it so the person can see what you've made. The person you're helping is the author; mark contributions as AI-assisted.
 
 designs and help_wanted show what's being built and what help is wanted, most of it needing no code. galaxy_system puts stories somewhere real. Nothing here changes anything. To hand work in, the person can add https://space.witchspace.org.uk/mcp/build (it signs them in to their Witchspace account) or use https://witchspace.org.uk/submit/.`;
 
@@ -61,7 +61,7 @@ export async function handle(msg: Message, data: McpData, version: string, extra
       case 'tools/list':
         return ok(msg.id, {
           tools: [
-            ...TOOLS.map(({ name, title, description, inputSchema }) => ({ name, title, description, inputSchema, annotations: { readOnlyHint: true, openWorldHint: false } })),
+            ...TOOLS.map(({ name, title, description, inputSchema, _meta }) => ({ name, title, description, inputSchema, annotations: { readOnlyHint: true, openWorldHint: false }, ...(_meta ? { _meta } : {}) })),
             ...(extra?.tools ?? []).map(({ name, title, description, inputSchema, annotations }) => ({ name, title, description, inputSchema, annotations })),
           ],
         });

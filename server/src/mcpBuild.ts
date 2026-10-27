@@ -103,7 +103,8 @@ export function buildTools(as: AsAccount, callsign: string | null): Extra {
         const r = await as('GET', `/submissions/${id}`);
         if (r.status !== 200) return failure(r);
         const s = r.data.submission as Submission;
-        return text(`${describe(s)}\n\nThe file:\n${JSON.stringify(s.file, null, 2)}`);
+        // Compact: geometry pretty-printed is a number a line, which costs the assistant thousands of tokens for nothing.
+        return text(`${describe(s)}\n\nThe file:\n${JSON.stringify(s.file)}`);
       },
     },
     {
