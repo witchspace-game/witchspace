@@ -10,7 +10,8 @@ const mod = (id: string) => moduleById(id)!;
 
 describe('the core modules', () => {
   it('all pass the standard', () => {
-    expect(shipModules.map((m) => m.id).sort()).toEqual(['drive', 'fabricator', 'furnace', 'habitat', 'hold', 'maw', 'reactor', 'science']);
+    // The core eight are Witchspace's; community modules join them (docs/design/submissions.md) and must pass too.
+    expect(shipModules.filter((m) => m.designer === 'Witchspace').map((m) => m.id).sort()).toEqual(['drive', 'fabricator', 'furnace', 'habitat', 'hold', 'maw', 'reactor', 'science']);
     for (const m of shipModules) {
       expect(checkModule(m).errors, m.id).toEqual([]);
       expect(m.geometry.vertices.length).toBeLessThanOrEqual(MAX_VERTICES);

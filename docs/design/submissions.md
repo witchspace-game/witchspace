@@ -33,8 +33,8 @@ Every road into Build used to end on GitHub. The jobs board now offers real in-g
 So the credit and the commission can't go astray, the server sets these, whatever the file says:
 
 - `credits.authors` starts with your callsign; `credits.license` is `CC-BY-SA-4.0`; `credits.aiAssisted` is what you said.
-- **A new module:** `designer` is your callsign. `inService` and `revisions` are removed: putting a module into service is the maintainer's step, when it's accepted.
-- **An improvement to an existing ship or module** (same `id`): it's marked as a revision. For a module, `designer`, `inService` and `revisions` stay as they are in the game; the maintainer adds your revision, which pays the revision fee.
+- **A new module:** `designer` is your callsign. `inService` and `revisions` are removed: putting a module into service is the maintainer's step, when it's accepted. So is `insignia`: the company mark is on the habitat alone.
+- **An improvement to an existing ship or module** (same `id`): it's marked as a revision. For a module, `designer`, `inService`, `revisions` and `insignia` stay as they are in the game; the maintainer adds your revision, which pays the revision fee.
 
 ## The API
 
@@ -106,6 +106,7 @@ A submission keeps the account it came from, the file, the notes and the dates. 
 - The `submissions` table lives in the `Accounts` Durable Object (`server/src/accounts.ts`) beside the saves; the checks and the rules above are in `server/src/submissions.ts`, the GitHub App in `server/src/github.ts`.
 - The ship check is the MCP server's `validate_ship`; the module check is the schema (compiled by `tools/mcp-data.ts`, as the ship schema is) plus `checkModule` and `checkService` from `src/content/modules.ts`.
 - Maintainers work the queue with `npx tsx tools/submissions.ts` (`list`, `show`, `save` to fly it locally, `accept`, `changes`).
+- The GitHub App (Witchspace Submissions, App ID 5493130) is installed on this repository only, with its secrets set (27 October 2026). Tested live with a throwaway submission: it opened the pull request from the App, credited and in place, and was closed unmerged. That test found `modules.test.ts` pinned the module list to the core eight, which would have failed CI on every community module; it now pins only the modules designed by Witchspace.
 - Tested end to end against `wrangler dev`: checks on the way in, send back, revise (version 2), accept, no withdrawing after, and the daily limit.
 - The GitHub App needs two Worker secrets, `GITHUB_APP_ID` and `GITHUB_APP_KEY` (the private key as GitHub gives it). It needs access to this repository only, with contents and pull requests: read and write.
 - **On the site** (*27 October 2026*): [/submit/](/submit/) has the form and My submissions (`src/site/submit.ts`, with the logic in `src/site/submission.ts`, tested). You can paste a file, upload one, or start from a core module, either as a new module or as an improvement to it. The design turns in the ship viewer as you edit, `/submissions/check` runs as you type, and problems with a field path show under that field. The ship editor is next.

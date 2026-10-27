@@ -88,17 +88,14 @@ export function prepare(kind: Kind, raw: Record<string, unknown>, callsign: stri
 
   if (kind === 'module') {
     const old = checks.modules.get(id);
+    // The company mark is Wexley-Yorozu's, on the habitat alone: a submission keeps whatever the original had.
+    for (const k of ['inService', 'revisions', 'insignia']) delete file[k];
     if (old) {
       file.designer = old.designer;
-      delete file.inService;
-      delete file.revisions;
       if (old.inService) file.inService = old.inService;
       if (old.revisions) file.revisions = old.revisions;
-    } else {
-      file.designer = callsign;
-      delete file.inService;
-      delete file.revisions;
-    }
+      if (old.insignia) file.insignia = old.insignia;
+    } else file.designer = callsign;
     const m = file as unknown as ModuleDef;
     const { errors, warnings } = checks.module(m);
     if (errors.length) return { problems: errors.map(tidy) };
