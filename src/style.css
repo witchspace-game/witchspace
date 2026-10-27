@@ -112,10 +112,12 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 
 /* Docked screen tabs and the market. */
 .panel.docked { max-height: calc(100vh - 110px); overflow-y: auto; overflow-x: hidden; }
+/* A desktop has room: the docked panel widens so its tabs read in full, keys and all (Mark). */
+@media (min-width: 900px) { .panel.docked { width: 500px; } }
 .panel.docked.wide { width: min(640px, calc(100vw - 32px)); }
 .tabs { display: flex; gap: 4px; margin: 4px 0 12px; } /* one row, however narrow the panel */
 .tabs button { flex: 1 1 auto; min-width: 0; font-size: 13px; padding: 5px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 440px) { .tabs { gap: 3px; } .tabs button { padding: 5px 3px; font-size: 12.5px; } }
+@media (max-width: 440px) { .tabs { gap: 3px; } .tabs button { padding: 5px 3px; font-size: 12.5px; } .tab-badge-word { display: none; } }
 .tab-badge { display: inline-block; min-width: 16px; margin-left: 4px; padding: 0 4px; border-radius: 8px; color: #000; background: var(--accent); font-size: 10px; line-height: 16px; letter-spacing: 0; text-align: center; vertical-align: 1px; }
 .tabs button.active { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
 .market-summary { margin: 0 0 8px; font-size: 14px; color: var(--dim); }
