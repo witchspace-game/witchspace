@@ -239,3 +239,62 @@ export function focusOf(d: TrackData, start: number, end: number): number | unde
   return boom && boom.kind === 'boom' ? boom.id : undefined;
 }
 
+
+// --- One ship at a time -------------------------------------------------------
+// The replay places each ship from its own run of poses, not sample by sample,
+// so a ship missing from one sample (or two) is carried across the gap rather
+// than blinking out, which used to throw the camera following it.
+
+/** One ship's poses through the track, in time order. */
+export interface Timeline {
+  t: number[];
+  poses: Pose[];
+}
+
+/** Every ship's timeline, by id. */
+export function timelines(d: TrackData): Map<number, Timeline> {
+  const out = new Map<number, Timeline>();
+  for (const s of d.samples) {
+    for (const p of s.poses) {
+      let tl = out.get(p.id);
+      if (!tl) out.set(p.id, (tl = { t: [], poses: [] }));
+      tl.t.push(s.t);
+      tl.poses.push(p);
+    }
+  }
+  return out;
+}
+
+/** A gap longer than this (seconds) means the ship really left the scanner. */
+export const MAX_GAP = 1;
+
+/**
+ * Where a ship is at time t: the poses either side and how far between (the
+ * caller interpolates positions and slerps orientations). Null when it isn't
+ * there: before it appeared, after it went, or in a gap longer than `maxGap`.
+ * Up to `extend` seconds past its last pose it carries on at its last speed
+ * (a track ends a few seconds after a death, and ships shouldn't freeze there).
+ */
+export function poseAt(tl: Timeline, t: number, maxGap = MAX_GAP, extend = 0): { a: Pose; b: Pose; f: number } | null {
+  const ts = tl.t;
+  const n = ts.length;
+  if (!n) return null;
+  const step = 1.5 / SAMPLE_RATE;
+  if (t < ts[0] - step) return null;
+  if (t <= ts[0]) return { a: tl.poses[0], b: tl.poses[0], f: 0 };
+  if (t >= ts[n - 1]) {
+    if (t <= ts[n - 1] + step) return { a: tl.poses[n - 1], b: tl.poses[n - 1], f: 0 };
+    if (t > ts[n - 1] + extend || n < 2) return null;
+    // Carry on: extrapolate from the last two poses (f past 1).
+    return { a: tl.poses[n - 2], b: tl.poses[n - 1], f: (t - ts[n - 2]) / (ts[n - 1] - ts[n - 2] || 1) };
+  }
+  let lo = 0;
+  let hi = n - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (ts[mid] <= t) lo = mid;
+    else hi = mid;
+  }
+  if (ts[hi] - ts[lo] > maxGap) return null;
+  return { a: tl.poses[lo], b: tl.poses[hi], f: (t - ts[lo]) / (ts[hi] - ts[lo] || 1) };
+}
