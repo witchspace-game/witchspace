@@ -419,7 +419,10 @@ async function serverCheck(file: Record<string, unknown>) {
 
 function showCheck(r: Check | null) {
   if (r) result = r;
-  const problems = [...local, ...(result?.problems ?? []).map((p) => p.replace(/^([\w.[\]]+): (.+)$/s, (_, w: string, what: string) => `${w}: ${plainly(what)}`))];
+  // The server's word on a field the editor has already asked for (a name, a description) would say it twice.
+  const asked = [!draft.name.trim() ? /^(name|id):/ : null, draft.description.trim().length < 10 ? /^description:/ : null].filter((r): r is RegExp => r !== null);
+  const server = (result?.problems ?? []).filter((p) => !asked.some((r) => r.test(p)));
+  const problems = [...local, ...server.map((p) => p.replace(/^([\w.[\]]+): (.+)$/s, (_, w: string, what: string) => `${w}: ${plainly(what)}`))];
   // The server's warnings, sorted: balance notes on their own, the homage rule as standing
   // guidance below, and the AI question left to /submit/, which asks it.
   const all = result?.warnings ?? [];
