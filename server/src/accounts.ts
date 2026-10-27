@@ -22,7 +22,7 @@ import { isPushEndpoint, sendPush } from './push';
 import type { ClipBoard } from './clips';
 import { awake, btcItems, heartItems, LOG_EVERY, logMessage, type LogItem, type LogKinds } from './shipsLog';
 import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
-import { KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
+import { CHECKS_PER_MINUTE, KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
 import { gitHubReady, openPullRequest, type GitHubEnv } from './github';
 import { CHECKS } from './checks';
 
@@ -119,6 +119,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'GET' && path === '/contact/stop') return this.stop(url);
     const galaxy = path.match(/^\/firsts\/([0-7])$/);
     if (m === 'GET' && galaxy) return this.firstsOf(Number(galaxy[1]));
+    if (m === 'POST' && path === '/submissions/check') return this.checkOnly(request);
     const sub = path.match(/^\/submissions(?:\/(mine|[a-z0-9]{10})(?:\/(review))?)?$/);
     if (sub && request.headers.has('X-Admin-Key')) return this.reviewQueue(request, url, sub[1], sub[2]);
 
@@ -199,6 +200,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
    * a duplicate ship until one of them next joins.
    */
   private readonly present = new Map<string, { room: string; id: string }>();
+  /** Checks without storing, per network this minute (one Accounts object, so this is every check). */
+  private checksByNet = { minute: 0, counts: new Map<string, number>() };
 
   /** An account's ship joined a system: record it, and return the ship it replaces (if any). */
   async arrive(account: string, room: string, id: string): Promise<{ room: string; id: string } | null> {
@@ -692,10 +695,29 @@ export class Accounts extends DurableObject<AccountsEnv> {
     return { prepared };
   }
 
-  /** GET /submissions/mine: newest first, without the files. */
+  /** POST /submissions/check {kind, file}: the same checks, nothing stored, signed in or not. */
+  private async checkOnly(request: Request): Promise<Response> {
+    const minute = Math.floor(Date.now() / 60_000);
+    if (this.checksByNet.minute !== minute) this.checksByNet = { minute, counts: new Map() };
+    const net = await networkOf(request, (this.env.ADMIN_KEY ?? 'witchspace') + ':checks');
+    const n = (this.checksByNet.counts.get(net) ?? 0) + 1;
+    this.checksByNet.counts.set(net, n);
+    if (n > CHECKS_PER_MINUTE) return json({ error: 'That’s a lot of checks: try again in a minute' }, 429);
+    const body = (await request.json().catch(() => null)) as { kind?: unknown; file?: unknown } | null;
+    if (!KINDS.includes(body?.kind as Kind)) return json({ error: `kind must be one of: ${KINDS.join(', ')}` }, 400);
+    const account = await this.sessionAccount(request);
+    const parsed = parseFile(body!.file);
+    if (!parsed.file) return json({ error: parsed.error }, parsed.error?.includes('KB') ? 413 : 400);
+    const { prepared, problems } = prepare(body!.kind as Kind, parsed.file, account?.callsign ?? 'You', true, CHECKS);
+    return json(prepared ? { problems: [], warnings: prepared.warnings, title: prepared.title, itemId: prepared.itemId, revises: prepared.revises } : { problems, warnings: [], title: null, itemId: null, revises: null });
+  }
+
+  /** GET /submissions/mine: newest first, without the files, and how many more can be sent today. */
   private mySubmissions(account: Account): Response {
     const rows = this.sql.exec('SELECT * FROM submissions WHERE account = ? ORDER BY created DESC', account.id).toArray();
-    return json({ submissions: rows.map((r) => this.submissionOut(r, false)) });
+    const today = rows.filter((r) => (r.created as number) > Date.now() - 86_400_000).length;
+    const waiting = rows.filter((r) => OPEN.includes(r.status as Status)).length;
+    return json({ submissions: rows.map((r) => this.submissionOut(r, false)), limits: { today, perDay: PER_DAY, waiting, maxWaiting: OPEN_AT_ONCE } });
   }
 
   /** GET /submissions/<id>: yours, with the file. Anyone else's is "not found", so ids can't be fished for. */

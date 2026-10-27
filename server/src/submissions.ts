@@ -4,6 +4,7 @@
 // the credit and the commission can't go astray. The table and the routes are
 // in accounts.ts; the pull request is opened by github.ts.
 
+import { checkModule, checkService } from '../../src/content/modules';
 import type { ModuleDef, ShipDef } from '../../src/content/types';
 
 export const KINDS = ['ship', 'module'] as const;
@@ -15,6 +16,8 @@ export const MAX_FILE = 64 * 1024; // bytes of JSON
 export const PER_DAY = 5;
 export const OPEN_AT_ONCE = 10;
 export const MAX_NOTE = 2000;
+/** Checks without storing (POST /submissions/check), per network per minute: loose, since nothing is kept. */
+export const CHECKS_PER_MINUTE = 30;
 /** While it's waiting or sent back, the author may revise or withdraw it. */
 export const OPEN: readonly Status[] = ['submitted', 'changes'];
 
@@ -26,6 +29,18 @@ export interface Checks {
   module: (m: ModuleDef) => { errors: string[]; warnings: string[] };
   ships: ReadonlyMap<string, ShipDef>;
   modules: ReadonlyMap<string, ModuleDef>;
+}
+
+/** A module's checks: its schema first (`schemaErrors`, compiled where it runs), then the coupling standard and its service. */
+export function moduleCheck(schemaErrors: (m: unknown) => string[], modules: ReadonlyMap<string, ModuleDef>): Checks['module'] {
+  return (m) => {
+    const schema = schemaErrors(m).map((e) => `schema: ${e}`);
+    if (schema.length) return { errors: schema, warnings: [] };
+    // The coupling standard's sentences are about the shape; the service ones name their field.
+    const { errors, warnings } = checkModule(m);
+    const service = checkService(m, new Map([...modules, [m.id, m]])).map((e) => `${e.split(/[ "]/)[0]}: ${e}`);
+    return { errors: [...errors.map((e) => `geometry: ${e}`), ...service], warnings: warnings.map((w) => `geometry: ${w}`) };
+  };
 }
 
 export interface Prepared {
@@ -86,14 +101,30 @@ export function prepare(kind: Kind, raw: Record<string, unknown>, callsign: stri
     }
     const m = file as unknown as ModuleDef;
     const { errors, warnings } = checks.module(m);
-    if (errors.length) return { problems: errors };
-    return { prepared: { file: m, itemId: id, title: titleOf(m.name, id), revises: Boolean(old), warnings } };
+    if (errors.length) return { problems: errors.map(tidy) };
+    return { prepared: { file: m, itemId: id, title: titleOf(m.name, id), revises: Boolean(old), warnings: warnings.map(tidy) } };
   }
   const ship = file as unknown as ShipDef;
   const { errors, warnings } = checks.ship(ship);
-  if (errors.length) return { problems: errors };
+  if (errors.length) return { problems: errors.map(tidy) };
   // validate_ship warns when the id is taken; here that just means it's a revision.
-  return { prepared: { file: ship, itemId: id, title: titleOf(ship.name, id), revises: checks.ships.has(id), warnings: warnings.filter((w) => !w.startsWith('id:')) } };
+  return { prepared: { file: ship, itemId: id, title: titleOf(ship.name, id), revises: checks.ships.has(id), warnings: warnings.filter((w) => !w.startsWith('id:')).map(tidy) } };
+}
+
+/**
+ * Every problem and warning reads "<where>: <what>". `where` is a field path as the file
+ * writes it ("length", "geometry.vertices[3]", "credits.authors") when the check names
+ * one, or else an area: "file", "id", "kind", "geometry", "size", "maker", and so on.
+ * The site pins the ones with a field path to that field.
+ */
+export function tidy(line: string): string {
+  const schema = /^(?:schema: )?(\/\S*|\(the \w+\)) (.*)$/.exec(line);
+  if (schema) {
+    const [, at, what] = schema;
+    const path = at.startsWith('(') || at === '/' ? 'file' : at.slice(1).split('/').map((k, i) => (/^\d+$/.test(k) ? `[${k}]` : `${i ? '.' : ''}${k}`)).join('');
+    return `${path}: ${what}`;
+  }
+  return /^[A-Za-z][\w.[\]-]*: /.test(line) ? line : `file: ${line}`;
 }
 
 const titleOf = (name: unknown, id: string) => (typeof name === 'string' && name.trim() ? name.trim().slice(0, 80) : id);

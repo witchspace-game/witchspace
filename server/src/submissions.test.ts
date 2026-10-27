@@ -1,11 +1,10 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { checkModule, checkService } from '../../src/content/modules';
 import type { ModuleDef, ShipDef } from '../../src/content/types';
 import { validateShip, type McpData } from '../../src/mcp/tools';
 import { compileSchemaCheck } from '../../tools/mcp-data';
-import { parseFile, prepare, pullRequestText, repoFile, type Checks } from './submissions';
+import { moduleCheck, parseFile, prepare, pullRequestText, repoFile, tidy, type Checks } from './submissions';
 
 // The same checks the Worker runs (checks.ts), built from the real schemas and files.
 const root = resolve(import.meta.dirname, '../..');
@@ -17,12 +16,7 @@ const moduleSchema = compileSchemaCheck(readFileSync(join(root, 'schemas/module.
 const data = { ships, checkSchema: shipSchema } as unknown as McpData;
 const checks: Checks = {
   ship: (s) => validateShip(s, data),
-  module: (m) => {
-    const schema = moduleSchema(m);
-    if (schema.length) return { errors: schema, warnings: [] };
-    const { errors, warnings } = checkModule(m);
-    return { errors: [...errors, ...checkService(m, new Map([...modules, [m.id, m]]))], warnings };
-  },
+  module: moduleCheck(moduleSchema, modules),
   ships: new Map(ships.map((s) => [s.id, s])),
   modules,
 };
@@ -49,6 +43,7 @@ describe('a new module', () => {
     const { prepared, problems } = prepare('module', narrow, 'NOVA', false, checks);
     expect(prepared).toBeUndefined();
     expect(problems!.join()).toMatch(/necks|coupling/);
+    expect(problems!.every((p) => p.startsWith('geometry: '))).toBe(true);
   });
 
   it('must be the kind it says it is, with a proper id', () => {
@@ -112,5 +107,30 @@ describe('the pull request', () => {
     expect(pr.body).toContain('inService');
     expect(pr.commit).toMatch(/Submitted-by: CMDR NOVA/);
     expect(pullRequestText({ ...s, revises: true }).body).toContain('"by": "NOVA"');
+  });
+});
+
+describe('every problem says where', () => {
+  const WHERE = /^[A-Za-z][\w.[\]-]*: /;
+
+  it('turns schema paths into the file\'s own field paths', () => {
+    expect(tidy('schema: /length must be >= 100')).toBe('length: must be >= 100');
+    expect(tidy('schema: /geometry/vertices/3 must have 3 items')).toBe('geometry.vertices[3]: must have 3 items');
+    expect(tidy("schema: (the ship) must have required property 'role'")).toBe("file: must have required property 'role'");
+    expect(tidy('geometry: hull is not closed')).toBe('geometry: hull is not closed');
+    expect(tidy('a sentence with no place')).toBe('file: a sentence with no place');
+  });
+
+  it('for real failures and warnings, of both kinds', () => {
+    const badShip = { ...copy(cobra), id: 'x-wing-ish', role: 'spaceship', geometry: { vertices: [[0, 0, 0]], faces: [] }, manufacturer: undefined, description: 'Short.' };
+    const badModule = { ...copy(hold), id: 'tiny', length: 40, zone: 'nowhere' };
+    const lines = [
+      ...prepare('ship', badShip, 'NOVA', true, checks).problems!,
+      ...prepare('module', badModule, 'NOVA', true, checks).problems!,
+      ...prepare('ship', { ...copy(cobra), id: 'cobra-new', description: 'Short.' }, 'NOVA', false, checks).prepared!.warnings,
+    ];
+    expect(lines.length).toBeGreaterThan(3);
+    for (const l of lines) expect(l).toMatch(WHERE);
+    expect(lines).toContain('length: must be >= 100');
   });
 });

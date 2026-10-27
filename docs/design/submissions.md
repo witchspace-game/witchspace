@@ -69,12 +69,20 @@ interface Submission {
 | Call | Body | Answer |
 |---|---|---|
 | `POST /submissions` | `{kind, file, note?, ai, via}` | `201 {submission}`, or `400 {error, problems}` |
-| `GET /submissions/mine` | | `{submissions: Submission[]}`, newest first, without `file` |
+| `GET /submissions/mine` | | `{submissions: Submission[], limits: {today, perDay, waiting, maxWaiting}}`, newest first, without `file` |
 | `GET /submissions/<id>` | | `{submission}` with `file` (yours, or any for maintainers) |
 | `PUT /submissions/<id>` | `{file, note?, ai?}` | `{submission}`: a new version, back to `submitted`. Only while `submitted` or `changes`. |
 | `DELETE /submissions/<id>` | | `{submission}`, now `withdrawn`. Only while `submitted` or `changes`. |
 
 `file` is the JSON object, or its text. `kind` must match what it is. `ai` is required (true or false), so the question is always asked.
+
+### Checking without sending
+
+`POST /submissions/check {kind, file}` runs the same checks and stores nothing: `{problems, warnings, title, itemId, revises}` (the last three `null` when it fails). It works signed out, so people can check before they make an account, and it doesn't count towards the daily limit; it has its own, 30 a minute per network. The site's form and the ship editor use it as you type.
+
+### Problems and warnings
+
+Every problem and warning reads **`<where>: <what>`**. `where` is a field path as the file writes it (`length`, `geometry.vertices[3]`, `credits.authors`) when the check names one, or else an area (`file`, `id`, `kind`, `geometry`, `size`, `maker`, `description`, `homage`). The site pins the ones with a field path to that field and lists the rest.
 
 ### For maintainers
 
