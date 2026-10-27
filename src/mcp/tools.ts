@@ -10,6 +10,7 @@ import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, systemsWithin, type StarSys
 import { stationName } from '../galaxy/stationNames';
 import { describeWorld, worldOf } from '../game/explore';
 import { base64, Raster } from './png';
+import { VIEWER_HTML, VIEWER_MIME, VIEWER_URI, type ViewerModel } from './viewer';
 
 /** A design document, as tools/docs.ts reads it (declared here so the Worker needn't load Node's file system). */
 export interface Doc {
@@ -35,6 +36,8 @@ export interface McpData {
 export type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
 export interface ToolResult {
   content: Content[];
+  /** For a client's view of the answer (MCP Apps); not shown to the model. */
+  structuredContent?: Record<string, unknown>;
   isError?: boolean;
 }
 
@@ -43,6 +46,8 @@ export interface Tool {
   title: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** MCP Apps: the view a client shows for this tool's answers. */
+  _meta?: Record<string, unknown>;
   run: (args: Record<string, unknown>, data: McpData) => ToolResult | Promise<ToolResult>;
 }
 
@@ -248,6 +253,21 @@ export function systemInfo(s: StarSystem) {
 
 // --- The tools ---------------------------------------------------------------------
 
+/** What the live viewer draws: the ship, and a Cobra beside it for scale. */
+export function viewerModel(ship: ShipDef, data: McpData): ViewerModel {
+  const cobra = data.ships.find((s) => s.id === 'cobra-mk3');
+  const g = ship.geometry;
+  return {
+    name: ship.name ?? ship.id,
+    color: /^#[0-9a-f]{6}$/i.test(ship.style?.lineColor ?? '') ? ship.style.lineColor : '#3dffb0',
+    glow: typeof ship.style?.glow === 'number' ? ship.style.glow : 1,
+    vertices: g.vertices,
+    faces: g.faces,
+    ...(g.details ? { details: g.details } : {}),
+    ...(cobra && cobra.id !== ship.id ? { scale: { name: cobra.name, vertices: cobra.geometry.vertices, faces: cobra.geometry.faces } } : {}),
+  };
+}
+
 export const TOOLS: Tool[] = [
   {
     name: 'validate_ship',
@@ -258,6 +278,39 @@ export const TOOLS: Tool[] = [
       const { ship, error } = shipArg(args);
       if (!ship) return text(error!, true);
       return json(validateShip(ship, data));
+    },
+  },
+  {
+    name: 'view_ship',
+    title: 'Turn it round',
+    description: 'Show a ship turning in 3D inside the chat, in neo glow with a Cobra Mk III beside it for scale: the person can drag it round and zoom. Pass a ship file, or the id of a fleet ship. Clients that can\'t show views get a text summary instead (use preview_ship for a picture). Show it after each change worth seeing.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        ship: SHIP_INPUT.properties.ship,
+        id: { type: 'string', description: 'A fleet ship\'s id instead of a file, e.g. "cobra-mk3" (list_ships has them all).' },
+      },
+    },
+    _meta: { ui: { resourceUri: VIEWER_URI } },
+    run: (args, data) => {
+      let ship: ShipDef | undefined;
+      if (typeof args.id === 'string' && !args.ship) {
+        ship = data.ships.find((s) => s.id === args.id);
+        if (!ship) return text(`No ship "${args.id}" in the fleet: list_ships has them all.`, true);
+      } else {
+        const got = shipArg(args);
+        if (!got.ship) return text(got.error!, true);
+        ship = got.ship;
+      }
+      const g = ship.geometry;
+      if (!Array.isArray(g?.vertices) || !Array.isArray(g?.faces) || !g.vertices.length) return text('The ship needs geometry.vertices and geometry.faces to show.', true);
+      if (g.vertices.length > 2000) return text('Too many vertices to show (2,000 at most).', true);
+      const zs = g.vertices.map((v) => v[2]);
+      const xs = g.vertices.map((v) => v[0]);
+      return {
+        content: [{ type: 'text', text: `Showing ${ship.name ?? ship.id} turning in 3D: ${Math.round(Math.max(...zs) - Math.min(...zs))} m long, ${Math.round(Math.max(...xs) - Math.min(...xs))} m across, ${g.vertices.length} vertices and ${g.faces.length} faces, with a Cobra Mk III beside it for scale. The person can drag it round. (If they can't see it, their client doesn't show views: use preview_ship for a picture.)` }],
+        structuredContent: viewerModel(ship, data) as unknown as Record<string, unknown>,
+      };
     },
   },
   {
@@ -369,5 +422,6 @@ export const RESOURCES = [
   { uri: 'witchspace://contributing', name: 'CONTRIBUTING.md', title: 'How to contribute', mimeType: 'text/markdown', read: (d: McpData) => d.texts.contributing },
   { uri: 'witchspace://schema/ship', name: 'ship.schema.json', title: 'The ship file schema', mimeType: 'application/schema+json', read: (d: McpData) => d.texts.schema },
   { uri: 'witchspace://design/worldbuilding', name: 'worldbuilding.md', title: 'The worldbuilding guide: tone, people, companies', mimeType: 'text/markdown', read: (d: McpData) => d.docs.find((x) => x.slug === 'worldbuilding')?.body ?? '' },
+  { uri: VIEWER_URI, name: 'viewer.html', title: 'The live viewer: a ship turning in 3D (an MCP App, for view_ship)', mimeType: VIEWER_MIME, read: () => VIEWER_HTML },
   { uri: 'witchspace://lore', name: 'lore.md', title: 'The lore of Witchspace: the canon, by Trade, Fight, Explore and Build', mimeType: 'text/markdown', read: (d: McpData) => d.docs.find((x) => x.slug === 'lore')?.body ?? '' },
 ];
