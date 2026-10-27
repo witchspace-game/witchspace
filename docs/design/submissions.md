@@ -6,7 +6,7 @@ summary: One way to hand in a ship or a Titanoboa module, with no GitHub. Sign i
 card: titanoboa
 stages:
   - The submission system - submit, follow, revise, withdraw; the review queue; accepting opens the pull request | building
-  - Submit from the site - a form and My submissions, then the ship editor | proposed
+  - Submit from the site - a form and My submissions, then the ship editor | building
   - Submit from your AI assistant - the Build connector's submit tools | proposed
   - More kinds - characters, news events, trails, company files, as each gets a schema | proposed
 ---
@@ -108,3 +108,4 @@ A submission keeps the account it came from, the file, the notes and the dates. 
 - Maintainers work the queue with `npx tsx tools/submissions.ts` (`list`, `show`, `save` to fly it locally, `accept`, `changes`).
 - Tested end to end against `wrangler dev`: checks on the way in, send back, revise (version 2), accept, no withdrawing after, and the daily limit.
 - The GitHub App needs two Worker secrets, `GITHUB_APP_ID` and `GITHUB_APP_KEY` (the private key as GitHub gives it). It needs access to this repository only, with contents and pull requests: read and write.
+- **On the site** (*27 October 2026*): [/submit/](/submit/) has the form and My submissions (`src/site/submit.ts`, with the logic in `src/site/submission.ts`, tested). You can paste a file, upload one, or start from a core module, either as a new module or as an improvement to it. The design turns in the ship viewer as you edit, `/submissions/check` runs as you type, and problems with a field path show under that field. The ship editor is next.
