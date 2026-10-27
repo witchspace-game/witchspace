@@ -90,7 +90,7 @@ Every problem and warning reads **`<where>: <what>`**. `where` is a field path a
 
 ### For maintainers
 
-With the admin key (`X-Admin-Key`), from our pages or `npx tsx tools/submissions.ts`:
+Signed in as a maintainer (an account whose email is on the Worker's `MAINTAINERS` secret, comma-separated), with the game's session as everywhere else; or with the admin key (`X-Admin-Key`), from `npx tsx tools/submissions.ts`. `GET /me` says `maintainer: true` for a maintainer, so the site shows the review page only to them. (Mark reviews from his phone: a session, not the admin key, is what belongs in a browser.)
 
 | Call | Body | Answer |
 |---|---|---|

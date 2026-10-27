@@ -32,6 +32,8 @@ export interface AccountsEnv extends GitHubEnv {
   RESEND_API_KEY?: string;
   TURNSTILE_SECRET?: string;
   ADMIN_KEY?: string;
+  /** Who may review submissions while signed in: their account emails, comma-separated (a secret). */
+  MAINTAINERS?: string;
   /** Web Push (VAPID): the public key (a var) and the private key as a P-256 JWK (a secret). */
   VAPID_PUBLIC?: string;
   VAPID_PRIVATE?: string;
@@ -135,11 +137,14 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (signIn && m === 'POST') return this.answerSignIn(request, signIn[1]);
     if (path.startsWith('/oauth/request/')) return json({ error: 'That sign-in has expired: start again from your assistant' }, 404);
     const sub = path.match(/^\/submissions(?:\/(mine|[a-z0-9]{10})(?:\/(review))?)?$/);
-    if (sub && request.headers.has('X-Admin-Key')) return this.reviewQueue(request, url, sub[1], sub[2]);
+    if (sub && request.headers.has('X-Admin-Key')) {
+      if (!this.env.ADMIN_KEY || request.headers.get('X-Admin-Key') !== this.env.ADMIN_KEY) return json({ error: 'Forbidden' }, 403);
+      return this.reviewQueue(request, url, sub[1], sub[2]);
+    }
 
     const account = await this.sessionAccount(request);
     if (!account) return json({ error: 'Please sign in' }, 401);
-    if (m === 'GET' && path === '/me') return json({ account, saveUpdated: this.saveUpdated(account.id) });
+    if (m === 'GET' && path === '/me') return json({ account, saveUpdated: this.saveUpdated(account.id), maintainer: this.isMaintainer(account) });
     if (m === 'POST' && path === '/me/callsign') return this.setCallsign(request, account);
     if (m === 'GET' && path === '/me/save') return this.getSave(account);
     if (m === 'PUT' && path === '/me/save') return this.putSave(request, account);
@@ -150,6 +155,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'POST' && path === '/me/firsts') return this.claimFirsts(request, account);
     if (m === 'GET' && path === '/me/connections') return this.connections(account);
     if (m === 'DELETE' && path === '/me/connections') return this.disconnect(account, url.searchParams.get('client') ?? '');
+    // A maintainer, signed in as themselves, reviews from the site's review page: the queue, any submission, the decision.
+    if (sub && this.isMaintainer(account) && ((m === 'GET' && !sub[1]) || sub[2] === 'review' || (m === 'GET' && sub[1] && sub[1] !== 'mine')))
+      return this.reviewQueue(request, url, sub[1], sub[2]);
     if (sub && !sub[2]) {
       if (m === 'POST' && !sub[1]) return this.submit(request, account);
       if (m === 'GET' && sub[1] === 'mine') return this.mySubmissions(account);
@@ -774,13 +782,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
     return json({ submission: this.submissionOut(this.submissionRow(id)!, false) });
   }
 
+  /** A maintainer: their account's email is on the MAINTAINERS list. */
+  private isMaintainer(account: Account): boolean {
+    const list = (this.env.MAINTAINERS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+    return list.includes(account.email.toLowerCase());
+  }
+
   /**
-   * The maintainers' side, with the admin key: GET /submissions?status=… (oldest first), GET /submissions/<id>,
-   * POST /submissions/<id>/review {decision: 'accept' | 'changes', notes?}.
+   * The maintainers' side, for the admin key or a signed-in maintainer (the caller has checked which):
+   * GET /submissions?status=… (oldest first), GET /submissions/<id>, POST /submissions/<id>/review {decision: 'accept' | 'changes', notes?}.
    */
   private async reviewQueue(request: Request, url: URL, id: string | undefined, action: string | undefined): Promise<Response> {
-    const key = request.headers.get('X-Admin-Key');
-    if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return json({ error: 'Forbidden' }, 403);
     if (request.method === 'GET' && !id) {
       const status = url.searchParams.get('status') ?? 'submitted';
       const rows = this.sql.exec('SELECT s.*, a.callsign FROM submissions s JOIN accounts a ON a.id = s.account WHERE s.status = ? ORDER BY s.created', status).toArray();
