@@ -6,6 +6,28 @@
       "main": true
     }
   },
+  "redirects": [
+    {
+      "source": "/careers",
+      "destination": "/jobs/",
+      "permanent": true
+    },
+    {
+      "source": "/careers/:path*",
+      "destination": "/jobs/",
+      "permanent": true
+    },
+    {
+      "source": "/companies",
+      "destination": "/jobs/",
+      "permanent": false
+    },
+    {
+      "source": "/companies/",
+      "destination": "/jobs/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/clip/:id",
