@@ -33,7 +33,7 @@ export function boardAt(here: StarSystem, now: number): { offers: Offer[]; rolli
 }
 
 /** The kinds the filters and adverts speak of. */
-export type Kind = 'haulage' | 'starter' | 'contractor' | 'rush' | 'survey' | 'danger' | 'assignment' | 'coming-soon';
+export type Kind = 'haulage' | 'starter' | 'contractor' | 'rush' | 'survey' | 'danger' | 'assignment' | 'coming-soon' | 'build';
 export const FILTER_KINDS: { id: Kind; label: string }[] = [
   { id: 'haulage', label: 'Haulage' },
   { id: 'survey', label: 'Surveys' },
@@ -55,10 +55,15 @@ export interface Advert {
   kinds: Kind[];
   text: string;
   meta: string;
+  /** Where Apply goes, when it isn't the game (a design commission). */
+  href?: string;
 }
 
+/** Kinds that never appear on a station's board: by invitation, not built yet, or design commissions. */
+export const OFF_BOARD: Kind[] = ['assignment', 'coming-soon', 'build'];
+
 /** The live offers an advert describes: same company, and every kind the advert names. */
-export const offersFor = (a: Advert, offers: Contract[]) => (a.kinds.some((k) => k === 'assignment' || k === 'coming-soon') ? [] : offers.filter((o) => o.company === a.company && a.kinds.every((k) => kindsOf(o).includes(k))));
+export const offersFor = (a: Advert, offers: Contract[]) => (a.kinds.some((k) => OFF_BOARD.includes(k)) ? [] : offers.filter((o) => o.company === a.company && a.kinds.every((k) => kindsOf(o).includes(k))));
 
 /**
  * Where a company is strongest near Lave: the nearest world where it works

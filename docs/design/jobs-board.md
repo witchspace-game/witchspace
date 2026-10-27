@@ -8,8 +8,9 @@ stages:
   - The jobs board - /jobs/, the live board at Cambridge Orbital, Lave, and what each company offers, filterable | built
   - Company pages - /companies/<id>/, one for each company, from the canon in docs/companies.md | built
   - Careers becomes Jobs - /careers/ redirects to /jobs/; the nav says Jobs | built
-  - A rolling board - contracts posted one at a time in the game, each with a notice on the site | building
-  - Take this job - a link that opens the game on that exact contract | building
+  - A rolling board - contracts posted one at a time in the game, each with a notice on the site | built
+  - Take this job - a link that opens the game on that exact contract | built
+  - Build jobs - Wexley-Yorozu's design commissions on the board (Mark) | built
 ---
 
 # The jobs board and company pages
@@ -90,10 +91,10 @@ These are real, but personal to a commander, so the site describes them rather t
 - **The shape (agreed with the game dev session):** `board(c, here, now)` keeps its signature. Every offer gains `posted` and `until` (ms). `TICK = 5 * 60_000` is exported for the site's re-check timer. Ids look like `<galaxy>:<index>:<postedTick>:<n>`, `survey:…` and `order:…`. `welcome()` stays one per half-hour slot, since it isn't on the public board.
 - **Keep what works:**
   - each company's starter job, on its own cycle
-    - Every company present at a station posts a starter about every 50 minutes, at an offset from the seed, and each stays up 60 minutes.
+    - Every company with a real presence at a station (1 or more) posts a starter about every 50 minutes, at an offset from the seed, and each stays up 60 minutes. At Lave that's Hexon, the Mutual and W-Y; Vorg posts there, but without a guaranteed starter.
     - So there's always one per company, and they arrive at staggered times.
     - The board is still worked out from the clock alone. A rule like "when one lapses, the next post is a starter" would depend on every earlier post.
-  - Wexley-Yorozu's surveys
+  - Wexley-Yorozu's surveys, on their own 45-minute cycle, one at a time, up about three quarters of the time (random ticks sometimes put two identical surveys on the board)
   - the welcome job and work-on-your-route
 - **New in the game too:**
   - a docked commander sees a new card slide in, marked "Just posted"
@@ -196,6 +197,29 @@ One for each company: `hexon`, `vorg`, `mutual` and `wy`, the ids the game uses.
 
 **Off the company pages:** the logo and concept-art prompts, and the story hooks. They're for builders, and stay on the full design page.
 
+## Build jobs: Wexley-Yorozu's design commissions (Mark)
+
+*Mark: "We do also offer Build jobs where users can contribute to the Witchspace universe! I think 5000 credits for an approved design from Wexley-Y!"*
+
+These match the commission already designed in [the Titanoboa](ship-the-titanoboa.md#paid-on-commission-mark-25-october-2026):
+- 5,000 Cr, once, when an accepted module is first fitted at a yard
+- 2,000 Cr for an accepted revision
+
+On the site:
+- **Where they go:**
+  - their own section on /jobs/ ("Design commissions", `#build`), after the companies' adverts
+  - repeated on the Wexley-Yorozu page
+- **Kept apart from the contracts:** kind `build` is never on a station's board, so it has no filter chip and no live count.
+- **Apply** goes to the Titanoboa design page (the coupling standard), or to the no-GitHub submit page once there is one.
+- **Honest about it:**
+  - Every pay line says "when it's first fitted".
+  - The payout is built (game dev #222): 5,000 Cr for a design, 2,000 Cr for a revision, each paid once, when the module is first fitted to a Titanoboa in any galaxy, on the designer's next dock in a Modern game signed in with that callsign, with a letter from Wexley-Yorozu.
+  - Pay is in credits, in the game. Contributors keep their copyright (CC BY-SA 4.0).
+  - **The ownership joke stays (Mark):** in character, W-Y owns the design "in perpetuity, across all systems known and unknown.*" The asterisk's footnote, right under the adverts, gives the real terms, and a test keeps the two together on every page.
+  - How to submit today: a GitHub pull request, or the ideas board without GitHub.
+- **Words** from the marketing session, checked by the game dev session.
+- **Decided (Mark):** the adverts went up once the payout was built and merged.
+
 ## Careers becomes Jobs
 
 - **The nav:** "Careers" becomes "Jobs". The footer's "Careers (in game)" becomes "Jobs (in game)".
@@ -266,7 +290,8 @@ Placeholder copy (the current careers text) until these arrive:
   - `src/site/board.ts` holds the logic, with no DOM; `src/site/jobs.ts` runs the page.
   - The board is worked out again every 5 seconds.
   - Today it changes every half hour, and a new board brings one notice ("New board at Lave · 5 contracts").
-  - Once `board()` gives offers `posted` and `until`, the same code shows a notice for each arrival, "Posted 3 min ago" and "Up for 14 more min" on each card, and "Take this job" on Lave's cards. No site change is needed.
+  - The game's board rolls (game dev, PR #219, 27 October), and the site switched by itself: a notice for each arrival, "Posted 19 min ago" and "Up for 26 min more" on each card, and "Take this job" on Lave's cards, linking to `/play/?contract=<id>&company=<id>`. Checked on the live site the same day. Lave averages about 6 offers.
+  - The rolling board itself is designed in [companies and contracts](companies-and-contracts.md), "The board: posted one at a time".
 - **Company pages:** a company with nothing at Lave shows its board on its home ground, the nearest world it leads: Hexon at Leesti, Vorg at Riedquat, the Mutual at Reorte (each one jump away). W-Y's home ground is Lave.
 - **Pay found by building it:** Hexon never posts Contractor work at Lave, but at Leesti it's common: typically 400 Cr, sometimes over 1,000. The Luxury Goods Haulier advert now says "typically 300 to 1,000 Cr".
 - **Tests** (`src/site/board.test.ts`):

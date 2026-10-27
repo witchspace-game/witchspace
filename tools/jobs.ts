@@ -33,6 +33,7 @@ export interface JobsCopy {
   howItWorks: string[];
   start: string;
   jobs: { description: string; card: { ship: string; sub: string } };
+  build: { intro: string; note: string; how: string };
 }
 
 export const loadJobs = (root: string): JobsCopy => JSON.parse(readFileSync(join(root, 'site/jobs.json'), 'utf8'));
@@ -86,7 +87,7 @@ function advertHtml(a: Advert) {
             <p>${esc(a.text)}</p>
             <p class="meta">${esc(a.meta)}</p>
             <p class="on-board" data-on-board hidden></p>
-            <a class="apply" href="/play/?company=${a.company}">Apply <span aria-hidden="true">→</span></a>
+            <a class="apply" href="${a.href ?? `/play/?company=${a.company}`}">Apply <span aria-hidden="true">→</span></a>
           </li>`;
 }
 
@@ -111,6 +112,17 @@ function boardHtml(company?: CompanyId) {
     </div>`;
 }
 
+const isBuild = (a: Advert) => a.kinds.includes('build');
+
+/** Wexley-Yorozu's design commissions (Mark): the Build path, apart from the contracts. */
+const buildHtml = (copy: JobsCopy, heading = true) => `<section class="section build-ads" id="build" style="--c: ${COMPANIES.wy.colour}">
+  ${heading ? `<p class="kicker">Build</p><h2>Design commissions</h2>` : '<h3>Design commissions</h3>'}
+  <p class="lede">${esc(copy.build.intro)}</p>
+  <ul class="jobs">${copy.adverts.filter(isBuild).map(advertHtml).join('')}</ul>
+  <p class="build-note">${esc(copy.build.note)}</p>
+  <p class="build-note">${copy.build.how}</p>
+</section>`;
+
 const howItWorks = (copy: JobsCopy) => `<div class="how">
       <h3>How contracts work</h3>
       <ul>${copy.howItWorks.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>
@@ -122,7 +134,7 @@ export function jobsPage(copy: JobsCopy): string {
     const c = copy.companies[id];
     return `<section class="firm-ads" id="${id}" style="--c: ${COMPANIES[id].colour}">
         <div class="firm-head"><span class="firm-mark" aria-hidden="true">${c.mark}</span><div><h3><a href="/companies/${id}/">${esc(COMPANIES[id].name)}</a></h3><p class="motto">${esc(COMPANIES[id].motto.replace(/\.$/, ''))}</p></div></div>
-        <ul class="jobs">${copy.adverts.filter((a) => a.company === id).map(advertHtml).join('')}</ul>
+        <ul class="jobs">${copy.adverts.filter((a) => a.company === id && !isBuild(a)).map(advertHtml).join('')}</ul>
       </section>`;
   }).join('\n');
   return `<section class="section jobs-intro">
@@ -143,6 +155,8 @@ export function jobsPage(copy: JobsCopy): string {
   <p class="lede">The kinds of contract each company puts on the boards, from your first run to the ones that come by invitation.</p>
   ${groups}
 </section>
+
+${buildHtml(copy)}
 
 <section class="section independent">
   <h2>Not one for employers?</h2>
@@ -213,9 +227,10 @@ export function companyPage(copy: JobsCopy, id: CompanyId, companiesMd: string, 
 
 <section class="section company-ads">
   <h2>Working for ${esc(co.name)}</h2>
-  <ul class="jobs">${copy.adverts.filter((a) => a.company === id).map(advertHtml).join('')}</ul>
+  <ul class="jobs">${copy.adverts.filter((a) => a.company === id && !isBuild(a)).map(advertHtml).join('')}</ul>
   ${terms}
 </section>
+${copy.adverts.some((a) => a.company === id && isBuild(a)) ? buildHtml(copy) : ''}
 
 <section class="section company-story">
   <h2>Who they are</h2>

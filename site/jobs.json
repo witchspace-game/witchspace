@@ -1,5 +1,5 @@
 {
-  "$comment": "The words for /jobs/ and /companies/<id>/ (docs/design/jobs-board.md), from the marketing session. Pay lines are checked against the game: change them if its numbers change. kinds: haulage, starter, contractor, rush, survey, assignment, coming-soon.",
+  "$comment": "The words for /jobs/ and /companies/<id>/ (docs/design/jobs-board.md), from the marketing session. Pay lines are checked against the game: change them if its numbers change. kinds: haulage, starter, contractor, rush, survey, assignment, coming-soon, build (Wexley-Yorozu's design commissions: not contracts on the board).",
   "companies": {
     "hexon": {
       "mark": "HH",
@@ -10,7 +10,10 @@
       "cardLine": "Punctuality essential. Curiosity discouraged.",
       "ground": "The safe core: Corporate States, Democracies and Confederacies.",
       "empty": "Nothing from Hexon Holdings at Lave {when}. Hexon prefers the safe core: {station}, {jumps} away, is its ground.",
-      "card": { "ship": "coriolis", "sub": "Continuity of care. A company in a free browser game." },
+      "card": {
+        "ship": "coriolis",
+        "sub": "Continuity of care. A company in a free browser game."
+      },
       "description": "Hexon Holdings, a fictional company in Witchspace, the free browser space game: medicine, luxuries and sealed containers. Curiosity discouraged."
     },
     "vorg": {
@@ -24,7 +27,10 @@
       "cardLine": "Danger pay included. Pirates also included.",
       "ground": "The frontier: Anarchies, Feudal worlds and Multi-Governments.",
       "empty": "Nothing from Vorg at Lave {when}: it works the frontier. {station}, {gov} {jumps} away, is its ground.",
-      "card": { "ship": "mamba", "sub": "We build. You survive. A company in a free browser game." },
+      "card": {
+        "ship": "mamba",
+        "sub": "We build. You survive. A company in a free browser game."
+      },
       "description": "Vorg Industries, a fictional company in Witchspace, the free browser space game: frontier freight, danger pay, and crates that tick."
     },
     "mutual": {
@@ -36,7 +42,10 @@
       "cardLine": "Fair rates. Someone always comes.",
       "ground": "A little of everywhere with a government.",
       "empty": "Nothing from the Mutual at Lave {when}. The members are probably in a meeting. Try {station}, {jumps} away.",
-      "card": { "ship": "cobra-mk3", "sub": "No hauler flies alone. A company in a free browser game." },
+      "card": {
+        "ship": "cobra-mk3",
+        "sub": "No hauler flies alone. A company in a free browser game."
+      },
       "description": "The Carriers' Mutual, a fictional co-operative in Witchspace, the free browser space game: fair rates, honest freight, and someone always comes."
     },
     "wy": {
@@ -49,26 +58,169 @@
       "surveyLine": "No cargo. Look closely, and tell us first.",
       "ground": "Thinly settled worlds with moons to build from.",
       "empty": "Nothing from Wexley-Yorozu at Lave {when}, which is unusual: it posts over half the work here. Try the next board.",
-      "card": { "ship": "titanoboa", "sub": "Better worlds, built to order. A company in a free browser game." },
+      "card": {
+        "ship": "titanoboa",
+        "sub": "Better worlds, built to order. A company in a free browser game."
+      },
       "description": "Wexley-Yorozu, a fictional company in Witchspace, the free browser space game: colony supply, moon surveys and stations built to order."
     }
   },
   "rushLine": "Wanted yesterday.",
   "noMatch": "Nothing like that at Lave {when}.",
   "adverts": [
-    { "company": "hexon", "title": "Discreet Medical Courier", "kinds": ["haulage", "starter"], "text": "Carry medical supplies between Corporate States and Democracies. Punctuality essential. Curiosity discouraged.", "meta": "Safe core · Supplied cargo · Typically 50 to 250 Cr a run" },
-    { "company": "hexon", "title": "Luxury Goods Haulier", "kinds": ["haulage", "contractor"], "text": "Fine wines, luxuries and computers for discerning worlds. You will be trusted with valuable cargo once we trust you.", "meta": "Contractor standing · Bigger loads, typically 300 to 1,000 Cr" },
-    { "company": "hexon", "title": "Specimen Transport Associate", "kinds": ["assignment"], "text": "Sealed class-4 biologicals, by invitation only. No prior biology required. No later biology permitted.", "meta": "By invitation · 600 Cr and up · Do not open" },
-    { "company": "vorg", "title": "Frontier Freight Pilot", "kinds": ["haulage", "starter"], "text": "Alloys, machinery and minerals through Anarchies and Feudal worlds. Big danger bonuses. Pirates included at no extra charge.", "meta": "The frontier · Supplied cargo · Typically 50 to 250 Cr, danger pay included" },
-    { "company": "vorg", "title": "Irregular Cargo Specialist", "kinds": ["assignment"], "text": "Some of our crates tick. Applicants must not mind ticking, ask about ticking, or report ticking to the police.", "meta": "By invitation · 600 Cr and up · Questions not answered" },
-    { "company": "vorg", "title": "Pest Control Operative", "kinds": ["coming-soon"], "text": "Our pest control division answers Thargoid incursions very quickly. Some say before. Apply now to find out.", "meta": "Coming soon · Combat experience preferred" },
-    { "company": "mutual", "title": "Member-Haulier", "kinds": ["haulage", "starter"], "text": "Food, textiles, water and furs, wherever there's a government and a need. The friendliest first job in the galaxy.", "meta": "Almost everywhere · Supplied cargo · Fair rates, typically 50 to 250 Cr" },
-    { "company": "mutual", "title": "Relief Runner", "kinds": ["assignment"], "text": "When a member is stranded with sick crew, someone has to get there first. The treasurer always finds the money.", "meta": "By invitation · 600 Cr and up · Remembered" },
-    { "company": "wy", "title": "Junior Haulier, Lave", "kinds": ["haulage", "starter"], "text": "Most of the work on Lave's board is ours. Food, textiles, furs, water and liquor: whatever Lave exports, wherever it's short. Three to sixteen tonnes: every load fits an empty Cobra. Start the moment you dock.", "meta": "Lave · Supplied cargo · Open to new pilots" },
-    { "company": "wy", "title": "Colony Supply Pilot", "kinds": ["haulage", "starter"], "text": "Machinery, electronics and medicine for frontier colonies with moons to build from. Long routes, steady work.", "meta": "Thinly settled worlds · Supplied cargo · Typically 50 to 250 Cr a run" },
-    { "company": "wy", "title": "Rush Freight Pilot", "kinds": ["rush"], "text": "A yard is waiting and so are we. Rush jobs pay 40 % over the usual rate, in fewer jumps. Late still pays half. We will mention it.", "meta": "Rush · Supplied cargo · 40 % over the usual rate" },
-    { "company": "wy", "title": "Survey Contractor", "kinds": ["survey"], "text": "Fly out to a system's moons, take a close look, and hand the data in at any Wexley-Yorozu station. No cargo. No customs. No questions about why we want them.", "meta": "Moons · No cargo needed · From about 350 Cr, more per moon" },
-    { "company": "wy", "title": "Science Division Courier", "kinds": ["assignment"], "text": "Special orders, delivered intact. Crew safety is a secondary consideration.", "meta": "By invitation · 600 Cr and up · See clause 214" }
+    {
+      "company": "hexon",
+      "title": "Discreet Medical Courier",
+      "kinds": [
+        "haulage",
+        "starter"
+      ],
+      "text": "Carry medical supplies between Corporate States and Democracies. Punctuality essential. Curiosity discouraged.",
+      "meta": "Safe core · Supplied cargo · Typically 50 to 250 Cr a run"
+    },
+    {
+      "company": "hexon",
+      "title": "Luxury Goods Haulier",
+      "kinds": [
+        "haulage",
+        "contractor"
+      ],
+      "text": "Fine wines, luxuries and computers for discerning worlds. You will be trusted with valuable cargo once we trust you.",
+      "meta": "Contractor standing · Bigger loads, typically 300 to 1,000 Cr"
+    },
+    {
+      "company": "hexon",
+      "title": "Specimen Transport Associate",
+      "kinds": [
+        "assignment"
+      ],
+      "text": "Sealed class-4 biologicals, by invitation only. No prior biology required. No later biology permitted.",
+      "meta": "By invitation · 600 Cr and up · Do not open"
+    },
+    {
+      "company": "vorg",
+      "title": "Frontier Freight Pilot",
+      "kinds": [
+        "haulage",
+        "starter"
+      ],
+      "text": "Alloys, machinery and minerals through Anarchies and Feudal worlds. Big danger bonuses. Pirates included at no extra charge.",
+      "meta": "The frontier · Supplied cargo · Typically 50 to 250 Cr, danger pay included"
+    },
+    {
+      "company": "vorg",
+      "title": "Irregular Cargo Specialist",
+      "kinds": [
+        "assignment"
+      ],
+      "text": "Some of our crates tick. Applicants must not mind ticking, ask about ticking, or report ticking to the police.",
+      "meta": "By invitation · 600 Cr and up · Questions not answered"
+    },
+    {
+      "company": "vorg",
+      "title": "Pest Control Operative",
+      "kinds": [
+        "coming-soon"
+      ],
+      "text": "Our pest control division answers Thargoid incursions very quickly. Some say before. Apply now to find out.",
+      "meta": "Coming soon · Combat experience preferred"
+    },
+    {
+      "company": "mutual",
+      "title": "Member-Haulier",
+      "kinds": [
+        "haulage",
+        "starter"
+      ],
+      "text": "Food, textiles, water and furs, wherever there's a government and a need. The friendliest first job in the galaxy.",
+      "meta": "Almost everywhere · Supplied cargo · Fair rates, typically 50 to 250 Cr"
+    },
+    {
+      "company": "mutual",
+      "title": "Relief Runner",
+      "kinds": [
+        "assignment"
+      ],
+      "text": "When a member is stranded with sick crew, someone has to get there first. The treasurer always finds the money.",
+      "meta": "By invitation · 600 Cr and up · Remembered"
+    },
+    {
+      "company": "wy",
+      "title": "Junior Haulier, Lave",
+      "kinds": [
+        "haulage",
+        "starter"
+      ],
+      "text": "Most of the work on Lave's board is ours. Food, textiles, furs, water and liquor: whatever Lave exports, wherever it's short. Three to sixteen tonnes: every load fits an empty Cobra. Start the moment you dock.",
+      "meta": "Lave · Supplied cargo · Open to new pilots"
+    },
+    {
+      "company": "wy",
+      "title": "Colony Supply Pilot",
+      "kinds": [
+        "haulage",
+        "starter"
+      ],
+      "text": "Machinery, electronics and medicine for frontier colonies with moons to build from. Long routes, steady work.",
+      "meta": "Thinly settled worlds · Supplied cargo · Typically 50 to 250 Cr a run"
+    },
+    {
+      "company": "wy",
+      "title": "Rush Freight Pilot",
+      "kinds": [
+        "rush"
+      ],
+      "text": "A yard is waiting and so are we. Rush jobs pay 40 % over the usual rate, in fewer jumps. Late still pays half. We will mention it.",
+      "meta": "Rush · Supplied cargo · 40 % over the usual rate"
+    },
+    {
+      "company": "wy",
+      "title": "Survey Contractor",
+      "kinds": [
+        "survey"
+      ],
+      "text": "Fly out to a system's moons, take a close look, and hand the data in at any Wexley-Yorozu station. No cargo. No customs. No questions about why we want them.",
+      "meta": "Moons · No cargo needed · From about 350 Cr, more per moon"
+    },
+    {
+      "company": "wy",
+      "title": "Science Division Courier",
+      "kinds": [
+        "assignment"
+      ],
+      "text": "Special orders, delivered intact. Crew safety is a secondary consideration.",
+      "meta": "By invitation · 600 Cr and up · See clause 214"
+    },
+    {
+      "company": "wy",
+      "title": "Module Designer, Titanoboa",
+      "kinds": [
+        "build"
+      ],
+      "href": "/design/ship-the-titanoboa/",
+      "text": "Design a section of our constructor to the coupling standard: a greenhouse, an ice refinery, a chapel, a racing gate for the workers' day off. If we build it, we pay the commander whose callsign is on the design, and put that callsign in the catalogue. The design becomes the property of Wexley-Yorozu in perpetuity, across all systems known and unknown.* The company thanks you for your contribution.",
+      "meta": "Build · 5,000 Cr when it's first fitted · Designed by you"
+    },
+    {
+      "company": "wy",
+      "title": "Module Improver",
+      "kinds": [
+        "build"
+      ],
+      "href": "/design/ship-the-titanoboa/",
+      "text": "Make one of our modules better: a cleaner shape, a better place for the docks. If we accept it, your callsign goes on the module beside its designer's. Small fixes are welcome, but only better modules are paid.",
+      "meta": "Build · 2,000 Cr when it's first fitted · Revised by you"
+    },
+    {
+      "company": "wy",
+      "title": "Detention Module, open brief",
+      "kinds": [
+        "build"
+      ],
+      "href": "/design/ship-the-titanoboa/",
+      "text": "The Co-operative Marshals need somewhere to keep what they catch. A block of cells, one clear shape, and nothing facing the crew that shouldn't. Standard commission applies.",
+      "meta": "Build · Open brief · 5,000 Cr when it's first fitted"
+    }
   ],
   "howItWorks": [
     "The company supplies the cargo. You fly it there.",
@@ -79,6 +231,14 @@
   "start": "Every commander starts at Lave in a Cobra Mk III with 20 t of hold and 100 Cr.",
   "jobs": {
     "description": "Jobs in Witchspace, a free space game in your browser: the live contracts board at Lave, from four fictional companies. Paid in credits. No CV.",
-    "card": { "ship": "cobra-mk3", "sub": "The live board at Lave. A free game in your browser." }
+    "card": {
+      "ship": "cobra-mk3",
+      "sub": "The live board at Lave. A free game in your browser."
+    }
+  },
+  "build": {
+    "intro": "Wexley-Yorozu also commissions designs: sections of the Titanoboa, its constructor ship. These aren't contracts on the board. You design a module, and if it's accepted and built, the company pays your commander.",
+    "note": "*In the game. Out here, you keep your copyright: designs are shared under CC BY-SA 4.0, like the rest of Witchspace. Paid in credits, in the game, to the signed-in commander whose callsign is on the design. Nobody is paid real money. The real reward is your name on it and your module flying in everyone's game.",
+    "how": "How to submit today: a pull request on GitHub, following the standard on <a href=\"/design/ship-the-titanoboa/\">the design page</a>. No GitHub? Describe your idea on <a href=\"/ideas/\">the ideas board</a>."
   }
 }

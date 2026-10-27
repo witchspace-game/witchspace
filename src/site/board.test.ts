@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { COMPANY_IDS, presence } from '../game/companies';
 import { BOARD_SLOT } from '../game/contracts';
-import { canonFor, loadJobs } from '../../tools/jobs';
-import { boardAt, COBRA_HOLD, FILTER_KINDS, homeGround, LAVE, offersFor, type Kind } from './board';
+import { canonFor, companyPage, jobsPage, loadJobs } from '../../tools/jobs';
+import { boardAt, COBRA_HOLD, FILTER_KINDS, homeGround, LAVE, OFF_BOARD, offersFor, type Kind } from './board';
 
 const root = join(import.meta.dirname, '../..');
 const jobs = loadJobs(root);
@@ -26,7 +26,7 @@ describe('the jobs board at Lave', () => {
 });
 
 describe('the adverts', () => {
-  const KINDS: Kind[] = ['haulage', 'starter', 'contractor', 'rush', 'survey', 'danger', 'assignment', 'coming-soon'];
+  const KINDS: Kind[] = ['haulage', 'starter', 'contractor', 'rush', 'survey', 'danger', 'assignment', 'coming-soon', 'build'];
 
   it('only name kinds the board knows', () => {
     for (const a of jobs.adverts) for (const k of a.kinds) expect(KINDS).toContain(k);
@@ -35,7 +35,7 @@ describe('the adverts', () => {
 
   it('describe contracts that really turn up, at Lave or on the company’s home ground', () => {
     for (const a of jobs.adverts) {
-      if (a.kinds.includes('assignment') || a.kinds.includes('coming-soon')) continue;
+      if (a.kinds.some((k) => OFF_BOARD.includes(k))) continue;
       const home = homeGround(a.company).s;
       const there = Array.from({ length: 48 * 7 }, (_, i) => boardAt(home, t0 + i * BOARD_SLOT).offers);
       expect([...week, ...there].some((b) => offersFor(a, b).length > 0), a.title).toBe(true);
@@ -48,6 +48,29 @@ describe('the adverts', () => {
       expect(jobs.companies[id].pitch).toBeTruthy();
       expect(jobs.companies[id].description.length).toBeLessThanOrEqual(160);
     }
+  });
+});
+
+describe('the Build adverts', () => {
+  it('are design commissions, paid only once a design is built', () => {
+    const build = jobs.adverts.filter((a) => a.kinds.includes('build'));
+    expect(build.length).toBeGreaterThan(0);
+    for (const a of build) {
+      expect(a.href).toBeTruthy();
+      // The fee is designed, not yet paid: every pay line waits for the first fitting.
+      expect(a.meta).toMatch(/when it's first fitted/);
+    }
+  });
+});
+
+describe('the ownership joke (Mark)', () => {
+  // In character, W-Y owns your design forever; out here, contributors keep their copyright.
+  // The asterisk and its footnote always travel together, so the joke never reads as a real term.
+  it('never appears without its footnote', () => {
+    const md = readFileSync(join(root, 'docs/companies.md'), 'utf8');
+    const pages = [jobsPage(jobs), ...COMPANY_IDS.map((id) => companyPage(jobs, id, md, (m) => m, new Set()))];
+    expect(pages.some((html) => html.includes('in perpetuity'))).toBe(true);
+    for (const html of pages) if (html.includes('in perpetuity')) expect(html).toContain('*In the game. Out here, you keep your copyright');
   });
 });
 
