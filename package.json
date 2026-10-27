@@ -17,7 +17,7 @@
   "license": "GPL-3.0-only",
   "description": "An open-source, browser-based space trading game - a love letter to Elite (1984).",
   "dependencies": {
-    "@vercel/analytics": "^1.6.1",
+    "@vercel/analytics": "^2.0.1",
     "lightweight-charts": "5.2.1",
     "three": "^0.186.1"
   },
