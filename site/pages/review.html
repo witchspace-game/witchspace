@@ -24,26 +24,32 @@
     <div class="review-list" id="list" aria-live="polite"></div>
   </div>
 
-  <article class="submit-step review-one" id="one" hidden>
+  <article class="review-one" id="one" hidden>
     <button type="button" class="link review-back" id="back">← All of them</button>
     <div id="one-head"></div>
-    <div class="preview" id="preview">
-      <canvas id="preview-canvas" aria-label="The design, turning. Drag to turn it."></canvas>
-      <p class="small muted" id="preview-note" hidden></p>
-    </div>
-    <div id="one-body"></div>
-    <details class="review-file">
-      <summary>The file</summary>
-      <pre id="file"></pre>
-    </details>
-    <div id="decide">
-      <label>Your notes <textarea id="notes" rows="4" maxlength="2000" placeholder="What to change, or what you liked. The author sees these."></textarea></label>
-      <div class="connect-buttons">
-        <button type="button" class="button primary" id="accept">Accept</button>
-        <button type="button" class="button ghost" id="send-back" disabled>Send back</button>
+    <div class="review-cols">
+      <div class="review-visual">
+        <div class="preview" id="preview">
+          <canvas id="preview-canvas" aria-label="The design, turning. Drag to turn it."></canvas>
+          <p class="small muted" id="preview-note" hidden></p>
+        </div>
+        <details class="review-file">
+          <summary>The file</summary>
+          <pre id="file"></pre>
+        </details>
       </div>
-      <p class="small muted" id="decide-hint">Accepting opens a public pull request in the repository. Sending back needs notes.</p>
+      <div class="review-text">
+        <div id="one-body"></div>
+        <div class="submit-step" id="decide">
+          <label>Your notes <textarea id="notes" rows="4" maxlength="2000" placeholder="What to change, or what you liked. The author sees these."></textarea></label>
+          <div class="connect-buttons">
+            <button type="button" class="button primary" id="accept">Accept</button>
+            <button type="button" class="button ghost" id="send-back" disabled>Send back</button>
+          </div>
+          <p class="small muted" id="decide-hint">Accepting opens a public pull request in the repository. Sending back needs notes.</p>
+        </div>
+        <p class="send-result" id="decided" aria-live="polite"></p>
+      </div>
     </div>
-    <p class="send-result" id="decided" aria-live="polite"></p>
   </article>
 </section>

@@ -47,6 +47,9 @@ const ago = (t: number) => {
 
 const who = (s: Reviewed) => (s.callsign ? `CMDR ${escapeHtml(s.callsign)}` : 'an author with no callsign');
 const what = (s: Reviewed) => `${s.kind === 'ship' ? 'Ship' : 'Module'}${s.revises ? ', revising one in the game' : ''}`;
+/** The facts about one, each kept whole when the line wraps. */
+const facts = (s: Reviewed, extra: string[] = []) =>
+  `<span class="review-facts">${[what(s), who(s), `version ${s.version}`, ...(s.ai ? ['AI-assisted'] : []), ...extra, ago(s.updated)].map((f) => `<span>${f}</span>`).join('')}</span>`;
 
 // --- Who's here ---------------------------------------------------------------------------
 
@@ -95,7 +98,7 @@ async function load() {
         .map(
           (s, i) => `<button type="button" class="review-row" data-i="${i}">
       <strong>${escapeHtml(s.title)}</strong>
-      <span class="small muted">${what(s)} · ${who(s)} · version ${s.version}${s.ai ? ' · AI-assisted' : ''} · ${ago(s.updated)}</span>
+      ${facts(s)}
       ${s.warnings.some((w) => w.startsWith('balance:')) ? '<span class="small review-flag">Balance notes</span>' : ''}
     </button>`,
         )
@@ -138,8 +141,7 @@ async function openOne(id: string) {
 
 function showOne(s: Reviewed) {
   $('#one-head').innerHTML = `<h3>${escapeHtml(s.title)}</h3>
-    <p class="small muted">${what(s)} · ${who(s)} · version ${s.version} · ${STATUS[s.status]} ${ago(s.updated)}</p>
-    <p class="small">${s.ai ? '<strong>AI-assisted.</strong> An AI assistant helped make it.' : 'Made without an AI assistant.'}${s.via === 'connector' ? ' Handed in through the Build connector.' : ''}</p>`;
+    ${facts(s, [STATUS[s.status], ...(s.via === 'connector' ? ['through the Build connector'] : [])])}`;
 
   const balance = s.warnings.filter((w) => w.startsWith('balance:')).map((w) => w.replace(/^balance:\s*/, ''));
   // The homage rule is said to everyone; the rest are about this file.
