@@ -1,16 +1,15 @@
 // The upright cut of a cockpit clip, for Shorts, Reels and TikTok: the clip as
 // you saw it, enlarged and trimmed a little at the sides (the action is in the
 // middle, under the sights), with FLIGHT RECORDER and its title above,
-// witchspace.org.uk below, and the house card to end on. Made in the browser,
+// witchspace.org.uk below, and the end card fading up to finish. Made in the browser,
 // frame by frame, with the encoder the kill cam uses; the original is kept.
 
 import { encodeVideo } from './encodeVideo';
-import { fontFamily, houseCard, loadIcon, still } from './videoCards';
+import { cardAlpha, endCard, fontFamily, loadIcon, still, videoFrames, wrap } from './videoCards';
 
 const W = 720;
 const H = 1280;
 const FPS = 30;
-const CARD = 2.5; // seconds of the house card
 // The clip's window: 4:5, full width, between the title band and the foot.
 const CLIP_H = Math.round((W * 5) / 4);
 const CLIP_Y = 200;
@@ -53,26 +52,6 @@ const seek = (el: HTMLVideoElement, t: number) =>
     el.currentTime = target;
   });
 
-/** Lines of text that fit `width`, at most `max` of them (the last ends in … if it had to be cut). */
-function wrap(g: OffscreenCanvasRenderingContext2D, text: string, width: number, max: number): string[] {
-  const lines: string[] = [];
-  let line = '';
-  for (const word of text.split(' ')) {
-    const next = line ? `${line} ${word}` : word;
-    if (g.measureText(next).width <= width || !line) line = next;
-    else {
-      lines.push(line);
-      line = word;
-    }
-  }
-  if (line) lines.push(line);
-  if (lines.length > max) {
-    lines.length = max;
-    lines[max - 1] = `${lines[max - 1].replace(/\s+\S*$/, '')}…`;
-  }
-  return lines;
-}
-
 function frame(g: OffscreenCanvasRenderingContext2D, el: HTMLVideoElement, title: string) {
   g.fillStyle = '#000';
   g.fillRect(0, 0, W, H);
@@ -108,7 +87,7 @@ export async function uprightCut(video: Blob, title: string, onProgress?: (f: nu
   if (!v) return null;
   const { el } = v;
   const seconds = el.duration;
-  const span = Math.ceil(seconds * FPS);
+  const { scene: span, total } = videoFrames(seconds, FPS);
   const icon = await loadIcon();
   let poster: Blob | null = null;
   try {
@@ -116,17 +95,18 @@ export async function uprightCut(video: Blob, title: string, onProgress?: (f: nu
       width: W,
       height: H,
       fps: FPS,
-      frames: span + Math.ceil(CARD * FPS),
+      frames: total,
       onProgress,
       draw: async (i, g) => {
         if (i < span) {
           await seek(el, i / FPS);
           frame(g, el, title);
           if (!poster && i >= span * 0.4) poster = await still(g, W, H);
-        } else houseCard(g, W, H, title, icon);
+          endCard(g, W, H, title, icon, cardAlpha(i / FPS, seconds));
+        } else endCard(g, W, H, title, icon);
       },
     });
-    return out ? { video: out, poster, seconds: seconds + CARD } : null;
+    return out ? { video: out, poster, seconds: total / FPS } : null;
   } finally {
     v.done();
   }

@@ -26,13 +26,20 @@ export class Explosion {
   private age = 0;
   private readonly fragments: Fragment[] = [];
   private readonly sparks: { neo: THREE.Points; retro: THREE.Points; velocities: Float32Array };
-  private readonly flash: THREE.Mesh;
+  private readonly flash: THREE.Mesh | THREE.Sprite;
+  private readonly flashSize: number;
+  private readonly flashTime: number;
   private readonly parts: { neo: THREE.Object3D[]; retro: THREE.Object3D[] };
   private readonly hot: THREE.Color;
   private readonly cool: THREE.Color;
   private readonly drift: THREE.Vector3;
 
-  constructor(def: ShipDef, at: THREE.Object3D, inheritVelocity: THREE.Vector3) {
+  /**
+   * `flash: 'glow'` (the kill cam) swaps the solid flash ball for a soft glow,
+   * smaller and a little longer: seen up close from outside, the ball filled
+   * the frame as a hard white disc (Mark's first reconstruction, 27 October 2026).
+   */
+  constructor(def: ShipDef, at: THREE.Object3D, inheritVelocity: THREE.Vector3, opts: { flash?: 'ball' | 'glow' } = {}) {
     this.group.position.copy(at.getWorldPosition(new THREE.Vector3()));
     this.group.quaternion.copy(at.getWorldQuaternion(new THREE.Quaternion()));
     this.drift = inheritVelocity.clone().multiplyScalar(0.6);
@@ -71,10 +78,18 @@ export class Explosion {
     this.sparks = this.makeSparks(radius);
     this.group.add(this.sparks.neo, this.sparks.retro);
 
-    this.flash = new THREE.Mesh(
-      new THREE.SphereGeometry(radius, 24, 12),
-      new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 3.5, 1.5), transparent: true, depthWrite: false }),
-    );
+    if (opts.flash === 'glow') {
+      this.flash = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: new THREE.Color(1.6, 1.05, 0.5), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+      this.flashSize = radius * 1.4;
+      this.flashTime = 0.6;
+    } else {
+      this.flash = new THREE.Mesh(
+        new THREE.SphereGeometry(radius, 24, 12),
+        new THREE.MeshBasicMaterial({ color: new THREE.Color(6, 3.5, 1.5), transparent: true, depthWrite: false }),
+      );
+      this.flashSize = 1;
+      this.flashTime = 0.35;
+    }
     this.group.add(this.flash);
 
     this.parts = { neo: [...this.fragments.map((f) => f.obj), this.sparks.neo, this.flash], retro: [this.sparks.retro] };
@@ -141,17 +156,40 @@ export class Explosion {
     // The 1984 cloud thins out as it spreads.
     this.sparks.retro.geometry.setDrawRange(0, Math.floor(120 * (1 - t)));
 
-    const flashT = Math.min(1, this.age / 0.35);
-    this.flash.scale.setScalar(0.5 + flashT * 2.5);
-    (this.flash.material as THREE.MeshBasicMaterial).opacity = 1 - flashT;
+    const flashT = Math.min(1, this.age / this.flashTime);
+    const glow = this.flash instanceof THREE.Sprite;
+    this.flash.scale.setScalar((glow ? 0.8 + flashT : 0.5 + flashT * 2.5) * this.flashSize);
+    (this.flash.material as THREE.Material).opacity = glow ? (1 - flashT) ** 2 : 1 - flashT;
     this.flash.visible = flashT < 1 && !this.sparks.retro.visible;
 
     return true;
   }
 
+  private disposed = false;
+
   dispose() {
+    if (this.disposed) return;
+    this.disposed = true;
     unregisterParts(this.parts);
     // The retro cloud shares its position buffer with the neo sparks.
     disposeObject(this.group);
   }
+}
+
+let glow: THREE.Texture | null = null;
+/** A soft round glow, brightest in the middle and fading to nothing at the edge. Made once. */
+function glowTexture(): THREE.Texture {
+  if (glow) return glow;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d')!;
+  const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, 'rgba(255,255,255,1)');
+  r.addColorStop(0.25, 'rgba(255,255,255,0.55)');
+  r.addColorStop(0.6, 'rgba(255,255,255,0.12)');
+  r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r;
+  g.fillRect(0, 0, 128, 128);
+  glow = new THREE.CanvasTexture(c);
+  return glow;
 }

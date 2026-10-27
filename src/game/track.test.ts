@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bracket, focusOf, killerOf, packTrack, SAMPLE_RATE, TrackRecorder, unpackTrack, type Pose } from './track';
+import { bracket, focusOf, killerOf, packTrack, poseAt, SAMPLE_RATE, timelines, TrackRecorder, unpackTrack, type Pose } from './track';
 
 const scene = { system: 'Riedquat', when: 0, you: 1 };
 const pose = (id: number, x: number, unknown = false): Pose => ({ id, p: [100000 + x, 5000, -20000], q: [0, 0, 0, 1], ...(unknown ? { unknown } : {}) });
@@ -88,5 +88,37 @@ describe('the kill cam track', () => {
     expect(focusOf(d, 14, 20)).toBeUndefined();
     r.event({ t: 18, kind: 'boom', id: 2, p: [0, 0, 0] });
     expect(focusOf(r.snapshot(scene)!, 14, 20)).toBe(2); // or the last ship that went up
+  });
+});
+
+describe('one ship at a time', () => {
+  const p = (id: number, x: number): Pose => ({ id, p: [x, 0, 0], q: [0, 0, 0, 1] });
+  // Ship 2 misses two samples (0.15 to 0.2), then leaves for good after 1.0; ship 3 leaves for two seconds.
+  const samples = Array.from({ length: 81 }, (_, i) => {
+    const t = i / SAMPLE_RATE;
+    const poses = [p(1, t * 10)];
+    if ((t < 0.14 || t > 0.21) && t <= 1.0) poses.push(p(2, 100 + t * 100));
+    if (t < 1 || t > 3) poses.push(p(3, -t));
+    return { t, poses };
+  });
+  const d = { v: 1, scene: { system: 'Lave', when: 0, you: 1 }, ships: [], samples, events: [] };
+  const tl = timelines(d);
+  const x = (r: ReturnType<typeof poseAt>) => r && r.a.p[0] + (r.b.p[0] - r.a.p[0]) * r.f;
+
+  it('carries a ship across a sample or two it was missing from', () => {
+    const r = poseAt(tl.get(2)!, 0.175);
+    expect(r).not.toBeNull();
+    expect(x(r)).toBeCloseTo(117.5, 3);
+  });
+
+  it('lets it go when it really left', () => {
+    expect(poseAt(tl.get(2)!, 1.5)).toBeNull();
+    expect(poseAt(tl.get(3)!, 2)).toBeNull();
+    expect(poseAt(tl.get(3)!, 3.5)).not.toBeNull();
+  });
+
+  it('carries on at its last speed a little past its last pose, if asked', () => {
+    expect(poseAt(tl.get(1)!, 4.5)).toBeNull();
+    expect(x(poseAt(tl.get(1)!, 4.5, 1, 1))).toBeCloseTo(45, 3);
   });
 });

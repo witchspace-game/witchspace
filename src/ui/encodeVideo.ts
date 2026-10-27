@@ -6,11 +6,14 @@ import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 
 const CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42e028', 'avc1.42001f'];
 
+/** 3 Mbit/s for 720p, more for bigger frames (about 6.75 for an upright 1080×1920), so detail holds up. */
+const bitrateFor = (width: number, height: number) => Math.round(Math.max(3_000_000, ((width * height) / (1280 * 720)) * 3_000_000));
+
 export async function canEncode(width: number, height: number): Promise<string | null> {
   if (typeof VideoEncoder === 'undefined' || typeof OffscreenCanvas === 'undefined') return null;
   for (const codec of CODECS) {
     try {
-      if ((await VideoEncoder.isConfigSupported({ codec, width, height, bitrate: 3_000_000, framerate: 30 })).supported) return codec;
+      if ((await VideoEncoder.isConfigSupported({ codec, width, height, bitrate: bitrateFor(width, height), framerate: 30 })).supported) return codec;
     } catch {
       /* try the next */
     }
@@ -37,7 +40,7 @@ export async function encodeVideo(opts: {
     output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
     error: () => (failed = true),
   });
-  encoder.configure({ codec, width, height, bitrate: 3_000_000, framerate: fps, latencyMode: 'quality', avc: { format: 'avc' } });
+  encoder.configure({ codec, width, height, bitrate: bitrateFor(width, height), framerate: fps, latencyMode: 'quality', avc: { format: 'avc' } });
   const canvas = new OffscreenCanvas(width, height);
   const g = canvas.getContext('2d')!;
   for (let i = 0; i < frames && !failed; i++) {

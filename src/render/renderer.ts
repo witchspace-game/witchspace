@@ -127,7 +127,10 @@ export async function atSize<T>(width: number, height: number, fn: (canvas: HTML
   composer.setPixelRatio(1);
   neoRenderer.setSize(width, height, false);
   composer.setSize(width, height);
-  setLineResolution(new THREE.Vector2(width, height));
+  // Lines are drawn in pixels: above 720 across, thicken them in step, so a
+  // 1080×1920 video glows as boldly as a 720p one rather than looking spindly.
+  const lineScale = Math.max(1, Math.min(width, height) / 720);
+  setLineResolution(new THREE.Vector2(width / lineScale, height / lineScale));
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   try {
