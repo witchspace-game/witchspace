@@ -5,8 +5,8 @@ pillar: build
 summary: The home page's "right now in the galaxy" mixes the galaxy's own events, worked out from the clock, with what real commanders have done in the last two days - first discoveries, shared clips and their hearts, and how many are flying. One small public endpoint on the server supplies the commanders' half.
 card: coriolis
 stages:
-  - GET /feed - firsts, clips and how many are flying, public and cached | building
-  - The home page feed and ticker, mixing it with the galaxy's events | proposed
+  - GET /feed - firsts, clips and how many are flying, public and cached | built
+  - The home page feed and ticker, mixing it with the galaxy's events | built
   - Milestones - "a clip passed 10 hearts" (needs hearts with timestamps) | idea
 ---
 
@@ -77,6 +77,14 @@ Nothing that isn't already public elsewhere: callsigns and firsts are on the gal
 - The Worker caches the whole response at the edge for 60 seconds (`Cache-Control: public, max-age=60`), so however often the home page asks, the Durable Objects are asked at most about once a minute per Cloudflare location.
 - Anyone may read it (it's public, and `curl` works), but the browser CORS header is only sent to witchspace.org.uk and localhost, so other sites can't build on it from a browser.
 - Only `GET` (and the `OPTIONS` preflight).
+
+## As built on the home page
+
+- **Live from the galaxy** (the tall card under "Right now in the galaxy"): newest first, each line labelled where it comes from. *Contracts* is the newest contract posted at Lave (the rolling board); *News* is what Lave has heard; *Commander* is real, from `/feed`: up to two lines, a clip (linked to its page) or a trip home, its firsts grouped ("CMDR JAMESON charted Lave first: the planet, a moon and a derelict"). Under the heading, how many are flying, leaving out noughts ("1 player today"). Lines that weren't there a minute ago slide in.
+- **First to get there**: the latest commander to chart somewhere first, and how many other systems were charted first in two days, by whom ("by CMDR JAMESON" when it's one commander, never "by commanders").
+- **The ticker** opens with the latest commander's line and the newest contract.
+- The caption says which is which: the galaxy's lines are worked out from its clock; lines marked Commander are real players.
+- Fetched on load and every minute (`cache: 'no-cache'`, so the browser always asks the edge). If it fails, the commanders' lines are left out and the galaxy carries the page. Unknown kinds and malformed events are dropped (`src/site/feed.ts`, tested).
 
 ## Later
 
