@@ -64,29 +64,41 @@ export function shareMoment(m: LoggedMoment, onChange?: () => void) {
   });
 }
 
-/** Put a playing video into `holder` once its bytes are in memory; a short note there if it can't play. */
-async function mountVideo(holder: HTMLElement, clip: Blob, poster: Blob | null) {
+/**
+ * The service worker serves stored clips at an address, a piece at a time (public/sw.js): what an
+ * iPhone's player needs, since in a Home Screen app it won't play a video from memory (Mark's
+ * screenshot: "the player said unsupported"). Registered as the flight log loads; it takes charge
+ * at once, so the first clip opened can use it.
+ */
+if ('serviceWorker' in navigator && location.protocol !== 'file:') void navigator.serviceWorker.register('/sw.js').catch(() => {});
+const clipAddress = (id: string) => (navigator.serviceWorker?.controller ? `/flight-log/clip/${encodeURIComponent(id)}` : null);
+
+/** Put a playing video into `holder`: from the service worker's address, or else from memory; a short note there if it can't play. */
+async function mountVideo(holder: HTMLElement, clip: Blob, poster: Blob | null, id?: string) {
   const say = (why: string) => {
     const note = holder.querySelector('.replay-loading');
     if (note) note.textContent = `This clip won't play here (${why}). Share or save it to watch it.`;
   };
-  let bytes: ArrayBuffer;
-  try {
-    bytes = await clip.arrayBuffer();
-  } catch (e) {
-    return say(`it couldn't be read from this device: ${(e as Error).name || 'error'}`);
+  const address = id ? clipAddress(id) : null;
+  let bytes: ArrayBuffer | null = null;
+  if (!address) {
+    try {
+      bytes = await clip.arrayBuffer();
+    } catch (e) {
+      return say(`it couldn't be read from this device: ${(e as Error).name || 'error'}`);
+    }
   }
   if (!holder.isConnected) return;
   const video = document.createElement('video');
   Object.assign(video, { controls: true, muted: true, playsInline: true, autoplay: true, loop: false });
   video.setAttribute('playsinline', '');
   if (poster) video.poster = replayUrl(poster);
-  video.src = replayUrl(new Blob([bytes], { type: clip.type || 'video/mp4' }));
+  video.src = address ?? replayUrl(new Blob([bytes!], { type: clip.type || 'video/mp4' }));
   // In as soon as its file is ready, with the still as its poster (a phone may not load it until tapped).
   const note = holder.querySelector('.replay-loading');
   holder.replaceChildren(video, ...(note ? [note] : []));
   if (note) note.textContent = '';
-  video.onerror = () => say(`the player said ${['', 'aborted', 'network', 'decode', 'unsupported'][video.error?.code ?? 0] || 'error'}`);
+  video.onerror = () => say(`the player said ${['', 'aborted', 'network', 'decode', 'unsupported'][video.error?.code ?? 0] || 'error'}${address ? ', from its address' : ', from memory'}`);
   video.load();
   void video.play().catch(() => {}); // muted autoplay; if the browser holds it, the controls are there
 }
@@ -117,7 +129,7 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
   // then: an empty player on an iPhone shows "can't play" and may stay that
   // way (Mark's screenshots). If it fails, say why, so it can be fixed.
   const holder = box.querySelector<HTMLElement>('.replay-video');
-  if (holder && m.video) void mountVideo(holder, m.video, m.poster);
+  if (holder && m.video) void mountVideo(holder, m.video, m.poster, m.id);
   const close = () => {
     box.hidden = true;
     box.innerHTML = '';

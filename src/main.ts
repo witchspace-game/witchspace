@@ -812,7 +812,10 @@ const specialsHere = (c: Commander, here: StarSystem, now: number) =>
 /** Unread messages, on the Contracts tab's button. */
 function markInbox(c: Commander) {
   const unread = (c.messages ?? []).filter((m) => !m.read).length + (state === 'docked' && dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
-  $('.tabs [data-tab="contracts"]').textContent = unread ? `Contracts · ${unread} new` : 'Contracts';
+  // A small badge, not words: "Contracts · 2 new" spilled out of the tab on a phone (Mark).
+  const tab = $('.tabs [data-tab="contracts"]');
+  tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}</b>` : 'Contracts';
+  tab.setAttribute('aria-label', unread ? `Contracts, ${unread} new` : 'Contracts');
 }
 
 /** Earlier messages stays open while you archive from it. */
