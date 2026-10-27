@@ -65,7 +65,7 @@ Range is real. Messages from ships beyond scanner range don't arrive; near the e
 - **Chatter folds away.** Lines that need nothing from you (thanks, greetings, routine traffic) fold into one quiet line, *3 more from traffic*, and drop out after a few minutes.
 - **Calmer in a fight.** In combat only the urgent cards show; the rest waits until it's over, then sums up: *While you were fighting: 2 messages from Hexon, a news report.*
 - **Icons and colour, not labels.** A small mark for each kind of voice (station, police, pirate, company, news) instead of writing its name every time; the colours already exist.
-- **Colour says who, motion says how** *(Mark)*. Each voice keeps its colour, as a thin glowing edge on its card or row rather than coloured text, so who's speaking is obvious at a glance without the panel turning into a rainbow. A small, quiet animation hints at the message's character before you read a word:
+- **An accent colour and a subtle animation** *(Mark)*. Each voice has an **accent**, not a colour scheme: a thin glowing edge or a small mark on its card or row, with the text itself staying plain, so who's speaking is obvious at a glance and the panel never turns into a rainbow. And a **subtle** animation, felt more than seen, hints at the message's character as it arrives (Mark, 27 October 2026: "more of an accent color and subtle animations"):
   - **station traffic** settles in calmly, a soft fade;
   - **police** carry a slow steady pulse on the edge, like a patrol light;
   - **a pirate's line** arrives with a brief flicker of interference, a twitch, then still;
@@ -74,10 +74,26 @@ Range is real. Messages from ships beyond scanner range don't arrive; near the e
   - **news** sweeps once across, like a ticker;
   - **the Falcon** comes through with a shimmer of static, cold and white.
 
-  Each plays once as the message arrives (the Mayday excepted) and then stays still, so the panel is calm to read. Settings and the system's "reduce motion" keep the colours and drop the motion.
+  Each is small and short, plays once as the message arrives (the Mayday excepted) and then stays still, so the panel is calm to read; none should pull the eye from flying. Settings and the system's "reduce motion" keep the accents and drop the motion.
 - **A voice, later.** A few key lines spoken (a hail, a Mayday) would mean you don't have to read them at all.
 
 The test of a good answer: in the middle of a busy system, a glance tells you whether anything needs you, and what.
+
+### Answer cards *(built, 27 October 2026)*
+
+Mark: "it's relatively hard to communicate back to a radio message." The first piece of the answer above: **anything that wants an answer is a card, with its answers as buttons.**
+
+- **Where:** on screen whether the log is open or not, top left (under the radio pill on a phone, clear of the camera, back and Jump buttons when held upright); in a fight too. Two at most, newest at the bottom. A card goes once answered, dismissed (✕) or lapsed (about 30 seconds; a pirate's threat 20), and the line stays in the log saying what you did. Enter gives the newest card its first answer.
+- **What gets answers so far:**
+  - **A pirate's threat:** *Name your price* (with something in your hold worth taking and the credits to pay, they name one: 15% of the hold, at least 50 Cr) or *Come and take it*.
+  - **A pirate's price:** *Pay* (they leave, as before) or *No deal*.
+  - **The police's "switch on your transponder":** *Switch on*, or *Hold still* if it's broken (for a hull read).
+  - **A Mayday:** *On my way* (the trader answers with the distance and to follow its marker).
+  - **"We know who you are… surrender" and docking refused to a Fugitive:** *Surrender*.
+  - **A company's offer over the array:** *Accept*, as before.
+- **The look** is the accent and the subtle motion above: a thin glowing edge in the voice's colour, plain text, and an entrance played once (police a slow pulse on the edge, a pirate a brief flicker, a Mayday a slow heartbeat until it's answered); "reduce motion" keeps the accent and drops the motion. A card's words aren't also flashed across the screen.
+- **A tiny squawk** *(Mark)* as a card arrives, and only then (routine chatter stays silent): a click of the key and a breath of filtered static, police a clean chirp, pirates a rougher crackle, a Mayday twice. Under the game's sound settings.
+- **Still to come** from the redesign above: conversations grouped by voice, chatter folding away, the fight summary; and quick phrases with other commanders (stage 2) can use the same cards.
 
 **Over to the community** *(Mark)*. These are starting points, not the answer. If you have a better idea for the radio and the comms array, or improvements to any of this, we'd love it: a sketch, a mock-up, a prototype or a paragraph. Post it in [Discussions](https://github.com/witchspace-game/witchspace/discussions/categories/ideas) or on the [ideas board](https://witchspace.org.uk/ideas/?about=The%20radio%20and%20comms), and the best answer gets built, credited to you.
 

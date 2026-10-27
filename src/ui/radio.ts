@@ -1,11 +1,19 @@
 import { escapeHtml } from './escape';
 import { isTouch } from '../game/input';
 import { onTap } from './touch';
+import { sfx } from '../audio/sound';
 
 // The radio log in flight (docs/design/radio-and-comms.md): everything said
 // to you, by whom and when, in one place that fades when it's quiet. On a
 // phone it's a pill with an unread count that opens the log, and it folds
 // away when a fight starts, as the job strip does.
+//
+// Anything that wants an answer (a pirate's price, a police order, a Mayday,
+// an offer) is also a card on screen, log open or not, with its answers as
+// buttons big enough for a thumb (Mark: "it's relatively hard to communicate
+// back to a radio message"). Each card has its voice's accent on its edge and
+// a subtle entrance, and arrives with a tiny squawk; it goes once answered,
+// dismissed, or lapsed.
 
 export type RadioKind = 'station' | 'police' | 'company' | 'ship' | 'pirate' | 'mayday' | 'news' | 'beacon';
 
@@ -25,15 +33,22 @@ export interface RadioLine {
   kind: RadioKind;
   /** The speaker's colour: a company's, or the role's. */
   colour?: string;
+  /** One answer (the old form); `answers` takes several, the first being what Enter does. */
   action?: RadioAction;
+  answers?: RadioAction[];
 }
 
-interface Entry extends RadioLine {
+interface Entry extends Omit<RadioLine, 'action'> {
   id: number;
   at: number;
-  /** The action's been taken (or has lapsed): what it says now. */
+  answers?: RadioAction[];
+  /** Answered, dismissed or lapsed: what it says now. */
   done?: string;
 }
+
+/** How long a card waits for an answer when its answers don't say. */
+const CARD_TIME = 30_000;
+const CARDS_SHOWN = 2;
 
 const KEEP = 40;
 const SHOWN = 4; // lines on screen while closed (desktop)
@@ -57,8 +72,11 @@ const time = (t: number) => {
 
 /** Something said to you: into the log, and on screen for a while. */
 export function say(line: RadioLine) {
-  const e: Entry = { ...line, id: ++serial, at: Date.now() };
+  const { action, answers, ...rest } = line;
+  const all = answers ?? (action ? [action] : undefined);
+  const e: Entry = { ...rest, answers: all?.length ? all : undefined, id: ++serial, at: Date.now() };
   entries.push(e);
+  if (e.answers) sfx.squawk(e.kind);
   if (entries.length > KEEP) entries.shift();
   if (!open) unread++;
   render();
@@ -106,27 +124,39 @@ export function setRadioFight(on: boolean) {
   }
 }
 
-/** The newest offer still open: what Enter accepts. */
-const pending = () => [...entries].reverse().find((e) => e.action && !e.done && (!e.action.until || e.action.until > Date.now()));
+/** When a card's answers lapse. */
+const until = (e: Entry) => e.answers?.[0]?.until ?? e.at + CARD_TIME;
+const waiting = (e: Entry, now = Date.now()) => Boolean(e.answers && !e.done && until(e) > now);
 
-/** Enter: take the newest offer on the log. Returns whether there was one. */
+/** The newest card still waiting: what Enter answers. */
+const pending = () => [...entries].reverse().find((e) => waiting(e));
+
+/** Enter: give the newest card its first answer. Returns whether there was one. */
 export function acceptLatest(): boolean {
   const e = pending();
   if (!e) return false;
-  act(e);
+  act(e, 0);
   return true;
 }
 
-function act(e: Entry) {
-  if (!e.action || e.done) return;
-  if (e.action.until && e.action.until <= Date.now()) {
-    e.done = 'Offer gone';
+function act(e: Entry, i: number) {
+  const a = e.answers?.[i];
+  if (!a || e.done) return;
+  if (until(e) <= Date.now()) {
+    e.done = 'Gone';
     return render();
   }
-  e.done = e.action.done;
-  const reply = e.action.run();
+  e.done = a.done;
+  const reply = a.run();
   if (reply) say(reply);
   else render();
+}
+
+/** Not answering: the card goes, the line stays in the log. */
+function dismiss(e: Entry) {
+  if (e.done) return;
+  e.done = 'Not answered';
+  render();
 }
 
 /** Forget everything (a new commander). */
@@ -139,21 +169,52 @@ export function clearRadio() {
 function render() {
   const el = root();
   const now = Date.now();
-  // Lapsed offers say so.
-  for (const e of entries) if (e.action && !e.done && e.action.until && e.action.until <= now) e.done = 'Offer gone';
+  // Lapsed cards say so.
+  for (const e of entries) if (e.answers && !e.done && until(e) <= now) e.done = 'Gone';
   el.hidden = !entries.length;
   const shown = open ? entries : entries.slice(-SHOWN);
   el.querySelector('.radio-list')!.innerHTML = shown
     .map((e) => {
-      const button = e.action ? (e.done ? `<em class="radio-done">${escapeHtml(e.done)}</em>` : `<button type="button" data-radio="${e.id}">${escapeHtml(e.action.label)}${isTouch ? '' : ' (Enter)'}</button>`) : '';
-      return `<li class="r-${e.kind}"><time>${time(e.at)}</time> <b style="${e.colour ? `--who:${e.colour}` : ''}">${escapeHtml(e.from)}</b> ${escapeHtml(e.text)}${button}</li>`;
+      // Answers live on the card; the open log offers them too, the closed one just says what was said.
+      const buttons = e.answers ? (e.done ? `<em class="radio-done">${escapeHtml(e.done)}</em>` : !open ? '' : e.answers.map((a, i) => `<button type="button" data-radio="${e.id}" data-answer="${i}">${escapeHtml(a.label)}${isTouch || i ? '' : ' (Enter)'}</button>`).join('')) : '';
+      return `<li class="r-${e.kind}"><time>${time(e.at)}</time> <b style="${e.colour ? `--who:${e.colour}` : ''}">${escapeHtml(e.from)}</b> ${escapeHtml(e.text)}${buttons}</li>`;
     })
     .join('');
+  renderCards(now);
   const last = entries[entries.length - 1];
   el.querySelector('.radio-count')!.textContent = unread ? String(unread) : '';
   el.querySelector('.radio-ticker')!.textContent = last ? `${last.from} · ${last.text}` : '';
   el.classList.toggle('unread', unread > 0);
 }
+
+/** The cards waiting for an answer, newest at the bottom, a couple at most. */
+function renderCards(now: number) {
+  const box = document.querySelector<HTMLElement>('#radio-cards');
+  if (!box) return;
+  const open = entries.filter((e) => waiting(e, now)).slice(-CARDS_SHOWN);
+  // Keep cards already on screen (so they don't replay their entrance); add new ones; drop the rest.
+  const ids = new Set(open.map((e) => String(e.id)));
+  for (const c of [...box.children] as HTMLElement[]) if (!ids.has(c.dataset.card!)) c.remove();
+  for (const e of open) {
+    let card = box.querySelector<HTMLElement>(`[data-card="${e.id}"]`);
+    if (!card) {
+      card = document.createElement('div');
+      card.className = `rcard r-${e.kind}`;
+      card.dataset.card = String(e.id);
+      if (e.colour) card.style.setProperty('--who', e.colour);
+      card.setAttribute('role', 'group');
+      card.setAttribute('aria-label', `${e.from}: ${e.text}`);
+      card.innerHTML = `<p class="rcard-text"><b>${escapeHtml(e.from)}</b> ${escapeHtml(e.text)}</p>
+        <div class="rcard-answers">${e.answers!.map((a, i) => `<button type="button" data-radio="${e.id}" data-answer="${i}"${i ? '' : ' class="primary"'}>${escapeHtml(a.label)}${isTouch || i ? '' : ' <kbd>Enter</kbd>'}</button>`).join('')}<button type="button" class="rcard-dismiss" data-dismiss="${e.id}" aria-label="Don't answer">✕</button></div>`;
+      box.append(card);
+    }
+  }
+  box.hidden = !open.length;
+  clearTimeout(cardTimer);
+  // Wake again when the soonest card lapses, so it goes on time.
+  if (open.length) cardTimer = window.setTimeout(render, Math.max(250, Math.min(...open.map(until)) - now + 50));
+}
+let cardTimer = 0;
 
 export function initRadio() {
   const el = root();
@@ -165,16 +226,25 @@ export function initRadio() {
   const list = el.querySelector<HTMLElement>('.radio-list')!;
   let tapped = 0;
   const press = (target: EventTarget | null) => {
-    const b = (target as HTMLElement).closest<HTMLButtonElement>('button[data-radio]');
+    const t = target as HTMLElement;
+    const gone = t.closest<HTMLButtonElement>('button[data-dismiss]');
+    const off = gone && entries.find((x) => x.id === Number(gone.dataset.dismiss));
+    if (off) return dismiss(off);
+    const b = t.closest<HTMLButtonElement>('button[data-radio]');
     const e = b && entries.find((x) => x.id === Number(b.dataset.radio));
-    if (e) act(e);
+    if (e) act(e, Number(b!.dataset.answer ?? 0));
   };
-  list.addEventListener('pointerdown', (ev) => {
-    if (ev.pointerType === 'mouse') return;
-    tapped = performance.now();
-    press(ev.target);
-  });
-  list.addEventListener('click', (ev) => {
-    if (performance.now() - tapped > 800) press(ev.target);
-  });
+  // Answers come and go with the list and the cards: catch their taps on the containers.
+  for (const box of [list, document.querySelector<HTMLElement>('#radio-cards')]) {
+    if (!box) continue;
+    box.addEventListener('pointerdown', (ev) => {
+      if (ev.pointerType === 'mouse') return;
+      ev.stopPropagation(); // a tap on a card isn't a tap on the flight controls
+      tapped = performance.now();
+      press(ev.target);
+    });
+    box.addEventListener('click', (ev) => {
+      if (performance.now() - tapped > 800) press(ev.target);
+    });
+  }
 }

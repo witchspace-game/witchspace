@@ -113,7 +113,7 @@ import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
 import { closeDrawer, initTouch, onTap, updateTouch } from './ui/touch';
 import { COMPANY_SHORT, jobStrip, routeWork, workInReach, type JobStep } from './game/jobs';
-import { BEACON_CALLS, beacon, distressReward, hailReply, newBeacon, newsInReach, pirateAnswer, pirateThreat, RADIO_RANGE, type BeaconCall, type HailContext, type Speaker } from './game/radio';
+import { BEACON_CALLS, beacon, distressReward, hailReply, newBeacon, newsInReach, pirateAnswer, pirateThreat, RADIO_RANGE, tollFor, type BeaconCall, type HailContext, type Speaker } from './game/radio';
 import { acceptLatest, clearRadio, initRadio, say, setRadioFight, toggleRadio, wakeRadio, type RadioAction, type RadioKind } from './ui/radio';
 import { FlightRecorder, type Clip } from './game/recorder';
 import { RecorderWatch } from './game/recorderWatch';
@@ -3292,7 +3292,7 @@ function updateHail() {
     if (!by) return;
     hail = { by, until: elapsed + HAIL_TIME };
     sfx.beep();
-    radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.` });
+    radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, answers: answerPolice() });
   }
   // The Viper that hailed you comes to look.
   hail.by.patrol.centre.copy(player.obj.position);
@@ -5048,7 +5048,7 @@ function updateClearance() {
   // Running dark into a lawful station: switch on to dock, if that's safe.
   if (darkRefused() && !lockedDown() && !clearanceRefused() && !transponderOnToDock()) return;
   if (lockedDown()) radio('station', name, 'Lockdown: containment breach · docking suspended', { flash: 4, urgent: true });
-  else if (clearanceRefused()) radio('station', name, 'Docking refused: you are a Fugitive · U to surrender', { flash: 4, urgent: true });
+  else if (clearanceRefused()) radio('station', name, 'Docking refused: you are a Fugitive · U to surrender', { flash: 4, urgent: true, answers: [answerSurrender()] });
   else if (darkRefused()) radio('station', name, 'Unidentified ship: switch on your transponder to dock', { flash: 4, urgent: true });
   else if (checksClearance(currentSystem())) radio('station', name, 'Transponder checked · Docking clearance granted', { flash: 2.5 });
   else radio('station', name, 'No questions asked', { flash: 2.5 });
@@ -5188,6 +5188,8 @@ interface RadioOpts {
   urgent?: boolean;
   colour?: string;
   action?: RadioAction;
+  /** Several answers, as a card (src/ui/radio.ts); the first is what Enter does. */
+  answers?: RadioAction[];
   /** The flashed text, when it isn't "from · text". */
   line?: string;
 }
@@ -5198,8 +5200,9 @@ function radio(kind: RadioKind, from: string, text: string, o: RadioOpts = {}) {
     if (o.flash) flash(line, o.flash);
     return;
   }
-  say({ kind, from, text, colour: o.colour, action: o.action });
-  if (o.urgent && o.flash) flash(line, o.flash);
+  say({ kind, from, text, colour: o.colour, action: o.action, answers: o.answers });
+  // A card carries the words itself; flash only what has no card.
+  if (o.urgent && o.flash && !o.answers?.length && !o.action) flash(line, o.flash);
 }
 
 const companyVoice = (id: CompanyId) => ({ from: COMPANIES[id].name, colour: COMPANIES[id].colour });
@@ -5274,7 +5277,7 @@ function hailTarget() {
     if (npc.paid) return radio('pirate', sp.from, "We had a deal. Don't push it.");
     if (sp.who === 'pirate' && npcIdentified(npc)) {
       const r = pirateAnswer(ctx, playerHoldValue(), cmdr().credits);
-      return radio('pirate', sp.from, r.text, { colour: sp.colour, action: r.toll ? payOff(npc, r.toll) : undefined, flash: r.toll ? 4 : undefined, urgent: Boolean(r.toll) });
+      return radio('pirate', sp.from, r.text, { colour: sp.colour, answers: r.toll ? [payOff(npc, r.toll), noDeal(npc)] : undefined, flash: r.toll ? 4 : undefined, urgent: Boolean(r.toll) });
     }
     return radio(sp.kind, sp.from, hailReply(sp.who, ctx).text, { colour: sp.colour });
   }
@@ -5306,6 +5309,68 @@ function payOff(npc: NpcShip, toll: number): RadioAction {
   };
 }
 
+/** Turning a pirate's price down: they say so, and get on with it. */
+function noDeal(npc: NpcShip): RadioAction {
+  return { label: 'No deal', done: 'Refused', until: Date.now() + 30_000, run: () => ({ kind: 'pirate', from: npc.def.name, text: npcs.includes(npc) ? 'Your funeral, Commander.' : '...' }) };
+}
+
+/**
+ * Answering a pirate's threat (Mark: answering the radio should be easy). Ask their price: with
+ * something worth taking in your hold, and the credits to pay, they name one; or tell them to come
+ * and take it, which changes nothing but your dignity.
+ */
+function answerPirate(p: NpcShip): RadioAction[] {
+  const until = Date.now() + 20_000;
+  return [
+    {
+      label: 'Name your price',
+      done: 'Asked',
+      until,
+      run: () => {
+        if (!npcs.includes(p) || p.paid) return null;
+        const hold = playerHoldValue();
+        const toll = tollFor(hold);
+        if (hold <= 0) return { kind: 'pirate', from: p.def.name, text: "Nothing in your hold worth the trouble. We'll take the ship." };
+        if (cmdr().credits < toll) return { kind: 'pirate', from: p.def.name, text: `${toll} Cr. You haven't got it, have you? Then we'll take the cargo.` };
+        radio('pirate', p.def.name, `${toll} Cr and we never saw you.`, { answers: [payOff(p, toll), noDeal(p)], flash: 4, urgent: true });
+        return null;
+      },
+    },
+    { label: 'Come and take it', done: 'Defied', until, run: () => ({ kind: 'pirate', from: p.def.name, text: npcs.includes(p) ? 'Brave words, Commander. Let\'s see your shields.' : '...' }) },
+  ];
+}
+
+/** Answering the police's order: switch on, or hold still for a hull read if it's broken. */
+function answerPolice(): RadioAction[] {
+  if (transponderBroken() && !transponderOff)
+    return [{ label: 'Hold still', done: 'Holding still', run: () => {
+      if (isTouch) setTouchSpeed(0);
+      flash('Slow right down and hold still · they\'ll read your hull', 2.5);
+      return { kind: 'police', from: 'You', text: 'Transponder damaged. Holding still for your scan.' };
+    } }];
+  return [{ label: 'Switch on', done: 'Switched on', run: () => {
+    if (transponderOff) toggleTransponder();
+    return null;
+  } }];
+}
+
+/** Answering a Mayday: you're coming, and the trader knows it (the Carriers' Mutual remembers who answered). */
+function onMyWay(trader: NpcShip): RadioAction {
+  return { label: 'On my way', done: 'On your way', until: Date.now() + 40_000, run: () => {
+    if (!npcs.includes(trader)) return null;
+    const d = trader.obj.position.distanceTo(player.obj.position);
+    return { kind: 'mayday', from: traderName(trader), colour: traderColour(trader), text: `Thank you, Commander! ${(d / 1000).toFixed(1)} km, follow our marker. Hurry!` };
+  } };
+}
+
+/** Surrendering when asked to: the same as U. */
+function answerSurrender(): RadioAction {
+  return { label: 'Surrender', done: 'Surrendering', run: () => {
+    if (surrenderTimer === null) toggleSurrender();
+    return null;
+  } };
+}
+
 // Pirates say something before they open fire, if you're in range to hear.
 const threatened = new WeakSet<NpcShip>();
 let lastThreat = -Infinity;
@@ -5315,7 +5380,7 @@ function pirateThreats() {
     threatened.add(p);
     if (elapsed - lastThreat < 20 || !npcIdentified(p) || p.obj.position.distanceTo(player.obj.position) > RADIO_RANGE) continue;
     lastThreat = elapsed;
-    radio('pirate', p.def.name, pirateThreat(hailContext(serialOf(p) * 1000 + (minute() % 1000), p)));
+    radio('pirate', p.def.name, pirateThreat(hailContext(serialOf(p) * 1000 + (minute() % 1000), p)), { answers: answerPirate(p) });
   }
   // Paid-off pirates, gone over the horizon.
   for (const p of ofRole('pirate')) if (p.paid && p.obj.position.distanceTo(player.obj.position) > 25000) removeNpc(p);
@@ -5428,7 +5493,7 @@ function distressCall(trader: NpcShip, pirate: NpcShip) {
   distresses.push({ trader, pirates: new Set([pirate]), heard, arrived: false, until: elapsed + DISTRESS_TIME });
   if (!heard) return;
   sfx.beep();
-  radio('mayday', traderName(trader), `Mayday! Pirates on us, ${(d / 1000).toFixed(1)} km from you. Anyone?`, { colour: traderColour(trader), flash: 3.5, urgent: true });
+  radio('mayday', traderName(trader), `Mayday! Pirates on us, ${(d / 1000).toFixed(1)} km from you. Anyone?`, { colour: traderColour(trader), flash: 3.5, urgent: true, answers: [onMyWay(trader)] });
 }
 
 function updateDistress() {
@@ -5548,7 +5613,7 @@ function sendBeacon(call: BeaconCall) {
   radio('beacon', 'Beacon', `${label} sent`);
   switch (out.kind) {
     case 'police': {
-      if (isFugitive() && identified()) return radio('police', police, 'We know who you are, Commander. Surrender (U).', { flash: 3, urgent: true });
+      if (isFugitive() && identified()) return radio('police', police, 'We know who you are, Commander. Surrender (U).', { flash: 3, urgent: true, answers: [answerSurrender()] });
       const delay = Math.round(Math.max(10, 10 + (pos.distanceTo(station.root.position) - STATION_SPACE) / 200));
       responses.push({ at: elapsed + delay, where: pos.clone() });
       // Any Viper already out comes too.
