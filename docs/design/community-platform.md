@@ -68,6 +68,8 @@ The README keeps a short summary and points to the roadmap page, so there's noth
 
 The biggest unlock for people who'll never use git. Draw a ship from points and faces (or start from one in the fleet), see it glow in neo-vector, turn it, check it against the rules (size, schema, the homage rules) as you go, give it a name, a maker and a story, and **submit** it. Submissions wait in a queue; a maintainer turns the good ones into pull requests, crediting the designer. Ships already have every field the editor needs.
 
+Its submit button uses the same submission system as the AI connector ([the Build connector plan](mcp-server.md)), so a ship from the editor and a ship from a chat land in one queue. The submission system is built first, on the server; the editor follows on the site.
+
 ## 4. The writers' room, profiles and credit *(proposed)*
 
 - **The writers' room:** forms for the content the game needs most (saloon characters, rumours, trail stories, station descriptions, Legends' logs), each with the tone guide beside it and examples, into the same queue.

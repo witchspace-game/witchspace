@@ -6,10 +6,10 @@ summary: Bring your own AI, and build Witchspace with it. One web address lets C
 card: coriolis
 stages:
   - Contributors - validate, preview and balance-check ships; the designs and help wanted; galaxy lookups | built
-  - Guided workshops - prompts for a first ship, a module, a saloon regular; the live viewer in the chat | proposed
-  - Every content type - Titanoboa modules, characters, news events, trails, company files | proposed
-  - Try it - a link that flies your draft in the game, in a test system | proposed
   - Hand it in - sign in, submit, follow it, revise it; the review queue and a pull request made for you | proposed
+  - Guided workshops - prompts for a first ship, a module, a saloon regular | proposed
+  - Every content type - Titanoboa modules, characters, news events, trails, company files | proposed
+  - Try it - the live viewer in the chat, and a link that flies your draft in the game, in a test system | proposed
   - The community - claim a task, post and vote on ideas, see your credits and commissions | proposed
   - Players - the live galaxy, public news only | proposed
 help:
@@ -76,6 +76,45 @@ Nobody needs GitHub, the repo or a terminal. People who code still can, and the 
 On the Worker that already serves it. Sign-in is OAuth 2.1 (what MCP clients expect for remote servers), with our email code as the login step, so the account is the game's account. Submissions, claims and drafts are tables in the `Accounts` Durable Object beside the saves. Previews are SVG today; the in-chat viewer is a small HTML resource running the game's renderer, served where the client supports it. The pull request is opened by a GitHub App with access to this repo only.
 
 The web form and the ship workshop page on the site use the **same** submission API, so a person without an AI assistant gets the same path ([the community platform](community-platform.md), stage 3).
+
+### The plan *(27 October 2026, agreed with Mark)*
+
+**Hand it in comes first.** The Build adverts on /jobs/ now offer real in-game fees, and today the only way to hand anything in is a GitHub pull request. An assistant can already make and check a ship with stage 1; what's missing is somewhere to send it. Building the submission system first also gives the site's form and ship editor their back end, so people without an AI assistant aren't left out.
+
+**What the clients can do** (checked 27 October 2026):
+
+- **MCP Apps** (interactive views inside the chat) is an official MCP extension since 26 January 2026, supported by Claude (web and desktop) and ChatGPT among others. A tool names a `ui://` resource (`text/html;profile=mcp-app`) in `_meta.ui.resourceUri`; the view runs in a sandboxed frame, may call our tools, and reaches no other site unless the resource declares it (`_meta.ui.csp`). So the game's own renderer can turn a draft inside the chat.
+- **Claude:** custom connectors with OAuth sign-in on paid plans, tools that write included.
+- **ChatGPT:** full MCP, with tools that write, is in beta for Business, Enterprise and Edu; Plus and Pro may only get the read-only tools. So a ChatGPT Plus user may be able to design and check in the chat but not submit from it. **The site is the path everyone has; the connector is the convenient one.**
+
+**The stages, in order:**
+
+| # | Stage | Where | What |
+|---|---|---|---|
+| 1 | **Submissions** | Server | The submission system on the Worker, one API for every way in. The maintainers' review queue. Accepting opens the pull request. |
+| 2a | **Submit from the connector** | Server | OAuth sign-in through the client's own screen; `submit`, `my_submissions`, `revise`, `withdraw`; `review_queue` and `review` for maintainers. |
+| 2b | **Submit from the site** | Site | A submit form (paste or upload a file, or fill in the fields) and *My submissions*; then [the ship editor](community-platform.md), stage 3. Both use stage 1's API. |
+| 3 | **Workshops** | Server | The prompts (`first_ship`, `design_module`, `write_regular`, `write_news_event`, `critique`) and `validate_module`, `preview_module`, `preview_lineup`. |
+| 4 | **Try it** | Server | The in-chat viewer (MCP Apps), then `playtest_link`. |
+| 5 | **The rest** | Server | Other content types as they get schemas; claims, ideas and credits. |
+
+**Stage 1, the submission system:**
+
+- **What's stored:** a `submissions` table in `Accounts`, beside the saves. Each row has the author's account, its kind (ship or module to start with), the file, a note, *made with AI* (yes by default from the connector), where it came from (connector or site), its status (`submitted`, `changes wanted`, `accepted`, `withdrawn`), the review notes, the pull request link, and its versions (a revision keeps the old one).
+- **The API**, signed in with the game's existing session: `POST /submissions`, `GET /submissions/mine`, `GET /submissions/<id>`, `PUT /submissions/<id>` (revise), `DELETE /submissions/<id>` (withdraw). Maintainers: `GET /submissions?status=…` and `POST /submissions/<id>/review` (accept, or send back with notes). CORS for our own sites only.
+- **Checked on the way in** by the same validator as CI (the ship rules stage 1 already runs; the module rules, compiled the same way). A file that fails isn't stored: the answer lists every problem, so the assistant or the form can fix it.
+- **Limits:** signed in with a callsign; 64 KB a file; a few submissions a day and ten open at once per account; rate-limited by network too.
+- **Private:** an author sees their own, maintainers see all, nobody else sees any. Nothing is public until a maintainer accepts it.
+- **Accepting** opens a pull request from a **GitHub App** that can reach this repo only: a branch `submission/<id>`, the file in its place (`content/ships/` or `content/modules/`), credited to the callsign and marked AI-assisted, with the submission linked. The merge is still a maintainer's, with CI's checks. For a module, the maintainer adds `inService` before merging, which starts [its commission](ship-the-titanoboa.md).
+- **Hearing back:** a push notification when it's accepted or sent back (for anyone who allowed them), and the status in *My submissions* on the site and in the chat.
+
+**What Mark does** (the exact steps will be written out when we get there):
+
+- Create the GitHub App in the witchspace-game organisation (contents and pull requests: read and write; this repo only), install it, and put its id and private key into the Worker with `wrangler secret put`.
+- Deploy the Worker after each stage.
+- Add the connector to his own Claude account, so every tool is tested in the real client before it's announced.
+
+**Still to decide while building:** whether sign-in uses Cloudflare's OAuth provider library (which keeps its grants in a KV namespace: one new, free binding Mark would create) or our own tables in `Accounts`. Either way the login step is the game's email code, so the account is the game's account.
 
 ## 1. Contributors *(built)*
 
