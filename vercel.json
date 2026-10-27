@@ -13,6 +13,11 @@
       "permanent": true
     },
     {
+      "source": "/careers/",
+      "destination": "/jobs/",
+      "permanent": true
+    },
+    {
       "source": "/careers/:path*",
       "destination": "/jobs/",
       "permanent": true
