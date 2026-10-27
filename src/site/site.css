@@ -1209,24 +1209,37 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 }
 
 /* /connect/: the Build connector's sign-in step. */
-.review-desk { max-width: 720px; }
+.review-desk { max-width: 1120px; }
 .review-desk [hidden] { display: none; }
 .review-desk .submit-step { margin-bottom: 16px; }
-.review-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
-.review-tabs button { flex: 1; padding: 10px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
-.review-tabs button[aria-selected='true'] { color: var(--fg); border-color: var(--accent); }
-.review-list { display: flex; flex-direction: column; gap: 8px; }
-.review-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
-.review-row:hover { border-color: var(--accent); }
+.review-tabs { display: flex; gap: 8px; margin-bottom: 18px; max-width: 560px; }
+.review-tabs button { flex: 1; padding: 11px 8px; border: 1px solid var(--border); border-radius: 999px; background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.review-tabs button[aria-selected='true'] { color: var(--fg); border-color: var(--accent); background: rgba(61, 255, 176, 0.06); }
+.review-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.review-row { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 20px 22px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--fg); font: inherit; text-align: left; cursor: pointer; transition: border-color 0.15s; }
+.review-row:hover { border-color: rgba(61, 255, 176, 0.35); }
+.review-row strong { font-family: var(--display); font-size: 20px; font-weight: 600; }
+.review-facts { display: flex; flex-wrap: wrap; gap: 6px 0; color: var(--muted); font-size: 14px; }
+.review-facts span { white-space: nowrap; }
+.review-facts span:not(:last-child)::after { content: '·'; margin: 0 8px; opacity: 0.6; }
 .review-flag { color: var(--amber); }
-.review-one h3 { margin: 4px 0; }
-.review-one h4 { margin: 18px 0 6px; font-size: 14px; }
-.review-back { align-self: flex-start; margin-bottom: 8px; }
-.review-note { margin: 0; padding: 10px 14px; border-left: 2px solid var(--accent); color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
-.review-one .preview { margin: 12px 0; }
-.review-file pre { max-height: 320px; overflow: auto; font-size: 12px; }
-.review-one #decide:not([hidden]) { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; }
+.review-back { margin-bottom: 14px; }
+.review-one h3 { margin: 0 0 8px; font-family: var(--display); font-size: clamp(26px, 5vw, 34px); }
+.review-one h4 { margin: 22px 0 8px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.review-one h4:first-child { margin-top: 0; }
+.review-cols { display: grid; gap: 24px; margin-top: 22px; }
+.review-visual .preview canvas { height: 320px; }
+.review-file { margin-top: 12px; }
+.review-file pre { max-height: 360px; overflow: auto; font-size: 12px; }
+.review-note { margin: 0; padding: 12px 16px; border-left: 2px solid var(--accent); background: var(--surface); border-radius: 0 10px 10px 0; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-text .warnings { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.review-text #decide { margin-top: 26px; gap: 14px; }
 .review-one textarea { width: 100%; }
+@media (min-width: 900px) {
+  .review-cols { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 36px; align-items: start; }
+  .review-visual { position: sticky; top: 90px; }
+  .review-visual .preview canvas { height: 460px; }
+}
 .connect { max-width: 640px; }
 .connect [hidden] { display: none; }
 .connect .submit-step { margin-bottom: 16px; }
