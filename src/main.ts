@@ -4883,13 +4883,13 @@ if (isTouch && !isIos) {
   );
 }
 
-/** Whether this page load has launched yet: the first launch is counted once (Vercel Web Analytics, no properties). */
+/** Whether this page load has launched yet: the first launch is counted once (Vercel Web Analytics: the rules and the controls, nothing personal). */
 let launchCounted = false;
 
 async function launch() {
   if (!launchCounted) {
     launchCounted = true;
-    countEvent('launch'); // nothing personal; records nothing until custom events are on the plan
+    countEvent('launch', { rules: cmdr().difficulty, controls: isTouch ? 'touch' : 'keys' }); // how many who arrive actually fly; nothing personal
   }
   const repaired = fitTransponderForLaunch();
   ensureSystemScene();
