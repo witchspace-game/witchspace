@@ -130,7 +130,7 @@ const progress = (doc: Doc) => {
 /** The panel at the top of a design's page: where it stands and what help it needs. */
 export function docPanel(doc: Doc): string {
   const help = doc.help.length
-    ? `<div class="doc-help"><h3>Help wanted</h3><ul>${doc.help.map((h) => `<li><span class="skill ${esc(h.skill)}">${esc(SKILLS[h.skill] ?? h.skill)}</span> ${esc(h.task)}</li>`).join('')}</ul><p class="muted small">Pick one up: say so in <a href="https://github.com/witchspace-game/witchspace/discussions">Discussions</a> or at <a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a>, or <a href="/ideas/?about=${encodeURIComponent(doc.title)}">suggest an idea</a> about it.</p></div>`
+    ? `<div class="doc-help"><h3>Help wanted</h3><ul>${doc.help.map((h) => `<li><span class="skill ${esc(h.skill)}">${esc(SKILLS[h.skill] ?? h.skill)}</span> ${esc(h.task)}</li>`).join('')}</ul><p class="muted small">Pick one up: email <a href="mailto:hello@witchspace.org.uk?subject=${encodeURIComponent(`Help wanted: ${doc.title}`)}">hello@witchspace.org.uk</a> and we'll help you get going, or <a href="/ideas/?about=${encodeURIComponent(doc.title)}">suggest an idea</a> about it on the ideas board. No GitHub needed; if you code, <a href="https://github.com/witchspace-game/witchspace/discussions">GitHub Discussions</a> works too.</p></div>`
     : '';
   return `<aside class="doc-panel">
   <p class="doc-status"><span class="tag ${doc.status}">${STATUS[doc.status].label}</span><span class="muted">${esc(PILLARS[doc.pillar].name)}${progress(doc) ? ` · ${progress(doc)}` : ''}</span></p>

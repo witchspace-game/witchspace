@@ -185,7 +185,8 @@ ${ships
   </div>
   <div class="ship-make">
     <h3>Design a ship</h3>
-    <p>Ships are JSON files in <a href="https://github.com/witchspace-game/witchspace/tree/main/content/ships">content/ships</a>: points, faces and a few glowing details. Drop one in and it's in the game. Read <a href="${REPO}CONTRIBUTING.md">how to contribute</a>, including <a href="${REPO}CONTRIBUTING.md#legends-and-homages">the rules on homages</a>: nods to films and books are welcome, copies of their designs aren't.</p>
+    <p>A ship is a small file: points, faces and a few glowing details. You don't need to code to make one. <a href="/get-involved/#ai">Add Witchspace to your AI assistant</a>, ask it for the ship you have in mind, and it checks the design against the game's rules and draws it beside a Cobra. Then email the file to <a href="mailto:hello@witchspace.org.uk?subject=A%20ship%20for%20Witchspace">hello@witchspace.org.uk</a>, or <a href="/ideas/">put the idea on the ideas board</a> for someone to draw. Nods to films and books are welcome, copies of their designs aren't (<a href="${REPO}CONTRIBUTING.md#legends-and-homages">the rules on homages</a>).</p>
+    <p class="muted small">If you code: ships live in <a href="https://github.com/witchspace-game/witchspace/tree/main/content/ships">content/ships</a> on GitHub, open to pull requests (<a href="${REPO}CONTRIBUTING.md">how to contribute</a>).</p>
   </div>
 </section>`;
 }
@@ -270,7 +271,7 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
       <p>Got an idea for the ${esc(s.name)}: a better shape, a detail it's missing, a story for it? Suggest it on the ideas board, where others can vote it up.</p>
       <ul class="ship-ideas" data-ship-name="${esc(s.name)}"><li class="muted">Looking for ideas about the ${esc(s.name)}…</li></ul>
       <p><a class="button primary small" href="/ideas/?about=${encodeURIComponent(s.name)}">Suggest an improvement</a></p>
-      <p class="muted small">Want to redraw it yourself? Edit <a href="${REPO}content/ships/${esc(s.id)}.json">its file</a> and open a pull request: see <a href="${REPO}CONTRIBUTING.md">how to contribute</a>.</p>
+      <p class="muted small">Want to redraw it yourself? <a href="/get-involved/#ai">Ask your AI assistant</a> to rework <a href="${REPO}content/ships/${esc(s.id)}.json">its file</a> and email the result to <a href="mailto:hello@witchspace.org.uk?subject=${encodeURIComponent(`A better ${s.name}`)}">hello@witchspace.org.uk</a>. If you code, a pull request works too.</p>
     </div>
   </div>
 </section>`,

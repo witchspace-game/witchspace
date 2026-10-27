@@ -13,7 +13,7 @@
         <a class="button primary big" href="/play/">Play now, it's free</a>
         <a class="button ghost big" href="#now">See the galaxy right now</a>
       </div>
-      <p class="live-strip" id="live-strip"><span class="live-dot" aria-hidden="true"></span><b>Live</b> <span>The galaxy runs on its own clock, the same for everyone.</span></p>
+      <a class="ticker" href="#now"><span class="ticker-label">Now</span><span class="ticker-item" id="ticker-item">The galaxy runs on its own clock, the same for everyone.</span><span class="ticker-go" aria-hidden="true">↓</span></a>
     </div>
   </div>
   <p class="ship-name" id="hero-ship" aria-live="polite"></p>
@@ -26,7 +26,7 @@
   </div>
   <div class="now-grid">
     <div class="now-card news">
-      <h3><span class="live-dot" aria-hidden="true"></span>The news, as it reaches Lave</h3>
+      <h3>The news around Lave</h3>
       <div id="now-news"><p class="muted">Famines, booms, strikes and wars come and go across the galaxy, and the news travels at the speed of ships.</p></div>
       <a class="card-cta" href="/play/">Launch from Lave and chase the news →</a>
     </div>
@@ -40,8 +40,9 @@
     </div>
     <div class="now-card market">
       <h3>A market in crisis</h3>
-      <div class="big" id="now-crisis">Somewhere, a shortage</div>
-      <p><span class="up" id="now-crisis-pct"></span> <span class="muted">on the usual price, while the trouble lasts</span></p>
+      <div class="big" id="now-crisis">Shortages come and go</div>
+      <p><span class="up" id="now-crisis-pct"></span> <span class="muted" id="now-crisis-note">When trouble strikes a world, what it's short of climbs in price until the trouble passes.</span></p>
+      <small class="muted" id="now-crisis-meta"></small>
       <a class="card-cta" id="now-crisis-cta" href="/play/">Find a run →</a>
     </div>
     <div class="now-card falcon">
