@@ -1,0 +1,28 @@
+<!-- {"path": "/connect/", "title": "Connect your AI assistant · Witchspace", "description": "Let your AI assistant hand in ships and Titanoboa modules for Witchspace as you, through the Build connector. Nothing goes public until a maintainer accepts it.", "scripts": ["/src/site/connect.ts"], "bodyClass": "submit-page connect-page", "head": "    <meta name=\"robots\" content=\"noindex\" />\n"} -->
+<section class="section connect">
+  <div class="section-head">
+    <p class="kicker">Build connector</p>
+    <h2>Connect your AI assistant</h2>
+  </div>
+
+  <div class="submit-step connect-ask" id="ask" aria-live="polite">
+    <p class="muted">Looking up the request…</p>
+  </div>
+
+  <div class="submit-step" id="step-account" hidden>
+    <h3><span class="step-n">1</span> Sign in</h3>
+    <div id="account"></div>
+  </div>
+
+  <div class="submit-step" id="step-answer" hidden>
+    <h3><span class="step-n">2</span> Your answer</h3>
+    <p class="muted" id="answer-note"></p>
+    <div class="connect-buttons">
+      <button type="button" class="button primary" id="allow" disabled>Allow</button>
+      <button type="button" class="button ghost" id="deny" disabled>Don't allow</button>
+    </div>
+    <p class="send-result" id="answer-result" aria-live="polite"></p>
+  </div>
+
+  <p class="small muted connect-more">To stop it later, remove the Witchspace connector in your assistant's settings.</p>
+</section>

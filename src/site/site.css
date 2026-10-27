@@ -1207,3 +1207,15 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
   .fields { grid-template-columns: 1fr; }
   .submit-step { padding: 18px; }
 }
+
+/* /connect/: the Build connector's sign-in step. */
+.connect { max-width: 640px; }
+.connect [hidden] { display: none; }
+.connect .submit-step { margin-bottom: 16px; }
+.connect-ask h3 { margin: 0; }
+.connect-who { font-size: 17px; }
+.connect-may { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+.connect-buttons .button { flex: 1 1 140px; justify-content: center; }
+.connect-buttons .button:disabled { opacity: 0.35; box-shadow: none; cursor: not-allowed; }
+.connect-more { margin-top: 8px; }
