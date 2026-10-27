@@ -29,6 +29,10 @@ const extension = (b: Blob) => ({ 'video/mp4': 'mp4', 'image/png': 'png' })[b.ty
 const fileName = (m: LoggedMoment) => `witchspace-${m.system.toLowerCase()}-${new Date(m.created).toISOString().slice(0, 16).replace(/[-:T]/g, '')}.${extension(media(m))}`;
 const megabytes = (bytes: number) => `${Math.max(1, Math.round(bytes / 1048576))} MB`;
 
+/** Plays one of your public clips in the game, over the flight log (set by the game). */
+let watchClip: ((id: string) => void) | null = null;
+export const setWatchClip = (fn: (id: string) => void) => (watchClip = fn);
+
 /** Opens the kill cam on a moment's track (set by the game). */
 let outsideView: ((m: LoggedMoment) => void) | null = null;
 export const setOutsideView = (fn: (m: LoggedMoment) => void) => (outsideView = fn);
@@ -185,6 +189,14 @@ async function showPublic(el: HTMLElement, moments: LoggedMoment[]) {
     if (strong && !strong.querySelector('.log-public-mark')) strong.insertAdjacentHTML('beforeend', ` <em class="log-public-mark" title="${escapeHtml(c.url)}">Public · ♥ ${c.hearts}</em>`);
   }
   box.onclick = async (e) => {
+    // A clip's link plays it here, over the flight log, and closing comes back to it: opening the page itself
+    // reloaded the game at the title screen in the Home Screen app (Mark). Long-press still copies the link.
+    const link = (e.target as HTMLElement).closest<HTMLAnchorElement>('li[data-clip] a');
+    if (link && watchClip) {
+      e.preventDefault();
+      watchClip(link.closest<HTMLElement>('li[data-clip]')!.dataset.clip!);
+      return;
+    }
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-down], button[data-up]');
     if (!b) return;
     const down = Boolean(b.dataset.down);

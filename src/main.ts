@@ -120,7 +120,7 @@ import { RecorderWatch } from './game/recorderWatch';
 import { addMoment, attachTrack, deleteMoment, listMoments, type LoggedMoment } from './game/flightLog';
 import { readTrack, TrackRecorder, trackBlob, type Pose } from './game/track';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
-import { closeReplay, isReplayOpen, openReplay, renderFlightLog, setOutsideView } from './ui/flightLog';
+import { closeReplay, isReplayOpen, openReplay, renderFlightLog, setOutsideView, setWatchClip } from './ui/flightLog';
 import { KillCam } from './ui/killCam';
 import { record, regularsAt, slotOf, talk, venue } from './game/saloon';
 import { hasBackRoom } from './economy/blackmarket';
@@ -7112,16 +7112,20 @@ answerAdvert();
 // screen, a key from playing (docs/design/flight-recorder.md, "Clip pages").
 const sharedClipId = location.pathname.match(/^\/clip\/([a-z0-9]{8,12})\/?$/)?.[1] ?? new URLSearchParams(location.search).get('clip');
 if (sharedClipId && /^[a-z0-9]{8,12}$/.test(sharedClipId)) void openSharedClip(sharedClipId);
-async function openSharedClip(id: string) {
+// One of your clips, from the flight log's list: played over the log, and closing comes back to it (Mark).
+setWatchClip((id) => void openSharedClip(id, true));
+async function openSharedClip(id: string, fromGame = false) {
   const clip = await getClip(id);
   const data = clip ? await readTrack(clip.track).catch(() => null) : null;
-  if (!clip || !data) return flash("That clip isn't here any more · but the galaxy is: press Enter to fly", 5);
-  document.title = `${clip.title} · Witchspace`;
+  if (!clip || !data) return flash(fromGame ? "That clip isn't on the site any more" : "That clip isn't here any more · but the galaxy is: press Enter to fly", 5);
+  if (fromGame) document.querySelector<HTMLVideoElement>('#replay video')?.pause();
+  else document.title = `${clip.title} · Witchspace`;
   killCam.open(data, {
     seconds: clip.seconds,
     title: clip.title,
     shared: { hearts: clip.hearts, mine: clip.mine, heart: (on) => heartClip(id, on), report: () => reportClip(id) },
     onClose: () => {
+      if (fromGame) return; // back to the flight log, as it was
       document.title = 'Play · Witchspace';
       history.replaceState(null, '', '/play/');
     },
