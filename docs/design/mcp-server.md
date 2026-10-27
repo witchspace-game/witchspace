@@ -133,7 +133,7 @@ Handing work in needs an account, so the connector gets a second address that si
 4. Allowing sends the browser back to the client with a code, which the client trades at `POST /oauth/token` for an access token (an hour) and a refresh token (30 days, replaced at each use).
 5. The connector's tools act as that account. Submissions from it are marked `via: connector` and AI-assisted.
 
-Only the hashes of codes and tokens are kept. Signing out of the game doesn't revoke a connector; deleting your account does, and so does the **Disconnect** on the connect page's list of connected assistants (later).
+Only the hashes of codes and tokens are kept. Signing out of the game doesn't revoke a connector; deleting your account does, and so does **Disconnect** in your list of connected assistants (`GET /me/connections` → `{connections: [{client, name, uri, until}]}`, and `DELETE /me/connections?client=<id>`, which signs that assistant out at once).
 
 ### As built *(27 October 2026)*
 
@@ -141,7 +141,8 @@ Only the hashes of codes and tokens are kept. Signing out of the game doesn't re
 - Clients can register (`POST /oauth/register`) or identify themselves with a metadata document's address; both are kept in `oauth_clients`.
 - The issuer is always `https://space.witchspace.org.uk`. To try it locally: `npx wrangler dev --var OAUTH_ISSUER:http://127.0.0.1:8787`, with the site on `npm run dev` for the connect page.
 - Tested end to end against `wrangler dev` with a script playing the client: told to sign in, register, authorise, the connect page's two calls, a wrong PKCE verifier (refused, and the code spent), tokens, the signed-in tools handing a module in, refresh (and the old refresh token refused), a bad token, and saying no.
-- **Still to do before it's announced:** the connect page on the site, then trying every tool in the real Claude client. `review_queue` and `review` for maintainers come later; `npx tsx tools/submissions.ts` does that meanwhile.
+- The connect page is `site/pages/connect.html` and `src/site/connect.ts` (the site's).
+- **Still to do before it's announced:** the connect page live on the site, then trying every tool in the real Claude client. `review_queue` and `review` for maintainers come later; `npx tsx tools/submissions.ts` does that meanwhile.
 
 ### The connect page: the contract with the site
 

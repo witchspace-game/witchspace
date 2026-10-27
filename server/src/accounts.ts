@@ -147,6 +147,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'GET' && path === '/me/contact') return this.getContact(account, url);
     if (m === 'PUT' && path === '/me/contact') return this.putContact(request, account);
     if (m === 'POST' && path === '/me/firsts') return this.claimFirsts(request, account);
+    if (m === 'GET' && path === '/me/connections') return this.connections(account);
+    if (m === 'DELETE' && path === '/me/connections') return this.disconnect(account, url.searchParams.get('client') ?? '');
     if (sub && !sub[2]) {
       if (m === 'POST' && !sub[1]) return this.submit(request, account);
       if (m === 'GET' && sub[1] === 'mine') return this.mySubmissions(account);
@@ -970,6 +972,23 @@ export class Accounts extends DurableObject<AccountsEnv> {
       .exec(`SELECT a.id, a.callsign FROM oauth_tokens t JOIN accounts a ON a.id = t.account WHERE t.hash = ? AND t.kind = 'access' AND t.expires > ?`, await sha256(token), Date.now())
       .toArray()[0];
     return row ? { id: row.id as string, callsign: (row.callsign as string | null) ?? null } : null;
+  }
+
+  /** GET /me/connections: the assistants signed in as you, and until when (the latest refresh token's end). */
+  private connections(account: Account): Response {
+    const rows = this.sql
+      .exec(`SELECT t.client, c.name, c.uri, MAX(t.expires) AS until FROM oauth_tokens t JOIN oauth_clients c ON c.id = t.client
+        WHERE t.account = ? AND t.expires > ? GROUP BY t.client ORDER BY until DESC`, account.id, Date.now())
+      .toArray();
+    return json({ connections: rows.map((r) => ({ client: r.client as string, name: r.name as string, uri: (r.uri as string | null) ?? null, until: r.until as number })) });
+  }
+
+  /** DELETE /me/connections?client=<id>: sign that assistant out now, every token and code it holds. */
+  private disconnect(account: Account, client: string): Response {
+    if (!client) return json({ error: 'Which assistant? ?client=<id>' }, 400);
+    this.sql.exec('DELETE FROM oauth_tokens WHERE account = ? AND client = ?', account.id, client);
+    this.sql.exec('DELETE FROM oauth_codes WHERE account = ? AND client = ?', account.id, client);
+    return json({ disconnected: true });
   }
 
   /** The connector's tools, as the signed-in account: the same submission routes the site uses. */
