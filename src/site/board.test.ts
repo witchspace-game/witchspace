@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { COMPANY_IDS, presence } from '../game/companies';
 import { BOARD_SLOT } from '../game/contracts';
-import { canonFor, loadJobs } from '../../tools/jobs';
+import { canonFor, companyPage, jobsPage, loadJobs } from '../../tools/jobs';
 import { boardAt, COBRA_HOLD, FILTER_KINDS, homeGround, LAVE, OFF_BOARD, offersFor, type Kind } from './board';
 
 const root = join(import.meta.dirname, '../..');
@@ -60,6 +60,17 @@ describe('the Build adverts', () => {
       // The fee is designed, not yet paid: every pay line waits for the first fitting.
       expect(a.meta).toMatch(/when it's first fitted/);
     }
+  });
+});
+
+describe('the ownership joke (Mark)', () => {
+  // In character, W-Y owns your design forever; out here, contributors keep their copyright.
+  // The asterisk and its footnote always travel together, so the joke never reads as a real term.
+  it('never appears without its footnote', () => {
+    const md = readFileSync(join(root, 'docs/companies.md'), 'utf8');
+    const pages = [jobsPage(jobs), ...COMPANY_IDS.map((id) => companyPage(jobs, id, md, (m) => m, new Set()))];
+    expect(pages.some((html) => html.includes('in perpetuity'))).toBe(true);
+    for (const html of pages) if (html.includes('in perpetuity')) expect(html).toContain('*In the game. Out here, you keep your copyright');
   });
 });
 

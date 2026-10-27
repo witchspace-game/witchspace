@@ -215,6 +215,7 @@ On the site:
   - Every pay line says "when it's first fitted".
   - The section says the payout isn't built yet and no community module has been fitted.
   - Pay is in credits, in the game. Contributors keep their copyright (CC BY-SA 4.0).
+  - **The ownership joke stays (Mark):** in character, W-Y owns the design "in perpetuity, across all systems known and unknown.*" The asterisk's footnote, right under the adverts, gives the real terms, and a test keeps the two together on every page.
   - How to submit today: a GitHub pull request, or the ideas board without GitHub.
 - **Words** from the marketing session, checked by the game dev session.
 - **Waiting on Mark:** whether the adverts go up before the payout is built. Building the payout is about a day's work for the game dev session.
