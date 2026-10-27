@@ -7,7 +7,7 @@ card: coriolis
 stages:
   - One source of truth: headers on every design, the roadmap, the design library and help wanted made from them | built
   - Item pages linked to the ideas board, both ways | proposed
-  - A ship editor in the browser, with a submission queue | proposed
+  - A ship editor in the browser, with a submission queue | building
   - The writers' room, contributor profiles and credits in the game | proposed
 help:
   - Tell us what put you off contributing, or what would have helped you start | design
@@ -64,11 +64,18 @@ The README keeps a short summary and points to the roadmap page, so there's noth
 - An idea taken into a design is marked so on the board, with a link to the design, and moves with it: planned, building, built.
 - Signed-in voters hear when an idea they voted for moves.
 
-## 3. A ship editor in the browser *(proposed)*
+## 3. A ship editor in the browser *(building)*
 
 The biggest unlock for people who'll never use git. Draw a ship from points and faces (or start from one in the fleet), see it glow in neo-vector, turn it, check it against the rules (size, schema, the homage rules) as you go, give it a name, a maker and a story, and **submit** it. Submissions wait in a queue; a maintainer turns the good ones into pull requests, crediting the designer. Ships already have every field the editor needs.
 
 Its submit button uses the same submission system as the AI connector ([the Build connector plan](mcp-server.md)), so a ship from the editor and a ship from a chat land in one queue. The submission system is built first, on the server; the editor follows on the site.
+
+**As built** (*27 October 2026*, [/ship-editor/](/ship-editor/)): a ship is **parts**, and a part is **points**. The faces come from each part's convex hull (`src/site/hull.ts`, tested), so the hull is always closed, flat, convex and wound outward, and nobody wires faces by hand. Every ship in the fleet is made this way: mirror-symmetric, one to four convex parts. So any fleet ship comes back exactly as a starting point, panel lines included, and the tests check that for every one. A part is mirrored onto itself (a hull), a mirrored pair (wings, pods) or not mirrored, and a part with all its points in one plane is a plate (a fin).
+- **Drawing:** you drag points in top, side and front blueprints, beside the ship glowing in 3D. You can add points, snap to a grid, undo, and set any point exactly by its coordinates. A point inside the hull is shown grey, since it changes nothing.
+- **The rest of the file:** name, maker, role, description, colour and stats.
+- **Checks:** the server's own checks run as you go (`POST /submissions/check`), with its balance notes against the fleet ([#236](https://github.com/witchspace-game/witchspace/pull/236)).
+- **Handing in:** Hand it in opens [Hand in a design](/submit/) with the ship filled in, so there is one queue and one sign-in. The drawing is kept in the browser as you go, and the file can be downloaded.
+- **Next:** drawing panel lines and an insignia, and the class table beside the stats.
 
 ## 4. The writers' room, profiles and credit *(proposed)*
 

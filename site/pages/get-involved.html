@@ -41,7 +41,7 @@
     <li><b>Play</b>Fly a few runs, so you know what it feels like.</li>
     <li><b>Pick something</b>From <a href="#help-wanted">help wanted</a> below, or something you'd love to see.</li>
     <li><b>Say hello</b>Email <a href="mailto:hello@witchspace.org.uk">hello@witchspace.org.uk</a> or post on the <a href="/ideas/">ideas board</a>, and we'll help you get going. No GitHub needed.</li>
-    <li><b>Hand it in</b>Made a ship or a Titanoboa module? <a href="/submit/">Hand it in here</a>: it's checked as you go and credited to your callsign. No GitHub needed.</li>
+    <li><b>Hand it in</b>Made a ship or a Titanoboa module? <a href="/submit/">Hand it in here</a>: it's checked as you go and credited to your callsign. No GitHub needed. Or shape a ship from scratch in <a href="/ship-editor/">the ship editor</a>.</li>
   </ol>
 </section>
 
@@ -53,12 +53,15 @@
   <details class="ai-setup">
     <summary>Add Witchspace to your assistant</summary>
     <div>
-      <p class="muted">One web address gives your assistant the game's own tools: check a ship against the rules, draw it beside a Cobra for scale, read every design and help-wanted task, and look up any system. It only reads: nothing you do with it changes anything.</p>
+      <p class="muted">There are two addresses. Add the one you need, or both.</p>
+      <p><b>To read and check</b>, with no sign-in: check a ship against the rules, draw it beside a Cobra for scale, read every design and help-wanted task, and look up any system. Nothing you do with it changes anything.</p>
       <p><code class="mcp-url">https://space.witchspace.org.uk/mcp</code> <button type="button" class="button small" data-copy="https://space.witchspace.org.uk/mcp">Copy</button></p>
+      <p><b>To hand work in</b>: the same tools, plus handing in ships and Titanoboa modules as you, and following their review. Adding it sends you to <a href="/connect/">a page on this site</a> to sign in and say yes; nothing goes public until a maintainer accepts it.</p>
+      <p><code class="mcp-url">https://space.witchspace.org.uk/mcp/build</code> <button type="button" class="button small" data-copy="https://space.witchspace.org.uk/mcp/build">Copy</button></p>
       <ul class="doc">
-        <li><strong>Claude:</strong> Settings, Connectors, Add custom connector, and paste the address.</li>
-        <li><strong>ChatGPT:</strong> Settings, Connectors (developer mode), Create, and paste the address.</li>
-        <li><strong>Claude Code:</strong> <code>claude mcp add --transport http witchspace https://space.witchspace.org.uk/mcp</code></li>
+        <li><strong>Claude:</strong> Settings, Connectors, Add custom connector, and paste an address.</li>
+        <li><strong>ChatGPT:</strong> Settings, Connectors (developer mode), Create, and paste an address.</li>
+        <li><strong>Claude Code:</strong> <code>claude mcp add --transport http witchspace https://space.witchspace.org.uk/mcp/build</code> (or <code>/mcp</code> to only read)</li>
         <li><strong>Cursor and others:</strong> add it as a remote MCP server (streamable HTTP).</li>
       </ul>
       <p class="muted small"><a href="/design/mcp-server/">How it works, and what's next</a>. A plain summary of the project for any AI lives at <a href="/llms.txt">/llms.txt</a>.</p>

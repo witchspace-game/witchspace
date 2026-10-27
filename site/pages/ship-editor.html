@@ -1,0 +1,93 @@
+<!-- {"path": "/ship-editor/", "title": "Ship editor · Witchspace", "description": "Design a ship for Witchspace, the free browser space game, in your browser: place its points, watch it glow in neo-vector, check it as you go and hand it in. No code, no GitHub.", "scripts": ["/src/site/editor.ts"], "bodyClass": "submit-page editor-page"} -->
+<section class="section">
+  <div class="section-head">
+    <p class="kicker">Build</p>
+    <h2>Ship editor</h2>
+    <p class="lede">Shape a ship from points: the editor mirrors them and makes the faces, so it's always a sound hull. Start from a ship in the fleet or a plain wedge, give it a name, a maker and a reason to exist, and hand it in. Your drawing is kept in this browser as you go.</p>
+  </div>
+
+  <div class="editor-layout">
+    <div class="editor-stage">
+      <div class="editor-3d">
+        <canvas id="editor-canvas" aria-label="Your ship, turning. Drag to turn it."></canvas>
+      </div>
+      <div class="editor-tabs" role="tablist" aria-label="Blueprint view"></div>
+      <div class="editor-views" id="views"></div>
+      <div class="editor-tools">
+        <button type="button" class="button small" id="add-mode" aria-pressed="false">Add points</button>
+        <button type="button" class="button small ghost" id="undo" disabled>Undo</button>
+        <button type="button" class="button small ghost" id="redo" disabled>Redo</button>
+        <label class="snap">Snap <select id="snap"><option value="0">off</option><option value="0.5">0.5 m</option><option value="1" selected>1 m</option><option value="2">2 m</option></select></label>
+      </div>
+      <p class="small muted editor-tip" id="tip">Drag a point to move it. Hollow points are mirror images. Grey ones are inside the hull, so they don't change its shape.</p>
+    </div>
+
+    <div class="editor-panel">
+      <div class="submit-step">
+        <h3>Start from</h3>
+        <label>A ship <select id="start"><option value="">A plain wedge</option></select></label>
+        <div class="start-buttons">
+          <button type="button" class="button small" data-start="new">Make a new one from it</button>
+          <button type="button" class="button small ghost" data-start="improve" id="improve">Improve it</button>
+        </div>
+      </div>
+
+      <div class="submit-step">
+        <h3>Parts</h3>
+        <div class="part-list" id="parts"></div>
+        <label>Name <input id="part-name" maxlength="30" autocomplete="off" /></label>
+        <label>Mirror <select id="part-mirror">
+          <option value="centre">Mirrored onto itself (a hull)</option>
+          <option value="pair">A mirrored pair (wings, pods)</option>
+          <option value="none">Not mirrored</option>
+        </select></label>
+        <div class="start-buttons">
+          <button type="button" class="button small ghost" id="part-add">New part</button>
+          <button type="button" class="button small ghost" id="part-copy">Copy it</button>
+          <button type="button" class="button small ghost" id="part-delete">Delete it</button>
+        </div>
+      </div>
+
+      <div class="submit-step" id="point-panel">
+        <h3>Point</h3>
+        <div class="xyz">
+          <label>x <small>right</small><input type="number" step="0.5" id="px" /></label>
+          <label>y <small>up</small><input type="number" step="0.5" id="py" /></label>
+          <label>z <small>forward</small><input type="number" step="0.5" id="pz" /></label>
+        </div>
+        <button type="button" class="button small ghost" id="point-delete">Delete point</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section editor-ship">
+  <div class="submit-layout">
+    <form class="submit-step" id="ship" novalidate>
+      <h3>Your ship</h3>
+      <div class="fields">
+        <label>Name <input name="name" maxlength="40" autocomplete="off" placeholder="Ice Hauler" /></label>
+        <label>Id <input name="id" maxlength="40" autocomplete="off" spellcheck="false" placeholder="ice-hauler" /><small class="hint">From the name, unless you change it. Lower case and hyphens.</small></label>
+        <label>Maker <input name="manufacturer" maxlength="60" list="makers" autocomplete="off" placeholder="Cowell &amp; MgRath" /><small class="hint">One of <a href="/design/ships-and-classes/#2-makers-and-their-line-ups">the makers</a>, or a new one with a character of its own.</small></label>
+        <label>Role <select name="role"></select></label>
+        <label>Description <textarea name="description" rows="3" maxlength="400" placeholder="Who flies it, and why. What it's best at, and worst at."></textarea><small class="hint">Its class and its reason to exist: see <a href="/design/ships-and-classes/#1-classes">ships and classes</a>.</small></label>
+        <label>Colour <input type="color" name="lineColor" /></label>
+      </div>
+      <datalist id="makers"></datalist>
+      <details class="ship-stats">
+        <summary>Stats</summary>
+        <div class="stat-grid" id="stats"></div>
+      </details>
+    </form>
+
+    <aside class="submit-side">
+      <div class="submit-step">
+        <h3>Check and hand in</h3>
+        <div class="check" id="check" aria-live="polite"></div>
+        <button type="button" class="button primary" id="hand-in">Hand it in</button>
+        <p class="small muted">You'll sign in and send it on <a href="/submit/">Hand in a design</a>, where a maintainer reviews it. It's credited to your callsign.</p>
+        <p class="small"><button type="button" class="link" id="download">Download the file</button> · <button type="button" class="link" id="reset">Start again</button></p>
+      </div>
+    </aside>
+  </div>
+</section>
