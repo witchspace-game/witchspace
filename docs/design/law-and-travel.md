@@ -203,6 +203,14 @@ What happens when a heavily armed veteran arrives somewhere poor and low-tech? *
 - **No-fire zones around stations:** firing near a station brings its own defences into play, which hurt even top-end ships.
   *(Built so far: hitting a station brings one warning and an Offender record, then Fugitive if you keep firing. Under Modern rules a line-of-fire safety holds your lasers when the station is in the way, unless you hold the trigger for 1.5 seconds; under both rules lasers are locked while the docking computer flies.)*
 
+### The station defends its approach *(Mark, 27 October 2026)*
+
+After Mark was shot down by pirates at Raoror while his docking computer flew him in, unable to fire back:
+
+- **Under fire, the docking computer hands you the stick:** "Under fire · docking computer off · you have control", so you can fight, run or fly yourself in. Everywhere, anarchies included. *(Built, Modern rules.)*
+- **In a lawful system, a pirate that fires within the station's 5 km safe zone brings its police out at once** (two Vipers from the slot, up to the usual four), and **inside 2 km the station's own guns fire on it** until it stops shooting. A station kill earns you nothing. *(Built, Modern rules.)*
+- **Anarchies stay lawless:** nobody comes, and the docking computer there is a risk worth knowing about. Raoror, where it happened, is an anarchy.
+
 ### Protected starter systems
 
 - A few **core systems around the starting stations** have much heavier patrols, a permanent Marshal presence and harsher penalties, so newcomers can learn without being farmed. Veterans can visit and trade; they just can't hunt there without serious consequences.

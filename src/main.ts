@@ -2858,6 +2858,8 @@ const evading = () => commander?.difficulty === 'modern' && isWorking(commander,
  */
 function damagePlayer(amount: number, from?: NpcShip): boolean {
   if (from) lastHitBy = { npc: from, at: elapsed };
+  // Under fire on the docking computer, you get the stick back: never a sitting duck on autopilot (Mark). Modern only.
+  if (from && autopilot && modern()) setAutopilot(false, 'Under fire · docking computer off · you have control');
   const hullBefore = player.hull;
   let destroyed = player.damage(amount);
   // A Falcon fights to disable: at a third of your hull she stops, and takes her price.
@@ -3114,6 +3116,37 @@ function updateResponses() {
     }
     radio('police', `${currentSystem().name} police`, 'Police arriving · answering a distress call', { flash: 2 });
   }
+}
+
+// The station defends its approach (Mark): in a lawful system under Modern rules, a pirate that
+// fires within the safe zone brings the station's police out at once, and inside its guns' reach
+// the station fires on it. Anarchies have no law: nobody comes, as there.
+const STATION_GUNS = 2000; // metres
+const STATION_GUN_INTERVAL = 0.5; // seconds between shots
+const STATION_GUN_DAMAGE = 18;
+const FIRED_RECENTLY = 5; // seconds a pirate stays a target after its last shot
+const pirateFiredAt = new WeakMap<NpcShip, number>();
+let stationGunCooldown = 0;
+let policeScrambledAt = -Infinity;
+
+function pirateFired(npc: NpcShip) {
+  if (!modern() || !hasLaw(currentSystem()) || !inSafeZone(npc.obj.position)) return;
+  pirateFiredAt.set(npc, elapsed);
+  if (elapsed - policeScrambledAt < 30) return; // one scramble at a time
+  policeScrambledAt = elapsed;
+  for (let k = 0; k < 2 && ofRole('police').length < MAX_POLICE; k++) spawnViper(true);
+  radio('police', `${currentSystem().name} police`, 'Pirate fire on the approach · police launching', { flash: 2 });
+}
+
+function updateStationDefence(dt: number) {
+  stationGunCooldown -= dt;
+  if (stationGunCooldown > 0 || !modern() || !hasLaw(currentSystem())) return;
+  const target = npcs.find((n) => n.role === 'pirate' && elapsed - (pirateFiredAt.get(n) ?? -Infinity) < FIRED_RECENTLY && n.obj.position.distanceTo(station.root.position) < STATION_GUNS);
+  if (!target) return;
+  stationGunCooldown = STATION_GUN_INTERVAL;
+  const from = station.root.position.clone().add(target.obj.position.clone().sub(station.root.position).setLength(95));
+  beams.fire(from, target.obj.position.clone(), POLICE_LASER.color);
+  if (target.hit(STATION_GUN_DAMAGE)) destroyNpc(target, station.root);
 }
 
 /** A trader you attacked, getting away: it reports you (in the system where it happened). */
@@ -3511,6 +3544,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     if (!npcs.includes(npc)) continue; // destroyed earlier this frame
     const shot = npc.update(dt);
     if (shot && npc.target === player) npc.firedOnPlayer = true;
+    if (shot && npc.role === 'pirate') pirateFired(npc);
     // Keep ships from flying through the station, except traders docking down the slot.
     const fromStation = npc.obj.position.clone().sub(station.root.position);
     if (fromStation.length() < 120 && legs.get(npc) !== 'docking') npc.obj.position.copy(station.root.position).add(fromStation.setLength(120));
@@ -4411,6 +4445,7 @@ function updateSpace(dt: number) {
   updateDrifters(dt);
   updateCaseRaid(dt);
   updateResponses();
+  updateStationDefence(dt);
   updateHail();
   updateMissileButton();
   for (let i = explosions.length - 1; i >= 0; i--) if (!explosions[i].update(dt)) explosions.splice(i, 1);
@@ -6958,7 +6993,7 @@ function frame(now?: number) {
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier, setAutopilot,
       get carrier() { return carrier; },
       get commander() { return commander; },
       get state() { return state; },
