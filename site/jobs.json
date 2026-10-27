@@ -237,7 +237,7 @@
     }
   },
   "build": {
-    "intro": "Wexley-Yorozu also commissions designs: sections of the Titanoboa, its constructor ship. These aren't contracts on the board. You design a module, and if it's accepted and built, the company pays your commander. The commission is designed, but the game doesn't pay it yet: no community module has been fitted so far.",
+    "intro": "Wexley-Yorozu also commissions designs: sections of the Titanoboa, its constructor ship. These aren't contracts on the board. You design a module, and if it's accepted and built, the company pays your commander.",
     "note": "*In the game. Out here, you keep your copyright: designs are shared under CC BY-SA 4.0, like the rest of Witchspace. Paid in credits, in the game, to the signed-in commander whose callsign is on the design. Nobody is paid real money. The real reward is your name on it and your module flying in everyone's game.",
     "how": "How to submit today: a pull request on GitHub, following the standard on <a href=\"/design/ship-the-titanoboa/\">the design page</a>. No GitHub? Describe your idea on <a href=\"/ideas/\">the ideas board</a>."
   }

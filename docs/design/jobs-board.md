@@ -10,7 +10,7 @@ stages:
   - Careers becomes Jobs - /careers/ redirects to /jobs/; the nav says Jobs | built
   - A rolling board - contracts posted one at a time in the game, each with a notice on the site | built
   - Take this job - a link that opens the game on that exact contract | built
-  - Build jobs - Wexley-Yorozu's design commissions on the board (Mark) | proposed
+  - Build jobs - Wexley-Yorozu's design commissions on the board (Mark) | built
 ---
 
 # The jobs board and company pages
@@ -213,12 +213,12 @@ On the site:
 - **Apply** goes to the Titanoboa design page (the coupling standard), or to the no-GitHub submit page once there is one.
 - **Honest about it:**
   - Every pay line says "when it's first fitted".
-  - The section says the payout isn't built yet and no community module has been fitted.
+  - The payout is built (game dev #222): 5,000 Cr for a design, 2,000 Cr for a revision, each paid once, when the module is first fitted to a Titanoboa in any galaxy, on the designer's next dock in a Modern game signed in with that callsign, with a letter from Wexley-Yorozu.
   - Pay is in credits, in the game. Contributors keep their copyright (CC BY-SA 4.0).
   - **The ownership joke stays (Mark):** in character, W-Y owns the design "in perpetuity, across all systems known and unknown.*" The asterisk's footnote, right under the adverts, gives the real terms, and a test keeps the two together on every page.
   - How to submit today: a GitHub pull request, or the ideas board without GitHub.
 - **Words** from the marketing session, checked by the game dev session.
-- **Waiting on Mark:** whether the adverts go up before the payout is built. Building the payout is about a day's work for the game dev session.
+- **Decided (Mark):** the adverts went up once the payout was built and merged.
 
 ## Careers becomes Jobs
 
