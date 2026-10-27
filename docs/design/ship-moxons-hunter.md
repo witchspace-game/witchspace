@@ -30,6 +30,8 @@ In his words: *"a kind of Fer-de-Lance-type deep space bounty hunter ship, desig
 
 ## The promise: a genuine 6502 blueprint
 
+*On hold until Mark Moxon answers: Mark has asked him whether he'd like the ship strictly within the 1984 limits below, so it could fly in the original code, or "more Neo", with more lines and detail, in Witchspace only. No geometry until he says.*
+
 The thank-you email promised a real ship blueprint, laid out as in his [ship blueprints deep dive](https://elite.bbcelite.com/deep_dives/ship_blueprints.html). In principle it could then fly in the 1984 code too. That sets hard limits on the shape, which are part of the charm:
 
 - **Byte-sized vertices:** each coordinate is a magnitude from 0 to 255 with a sign bit, so the whole ship lives on a coarse grid.
@@ -47,6 +49,7 @@ The thank-you email promised a real ship blueprint, laid out as in his [ship blu
 
 - **Class:** a **long-range hunter**, between Interceptor (catching things, guns) and Explorer (range, endurance). It's faster than an Explorer and goes further than an Interceptor, with a small hold. It's a new class, so it needs adding to the classes table.
 - **Maker:** open. Zorgon Petterson (fast and flashy) builds the yacht-class halo, so this could be theirs, or a small independent yard built around it. Mark Moxon may have a view.
+- **An idea, for Mark to decide:** there's no Fer-de-Lance in the game yet; it's planned as Zorgon Petterson's yacht. This ship could be that yacht's long-haul, armed cousin. It would arrive first, and the Fer-de-Lance tribute would follow as the civilian version. That gives it a place in the makers' line-up without copying Frontier's hull. (Suggested by the Marketing session; not yet approved.)
 
 ## In the game
 
@@ -63,6 +66,8 @@ The thank-you email promised a real ship blueprint, laid out as in his [ship blu
 
 ## Open questions
 
+- Strictly 6502 (it could fly in the 1984 code) or more Neo (more lines and detail, Witchspace only)? Mark has asked Mark Moxon.
+- Zorgon Petterson's armed cousin of the Fer-de-Lance yacht, arriving first?
 - Its name (Mark Moxon may suggest one).
 - Its maker.
 - Its laser and missiles in the header: a hunter's loadout, but balanced against the Viper and the Lancer.
