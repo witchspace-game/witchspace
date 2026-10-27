@@ -223,6 +223,18 @@ export const sfx = {
     zap(200, 3200, 0.5, 0.06, 'sawtooth');
     noise(0.6, 'highpass', 6000, 2000, 0.25);
   },
+  /**
+   * A tiny squawk as a radio card arrives (Mark): a click and a breath of
+   * filtered static, the voice's own flavour, quiet. Police chirp clean,
+   * pirates crackle rough, a Mayday comes twice.
+   */
+  squawk: (kind: string) => {
+    const rough = kind === 'pirate';
+    zap(rough ? 900 : 2400, rough ? 500 : 1800, 0.025, 0.05, 'square'); // the key going down
+    noise(rough ? 0.14 : 0.09, 'bandpass', rough ? 1400 : 2600, rough ? 700 : 1500, rough ? 0.16 : 0.1);
+    if (kind === 'police') setTimeout(() => zap(1500, 1700, 0.05, 0.035, 'sine'), 90);
+    if (kind === 'mayday') setTimeout(() => noise(0.08, 'bandpass', 2200, 1400, 0.1), 160);
+  },
   beep: () => {
     const { ctx, master } = audio();
     const o = ctx.createOscillator();

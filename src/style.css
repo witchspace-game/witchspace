@@ -825,6 +825,36 @@ body.touch #job .job-go, body.touch #job .job-more { min-height: 36px; padding: 
 body.retro #job .job-main, body.retro #job .job-list { border-radius: 0; font-size: 9px; }
 body.retro #job .job-next, body.retro #job .job-list small { font-size: 8px; }
 /* The radio log: who said what, and when. Bottom left on a desktop, fading when it's quiet. */
+/* Radio cards: what wants an answer (src/ui/radio.ts). An accent on the edge, not a colour scheme; a subtle
+   entrance per voice, once; then still (Mark). */
+#radio-cards { position: fixed; left: 16px; top: 22vh; z-index: 12; display: flex; flex-direction: column; gap: 8px; width: min(400px, 34vw); }
+body:not([data-state='flying']) #radio-cards { display: none; }
+.rcard { --who: var(--fg); position: relative; padding: 10px 12px; border: 1px solid var(--edge); border-left: 3px solid var(--who); border-radius: 8px; background: rgba(2, 10, 8, 0.94); box-shadow: -2px 0 10px -4px var(--who); animation: rcard-in 0.35s ease-out; }
+.rcard.r-station { --who: #ffb347; } .rcard.r-police { --who: #4aa8ff; } .rcard.r-pirate { --who: #ff9a3d; }
+.rcard.r-mayday { --who: #ff8fa3; } .rcard.r-company { --who: var(--accent); } .rcard.r-news { --who: #c9b3ff; }
+.rcard[style*='--who'] { border-left-color: var(--who); }
+.rcard-text { margin: 0 0 8px; font-size: 13px; line-height: 1.35; }
+.rcard-text b { font-weight: 600; margin-right: 4px; }
+.rcard-answers { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rcard-answers button { min-height: 32px; padding: 4px 12px; font-size: 12.5px; }
+.rcard-answers button.primary { border-color: var(--who); color: var(--fg); }
+.rcard-answers kbd { margin-left: 4px; font: inherit; font-size: 10px; color: var(--dim); }
+.rcard-dismiss { margin-left: auto; min-width: 32px; padding: 4px 8px !important; color: var(--dim); border-color: transparent !important; background: none; }
+@keyframes rcard-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+/* The voice, felt more than seen: once each, except a Mayday's slow heartbeat on its edge. */
+.rcard.r-police { animation: rcard-in 0.35s ease-out, rcard-pulse 1.6s ease-in-out 0.35s 1; }
+.rcard.r-pirate { animation: rcard-in 0.3s ease-out, rcard-flicker 0.22s steps(2) 0.3s 1; }
+.rcard.r-mayday { animation: rcard-in 0.35s ease-out, rcard-beat 1.4s ease-in-out 0.35s infinite; }
+@keyframes rcard-pulse { 50% { box-shadow: -2px 0 16px -2px var(--who); } }
+@keyframes rcard-flicker { 50% { opacity: 0.7; transform: translateX(1px); } }
+@keyframes rcard-beat { 0%, 100% { box-shadow: -2px 0 10px -4px var(--who); } 15% { box-shadow: -2px 0 16px -1px var(--who); } 30% { box-shadow: -2px 0 10px -4px var(--who); } 45% { box-shadow: -2px 0 14px -2px var(--who); } }
+@media (prefers-reduced-motion: reduce) { .rcard { animation: none !important; } }
+body.touch #radio-cards { left: max(10px, env(safe-area-inset-left)); top: calc(max(8px, env(safe-area-inset-top)) + 46px); width: min(88vw, 400px); }
+body.touch #job:not([hidden]) ~ #radio-cards { top: calc(max(8px, env(safe-area-inset-top)) + 90px); }
+body.touch .rcard-answers button { min-height: 40px; padding: 6px 14px; font-size: 13px; }
+/* Upright, clear of the camera, back and Jump buttons on the right. */
+@media (orientation: portrait) { body.touch #radio-cards { width: calc(100vw - 110px - env(safe-area-inset-right)); } }
+body.retro .rcard { border-radius: 0; box-shadow: none; animation: none; }
 #radio { position: fixed; left: 16px; bottom: 196px; z-index: 5; width: min(440px, 34vw); transition: opacity 1.2s ease; }
 body:not([data-state='flying']) #radio { display: none; }
 #radio.quiet:not(.open):not(:hover) { opacity: 0; pointer-events: none; }
