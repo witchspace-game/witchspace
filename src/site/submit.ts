@@ -1,7 +1,8 @@
 import { ZONES } from '../content/modules';
-import { API, currentAccount, refresh, requestLink, sessionToken, setCallsign, signInWithCode, signOut } from '../net/account';
+import { API, currentAccount, refresh, sessionToken } from '../net/account';
 import { escapeHtml } from '../ui/escape';
 import { FIELDS, fromModule, kindOf, limitsLine, open, pinProblems, previewOf, readFile, STATUS, type Check, type Field, type Kind, type Limits, type Submission } from './submission';
+import { signInBox } from './signin';
 import { viewer, type Viewer } from './viewer';
 
 // Hand in a design (docs/design/submissions.md): sign in with the game's email
@@ -9,7 +10,6 @@ import { viewer, type Viewer } from './viewer';
 // by the server's own checks as you go, and hand it in. Below, everything
 // you've handed in, with the reviewer's notes, to revise or withdraw.
 
-const TURNSTILE_SITE_KEY = import.meta.env.DEV ? '' : '0x4AAAAAAFfP1CB8aXita2o_';
 const CHECK_DELAY = 800;
 const CORE = import.meta.glob<Record<string, unknown>>('../../content/modules/*.json', { eager: true, import: 'default' });
 
@@ -49,107 +49,15 @@ const ago = (t: number) => {
 
 // --- 1. Signing in ---------------------------------------------------------------------
 
-const accountBox = $('#account');
-let sentTo = '';
-let turnstileToken = '';
-declare const turnstile: { render: (el: HTMLElement, opts: Record<string, unknown>) => string } | undefined;
+const account = signInBox(
+  $('#account'),
+  { why: 'Your design is credited to your callsign.', callsignWhy: "it's the name your design is credited to, here and in the game." },
+  accountChanged,
+);
 
-function renderAccount() {
-  const a = currentAccount();
-  if (!a) {
-    accountBox.innerHTML = sentTo
-      ? `<p>We've emailed a code to <b>${escapeHtml(sentTo)}</b>. Type it here (or open the link in the email, then come back to this page).</p>
-        <form class="inline-form" id="code-form"><input inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6-digit code" aria-label="Sign-in code" required /><button type="submit" class="button primary small">Sign in</button></form>
-        <p class="small"><button type="button" class="link" id="again">Use a different email</button></p>`
-      : `<p class="muted">The same account as the game: no password, we email you a code. Your design is credited to your callsign.</p>
-        <form class="inline-form" id="email-form"><input type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email" /><button type="submit" class="button primary small">Email me a code</button></form>
-        <div class="turnstile" id="signin-check"></div>
-        <p class="small"><a href="/privacy/">How we use your email</a></p>`;
-  } else if (!a.callsign) {
-    accountBox.innerHTML = `<p>Signed in as ${escapeHtml(a.email)}. Choose your callsign: it's the name your design is credited to, here and in the game.</p>
-      <form class="inline-form" id="callsign-form"><input maxlength="24" required placeholder="Your callsign" aria-label="Callsign" /><button type="submit" class="button primary small">Claim it</button></form>`;
-  } else {
-    accountBox.innerHTML = `<p class="signed-in">Signed in as <b>CMDR ${escapeHtml(a.callsign)}</b> <span class="muted">(${escapeHtml(a.email)})</span> · <button type="button" class="link" id="sign-out">Sign out</button></p>`;
-  }
-  $('#step-account').classList.toggle('done', Boolean(a?.callsign));
-  wireAccount();
-}
-
-function say(where: HTMLElement, text: string) {
-  const p = document.createElement('p');
-  p.className = 'form-error';
-  p.textContent = text;
-  where.querySelector('.form-error')?.remove();
-  where.append(p);
-}
-
-function wireAccount() {
-  document.querySelector('#email-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const f = e.target as HTMLFormElement;
-    const email = f.querySelector('input')!.value.trim();
-    f.querySelector('button')!.disabled = true;
-    try {
-      const r = await requestLink(email, turnstileToken);
-      sentTo = email;
-      renderAccount();
-      if (r.devCode) say(accountBox, `Development: the code is ${r.devCode}`);
-    } catch (err) {
-      say(accountBox, (err as Error).message);
-      f.querySelector('button')!.disabled = false;
-    }
-  });
-  document.querySelector('#code-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const code = (e.target as HTMLFormElement).querySelector('input')!.value.replace(/\D/g, '');
-    try {
-      await signInWithCode(sentTo, code);
-      sentTo = '';
-      renderAccount();
-      void loadMine();
-    } catch (err) {
-      say(accountBox, (err as Error).message);
-    }
-  });
-  document.querySelector('#again')?.addEventListener('click', () => {
-    sentTo = '';
-    renderAccount();
-  });
-  document.querySelector('#callsign-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-      await setCallsign((e.target as HTMLFormElement).querySelector('input')!.value);
-      renderAccount();
-      void loadMine();
-    } catch (err) {
-      say(accountBox, (err as Error).message);
-    }
-  });
-  document.querySelector('#sign-out')?.addEventListener('click', async () => {
-    await signOut().catch(() => {});
-    renderAccount();
-    renderMine(null);
-  });
-  mountTurnstile();
-}
-
-/** The human check on the email form. Not id="turnstile": an element's id is also a global, and would hide Turnstile's own. */
-function mountTurnstile() {
-  const el = document.querySelector<HTMLElement>('#signin-check');
-  if (!el || !TURNSTILE_SITE_KEY) return;
-  const draw = () => {
-    turnstileToken = '';
-    turnstile?.render(el, { sitekey: TURNSTILE_SITE_KEY, theme: 'dark', size: 'flexible', callback: (t: string) => (turnstileToken = t) });
-  };
-  if (typeof turnstile !== 'undefined' && typeof turnstile.render === 'function') return draw();
-  (window as unknown as Record<string, unknown>).onSubmitTurnstile = draw;
-  if (!document.querySelector('script[data-turnstile]')) {
-    const s = document.createElement('script');
-    s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onSubmitTurnstile&render=explicit';
-    s.async = true;
-    s.dataset.turnstile = '';
-    document.head.append(s);
-  }
+function accountChanged() {
+  $('#step-account').classList.toggle('done', Boolean(currentAccount()?.callsign));
+  void loadMine();
 }
 
 // --- 2. The design: fields and file kept in step, a preview, checked as you go --------
@@ -450,8 +358,8 @@ if (startWith && cores.some((c) => c.id === startWith)) {
   core.value = startWith;
   core.dispatchEvent(new Event('change'));
 }
-renderAccount();
+account.render();
 void refresh().then(() => {
-  renderAccount();
-  void loadMine();
+  account.render();
+  accountChanged();
 });
