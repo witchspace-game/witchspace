@@ -1016,3 +1016,114 @@ button.yt .shot-play { position: absolute; inset: 0; margin: auto; }
 button.yt:hover .shot-play, button.yt:focus-visible .shot-play { transform: scale(1.08); }
 iframe.yt { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 14px; background: #000; }
 .viewer-stage iframe { width: min(100%, calc((100vh - 220px) * 16 / 9)); aspect-ratio: 16 / 9; border: 0; background: #000; }
+
+/* --- The jobs board and the company pages (tools/jobs.ts, src/site/jobs.ts) --- */
+
+.game-note { margin: 18px 0 0; color: var(--muted); font-size: 14px; }
+.firm-index { list-style: none; margin: clamp(28px, 4vw, 40px) 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.firm-index.three { grid-template-columns: repeat(3, 1fr); }
+.firm-index a { display: flex; align-items: center; gap: 12px; padding: 16px 18px; background: var(--bg); color: var(--fg); text-decoration: none; transition: background 0.2s; height: 100%; }
+.firm-index a:hover { background: color-mix(in srgb, var(--c) 8%, var(--bg)); }
+.firm-index b { display: block; font: 600 15px var(--display); }
+.firm-index small { display: block; color: var(--muted); font-size: 12.5px; }
+.firm-mark { flex: none; width: 40px; height: 40px; border: 1.5px solid var(--c); border-radius: 50%; display: grid; place-items: center; font: 700 13px var(--display); color: var(--c); letter-spacing: 0.5px; box-shadow: 0 0 14px color-mix(in srgb, var(--c) 35%, transparent); }
+.firm-mark.big { width: 64px; height: 64px; font-size: 20px; border-width: 2px; }
+.firm-head { display: flex; align-items: center; gap: 14px; }
+.motto { margin: 2px 0 0; color: var(--c); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; font-weight: 600; }
+
+/* The live board: the station's Contracts tab, on the page. */
+.board-section { padding-top: 0; }
+.board { border: 1px solid var(--border-strong); border-radius: var(--radius); background: var(--surface); padding: clamp(18px, 3vw, 28px); }
+.board-head h2 { margin: 0; font-size: clamp(20px, 2.4vw, 26px); }
+.board-meta { margin: 4px 0 18px; color: var(--muted); font-size: 14px; }
+.board .chips { margin-bottom: 16px; }
+.board .chip { border-color: color-mix(in srgb, var(--c, var(--accent)) 45%, var(--border)); }
+.board .chip[data-filter-company][aria-pressed='true'] { background: var(--c); border-color: var(--c); }
+.chip-gap { flex-basis: 100%; height: 0; }
+.offers { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.offer { display: grid; grid-template-columns: 1fr auto; gap: 6px 18px; align-items: center; padding: 14px 16px; border-left: 3px solid var(--c, var(--accent)); background: rgba(0, 0, 0, 0.28); border-radius: 0 10px 10px 0; transition: opacity 1.6s, transform 1.6s; }
+.offer p { margin: 0; }
+.offer-what { font-size: 16px; line-height: 1.5; }
+.offer-what .co { color: var(--c); font-weight: 600; text-decoration: none; }
+.offer-what .co:hover { text-decoration: underline; }
+.offer-what small, .offer-terms { color: var(--muted); font-size: 14px; }
+.offer-terms .pay { color: var(--accent); }
+.offer-line { color: var(--fg); opacity: 0.8; font-style: italic; font-size: 14px; }
+.offer-fit { color: var(--c); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.9; margin-top: 2px !important; }
+.offer .risk { font-style: normal; font-size: 11.5px; padding: 1px 7px; border-radius: 4px; background: rgba(255, 179, 71, 0.12); color: var(--amber); white-space: nowrap; }
+.offer .risk.high { background: rgba(255, 77, 109, 0.14); color: var(--danger); }
+.offer-go { white-space: nowrap; }
+.offer.new { animation: offer-in 1.2s ease-out, offer-glow 6s ease-out; }
+.offer.gone { opacity: 0; transform: translateX(24px); }
+@keyframes offer-in { from { opacity: 0; transform: translateY(-10px); } }
+@keyframes offer-glow { 0%, 30% { box-shadow: 0 0 0 1px var(--c), 0 0 24px color-mix(in srgb, var(--c) 40%, transparent); } 100% { box-shadow: none; } }
+.board-empty { margin: 4px 0 0; padding: 16px; border: 1px dashed var(--border-strong); border-radius: 10px; color: var(--muted); font-size: 15px; }
+.how { margin-top: 24px; color: var(--muted); font-size: 15px; }
+.how h3 { color: var(--fg); font-size: 17px; margin: 0 0 6px; }
+.how ul { margin: 0 0 8px; padding-left: 20px; }
+
+/* The companies' adverts. */
+.ads-section > .lede { margin-bottom: 8px; }
+.firm-ads { padding: clamp(28px, 4vw, 40px) 0 0; }
+.firm-ads h3 { margin: 0; font-size: 22px; }
+.firm-ads h3 a { color: var(--fg); text-decoration: none; }
+.firm-ads h3 a:hover { color: var(--c); }
+.jobs { list-style: none; margin: 14px 0 0; padding: 0; }
+.job { display: grid; grid-template-columns: 1fr auto; gap: 4px 20px; padding: 18px 0; border-top: 1px solid var(--border); }
+.job[hidden] { display: none; }
+.job h3 { margin: 0; font-size: 17.5px; }
+.job p { margin: 0; grid-column: 1; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+.job .meta { margin-top: 4px; font-size: 11.5px; letter-spacing: 0.08em; color: var(--c); text-transform: uppercase; opacity: 0.9; }
+.job .on-board button { margin-top: 6px; padding: 3px 10px; border: 1px solid var(--accent); border-radius: 999px; background: rgba(61, 255, 176, 0.08); color: var(--accent); font: 600 12.5px var(--font); cursor: pointer; }
+.job .apply { grid-column: 2; grid-row: 1; align-self: baseline; color: var(--c); font-weight: 600; font-size: 14.5px; text-decoration: none; white-space: nowrap; }
+.job .apply span { display: inline-block; transition: transform 0.2s; }
+.job .apply:hover span { transform: translateX(4px); }
+
+/* A company's own page. */
+.company-head { display: flex; align-items: center; gap: 18px; margin-top: 8px; }
+.company-head h1 { margin: 0; }
+.company-top { display: grid; grid-template-columns: 7fr 5fr; gap: clamp(24px, 4vw, 48px); align-items: start; margin-top: 24px; }
+.company-top img { display: block; width: 100%; height: auto; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--c) 30%, transparent); }
+.company .kicker a { color: inherit; }
+.speech { margin: 18px 0 0; padding: 0 0 0 16px; border-left: 2px solid var(--c); font-style: italic; color: var(--fg); opacity: 0.88; }
+.speech cite { display: block; margin-top: 8px; font-style: normal; font-size: 13.5px; color: var(--muted); }
+.ground { margin: 14px 0 0; font-size: 15px; color: var(--muted); }
+.ground b { color: var(--fg); }
+.company-story > * { max-width: var(--measure); }
+.company-story h3 { margin-top: 28px; }
+.ladder { list-style: none; margin: 18px 0; padding: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.ladder li { display: grid; grid-template-columns: 9em 3em 1fr; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--border); font-size: 15px; }
+.ladder li:first-child { border-top: 0; }
+.ladder li.start { background: color-mix(in srgb, var(--c) 8%, transparent); }
+.ladder b { color: var(--c); }
+.ladder small, .ladder span { color: var(--muted); }
+.company-between ul { padding-left: 20px; color: var(--muted); max-width: var(--measure); }
+.terms { margin-top: 18px; max-height: 150px; overflow-y: auto; padding: 14px 16px; border-left: 2px solid var(--c); background: rgba(0, 0, 0, 0.3); font: 12px/1.6 'Courier New', monospace; color: #7d8999; }
+.terms p { margin: 0 0 8px; }
+.terms .last { color: var(--c); }
+
+/* Notices: a small line as each contract arrives. */
+.notices { position: fixed; right: 20px; bottom: 20px; z-index: 50; display: grid; gap: 8px; max-width: min(420px, calc(100vw - 32px)); pointer-events: none; }
+.notice { pointer-events: auto; text-align: left; padding: 12px 16px; border: 1px solid var(--accent); border-radius: 10px; background: rgba(5, 7, 13, 0.94); color: var(--fg); font: 500 14px/1.45 var(--font); box-shadow: 0 0 24px rgba(61, 255, 176, 0.25); cursor: pointer; animation: notice-in 0.4s ease-out; transition: opacity 0.4s, transform 0.4s; }
+.notice.out { opacity: 0; transform: translateY(8px); }
+@keyframes notice-in { from { opacity: 0; transform: translateY(12px); } }
+
+@media (max-width: 860px) {
+  .firm-index, .firm-index.three { grid-template-columns: 1fr 1fr; }
+  .company-top { grid-template-columns: 1fr; }
+  .company-top img { aspect-ratio: 16 / 9; }
+}
+@media (max-width: 560px) {
+  .offer { grid-template-columns: 1fr; }
+  .offer-go { justify-self: start; }
+  .ladder li { grid-template-columns: 7.5em 2.5em 1fr; gap: 8px; font-size: 14px; }
+  .notices { left: 16px; right: 16px; bottom: 16px; max-width: none; }
+}
+@media (max-width: 420px) {
+  .firm-index a { padding: 12px; gap: 10px; }
+  .firm-index small { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .offer.new, .notice { animation: none; }
+  .offer, .notice { transition: none; }
+}

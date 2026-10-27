@@ -8,7 +8,9 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { dirname, join, posix, relative, resolve } from 'node:path';
 import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from './media';
 import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLARS, roadmapCompactHtml, roadmapHtml, roadmapSummaryHtml, STATUS } from './docs';
+import { companyPage, jobsPage, loadJobs } from './jobs';
 import { loadModules, loadShips, shipPage, shipsIndex } from './ships';
+import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
 
 const root = resolve(import.meta.dirname, '..');
 const REPO = 'https://github.com/witchspace-game/witchspace/blob/main/';
@@ -19,7 +21,7 @@ const template = readFileSync(join(root, 'site/template.html'), 'utf8');
 const NAV = [
   ['/ships/', 'Ships'],
   ['/roadmap/', 'Roadmap'],
-  ['/careers/', 'Careers'],
+  ['/jobs/', 'Jobs'],
   ['/ideas/', 'Ideas'],
   ['/get-involved/', 'Get involved'],
   ['/about/', 'About'],
@@ -58,7 +60,6 @@ const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/ideas/': { ship: 'cobra-mk3', kicker: 'Ideas', title: 'What should Witchspace do next?', sub: 'Suggest an idea, or vote the ones you care about up or down.' },
   '/press/': { ship: 'falcon', kicker: 'Press kit', sub: 'A new trailer, short films, screenshots, facts and words about Witchspace.' },
   '/privacy/': { ship: 'coriolis', kicker: 'Privacy', sub: 'What Witchspace keeps about you, why, and how to delete it.' },
-  '/careers/': { ship: 'bullsnake', kicker: 'Careers', title: 'Careers in the eight galaxies', sub: 'Four companies are hiring pilots. Fly for one.' },
 };
 
 const ORG = { '@type': 'Organization', name: 'Witchspace', url: SITE, logo: `${SITE}/icons/icon-512.png`, sameAs: ['https://github.com/witchspace-game/witchspace', 'https://www.instagram.com/witchspace_game/', 'https://www.youtube.com/channel/UC0ZD9s_rEYbGhXb3S6ai-Iw'] };
@@ -79,13 +80,15 @@ const GAME = {
 };
 
 /** Names for breadcrumbs, by URL section. */
-const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', careers: 'Careers' };
+const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', jobs: 'Jobs', companies: 'Jobs' };
+/** Sections without an index page of their own: their breadcrumb points here instead. */
+const SECTION_URLS: Record<string, string> = { companies: '/jobs/' };
 
 function structuredData(page: Page, image: string): string {
   const parts = page.path.split('/').filter(Boolean);
   const name = page.title.replace(/ · .*$/, '');
   const crumbs = [{ name: 'Witchspace', url: `${SITE}/` }];
-  if (parts.length) crumbs.push({ name: SECTION_NAMES[parts[0]] ?? name, url: `${SITE}/${parts[0]}/` });
+  if (parts.length) crumbs.push({ name: SECTION_NAMES[parts[0]] ?? name, url: SITE + (SECTION_URLS[parts[0]] ?? `/${parts[0]}/`) });
   if (parts.length > 1) crumbs.push({ name, url: SITE + page.path });
   const graph: Record<string, unknown>[] = [
     page.path === '/' ? { '@type': 'WebSite', name: 'Witchspace', url: `${SITE}/`, description: page.description, publisher: ORG } : { '@type': 'WebPage', name, url: SITE + page.path, description: page.description, image, isPartOf: { '@type': 'WebSite', name: 'Witchspace', url: `${SITE}/` } },
@@ -222,6 +225,41 @@ marked.use({
     if (token.type === 'image' && token.href.startsWith('../../public/')) token.href = token.href.slice('../../public'.length);
   },
 });
+
+// --- The jobs board and the company pages (tools/jobs.ts) ------------------------
+
+const jobs = loadJobs(root);
+const GAME_REF = { '@type': 'VideoGame', name: 'Witchspace', url: `${SITE}/play/` };
+// Never JobPosting: these are jobs in a game, and must never sit beside real vacancies.
+const fictional = (id: (typeof COMPANY_IDS)[number]) => ({ '@type': 'CreativeWork', name: COMPANIES[id].name, url: `${SITE}/companies/${id}/`, description: `A fictional company in the game Witchspace. ${COMPANIES[id].motto}`, isPartOf: GAME_REF });
+write({
+  path: '/jobs/',
+  title: 'Jobs at Lave · Witchspace',
+  description: jobs.jobs.description,
+  content: jobsPage(jobs),
+  scripts: ['/src/site/jobs.ts'],
+  bodyClass: 'jobs-page',
+  card: { ship: jobs.jobs.card.ship, kicker: 'Jobs in Witchspace', title: 'Work for the Big Four', sub: jobs.jobs.card.sub },
+  schema: [{ '@type': 'CollectionPage', name: 'Jobs at Lave', about: GAME_REF, hasPart: COMPANY_IDS.map(fictional) }],
+});
+const companiesMd = readFileSync(join(root, 'docs/companies.md'), 'utf8');
+const shipIds = new Set(ships.map((s) => s.id));
+for (const id of COMPANY_IDS) {
+  const c = jobs.companies[id];
+  write({
+    path: `/companies/${id}/`,
+    title: `${COMPANIES[id].name} · Witchspace`,
+    description: c.description,
+    content: companyPage(jobs, id, companiesMd, (md) => {
+      currentSource = 'docs/companies.md';
+      return marked.parse(md) as string;
+    }, shipIds),
+    scripts: ['/src/site/jobs.ts'],
+    bodyClass: 'jobs-page company-page',
+    card: { ship: c.card.ship, kicker: 'A company in Witchspace', title: COMPANIES[id].name, sub: c.card.sub },
+    schema: [fictional(id)],
+  });
+}
 
 const shortLine = (s: string) => (s.length > 110 ? s.slice(0, s.lastIndexOf(' ', 107)).replace(/[,;:·\s]+$/, '') + '…' : s);
 
