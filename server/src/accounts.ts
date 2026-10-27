@@ -25,6 +25,7 @@ import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
 import { CHECKS_PER_MINUTE, KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
 import { gitHubReady, openPullRequest, type GitHubEnv } from './github';
 import { CHECKS } from './checks';
+import { ACCESS_TTL, challengeOk, clientName, CODE_TTL, connectPage, isMetadataUrl, redirectOk, REFRESH_TTL, REQUEST_TTL, s256, SCOPE, verifierOk, withParams } from './oauth';
 
 export interface AccountsEnv extends GitHubEnv {
   /** Resend, for sign-in emails. Without it (local development) the link is returned instead of sent. */
@@ -104,6 +105,15 @@ export class Accounts extends DurableObject<AccountsEnv> {
       status TEXT NOT NULL, note TEXT NOT NULL, ai INTEGER NOT NULL, via TEXT NOT NULL, review TEXT, pr TEXT, version INTEGER NOT NULL,
       file TEXT NOT NULL, warnings TEXT NOT NULL, history TEXT NOT NULL DEFAULT '[]', created INTEGER NOT NULL, updated INTEGER NOT NULL)`);
     this.sql.exec('CREATE INDEX IF NOT EXISTS submissions_account ON submissions (account)');
+    // Signing in from an assistant (oauth.ts): the clients, the sign-ins waiting on the connect page, and only
+    // the hashes of codes and tokens.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS oauth_clients (id TEXT PRIMARY KEY, name TEXT NOT NULL, uri TEXT, redirects TEXT NOT NULL, created INTEGER NOT NULL)');
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS oauth_requests (id TEXT PRIMARY KEY, client TEXT NOT NULL, redirect TEXT NOT NULL, state TEXT,
+      challenge TEXT NOT NULL, expires INTEGER NOT NULL)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS oauth_codes (hash TEXT PRIMARY KEY, client TEXT NOT NULL, redirect TEXT NOT NULL, challenge TEXT NOT NULL,
+      account TEXT NOT NULL, expires INTEGER NOT NULL)`);
+    this.sql.exec('CREATE TABLE IF NOT EXISTS oauth_tokens (hash TEXT PRIMARY KEY, kind TEXT NOT NULL, account TEXT NOT NULL, client TEXT NOT NULL, expires INTEGER NOT NULL)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS oauth_tokens_account ON oauth_tokens (account)');
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -120,6 +130,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const galaxy = path.match(/^\/firsts\/([0-7])$/);
     if (m === 'GET' && galaxy) return this.firstsOf(Number(galaxy[1]));
     if (m === 'POST' && path === '/submissions/check') return this.checkOnly(request);
+    const signIn = path.match(/^\/oauth\/request\/([A-Za-z0-9_-]{20,64})$/);
+    if (signIn && m === 'GET') return this.describeSignIn(request, signIn[1]);
+    if (signIn && m === 'POST') return this.answerSignIn(request, signIn[1]);
     const sub = path.match(/^\/submissions(?:\/(mine|[a-z0-9]{10})(?:\/(review))?)?$/);
     if (sub && request.headers.has('X-Admin-Key')) return this.reviewQueue(request, url, sub[1], sub[2]);
 
@@ -825,8 +838,161 @@ export class Accounts extends DurableObject<AccountsEnv> {
     };
   }
 
+  // --- Signing in from an assistant (oauth.ts; docs/design/mcp-server.md) --------------
+
+  /** POST /oauth/register (RFC 7591): any client may register; what it can do is still up to the person. */
+  async oauthRegister(meta: { redirect_uris?: unknown; client_name?: unknown; client_uri?: unknown }): Promise<{ status: number; body: string }> {
+    const redirects = Array.isArray(meta.redirect_uris) ? meta.redirect_uris : [];
+    if (!redirects.length || redirects.length > 10 || !redirects.every(redirectOk)) return { status: 400, body: JSON.stringify({ error: 'invalid_redirect_uri', error_description: 'redirect_uris: one to ten https addresses (or http on localhost)' }) };
+    const id = `wsc_${randomToken(18)}`;
+    const name = clientName(meta.client_name);
+    const uri = typeof meta.client_uri === 'string' && redirectOk(meta.client_uri) ? meta.client_uri : null;
+    const now = Date.now();
+    this.sql.exec('INSERT INTO oauth_clients (id, name, uri, redirects, created) VALUES (?, ?, ?, ?, ?)', id, name, uri, JSON.stringify(redirects), now);
+    return {
+      status: 201,
+      body: JSON.stringify({ client_id: id, client_id_issued_at: Math.floor(now / 1000), client_name: name, ...(uri ? { client_uri: uri } : {}), redirect_uris: redirects, grant_types: ['authorization_code', 'refresh_token'], response_types: ['code'], token_endpoint_auth_method: 'none' }),
+    };
+  }
+
+  /** A client by id: registered here, or (a URL) its metadata document, fetched and kept. */
+  private async oauthClient(id: string): Promise<{ id: string; name: string; uri: string | null; redirects: string[] } | null> {
+    const row = this.sql.exec('SELECT * FROM oauth_clients WHERE id = ?', id).toArray()[0];
+    if (row && (!isMetadataUrl(id) || (row.created as number) > Date.now() - 86_400_000)) {
+      return { id, name: row.name as string, uri: (row.uri as string | null) ?? null, redirects: JSON.parse(row.redirects as string) as string[] };
+    }
+    if (!isMetadataUrl(id)) return null;
+    try {
+      const res = await fetch(id, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(5000) });
+      const doc = (await res.json()) as { client_id?: unknown; client_name?: unknown; client_uri?: unknown; redirect_uris?: unknown };
+      const redirects = Array.isArray(doc.redirect_uris) ? doc.redirect_uris.filter(redirectOk) : [];
+      if (!res.ok || doc.client_id !== id || !redirects.length) return null;
+      const name = clientName(doc.client_name);
+      const uri = typeof doc.client_uri === 'string' && redirectOk(doc.client_uri) ? doc.client_uri : null;
+      this.sql.exec('INSERT OR REPLACE INTO oauth_clients (id, name, uri, redirects, created) VALUES (?, ?, ?, ?, ?)', id, name, uri, JSON.stringify(redirects), Date.now());
+      return { id, name, uri, redirects };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * GET /oauth/authorize: check the request, keep it, and send the browser to the site's connect page.
+   * A bad client or return address gets a page (never a redirect to somewhere unchecked); anything else
+   * goes back to the client as an OAuth error.
+   */
+  async oauthStart(q: Record<string, string>, issuer: string): Promise<{ redirect: string } | { page: string }> {
+    const client = q.client_id ? await this.oauthClient(q.client_id) : null;
+    if (!client) return { page: 'That assistant isn’t known to Witchspace. Try adding the connector again.' };
+    const redirect = q.redirect_uri ?? (client.redirects.length === 1 ? client.redirects[0] : '');
+    if (!client.redirects.includes(redirect)) return { page: 'That assistant asked to be sent somewhere it didn’t register. Try adding the connector again.' };
+    const fail = (error: string, description: string) => ({ redirect: withParams(redirect, { error, error_description: description, state: q.state }) });
+    if (q.response_type !== 'code') return fail('unsupported_response_type', 'Only response_type=code');
+    if (q.code_challenge_method !== 'S256' || !challengeOk(q.code_challenge)) return fail('invalid_request', 'PKCE with S256 is required');
+    if (q.scope && !q.scope.split(' ').every((s) => s === SCOPE)) return fail('invalid_scope', `The only scope is "${SCOPE}"`);
+    const now = Date.now();
+    this.sql.exec('DELETE FROM oauth_requests WHERE expires < ?', now);
+    const id = randomToken(24);
+    this.sql.exec('INSERT INTO oauth_requests (id, client, redirect, state, challenge, expires) VALUES (?, ?, ?, ?, ?, ?)', id, client.id, redirect, q.state ?? null, q.code_challenge, now + REQUEST_TTL);
+    return { redirect: withParams(connectPage(issuer), { request: id }) };
+  }
+
+  private signInRequest(id: string) {
+    return this.sql.exec('SELECT r.*, c.name, c.uri FROM oauth_requests r JOIN oauth_clients c ON c.id = r.client WHERE r.id = ? AND r.expires > ?', id, Date.now()).toArray()[0];
+  }
+
+  /** GET /oauth/request/<id>, for the connect page: who's asking, and (signed in) as whom. */
+  private async describeSignIn(request: Request, id: string): Promise<Response> {
+    const r = this.signInRequest(id);
+    if (!r) return json({ error: 'That sign-in has expired: start again from your assistant' }, 404);
+    const account = await this.sessionAccount(request);
+    return json({ client: { name: r.name as string, uri: (r.uri as string | null) ?? null }, scope: SCOPE, expires: r.expires as number, ...(account ? { callsign: account.callsign } : {}) });
+  }
+
+  /** POST /oauth/request/<id> {allow}, signed in: the address to send the browser back to the client. */
+  private async answerSignIn(request: Request, id: string): Promise<Response> {
+    const account = await this.sessionAccount(request);
+    if (!account) return json({ error: 'Please sign in' }, 401);
+    const r = this.signInRequest(id);
+    if (!r) return json({ error: 'That sign-in has expired: start again from your assistant' }, 404);
+    const body = (await request.json().catch(() => null)) as { allow?: unknown } | null;
+    const state = (r.state as string | null) ?? undefined;
+    if (body?.allow !== true) {
+      this.sql.exec('DELETE FROM oauth_requests WHERE id = ?', id);
+      return json({ redirect: withParams(r.redirect as string, { error: 'access_denied', error_description: 'The commander said no', state }) });
+    }
+    if (!account.callsign) return json({ error: 'Choose a callsign first: your work is credited to it' }, 403);
+    this.sql.exec('DELETE FROM oauth_requests WHERE id = ?', id);
+    const code = randomToken(32);
+    this.sql.exec('DELETE FROM oauth_codes WHERE expires < ?', Date.now());
+    this.sql.exec('INSERT INTO oauth_codes (hash, client, redirect, challenge, account, expires) VALUES (?, ?, ?, ?, ?, ?)', await sha256(code), r.client, r.redirect, r.challenge, account.id, Date.now() + CODE_TTL);
+    return json({ redirect: withParams(r.redirect as string, { code, state }) });
+  }
+
+  /** POST /oauth/token: a code (with its PKCE verifier) or a refresh token, for a new pair. */
+  async oauthToken(f: Record<string, string>): Promise<{ status: number; body: string }> {
+    const bad = (error: string, error_description: string, status = 400) => ({ status, body: JSON.stringify({ error, error_description }) });
+    const now = Date.now();
+    let account: string;
+    let client: string;
+    if (f.grant_type === 'authorization_code') {
+      if (!f.code || !f.client_id || !verifierOk(f.code_verifier)) return bad('invalid_request', 'code, client_id and code_verifier are needed');
+      const hash = await sha256(f.code);
+      const c = this.sql.exec('SELECT * FROM oauth_codes WHERE hash = ?', hash).toArray()[0];
+      this.sql.exec('DELETE FROM oauth_codes WHERE hash = ?', hash); // once only, right or wrong
+      if (!c || (c.expires as number) < now) return bad('invalid_grant', 'That code has expired or been used');
+      if (c.client !== f.client_id || (f.redirect_uri && f.redirect_uri !== c.redirect)) return bad('invalid_grant', 'That code was issued to someone else');
+      if ((await s256(f.code_verifier)) !== c.challenge) return bad('invalid_grant', 'The PKCE verifier doesn’t match');
+      account = c.account as string;
+      client = c.client as string;
+    } else if (f.grant_type === 'refresh_token') {
+      if (!f.refresh_token) return bad('invalid_request', 'refresh_token is needed');
+      const hash = await sha256(f.refresh_token);
+      const t = this.sql.exec(`SELECT * FROM oauth_tokens WHERE hash = ? AND kind = 'refresh'`, hash).toArray()[0];
+      if (!t || (t.expires as number) < now || (f.client_id && f.client_id !== t.client)) return bad('invalid_grant', 'That refresh token has expired or been used');
+      this.sql.exec('DELETE FROM oauth_tokens WHERE hash = ?', hash); // replaced at each use
+      account = t.account as string;
+      client = t.client as string;
+    } else return bad('unsupported_grant_type', 'authorization_code or refresh_token');
+    if (!this.sql.exec('SELECT 1 FROM accounts WHERE id = ?', account).toArray().length) return bad('invalid_grant', 'That account no longer exists');
+    this.sql.exec('DELETE FROM oauth_tokens WHERE expires < ?', now);
+    const access = `wsa_${randomToken(32)}`;
+    const refresh = `wsr_${randomToken(32)}`;
+    this.sql.exec(`INSERT INTO oauth_tokens (hash, kind, account, client, expires) VALUES (?, 'access', ?, ?, ?)`, await sha256(access), account, client, now + ACCESS_TTL);
+    this.sql.exec(`INSERT INTO oauth_tokens (hash, kind, account, client, expires) VALUES (?, 'refresh', ?, ?, ?)`, await sha256(refresh), account, client, now + REFRESH_TTL);
+    return { status: 200, body: JSON.stringify({ access_token: access, token_type: 'Bearer', expires_in: ACCESS_TTL / 1000, refresh_token: refresh, scope: SCOPE }) };
+  }
+
+  /** The account an access token acts for, from the MCP route. */
+  async oauthAccount(token: string): Promise<{ id: string; callsign: string | null } | null> {
+    if (typeof token !== 'string' || !token.startsWith('wsa_')) return null;
+    const row = this.sql
+      .exec(`SELECT a.id, a.callsign FROM oauth_tokens t JOIN accounts a ON a.id = t.account WHERE t.hash = ? AND t.kind = 'access' AND t.expires > ?`, await sha256(token), Date.now())
+      .toArray()[0];
+    return row ? { id: row.id as string, callsign: (row.callsign as string | null) ?? null } : null;
+  }
+
+  /** The connector's tools, as the signed-in account: the same submission routes the site uses. */
+  async asAccount(accountId: string, method: string, path: string, body?: string): Promise<{ status: number; data: string }> {
+    const row = this.sql.exec('SELECT id, email, callsign FROM accounts WHERE id = ?', accountId).toArray()[0];
+    if (!row) return { status: 401, data: JSON.stringify({ error: 'That account no longer exists' }) };
+    const account: Account = { id: row.id as string, email: row.email as string, callsign: (row.callsign as string | null) ?? null };
+    const url = new URL(path, 'https://accounts.internal');
+    const request = new Request(url, { method, ...(body === undefined ? {} : { body, headers: { 'Content-Type': 'application/json' } }) });
+    const sub = url.pathname.match(/^\/submissions(?:\/(mine|[a-z0-9]{10}))?$/);
+    let res: Response = json({ error: 'Not found' }, 404);
+    if (sub && method === 'POST' && !sub[1]) res = await this.submit(request, account);
+    else if (sub && method === 'GET' && sub[1] === 'mine') res = this.mySubmissions(account);
+    else if (sub && sub[1] && sub[1] !== 'mine') {
+      if (method === 'GET') res = this.oneSubmission(account, sub[1]);
+      if (method === 'PUT') res = await this.revise(request, account, sub[1]);
+      if (method === 'DELETE') res = this.withdraw(account, sub[1]);
+    }
+    return { status: res.status, data: await res.text() };
+  }
+
   private deleteAccount(account: Account): Response {
-    for (const table of ['saves', 'sessions', 'contact', 'devices', 'firsts', 'submissions']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
+    for (const table of ['saves', 'sessions', 'contact', 'devices', 'firsts', 'submissions', 'oauth_codes', 'oauth_tokens']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM codes WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM accounts WHERE id = ?', account.id);

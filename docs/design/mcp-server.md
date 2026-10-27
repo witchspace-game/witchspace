@@ -6,7 +6,7 @@ summary: Bring your own AI, and build Witchspace with it. One web address lets C
 card: coriolis
 stages:
   - Contributors - validate, preview and balance-check ships; the designs and help wanted; galaxy lookups | built
-  - Hand it in - sign in, submit, follow it, revise it; the review queue and a pull request made for you | proposed
+  - Hand it in - sign in, submit, follow it, revise it; the review queue and a pull request made for you | building
   - Guided workshops - prompts for a first ship, a module, a saloon regular | proposed
   - Every content type - Titanoboa modules, characters, news events, trails, company files | proposed
   - Try it - the live viewer in the chat, and a link that flies your draft in the game, in a test system | proposed
@@ -115,6 +115,42 @@ The web form and the ship workshop page on the site use the **same** submission 
 - Add the connector to his own Claude account, so every tool is tested in the real client before it's announced.
 
 **Still to decide while building:** whether sign-in uses Cloudflare's OAuth provider library (which keeps its grants in a KV namespace: one new, free binding Mark would create) or our own tables in `Accounts`. Either way the login step is the game's email code, so the account is the game's account.
+
+## Signing in from an assistant *(stage 2a, building)*
+
+Handing work in needs an account, so the connector gets a second address that signs you in. Reading and checking stay open to everyone at the first.
+
+| Address | Sign-in | Tools |
+|---|---|---|
+| `https://space.witchspace.org.uk/mcp` | none | the stage 1 tools: read, check, draw |
+| `https://space.witchspace.org.uk/mcp/build` | your Witchspace account | the same, plus `submit`, `my_submissions`, `submission`, `revise`, `withdraw` |
+
+**How signing in works.** MCP clients sign in to remote servers with OAuth 2.1, so the Worker is a small OAuth server whose login step is the game's own sign-in:
+
+1. Adding `/mcp/build`, the client is told to sign in (a `401` pointing at `/.well-known/oauth-protected-resource/mcp/build`) and finds our authorisation server (`/.well-known/oauth-authorization-server`).
+2. It registers itself (dynamic client registration, `POST /oauth/register`, or a client metadata document, where the client's id is a URL) and opens `/oauth/authorize` with PKCE.
+3. The Worker checks the request and sends the browser to **`https://witchspace.org.uk/connect/?request=<id>`**, a page on the site. That page uses the game's sign-in (the email code), so someone already signed in to the game in that browser just clicks **Allow**. A callsign is needed first, since work is credited to it.
+4. Allowing sends the browser back to the client with a code, which the client trades at `POST /oauth/token` for an access token (an hour) and a refresh token (30 days, replaced at each use).
+5. The connector's tools act as that account. Submissions from it are marked `via: connector` and AI-assisted.
+
+Only the hashes of codes and tokens are kept. Signing out of the game doesn't revoke a connector; deleting your account does, and so does the **Disconnect** on the connect page's list of connected assistants (later).
+
+### As built *(27 October 2026)*
+
+- `server/src/oauth.ts` (the metadata, PKCE, return addresses), the clients, sign-ins, codes and tokens in `Accounts` (`server/src/accounts.ts`), and the signed-in tools in `server/src/mcpBuild.ts`, which call the same submission routes as the site.
+- Clients can register (`POST /oauth/register`) or identify themselves with a metadata document's address; both are kept in `oauth_clients`.
+- The issuer is always `https://space.witchspace.org.uk`. To try it locally: `npx wrangler dev --var OAUTH_ISSUER:http://127.0.0.1:8787`, with the site on `npm run dev` for the connect page.
+- Tested end to end against `wrangler dev` with a script playing the client: told to sign in, register, authorise, the connect page's two calls, a wrong PKCE verifier (refused, and the code spent), tokens, the signed-in tools handing a module in, refresh (and the old refresh token refused), a bad token, and saying no.
+- **Still to do before it's announced:** the connect page on the site, then trying every tool in the real Claude client. `review_queue` and `review` for maintainers come later; `npx tsx tools/submissions.ts` does that meanwhile.
+
+### The connect page: the contract with the site
+
+The page lives on the site, so it shares the game's sign-in. It calls two endpoints (CORS for our sites, like `/me`):
+
+- `GET /oauth/request/<id>` → `{client: {name, uri}, scope: 'submit', expires}` (404 if it's gone or expired: ask them to start again from their assistant). Send the session if there is one, and the answer also has `callsign`.
+- `POST /oauth/request/<id>` with `Authorization: Bearer <session>` and `{allow: true | false}` → `{redirect}`. Then set `location.href` to it. Allowing needs a callsign (`403 "Choose a callsign first"`); refusing sends the client an `access_denied`.
+
+What the page says: who is asking (`client.name`, which the client chose, so say "says it is"), what it may do ("hand in ships and modules as CMDR X, and see and change the ones it handed in"), and that nothing goes public until a maintainer accepts it.
 
 ## 1. Contributors *(built)*
 
