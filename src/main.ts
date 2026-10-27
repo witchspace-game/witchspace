@@ -1405,7 +1405,7 @@ function renderDocked() {
     // Say what's in it (a tooltip doesn't show on a phone), and that a company station pays more.
     const names = data.filter((d) => !kept.includes(d)).map((d) => d.name).join(', ');
     const keptLine = kept.length ? `${kept.map((d) => d.name).join(', ')}: kept for your Wexley-Yorozu survey contract` : '';
-    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${data.length ? ` <small>${[escapeHtml(names), escapeHtml(keptLine), wy ? 'A Wexley-Yorozu station: it pays 25% more for data' : ''].filter(Boolean).join(' · ')}</small>` : ''}</span>`;
+    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${data.length ? ` <small>${[escapeHtml(names), escapeHtml(keptLine), wy ? 'This is a Wexley-Yorozu station: data sells for 25% more here' : 'Wexley-Yorozu stations pay 25% more: look for them on the galaxy map'].filter(Boolean).join(' · ')}</small>` : ''}</span>`;
     dataRow.title = data.length ? data.map((d) => `${d.name}: ${dataValue(d, here, wy)} Cr`).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
     const sell = document.createElement('button');
     sell.textContent = sellable.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
@@ -6627,6 +6627,8 @@ function toggleGalaxyMap() {
       return { to, colour: COMPANIES[a.company].colour, line: `${a.qty} t ${cargoName(a)} → ${to.name} · ${left} · ${a.pay.toLocaleString()} Cr · ${COMPANIES[a.company].name}${adrift}` };
     }),
     firsts: (s) => (c.difficulty === 'modern' ? firstsLine(s) : null),
+    // Where Wexley-Yorozu runs the station, data sells for more (Mark: "how do I get to a W-Y station?").
+    station: (s) => (c.difficulty === 'modern' && wyWorks(s) ? 'Wexley-Yorozu · pays 25% more for survey data' : null),
     explored: (s) => {
       const e = exploreOf(c);
       if (!e.visited.includes(`${s.galaxy}:${s.index}`)) return { visited: false, line: 'Not yet' };
