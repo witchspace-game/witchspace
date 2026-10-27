@@ -83,14 +83,25 @@ let aimDy = 0;
 let mouseFire = false;
 let recentre = false;
 let wheel = 0;
+// Holding the right button locks the nose and the mouse rolls the ship, like
+// a stick: the further from where you pressed, the faster. A quick tap
+// centres the aim and levels the wings instead (Mark).
+const MOUSE_ROLL_PX = 100; // pixels from the press for a full-rate roll
+const TAP_MS = 250;
+const TAP_PX = 6;
+let rolling = false;
+let rollStick = 0;
+let rollTravel = 0;
+let rollPressAt = 0;
+let level = false;
 let swipeRoll = 0;
 
 /** Mouse capture and scrolling only apply while flying. */
 export function setFlying(value: boolean) {
   flying = value;
   if (!value && document.pointerLockElement) document.exitPointerLock();
-  aimDx = aimDy = wheel = swipeRoll = 0;
-  mouseFire = recentre = touchFire = false;
+  aimDx = aimDy = wheel = swipeRoll = rollStick = 0;
+  mouseFire = recentre = touchFire = rolling = level = false;
   touchSpeed = null;
 }
 
@@ -129,7 +140,12 @@ addEventListener('mousedown', (e) => {
   if (isTouch) return; // taps arrive as mouse events too; touch has its own fire button
   if (isMouseCaptured()) {
     if (e.button === 0) mouseFire = true; // left: fire
-    if (e.button === 2) recentre = true; // right: centre the aim, stop turning
+    if (e.button === 2) {
+      // right: centre the aim, then roll while held
+      recentre = rolling = true;
+      rollStick = rollTravel = 0;
+      rollPressAt = performance.now();
+    }
     return;
   }
   if (!wantsMouseCapture()) return;
@@ -138,12 +154,25 @@ addEventListener('mousedown', (e) => {
 });
 addEventListener('mouseup', (e) => {
   if (e.button === 0) mouseFire = false;
+  if (e.button === 2 && rolling) {
+    if (performance.now() - rollPressAt < TAP_MS && rollTravel < TAP_PX) level = true;
+    rolling = false;
+    rollStick = 0;
+  }
+});
+addEventListener('pointerlockchange', () => {
+  if (!document.pointerLockElement) rolling = false;
 });
 addEventListener('contextmenu', (e) => {
   if (flying) e.preventDefault();
 });
 addEventListener('mousemove', (e) => {
   if (!isMouseCaptured()) return;
+  if (rolling) {
+    rollTravel += Math.abs(e.movementX) + Math.abs(e.movementY);
+    rollStick = clamp1(rollStick + e.movementX / MOUSE_ROLL_PX);
+    return;
+  }
   aimDx += e.movementX;
   aimDy += e.movementY;
 });
@@ -221,8 +250,12 @@ export interface FlightInput {
   fire: boolean;
   /** Touch speed slider: the speed wanted, as a fraction of top speed. */
   speedTarget?: number;
-  /** Snap the aim back to the nose this frame (right-click). */
+  /** Snap the aim back to the nose this frame (right button pressed). */
   recentre?: boolean;
+  /** Rolling with the mouse (right button held): keep the bank it leaves. */
+  mouseRoll?: boolean;
+  /** Level the wings again (a tap of the right button). */
+  level?: boolean;
   /** True if the pilot is touching any control this frame. */
   active: boolean;
 }
@@ -269,9 +302,10 @@ export function flightInput(): FlightInput {
   swipeRoll *= Math.exp(-dt * SWIPE_ROLL_DECAY);
   if (Math.abs(swipeRoll) < 0.01) swipeRoll = 0;
 
+  const mouseRoll = rolling && rollTravel >= TAP_PX;
   const input: FlightInput = {
     pitch: sign * clamp1(kbPitch + padPitch),
-    roll: clamp1(kbRoll + padRoll + swipe),
+    roll: clamp1(kbRoll + padRoll + swipe + (rolling ? rollStick : 0)),
     yaw: clamp1(kbYaw + padYaw),
     throttle: clamp1(kbThrottle + padThrottle),
     speedStep: wheel * SCROLL_SPEED,
@@ -280,9 +314,11 @@ export function flightInput(): FlightInput {
     fire: mouseFire || touchFire || keyHeld('KeyF') || Boolean(pad?.buttons[5]?.pressed),
     speedTarget: touchSpeed ?? undefined,
     recentre,
+    mouseRoll,
+    level,
     active: false,
   };
-  recentre = false;
+  recentre = level = false;
   input.active =
     input.pitch !== 0 || input.roll !== 0 || input.yaw !== 0 || input.throttle !== 0 ||
     input.speedStep !== 0 || aimDx !== 0 || aimDy !== 0 || touchMoved;

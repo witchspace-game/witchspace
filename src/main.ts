@@ -161,6 +161,7 @@ function setState(next: State) {
   layoutForScreen();
   if (next !== 'flying') $('#dock-aid').hidden = true;
   setFlying(next === 'flying');
+  bankHeld = false;
   if (next === 'flying') {
     showControlsCardOnce();
     engineSound.start();
@@ -4318,6 +4319,8 @@ const ROLL_ASSIST_HEADING = THREE.MathUtils.degToRad(35);
 const ROLL_ASSIST_GAIN = 3; // holds within ~3° of the slot (tested in simulation)
 const AUTO_LEVEL_GAIN = 2.5; // levels 50° of tilt in about half a second (tested in simulation)
 let rollAssist = false;
+/** The pilot rolled with the mouse: hold that bank until they tap to level. */
+let bankHeld = false;
 
 function rollAssistApplies() {
   return (
@@ -4382,10 +4385,12 @@ function updateSpace(dt: number) {
       aim.reset(player);
     }
 
+    if (input.mouseRoll) bankHeld = true;
+    else if (input.level || input.roll !== 0) bankHeld = false;
     rollAssist = !autopilot && !surveyPilot && !combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
     if (rollAssist) {
       input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
-    } else if (!autopilot && !surveyPilot && !combatComputer && controlScheme() === 'mouse' && input.roll === 0) {
+    } else if (!autopilot && !surveyPilot && !combatComputer && controlScheme() === 'mouse' && input.roll === 0 && !bankHeld) {
       // Flight assist: with no roll input, level the wings with the star
       // system's "up" so there's always a horizon. Weaker when pointing
       // steeply up or down, where "level" stops meaning much.
@@ -4694,7 +4699,8 @@ function renderControlsCard() {
           ['Click', 'Capture the mouse (Esc releases it)'],
           ['Mouse', 'Aim: the ship turns to follow the ring'],
           ['Left click / F', gimballed() || (commander && isWorking(cmdr(), 'gimbal-mount')) ? 'Fire: gimballed lasers hit what\'s under the ring' : 'Fire: lasers fire straight ahead at the centre cross'],
-          ['Right click', 'Centre the aim (stop turning)'],
+          ['Right click', 'Centre the aim and level the wings'],
+          ['Hold right + mouse', 'Roll, nose held steady; the ship keeps that bank'],
           ['W / S', 'Throttle up / down'],
           ['A / D', 'Roll'],
           ['Q / E', 'Yaw (fine sideways adjustment)'],
