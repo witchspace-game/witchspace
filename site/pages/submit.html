@@ -1,0 +1,83 @@
+<!-- {"path": "/submit/", "title": "Hand in a design · Witchspace", "description": "Hand in a ship or a Titanoboa module for Witchspace, the free browser space game. No GitHub: sign in, check your file, send it, and follow its review.", "scripts": ["/src/site/submit.ts"], "bodyClass": "submit-page"} -->
+<section class="section">
+  <div class="section-head">
+    <p class="kicker">Build</p>
+    <h2>Hand in a design</h2>
+    <p class="lede">Send a ship or a section of the Titanoboa straight from here: no GitHub needed. It's checked as you go, a maintainer reviews it, and if it's accepted it goes into the game under your callsign. A module that's built earns <a href="/jobs/#build">Wexley-Yorozu's commission</a>.</p>
+  </div>
+
+  <div class="submit-layout">
+    <div class="submit-main">
+      <div class="submit-step" id="step-account">
+        <h3><span class="step-n">1</span> Sign in</h3>
+        <div id="account"><p class="muted">Checking whether you're signed in…</p></div>
+      </div>
+
+      <form class="submit-step" id="step-file" novalidate>
+        <h3><span class="step-n">2</span> Your design</h3>
+        <p class="revising" id="revising" hidden></p>
+        <fieldset class="kind" aria-label="What are you handing in?">
+          <label><input type="radio" name="kind" value="module" checked /> A Titanoboa module</label>
+          <label><input type="radio" name="kind" value="ship" /> A ship</label>
+        </fieldset>
+
+        <div class="start-from" id="start-from">
+          <label>Start from a core module
+            <select id="core"><option value="">Choose one…</option></select>
+          </label>
+          <div class="start-buttons">
+            <button type="button" class="button small" data-start="new" disabled>Make a new one from it</button>
+            <button type="button" class="button small ghost" data-start="improve" disabled>Improve it</button>
+          </div>
+        </div>
+
+        <div class="fields">
+          <label data-field="name">Name <input name="name" maxlength="40" autocomplete="off" placeholder="Ice Refinery" /><small class="field-problem"></small></label>
+          <label data-field="id">Id <input name="id" maxlength="40" autocomplete="off" spellcheck="false" placeholder="ice-refinery" /><small class="hint">Lower case and hyphens. Keep an existing module's id to hand in an improvement to it.</small><small class="field-problem"></small></label>
+          <label data-field="zone" class="module-only">Zone <select name="zone"><option value="">Choose…</option></select><small class="field-problem"></small></label>
+          <label data-field="description">Description <textarea name="description" rows="3" maxlength="300" placeholder="What it's for, in a sentence or two."></textarea><small class="field-problem"></small></label>
+        </div>
+
+        <label class="file-label">The file
+          <textarea id="file" rows="12" spellcheck="false" placeholder='Paste the JSON here, or upload it: { "id": "ice-refinery", … }'></textarea>
+        </label>
+        <p class="file-actions"><label class="button small ghost upload">Upload a file<input type="file" id="upload" accept=".json,application/json" hidden /></label> <a class="small" href="/design/ship-the-titanoboa/" id="standard-link">The module standard</a></p>
+
+        <div class="check" id="check" aria-live="polite"></div>
+      </form>
+    </div>
+
+    <aside class="submit-side">
+      <div class="preview" id="preview">
+        <canvas id="preview-canvas" aria-label="Your design, turning"></canvas>
+        <p class="muted small" id="preview-note">Your design appears here as soon as its shape makes sense. Drag to turn it.</p>
+      </div>
+
+      <div class="submit-step" id="step-send">
+        <h3><span class="step-n">3</span> Hand it in</h3>
+        <fieldset class="ai" id="ai">
+          <legend>Did an AI assistant help make it?</legend>
+          <label><input type="radio" name="ai" value="yes" /> Yes</label>
+          <label><input type="radio" name="ai" value="no" /> No</label>
+          <small class="muted">Either is welcome. We just say so in its credits.</small>
+        </fieldset>
+        <label>A note for the reviewer <span class="muted">(optional)</span>
+          <textarea id="note" rows="3" maxlength="1000" placeholder="Anything they should know: what it's for, what you weren't sure about."></textarea>
+        </label>
+        <button type="button" class="button primary" id="send">Hand it in</button>
+        <p class="small muted" id="limits"></p>
+        <p class="send-result" id="send-result" aria-live="polite"></p>
+        <p class="small muted">Shared under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="license noopener">CC BY-SA 4.0</a>, like the rest of Witchspace, and credited to your callsign. It stays private until it's accepted.</p>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<section class="section" id="mine">
+  <div class="section-head">
+    <p class="kicker">Yours</p>
+    <h2>My submissions</h2>
+  </div>
+  <div id="submissions"><p class="muted">Sign in to see what you've handed in.</p></div>
+  <p class="small muted submit-other">Prefer GitHub? A pull request works as it always has: see <a href="/get-involved/">Get involved</a>. Just an idea, not a file? Put it on <a href="/ideas/">the ideas board</a>.</p>
+</section>
