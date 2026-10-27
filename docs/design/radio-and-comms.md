@@ -65,7 +65,7 @@ Range is real. Messages from ships beyond scanner range don't arrive; near the e
 - **Chatter folds away.** Lines that need nothing from you (thanks, greetings, routine traffic) fold into one quiet line, *3 more from traffic*, and drop out after a few minutes.
 - **Calmer in a fight.** In combat only the urgent cards show; the rest waits until it's over, then sums up: *While you were fighting: 2 messages from Hexon, a news report.*
 - **Icons and colour, not labels.** A small mark for each kind of voice (station, police, pirate, company, news) instead of writing its name every time; the colours already exist.
-- **Colour says who, motion says how** *(Mark)*. Each voice keeps its colour, as a thin glowing edge on its card or row rather than coloured text, so who's speaking is obvious at a glance without the panel turning into a rainbow. A small, quiet animation hints at the message's character before you read a word:
+- **An accent colour and a subtle animation** *(Mark)*. Each voice has an **accent**, not a colour scheme: a thin glowing edge or a small mark on its card or row, with the text itself staying plain, so who's speaking is obvious at a glance and the panel never turns into a rainbow. And a **subtle** animation, felt more than seen, hints at the message's character as it arrives (Mark, 27 October 2026: "more of an accent color and subtle animations"):
   - **station traffic** settles in calmly, a soft fade;
   - **police** carry a slow steady pulse on the edge, like a patrol light;
   - **a pirate's line** arrives with a brief flicker of interference, a twitch, then still;
@@ -74,7 +74,7 @@ Range is real. Messages from ships beyond scanner range don't arrive; near the e
   - **news** sweeps once across, like a ticker;
   - **the Falcon** comes through with a shimmer of static, cold and white.
 
-  Each plays once as the message arrives (the Mayday excepted) and then stays still, so the panel is calm to read. Settings and the system's "reduce motion" keep the colours and drop the motion.
+  Each is small and short, plays once as the message arrives (the Mayday excepted) and then stays still, so the panel is calm to read; none should pull the eye from flying. Settings and the system's "reduce motion" keep the accents and drop the motion.
 - **A voice, later.** A few key lines spoken (a hail, a Mayday) would mean you don't have to read them at all.
 
 The test of a good answer: in the middle of a busy system, a glance tells you whether anything needs you, and what.
