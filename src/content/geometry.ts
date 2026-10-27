@@ -125,12 +125,17 @@ export function checkGeometry(
       undirected.set(key, (undirected.get(key) ?? 0) + 1);
     }
   }
-  const open = [...undirected].filter(([, c]) => c !== 2).map(([k]) => k);
+  // A face that shares no edge with any other is a fin or a plate (the Titanoboa's radiators and vanes): open by design.
+  const edgeKey = (f: number[], i: number) => `${Math.min(f[i], f[(i + 1) % f.length])}-${Math.max(f[i], f[(i + 1) % f.length])}`;
+  const isFin = (f: number[]) => f.every((_, i) => undirected.get(edgeKey(f, i)) === 1);
+  const body = faces.filter((f) => !isFin(f));
+  const fins = new Set(faces.filter(isFin).flatMap((f) => f.map((_, i) => edgeKey(f, i))));
+  const open = [...undirected].filter(([k, c]) => c !== 2 && !(body.length && fins.has(k))).map(([k]) => k);
   if (open.length) {
     warnings.push(`hull is not closed: edges ${open.slice(0, 6).join(', ')}${open.length > 6 ? '…' : ''} are not shared by exactly two faces`);
   } else {
     const flipped = [...directed].some(([, c]) => c > 1);
-    if (flipped || signedVolume(verts, faces) <= 0) {
+    if (flipped || signedVolume(verts, body) <= 0) {
       errors.push('faces are not all wound counter-clockwise from outside; run `npm run validate -- --fix`');
     }
   }

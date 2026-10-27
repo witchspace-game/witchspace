@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { lineUpOf, SCIENCE_LINE_UP, STANDARD_LINE_UP, yardsOf } from '../game/yards';
 import { moduleById, shipModules, withLineUp } from './moduleFiles';
+import { checkGeometry } from './geometry';
 import { assemble, canCouple, centresOf, checkModule, MAX_VERTICES } from './modules';
 import { shipById } from './ships';
 import type { ModuleDef } from './types';
@@ -14,6 +15,21 @@ describe('the core modules', () => {
       expect(checkModule(m).errors, m.id).toEqual([]);
       expect(m.geometry.vertices.length).toBeLessThanOrEqual(MAX_VERTICES);
     }
+  });
+
+  it('raise no warnings: their radiators and vanes are fins, open by design', () => {
+    for (const m of shipModules) expect(checkModule(m).warnings, m.id).toEqual([]);
+  });
+
+  it('a real hole still warns, and a fin on a closed hull does not', () => {
+    const cube: [number, number, number][] = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
+    const faces = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [1, 2, 6, 5], [0, 4, 7, 3]];
+    expect(checkGeometry(cube, faces).warnings).toEqual([]);
+    expect(checkGeometry(cube, faces.slice(1)).warnings.join()).toMatch(/not closed/);
+    const fin: [number, number, number][] = [...cube, [1, 0, -0.5], [3, 0, -0.5], [3, 0, 0.5], [1, 0, 0.5]];
+    const report = checkGeometry(fin, [...faces, [8, 9, 10, 11]]);
+    expect(report.warnings).toEqual([]);
+    expect(report.errors).toEqual([]);
   });
 
   it('the maw has nothing ahead of it, the drive nothing behind', () => {
