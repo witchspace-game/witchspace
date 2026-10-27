@@ -1218,4 +1218,9 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
 .connect-buttons .button { flex: 1 1 140px; justify-content: center; }
 .connect-buttons .button:disabled { opacity: 0.35; box-shadow: none; cursor: not-allowed; }
+.connect-ask code { font-size: 13px; overflow-wrap: anywhere; }
+.connection-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.connection-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid var(--border); }
+.connection-list li:first-child { padding-top: 0; border-top: 0; }
+.connection-list .armed { border-color: var(--amber); color: var(--amber); }
 .connect-more { margin-top: 8px; }

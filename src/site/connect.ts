@@ -32,11 +32,13 @@ const headers = () => {
   return { 'Content-Type': 'application/json', ...(s ? { Authorization: `Bearer ${s}` } : {}) };
 };
 
-/** Nothing to answer: no request, or it's gone. */
-function gone(why: string) {
+/** Nothing to answer: no request, or it's gone. Signing in still shows your connected assistants. */
+function gone(why: string, then = START_AGAIN) {
   request = null;
-  ask.innerHTML = `<h3>${escapeHtml(why)}</h3><p>${START_AGAIN}</p>`;
-  stepAccount.hidden = stepAnswer.hidden = true;
+  ask.innerHTML = `<h3>${escapeHtml(why)}</h3><p>${then}</p>`;
+  stepAnswer.hidden = true;
+  stepAccount.hidden = false;
+  stepAccount.querySelector('.step-n')?.remove();
 }
 
 /** The website the client gave, as a bare host, if it's an ordinary web address. */
@@ -69,10 +71,80 @@ function render() {
   $('#answer-note').textContent = !a ? 'Sign in first, so we know who is answering.' : !a.callsign ? 'Choose a callsign first: what it hands in is credited to it.' : `Allow ${request.client.name} to hand in work as CMDR ${a.callsign}?`;
 }
 
-const account = signInBox($('#account'), { why: 'Your assistant works as you, under your callsign.', callsignWhy: "what your assistant hands in is credited to it, here and in the game." }, render);
+// --- The assistants already connected, to disconnect ---------------------------------
+
+interface Connection {
+  client: string;
+  name: string;
+  uri: string | null;
+  until: number;
+}
+
+const connections = $('#connections');
+const connectionList = $('#connection-list');
+
+async function loadConnections() {
+  if (!currentAccount()) {
+    connections.hidden = true;
+    return;
+  }
+  try {
+    const res = await fetch(`${API}/me/connections`, { headers: headers(), cache: 'no-store' });
+    if (!res.ok) throw new Error();
+    showConnections(((await res.json()) as { connections: Connection[] }).connections);
+  } catch {
+    connections.hidden = false;
+    connectionList.innerHTML = `<p class="form-error">We couldn't load your connected assistants. Try again in a moment.</p>`;
+  }
+}
+
+function showConnections(list: Connection[]) {
+  connections.hidden = false;
+  if (!list.length) {
+    connectionList.innerHTML = `<p class="muted">None yet. ${request ? 'Allow this one and it will be listed here.' : ''}</p>`;
+    return;
+  }
+  const day = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+  connectionList.innerHTML = `<ul class="connection-list">${list
+    .map((c) => {
+      const host = hostOf(c.uri);
+      return `<li><div><b>${escapeHtml(c.name)}</b>${host ? ` <span class="muted">(${escapeHtml(host)})</span>` : ''}<br /><small class="muted">Signed in until ${day(c.until)}, unless you disconnect it</small></div>
+        <button type="button" class="button small ghost" data-disconnect="${escapeHtml(c.client)}">Disconnect</button></li>`;
+    })
+    .join('')}</ul>`;
+  for (const b of connectionList.querySelectorAll<HTMLButtonElement>('[data-disconnect]'))
+    b.addEventListener('click', async () => {
+      if (!b.classList.contains('armed')) {
+        b.classList.add('armed');
+        b.textContent = 'Press again to disconnect';
+        setTimeout(() => {
+          b.classList.remove('armed');
+          b.textContent = 'Disconnect';
+        }, 4000);
+        return;
+      }
+      b.disabled = true;
+      const res = await fetch(`${API}/me/connections?client=${encodeURIComponent(b.dataset.disconnect!)}`, { method: 'DELETE', headers: headers() }).catch(() => null);
+      if (!res?.ok) {
+        b.disabled = false;
+        b.textContent = "Couldn't disconnect: try again";
+        return;
+      }
+      void loadConnections();
+    });
+}
+
+const account = signInBox($('#account'), { why: 'Your assistant works as you, under your callsign.', callsignWhy: 'what your assistant hands in is credited to it, here and in the game.' }, () => {
+  render();
+  void loadConnections();
+});
 
 async function load() {
-  if (!id) return gone('There is nothing to connect here.');
+  if (!id)
+    return gone(
+      'Connect from your assistant',
+      'Add the Witchspace connector in your AI assistant (its address is <code>https://space.witchspace.org.uk/mcp/build</code>), and it brings you here to say yes. Signed in, this page also lists the assistants you have connected, to disconnect any of them.',
+    );
   try {
     const res = await fetch(`${API}/oauth/request/${encodeURIComponent(id)}`, { headers: headers(), cache: 'no-store' });
     if (res.status === 404) return gone('That request has expired, or was already answered.');
@@ -121,5 +193,6 @@ void refresh()
   .catch(() => null)
   .then(() => {
     account.render();
+    void loadConnections();
     return load();
   });
