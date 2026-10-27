@@ -114,6 +114,8 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
 
 ## 6. Fuel, rescue and never being stranded
 
+**The station fills your tank as you dock** *(Mark, 27 October 2026: "it's a bit tiresome having to always go to the station tab and refuel. If you forget you have to dock again!")*. Under Modern rules docking refuels you as far as your credits go, and says so (*Refuelled · +3.5 LY · 7 Cr*). Fuel is 2 Cr a light year, a full Cobra tank 14 Cr at most, so the chore was the only real cost. *(Built.)* Classic keeps 1984's pump on the Station tab.
+
 - **Fuel:** a tank good for about **7 light years**, as in the original (one or two jumps). Docking refuels you.
 - **Fuel scoops (an upgrade):** skim close to the star to refuel. Go too deep and you overheat. With scoops fitted, there's fuel in every system.
 - **Distress beacon** **(proposed)**: stranded with no fuel and nowhere to dock? Call for help. A tug arrives after a while and tows you to the nearest station that will take you, for a fee, with your record still attached. **In multiplayer, other players can answer**, and being rescued by a stranger could become one of the best social moments in the game.

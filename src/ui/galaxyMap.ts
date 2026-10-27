@@ -25,6 +25,8 @@ interface Options {
   explored?: (s: StarSystem) => { visited: boolean; line: string };
   /** Who got there first: names on the galaxy, or null. */
   firsts?: (s: StarSystem) => string | null;
+  /** Who runs the station, where it matters to you (a Wexley-Yorozu station pays more for data), or null. */
+  station?: (s: StarSystem) => string | null;
   /** Contracts in hand: where to, in the company's colour, and a line about each. */
   contracts?: { to: StarSystem; colour: string; line: string }[];
 }
@@ -367,6 +369,8 @@ function renderInfo() {
   if (explored) rows.push(['Explored', explored.line]);
   const firsts = opts.firsts?.(s);
   if (firsts) rows.push(['Firsts', firsts]);
+  const runBy = opts.station?.(s);
+  if (runBy) rows.splice(2, 0, ['Run by', runBy]);
   const isTarget = opts.target === s;
   // Station names are community content, so everything is escaped.
   const contracts = opts.contracts ?? [];

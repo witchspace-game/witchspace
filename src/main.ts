@@ -583,10 +583,25 @@ function enterDocked(newShip = false) {
     });
   // The companies may have been in touch while you were away.
   if (checkMessages(cmdr(), currentSystem(), Date.now()).length) saveCommander(cmdr());
+  // Modern: the station fills your tank as you dock, as far as your credits go (Mark: forgetting
+  // meant docking again). Fuel is cheap; the chore was the cost. Classic keeps 1984's pump.
+  const refuelled = modern() ? autoRefuel(cmdr()) : null;
+  if (refuelled) setTimeout(() => flash(refuelled, 3), newShip ? 7500 : 900);
   markInbox(cmdr());
   renderDocked();
   setState('docked');
   void showNewMoments(newShip);
+}
+
+/** Fill the tank as far as the credits go; what to say, or null if it was already full or there was nothing to pay with. */
+function autoRefuel(c: Commander): string | null {
+  const missing = Math.round((fuelCapacity(c) - c.fuel) * 10) / 10;
+  const affordable = Math.min(missing, Math.floor((c.credits / FUEL_PRICE) * 10) / 10);
+  if (missing <= 0 || affordable <= 0) return missing > 0 ? 'Not enough credits for fuel' : null;
+  c.credits = Math.round((c.credits - affordable * FUEL_PRICE) * 10) / 10;
+  c.fuel = Math.round((c.fuel + affordable) * 10) / 10;
+  saveCommander(c);
+  return `Refuelled · +${affordable.toFixed(1)} LY · ${(affordable * FUEL_PRICE).toFixed(1)} Cr${affordable < missing ? ' · as far as your credits go' : ''}`;
 }
 
 // The flight log is the first thing you see in a new ship, and whenever you
@@ -812,7 +827,10 @@ const specialsHere = (c: Commander, here: StarSystem, now: number) =>
 /** Unread messages, on the Contracts tab's button. */
 function markInbox(c: Commander) {
   const unread = (c.messages ?? []).filter((m) => !m.read).length + (state === 'docked' && dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
-  $('.tabs [data-tab="contracts"]').textContent = unread ? `Contracts · ${unread} new` : 'Contracts';
+  // A small badge, not words: "Contracts · 2 new" spilled out of the tab on a phone (Mark).
+  const tab = $('.tabs [data-tab="contracts"]');
+  tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}</b>` : 'Contracts';
+  tab.setAttribute('aria-label', unread ? `Contracts, ${unread} new` : 'Contracts');
 }
 
 /** Earlier messages stays open while you archive from it. */
@@ -1387,7 +1405,7 @@ function renderDocked() {
     // Say what's in it (a tooltip doesn't show on a phone), and that a company station pays more.
     const names = data.filter((d) => !kept.includes(d)).map((d) => d.name).join(', ');
     const keptLine = kept.length ? `${kept.map((d) => d.name).join(', ')}: kept for your Wexley-Yorozu survey contract` : '';
-    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${data.length ? ` <small>${[escapeHtml(names), escapeHtml(keptLine), wy ? 'A Wexley-Yorozu station: it pays 25% more for data' : ''].filter(Boolean).join(' · ')}</small>` : ''}</span>`;
+    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${data.length ? ` <small>${[escapeHtml(names), escapeHtml(keptLine), wy ? 'This is a Wexley-Yorozu station: data sells for 25% more here' : 'Wexley-Yorozu stations pay 25% more: look for them on the galaxy map'].filter(Boolean).join(' · ')}</small>` : ''}</span>`;
     dataRow.title = data.length ? data.map((d) => `${d.name}: ${dataValue(d, here, wy)} Cr`).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
     const sell = document.createElement('button');
     sell.textContent = sellable.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
@@ -6609,6 +6627,8 @@ function toggleGalaxyMap() {
       return { to, colour: COMPANIES[a.company].colour, line: `${a.qty} t ${cargoName(a)} → ${to.name} · ${left} · ${a.pay.toLocaleString()} Cr · ${COMPANIES[a.company].name}${adrift}` };
     }),
     firsts: (s) => (c.difficulty === 'modern' ? firstsLine(s) : null),
+    // Where Wexley-Yorozu runs the station, data sells for more (Mark: "how do I get to a W-Y station?").
+    station: (s) => (c.difficulty === 'modern' && wyWorks(s) ? 'Wexley-Yorozu · pays 25% more for survey data' : null),
     explored: (s) => {
       const e = exploreOf(c);
       if (!e.visited.includes(`${s.galaxy}:${s.index}`)) return { visited: false, line: 'Not yet' };
