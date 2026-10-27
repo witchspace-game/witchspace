@@ -5,7 +5,7 @@ import { addMoment, BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes,
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
 import { uprightCut } from './upright';
-import { sharedLink, shareTrack } from '../net/clips';
+import { myClips, sharedLink, shareTrack, takeDownClip, type MyClip } from '../net/clips';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 // Object URLs for the flight log's list, and separately for the replay player:
@@ -157,6 +157,54 @@ export function closeReplay() {
   revoke(replayUrls);
 }
 
+/**
+ * Your clips on witchspace.org.uk, at the top of the flight log, and a mark on each moment that's up
+ * (Mark: "I don't know how to take down my own clips. I don't even know where my clips are?"). From
+ * the server, so a clip shared from another device signed in as you shows too. Take it down: gone
+ * from its page and the live feed; Put it back undoes that.
+ */
+async function showPublic(el: HTMLElement, moments: LoggedMoment[]) {
+  const box = el.querySelector<HTMLElement>('.log-public');
+  if (!box) return;
+  const clips = await myClips();
+  if (!box.isConnected || !clips?.length) return;
+  const up = clips.filter((c) => c.up);
+  const row = (c: MyClip) => `<li data-clip="${c.id}" class="${c.up ? '' : 'down'}">
+      <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${escapeHtml(c.title.replace(/^CMDR [^:]+: /, ''))}</a>
+      <small>${c.up ? `♥ ${c.hearts} · ${new Date(c.created).toLocaleDateString()}` : 'Taken down'}</small>
+      <button type="button" data-${c.up ? 'down' : 'up'}="${c.id}">${c.up ? 'Take it down' : 'Put it back'}</button>
+    </li>`;
+  box.innerHTML = `<h3>Your clips on witchspace.org.uk <small>${up.length} up · anyone with the link can watch them</small></h3><ul>${clips.map(row).join('')}</ul>`;
+  box.hidden = false;
+  // The moments here that are up get a mark: public, with their hearts.
+  const byUrl = new Map(up.map((c) => [c.url, c]));
+  for (const m of moments) {
+    const link = sharedLink(m.id);
+    const c = link ? byUrl.get(link) : undefined;
+    const strong = c && el.querySelector(`li[data-id="${m.id}"] strong`);
+    if (strong && !strong.querySelector('.log-public-mark')) strong.insertAdjacentHTML('beforeend', ` <em class="log-public-mark" title="${escapeHtml(c.url)}">Public · ♥ ${c.hearts}</em>`);
+  }
+  box.onclick = async (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-down], button[data-up]');
+    if (!b) return;
+    const down = Boolean(b.dataset.down);
+    if (down && !b.dataset.armed) {
+      b.dataset.armed = '1';
+      b.textContent = 'Take it down? Press again';
+      return;
+    }
+    b.disabled = true;
+    const r = await takeDownClip((b.dataset.down ?? b.dataset.up)!, down);
+    if ('error' in r) {
+      b.disabled = false;
+      b.textContent = r.error;
+      return;
+    }
+    for (const mark of el.querySelectorAll('.log-public-mark')) mark.remove();
+    void showPublic(el, moments);
+  };
+}
+
 /** The flight log, its own tab when docked. */
 export async function renderFlightLog(opts: {
   available: boolean;
@@ -199,7 +247,8 @@ export async function renderFlightLog(opts: {
         )
         .join('')}</ul>`;
   }
-  el.innerHTML = head;
+  el.innerHTML = `<section class="log-public" hidden aria-live="polite"></section>${head}`;
+  void showPublic(el, moments);
   el.querySelector<HTMLButtonElement>('.log-toggle')?.addEventListener('click', () => opts.onToggle());
   el.querySelector<HTMLButtonElement>('.log-hd')?.addEventListener('click', () => {
     q?.retry();

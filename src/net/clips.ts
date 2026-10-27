@@ -76,3 +76,34 @@ export async function reportClip(id: string): Promise<boolean> {
   const res = await fetch(`${API}/clips/${id}/report`, { method: 'POST', headers: headers() }).catch(() => null);
   return Boolean(res?.ok);
 }
+
+/** A clip you put up: from this browser, or your account on any device. */
+export interface MyClip {
+  id: string;
+  url: string;
+  title: string;
+  system: string;
+  created: number;
+  hearts: number;
+  /** On the site; false once you've taken it down. */
+  up: boolean;
+}
+
+const mineHeaders = () => {
+  const session = sessionToken();
+  return headers(session ? { Authorization: `Bearer ${session}` } : {});
+};
+
+/** Your clips on witchspace.org.uk, newest first; null if the server couldn't be reached. */
+export async function myClips(): Promise<MyClip[] | null> {
+  const res = await fetch(`${API}/clips/mine`, { headers: mineHeaders() }).catch(() => null);
+  if (!res?.ok) return null;
+  return ((await res.json()) as { clips: MyClip[] }).clips;
+}
+
+/** Take one of your clips down (gone from its page and the live feed), or put it back up. */
+export async function takeDownClip(id: string, down = true): Promise<{ ok: true } | { error: string }> {
+  const res = await fetch(`${API}/clips/${id}/${down ? 'takedown' : 'putback'}`, { method: 'POST', headers: mineHeaders() }).catch(() => null);
+  const out = (await res?.json().catch(() => null)) as { error?: string } | null;
+  return res?.ok ? { ok: true } : { error: out?.error ?? "Couldn't reach witchspace.org.uk" };
+}
