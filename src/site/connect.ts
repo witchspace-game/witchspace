@@ -147,7 +147,8 @@ async function load() {
     );
   try {
     const res = await fetch(`${API}/oauth/request/${encodeURIComponent(id)}`, { headers: headers(), cache: 'no-store' });
-    if (res.status === 404) return gone('That request has expired, or was already answered.');
+    // 404 when it's expired or answered; any other 4xx is a link that was cut short or mangled.
+    if (res.status >= 400 && res.status < 500) return gone('That request has expired, or was already answered.');
     if (!res.ok) throw new Error();
     request = (await res.json()) as SignInRequest;
     render();

@@ -210,13 +210,13 @@ On the site:
   - their own section on /jobs/ ("Design commissions", `#build`), after the companies' adverts
   - repeated on the Wexley-Yorozu page
 - **Kept apart from the contracts:** kind `build` is never on a station's board, so it has no filter chip and no live count.
-- **Apply** goes to the Titanoboa design page (the coupling standard), or to the no-GitHub submit page once there is one.
+- **Apply** goes to [Hand in a design](/submit/), the no-GitHub submit page (Mark, 27 Oct).
 - **Honest about it:**
   - Every pay line says "when it's first fitted".
   - The payout is built (game dev #222): 5,000 Cr for a design, 2,000 Cr for a revision, each paid once, when the module is first fitted to a Titanoboa in any galaxy, on the designer's next dock in a Modern game signed in with that callsign, with a letter from Wexley-Yorozu.
   - Pay is in credits, in the game. Contributors keep their copyright (CC BY-SA 4.0).
   - **The ownership joke stays (Mark):** in character, W-Y owns the design "in perpetuity, across all systems known and unknown.*" The asterisk's footnote, right under the adverts, gives the real terms, and a test keeps the two together on every page.
-  - How to submit today: a GitHub pull request, or the ideas board without GitHub.
+  - How to submit: Hand in a design (no GitHub), with the standard on the design page; a pull request works too; just an idea goes on the ideas board.
 - **Words** from the marketing session, checked by the game dev session.
 - **Decided (Mark):** the adverts went up once the payout was built and merged.
 

@@ -197,7 +197,7 @@
       "kinds": [
         "build"
       ],
-      "href": "/design/ship-the-titanoboa/",
+      "href": "/submit/",
       "text": "Design a section of our constructor to the coupling standard: a greenhouse, an ice refinery, a chapel, a racing gate for the workers' day off. If we build it, we pay the commander whose callsign is on the design, and put that callsign in the catalogue. The design becomes the property of Wexley-Yorozu in perpetuity, across all systems known and unknown.* The company thanks you for your contribution.",
       "meta": "Build · 5,000 Cr when it's first fitted · Designed by you"
     },
@@ -207,7 +207,7 @@
       "kinds": [
         "build"
       ],
-      "href": "/design/ship-the-titanoboa/",
+      "href": "/submit/",
       "text": "Make one of our modules better: a cleaner shape, a better place for the docks. If we accept it, your callsign goes on the module beside its designer's. Small fixes are welcome, but only better modules are paid.",
       "meta": "Build · 2,000 Cr when it's first fitted · Revised by you"
     },
@@ -217,7 +217,7 @@
       "kinds": [
         "build"
       ],
-      "href": "/design/ship-the-titanoboa/",
+      "href": "/submit/",
       "text": "The Co-operative Marshals need somewhere to keep what they catch. A block of cells, one clear shape, and nothing facing the crew that shouldn't. Standard commission applies.",
       "meta": "Build · Open brief · 5,000 Cr when it's first fitted"
     }
@@ -239,6 +239,6 @@
   "build": {
     "intro": "Wexley-Yorozu also commissions designs: sections of the Titanoboa, its constructor ship. These aren't contracts on the board. You design a module, and if it's accepted and built, the company pays your commander.",
     "note": "*In the game. Out here, you keep your copyright: designs are shared under CC BY-SA 4.0, like the rest of Witchspace. Paid in credits, in the game, to the signed-in commander whose callsign is on the design. Nobody is paid real money. The real reward is your name on it and your module flying in everyone's game.",
-    "how": "How to submit today: a pull request on GitHub, following the standard on <a href=\"/design/ship-the-titanoboa/\">the design page</a>. No GitHub? Describe your idea on <a href=\"/ideas/\">the ideas board</a>."
+    "how": "Hand it in on <a href=\"/submit/\">Hand in a design</a>: no GitHub needed, and it's checked as you go. The standard is on <a href=\"/design/ship-the-titanoboa/\">the design page</a>. A pull request on GitHub works too. Just an idea? Put it on <a href=\"/ideas/\">the ideas board</a>."
   }
 }
