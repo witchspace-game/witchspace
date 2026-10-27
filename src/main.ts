@@ -583,10 +583,25 @@ function enterDocked(newShip = false) {
     });
   // The companies may have been in touch while you were away.
   if (checkMessages(cmdr(), currentSystem(), Date.now()).length) saveCommander(cmdr());
+  // Modern: the station fills your tank as you dock, as far as your credits go (Mark: forgetting
+  // meant docking again). Fuel is cheap; the chore was the cost. Classic keeps 1984's pump.
+  const refuelled = modern() ? autoRefuel(cmdr()) : null;
+  if (refuelled) setTimeout(() => flash(refuelled, 3), newShip ? 7500 : 900);
   markInbox(cmdr());
   renderDocked();
   setState('docked');
   void showNewMoments(newShip);
+}
+
+/** Fill the tank as far as the credits go; what to say, or null if it was already full or there was nothing to pay with. */
+function autoRefuel(c: Commander): string | null {
+  const missing = Math.round((fuelCapacity(c) - c.fuel) * 10) / 10;
+  const affordable = Math.min(missing, Math.floor((c.credits / FUEL_PRICE) * 10) / 10);
+  if (missing <= 0 || affordable <= 0) return missing > 0 ? 'Not enough credits for fuel' : null;
+  c.credits = Math.round((c.credits - affordable * FUEL_PRICE) * 10) / 10;
+  c.fuel = Math.round((c.fuel + affordable) * 10) / 10;
+  saveCommander(c);
+  return `Refuelled · +${affordable.toFixed(1)} LY · ${(affordable * FUEL_PRICE).toFixed(1)} Cr${affordable < missing ? ' · as far as your credits go' : ''}`;
 }
 
 // The flight log is the first thing you see in a new ship, and whenever you
