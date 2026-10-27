@@ -75,11 +75,11 @@ describe('line-ups', () => {
 
   it('some yards carry science, most do not, the same for everyone', () => {
     const now = Date.UTC(2026, 9, 25);
-    const lineUps = Array.from({ length: 60 }, (_, d) => yardsOf(0, now + d * 86_400_000 * 3)).flat().map(lineUpOf);
-    const science = lineUps.filter((l) => l === SCIENCE_LINE_UP).length;
+    const lineUps = Array.from({ length: 60 }, (_, d) => yardsOf(0, now + d * 86_400_000 * 3)).flat().map((y) => lineUpOf(y));
+    const science = lineUps.filter((l) => l.join() === SCIENCE_LINE_UP.join()).length;
     expect(science).toBeGreaterThan(0);
     expect(science).toBeLessThan(lineUps.length / 2);
     const y = yardsOf(0, now)[0];
-    expect(lineUpOf(y)).toBe(lineUpOf({ ...y }));
+    expect(lineUpOf(y)).toEqual(lineUpOf({ ...y }));
   });
 });

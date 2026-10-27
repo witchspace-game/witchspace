@@ -33,6 +33,36 @@ export function checkModule(m: ModuleDef): { errors: string[]; warnings: string[
   return { errors, warnings: report.warnings };
 }
 
+/** A real calendar date, YYYY-MM-DD. */
+const isDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && new Date(`${d}T00:00:00Z`).toISOString().startsWith(d);
+/** What the game accepts as a callsign (server/src/protocol.ts, cleanName). */
+const isCallsign = (s: string) => /^[\p{L}\p{N} .'_-]{1,24}$/u.test(s) && s.trim() === s;
+
+/** A community module's service and commission details: who gets paid, and where it goes in the line-up. */
+export function checkService(m: ModuleDef, all: ReadonlyMap<string, ModuleDef>): string[] {
+  const errors: string[] = [];
+  const s = m.inService;
+  if (s) {
+    if (!isDate(s.from)) errors.push(`inService.from "${s.from}" isn't a real date (YYYY-MM-DD)`);
+    if (m.designer === 'Witchspace' || !isCallsign(m.designer)) errors.push(`designer "${m.designer}" must be the designer's callsign, so the commission reaches them`);
+    if (s.replaces) {
+      const old = all.get(s.replaces);
+      if (!old) errors.push(`inService.replaces "${s.replaces}": no such module`);
+      else if (old.id === m.id) errors.push('a module can\'t replace itself');
+      else if (old.zone !== m.zone) errors.push(`it replaces ${old.id}, a ${old.zone} module, so it must be one too (it's ${m.zone})`);
+      else if (old.couples.fore !== m.couples.fore || old.couples.aft !== m.couples.aft) errors.push(`it must couple at the same ends as ${old.id}`);
+    } else if (!m.couples.fore || !m.couples.aft) errors.push('an added module sits between two others, so it must couple at both ends');
+  }
+  let last = '';
+  for (const r of m.revisions ?? []) {
+    if (!isDate(r.from)) errors.push(`revision by ${r.by}: "${r.from}" isn't a real date`);
+    if (!isCallsign(r.by)) errors.push(`revision by "${r.by}": that must be the improver's callsign`);
+    if (r.from < last) errors.push('revisions go oldest first');
+    last = r.from;
+  }
+  return errors;
+}
+
 /** Is this face flat at z, and does it cover the coupling square? (Faces are convex, so the square's corners are enough.) */
 function coversCoupling(vertices: Vec3[], face: number[], z: number): boolean {
   const p = face.map((i) => vertices[i]);

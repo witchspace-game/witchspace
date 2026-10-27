@@ -9,7 +9,7 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
 import { checkGeometry, fixWinding } from '../src/content/geometry';
-import { assemble, checkModule } from '../src/content/modules';
+import { assemble, checkModule, checkService } from '../src/content/modules';
 import type { ModuleDef, ShipDef } from '../src/content/types';
 
 const root = resolve(import.meta.dirname, '..');
@@ -52,7 +52,7 @@ for (const file of files) {
     } else {
       if (m.id !== basename(file, '.json')) errors.push(`id "${m.id}" must match the file name "${basename(file, '.json')}"`);
       const report = checkModule(m);
-      errors.push(...report.errors);
+      errors.push(...report.errors, ...checkService(m, allModules));
       warnings.push(...report.warnings);
     }
     report(`modules/${name}`, errors, warnings);

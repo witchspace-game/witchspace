@@ -87,7 +87,8 @@ import { applyCompanyBand } from './render/livery';
 import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
 import { SpaceDust } from './render/dust';
 import { buildYard, type YardScene } from './render/yard';
-import { lineUpOf, stageInfo, stageLabel, yardAt, yardsNear, yardsOf } from './game/yards';
+import { stageInfo, stageLabel, yardAt, yardsNear, yardsOf } from './game/yards';
+import { commissionsDue, firstFittingsAt, lineUpFor, payCommission } from './game/commissions';
 import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
 import { riftClose, riftDrone, riftGroan, type Drone } from './audio/rift';
@@ -562,6 +563,7 @@ function enterDocked(newShip = false) {
   showShip(cobraIndex);
   forgive(cmdr(), Date.now());
   boardSeenAt = Date.now(); // what's on the board as you dock isn't news; what's posted while you're here is
+  payCommissions();
   // Work that's due here is handed in however you arrived: docking does it
   // first, but waking here in a new ship or loading the game docked must too
   // (a survey finished just before a fight was never paid).
@@ -743,6 +745,18 @@ function answerAdvert() {
   setCausedEvents(saved.caused);
   enterDocked();
   setDockTab('contracts');
+}
+
+/** Wexley-Yorozu's commissions for modules you designed, paid when you dock after one is first fitted. */
+function payCommissions() {
+  const c = cmdr();
+  const due = commissionsDue(c, currentAccount()?.callsign ?? null, Date.now());
+  if (!due.length) return;
+  const lines = due.map((x) => payCommission(c, x, Date.now()));
+  saveCommander(c);
+  markInbox(c);
+  sfx.beep();
+  setTimeout(() => flash(lines.join(' · '), 6), 1200);
 }
 
 /** The welcome job from the company whose advert brought you here, if it's still to be taken, and the card you came for isn't here. */
@@ -1127,7 +1141,10 @@ function renderNews() {
         .slice(0, 3)
         .map(
           (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Wexley-Yorozu yard at ${n.where.name}: ${stageInfo(n.yard.stage).news}`, n.where)}</b>
-        <small>${escapeHtml(n.where === here ? 'Here, by the moon' : `${n.distance.toFixed(1)} LY away`)} · ${escapeHtml(stageLabel(n.yard))}</small></li>`,
+        <small>${escapeHtml(n.where === here ? 'Here, by the moon' : `${n.distance.toFixed(1)} LY away`)} · ${escapeHtml(stageLabel(n.yard))}</small></li>${firstFittingsAt(n.yard)
+          .map((x) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(x.kind === 'design' ? `Wexley-Yorozu fits CMDR ${x.to}'s new ${x.module.name.toLowerCase()} at ${n.where.name}` : `Wexley-Yorozu fits CMDR ${x.to}'s improved ${x.module.name.toLowerCase()} at ${n.where.name}`, n.where)}</b>
+        <small>${x.kind === 'design' ? 'The first Titanoboa to carry it' : `Designed by CMDR ${escapeHtml(x.module.designer)}, revised by CMDR ${escapeHtml(x.to)}`}</small></li>`)
+          .join('')}`,
         )
         .join('')
     : '';
@@ -2522,7 +2539,7 @@ function buildExploreScene(sys: StarSystem) {
   const yard = yardAt(sys, Date.now());
   const quarry = yard && sceneBodies.find((b) => b.body.id === `moon${yard.moon}`);
   if (yard && quarry) {
-    const defs = { titan: withLineUp(shipById('titanoboa')!, lineUpOf(yard)), hauler: shipById('bullsnake')!, station: shipById('coriolis')! };
+    const defs = { titan: withLineUp(shipById('titanoboa')!, lineUpFor(yard)), hauler: shipById('bullsnake')!, station: shipById('coriolis')! };
     yardScene = buildYard(space.scene, yard, defs, { centre: quarry.centre, radius: quarry.radius }, station.root.position);
   }
   const planetDone = isSurveyed(c, sys, 'planet');
@@ -6991,4 +7008,7 @@ void initAccount({
     if (state === 'title') showTitle();
   },
   onTitle: () => state === 'title',
+}).then(() => {
+  // Signed in after docking (the account loads in the background): a commission may be waiting.
+  if (state === 'docked' && commander) payCommissions();
 });

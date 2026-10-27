@@ -264,6 +264,8 @@ export interface Commander {
   contracts?: ActiveContract[];
   /** Contracts finished or given up recently, so a board doesn't offer them again. */
   contractsDone?: string[];
+  /** Wexley-Yorozu commissions already paid to you (game/commissions.ts), so each is paid once. */
+  commissions?: string[];
   /** Standing with each trading company, in points. */
   standing?: Partial<Record<CompanyId, number>>;
   /** When companies last forgave a day of bad standing (see contracts.forgive). */

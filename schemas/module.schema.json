@@ -71,10 +71,67 @@
       "maxLength": 300
     },
     "designer": {
-      "description": "The commander who designed it (paid 5,000 Cr in the game when it's first fitted).",
+      "description": "The callsign of the commander who designed it: Wexley-Yorozu pays that commander 5,000 Cr in the game, once, when it's first fitted (docs/design/ship-the-titanoboa.md, \"Paid on commission\"). They must be signed in with that callsign to be paid.",
       "type": "string",
       "minLength": 1,
       "maxLength": 40
+    },
+    "inService": {
+      "description": "When an accepted module goes into service. From this date (UTC), a share of new Titanoboa builds carry it; the first build that does is when it's first fitted, and its designer's commission falls due. Set by a maintainer on acceptance. Core modules have none.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from"
+      ],
+      "properties": {
+        "from": {
+          "description": "The date, YYYY-MM-DD (UTC), from which new builds may carry it.",
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "replaces": {
+          "description": "The id of a module of the same zone whose place it takes in the builds that carry it. Leave it out to add the module to the line-up instead, at its zone's place.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "share": {
+          "description": "The share of new builds that carry it (default 0.5).",
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "revisions": {
+      "description": "Accepted improvements, oldest first. Each improver is paid 2,000 Cr, once, when the first build carrying the module after the revision's date is fitted. The designer keeps the credit.",
+      "type": "array",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "by",
+          "from"
+        ],
+        "properties": {
+          "by": {
+            "description": "The improver's callsign.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "from": {
+            "description": "The date, YYYY-MM-DD (UTC), the revision was accepted.",
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "note": {
+            "description": "What changed, in a line.",
+            "type": "string",
+            "maxLength": 200
+          }
+        }
+      }
     },
     "credits": {
       "type": "object",

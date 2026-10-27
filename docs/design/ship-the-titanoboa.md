@@ -6,7 +6,7 @@ summary: Wexley-Yorozu's constructor rebuilt as a factory of modules on a common
 card: titanoboa
 stages:
   - The core modules, the coupling standard, and the standard line-up on the ship page | built
-  - Community modules - anyone designs a section to the standard, checked by validate and the MCP server | proposed
+  - Community modules - anyone designs a section to the standard, checked by validate and the MCP server; accepted ones go into service and their designers are paid | building
   - Every module its own page, and line-ups chosen for the job from the catalogue (a prison module, for one) | proposed
   - Yards assemble the line-up the job needs (a station, a refinery, an atmosphere processor) | building
   - Modules sent where they're needed - a science module for exotic organisms couples on, and stays with the station | proposed
@@ -138,11 +138,21 @@ Wexley-Yorozu pays for good ideas, in credits, and only once they're built. It p
 - **Small fixes aren't revisions.** Mending a face or tidying a sentence is welcome and credited in the repo, but only a change the reviewers accept as a better module earns a revision fee.
 - **A different job is a new module, not a revision.** A hold for ice instead of ore is its own module with its own designer and its own commission fee, and it can say which module it grew from.
 
-And the company being the company, the standard design agreement has a clause of its own: *"All designs submitted become the property of Wexley-Yorozu in perpetuity, across all systems known and unknown. The company thanks you for your contribution."* You're paid; they own your idea forever.
+And the company being the company, the standard design agreement has a clause of its own: *"All designs submitted become the property of Wexley-Yorozu in perpetuity, across all systems known and unknown. The company thanks you for your contribution."* You're paid; they own your idea forever.\*
+
+\*In the game. Out here, you keep your copyright: contributions are shared under CC BY-SA 4.0.
 
 Two guards keep it fair. **Only accepted modules are paid:** review stays with the maintainers, so submitting modules earns nothing until one is built. And **the pay goes to a named commander:** the module file carries its designer's commander name, and the fee waits until that commander next docks.
 
 The pay is in credits, in the game. Nobody is paid real money for a module: the real-world reward is the credit on the page, in the repo, and your module flying in everyone's game.
+
+#### As built *(27 October 2026)*
+
+- **Accepting a module** (for now, by merging its pull request) adds `inService` to its file: the date it goes into service, and either the module it `replaces` (same zone and couplings) or nothing, in which case it's added at its zone's place in the line-up. `share` is how many new builds carry it, half by default. Accepting a revision adds `{ by, from, note }` to `revisions`. `npm run validate` checks them: a real date, a callsign rather than "Witchspace", a replacement that fits.
+- **First fitted** is the first Titanoboa build anywhere, starting on or after that date, whose line-up carries it. The yards run on the clock, so every game agrees on when and where (`src/game/commissions.ts`). From then on the yard's Titanoboa really is built with it.
+- **The fee** waits for the commander signed in with the designer's callsign (any case): the next time they dock in a Modern game, Wexley-Yorozu pays 5,000 Cr (2,000 for a revision) and writes to say so, and the save remembers it so it's paid once. A designer needs an account and a callsign; the callsign on the file is the one that's paid.
+- **The yard news** at the build that first carries it: *"Wexley-Yorozu fits CMDR X's new ice hold at Lave"*, or *"…improved…"* for a revision, with *Designed by CMDR X, revised by CMDR Y*.
+- **Not yet:** the payment lives in the save, so a commander started afresh would be paid again; moving it onto the account on the server is a later step, if that's ever abused. The catalogue pages showing designers and revisions are the website's. Handing a module in without GitHub waits for the Build connector's submissions ([MCP server](mcp-server.md)).
 
 ### Every section its own page, every job its own line-up *(Mark, 27 October 2026)*
 
