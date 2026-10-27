@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { handle } from '../../src/mcp/protocol';
 import type { McpData } from '../../src/mcp/tools';
 import { buildTools, type AsAccount } from './mcpBuild';
-import { authServerMetadata, connectPage, isMetadataUrl, issuerOf, protectedResourceMetadata, redirectOk, s256, verifierOk, withParams } from './oauth';
+import { authServerMetadata, connectPage, isMetadataUrl, issuerOf, redirectMatches, protectedResourceMetadata, redirectOk, s256, verifierOk, withParams } from './oauth';
 
 const ISSUER = 'https://space.witchspace.org.uk';
 
@@ -43,6 +43,16 @@ describe('where a client may be sent back to', () => {
     expect(redirectOk('http://evil.example/callback')).toBe(false);
     expect(redirectOk('https://claude.ai/cb#x')).toBe(false);
     expect(redirectOk('javascript:alert(1)')).toBe(false);
+  });
+
+  it('on this machine the port may differ, as Claude Code registers its addresses without one', () => {
+    const claudeCode = ['http://localhost/callback', 'http://127.0.0.1/callback'];
+    expect(redirectMatches(claudeCode, 'http://localhost:54321/callback')).toBe(true);
+    expect(redirectMatches(claudeCode, 'http://127.0.0.1:61000/callback')).toBe(true);
+    expect(redirectMatches(claudeCode, 'http://localhost:54321/elsewhere')).toBe(false);
+    expect(redirectMatches(claudeCode, 'http://evil.example:54321/callback')).toBe(false);
+    expect(redirectMatches(['https://claude.ai/api/mcp/auth_callback'], 'https://claude.ai/api/mcp/auth_callback')).toBe(true);
+    expect(redirectMatches(['https://claude.ai/api/mcp/auth_callback'], 'https://claude.ai:8443/api/mcp/auth_callback')).toBe(false);
   });
 
   it('keeps the address and adds the answer', () => {

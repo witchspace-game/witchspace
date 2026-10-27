@@ -25,7 +25,7 @@ import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
 import { CHECKS_PER_MINUTE, KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
 import { gitHubReady, openPullRequest, type GitHubEnv } from './github';
 import { CHECKS } from './checks';
-import { ACCESS_TTL, challengeOk, clientName, CODE_TTL, connectPage, isMetadataUrl, redirectOk, REFRESH_TTL, REQUEST_TTL, s256, SCOPE, verifierOk, withParams } from './oauth';
+import { ACCESS_TTL, challengeOk, clientName, CODE_TTL, connectPage, isMetadataUrl, redirectMatches, redirectOk, REFRESH_TTL, REQUEST_TTL, s256, SCOPE, verifierOk, withParams } from './oauth';
 
 export interface AccountsEnv extends GitHubEnv {
   /** Resend, for sign-in emails. Without it (local development) the link is returned instead of sent. */
@@ -133,6 +133,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const signIn = path.match(/^\/oauth\/request\/([A-Za-z0-9_-]{20,64})$/);
     if (signIn && m === 'GET') return this.describeSignIn(request, signIn[1]);
     if (signIn && m === 'POST') return this.answerSignIn(request, signIn[1]);
+    if (path.startsWith('/oauth/request/')) return json({ error: 'That sign-in has expired: start again from your assistant' }, 404);
     const sub = path.match(/^\/submissions(?:\/(mine|[a-z0-9]{10})(?:\/(review))?)?$/);
     if (sub && request.headers.has('X-Admin-Key')) return this.reviewQueue(request, url, sub[1], sub[2]);
 
@@ -887,7 +888,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const client = q.client_id ? await this.oauthClient(q.client_id) : null;
     if (!client) return { page: 'That assistant isn’t known to Witchspace. Try adding the connector again.' };
     const redirect = q.redirect_uri ?? (client.redirects.length === 1 ? client.redirects[0] : '');
-    if (!client.redirects.includes(redirect)) return { page: 'That assistant asked to be sent somewhere it didn’t register. Try adding the connector again.' };
+    if (!redirectMatches(client.redirects, redirect)) return { page: 'That assistant asked to be sent somewhere it didn’t register. Try adding the connector again.' };
     const fail = (error: string, description: string) => ({ redirect: withParams(redirect, { error, error_description: description, state: q.state }) });
     if (q.response_type !== 'code') return fail('unsupported_response_type', 'Only response_type=code');
     if (q.code_challenge_method !== 'S256' || !challengeOk(q.code_challenge)) return fail('invalid_request', 'PKCE with S256 is required');
