@@ -7,6 +7,7 @@ card: titanoboa
 stages:
   - The core modules, the coupling standard, and the standard line-up on the ship page | built
   - Community modules - anyone designs a section to the standard, checked by validate and the MCP server | proposed
+  - Every module its own page, and line-ups chosen for the job from the catalogue (a prison module, for one) | proposed
   - Yards assemble the line-up the job needs (a station, a refinery, an atmosphere processor) | building
   - Modules sent where they're needed - a science module for exotic organisms couples on, and stays with the station | proposed
   - Sections swapped in the yard - a failed reactor towed away, a new one fitted | proposed
@@ -16,6 +17,7 @@ help:
   - Critique the core modules - does each one read as what it is, and is anything in the wrong place? | design
   - Write the yard's radio when a reactor section is being changed out | writing
   - Name the module types as Wexley-Yorozu's catalogue would (dry, corporate, a little sinister) | writing
+  - Design the detention module - cells for the Marshals' captures, one clear shape | ships
 ---
 
 # Design: the Titanoboa, a modular factory
@@ -141,6 +143,16 @@ And the company being the company, the standard design agreement has a clause of
 Two guards keep it fair. **Only accepted modules are paid:** review stays with the maintainers, so submitting modules earns nothing until one is built. And **the pay goes to a named commander:** the module file carries its designer's commander name, and the fee waits until that commander next docks.
 
 The pay is in credits, in the game. Nobody is paid real money for a module: the real-world reward is the credit on the page, in the repo, and your module flying in everyone's game.
+
+### Every section its own page, every job its own line-up *(Mark, 27 October 2026)*
+
+Every section deserves proper attention from the community, so each module stands on its own rather than as a line in the Titanoboa's page:
+
+- **A page per module,** like a ship's: its shape turning, its job in a sentence, where it sits in the line-up and why, its designer and revisions, its own help wanted, and the yards it's fitted at today. The Titanoboa's page becomes the catalogue that links them.
+- **Wexley-Yorozu puts the line-up together for the job at hand.** A job is an order in the catalogue (a station, a refinery, a station moved) that names the modules it needs, and the yard couples those and nothing else. A new kind of job is a new order; a new module makes new orders possible.
+- **So a new section can be designed, and the work comes with it.** A **detention module**, for one: a block of cells for the Co-operative Marshals' captures ([law, debt and capture](law-and-travel.md)). Wexley-Yorozu builds a prison where the Marshals ask for one, the module can stay behind as the prison satellite a station keeps ([stations and worlds](stations-and-worlds.md)), and towing one between stars is escort work nobody else wants.
+
+It only works if anyone can design a module without GitHub, from a web page or a conversation with an AI assistant, so that comes with it.
 
 ## 3. Modules sent where they're needed
 

@@ -926,11 +926,13 @@ body.menu-open { overflow: hidden; }
 
 /* --- Home: the live galaxy, the ladders, see it fly, built with you ---------- */
 
-.live-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 24px 0 0; font-size: 14px; color: var(--muted); }
-.live-strip b { color: var(--fg); font-weight: 600; }
-.live-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #ff4d6d; box-shadow: 0 0 10px #ff4d6d; animation: live-pulse 1.6s infinite; }
-@keyframes live-pulse { 50% { opacity: 0.35; } }
-@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+.ticker { display: inline-flex; align-items: center; gap: 12px; max-width: 100%; margin: 26px 0 0; padding: 8px 16px 8px 14px; border: 1px solid var(--border); border-radius: 999px; background: rgba(12, 15, 21, 0.55); color: var(--muted); font-size: 14px; text-decoration: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.ticker:hover, .ticker:focus-visible { border-color: rgba(61, 255, 176, 0.35); color: var(--fg); }
+.ticker-label { flex: none; padding-right: 12px; border-right: 1px solid var(--border-strong); color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }
+.ticker-item { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; transition: opacity 0.4s ease; }
+.ticker-item.out { opacity: 0; }
+.ticker-item b { color: var(--fg); font-weight: 600; }
+.ticker-go { flex: none; color: var(--accent); }
 
 .now-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px; }
 .now-card { display: flex; flex-direction: column; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
@@ -941,6 +943,8 @@ body.menu-open { overflow: hidden; }
 .headline:first-child { border-top: 0; padding-top: 0; }
 .headline b { display: block; font-size: 16.5px; }
 .headline small { color: var(--muted); }
+.headline.over { opacity: 0.55; }
+.now-card .up:empty { display: none; }
 .now-card .big { font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 600; line-height: 1.12; margin-bottom: 6px; }
 .now-card .bar { height: 6px; margin: 12px 0 6px; border-radius: 3px; background: var(--border-strong); overflow: hidden; }
 .now-card .bar i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #f7c948, var(--amber)); }

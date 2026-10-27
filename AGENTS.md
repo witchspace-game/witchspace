@@ -15,17 +15,24 @@ Most contributions are **content files** (JSON validated by JSON Schema), not co
 | Path | What |
 | --- | --- |
 | `content/ships/*.json` | One ship or station per file. Bundled automatically. |
+| `content/modules/*.json` | Titanoboa sections, each to the coupling standard (docs/design/ship-the-titanoboa.md). |
 | `schemas/*.schema.json` | The source of truth for every content format. Read it before writing content. |
 | `src/content/types.ts` | TypeScript mirror of the schemas. Keep them in sync. |
 | `src/content/geometry.ts` | Geometry rules shared by the game and the validator. |
 | `src/render/` | three.js rendering. |
+| `src/game/`, `src/economy/`, `src/ui/`, `src/net/` | Flight, combat and the law; markets, events and companies; screens and HUD; accounts and shared space. `src/main.ts` ties them together. |
+| `site/`, `src/site/` | The website (witchspace.org.uk): pages in `site/pages/`, built by `tools/build-site.ts` along with the design, ship and roadmap pages. |
+| `server/` | The Cloudflare Worker at space.witchspace.org.uk: shared space, accounts, the ideas board, clips, notifications and the MCP server. Has its own `package.json`. |
+| `relay/` | A small price relay for the Bitcoin exchange. |
 | `tools/validate.ts` | Content validator CLI. |
 | `docs/worldbuilding.md` | Tone, setting and naming. Read it before writing flavour text. |
+| `docs/lore.md`, `docs/companies.md` | The canon: the galaxy as its people know it, and the four trading companies. |
+| `docs/ideas.md` | The ideas backlog, not yet designed. |
 | `docs/design/` | Agreed designs, written before building. Built ones end with an "As built" section. Read the relevant one before implementing or changing a feature, and update it when you do. |
 
 ## The Witchspace MCP server
 
-If your client supports MCP, connect to `https://space.witchspace.org.uk/mcp` (streamable HTTP, read-only, no sign-in), or run it locally from the repo with `claude mcp add witchspace -- npx tsx tools/mcp.ts`. It gives you `validate_ship`, `preview_ship` (a PNG of four views beside a Cobra), `balance_check`, `list_ships`, `get_ship`, `designs`, `get_design`, `help_wanted` and `galaxy_system`. Use them: check and preview every ship you draft before showing it to the person. See docs/design/mcp-server.md.
+If your client supports MCP, connect to `https://space.witchspace.org.uk/mcp` (streamable HTTP, read-only, no sign-in), or run it locally from the repo with `claude mcp add witchspace -- npx tsx tools/mcp.ts`. It gives you `validate_ship`, `preview_ship` (a PNG of four views beside a Cobra), `balance_check`, `list_ships`, `get_ship`, `designs`, `get_design`, `help_wanted` and `galaxy_system`, and the design documents and the lore as resources. Use them: check and preview every ship you draft before showing it to the person. See docs/design/mcp-server.md.
 
 ## Workflow for creating content
 
@@ -46,6 +53,15 @@ If your client supports MCP, connect to `https://space.witchspace.org.uk/mcp` (s
 - Detail lines (`geometry.details`) sit 0.2–0.5m outside the hull surface, or the depth test hides them. So does an `insignia` (a small mark in its own colour; keep it subtle).
 - Never imitate police markings (beacons, hull bands) on non-police ships. The game adds them to the `police` role only.
 
+## Design principles
+
+- **The neo glow is the signature.** Never dim a hull's glow to make a point; menace comes from shape and behaviour.
+- **Elegance over detail.** One clear shape that says what a thing is, in a handful of lines. No windows, pipes or panels.
+- **It plays on a phone.** Every screen and control works by touch and at phone width, as well as with mouse and keyboard.
+- **Look at it.** Check visual changes in a browser, at desktop and phone width, before calling them done.
+- **Design before building.** New features get a design document first; credit an idea to whoever had it, as "(Name)".
+- **Be honest on the page.** No claims the game doesn't back up; say what's built, and label what isn't.
+
 ## Hard rules
 
 - **Never reproduce copyrighted material from *Elite*, *Elite Dangerous*, *Oolite* or other games.** That includes source code, ship vertex/face data, manual or in-game text, and art, even if you remember it. Original *Elite* ship **names** are allowed as a deliberate tribute (see `CREDITS.md`), but geometry, stats tables and descriptions must be newly created.
@@ -61,7 +77,12 @@ npm run dev         # dev server on http://localhost:5173
 npm run validate    # validate all content (add -- --fix to fix winding)
 npm run typecheck   # TypeScript
 npm run build       # typecheck + production build
+npm test            # unit tests (vitest)
+npm run preview:headers   # production build served with the real security headers
+cd server && npx tsc --noEmit   # the server typechecks separately
 ```
+
+Before opening a pull request, run the typecheck, tests, validate, build and the server typecheck.
 
 ## Code style
 

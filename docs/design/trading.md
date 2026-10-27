@@ -8,6 +8,7 @@ stages:
   - The trader's screen, prices you know, trading from the station | built
   - The saloon: regulars and tips | built
   - The saloon: insiders and the inspectors | proposed
+  - Meet the founder - CMDR Jameson in the saloon, a round on the house, office hours | proposed
   - The news cycle: overshoot and aftermath | proposed
   - Limit orders (Bitcoin first); Ma Reyes's lessons; a Merchant rank | building
   - Working the market: cornering, planted rumours | proposed
@@ -117,6 +118,16 @@ Every station has somewhere traders rest: **the saloon** (a bar on a Coriolis; a
 *(Stage 1 built, 26 October 2026, `src/game/saloon.ts`: a Saloon tab beside News, named for the station's people (a saloon, a club, a tea room or a shebeen); two to four regulars, a dozen per station coming and going every two hours, each with a name, a trade, a mood you read from how they're behaving, and a drink price. Tips come from the galaxy's own events within 15 LY: glad regulars tell stale news, sad and mad ones early news (true, before it reaches the board), and about one regular in five is a liar who plants it. A drink buys the talk; the sad and the liars want paying properly (40–160 Cr) before they name the system. Once the news, or the silence, would have reached you, a regular's card shows how many of their tips came true. A door at the back leads to the back room. Insiders, the inspectors and Ma Reyes are still to come.)*
 
 **Insiders are another matter.** Some people in the saloon have information that isn't theirs to sell: a station clerk who sees the price reports before they're posted, a company contact who knows a shipping schedule, a port official who knows a crackdown is coming. Paying one of them is **insider trading**: more reliable than bar talk, dearer **(to tune: 200–1,000 Cr)**, and illegal in lawful systems (corporate state, democracy, confederacy). Big trades on what they told you, made before it was public, can be noticed afterwards: the Co-operative's market inspectors may fine you and give you a record (an Offender, as for smuggling) **(to tune: chance by size and government)**, and the insider loses their job, which they'll remember. Anarchies and feudal worlds don't care. The risk is the price of the edge.
+
+### Meet the founder in the saloon *(Mark, 27 October 2026)*
+
+Players could meet Mark in the saloon. His callsign is **Jameson**, the original's default commander, which suits the corner table. It grows with the game:
+
+1. **He's really there.** When CMDR Jameson is docked, he appears among that saloon's regulars, marked as a real commander, never a character. No chat is needed: he can **buy the bar a round** (everyone in the saloon that hour gets a drink and a tip on the house) and pin a **note** on the saloon board, signed, which stays after he leaves.
+2. **Office hours.** Announced ahead on the socials: *"Jameson will be in the Lave saloon on Friday at 8 pm."* Commanders fly in, see who else turned up, and leave him their ideas on the ideas board from there. It's an event, and a reason to launch.
+3. **Talking.** Real conversation waits for player chat, which waits for the online-safety sign-off ([radio and comms](radio-and-comms.md)). Office hours are the natural first place for it: one room, one host, moderated.
+
+When he isn't there, nothing pretends he is: there's no NPC Jameson, only his notes.
 
 ## 4. The news cycle
 

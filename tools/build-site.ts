@@ -238,7 +238,7 @@ for (const d of docs) {
 <div class="doc-top"><a class="back" href="/roadmap/">← Roadmap</a><button type="button" class="button ghost small" data-share data-share-url="/design/${d.slug}/" data-share-title="${escapeAttr(d.title)}">Share</button></div>
 ${docPanel(d)}
 ${html}
-<p class="doc-edit muted small">This page is <a href="${REPO}${d.file}">${d.file}</a>. Anyone can propose a change to it by pull request, or argue for one in <a href="https://github.com/witchspace-game/witchspace/discussions">Discussions</a>.</p>
+<p class="doc-edit muted small">Think something here should change? <a href="/ideas/?about=${encodeURIComponent(d.title)}">Say so on the ideas board</a>, where others can vote it up, or email <a href="mailto:hello@witchspace.org.uk?subject=${encodeURIComponent(d.title)}">hello@witchspace.org.uk</a>. If you code: this page is <a href="${REPO}${d.file}">${d.file}</a> on GitHub, open to pull requests.</p>
 </article>`,
   });
 }

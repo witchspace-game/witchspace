@@ -35,7 +35,8 @@ Witchspace has two control schemes. Press **K** in flight to switch, and **F1** 
 | --- | --- |
 | Mouse | Aim (Esc releases the mouse) |
 | Left click / F | Fire. Lasers fire straight ahead at the centre cross, which turns red on target. Fit a **Gimballed Laser Mount** (Modern rules) and they hit whatever is under the ring instead, at 80% damage |
-| Right click | Centre the aim and stop turning |
+| Right click | Centre the aim and level the wings |
+| Hold right + mouse | Roll with the nose held steady; the ship keeps that bank |
 | W / S | Throttle up / down |
 | A / D | Roll |
 | Q / E | Yaw (fine sideways adjustment) |

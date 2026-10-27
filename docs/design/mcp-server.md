@@ -2,13 +2,16 @@
 title: The Witchspace MCP server
 status: building
 pillar: build
-summary: Bring your own AI. One web address lets Claude, ChatGPT or Cursor validate, preview and balance-check a ship, read every design and help-wanted task, and look up any system in the galaxy. Later, the live galaxy for players, public news only.
+summary: Bring your own AI, and build Witchspace with it. One web address lets Claude, ChatGPT or Cursor design, check and preview ships, modules and stories, try them in the game, and hand them in for review, credited to your callsign, with no GitHub. The connector that powers the Build side.
 card: coriolis
 stages:
   - Contributors - validate, preview and balance-check ships; the designs and help wanted; galaxy lookups | built
-  - Submissions - send a checked design to the queue from the conversation | proposed
+  - Guided workshops - prompts for a first ship, a module, a saloon regular; the live viewer in the chat | proposed
+  - Every content type - Titanoboa modules, characters, news events, trails, company files | proposed
+  - Try it - a link that flies your draft in the game, in a test system | proposed
+  - Hand it in - sign in, submit, follow it, revise it; the review queue and a pull request made for you | proposed
+  - The community - claim a task, post and vote on ideas, see your credits and commissions | proposed
   - Players - the live galaxy, public news only | proposed
-  - New content types as they arrive - characters, events, missions | proposed
 help:
   - Try it with your own assistant and tell us what it got wrong | playtest
   - Write the prompts that make a good first ship with it, as a guide for newcomers | writing
@@ -33,6 +36,47 @@ MCP (the Model Context Protocol) lets an assistant use tools a service provides.
 - **Never a shortcut through the game.** Players get public information (what the news says, where yards are building, what a system is), never the answers the game asks them to earn: no best trade routes, no price predictions, no where-the-Falcon-is. Learning the exchange should pay ([trading](trading.md)).
 - **Honest about authorship.** The person is the author; contributions made with it are marked AI-assisted, as `AGENTS.md` asks.
 
+## The Build connector *(Mark, 27 October 2026)*
+
+Mark's point: the Build side of Witchspace feels out of reach if you don't code, because every road ends on GitHub, and we haven't fully embraced AI tools. Most people who'd design a ship or write a saloon regular already have an AI assistant. So the connector should be **the whole workshop**, not just a checker: you talk to your assistant, it does the files, the rules and the checks, and you do the imagining, the judging and the play-testing.
+
+The loop, all in one conversation:
+
+1. **Pick something.** *"What does Witchspace need that I could do?"* The assistant reads help wanted, suggests tasks that fit, and **claims** one for you, so two people don't build the same prison module.
+2. **Make it.** A guided workshop (an MCP *prompt*: they show up as ready-made starters in Claude and others) walks you through it: the brief, the rules, two or three real examples, then drafts with you.
+3. **See it.** A preview after every change: the ship beside a Cobra, the module coupled into a Titanoboa line-up, the regular in a saloon scene. Where the client can show interactive views inside the chat (MCP Apps), it's the game's own wireframe renderer, turning, so you can drag it round.
+4. **Try it.** A link that opens the game with your draft in it, in a quiet test system: fly your ship, dock at a yard fitted with your module. Drafts are private, expire after a week, and never reach shared space.
+5. **Hand it in.** Sign in once (the same email code as the game), and submit. It's credited to your callsign, marked AI-assisted, and you can follow it, answer review notes and revise, all from the conversation.
+6. **Get it in.** A maintainer reviews the queue. Accepting it opens the pull request for you, credited, and you get a notification. When it's in the game you get the in-game reward (the Contributor rung; a Wexley-Yorozu commission for a module), and your name is on it.
+
+Nobody needs GitHub, the repo or a terminal. People who code still can, and the same checks run in CI.
+
+### What's new, beyond stage 1
+
+| Area | Tools and prompts |
+|---|---|
+| **Workshops** (prompts) | `first_ship`, `design_module`, `write_regular`, `write_news_event`, `critique` (an honest second opinion against the design principles) |
+| **Content types** | `validate_*` and `preview_*` for each format as it gets a schema: modules first (`schemas/module.schema.json` exists), then characters, news events, trails, company files |
+| **Context** | `preview_lineup` (a module in a Titanoboa), `compare_fleet` (beside every ship in its class), `lore_check` (names, tone, no real companies, every story has people) |
+| **Try it** | `playtest_link`: stores a checked draft for a week and returns a /play/ link that loads it in a test system |
+| **Hand it in** | `sign_in` (OAuth, the client's own sign-in screen), `submit`, `my_submissions`, `revise`, `withdraw` |
+| **Community** | `claim_task` / `release_task`, `ideas` (search), `post_idea` and `vote` (signed in), `my_credits` (accepted work, commissions, rank) |
+| **Maintainers** (admin only) | `review_queue`, `review` (accept, or send back with notes), which opens the pull request from a GitHub App |
+
+### Rules that keep it safe and fair
+
+- **Reading needs nothing; writing needs a sign-in.** Every write (claim, submit, idea, vote) is tied to an account, rate-limited, and size-capped.
+- **Nothing is public until a person accepts it.** Submissions are private to their author and the maintainers, so the queue isn't a place to post things, which also keeps the online-safety duties small. The ideas board stays the public, moderated place.
+- **The checks are the game's checks.** The same validator, renderer and generator as the game and CI: one truth, no hand-copied rules.
+- **The person is the author.** The connector never submits on its own; the person asks, in the conversation, every time.
+- **Still no shortcuts through the game** for players (see Principles).
+
+### How it's built
+
+On the Worker that already serves it. Sign-in is OAuth 2.1 (what MCP clients expect for remote servers), with our email code as the login step, so the account is the game's account. Submissions, claims and drafts are tables in the `Accounts` Durable Object beside the saves. Previews are SVG today; the in-chat viewer is a small HTML resource running the game's renderer, served where the client supports it. The pull request is opened by a GitHub App with access to this repo only.
+
+The web form and the ship workshop page on the site use the **same** submission API, so a person without an AI assistant gets the same path ([the community platform](community-platform.md), stage 3).
+
 ## 1. Contributors *(built)*
 
 Tools:
@@ -56,7 +100,7 @@ Resources: the ship schema, `AGENTS.md`, `CONTRIBUTING.md`, the worldbuilding gu
 
 ## 2. Submissions
 
-`submit_ship` sends a design that has passed `validate_ship` to the submission queue planned in the community platform (stage 3, the ship editor), with the person's name or callsign and a note, and returns a link to watch it. A maintainer turns good ones into pull requests, credited. This needs the queue to exist first, and an account (a sign-in link, as the game already uses) so submissions have an author and can be limited.
+*Superseded by The Build connector above, kept for the history.* `submit_ship` sends a design that has passed `validate_ship` to the submission queue planned in the community platform (stage 3, the ship editor), with the person's name or callsign and a note, and returns a link to watch it. A maintainer turns good ones into pull requests, credited. This needs the queue to exist first, and an account (a sign-in link, as the game already uses) so submissions have an author and can be limited.
 
 ## 3. Players
 
@@ -76,6 +120,10 @@ Not included, on purpose: prices, routes, the best trade, where a pirate or a Le
 As characters, events, trails and missions become data files with schemas, each gets its `validate_*` tool and examples, and the worldbuilding checks (every story has people, with their glad, sad, mad and bad moments; no real company names).
 
 ## Open questions
+
+- Which content type comes after modules: saloon regulars (lots of writers, little risk) or news events (they change the economy, so they need balance checks)?
+- Should claims expire (two weeks without a draft?) so abandoned tasks free up?
+- Should the in-chat viewer be the first thing built, since seeing your ship turn is the moment people fall for it?
 
 - Should the player tools be in the same server as the contributor tools, or a separate address, so a player adds only what they need?
 - How generous should the rate limits be before submissions exist?
