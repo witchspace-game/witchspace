@@ -1209,6 +1209,24 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 }
 
 /* /connect/: the Build connector's sign-in step. */
+.review-desk { max-width: 720px; }
+.review-desk [hidden] { display: none; }
+.review-desk .submit-step { margin-bottom: 16px; }
+.review-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.review-tabs button { flex: 1; padding: 10px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.review-tabs button[aria-selected='true'] { color: var(--fg); border-color: var(--accent); }
+.review-list { display: flex; flex-direction: column; gap: 8px; }
+.review-row { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.review-row:hover { border-color: var(--accent); }
+.review-flag { color: var(--amber); }
+.review-one h3 { margin: 4px 0; }
+.review-one h4 { margin: 18px 0 6px; font-size: 14px; }
+.review-back { align-self: flex-start; margin-bottom: 8px; }
+.review-note { margin: 0; padding: 10px 14px; border-left: 2px solid var(--accent); color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+.review-one .preview { margin: 12px 0; }
+.review-file pre { max-height: 320px; overflow: auto; font-size: 12px; }
+.review-one #decide:not([hidden]) { margin-top: 18px; display: flex; flex-direction: column; gap: 12px; }
+.review-one textarea { width: 100%; }
 .connect { max-width: 640px; }
 .connect [hidden] { display: none; }
 .connect .submit-step { margin-bottom: 16px; }
