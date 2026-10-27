@@ -80,6 +80,7 @@ function setKind(k: Kind) {
   form.classList.toggle('is-ship', k === 'ship');
   $('#standard-link').textContent = k === 'module' ? 'The module standard' : 'How ship files work';
   $<HTMLAnchorElement>('#standard-link').href = k === 'module' ? '/design/ship-the-titanoboa/' : '/get-involved/';
+  $('#editor-link').hidden = k !== 'ship';
 }
 
 /** Fill the fields from the file, and draw it. */
@@ -353,6 +354,18 @@ async function revise(id: string) {
 // --- Start ----------------------------------------------------------------------------------
 
 setKind(kind);
+// A ship from the ship editor, handed over for sending.
+if (new URLSearchParams(location.search).get('from') === 'editor') {
+  try {
+    const handed = sessionStorage.getItem('ws-submit-file');
+    if (handed) {
+      fileBox.value = handed;
+      fromText();
+    }
+  } catch {
+    /* nothing handed over */
+  }
+}
 const startWith = new URLSearchParams(location.search).get('module');
 if (startWith && cores.some((c) => c.id === startWith)) {
   core.value = startWith;

@@ -1224,3 +1224,68 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .connection-list li:first-child { padding-top: 0; border-top: 0; }
 .connection-list .armed { border-color: var(--amber); color: var(--amber); }
 .connect-more { margin-top: 8px; }
+
+/* /ship-editor/: blueprints beside the ship glowing in 3D. */
+.editor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.editor-stage { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.editor-3d { border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; background: #04060b; }
+.editor-3d canvas { display: block; width: 100%; height: 340px; touch-action: none; cursor: grab; }
+.editor-3d p { margin: 0; padding: 20px; }
+.editor-views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.editor-view { margin: 0; position: relative; border-radius: var(--radius); border: 1px solid var(--border); background: #05080f; overflow: hidden; }
+.editor-view figcaption { position: absolute; top: 8px; left: 10px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); pointer-events: none; }
+.blueprint { display: block; width: 100%; aspect-ratio: 1; touch-action: none; user-select: none; }
+.blueprint.adding { cursor: crosshair; }
+.bp-grid { stroke: rgba(120, 160, 255, 0.08); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.bp-axis { stroke: rgba(120, 160, 255, 0.25); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.bp-edge { stroke-width: 1; opacity: 0.3; vector-effect: non-scaling-stroke; }
+.bp-edge.mine { stroke-width: 1.6; opacity: 1; }
+.bp-point { cursor: grab; }
+.bp-point circle:last-child { fill: var(--accent); stroke: #04060b; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.bp-point.ghost circle:last-child { fill: none; stroke: var(--accent); }
+.bp-point.inside circle:last-child { fill: var(--muted); }
+.bp-point.ghost.inside circle:last-child { fill: none; stroke: var(--muted); }
+.bp-point.chosen circle:last-child { fill: #fff; stroke: var(--accent); stroke-width: 3; }
+.bp-hit { fill: transparent; }
+.editor-tabs { display: none; }
+.editor-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.editor-tools [aria-pressed='true'] { background: var(--accent); color: #04060b; }
+.editor-tools .snap { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); margin-left: auto; }
+.editor-tools select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border-strong); background: rgba(0, 0, 0, 0.3); color: var(--fg); font: 14px var(--font); }
+.editor-tip { margin: 0; }
+.editor-panel { display: flex; flex-direction: column; gap: 14px; }
+.editor-panel .submit-step { padding: 18px; gap: 12px; }
+.part-list { display: flex; flex-direction: column; gap: 6px; }
+.part-list button { display: flex; justify-content: space-between; gap: 8px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--fg); font: 15px var(--font); text-align: left; cursor: pointer; }
+.part-list button small { color: var(--muted); }
+.part-list button[aria-pressed='true'] { border-color: var(--accent); background: rgba(77, 255, 210, 0.08); }
+.xyz { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.xyz small { font-size: 11px; }
+#point-panel.empty .xyz { opacity: 0.5; }
+.editor-panel .armed, .editor-ship .armed { border-color: var(--amber); color: var(--amber); }
+.ship-stats { align-self: stretch; }
+.stat-grid input { width: 100%; }
+.ship-stats summary { cursor: pointer; color: var(--fg); font-size: 15px; }
+.stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.editor-ship input[type='color'] { width: 64px; height: 36px; padding: 2px; }
+.check-head { font-size: 15px; color: var(--fg); }
+.check-head.good { color: var(--accent); }
+.check-head.bad { color: var(--amber); }
+.check ul { margin: 6px 0 10px; padding-left: 20px; font-size: 14px; color: var(--muted); }
+.submit-page .button:disabled { opacity: 0.35; box-shadow: none; cursor: not-allowed; }
+.homage { border-left: 2px solid var(--border-strong); padding-left: 10px; }
+@media (max-width: 900px) {
+  .editor-layout { grid-template-columns: 1fr; }
+  .editor-3d canvas { height: 260px; }
+  .editor-tabs { display: flex; gap: 6px; }
+  .editor-tabs button { flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--muted); font: 14px var(--font); }
+  .editor-tabs button[aria-selected='true'] { border-color: var(--accent); color: var(--fg); }
+  .editor-views { grid-template-columns: 1fr; }
+  #point-panel { order: -1; }
+  .editor-views[data-tab='0'] .editor-view:not([data-view='0']),
+  .editor-views[data-tab='1'] .editor-view:not([data-view='1']),
+  .editor-views[data-tab='2'] .editor-view:not([data-view='2']) { display: none; }
+  .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.ai-setup code { overflow-wrap: anywhere; }
