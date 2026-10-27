@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { track as countEvent } from '@vercel/analytics';
 import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
 import { cycleSoundMode, danube, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
 import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
@@ -4882,7 +4883,14 @@ if (isTouch && !isIos) {
   );
 }
 
+/** Whether this page load has launched yet: the first launch is counted once (Vercel Web Analytics: the rules and the controls, nothing personal). */
+let launchCounted = false;
+
 async function launch() {
+  if (!launchCounted) {
+    launchCounted = true;
+    countEvent('launch', { rules: cmdr().difficulty, controls: isTouch ? 'touch' : 'keys' }); // how many who arrive actually fly; nothing personal
+  }
   const repaired = fitTransponderForLaunch();
   ensureSystemScene();
   setState('transition');

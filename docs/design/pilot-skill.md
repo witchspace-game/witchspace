@@ -38,6 +38,18 @@ Each pirate has a skill from 0 (a rookie, exactly today's AI) to 1 (an ace).
 | **Breaking off** | Peels away in a random direction | Breaks out of your line of fire, across it |
 | **Shields** | Fights on with them gone | Pulls out to let them recharge, then comes back (from skill 0.6) |
 
+## Attack runs, not rams *(Mark, 27 October 2026)*
+
+"I hate the way the pirates come in nose first and literally smash into you." Every pirate, rookie or ace, makes attack runs: it comes at you, breaks off before it reaches you, and comes round again. A ram happens only by mistake, or from a deliberately suicidal type (none yet), never as the way to attack. A replay that mostly shows a ship ramming you teaches nothing ([the kill cam](kill-cam.md)).
+
+Built in today's AI (`src/game/npc.ts`), ahead of the skill dial, after the old pass broke off only at 300 m, under a second from impact head on:
+
+- **It breaks off by time, not distance:** 0.8 to 1.4 seconds from reaching you at the closing speed, picked afresh each pass, so a rookie is late and a bit clumsy but still turns away; never closer than 300 m.
+- **Across your line of fire, a little away from you,** on the side it's already sliding towards, never on through you.
+- **A collision guard** as a backstop: if its path would come within a ship's width of yours in the next second, it breaks at once.
+- **It opens up at least 700 m** before turning for the next run, and closes at about 150 m/s faster than you're moving away, so it catches you if you run and eases off head on.
+- Tested by flying it (`src/game/attackRuns.test.ts`): a Sidewinder, a Mamba and the Falcon against a Cobra coming at them, cruising or sitting still, over 180 fights and 746 passes, never touching: the closest pass 124 m, most between 150 and 280 m (a Cobra is 68 m across), and round again every 6 to 8 seconds; a Cobra running flat out gets fewer passes, since a pirate is barely faster.
+
 ## Who gets a good pilot
 
 - **Rookies:** most pirates, skill 0 to 0.4.
