@@ -56,6 +56,8 @@ const QUIET_AFTER = 9000; // ms before the closed log fades out
 const TICKER = 5000; // ms the phone pill shows the latest line
 
 const entries: Entry[] = [];
+/** Lines already drawn once: only new ones play their entrance. */
+const shownBefore = new Set<number>();
 let serial = 0;
 let open = false;
 let unread = 0;
@@ -177,7 +179,10 @@ function render() {
     .map((e) => {
       // Answers live on the card; the open log offers them too, the closed one just says what was said.
       const buttons = e.answers ? (e.done ? `<em class="radio-done">${escapeHtml(e.done)}</em>` : !open ? '' : e.answers.map((a, i) => `<button type="button" data-radio="${e.id}" data-answer="${i}">${escapeHtml(a.label)}${isTouch || i ? '' : ' (Enter)'}</button>`).join('')) : '';
-      return `<li class="r-${e.kind}"><time>${time(e.at)}</time> <b style="${e.colour ? `--who:${e.colour}` : ''}">${escapeHtml(e.from)}</b> ${escapeHtml(e.text)}${buttons}</li>`;
+      // The voice is an accent on the line's edge, the name plain (Mark); a line plays its entrance once, as it arrives.
+      const fresh = !shownBefore.has(e.id);
+      shownBefore.add(e.id);
+      return `<li class="r-${e.kind}${fresh ? ' fresh' : ''}" style="${e.colour ? `--who:${e.colour}` : ''}"><time>${time(e.at)}</time> <b>${escapeHtml(e.from)}</b> ${escapeHtml(e.text)}${buttons}</li>`;
     })
     .join('');
   renderCards(now);

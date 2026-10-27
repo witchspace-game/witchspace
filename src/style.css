@@ -866,13 +866,24 @@ body:not([data-state='flying']) #radio { display: none; }
 #radio.open .radio-list { max-height: 42vh; overflow-y: auto; padding-right: 30px; }
 #radio .radio-list li + li { margin-top: 4px; }
 #radio .radio-list time { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
-#radio .radio-list b { color: var(--who, var(--fg)); font-weight: 600; }
-#radio li.r-station b { color: var(--who, #ffb347); }
-#radio li.r-police b { color: var(--who, #4aa8ff); }
-#radio li.r-pirate b { color: var(--who, #ff9a3d); }
-#radio li.r-mayday b, #radio li.r-mayday { color: var(--who, #ff8fa3); }
-#radio li.r-news b { color: var(--who, #c9b3ff); }
-#radio li.r-beacon b { color: var(--who, #ffd98a); }
+/* Each line carries its voice as an accent on its edge, the name plain (Mark: "more of an accent color and subtle animations"). */
+#radio .radio-list li { --accent-of: var(--who, var(--dim)); padding-left: 8px; border-left: 2px solid var(--accent-of); box-shadow: -3px 0 8px -6px var(--accent-of); }
+#radio .radio-list b { color: var(--fg); font-weight: 600; }
+#radio li.r-station { --accent-of: var(--who, #ffb347); }
+#radio li.r-police { --accent-of: var(--who, #4aa8ff); }
+#radio li.r-pirate { --accent-of: var(--who, #ff9a3d); }
+#radio li.r-mayday { --accent-of: var(--who, #ff8fa3); }
+#radio li.r-news { --accent-of: var(--who, #c9b3ff); }
+#radio li.r-beacon { --accent-of: var(--who, #ffd98a); }
+#radio li.r-company { --accent-of: var(--who, var(--accent)); }
+/* A new line's entrance, once: felt more than seen. */
+#radio li.fresh { animation: rline-in 0.35s ease-out; }
+#radio li.fresh.r-police { animation: rline-in 0.35s ease-out, rline-pulse 1.4s ease-in-out 0.35s 1; }
+#radio li.fresh.r-pirate { animation: rline-in 0.3s ease-out, rcard-flicker 0.22s steps(2) 0.3s 1; }
+#radio li.fresh.r-mayday { animation: rline-in 0.35s ease-out, rline-pulse 0.7s ease-in-out 0.35s 2; }
+@keyframes rline-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
+@keyframes rline-pulse { 50% { box-shadow: -3px 0 12px -4px var(--accent-of); } }
+@media (prefers-reduced-motion: reduce) { #radio li.fresh { animation: none !important; } }
 #radio .radio-list button { margin-left: 8px; padding: 1px 8px; font-size: 11px; min-height: 0; border-color: var(--accent); color: var(--accent); }
 #radio .radio-done { margin-left: 8px; color: var(--dim); font-size: 11px; }
 #radio .radio-close { display: none; position: absolute; top: 4px; right: 4px; min-height: 0; padding: 0 6px; font-size: 12px; }

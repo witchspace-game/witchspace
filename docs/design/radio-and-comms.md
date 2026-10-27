@@ -92,6 +92,7 @@ Mark: "it's relatively hard to communicate back to a radio message." The first p
   - **"We know who you are… surrender" and docking refused to a Fugitive:** *Surrender*.
   - **A company's offer over the array:** *Accept*, as before.
 - **The look** is the accent and the subtle motion above: a thin glowing edge in the voice's colour, plain text, and an entrance played once (police a slow pulse on the edge, a pirate a brief flicker, a Mayday a slow heartbeat until it's answered); "reduce motion" keeps the accent and drops the motion. A card's words aren't also flashed across the screen.
+- **The log too** *(Mark, 27 October 2026)*: every line in the radio log carries its voice as a thin accent on its edge, the name in plain white rather than coloured text, and a new line plays the same subtle entrance once (police a slow pulse, a pirate a flicker, a Mayday two beats).
 - **A tiny squawk** *(Mark)* as a card arrives, and only then (routine chatter stays silent): a click of the key and a breath of filtered static, police a clean chirp, pirates a rougher crackle, a Mayday twice. Under the game's sound settings.
 - **Still to come** from the redesign above: conversations grouped by voice, chatter folding away, the fight summary; and quick phrases with other commanders (stage 2) can use the same cards.
 
