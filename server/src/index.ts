@@ -12,6 +12,7 @@ import { IdeasBoard, type IdeasEnv } from './ideas';
 import { mcp } from './mcp';
 import { btc, isBtc } from './btc';
 import { ClipBoard, type ClipsEnv } from './clips';
+import { buildFeed, FEED_MAX_AGE, FEED_WINDOW } from './feed';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
 
 export interface Env extends IdeasEnv, AccountsEnv, ClipsEnv {
@@ -60,6 +61,8 @@ export default {
     }
     // The MCP server for AI assistants: public and read-only, so open to any caller (server/src/mcp.ts).
     if (url.pathname === '/mcp') return mcp(request);
+    // The live feed for the home page (server/src/feed.ts): public, cached at the edge.
+    if (url.pathname === '/feed') return feedRoute(request, env, ctx);
     // A link in an email, so no Origin: stop the companies getting in touch.
     if (url.pathname === '/contact/stop') return accountsOf(env).fetch(request);
     // The ideas board (/ideas…) and accounts (/auth…, /me…, /admin…), called from our pages and tools.
@@ -87,6 +90,33 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 const clipsOf = (env: Env) => env.CLIPS.get(env.CLIPS.idFromName('clips'));
+
+/**
+ * GET /feed: anyone may read it (it's all public elsewhere), but only our pages get
+ * the CORS header. The edge keeps it a minute, so the home page can't hammer the
+ * Durable Objects however often it asks.
+ */
+async function feedRoute(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  const origin = request.headers.get('Origin') ?? '';
+  const headers: Record<string, string> = ORIGINS.some((o) => o.test(origin)) ? cors(origin) : {};
+  if (request.method === 'OPTIONS') return headers['Access-Control-Allow-Origin'] ? new Response(null, { status: 204, headers }) : new Response('Forbidden', { status: 403 });
+  if (request.method !== 'GET') return new Response('Method not allowed', { status: 405, headers: { Allow: 'GET, OPTIONS' } });
+  // One cache entry for every caller: the key ignores the query string and the Origin.
+  const key = new Request(new URL('/feed', request.url).toString());
+  let res = await caches.default.match(key);
+  if (!res) {
+    const since = Date.now() - FEED_WINDOW;
+    const [accounts, clips] = await Promise.all([accountsOf(env).feed(since), clipsOf(env).latest(since)]);
+    res = new Response(JSON.stringify(buildFeed(accounts.firsts, clips, accounts.flying)), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${FEED_MAX_AGE}` },
+    });
+    ctx.waitUntil(caches.default.put(key, res.clone()));
+  }
+  const out = new Response(res.body, res);
+  for (const [k, v] of Object.entries(headers)) out.headers.set(k, v);
+  out.headers.set('Vary', 'Origin');
+  return out;
+}
 
 /** /clips (share), /clips/<id> (watch), /clips/<id>/heart, /report, /admin. Our pages only, except the admin key. */
 async function clipRoute(request: Request, env: Env, id: string | undefined, action: string | undefined): Promise<Response> {
