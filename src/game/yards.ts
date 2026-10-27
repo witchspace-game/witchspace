@@ -137,8 +137,69 @@ export const STANDARD_LINE_UP = ['maw', 'furnace', 'furnace', 'hold', 'habitat',
 /** With a science module between the fabricator and the reactor, for whatever was found living there. */
 export const SCIENCE_LINE_UP = ['maw', 'furnace', 'furnace', 'hold', 'habitat', 'fabricator', 'science', 'reactor'];
 
-/** Which line-up a build uses: about one in three carries a science module. Same for everyone. */
-export const lineUpOf = (y: Yard): string[] => (hash(systemAt(y.galaxy, y.system), 905, y.build & 0xffff) < 1 / 3 ? SCIENCE_LINE_UP : STANDARD_LINE_UP);
+/**
+ * A module from the community in service (game/commissions.ts): from `from` (ms),
+ * a share of new builds carry it, in place of the module it `replaces` or, if it
+ * replaces nothing, added at its zone's place in the line-up.
+ */
+export interface InService {
+  id: string;
+  zone: string;
+  from: number;
+  replaces?: string;
+  share: number;
+}
+
+/** Zones, prow to stern (src/content/modules.ts has the same list). */
+const ZONE_ORDER = ['intake', 'industry', 'logistics', 'crew', 'fabrication', 'add-on', 'power'];
+/** The zone of each core module, for placing an added module after the ones before it. */
+const CORE_ZONES: Record<string, string> = { maw: 'intake', furnace: 'industry', hold: 'logistics', habitat: 'crew', fabricator: 'fabrication', science: 'add-on', reactor: 'power' };
+
+/**
+ * Which line-up a build uses: about one in three carries a science module, and
+ * community modules in service when it began take their share. Same for everyone.
+ */
+export function lineUpOf(y: Yard, extras: readonly InService[] = []): string[] {
+  const seed = systemAt(y.galaxy, y.system);
+  const line = [...(hash(seed, 905, y.build & 0xffff) < 1 / 3 ? SCIENCE_LINE_UP : STANDARD_LINE_UP)];
+  const zones = new Map(Object.entries(CORE_ZONES));
+  for (const m of extras) {
+    if (y.start < m.from || hash(seed, 906 + saltOf(m.id), y.build & 0xffff) >= m.share) continue;
+    zones.set(m.id, m.zone);
+    if (m.replaces) {
+      const i = line.indexOf(m.replaces);
+      if (i >= 0) line[i] = m.id;
+      continue;
+    }
+    // Added: after the last module of its zone or an earlier one.
+    const rank = (id: string) => ZONE_ORDER.indexOf(zones.get(id) ?? 'add-on');
+    let at = 0;
+    line.forEach((id, i) => {
+      if (rank(id) <= rank(m.id)) at = i + 1;
+    });
+    line.splice(at, 0, m.id);
+  }
+  return line;
+}
+
+/** A small number from a module's id, so each community module rolls its own dice. */
+const saltOf = (id: string) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 997, 7);
+
+/**
+ * The next `limit` builds of each of a galaxy's constructors that start at or
+ * after `t`, in order of starting: for finding when a module was first fitted.
+ */
+export function buildsFrom(g: number, t: number, limit: number): Yard[] {
+  const out: Yard[] = [];
+  for (let slot = 0; slot < YARDS_PER_GALAXY; slot++) {
+    const first = Math.max(0, Math.ceil((t - EPOCH - offset(g, slot)) / CYCLE));
+    for (let build = first; build < first + limit; build++) {
+      const y = buildAt(g, slot, EPOCH + offset(g, slot) + build * CYCLE + 1); // a moment in, clear of rounding
+      if (y) out.push(y);
+    }
+  }
+  return out.sort((a, b) => a.start - b.start);
+}
 
 export const stageInfo = (stage: YardStage) => STAGES.find((s) => s.stage === stage)!;
 

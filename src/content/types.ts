@@ -58,8 +58,12 @@ export interface ModuleDef {
   couples: { fore: boolean; aft: boolean };
   /** One sentence, in Wexley-Yorozu's catalogue voice. */
   description: string;
-  /** The commander who designed it, paid when it's first fitted. */
+  /** The callsign of the commander who designed it, paid when it's first fitted (game/commissions.ts). */
   designer: string;
+  /** When an accepted community module goes into service: from this date (YYYY-MM-DD, UTC) a share of new builds carry it. */
+  inService?: { from: string; replaces?: string; share?: number };
+  /** Accepted improvements, oldest first: each improver is paid when the first build after its date is fitted. */
+  revisions?: { by: string; from: string; note?: string }[];
   credits: { authors: string[]; license: 'CC-BY-SA-4.0'; aiAssisted?: boolean; notes?: string };
   /** The body, between the necks: z runs from +length/2 (fore) to -length/2 (aft), less 35 m at each coupled end. */
   geometry: { vertices: Vec3[]; faces: number[][] };
