@@ -78,6 +78,26 @@ export function redirectOk(uri: unknown): uri is string {
   }
 }
 
+/**
+ * Is `given` one of a client's registered return addresses? Exactly, except that on this machine (http on
+ * localhost or 127.0.0.1) the port may differ: apps listen on whatever port is free (RFC 8252, 7.3), and
+ * Claude Code registers its addresses without one.
+ */
+export function redirectMatches(registered: readonly string[], given: string): boolean {
+  if (registered.includes(given)) return true;
+  if (!redirectOk(given)) return false;
+  const g = new URL(given);
+  if (g.protocol !== 'http:') return false;
+  return registered.some((r) => {
+    try {
+      const u = new URL(r);
+      return u.protocol === 'http:' && u.hostname === g.hostname && u.pathname === g.pathname && u.search === g.search;
+    } catch {
+      return false;
+    }
+  });
+}
+
 /** The address with these added to its query string. */
 export function withParams(uri: string, params: Record<string, string | undefined>): string {
   const u = new URL(uri);
