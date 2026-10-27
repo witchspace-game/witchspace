@@ -8,27 +8,57 @@ import { COMMODITIES } from '../economy/commodities';
 import { activeEvent, EVENT_KINDS, newsAt, type WorldEvent } from '../economy/events';
 import { drift, equilibriumPrice, freshMarket, priceAt } from '../economy/market';
 import { distanceLy, galaxy, type StarSystem } from '../galaxy/generate';
+import { COMPANIES } from '../game/companies';
+import { cargoName, destinationOf } from '../game/contracts';
 import { stageInfo, STAGES, yardsNear } from '../game/yards';
 import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 import { escapeHtml } from '../ui/escape';
+import { boardAt, LAVE } from './board';
+import { chartedWhat, commanderLines, EMPTY, flyingLine, parseFeed, type CommanderLine, type Feed } from './feed';
 
 // The home page's live galaxy: the news around Lave, the nearest shipyard, a
 // market in crisis, the ticker under the hero, and the Falcon turning. All
 // from the game's own seed and clock, so it's what every commander would find
 // right now, and it's worked out again every minute while the page is open.
-// The page reads sensibly without it.
+// Beside them, what real commanders did in the last two days, from GET /feed
+// (docs/design/live-feed.md), labelled as theirs. If the feed can't be reached
+// the galaxy carries the page alone. The page reads sensibly without any of it.
 
 const $ = (id: string) => document.getElementById(id);
 const lave = galaxy(0)[7];
 const RANGE = 25; // light years: as far as news travels to Lave
-const span = (ms: number) => {
-  const m = Math.max(1, Math.round(ms / 60000));
-  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`;
-};
 const ly = (s: StarSystem) => `${distanceLy(lave, s).toFixed(1)} LY from Lave`;
 
+const FEED = `${import.meta.env.VITE_SPACE_HTTP ?? (import.meta.env.DEV ? 'http://127.0.0.1:8787' : 'https://space.witchspace.org.uk')}/feed`;
+/** "6 min ago", "13 h ago", "2 days ago": a feed needn't be exact to the minute. */
+const ago = (now: number, t: number) => {
+  const m = Math.max(1, Math.round((now - t) / 60000));
+  return m < 60 ? `${m}\u00a0min ago` : m < 48 * 60 ? `${Math.round(m / 60)}\u00a0h ago` : `${Math.round(m / 1440)}\u00a0days ago`;
+};
+const where = (s: StarSystem) => (s.galaxy ? `galaxy ${s.galaxy + 1}` : ly(s));
+
 let tickerItems: string[] = [];
+let feed: Feed = EMPTY;
+/** The feed lines already shown, so a new one can slide in. */
+let seen: Set<string> | null = null;
+
+interface Line {
+  key: string;
+  t: number;
+  tag: string;
+  title: string;
+  note: string;
+  href?: string;
+  cmdr?: boolean;
+  over?: boolean;
+}
+
+function commanderLine(c: CommanderLine, now: number): Line {
+  if (c.kind === 'clip')
+    return { key: `clip:${c.id}`, t: c.t, tag: 'Commander', cmdr: true, title: c.title, note: `Clip shared ${ago(now, c.t)}${c.hearts ? ` · ♥ ${c.hearts}` : ''}`, href: `/clip/${c.id}` };
+  return { key: `first:${c.t}:${c.callsign}:${c.where.galaxy}:${c.where.index}`, t: c.t, tag: 'Commander', cmdr: true, title: `CMDR ${c.callsign} charted ${c.where.name} first`, note: `${chartedWhat(c)} · ${where(c.where)} · ${ago(now, c.t)}` };
+}
 
 /** The shortage among these worlds that's pushed a price furthest over the usual, if any is over 5%. */
 function worst(trouble: { s: StarSystem; e: WorldEvent }[], now: number) {
@@ -53,22 +83,54 @@ function render() {
     .filter((t): t is { s: StarSystem; e: WorldEvent } => t.e !== null)
     .sort((a, b) => distanceLy(lave, a.s) - distanceLy(lave, b.s));
 
-  // The news: what Lave has heard that's still going on, then trouble too far out
-  // for news to reach Lave, then what's eased lately. Nothing within news range
-  // that Lave hasn't heard yet: that's for a fast ship to bring.
+  // The feed: the galaxy's news and the newest contract at Lave beside what real
+  // commanders have done, newest first. The news is what Lave has heard that's
+  // still going on, then trouble too far out for news to reach Lave, then what's
+  // eased lately. Nothing within news range that Lave hasn't heard yet: that's
+  // for a fast ship to bring.
   const heard = newsAt(lave, now).filter((n) => n.where !== lave);
   const ongoing = heard.filter((n) => now <= n.event.end);
-  const lines = [
-    ...ongoing.map((n) => ({ e: n.event, where: n.where, note: `${ly(n.where)} · began ${span(now - n.event.start)} ago · wanted: ${EVENT_KINDS[n.event.type].wanted}` })),
-    ...trouble
-      .filter((t) => distanceLy(lave, t.s) > RANGE)
-      .slice(0, Math.max(0, 3 - ongoing.length))
-      .map((t) => ({ e: t.e, where: t.s, note: `${ly(t.s)}, beyond the news at Lave · began ${span(now - t.e.start)} ago` })),
-    ...heard.filter((n) => now > n.event.end).map((n) => ({ e: n.event, where: n.where, note: `${ly(n.where)} · eased ${span(now - n.event.end)} ago`, over: true })),
-  ].slice(0, 4);
+  const news = (e: WorldEvent, at: StarSystem) => `news:${at.index}:${e.start}`;
+  const posted = boardAt(LAVE, now).offers.filter((o) => o.posted <= now).sort((a, b) => b.posted - a.posted)[0];
+  const cmdrs = commanderLines(feed);
+  const lines: Line[] = [
+    ...(posted
+      ? [{ key: `job:${posted.id}`, t: posted.posted, tag: 'Contracts', title: `${COMPANIES[posted.company].name}: ${posted.survey ? `a moon survey at ${destinationOf(posted).name}` : `${posted.qty} t ${cargoName(posted).toLowerCase()} to ${destinationOf(posted).name}`}`, note: `Posted at Lave ${ago(now, posted.posted)} · ${posted.pay.toLocaleString('en-GB')} Cr`, href: '/jobs/' }]
+      : []),
+    ...cmdrs.slice(0, 2).map((c) => commanderLine(c, now)),
+    ...ongoing.slice(0, 3).map((n) => ({ key: news(n.event, n.where), t: n.event.start, tag: 'News', title: EVENT_KINDS[n.event.type].headline(n.where.name), note: `${ly(n.where)} · began ${ago(now, n.event.start)} · wanted: ${EVENT_KINDS[n.event.type].wanted}` })),
+  ].sort((a, b) => b.t - a.t);
+  for (const t of trouble.filter((t) => distanceLy(lave, t.s) > RANGE)) {
+    if (lines.length >= 5) break;
+    lines.push({ key: news(t.e, t.s), t: t.e.start, tag: 'News', title: EVENT_KINDS[t.e.type].headline(t.s.name), note: `${ly(t.s)}, beyond the news at Lave · began ${ago(now, t.e.start)}` });
+  }
+  for (const n of heard.filter((n) => now > n.event.end)) {
+    if (lines.length >= 5) break;
+    lines.push({ key: news(n.event, n.where), t: n.event.end, tag: 'News', title: EVENT_KINDS[n.event.type].headline(n.where.name), note: `${ly(n.where)} · eased ${ago(now, n.event.end)}`, over: true });
+  }
   $('now-news')!.innerHTML = lines
-    .map((l) => `<div class="headline${'over' in l ? ' over' : ''}"><b>${escapeHtml(EVENT_KINDS[l.e.type].headline(l.where.name))}</b><small>${escapeHtml(l.note)}</small></div>`)
+    .map((l) => {
+      const title = escapeHtml(l.title);
+      const cls = `headline${l.over ? ' over' : ''}${l.cmdr ? ' cmdr' : ''}${seen && !seen.has(l.key) ? ' new' : ''}`;
+      return `<div class="${cls}"><span class="feed-src">${l.tag}</span><b>${l.href ? `<a href="${l.href}">${title}</a>` : title}</b><small>${escapeHtml(l.note)}</small></div>`;
+    })
     .join('');
+  seen = new Set(lines.map((l) => l.key));
+  const flying = flyingLine(feed.flying);
+  $('now-flying')!.textContent = flying;
+  $('now-flying')!.hidden = !flying;
+
+  // First to get there: the latest commander to chart somewhere first, if anyone has in two days.
+  const charted = cmdrs.find((c) => c.kind === 'charted');
+  if (charted) {
+    // The rest, counted honestly: systems, not claims, and by how many commanders (often just one, for now).
+    const others = cmdrs.filter((c) => c.kind === 'charted' && c.where !== charted.where);
+    const systems = new Set(others.map((c) => c.kind === 'charted' && c.where)).size;
+    const names = new Set(others.map((c) => c.kind === 'charted' && c.callsign));
+    const by = names.size === 1 && names.has(charted.callsign) ? `by CMDR ${charted.callsign}` : `by ${names.size} commanders`;
+    $('now-first')!.textContent = `CMDR ${charted.callsign}`;
+    $('now-first-line')!.textContent = `First to chart ${charted.where.name}: ${chartedWhat(charted)}, ${ago(now, charted.t)}.${systems ? ` ${systems} more system${systems === 1 ? '' : 's'} charted first ${by} in the last two days.` : ''}`;
+  }
 
   // A market in crisis: the worst shortage within reach of Lave right now, or anywhere if there's none.
   const crisis = worst(trouble.filter((t) => distanceLy(lave, t.s) <= RANGE), now) ?? worst(trouble, now);
@@ -94,7 +156,10 @@ function render() {
 
   // The ticker under the hero: a line at a time from all of the above.
   const first = ongoing[0];
+  const cmdr = cmdrs[0];
   tickerItems = [
+    cmdr ? (cmdr.kind === 'clip' ? `New clip: <b>${escapeHtml(cmdr.title)}</b>` : `<b>CMDR ${escapeHtml(cmdr.callsign)}</b> charted ${escapeHtml(cmdr.where.name)} first, ${ago(now, cmdr.t)}`) : '',
+    posted ? `<b>${escapeHtml(COMPANIES[posted.company].name)}</b> posted a contract at Lave, ${posted.pay.toLocaleString('en-GB')} Cr` : '',
     first ? `<b>${escapeHtml(EVENT_KINDS[first.event.type].name)}</b> at ${escapeHtml(first.where.name)}, ${distanceLy(lave, first.where).toFixed(1)} LY out` : '',
     crisis ? `${escapeHtml(crisis.good)} <b>+${Math.round(crisis.pct * 100)}%</b> at ${escapeHtml(crisis.where.name)}` : '',
     yards.length ? `<b>${escapeHtml(yards[0].where.name)}</b> station: ${escapeHtml(stageInfo(yards[0].yard.stage).name)}` : '',
@@ -102,8 +167,21 @@ function render() {
   ].filter(Boolean);
 }
 
+/** Fetch what commanders have done; on any failure keep what we had (nothing, at first). */
+async function load() {
+  try {
+    // no-cache: the edge refreshes every minute, so always ask it rather than the browser's copy.
+    const r = await fetch(FEED, { cache: 'no-cache' });
+    if (r.ok) feed = parseFeed(await r.json());
+  } catch {
+    // offline, or the server's down: the galaxy carries the page
+  }
+  render();
+}
+
 render();
-setInterval(() => document.hidden || render(), 60_000);
+void load();
+setInterval(() => document.hidden || void load(), 60_000);
 
 const ticker = $('ticker-item');
 if (ticker) {
