@@ -22,8 +22,11 @@ import { isPushEndpoint, sendPush } from './push';
 import type { ClipBoard } from './clips';
 import { awake, btcItems, heartItems, LOG_EVERY, logMessage, type LogItem, type LogKinds } from './shipsLog';
 import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
+import { KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
+import { gitHubReady, openPullRequest, type GitHubEnv } from './github';
+import { CHECKS } from './checks';
 
-export interface AccountsEnv {
+export interface AccountsEnv extends GitHubEnv {
   /** Resend, for sign-in emails. Without it (local development) the link is returned instead of sent. */
   RESEND_API_KEY?: string;
   TURNSTILE_SECRET?: string;
@@ -95,6 +98,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS firsts (
       galaxy INTEGER NOT NULL, system INTEGER NOT NULL, body TEXT NOT NULL, account TEXT NOT NULL, at INTEGER NOT NULL,
       PRIMARY KEY (galaxy, system, body))`);
+    // Submissions (submissions.ts): ships and modules handed in, private to their author and the maintainers.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS submissions (
+      id TEXT PRIMARY KEY, account TEXT NOT NULL, kind TEXT NOT NULL, item TEXT NOT NULL, title TEXT NOT NULL, revises INTEGER NOT NULL,
+      status TEXT NOT NULL, note TEXT NOT NULL, ai INTEGER NOT NULL, via TEXT NOT NULL, review TEXT, pr TEXT, version INTEGER NOT NULL,
+      file TEXT NOT NULL, warnings TEXT NOT NULL, history TEXT NOT NULL DEFAULT '[]', created INTEGER NOT NULL, updated INTEGER NOT NULL)`);
+    this.sql.exec('CREATE INDEX IF NOT EXISTS submissions_account ON submissions (account)');
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -110,6 +119,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'GET' && path === '/contact/stop') return this.stop(url);
     const galaxy = path.match(/^\/firsts\/([0-7])$/);
     if (m === 'GET' && galaxy) return this.firstsOf(Number(galaxy[1]));
+    const sub = path.match(/^\/submissions(?:\/(mine|[a-z0-9]{10})(?:\/(review))?)?$/);
+    if (sub && request.headers.has('X-Admin-Key')) return this.reviewQueue(request, url, sub[1], sub[2]);
 
     const account = await this.sessionAccount(request);
     if (!account) return json({ error: 'Please sign in' }, 401);
@@ -122,6 +133,15 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'GET' && path === '/me/contact') return this.getContact(account, url);
     if (m === 'PUT' && path === '/me/contact') return this.putContact(request, account);
     if (m === 'POST' && path === '/me/firsts') return this.claimFirsts(request, account);
+    if (sub && !sub[2]) {
+      if (m === 'POST' && !sub[1]) return this.submit(request, account);
+      if (m === 'GET' && sub[1] === 'mine') return this.mySubmissions(account);
+      if (sub[1] && sub[1] !== 'mine') {
+        if (m === 'GET') return this.oneSubmission(account, sub[1]);
+        if (m === 'PUT') return this.revise(request, account, sub[1]);
+        if (m === 'DELETE') return this.withdraw(account, sub[1]);
+      }
+    }
     return json({ error: 'Not found' }, 404);
   }
 
@@ -637,8 +657,154 @@ export class Accounts extends DurableObject<AccountsEnv> {
     return res.ok;
   }
 
+  // --- Submissions (docs/design/submissions.md) -------------------------------------
+
+  /** POST /submissions {kind, file, note?, ai, via}: checked on the way in; a file that fails isn't kept. */
+  private async submit(request: Request, account: Account): Promise<Response> {
+    if (!account.callsign) return json({ error: 'Choose a callsign first: your work is credited to it' }, 403);
+    const body = (await request.json().catch(() => null)) as { kind?: unknown; file?: unknown; note?: unknown; ai?: unknown; via?: unknown } | null;
+    if (!body) return json({ error: 'Send JSON: {kind, file, note, ai, via}' }, 400);
+    if (!KINDS.includes(body.kind as Kind)) return json({ error: `kind must be one of: ${KINDS.join(', ')}` }, 400);
+    if (typeof body.ai !== 'boolean') return json({ error: 'Say whether an AI assistant helped: ai, true or false' }, 400);
+    const via: Via = body.via === 'connector' ? 'connector' : 'site';
+    const note = typeof body.note === 'string' ? body.note.trim().slice(0, MAX_NOTE) : '';
+    const now = Date.now();
+    const today = this.sql.exec('SELECT COUNT(*) AS n FROM submissions WHERE account = ? AND created > ?', account.id, now - 86_400_000).one().n as number;
+    if (today >= PER_DAY) return json({ error: `That's ${PER_DAY} today: send more tomorrow` }, 429);
+    const open = this.sql.exec(`SELECT COUNT(*) AS n FROM submissions WHERE account = ? AND status IN ('submitted', 'changes')`, account.id).one().n as number;
+    if (open >= OPEN_AT_ONCE) return json({ error: `You have ${open} waiting: wait for a review, or withdraw one` }, 429);
+    const checked = this.checkFile(body.kind as Kind, body.file, account.callsign, body.ai);
+    if ('error' in checked) return checked.error;
+    const p = checked.prepared;
+    const id = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
+    this.sql.exec(
+      'INSERT INTO submissions (id, account, kind, item, title, revises, status, note, ai, via, version, file, warnings, created, updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?)',
+      id, account.id, body.kind as string, p.itemId, p.title, p.revises ? 1 : 0, 'submitted', note, body.ai ? 1 : 0, via, JSON.stringify(p.file), JSON.stringify(p.warnings), now, now,
+    );
+    return json({ submission: this.submissionOut(this.submissionRow(id)!, true) }, 201);
+  }
+
+  private checkFile(kind: Kind, raw: unknown, callsign: string, ai: boolean): { prepared: NonNullable<ReturnType<typeof prepare>['prepared']> } | { error: Response } {
+    const parsed = parseFile(raw);
+    if (!parsed.file) return { error: json({ error: parsed.error }, parsed.error?.includes('KB') ? 413 : 400) };
+    const { prepared, problems } = prepare(kind, parsed.file, callsign, ai, CHECKS);
+    if (!prepared) return { error: json({ error: "It doesn't pass the checks yet", problems }, 400) };
+    return { prepared };
+  }
+
+  /** GET /submissions/mine: newest first, without the files. */
+  private mySubmissions(account: Account): Response {
+    const rows = this.sql.exec('SELECT * FROM submissions WHERE account = ? ORDER BY created DESC', account.id).toArray();
+    return json({ submissions: rows.map((r) => this.submissionOut(r, false)) });
+  }
+
+  /** GET /submissions/<id>: yours, with the file. Anyone else's is "not found", so ids can't be fished for. */
+  private oneSubmission(account: Account, id: string): Response {
+    const row = this.submissionRow(id);
+    if (!row || row.account !== account.id) return json({ error: 'No such submission' }, 404);
+    return json({ submission: this.submissionOut(row, true) });
+  }
+
+  /** PUT /submissions/<id> {file, note?, ai?}: a new version, back in the queue. The old one is kept. */
+  private async revise(request: Request, account: Account, id: string): Promise<Response> {
+    const row = this.submissionRow(id);
+    if (!row || row.account !== account.id) return json({ error: 'No such submission' }, 404);
+    if (!OPEN.includes(row.status as Status)) return json({ error: `It's ${row.status}: it can't be changed now` }, 409);
+    if (!account.callsign) return json({ error: 'Choose a callsign first: your work is credited to it' }, 403);
+    const body = (await request.json().catch(() => null)) as { file?: unknown; note?: unknown; ai?: unknown } | null;
+    if (!body) return json({ error: 'Send JSON: {file, note, ai}' }, 400);
+    const ai = typeof body.ai === 'boolean' ? body.ai : row.ai === 1;
+    const checked = this.checkFile(row.kind as Kind, body.file, account.callsign, ai);
+    if ('error' in checked) return checked.error;
+    const p = checked.prepared;
+    if (p.itemId !== row.item) return json({ error: `This submission is "${row.item}": send "${p.itemId}" as a new submission` }, 400);
+    const history = [...(JSON.parse(row.history as string) as unknown[]), { version: row.version, file: JSON.parse(row.file as string), note: row.note, at: row.updated }].slice(-10);
+    const note = typeof body.note === 'string' ? body.note.trim().slice(0, MAX_NOTE) : (row.note as string);
+    this.sql.exec(
+      `UPDATE submissions SET file = ?, warnings = ?, title = ?, note = ?, ai = ?, version = version + 1, status = 'submitted', history = ?, updated = ? WHERE id = ?`,
+      JSON.stringify(p.file), JSON.stringify(p.warnings), p.title, note, ai ? 1 : 0, JSON.stringify(history), Date.now(), id,
+    );
+    return json({ submission: this.submissionOut(this.submissionRow(id)!, true) });
+  }
+
+  /** DELETE /submissions/<id>: withdrawn, while it's still waiting or sent back. */
+  private withdraw(account: Account, id: string): Response {
+    const row = this.submissionRow(id);
+    if (!row || row.account !== account.id) return json({ error: 'No such submission' }, 404);
+    if (!OPEN.includes(row.status as Status)) return json({ error: `It's ${row.status}: it can't be withdrawn now` }, 409);
+    this.sql.exec(`UPDATE submissions SET status = 'withdrawn', updated = ? WHERE id = ?`, Date.now(), id);
+    return json({ submission: this.submissionOut(this.submissionRow(id)!, false) });
+  }
+
+  /**
+   * The maintainers' side, with the admin key: GET /submissions?status=… (oldest first), GET /submissions/<id>,
+   * POST /submissions/<id>/review {decision: 'accept' | 'changes', notes?}.
+   */
+  private async reviewQueue(request: Request, url: URL, id: string | undefined, action: string | undefined): Promise<Response> {
+    const key = request.headers.get('X-Admin-Key');
+    if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return json({ error: 'Forbidden' }, 403);
+    if (request.method === 'GET' && !id) {
+      const status = url.searchParams.get('status') ?? 'submitted';
+      const rows = this.sql.exec('SELECT s.*, a.callsign FROM submissions s JOIN accounts a ON a.id = s.account WHERE s.status = ? ORDER BY s.created', status).toArray();
+      return json({ submissions: rows.map((r) => this.submissionOut(r, false, true)) });
+    }
+    if (!id || id === 'mine') return json({ error: 'Not found' }, 404);
+    const row = this.sql.exec('SELECT s.*, a.callsign FROM submissions s JOIN accounts a ON a.id = s.account WHERE s.id = ?', id).toArray()[0];
+    if (!row) return json({ error: 'No such submission' }, 404);
+    if (request.method === 'GET' && !action) return json({ submission: this.submissionOut(row, true, true) });
+    if (request.method !== 'POST' || action !== 'review') return json({ error: 'Not found' }, 404);
+    const body = (await request.json().catch(() => null)) as { decision?: unknown; notes?: unknown } | null;
+    const notes = typeof body?.notes === 'string' ? body.notes.trim().slice(0, MAX_NOTE) : '';
+    if (!OPEN.includes(row.status as Status)) return json({ error: `It's ${row.status} already` }, 409);
+    const now = Date.now();
+    if (body?.decision === 'changes') {
+      if (!notes) return json({ error: 'Say what to change: notes' }, 400);
+      this.sql.exec(`UPDATE submissions SET status = 'changes', review = ?, updated = ? WHERE id = ?`, notes, now, id);
+      await this.notify(row.account as string, `Your ${row.title as string} needs a change`, notes.slice(0, 160));
+    } else if (body?.decision === 'accept') {
+      let pr: string | null = null;
+      if (gitHubReady(this.env)) {
+        const s = this.submissionOut(row, true, true);
+        try {
+          pr = await openPullRequest(this.env, repoFile(s.kind, s.itemId, s.file!), pullRequestText({ ...s, callsign: s.callsign!, review: notes || null }));
+        } catch (e) {
+          return json({ error: (e as Error).message }, 502);
+        }
+      }
+      this.sql.exec(`UPDATE submissions SET status = 'accepted', review = ?, pr = ?, updated = ? WHERE id = ?`, notes || null, pr, now, id);
+      await this.notify(row.account as string, `Your ${row.title as string} is accepted`, 'A maintainer accepted it: it’s on its way into Witchspace, with your name on it.');
+    } else return json({ error: "decision must be 'accept' or 'changes'" }, 400);
+    return json({ submission: this.submissionOut({ ...this.submissionRow(id)!, callsign: row.callsign }, false, true) });
+  }
+
+  private submissionRow(id: string): Record<string, SqlStorageValue> | undefined {
+    return this.sql.exec('SELECT * FROM submissions WHERE id = ?', id).toArray()[0];
+  }
+
+  private submissionOut(r: Record<string, SqlStorageValue>, withFile: boolean, withCallsign = false) {
+    return {
+      id: r.id as string,
+      kind: r.kind as Kind,
+      itemId: r.item as string,
+      title: r.title as string,
+      revises: r.revises === 1,
+      status: r.status as Status,
+      note: r.note as string,
+      ai: r.ai === 1,
+      via: r.via as Via,
+      review: (r.review as string | null) ?? null,
+      pr: (r.pr as string | null) ?? null,
+      version: r.version as number,
+      created: r.created as number,
+      updated: r.updated as number,
+      warnings: JSON.parse(r.warnings as string) as string[],
+      ...(withFile ? { file: JSON.parse(r.file as string) as object } : {}),
+      ...(withCallsign ? { callsign: r.callsign as string } : {}),
+    };
+  }
+
   private deleteAccount(account: Account): Response {
-    for (const table of ['saves', 'sessions', 'contact', 'devices', 'firsts']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
+    for (const table of ['saves', 'sessions', 'contact', 'devices', 'firsts', 'submissions']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM codes WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM accounts WHERE id = ?', account.id);

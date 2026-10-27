@@ -9,5 +9,7 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // These tests read the real schemas and content files with Node, so the root tsconfig checks them.
+  "exclude": ["src/submissions.test.ts", "src/github.test.ts"]
 }
