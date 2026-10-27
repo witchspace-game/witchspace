@@ -29,8 +29,16 @@ export type NpcMode = 'patrol' | 'travel' | 'attack' | 'breakoff' | 'flee' | 'se
 
 const STEER_GAIN = 3;
 const FIRE_CONE = THREE.MathUtils.degToRad(3);
-const BREAKOFF_RANGE = 300; // metres: too close, peel away
+const BREAKOFF_RANGE = 300; // metres: too close, peel away, whatever the closing speed
 const BREAKOFF_TIME = 2.6; // seconds before coming round again
+// Attack runs, not rams (Mark: "I hate the way the pirates come in nose first and literally smash into you").
+// A pirate breaks off by time, not distance: this many seconds from reaching you at the closing speed,
+// picked afresh each pass, so rookies are late and clumsy but still turn away.
+const BREAK_LEAD = [0.8, 1.4] as const;
+const APPROACH = 150; // m/s: how fast a pirate closes on its target in a run
+const COME_ROUND = 700; // metres: open up at least this far before turning for the next run
+const TARGET_RADIUS = 30; // metres: a Cobra-sized target, for the collision guard
+const GUARD_TIME = 1; // seconds: the collision guard, a backstop for the latest breaks
 const AIM_SPREAD = THREE.MathUtils.degToRad(0.7); // so they don't hit with every shot
 const CRUISE = 0.6; // fraction of top speed when travelling
 const SEARCH_RADIUS = 350; // metres: the circle flown round where the target was last seen
@@ -119,6 +127,7 @@ export class NpcShip {
   private flash = 0;
   private breakTimer = 0;
   private readonly breakDir = new THREE.Vector3();
+  private breakLead: number = BREAK_LEAD[0] + Math.random() * (BREAK_LEAD[1] - BREAK_LEAD[0]);
   private readonly box: THREE.Box3;
 
   /** Where a shot leaves from, and which way: one from the nose, or one from each gun at once, converging on the target. */
@@ -191,6 +200,18 @@ export class NpcShip {
     this.ship.obj.removeFromParent();
   }
 
+  /** Break off across the target's line of fire, a little away from it: never on through it. */
+  private breakAway(toTarget: THREE.Vector3) {
+    this.mode = 'breakoff';
+    this.breakTimer = BREAKOFF_TIME;
+    const d = toTarget.clone().normalize();
+    // The side we're already sliding towards, so the turn is short; any side if we're dead on.
+    const across = this.ship.forward().projectOnPlane(d);
+    if (across.lengthSq() < 0.01) across.copy(new THREE.Vector3().randomDirection().projectOnPlane(d));
+    across.normalize().add(new THREE.Vector3().randomDirection().projectOnPlane(d).multiplyScalar(0.5)).normalize();
+    this.breakDir.copy(across).addScaledVector(d, -0.35).normalize();
+  }
+
   /** Steer towards a world point with pitch and yaw, banking for looks. */
   private steerTo(target: THREE.Vector3) {
     return steerTowards(this.obj, target);
@@ -217,18 +238,31 @@ export class NpcShip {
     const toTarget = this.target ? this.target.obj.position.clone().sub(this.obj.position) : null;
     const dist = toTarget ? toTarget.length() : Infinity;
 
+    if (this.mode === 'attack' || this.mode === 'breakoff') {
+      // Where are we heading relative to the target, and how soon would we reach it?
+      const tv = this.target!.forward().multiplyScalar(this.target!.speed);
+      const rel = toTarget!.clone(); // from us to it
+      const relVel = tv.sub(this.ship.forward().multiplyScalar(this.ship.speed)); // its velocity relative to ours
+      const closing = -rel.dot(relVel) / Math.max(1, dist); // m/s, positive when closing
+      const tStar = THREE.MathUtils.clamp(-rel.dot(relVel) / Math.max(1e-6, relVel.lengthSq()), 0, GUARD_TIME);
+      const miss = rel.clone().addScaledVector(relVel, tStar).length();
+      const onCollision = closing > 0 && miss < this.radius + TARGET_RADIUS + 50;
+      if (this.mode === 'attack' && (dist < BREAKOFF_RANGE || (closing > 0 && dist / closing < this.breakLead) || onCollision)) this.breakAway(toTarget!);
+      else if (this.mode === 'breakoff' && onCollision && this.breakDir.dot(toTarget!) > 0) this.breakAway(toTarget!);
+    }
+
     if (this.mode === 'attack') {
-      if (dist < BREAKOFF_RANGE) {
-        this.mode = 'breakoff';
-        this.breakTimer = BREAKOFF_TIME;
-        // Peel away sideways from the target's line of fire.
-        this.breakDir.copy(this.ship.forward()).add(new THREE.Vector3().randomDirection().multiplyScalar(1.4)).normalize();
-      }
       steer = this.steerTo(this.target!.obj.position);
-      speed = dist > 900 ? max : max * 0.65;
+      // Close at about APPROACH m/s whatever the target does: catch one running away, ease off head on.
+      const away = this.target!.forward().dot(toTarget!) / Math.max(1, dist) * this.target!.speed;
+      speed = dist > 900 ? max : THREE.MathUtils.clamp(away + APPROACH, max * 0.4, max);
     } else if (this.mode === 'breakoff') {
       this.breakTimer -= dt;
-      if (this.breakTimer <= 0) this.mode = 'attack';
+      // Come round only once there's room for a proper run.
+      if (this.breakTimer <= 0 && dist > COME_ROUND) {
+        this.mode = 'attack';
+        this.breakLead = BREAK_LEAD[0] + Math.random() * (BREAK_LEAD[1] - BREAK_LEAD[0]);
+      }
       steer = this.steerTo(this.obj.position.clone().addScaledVector(this.breakDir, 1000));
       speed = max;
     } else if (this.mode === 'flee') {
