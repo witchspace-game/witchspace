@@ -1247,6 +1247,11 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .bp-point.ghost.inside circle:last-child { fill: none; stroke: var(--muted); }
 .bp-point.chosen circle:last-child { fill: #fff; stroke: var(--accent); stroke-width: 3; }
 .bp-hit { fill: transparent; }
+.bp-slot { fill: none; stroke: rgba(120, 160, 255, 0.5); stroke-width: 1; stroke-dasharray: 5 4; vector-effect: non-scaling-stroke; }
+.bp-slot.out { stroke: var(--amber); fill: rgba(255, 180, 60, 0.06); }
+.fields label.tick { grid-column: 1 / -1; display: flex; flex-flow: row wrap; align-items: center; justify-content: flex-start; text-align: left; gap: 4px 8px; }
+.fields label.tick input { width: auto; margin: 0; accent-color: var(--accent); }
+.fields label.tick small { flex-basis: 100%; }
 .editor-tabs { display: none; }
 .editor-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .editor-tools [aria-pressed='true'] { background: var(--accent); color: #04060b; }

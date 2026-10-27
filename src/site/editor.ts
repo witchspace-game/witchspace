@@ -1,3 +1,4 @@
+import { SLOT, slotProblem } from '../content/slot';
 import type { ShipDef, Vec3 } from '../content/types';
 import { API } from '../net/account';
 import { escapeHtml } from '../ui/escape';
@@ -165,7 +166,8 @@ function scene(): Scene {
     });
   });
   const half = Math.max(10, Math.ceil((extent(draft.parts) * 1.15) / 5) * 5);
-  return { edges, handles, selected: sel, half, colour: draft.style.lineColor, adding };
+  const slot = draft.docks === false ? undefined : { halfW: SLOT.halfW, halfH: SLOT.halfH, out: Boolean(slotProblem(shipFile(draft) as Pick<ShipDef, 'role' | 'geometry'>)) };
+  return { edges, handles, selected: sel, half, colour: draft.style.lineColor, adding, slot };
 }
 
 // --- The panels -----------------------------------------------------------------------------
@@ -351,6 +353,7 @@ function fillShip() {
   field('id').value = draft.id;
   field('manufacturer').value = draft.manufacturer;
   (form.querySelector('[name="role"]') as HTMLSelectElement).value = draft.role;
+  field('docks').checked = draft.docks === false;
   (form.querySelector('[name="description"]') as HTMLTextAreaElement).value = draft.description;
   field('lineColor').value = draft.style.lineColor;
   for (const input of form.querySelectorAll<HTMLInputElement>('[data-stat]')) {
@@ -369,6 +372,10 @@ form.addEventListener('input', (e) => {
       else draft.stats[key] = Number(t.value);
     } else if (t.name === 'lineColor') draft.style.lineColor = t.value;
     else if (t.name === 'role') draft.role = t.value as Draft['role'];
+    else if (t.name === 'docks') {
+      if (t.checked) draft.docks = false;
+      else delete draft.docks;
+    }
     else if (t.name === 'name' || t.name === 'id' || t.name === 'manufacturer' || t.name === 'description') draft[t.name] = t.value;
   }, false);
   field('id').placeholder = slug(draft.name) || 'ice-hauler';
@@ -390,6 +397,12 @@ function localCheck(file: Record<string, unknown>) {
     const bodies = partBodies(p).map(convexHull);
     if (bodies.some((b) => !b.faces.length)) local.push(`${p.name || `Part ${i + 1}`} needs at least three points that aren't in a line.`);
   });
+  if (slotProblem(file as Pick<ShipDef, 'role' | 'docks' | 'geometry'>)) {
+    const g = (file as unknown as ShipDef).geometry.vertices;
+    const reach = (axis: number) => Math.round(Math.max(...g.map((v) => Math.abs(v[axis]))));
+    const over = [reach(0) >= SLOT.halfW ? `${reach(0)} m out to the side (the slot allows ${SLOT.halfW})` : '', reach(1) >= SLOT.halfH ? `${reach(1)} m above or below its centre (the slot allows ${SLOT.halfH})` : ''].filter(Boolean).join(' and ');
+    local.push(`It doesn't fit the docking slot, the dashed box in the Front view, ${SLOT.halfW * 2} m wide and ${SLOT.halfH * 2} m tall around the ship's centre: it reaches ${over}. Make it fit, or tick "Never docks" if it's a carrier or a yard hauler.`);
+  }
   if (!draft.name.trim()) local.push('Give it a name.');
   if (draft.description.trim().length < 10) local.push('Give it a description: who flies it, and why.');
   clearTimeout(checkTimer);
@@ -407,10 +420,13 @@ async function serverCheck(file: Record<string, unknown>) {
   try {
     const res = await fetch(`${API}/submissions/check`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kind: 'ship', file }) });
     const data = (await res.json()) as Check & { error?: string };
+    // A slow answer about an older drawing: a newer check is on its way.
+    if (text !== lastChecked) return;
     if (!res.ok) throw new Error(data.error);
     result = data;
     failed = false;
   } catch {
+    if (text !== lastChecked) return;
     failed = true;
     lastChecked = '';
   }
@@ -420,7 +436,7 @@ async function serverCheck(file: Record<string, unknown>) {
 function showCheck(r: Check | null) {
   if (r) result = r;
   // The server's word on a field the editor has already asked for (a name, a description) would say it twice.
-  const asked = [!draft.name.trim() ? /^(name|id):/ : null, draft.description.trim().length < 10 ? /^description:/ : null].filter((r): r is RegExp => r !== null);
+  const asked = [!draft.name.trim() ? /^(name|id):/ : null, draft.description.trim().length < 10 ? /^description:/ : null, /^dock:/].filter((r): r is RegExp => r !== null);
   const server = (result?.problems ?? []).filter((p) => !asked.some((r) => r.test(p)));
   const problems = [...local, ...server.map((p) => p.replace(/^([\w.[\]]+): (.+)$/s, (_, w: string, what: string) => `${w}: ${plainly(what)}`))];
   // The server's warnings, sorted: balance notes on their own, the homage rule as standing
