@@ -152,6 +152,7 @@ Only the hashes of codes and tokens are kept. Signing out of the game doesn't re
 - The tool names its view in `_meta.ui.resourceUri` (`ui://witchspace/viewer.html`), served as `text/html;profile=mcp-app` from `src/mcp/viewer.ts`. The answer's `structuredContent` carries the geometry and colour for the view; its text tells the model what's shown, and clients without views (Claude Code in a terminal) get that text alone.
 - The page is self-contained (no network, plain ASCII) and speaks the MCP Apps protocol by hand: `ui/initialize`, `ui/notifications/initialized`, then the tool result; it reports its size and offers full screen where the host has it.
 - It draws in neo glow on a canvas, with the game's hidden-line look (faces filled dark and drawn far to near, so near faces hide far lines) and a Cobra Mk III beside it in grey for scale; it turns slowly until touched, and you drag (mouse or finger) to turn it and pinch or scroll to zoom. A light drawing of the same geometry and colours, not the game's three.js renderer, so it's small and quick on a phone.
+- **Tried in claude.ai (27 October 2026):** asked to show the Falcon, Claude called `view_ship` (after its usual "allow once") and the view appeared in the chat: the Falcon in her own colour beside a grey Cobra, "75 m long, 72 m across", Cobra-for-scale and full-screen buttons; dragging turned her round.
 - Next: modules and a Titanoboa line-up in the same view, with `validate_module` and `preview_module`.
 
 ### The connect page: the contract with the site
