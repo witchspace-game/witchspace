@@ -1322,6 +1322,8 @@ function renderDocked() {
   if (dockTab === 'contracts') renderContracts();
   if (dockTab === 'market') renderMarket();
   if (dockTab === 'news') renderNews();
+  // Docked somewhere new with the saloon still open: that station's regulars, not the last one's (Mark).
+  if (dockTab === 'saloon') renderSaloon();
   const rows: [string, string][] = [
     ['Commander', `${escapeHtml(c.name)} <button type="button" class="rename" title="Change your callsign">Rename</button>`],
     ['Rules', DIFFICULTIES[c.difficulty].name],
