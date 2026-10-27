@@ -3,6 +3,7 @@
 // tools/mcp-data.ts) and the coupling standard from src/content/modules.ts.
 
 import { balanceCheck, validateShip } from '../../src/mcp/tools';
+import { NOT_FLOWN } from '../../src/content/slot';
 import type { ModuleDef, ShipDef } from '../../src/content/types';
 import { data, schemaErrors } from './mcp';
 import bundle from './mcp-data.json';
@@ -10,7 +11,6 @@ import { moduleCheck, type Checks } from './submissions';
 // @ts-expect-error: generated JavaScript, no types
 import checkModuleSchema from './module-schema.js';
 
-const NOT_FLOWN = new Set(['station', 'missile', 'cargo', 'debris']);
 const modules = new Map((bundle as unknown as { modules: ModuleDef[] }).modules.map((m) => [m.id, m]));
 
 export const CHECKS: Checks = {

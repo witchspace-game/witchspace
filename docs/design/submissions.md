@@ -82,6 +82,8 @@ interface Submission {
 
 ### Problems and warnings
 
+A ship that flies must fit the docking slot (90 m wide, 26 m tall, wings level), or say `"docks": false`: otherwise it's a `dock: …` problem ([ships and classes](ships-and-classes.md), "Shape and size").
+
 For a ship that can fly, the warnings include the MCP server's balance check against the fleet, as `balance: …` lines ("Top speed is among the highest in the fleet", "give it a real weakness"); they never stop a submission.
 
 Every problem and warning reads **`<where>: <what>`**. `where` is a field path as the file writes it (`length`, `geometry.vertices[3]`, `credits.authors`) when the check names one, or else an area (`file`, `id`, `kind`, `geometry`, `size`, `maker`, `description`, `homage`). The site pins the ones with a field path to that field and lists the rest.

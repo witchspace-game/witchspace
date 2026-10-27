@@ -34,6 +34,10 @@
       "type": "string",
       "maxLength": 60
     },
+    "docks": {
+      "description": "False for a ship that never docks at a station (a carrier, a yard hauler): it needn't fit the docking slot, 90 m wide and 26 m tall. Every other ship that flies must.",
+      "type": "boolean"
+    },
     "role": {
       "description": "What the ship is for. Drives AI behaviour and where it spawns.",
       "enum": [

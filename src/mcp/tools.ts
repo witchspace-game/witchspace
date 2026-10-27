@@ -4,7 +4,8 @@
 // over a data bundle, so the Worker (server/src/mcp.ts), the local server
 // (tools/mcp.ts) and the tests all use the same code. Read-only.
 
-import { checkGeometry, deriveEdges } from '../content/geometry';
+import { checkGeometry, deriveEdges, signedVolume } from '../content/geometry';
+import { NOT_FLOWN, slotProblem } from '../content/slot';
 import type { ShipDef, Vec3 } from '../content/types';
 import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, systemsWithin, type StarSystem } from '../galaxy/generate';
 import { stationName } from '../galaxy/stationNames';
@@ -74,7 +75,7 @@ const SHIP_INPUT = {
   required: ['ship'],
 };
 
-const ROLES_NOT_FLOWN = new Set(['station', 'missile', 'cargo', 'debris']);
+const ROLES_NOT_FLOWN = NOT_FLOWN;
 
 // --- Checking a ship --------------------------------------------------------------
 
@@ -90,6 +91,10 @@ export function validateShip(ship: ShipDef, data: McpData) {
     const extent = Math.max(...g.vertices.flat().map(Math.abs));
     if (!ROLES_NOT_FLOWN.has(ship.role) && extent > 400) warnings.push(`size: ${Math.round(extent * 2)} m across; a Cobra Mk III is about 68 m. Ships this big need a reason (and big stations).`);
   }
+  // A ship that flies must fit the docking slot, unless it never docks (src/content/slot.ts).
+  const slot = g && Array.isArray(g.vertices) ? slotProblem(ship) : null;
+  if (slot) errors.push(`dock: ${slot}`);
+  if (ship.docks === false && !ROLES_NOT_FLOWN.has(ship.role)) warnings.push('docks: false, so no commander can fly it from a station: right for a carrier or a yard hauler, flown by the computer.');
   const existing = data.ships.find((s) => s.id === ship.id);
   if (existing) warnings.push(`id: "${ship.id}" is already ${existing.name} in the fleet. Fine if this is an improvement to it; otherwise pick a new id.`);
   // The written rules (ships-and-classes.md): a ship needs a maker and a reason, and is never a copy.
@@ -196,6 +201,15 @@ export function balanceCheck(ship: ShipDef, data: McpData) {
     if (pct <= 10 && k !== 'price') lines.push(`${STAT_NAMES[k]} is among the lowest in the fleet (${v}).`);
     return { stat: STAT_NAMES[k], value: v, fleetPercentile: pct, vsCobra, ...(peerAvg !== null ? { averageForRole: Math.round(peerAvg * 100) / 100 } : {}) };
   }).filter(Boolean);
+  // The hold for the hull's size: the fleet carries about 1 to 1.5 t per 1,000 m3, so a dart with a freighter's hold stands out.
+  const vol = (s: ShipDef) => (Array.isArray(s.geometry?.vertices) && Array.isArray(s.geometry?.faces) ? signedVolume(s.geometry.vertices, s.geometry.faces) : 0);
+  const density = (s: ShipDef) => (s.stats?.cargo ?? 0) / Math.max(1, vol(s) / 1000);
+  const holds = fleet.filter((s) => (s.stats?.cargo ?? 0) > 0 && vol(s) > 0).map(density);
+  const cargo = ship.stats?.cargo ?? 0;
+  if (cargo > 0 && holds.length && vol(ship) > 0 && density(ship) > Math.max(...holds) * 1.5) {
+    const most = Math.max(...holds);
+    lines.push(`Its hold (${cargo} t) is big for its size: about ${Math.round(vol(ship)).toLocaleString('en-GB')} m³ of hull, where the fleet carries at most about ${Math.round((most * vol(ship)) / 1000)} t. Make the hull bigger or the hold smaller.`);
+  }
   // Trade-offs, not tiers: a ship that's better at everything is a problem.
   const strong = table.filter((t) => t && t.stat !== 'price' && t.fleetPercentile >= 75).length;
   const weak = table.filter((t) => t && t.stat !== 'price' && t.fleetPercentile <= 25).length;

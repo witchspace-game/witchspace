@@ -4,6 +4,7 @@
   "name": "Bullsnake",
   "manufacturer": "Wexley-Yorozu",
   "role": "miner",
+  "docks": false,
   "description": "Wexley-Yorozu's workhorse: short, square and slow, with an ore hopper under its belly and tractor booms where the guns should be. At a yard they run between the moon and the constructor all day, every day, and don't stop to chat.",
   "credits": {
     "authors": [
