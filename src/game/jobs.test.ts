@@ -67,6 +67,9 @@ describe('work on your route', () => {
       found++;
       expect(fit.offer.survey).toBeFalsy();
       expect(offers).toContain(fit.offer);
+      // The radio and the website say how long it's up, from the same times.
+      expect(fit.offer.posted).toBeTypeOf('number');
+      expect(fit.offer.until).toBeGreaterThan(NOW + h * 30 * 60_000);
       expect(fit.why).toMatch(/same drop|one jump past|on your way/);
     }
     expect(found).toBeGreaterThan(0);

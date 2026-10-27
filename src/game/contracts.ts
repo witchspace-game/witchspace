@@ -38,6 +38,9 @@ export interface Contract {
   survey?: boolean;
   /** A Science Division special order (explorers, Pathfinder and up): a survey of a system with a terraforming Candidate. */
   specialOrder?: boolean;
+  /** On a station's board: when it was posted and when it comes off (ms). The website shows them too. */
+  posted?: number;
+  until?: number;
 }
 
 /** A contract you've taken, counting down. */
@@ -53,8 +56,23 @@ export interface ActiveContract extends Contract {
   reserved?: boolean;
 }
 
-/** A new board every half hour. */
+/** The welcome job changes every half hour (welcome()). */
 export const BOARD_SLOT = 30 * 60_000;
+/**
+ * The board rolls (docs/design/jobs-board.md, "A live board", Mark): every
+ * five minutes a station may post a contract, which stays up 25 to 60 minutes.
+ */
+export const TICK = 5 * 60_000;
+const LIFE = { min: 5, max: 12 }; // ticks
+/** Each company with a real presence at a station posts a starter job every ~50 minutes, up for 55, so one is always on the board. */
+const STARTER_EVERY = 10; // ticks
+const STARTER_LIFE = 11; // ticks
+const STARTER_PRESENCE = 1;
+/** About five haulage contracts up at once, starters included, as the half-hourly board had. */
+const HAULAGE_UP = 5;
+/** Wexley-Yorozu stations may post a survey every 45 minutes, up until the next: one at a time, up about three quarters of the time. */
+const SURVEY_EVERY = 9; // ticks
+const SURVEY_CHANCE = 0.75;
 export const MAX_ACTIVE = 3;
 /** Jumps past the deadline before the company takes its cargo back. */
 export const LATE_GRACE = 3;
@@ -176,31 +194,46 @@ function needsFor(value: number): StandingName {
 }
 
 /**
- * The contracts on offer at a station at time `now`, best first. The same for
- * everyone; `c` only decides legality (a licence) and hides the ones you've taken.
+ * The contracts on offer at a station at time `now`, best first: every one
+ * posted in the last hour whose time hasn't run out. The same for everyone; `c`
+ * only decides legality (a licence) and hides the ones you've taken.
  */
 export function board(c: Commander, here: StarSystem, now: number): Contract[] {
-  const slot = Math.floor(now / BOARD_SLOT);
-  const r = (salt: number, k: number) => hash(here, 9000 + (slot % 100_000) * 7 + salt, k);
+  const tick = Math.floor(now / TICK);
   const near = withinJumps(here, 3);
   const offers: Contract[] = [];
-  const count = 4 + Math.floor(r(0, 0) * 3);
-  for (let k = 0; k < count; k++) {
-    const company = pickCompany(here, r(1, k));
-    // Every company keeps a starter job on the board: its first offer here is small enough for anyone.
-    const starter = !offers.some((o) => o.company === company && o.needs === 'Casual');
-    const o = offerFrom(c, here, near, company, (salt) => r(salt, k), starter, `${here.galaxy}:${here.index}:${slot}:${k}`);
-    if (o) offers.push(o);
+  const station = `${here.galaxy}:${here.index}`;
+  const up = (posted: number, life: number) => posted + life > tick;
+  const stamp = (o: Contract | null, posted: number, life: number) => o && offers.push({ ...o, posted: posted * TICK, until: (posted + life) * TICK });
+  // Each company that works here keeps a starter job up, posted on its own cycle.
+  const p = presence(here);
+  const starters = COMPANY_IDS.filter((id) => p[id] >= STARTER_PRESENCE).length;
+  // The rest of the haulage comes on the ticks, enough to make up about HAULAGE_UP.
+  const postChance = Math.min(0.4, Math.max(0.1, (HAULAGE_UP - (starters * STARTER_LIFE) / STARTER_EVERY) / ((LIFE.min + LIFE.max) / 2)));
+  COMPANY_IDS.forEach((company, i) => {
+    if (p[company] < STARTER_PRESENCE) return;
+    const offset = Math.floor(hash(here, 12500, i) * STARTER_EVERY);
+    const last = tick - ((((tick - offset) % STARTER_EVERY) + STARTER_EVERY) % STARTER_EVERY);
+    for (let t = last; up(t, STARTER_LIFE); t -= STARTER_EVERY) {
+      const r = (salt: number) => hash(here, 12000 + (t % 1_000_000) * 7 + salt, 1 + i);
+      stamp(offerFrom(c, here, near, company, r, true, `${station}:${t}:${1 + i}`), t, STARTER_LIFE);
+    }
+  });
+  // And on any tick, maybe another contract.
+  for (let t = tick - LIFE.max + 1; t <= tick; t++) {
+    const r = (salt: number, k: number) => hash(here, 12000 + (t % 1_000_000) * 7 + salt, k);
+    const life = LIFE.min + Math.floor(r(6, 0) * (LIFE.max - LIFE.min + 1));
+    if (r(0, 0) < postChance && up(t, life)) stamp(offerFrom(c, here, near, pickCompany(here, r(1, 0)), (salt) => r(salt, 0), false, `${station}:${t}:0`), t, life);
   }
-  // Wexley-Yorozu stations usually have a survey to offer too.
-  if (wyWorks(here) && r(10, 0) < 0.75) {
-    const o = surveyOffer(here, near, (salt) => r(salt, 0), `survey:${here.galaxy}:${here.index}:${slot}`);
-    if (o) offers.push(o);
-  }
-  // Pathfinders get the Science Division's special orders too.
-  if (wyWorks(here) && c.difficulty === 'modern' && exploreOf(c).points >= EXPLORER_DOORS.pathfinder) {
-    const o = surveyOffer(here, near, (salt) => r(salt + 20, 0), `order:${here.galaxy}:${here.index}:${slot}`, true);
-    if (o) offers.push(o);
+  // Wexley-Yorozu's survey, and (for Pathfinders) the Science Division's special order: each on its own cycle.
+  if (wyWorks(here)) {
+    const pathfinder = c.difficulty === 'modern' && exploreOf(c).points >= EXPLORER_DOORS.pathfinder;
+    for (const [kind, k] of [['survey', 0], ...(pathfinder ? [['order', 1] as const] : [])] as const) {
+      const offset = Math.floor(hash(here, 12600, k) * SURVEY_EVERY);
+      const t = tick - ((((tick - offset) % SURVEY_EVERY) + SURVEY_EVERY) % SURVEY_EVERY);
+      const r = (salt: number) => hash(here, 12000 + (t % 1_000_000) * 7 + salt, 10 + k);
+      if (r(0) < SURVEY_CHANCE) stamp(surveyOffer(here, near, (salt) => r(salt + 20 * k), `${kind}:${station}:${t}`, kind === 'order'), t, SURVEY_EVERY);
+    }
   }
   return offers.filter((o) => !c.contracts?.some((a) => a.id === o.id) && !c.contractsDone?.includes(o.id)).sort((a, b) => b.pay - a.pay);
 }

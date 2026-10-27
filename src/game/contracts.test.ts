@@ -1,18 +1,58 @@
 import { describe, expect, it } from 'vitest';
 import { distanceLy, galaxy, systemAt, type StarSystem } from '../galaxy/generate';
 import { cargoTonnes, FUEL_CAPACITY, newCommander } from './commander';
-import { abandon, afterJump, amendsCost, board, cannotTake, SIGNING_BONUS, welcome, forgive, makeAmends, deliver, destinationOf, DANGEROUS, jumpsBetween, LATE_GRACE, loseContracts, nextHop, safeRoute, standing, take } from './contracts';
+import { abandon, afterJump, amendsCost, board, cannotTake, TICK, SIGNING_BONUS, welcome, forgive, makeAmends, deliver, destinationOf, DANGEROUS, jumpsBetween, LATE_GRACE, loseContracts, nextHop, safeRoute, standing, take } from './contracts';
 import { presence, standingName } from './companies';
 
 const lave = systemAt(0, 7);
 const NOW = Date.UTC(2026, 9, 22, 12);
 
 describe('company contracts', () => {
-  it('every station board is the same for everyone, and changes every half hour', () => {
+  it('every station board is the same for everyone, and changes as the clock runs', () => {
     const a = board(newCommander('modern'), lave, NOW);
     expect(a.length).toBeGreaterThan(0);
     expect(board(newCommander('modern'), lave, NOW)).toEqual(a);
     expect(board(newCommander('modern'), lave, NOW + 31 * 60_000).map((o) => o.id)).not.toEqual(a.map((o) => o.id));
+  });
+
+  it('rolls: contracts are posted and come off a few at a time, each up 25 minutes to an hour', () => {
+    const c = newCommander('modern');
+    let changed = 0;
+    let changes = 0;
+    for (let t = NOW; t < NOW + 24 * 3600_000; t += TICK) {
+      const before = board(c, lave, t);
+      const after = board(c, lave, t + TICK);
+      for (const o of before) {
+        expect(o.posted).toBeLessThanOrEqual(t);
+        expect(o.until).toBeGreaterThan(t);
+        expect(o.until! - o.posted!).toBeGreaterThanOrEqual(25 * 60_000);
+        expect(o.until! - o.posted!).toBeLessThanOrEqual(60 * 60_000);
+        expect(o.posted! % TICK).toBe(0);
+        // A contract still up a tick later is the very same contract.
+        const same = after.find((x) => x.id === o.id);
+        if (same) expect(same).toEqual(o);
+        else expect(o.until).toBeLessThanOrEqual(t + TICK);
+      }
+      const ids = new Set(before.map((o) => o.id));
+      const diff = after.filter((o) => !ids.has(o.id)).length + before.filter((o) => !after.some((x) => x.id === o.id)).length;
+      expect(after.some((o) => ids.has(o.id))).toBe(true); // never the whole board at once
+      changes += diff;
+      if (diff) changed++;
+    }
+    expect(changed).toBeGreaterThan(24 * 4); // it moves often: most hours several times
+    expect(changes / (24 * 12)).toBeLessThan(1.5); // but a card or so at a time
+  });
+
+  it('keeps a starter job from every company that really works the station', () => {
+    const p = presence(lave);
+    const c = newCommander('modern');
+    for (let t = NOW; t < NOW + 24 * 3600_000; t += TICK) {
+      const b = board(c, lave, t);
+      for (const id of ['hexon', 'mutual', 'wy'] as const) {
+        expect(p[id]).toBeGreaterThanOrEqual(1);
+        expect(b.some((o) => o.company === id && o.needs === 'Casual' && !o.survey)).toBe(true);
+      }
+    }
   });
 
   it('offers work a new commander can take, within reach', () => {

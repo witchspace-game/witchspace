@@ -80,7 +80,7 @@ import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
-import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
+import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase, type Message } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
@@ -561,6 +561,7 @@ function enterDocked(newShip = false) {
   player.repair();
   showShip(cobraIndex);
   forgive(cmdr(), Date.now());
+  boardSeenAt = Date.now(); // what's on the board as you dock isn't news; what's posted while you're here is
   // Work that's due here is handed in however you arrived: docking does it
   // first, but waking here in a new ship or loading the game docked must too
   // (a survey finished just before a fight was never paid).
@@ -718,11 +719,17 @@ let justTaken: string | null = null; // after taking a contract, show it at the 
 // Arriving from a company's advert (witchspace.org.uk/careers/, /play/?company=hexon):
 // straight to the Contracts tab, with a starter job from that company at the top.
 let recruiter: CompanyId | null = null;
+// Or from a live card on witchspace.org.uk/jobs/ (/play/?contract=<id>&company=hexon): that
+// contract at the top, highlighted, if it's still on the board here; if not, the welcome.
+let wanted: string | null = null;
 
 function answerAdvert() {
   const url = new URL(location.href);
   const id = url.searchParams.get('company') as CompanyId | null;
+  const contract = url.searchParams.get('contract');
+  url.searchParams.delete('contract');
   if (!id || !COMPANY_IDS.includes(id)) return;
+  if (contract && /^[a-z0-9:]{1,48}$/.test(contract)) wanted = contract;
   url.searchParams.delete('company');
   history.replaceState(null, '', url.pathname + url.search + url.hash);
   recruiter = id;
@@ -738,8 +745,15 @@ function answerAdvert() {
   setDockTab('contracts');
 }
 
-/** The welcome job from the company whose advert brought you here, if it's still to be taken. */
-const welcomeHere = (c: Commander, here: StarSystem, now: number) => (recruiter && c.difficulty === 'modern' ? welcome(c, here, recruiter, now) : null);
+/** The welcome job from the company whose advert brought you here, if it's still to be taken, and the card you came for isn't here. */
+const welcomeHere = (c: Commander, here: StarSystem, now: number) =>
+  recruiter && c.difficulty === 'modern' && !(wanted && board(c, here, now).some((o) => o.id === wanted)) ? welcome(c, here, recruiter, now) : null;
+
+/** When you last looked at the board (or docked): offers posted since are new. */
+let boardSeenAt = 0;
+/** The board as it was last drawn, so a new post can be noticed while you're docked. */
+let boardKey = '';
+const newOffers = (c: Commander, here: StarSystem, now: number) => board(c, here, now).filter((o) => (o.posted ?? 0) > boardSeenAt).length;
 
 /**
  * Set a course to a system, however many jumps away: the first hop now, the
@@ -782,7 +796,7 @@ const specialsHere = (c: Commander, here: StarSystem, now: number) =>
 
 /** Unread messages, on the Contracts tab's button. */
 function markInbox(c: Commander) {
-  const unread = (c.messages ?? []).filter((m) => !m.read).length;
+  const unread = (c.messages ?? []).filter((m) => !m.read).length + (state === 'docked' && dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
   $('.tabs [data-tab="contracts"]').textContent = unread ? `Contracts · ${unread} new` : 'Contracts';
 }
 
@@ -886,11 +900,16 @@ function renderContracts() {
         <span class="actions">${k && where!.index !== here.index ? `<button data-course="${where!.index}">Set course</button>` : course}${sale}<button data-abandon="${a.id}" title="The company takes its cargo back, and remembers">Abandon</button></span></li>`;
     })
     .join('');
-  const offers = board(c, here, Date.now())
+  const onBoard = board(c, here, now);
+  const sought = wanted ? onBoard.find((o) => o.id === wanted) : undefined;
+  boardSeenAt = now;
+  boardKey = onBoard.map((o) => o.id).join();
+  const offers = (sought ? [sought, ...onBoard.filter((o) => o !== sought)] : onBoard)
     .map((o) => {
       const to = destinationOf(o);
       const why = cannotTake(c, o, free);
-      return `<li>${companyMark(o.company)}${o.rush ? ' <em class="risk">Rush</em>' : ''} · ${o.survey ? `Survey the moons of ${place(to)} <small>(${worldOf(to).moons.length}) · data to any Wexley-Yorozu station</small>` : `${o.qty} t ${goodName(o.good)} → ${place(to)}`}<br>
+      const fresh = o.posted !== undefined && now - o.posted < TICK;
+      return `<li class="${o === sought ? 'fresh sought' : ''}">${companyMark(o.company)}${fresh ? ' <em class="posted">Just posted</em>' : ''}${o.rush ? ' <em class="risk">Rush</em>' : ''} · ${o.survey ? `Survey the moons of ${place(to)} <small>(${worldOf(to).moons.length}) · data to any Wexley-Yorozu station</small>` : `${o.qty} t ${goodName(o.good)} → ${place(to)}`}<br>
         <small>within ${o.jumps} jump${o.jumps === 1 ? '' : 's'} · <b class="pay">${o.pay.toLocaleString()} Cr</b>${o.danger ? ` (${o.danger} danger bonus)` : ''}${o.needs !== 'Casual' ? ` · needs ${o.needs}` : ''}</small>
         <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}</li>`;
     })
@@ -908,9 +927,9 @@ function renderContracts() {
     ${messages ? `<h3>Messages</h3><ul class="contracts">${messages}</ul>` : ''}
     ${mine ? `<h3>Your contracts</h3><ul class="contracts">${mine}</ul>` : ''}
     <h3>On offer at ${escapeHtml(stationName(here).name)}</h3>
-    ${welcomeCard || specials || offers ? `<ul class="contracts">${welcomeCard}${specials}${offers}</ul>` : '<p class="meta">Nothing on the board. New work is posted every half hour.</p>'}
+    ${welcomeCard || specials || offers ? `<ul class="contracts">${welcomeCard}${specials}${offers}</ul>` : '<p class="meta">Nothing on the board. New work is posted every few minutes.</p>'}
     ${fileHtml || (fileButtons ? `<p class="files">${fileButtons}</p>` : '')}
-    <p class="meta">Hold: ${+(free).toFixed(1)} t free · new work every half hour${standings ? `<br>Standing: ${standings}` : ''}</p>
+    <p class="meta">Hold: ${+(free).toFixed(1)} t free · new work posted every few minutes${standings ? `<br>Standing: ${standings}` : ''}</p>
     <p class="market-message" aria-live="polite">${escapeHtml(contractMessage)}</p>`;
   if (justTaken) {
     // Bring the contract you just took into view, with what happened.
@@ -920,8 +939,24 @@ function renderContracts() {
     note?.remove();
     fresh?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     justTaken = null;
+  } else if (sought) {
+    $('#contracts').querySelector<HTMLElement>('li.sought')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
+  markInbox(c);
 }
+
+// While you're docked the board rolls on: a new post slides in if you're looking, or counts on the tab if not.
+setInterval(() => {
+  if (state !== 'docked' || !commander || commander.difficulty !== 'modern') return;
+  const c = cmdr();
+  const key = board(c, currentSystem(), Date.now()).map((o) => o.id).join();
+  if (key === boardKey) return;
+  if (dockTab === 'contracts') renderContracts();
+  else {
+    boardKey = key;
+    markInbox(c);
+  }
+}, 15_000);
 
 $('#contracts').addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -941,6 +976,7 @@ $('#contracts').addEventListener('click', (e) => {
     const hello = welcomeHere(c, currentSystem(), now);
     const offer = [...(hello ? [hello] : []), ...specialsHere(c, currentSystem(), now), ...board(c, currentSystem(), now)].find((o) => o.id === b.dataset.take);
     if (offer && offer.id === hello?.id) recruiter = null; // welcomed
+    if (offer && offer.id === wanted) recruiter = wanted = null; // the card you came for
     if (!offer) return;
     const why = take(c, offer, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
     contractMessage = why ?? (offer.survey ? `Survey contract taken: the moons of ${destinationOf(offer).name}, data to any Wexley-Yorozu station` : `Contract taken: ${offer.qty} t ${cargoName(offer)} for ${destinationOf(offer).name}, loaded`);
@@ -4959,7 +4995,7 @@ function updateClearance() {
 
 // --- What you're doing, and what's next (docs/design/flight-hud-and-touch.md) -------
 
-/** Boards (system and half-hour) already mentioned, so traffic control says it once. */
+/** Offers already mentioned, so traffic control says each once. */
 const routeWorkSaid = new Set<string>();
 
 /** Approaching a station: traffic control mentions one job on its board that goes your way. */
@@ -4968,11 +5004,9 @@ function offerRouteWork() {
   if (c.difficulty !== 'modern') return;
   const here = currentSystem();
   const now = Date.now();
-  const key = `${here.galaxy}:${here.index}:${Math.floor(now / BOARD_SLOT)}`;
-  if (routeWorkSaid.has(key)) return;
   const fit = routeWork(c, here, board(c, here, now), cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
-  if (!fit) return;
-  routeWorkSaid.add(key);
+  if (!fit || routeWorkSaid.has(fit.offer.id)) return;
+  routeWorkSaid.add(fit.offer.id);
   const o = fit.offer;
   const what = `${o.qty} t ${cargoName(o)} for ${destinationOf(o).name}`;
   radio('station', stationName(here).name, `${COMPANY_SHORT[o.company]} has ${what}, ${fit.why} · ${o.pay.toLocaleString()} Cr · dock to take it`, { flash: 5 });
@@ -5238,7 +5272,7 @@ function routeMessage(o: Contract, at: StarSystem, why: string) {
   const id = `route:${o.id}`;
   if (c.messages?.some((m) => m.id === id)) return;
   const what = `${o.qty} t ${cargoName(o)} for ${destinationOf(o).name}`;
-  c.messages = [{ id, company: o.company, subject: 'Work on your route', body: `${what} at ${stationName(at).name}, ${at.name}: ${why}. ${o.pay.toLocaleString()} Cr on delivery. On the board until the half hour.`, at: Date.now() }, ...(c.messages ?? [])].slice(0, 20);
+  c.messages = [{ id, company: o.company, subject: 'Work on your route', body: `${what} at ${stationName(at).name}, ${at.name}: ${why}. ${o.pay.toLocaleString()} Cr on delivery.${o.until ? ` On the board until ${new Date(o.until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.` : ''}`, at: Date.now() }, ...(c.messages ?? [])].slice(0, 20);
 }
 
 /** Work on your route from here and your next jump, with an Accept button. */
@@ -5251,7 +5285,7 @@ function arrayOffers() {
   for (const { offer: o, why, at } of workInReach(c, here, next, now, free)) {
     if (offersHeard.has(o.id) || cannotReserve(c, o)) continue;
     offersHeard.add(o.id);
-    if (at === here) routeWorkSaid.add(`${here.galaxy}:${here.index}:${Math.floor(now / BOARD_SLOT)}`); // traffic control needn't say it again
+    if (at === here) routeWorkSaid.add(o.id); // traffic control needn't say it again
     routeMessage(o, at, why);
     const where = at === here ? stationName(here).name : `${stationName(at).name}, ${at.name}`;
     radio('company', COMPANIES[o.company].name, `Work on your route: ${o.qty} t ${cargoName(o)} for ${destinationOf(o).name}, ${why} · waiting at ${where} · ${o.pay.toLocaleString()} Cr`, {
@@ -5268,7 +5302,7 @@ function acceptOffer(o: Contract, at: StarSystem): RadioAction {
   return {
     label: 'Accept',
     done: 'Accepted',
-    until: (Math.floor(Date.now() / BOARD_SLOT) + 1) * BOARD_SLOT,
+    until: o.until ?? (Math.floor(Date.now() / BOARD_SLOT) + 1) * BOARD_SLOT,
     run: () => {
       const c = cmdr();
       if (!isWorking(c, 'comms-array')) return { ...voice, text: "We can't hear you: your comms array is down. Dock and take it at the station." };

@@ -1326,12 +1326,13 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .company { color: var(--company, var(--accent)); font-weight: 600; }
 .risk { font-style: normal; font-size: 11px; padding: 0 5px; border-radius: 3px; color: var(--amber); background: rgba(255, 179, 71, 0.1); }
 .risk.high { color: var(--danger); background: rgba(255, 77, 109, 0.12); }
+.posted { font-style: normal; font-size: 11px; padding: 0 5px; border-radius: 3px; color: var(--accent); background: rgba(61, 255, 176, 0.1); }
 @media (max-width: 700px) {
   .contracts li { padding-right: 10px; }
   .contracts .actions { position: static; transform: none; margin-top: 6px; justify-content: flex-end; }
 }
 body.retro .contracts li { font-size: 12px; border-radius: 0; }
-body.retro .contracts li small, body.retro .risk { font-size: 8px; }
+body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size: 8px; }
 .contracts li.special { border-left-color: var(--company, var(--amber)); background: rgba(255, 179, 71, 0.06); }
 .contracts li.message { border-left-color: var(--dim); }
 /* The saloon (main.ts renderSaloon): the regulars, each a card. */

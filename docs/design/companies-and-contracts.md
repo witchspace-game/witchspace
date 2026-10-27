@@ -71,6 +71,17 @@ Four to start, each with a character, a home ground and a rival. Their backstori
 - **Pay comes on delivery.** It's set from the cargo's value, the distance, the danger along the way (the [danger premium](markets-and-trade.md)) and any crisis at the destination. Rough guide: about two thirds of what an independent with the capital would make on the same run, since you risk none of your own money.
 - **A small bond** for valuable cargo: a share of the cargo's value, held until delivery. First contracts have none, so a commander with 100 Cr can take them.
 
+### The board: posted one at a time *(built)*
+
+Each station's board comes from its seed and the clock, the same for every commander, with no server. It rolls, so it feels live (Mark, 27 October 2026; the site's side is in the website's jobs board design):
+
+- **Every five minutes a station may post a contract**, which stays up for 25 minutes to an hour. Most hours the board changes several times, a card or so at a time, never all at once.
+- **Every company with a real presence at the station keeps a starter job up**, small enough for anyone. Each company posts one every 50 minutes, at its own moment, and it stays up 55, so there's always one. (The first idea, "when a starter lapses, that company's next post is a starter", can't be worked out from the clock alone: each post would depend on every earlier one.)
+- **The rest come on the ticks**, enough to make about five haulage contracts up at once, as the old half-hourly board had. Wexley-Yorozu stations post surveys on the ticks too (one is up about two thirds of the time), and Pathfinders see the Science Division's special orders.
+- **Every offer carries its `posted` and `until` times**, and its id comes from the tick it was posted. Docked, a new card is marked "Just posted" and the Contracts tab counts it ("Contracts · 1 new"). An offer radioed in flight (work on your route) stays open until that contract comes off the board.
+- **From the website:** `/play/?contract=<id>&company=<id>` opens the Contracts tab with that contract at the top, highlighted, if it's still on the board where you're docked; otherwise that company's welcome job, as `?company=` does.
+- Contracts leave because their time runs out, never because "someone took it": that waits for claimed contracts in the shared galaxy (section 6).
+
 ### Kinds of contract
 
 1. **Haulage** (first): carry consigned cargo from here to there.
