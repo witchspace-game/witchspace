@@ -18,6 +18,8 @@ export interface Draft {
   details?: ShipDef['geometry']['details'];
   /** The fleet ship this improves (it keeps that ship's id), if it does. */
   improves?: string;
+  /** False for a ship that never docks (a carrier, a yard hauler), so it needn't fit the slot. */
+  docks?: false;
 }
 
 /** The roles a player's ship can have (stations, missiles and the like are scenery). */
@@ -73,6 +75,8 @@ export function fromShip(ship: ShipDef, as: 'new' | 'improve'): Draft {
     style: { ...ship.style },
     details: ship.geometry.details ? structuredClone(ship.geometry.details) : undefined,
     improves: as === 'improve' ? ship.id : undefined,
+    // A new ship has to fit the slot, or say it never docks, on purpose.
+    docks: as === 'improve' && ship.docks === false ? false : undefined,
   };
 }
 
@@ -85,6 +89,7 @@ export function shipFile(d: Draft): Record<string, unknown> {
     name: d.name,
     ...(d.manufacturer ? { manufacturer: d.manufacturer } : {}),
     role: d.role,
+    ...(d.docks === false ? { docks: false } : {}),
     description: d.description,
     credits: { authors: [], license: 'CC-BY-SA-4.0' },
     geometry,

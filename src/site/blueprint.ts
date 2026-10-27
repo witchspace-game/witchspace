@@ -38,6 +38,8 @@ export interface Scene {
   half: number;
   colour: string;
   adding: boolean;
+  /** The docking slot's half width and height, drawn in the front view; `out` when the ship doesn't fit it. */
+  slot?: { halfW: number; halfH: number; out: boolean };
 }
 
 export interface BlueprintEvents {
@@ -122,6 +124,10 @@ export function blueprint(svg: SVGSVGElement, view: View, on: BlueprintEvents) {
     for (let g = Math.ceil(-half / step) * step; g <= half; g += step) {
       const cls = g === 0 ? 'bp-axis' : 'bp-grid';
       parts.push(`<line class="${cls}" x1="${g}" y1="${-half}" x2="${g}" y2="${half}"/><line class="${cls}" x1="${-half}" y1="${g}" x2="${half}" y2="${g}"/>`);
+    }
+    if (s.slot && view.h === 0 && view.v === 1) {
+      const { halfW, halfH, out } = s.slot;
+      parts.push(`<rect class="bp-slot${out ? ' out' : ''}" x="${-halfW}" y="${-halfH}" width="${halfW * 2}" height="${halfH * 2}"/>`);
     }
     const x = (p: Vec3) => p[view.h];
     const y = (p: Vec3) => -p[view.v];

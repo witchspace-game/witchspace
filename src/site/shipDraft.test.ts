@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { checkGeometry } from '../content/geometry';
 import type { ShipDef } from '../content/types';
 import cobraFile from '../../content/ships/cobra-mk3.json';
+import bullsnakeFile from '../../content/ships/bullsnake.json';
+import { slotProblem } from '../content/slot';
 import { blank, fromShip, readDraft, shipFile, slug } from './shipDraft';
 
 const cobra = cobraFile as unknown as ShipDef;
@@ -21,6 +23,17 @@ describe('the ship draft', () => {
     const file = shipFile(mine);
     expect(file.credits).toEqual({ authors: [], license: 'CC-BY-SA-4.0' });
     expect((file.geometry as ShipDef['geometry']).details).toBeDefined();
+  });
+
+  it('keeps "never docks" to improve a ship, and drops it for a new one, which must then fit the slot', () => {
+    const bullsnake = bullsnakeFile as unknown as ShipDef;
+    const improved = shipFile(fromShip(bullsnake, 'improve'));
+    expect(improved.docks).toBe(false);
+    expect(slotProblem(improved as unknown as ShipDef)).toBeNull();
+    const mine = shipFile(fromShip(bullsnake, 'new'));
+    expect('docks' in mine).toBe(false);
+    expect(slotProblem(mine as unknown as ShipDef)).toMatch(/tall/);
+    expect('docks' in shipFile(fromShip(cobra, 'improve'))).toBe(false);
   });
 
   it('takes its id from the name until you give it one', () => {
