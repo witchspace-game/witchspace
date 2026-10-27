@@ -56,6 +56,15 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS hearts (clip TEXT NOT NULL, voter TEXT NOT NULL, net TEXT NOT NULL, PRIMARY KEY (clip, voter))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS reports (clip TEXT NOT NULL, voter TEXT NOT NULL, t INTEGER NOT NULL, PRIMARY KEY (clip, voter))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS activity (voter TEXT NOT NULL, net TEXT NOT NULL, kind TEXT NOT NULL, t INTEGER NOT NULL)`);
+    // Who put a clip up, so they can find it and take it down (Mark: "I don't even know where my clips are?"):
+    // the account if signed in (kept from the start), and the browser that shared it (from 27 October 2026).
+    for (const col of ['sharer TEXT', 'withdrawn INTEGER NOT NULL DEFAULT 0']) {
+      try {
+        this.sql.exec(`ALTER TABLE clips ADD COLUMN ${col}`);
+      } catch {
+        /* already there */
+      }
+    }
   }
 
   /** Share a track. `callsign` and `account` come from the session, checked by the Worker, never from the body. */
@@ -68,7 +77,7 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     const c = checkTrack(packed, SHIP_NAMES, account?.callsign ?? null, seconds);
     if (typeof c === 'string') return { error: c, status: 400 };
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
-    this.sql.exec('INSERT INTO clips (id, created, title, system, focus, seconds, track, account) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', id, Date.now(), c.title, c.system, c.focusDef, c.seconds, await gzip(c.packed), account?.id ?? null);
+    this.sql.exec('INSERT INTO clips (id, created, title, system, focus, seconds, track, account, sharer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', id, Date.now(), c.title, c.system, c.focusDef, c.seconds, await gzip(c.packed), account?.id ?? null, voter);
     this.note(voter, net, 'share');
     return { id, url: `${SITE}/clip/${id}`, title: c.title, status: 200 };
   }
@@ -119,6 +128,28 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
       .exec('SELECT id, created, title, system, hearts FROM clips WHERE hidden = 0 AND created > ? ORDER BY created DESC LIMIT ?', since, FEED_EACH)
       .toArray()
       .map((r) => ({ kind: 'clip', t: r.created as number, id: r.id as string, title: r.title as string, system: r.system as string, hearts: r.hearts as number }));
+  }
+
+  /** The clips you put up, from this browser or your account, newest first: up, or taken down by you. */
+  mine(account: string | null, voter: string | null): { id: string; url: string; title: string; system: string; created: number; hearts: number; up: boolean }[] {
+    if (!account && !voterOk(voter)) return [];
+    return this.sql
+      .exec('SELECT id, title, system, created, hearts, hidden, withdrawn FROM clips WHERE (account = ? OR sharer = ?) AND (hidden = 0 OR withdrawn = 1) ORDER BY created DESC LIMIT 100', account ?? '', voterOk(voter) ? voter : '')
+      .toArray()
+      .map((r) => ({ id: r.id as string, url: `${SITE}/clip/${r.id as string}`, title: r.title as string, system: r.system as string, created: r.created as number, hearts: r.hearts as number, up: r.hidden === 0 }));
+  }
+
+  /** Take your own clip down (or put it back up): gone from its page and the feed. Only its sharer, by account or browser. */
+  takeDown(id: string, account: string | null, voter: string | null, down = true) {
+    if (!idOk(id)) return { error: 'No such clip', status: 404 };
+    const r = this.sql.exec('SELECT account, sharer, hidden, withdrawn FROM clips WHERE id = ?', id).toArray()[0];
+    if (!r) return { error: 'No such clip', status: 404 };
+    const yours = (account && r.account === account) || (voterOk(voter) && r.sharer === voter);
+    if (!yours) return { error: 'That clip isn’t yours to take down', status: 403 };
+    // A clip hidden by reports or the admin stays hidden: only a withdrawn one can be put back.
+    if (!down && r.hidden === 1 && r.withdrawn !== 1) return { error: 'That clip is hidden for review', status: 409 };
+    this.sql.exec('UPDATE clips SET hidden = ?, withdrawn = ? WHERE id = ?', down ? 1 : 0, down ? 1 : 0, id);
+    return { ok: true, up: !down, status: 200 };
   }
 
   /** The admin key hides or restores a clip. */

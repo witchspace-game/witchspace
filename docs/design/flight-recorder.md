@@ -136,6 +136,7 @@ A clip that people watch becomes part of the galaxy's story.
 - **The page is the game.** /clip/… opens the play page straight into the kill cam on that track; closing it leaves you at the title screen, a key from playing.
 - **Links unfurl.** Link previewers (X, Bluesky, Facebook, WhatsApp, Discord...) are given a small page of their own with the title and the card of the ship involved, from the site's ship cards.
 - **Hearts** as below; **reports** from enough different browsers hide a clip until someone looks; the founder can take any clip down.
+- **Your clips, and taking them down** *(Mark, 27 October 2026: "I don't know how to take down my own clips. I don't even know where my clips are?")*. The flight log opens with **Your clips on witchspace.org.uk**: every clip you put up, from this browser or signed in as you on any device, with its hearts, and a **Take it down** button (press twice). Taken down, it's gone from its page and the live feed, and **Put it back** undoes it; a clip hidden by reports or the founder stays hidden. Each moment that's up is marked *Public · ♥ n*. The server keeps who put a clip up: the account if signed in, and the browser that shared it (`GET /clips/mine`, `POST /clips/<id>/takedown` and `/putback`).
 - **Limits:** a few clips an hour per browser and network, and a size cap.
 
 ### Hearts *(Mark, 26 October 2026)*
