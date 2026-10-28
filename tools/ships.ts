@@ -35,6 +35,8 @@ export interface ManualData {
   span: string;
   /** Degrees off level the slot allows. */
   roll: number;
+  /** She leaves the yard with a docking computer (the game's standardKit). */
+  dockingFitted: boolean;
   /** Equipment, luxuries and editions by id: [name, blurb]. */
   kit: Record<string, string[]>;
   luxuries: Record<string, string[]>;
