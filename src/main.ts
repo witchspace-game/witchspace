@@ -7019,6 +7019,9 @@ function onSpaceEvent(e: SpaceEvent) {
       remoteModels.delete(e.remote.id);
       break;
     }
+    case 'full':
+      if (state === 'flying') flash(`Shared space in ${currentSystem().name} is full (${e.max} commanders) · flying solo for now`, 3.5);
+      break;
     case 'lost':
       if (state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
       break;
