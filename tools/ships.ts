@@ -51,7 +51,6 @@ export interface EditionCard {
   name: string;
   blurb: string;
   limit: number;
-  price: number;
   colour: string;
   trimColour: string | null;
   /** "Orerve Nebula, with Witch-fire trim". */
@@ -66,7 +65,6 @@ export interface EditionCard {
   glowLevel: number;
   /** Days the yard takes to finish one by hand. */
   finishDays: number;
-  deposit: number;
   /** Black-light running lights aboard (the Dark Edition's luxury): drawn on her. */
   lights: boolean;
 }
@@ -337,8 +335,8 @@ function editionsCard(editions: EditionCard[], ship: string): string {
         <div><dt>Aboard</dt><dd>${e.luxuries.map(esc).join(', ')}</dd></div>
       </dl>
       <p class="edition-count" data-edition="${esc(e.id)}" data-limit="${e.limit}">Numbered 001 to ${String(e.limit).padStart(3, '0')}, each painted beside its name.</p>
-      <p class="edition-price"><b>${e.price.toLocaleString('en-GB')} Cr</b> · Reserve one in the game, at a shipyard.</p>
-      <p class="edition-see"><a class="button ghost small" href="/ships/${esc(ship)}/${esc(e.id)}/">See the ${esc(e.name)} →</a></p>
+      <p class="edition-price"><b>By invitation</b> · signed over to the people who build Witchspace.</p>
+      <p class="edition-see"><a class="button ghost small" href="/ships/${esc(ship)}/${esc(e.id)}/">See the ${esc(e.name)} →</a> <a class="button ghost small" href="/ships/${esc(ship)}/build/#edition=${esc(e.id)}">Name yours</a></p>
     </article>`,
       )
       .join('')}
@@ -421,7 +419,12 @@ export function buildPage(s: ShipFile, names: Record<string, string>) {
   };
 }
 
-/** A numbered edition's own page (Mark: "surely the special editions would have their own marketing page"): she turns in her paint, and the yard's office says how many are left (src/site/edition.ts). */
+/**
+ * A numbered edition's own page (Mark: "surely the special editions would have their own marketing page"): she
+ * turns in her paint, and the yard's office says how many are left (src/site/edition.ts). Editions are by
+ * invitation: the maker signs them over to contributors (Mark: "if you have to ask, you can't afford it"), so the
+ * page sends you to name one in the configurator and share her, not to reserve one, and shows no price.
+ */
 export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) {
   const def = JSON.stringify({ id: s.id, name: s.name, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
   const look = JSON.stringify({ colour: e.colour, glow: e.glowLevel, trim: e.trimColour, ...(e.lights ? { lights: true } : {}) });
@@ -431,7 +434,7 @@ export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) 
     card: { ship: s.id, kicker: `${maker} · ${e.limit} built`, title: e.name, sub: e.blurb.split('. ')[0] + '.', paint: { colour: e.colour, glow: e.glowLevel, trim: e.trimColour, ...(e.lights ? { lights: true } : {}) } },
     schema: [{ '@type': 'CreativeWork', name: `${s.name} ${e.name}`, description: e.blurb, about: { '@type': 'CreativeWork', name: s.name, url: `https://witchspace.org.uk/ships/${s.id}/` }, isPartOf: { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' } }],
     title: `${e.name} · ${s.name} · Ships · Witchspace`,
-    description: `The ${s.name} ${e.name}: ${e.blurb} ${e.price.toLocaleString('en-GB')} Cr, reserved in the game.`.slice(0, 300),
+    description: `The ${s.name} ${e.name}: ${e.blurb} ${e.limit} built, signed over by invitation to the people who build Witchspace. Name yours in the configurator and share her.`.slice(0, 300),
     content: `<section class="section ship-page edition-page" style="--edition:${esc(e.colour)};--trim:${esc(e.trimColour ?? e.colour)}">
   <a class="back" href="/ships/${esc(s.id)}/">← The ${esc(s.name)}</a>
   <div class="edition-stage">
@@ -446,11 +449,10 @@ export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) 
     <p class="lede">${esc(e.blurb)}</p>
     <ul class="edition-facts">
       <li><b data-edition-left="${esc(e.id)}" data-limit="${e.limit}">${e.limit}</b><span>built, numbered</span></li>
-      <li><b>${e.price.toLocaleString('en-GB')}</b><span>credits</span></li>
       <li><b>${esc(e.glow.replace(/ glow$/, ''))}</b><span>glow</span></li>
       <li><b>${e.finishDays} days</b><span>finished by hand</span></li>
     </ul>
-    <p class="connect-buttons"><a class="button primary big" href="#reserve">Reserve yours</a> <button type="button" class="button ghost big" data-share data-share-url="/ships/${esc(s.id)}/${esc(e.id)}/" data-share-title="The ${esc(s.name)} ${esc(e.name)}">Share her</button></p>
+    <p class="connect-buttons"><a class="button primary big" href="/ships/${esc(s.id)}/build/#edition=${esc(e.id)}">Name yours and share her</a> <a class="button ghost big" href="/ships/${esc(s.id)}/build/">Spec your own ${esc(s.name)}</a> <button type="button" class="button ghost big" data-share data-share-url="/ships/${esc(s.id)}/${esc(e.id)}/" data-share-title="The ${esc(s.name)} ${esc(e.name)}">Share this page</button></p>
   </header>
 
   <div class="edition-sections">
@@ -475,17 +477,12 @@ export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) 
     </section>
   </div>
 
-  <section class="card edition-reserve" id="reserve">
-    <p class="kicker">Reserve yours</p>
-    <h2>${e.price.toLocaleString('en-GB')} Cr, with ${e.deposit.toLocaleString('en-GB')} Cr down</h2>
-    <ol class="edition-steps">
-      <li><b>Play Witchspace</b> and earn the deposit: a tenth of the price, refundable until she’s ready.</li>
-      <li><b>Sign in</b> (from the menu), so your number is held for you, on every device.</li>
-      <li><b>Dock at any shipyard</b>, choose the ${esc(e.name)}, give her a name, and reserve her. The next number is yours.</li>
-      <li><b>Collect her</b> when the yard has finished her by hand, in about ${e.finishDays} days. The yard tells you when she’s ready.</li>
-    </ol>
-    <p class="connect-buttons"><a class="button primary" href="/play/">Play now, it’s free</a></p>
-    <p class="muted small">Credits are earned in the game, never bought: nothing here costs real money.</p>
+  <section class="card edition-reserve" id="invitation">
+    <p class="kicker">By invitation</p>
+    <h2>If you have to ask, you can’t afford one</h2>
+    <p>The ${esc(e.name)} isn’t on the yard’s list. Special editions are by invitation: for now, the maker signs them over to the people who build Witchspace, whether they write code, draw ships, write lore or test.</p>
+    <p>Anyone can name one and share her, in the configurator.</p>
+    <p class="connect-buttons"><a class="button primary" href="/ships/${esc(s.id)}/build/#edition=${esc(e.id)}">Name yours and share her</a> <a class="button ghost" href="/get-involved/">Get involved</a></p>
   </section>
 
   <section class="edition-more">

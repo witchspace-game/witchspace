@@ -828,7 +828,7 @@ button.button { cursor: pointer; }
 .edition-head .kicker { color: var(--trim); }
 .edition-head h1 { margin: 6px 0 14px; font-family: 'Space Grotesk', sans-serif; font-size: clamp(42px, 8vw, 84px); line-height: 1; letter-spacing: -0.02em; color: var(--edition); text-shadow: 0 0 18px color-mix(in srgb, var(--edition) 60%, transparent), 0 0 48px color-mix(in srgb, var(--edition) 30%, transparent); }
 .edition-head .lede { margin: 0 auto; }
-.edition-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; }
+.edition-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 26px 0 0; padding: 0; list-style: none; }
 .edition-facts li { padding: 12px 8px; border-top: 1px solid color-mix(in srgb, var(--edition) 40%, transparent); }
 .edition-facts b { display: block; font: 700 clamp(18px, 2.6vw, 26px) 'Space Grotesk', sans-serif; color: var(--fg); }
 .edition-facts span { color: var(--muted); font-size: 13px; }
@@ -854,7 +854,7 @@ button.button { cursor: pointer; }
 .edition-other p { margin: 0; color: var(--muted); }
 @media (max-width: 760px) {
   .edition-page .edition-view { height: auto; aspect-ratio: 4 / 3; }
-  .edition-facts { grid-template-columns: repeat(2, 1fr); }
+  .edition-facts { gap: 6px; }
   .edition-sections { grid-template-columns: 1fr; }
 }
 /* Money and markets (/economy/). */
@@ -980,6 +980,7 @@ button.button { cursor: pointer; }
 .build-bar-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1180px; margin: 0 auto; }
 .build-price b { display: block; color: var(--hull); font: 700 22px 'Space Grotesk', sans-serif; }
 .build-price span { color: var(--muted); font-size: 13px; }
+.build-bar-buttons { display: flex; flex: 0 0 auto; gap: 8px; }
 @media (max-width: 860px) {
   .build { grid-template-columns: 1fr; gap: 16px; }
   .build-stage { top: 64px; z-index: 2; background: var(--bg); padding-bottom: 6px; }
@@ -987,6 +988,7 @@ button.button { cursor: pointer; }
   .build-steps { scroll-margin-top: calc(64px + 56vw + 40px); }
   .build-caption { margin-top: 6px; font-size: 13px; }
   .build-price span { display: none; }
+  .build-bar-buttons .button { padding-left: 14px; padding-right: 14px; }
 }
 /* An owner's manual (/ships/<id>/manual/): in her colours, for her owner only. */
 .manual-page { max-width: 860px; }
