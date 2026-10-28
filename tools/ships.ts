@@ -21,6 +21,23 @@ export interface ShipFile {
   concept?: true;
 }
 
+/** A special edition, as its ship's page shows it (made in tools/shipFiles.ts). */
+export interface EditionCard {
+  id: string;
+  name: string;
+  blurb: string;
+  limit: number;
+  price: number;
+  colour: string;
+  trimColour: string | null;
+  /** "Orerve Nebula, with Witch-fire trim". */
+  finish: string;
+  line: string;
+  glow: string;
+  fit: string[];
+  luxuries: string[];
+}
+
 export interface ModuleFile {
   id: string;
   name: string;
@@ -205,7 +222,7 @@ function modulesCard(s: ShipFile, modules: Map<string, ModuleFile>): string {
  * A ship's page. `preview` is for a ship file from a link (/ship-preview/):
  * not in the fleet yet, so no GitHub file, ideas or share address of its own.
  */
-export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map(), preview = false) {
+export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map(), preview = false, editions: EditionCard[] = []) {
   const c = s.credits ?? {};
   const stats = STAT_LABELS.filter(([k]) => s.stats?.[k] !== undefined)
     // A concept's numbers are the makers' promises.
@@ -248,6 +265,7 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
   </div>
   <script type="application/json" id="ship-def">${def}</script>
   ${modulesCard(s, modules)}
+  ${editionsCard(editions)}
 
   ${preview ? previewCard(s) : `<div class="ship-columns">
     <div class="card">
@@ -266,6 +284,30 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
   </div>`}
 </section>`,
   };
+}
+
+/** Numbered special editions: a set spec, a hundred built. How many are left comes live (src/site/ship.ts). */
+function editionsCard(editions: EditionCard[]): string {
+  if (!editions.length) return '';
+  return `<div class="ship-editions">
+    ${editions
+      .map(
+        (e) => `<article class="edition" style="--edition:${esc(e.colour)};--trim:${esc(e.trimColour ?? e.colour)}">
+      <p class="kicker">Special edition · ${e.limit} built</p>
+      <h3>${esc(e.name)}</h3>
+      <p>${esc(e.blurb)}</p>
+      <dl class="edition-spec">
+        <div><dt>Finish</dt><dd><span class="edition-swatch" aria-hidden="true"></span>${esc(e.finish)}${e.line ? `<br><small>${esc(e.line)}</small>` : ''}</dd></div>
+        <div><dt>Glow</dt><dd>${esc(e.glow)}</dd></div>
+        <div><dt>Fitted</dt><dd>${e.fit.map(esc).join(', ')}</dd></div>
+        <div><dt>Aboard</dt><dd>${e.luxuries.map(esc).join(', ')}</dd></div>
+      </dl>
+      <p class="edition-count" data-edition="${esc(e.id)}" data-limit="${e.limit}">Numbered 001 to ${String(e.limit).padStart(3, '0')}, each painted beside its name.</p>
+      <p class="edition-price"><b>${e.price.toLocaleString('en-GB')} Cr</b> · Reserve one in the game, at a shipyard.</p>
+    </article>`,
+      )
+      .join('')}
+  </div>`;
 }
 
 /** A preview's file: who drew it, and what you can do with it. */

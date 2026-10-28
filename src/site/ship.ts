@@ -1,4 +1,5 @@
 import type { ShipDef } from '../content/types';
+import { API as SPACE } from '../net/account';
 import { escapeHtml } from '../ui/escape';
 import { viewer } from './viewer';
 
@@ -16,6 +17,26 @@ try {
 } catch {
   // No WebGL: the drawing stays.
 }
+
+// --- Its special editions: how many are left, from the server ---------------------------------
+
+const counts = document.querySelectorAll<HTMLElement>('.edition-count[data-edition]');
+if (counts.length)
+  void (async () => {
+    try {
+      const res = await fetch(`${SPACE}/shipyard/editions`);
+      const { editions } = (await res.json()) as { editions: { id: string; limit: number; taken: number }[] };
+      for (const el of counts) {
+        const e = editions.find((x) => x.id === el.dataset.edition);
+        if (!e) continue;
+        const left = Math.max(0, e.limit - e.taken);
+        el.innerHTML = left ? `<b>${left} of ${e.limit} left.</b> Numbered 001 to ${String(e.limit).padStart(3, '0')}, each painted beside its name.` : `<b>All ${e.limit} spoken for.</b> Every one numbered, and every one taken.`;
+        el.classList.toggle('gone', !left);
+      }
+    } catch {
+      // The numbers stay as built: no count, nothing wrong.
+    }
+  })();
 
 // --- Ideas about this ship ----------------------------------------------------------
 
