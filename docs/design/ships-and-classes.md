@@ -115,7 +115,7 @@ Earned ships still need upkeep, insurance and the career's goodwill: lose your s
 - **Trade in** your ship against the next; its value follows its condition ([ship condition](ship-condition.md)) and what's fitted.
 - **Second-hand ships with a history:** cheaper, a little worn, and sometimes with a past (a former owner's record, a hidden compartment, a Falcon's old paint under the new).
 - **Insurance** follows the ship's value ([law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks)).
-- **A hangar:** later, keep more than one ship, berthed where you left it.
+- **A hangar:** later, keep more than one ship, berthed where you left it. **Storage at any shipyard, for a fee** *(Mark, 28 October 2026)*: "He could leave her in storage at any shipyard for a fee." Leave a ship you own at a yard, paying a berth fee by the day, and fly another; come back to swap. A stored ship can't be lost in a fight, but the fee runs while she sits, and a yard can sell her off for unpaid fees after a long while. It means a gift or an edition never has to cost you the ship you came in.
 
 ## 6. Concepts
 
