@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Photo studio (dev only)</title>
+    <!-- Dev only: not in vite.config.ts's pages, so it's never built or deployed. See src/dev/studio.ts. -->
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+      canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+      #plate { position: fixed; left: 50%; bottom: 6%; transform: translateX(-50%); font: 500 14px/1 Rajdhani, system-ui, sans-serif; letter-spacing: 0.3em; text-transform: uppercase; white-space: nowrap; color: var(--c, #3dffb0); text-shadow: 0 0 8px var(--c, #3dffb0); }
+      #plate[hidden] { display: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="neo"></canvas>
+    <canvas id="retro" hidden></canvas>
+    <p id="plate" hidden></p>
+    <script type="module" src="/src/dev/studio.ts"></script>
+  </body>
+</html>

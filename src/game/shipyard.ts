@@ -2,6 +2,7 @@ import type { ShipDef } from '../content/types';
 import { editionById, type Edition } from '../content/editions';
 import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
 import { PLAYER_LASERS, type LaserId } from './weapons';
+import { PRODUCTION_HOURS } from './production';
 import { combatRating, ratingPoints } from './rating';
 
 // Speccing a ship and putting down a deposit, as you would on a new car
@@ -18,8 +19,7 @@ export function laserLocked(c: Commander, id: LaserId): string | null {
 }
 
 export const DEPOSIT_RATE = 0.1;
-/** Real hours from deposit to built. */
-export const PRODUCTION_HOURS = 72;
+export { PRODUCTION_HOURS };
 
 /**
  * The yard's palette: five at no charge, and the special glows, which cost.
@@ -40,8 +40,9 @@ export const PALETTE: { colour: string; name: string; price: number; line: strin
   // Priced as before, so the edition's price holds; they're simply not offered on their own.
   { colour: '#7df9ff', name: 'Witch-fire', price: 18_000, line: 'The light at the edge of a jump that never closed.', edition: 'witch-fire' },
   { colour: '#ff4dff', name: 'Orerve Nebula', price: 24_000, line: 'The cloud you see from Orerve on a clear night.', edition: 'witch-fire' },
-  // The Dark Edition's own.
-  { colour: '#6a3dff', name: 'Black-light', price: 30_000, line: 'The light you only see in the dark.', edition: 'dark' },
+  // The Dark Edition's own. Not deeper: a saturated blue-violet thin line breaks into dashes where it runs
+  // near-level on screen (the anti-aliasing steps show); this one is as deep as stays clean.
+  { colour: '#8f6bff', name: 'Black-light', price: 30_000, line: 'The light you only see in the dark.', edition: 'dark' },
 ];
 
 /** The colours the configurator offers: everything but an edition's own. */

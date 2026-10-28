@@ -81,6 +81,7 @@ import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
 import { claimEdition, editionCounts, redeemVoucher, releaseEdition } from './net/shipyard';
+import { enablePush, needsHomeScreen } from './net/notify';
 import { cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
@@ -342,8 +343,77 @@ function updateBerth(dt: number, model: ShipModel) {
   camera.lookAt(centre);
 }
 
+// --- The photo booth ---------------------------------------------------------------
+// Your ship as specced (or as you own her), out of the berth, on black or in
+// space, from any angle including below, with a longer lens; the picture goes
+// to the flight log like a P photo (Mark: "the configurator but without the
+// hangar in the background").
+
+let booth: { bg: 'space' | 'black' } | null = null;
+const BOOTH_FOV = 28;
+const pinch = new Map<number, [number, number]>();
+
+function openBooth() {
+  booth = { bg: 'space' };
+  spin.x = 0.15;
+  spin.y = 0.6;
+  zoom = 1;
+  document.body.classList.add('photo-booth');
+  $('#booth').hidden = false;
+  $('#booth .booth-bg').textContent = 'Space';
+}
+
+function closeBooth() {
+  booth = null;
+  document.body.classList.remove('photo-booth');
+  $('#booth').hidden = true;
+  camera.fov = 50;
+  camera.updateProjectionMatrix();
+  resetShowroomView();
+}
+$('#booth .booth-close').addEventListener('click', closeBooth);
+$('#booth .booth-snap').addEventListener('click', () => (photoPending = true));
+$('#booth .booth-bg').addEventListener('click', (e) => {
+  if (!booth) return;
+  booth.bg = booth.bg === 'space' ? 'black' : 'space';
+  (e.target as HTMLElement).textContent = booth.bg === 'space' ? 'Space' : 'Black';
+});
+// Two fingers zoom.
+addEventListener('pointerdown', (e) => booth && pinch.set(e.pointerId, [e.clientX, e.clientY]));
+addEventListener('pointerup', (e) => pinch.delete(e.pointerId));
+addEventListener('pointercancel', (e) => pinch.delete(e.pointerId));
+addEventListener('pointermove', (e) => {
+  if (!booth || !pinch.has(e.pointerId) || pinch.size !== 2) return;
+  const [a, b] = [...pinch.values()];
+  const before = Math.hypot(a[0] - b[0], a[1] - b[1]);
+  pinch.set(e.pointerId, [e.clientX, e.clientY]);
+  const [c, d] = [...pinch.values()];
+  const after = Math.hypot(c[0] - d[0], c[1] - d[1]);
+  if (before > 0) zoom = THREE.MathUtils.clamp(zoom * (after / before), ZOOM_MIN, ZOOM_MAX);
+  spin.dragging = false; // a pinch, not a turn
+});
+
+function updateBooth(model: ShipModel) {
+  hangar.visible = false;
+  showroom.stars.visible = booth!.bg === 'space';
+  model.root.position.set(0, 0, 0);
+  model.root.rotation.set(0, 0, 0);
+  if (camera.fov !== BOOTH_FOV) {
+    camera.fov = BOOTH_FOV;
+    camera.updateProjectionMatrix();
+  }
+  if (camera.view?.enabled) camera.clearViewOffset();
+  // Free all the way round, and from well below: the angles the berth can't reach.
+  const elevation = THREE.MathUtils.clamp(spin.x * 0.6, -1.45, 1.45);
+  const dist = (model.radius * 4.6) / zoom;
+  camera.position.set(Math.sin(spin.y) * Math.cos(elevation) * dist, Math.sin(elevation) * dist, Math.cos(spin.y) * Math.cos(elevation) * dist);
+  camera.lookAt(0, 0, 0);
+  showroom.stars.position.copy(camera.position);
+}
+
 function updateShowroom(dt: number) {
   const model = showroomModels[shipIndex];
+  if (booth && state === 'docked') return updateBooth(model);
   if (state === 'docked') {
     if (camera.view?.enabled) camera.clearViewOffset();
     updateBerth(dt, model);
@@ -1183,6 +1253,18 @@ function boardShip() {
   plate.hidden = !words.length;
 }
 
+/** Whether this device has been asked (or has said yes) to notifications for the yard, this session. */
+let notifyAsked = false;
+
+/** Ask to be told when she's ready (Mark: "ask anyone ordering a ship to turn on notifications"). */
+function notifyPrompt(): string {
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && signedIn()) return '<span class="yard-note">The yard will send you a notification when she’s ready for collection.</span>';
+  const why = !signedIn() ? 'Sign in (from the menu), then turn on notifications' : needsHomeScreen() ? 'On iPhone, add Witchspace to your Home Screen, then turn on notifications there' : '';
+  return why
+    ? `<span class="yard-note">Want to know the moment she’s ready? ${why}.</span>`
+    : '<button type="button" class="yard-notify">Tell me when she’s ready: turn on notifications</button>';
+}
+
 /** The way to take delivery: here at the yard that built it, the bill with your trade-in; elsewhere, where to go. */
 function collectButton(o: ShipOrder): string {
   const here = currentSystem();
@@ -1240,6 +1322,7 @@ function renderShipyard() {
       <span>${p.built ? `Built, and waiting for you at ${escapeHtml(where)}.` : `In production at ${escapeHtml(where)}: ${p.stage.toLowerCase()} · about ${p.hoursLeft} h to go`}</span>
       <div class="rec-meter"><span style="width:${(p.fraction * 100).toFixed(1)}%"></span></div>
       <span>${o.gifted ? 'Built for you by the yard, with its thanks: nothing to pay' : `Deposit ${o.deposit.toLocaleString()} Cr paid · ${(o.quoted - o.deposit).toLocaleString()} Cr on collection`}</span>
+      ${!p.built && !notifyAsked ? notifyPrompt() : ''}
       ${p.built ? collectButton(o) : o.gifted ? '' : `<button type="button" class="yard-cancel">Cancel and refund ${o.deposit.toLocaleString()} Cr</button>`}
     </div>`;
   }
@@ -1309,7 +1392,7 @@ function renderShipyard() {
           ${nameField}
           <p class="yard-total"><span>Hull, ${escapeHtml(PLAYER_LASERS[standardLaser(def)].name.toLowerCase())}, standard fit</span><b>A gift</b></p>`
         : '';
-    el.innerHTML = `${msg}${orderCard}<button type="button" class="yard-back">‹ The yard</button>
+    el.innerHTML = `${msg}${orderCard}<button type="button" class="yard-back">‹ The yard</button> <button type="button" class="yard-photo">Photograph her</button>
       <h3 class="yard-title" style="--hull:${spec.colour}">${fixed ? `${escapeHtml(fixed.name)}: ${escapeHtml(def.name)}` : giftEdition ? `Your gift: ${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}` : gift ? `Your gift: a ${escapeHtml(def.name)}` : `Spec your ${escapeHtml(def.name)}`}</h3>
       ${body ? `${body}${action}` : `<p class="yard-label">Its colour <span>${chosenColour ? `${chosenColour.name} · ${cost(chosenColour.price)}` : 'The maker’s own'}</span></p>
       ${swatches('data-colour', spec.colour)}
@@ -1336,6 +1419,7 @@ function renderShipyard() {
       yardMode = 'spec';
       keep();
     };
+    el.querySelector<HTMLButtonElement>('.yard-photo')!.onclick = openBooth;
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-colour]'))
       b.onclick = () => {
         spec!.colour = b.dataset.colour!;
@@ -1533,6 +1617,19 @@ function renderShipyard() {
       renderShipyard();
     };
   }
+  const tell = el.querySelector<HTMLButtonElement>('.yard-notify');
+  if (tell)
+    tell.onclick = async () => {
+      tell.disabled = true;
+      try {
+        await enablePush();
+        yardMessage = 'Notifications on: the yard will tell you the moment she’s ready for collection.';
+      } catch (e) {
+        yardMessage = (e as Error).message;
+      }
+      notifyAsked = true;
+      renderShipyard();
+    };
   const take = el.querySelector<HTMLButtonElement>('.yard-collect');
   if (take && c.order)
     take.onclick = () => {
@@ -1854,7 +1951,7 @@ function renderDocked() {
     ['Rules', DIFFICULTIES[c.difficulty].name],
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ...(satsOf(c) ? ([['Bitcoin', `${formatBtc(satsOf(c))} · ${btcValue(c).toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr · no hold space`]] as [string, string][]) : []),
-    ['Ship', `${escapeHtml(player.def.name)} <button type="button" class="small manual-open">Owner's manual</button>`],
+    ['Ship', `${escapeHtml(player.def.name)} <button type="button" class="small manual-open">Owner's manual</button> <button type="button" class="small manual-open booth-open">Photograph her</button>`],
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
     ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
@@ -1865,7 +1962,11 @@ function renderDocked() {
     ...explorerTips(c, here),
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  $('#cmdr .manual-open')?.addEventListener('click', () => openManual(player.def));
+  $('#cmdr .manual-open:not(.booth-open)')?.addEventListener('click', () => openManual(player.def));
+  $('#cmdr .booth-open')?.addEventListener('click', () => {
+    showOwnShip();
+    openBooth();
+  });
   $('#cmdr .rename').addEventListener('click', () => startRename());
   document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
     flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);
@@ -5543,6 +5644,7 @@ if (isTouch && !isIos) {
 let launchCounted = false;
 
 async function launch() {
+  if (booth) closeBooth();
   if (!launchCounted) {
     launchCounted = true;
     countEvent('launch', { rules: cmdr().difficulty, controls: isTouch ? 'touch' : 'keys' }); // how many who arrive actually fly; nothing personal

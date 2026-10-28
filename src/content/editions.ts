@@ -44,7 +44,7 @@ export const EDITIONS: Edition[] = [
     ship: 'fer-de-lance',
     limit: 50,
     blurb: 'Black-light lines over a hull you lose against the stars, and one white-hot canopy. For pilots who would rather not be seen. Fifty will be built, each numbered beside its name.',
-    colour: '#6a3dff',
+    colour: '#8f6bff',
     trim: '#f2f6ff',
     glow: 'deep',
     laser: 'beam',
