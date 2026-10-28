@@ -1270,9 +1270,12 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 
 /* /ship-editor/: blueprints beside the ship glowing in 3D. */
 .editor-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
-.editor-stage { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.editor-stage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-width: 0; }
+/* On a wide screen the 3D view and the three blueprints are four equal squares, so a view and its result sit side by side. */
+.editor-stage > .editor-views { display: contents; }
+.editor-stage > .editor-tools, .editor-stage > .editor-tip { grid-column: 1 / -1; }
 .editor-3d { border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; background: #04060b; }
-.editor-3d canvas { display: block; width: 100%; height: 340px; touch-action: none; cursor: grab; }
+.editor-3d canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; touch-action: none; cursor: grab; }
 .editor-3d p { margin: 0; padding: 20px; }
 .editor-views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .editor-view { margin: 0; position: relative; border-radius: var(--radius); border: 1px solid var(--border); background: #05080f; overflow: hidden; }
@@ -1301,6 +1304,7 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .editor-tools .snap { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); margin-left: auto; }
 .editor-tools select { padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border-strong); background: rgba(0, 0, 0, 0.3); color: var(--fg); font: 14px var(--font); }
 .editor-tip { margin: 0; }
+.editor-tools-note { margin: 12px 0 0; max-width: 70ch; color: var(--muted); }
 .editor-panel { display: flex; flex-direction: column; gap: 14px; }
 .editor-panel .submit-step { padding: 18px; gap: 12px; }
 .part-list { display: flex; flex-direction: column; gap: 6px; }
@@ -1324,7 +1328,9 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .homage { border-left: 2px solid var(--border-strong); padding-left: 10px; }
 @media (max-width: 900px) {
   .editor-layout { grid-template-columns: 1fr; }
-  .editor-3d canvas { height: 260px; }
+  .editor-stage { display: flex; flex-direction: column; }
+  .editor-stage > .editor-views { display: grid; }
+  .editor-3d canvas { height: 260px; aspect-ratio: auto; }
   .editor-tabs { display: flex; gap: 6px; }
   .editor-tabs button { flex: 1; padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--muted); font: 14px var(--font); }
   .editor-tabs button[aria-selected='true'] { border-color: var(--accent); color: var(--fg); }

@@ -20,6 +20,13 @@ const toBase64url = (b: Uint8Array) => {
 
 const fromBase64url = (s: string) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
 
+/** A ship file, if this looks like one: a name, geometry, stats and style. */
+export function asShip(x: unknown): ShipDef | null {
+  const s = x as ShipDef;
+  const ok = typeof s?.name === 'string' && Array.isArray(s.geometry?.vertices) && Array.isArray(s.geometry?.faces) && typeof s.stats === 'object' && typeof s.style?.lineColor === 'string';
+  return ok ? s : null;
+}
+
 /** The hash for a ship file: "ship=…". */
 export async function shipHash(file: unknown): Promise<string> {
   const bytes = await pipe(new TextEncoder().encode(JSON.stringify(file)), new CompressionStream('deflate-raw'));
@@ -32,9 +39,7 @@ export async function shipFromHash(hash: string): Promise<ShipDef | null> {
   if (!m) return null;
   try {
     const bytes = await pipe(fromBase64url(m[1]), new DecompressionStream('deflate-raw'));
-    const s = JSON.parse(new TextDecoder().decode(bytes)) as ShipDef;
-    const ok = typeof s?.name === 'string' && Array.isArray(s.geometry?.vertices) && Array.isArray(s.geometry?.faces) && typeof s.stats === 'object' && typeof s.style?.lineColor === 'string';
-    return ok ? s : null;
+    return asShip(JSON.parse(new TextDecoder().decode(bytes)));
   } catch {
     return null;
   }

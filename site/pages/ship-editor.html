@@ -3,11 +3,12 @@
   <div class="section-head">
     <p class="kicker">Build</p>
     <h2>Ship editor</h2>
-    <p class="lede">Shape a ship from points: the editor mirrors them and makes the faces, so it's always a sound hull. Start from a ship in the fleet or a plain wedge, give it a name, a maker and a reason to exist, and hand it in. Your drawing is kept in this browser as you go.</p>
+    <p class="lede">See a ship, tweak it, check it and hand it in. The editor mirrors your points and makes the faces, so it's always a sound hull, and it keeps your drawing in this browser as you go.</p>
+    <p class="editor-tools-note">Designing a whole ship? Use the tools you know. <a href="/connect/">Connect your AI assistant</a> and ask it for the ship you have in mind: it checks the design against the game's rules and hands it in. Then open it here to look it over.</p>
   </div>
 
   <div class="link-offer" id="link-offer" role="alert" hidden>
-    <p>Open the <strong></strong> from your link? It replaces your drawing here (Undo brings it back).</p>
+    <p>Open the <strong></strong>? It replaces your drawing here (Undo brings it back).</p>
     <p class="connect-buttons"><button type="button" class="button primary small" data-link="open">Open it</button> <button type="button" class="button ghost small" data-link="keep">Keep my drawing</button></p>
   </div>
 
@@ -24,7 +25,7 @@
         <button type="button" class="button small ghost" id="redo" disabled>Redo</button>
         <label class="snap">Snap <select id="snap"><option value="0">off</option><option value="0.5">0.5 m</option><option value="1" selected>1 m</option><option value="2">2 m</option></select></label>
       </div>
-      <p class="small muted editor-tip" id="tip">Drag a point to move it. Hollow points are mirror images. Grey ones are inside the hull, so they don't change its shape.</p>
+      <p class="small muted editor-tip" id="tip">Drag a point to move it. Hollow points are mirror images. Grey ones are inside the hull, so they don't change its shape. If two points sit on top of each other in one view, pick them in another.</p>
     </div>
 
     <div class="editor-panel">
@@ -35,6 +36,9 @@
           <button type="button" class="button small" data-start="new">Make a new one from it</button>
           <button type="button" class="button small ghost" data-start="improve" id="improve">Improve it</button>
         </div>
+        <button type="button" class="button small ghost" id="open">Open a ship file</button>
+        <input type="file" id="open-file" accept=".json,application/json" hidden />
+        <p class="small muted" id="open-note" hidden></p>
       </div>
 
       <div class="submit-step">

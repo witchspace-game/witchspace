@@ -5,7 +5,7 @@ import { escapeHtml } from '../ui/escape';
 import { blueprint, blueprintSvg, VIEWS, type Handle, type Scene } from './blueprint';
 import { convexHull, mirrorX, partBodies, type Mirror, type Part } from './hull';
 import { blank, extent, fromShip, MAKERS, readDraft, ROLES, shipFile, slug, type Draft } from './shipDraft';
-import { shipFromHash, shipHash } from './shipLink';
+import { asShip, shipFromHash, shipHash } from './shipLink';
 import { plainly, type Check } from './submission';
 import { viewer, type Viewer } from './viewer';
 
@@ -139,6 +139,9 @@ function show3d(file: Record<string, unknown>) {
   });
 }
 
+/** The blueprints' half width, in metres, as last drawn. */
+let frame = 0;
+
 /** What the blueprints draw: every part's edges, and the chosen part's points. */
 function scene(): Scene {
   const edges: Scene['edges'] = [];
@@ -166,7 +169,10 @@ function scene(): Scene {
       if (p.mirror !== 'none' && at[0] !== 0) handles.push({ part: pi, point: i, at: mirrorX(at), ghost: true, inside });
     });
   });
-  const half = Math.max(10, Math.ceil((extent(draft.parts) * 1.15) / 5) * 5);
+  // The frame holds still while a point is dragged: refitting under the pointer
+  // moved the point further out, which grew the frame again, and so on.
+  const half = drawn.some((d) => d.dragging()) && frame ? frame : Math.max(10, Math.ceil((extent(draft.parts) * 1.15) / 5) * 5);
+  frame = half;
   const slot = draft.docks === false ? undefined : { halfW: SLOT.halfW, halfH: SLOT.halfH, out: Boolean(slotProblem(shipFile(draft) as Pick<ShipDef, 'role' | 'geometry'>)) };
   return { edges, handles, selected: sel, half, colour: draft.style.lineColor, adding, slot };
 }
@@ -300,14 +306,19 @@ syncStart();
 
 /** Replace the drawing, with a second press to be sure if there's one to lose. */
 function armed(b: HTMLButtonElement, words: string): boolean {
-  if (b.classList.contains('armed')) return true;
+  const disarm = () => {
+    clearTimeout(Number(b.dataset.timer));
+    b.classList.remove('armed');
+    b.textContent = b.dataset.words!;
+  };
+  if (b.classList.contains('armed')) {
+    disarm();
+    return true;
+  }
   b.dataset.words ??= b.textContent ?? '';
   b.classList.add('armed');
   b.textContent = words;
-  setTimeout(() => {
-    b.classList.remove('armed');
-    b.textContent = b.dataset.words!;
-  }, 4000);
+  b.dataset.timer = String(setTimeout(disarm, 4000));
   return false;
 }
 
@@ -335,13 +346,16 @@ const field = (name: string) => form.querySelector<HTMLInputElement>(`[name="${n
 form.querySelector('[name="role"]')!.innerHTML = ROLES.map((r) => `<option value="${r}">${r[0].toUpperCase()}${r.slice(1)}</option>`).join('');
 $('#makers').innerHTML = MAKERS.map((m) => `<option value="${escapeHtml(m)}"></option>`).join('');
 
+// The Cobra's own numbers, for scale: from its file, so they never go stale.
+const cobra = FLEET.find((s) => s.id === 'cobra-mk3')?.stats;
+const like = (key: keyof ShipDef['stats'], unit = '') => [unit, cobra?.[key] !== undefined ? `Cobra ${cobra[key]}` : ''].filter(Boolean).join(' · ');
 const STATS: { key: keyof ShipDef['stats']; label: string; step: number; hint: string }[] = [
-  { key: 'maxSpeed', label: 'Top speed', step: 10, hint: 'm/s · Cobra 300' },
-  { key: 'pitchRate', label: 'Pitch', step: 0.1, hint: 'rad/s · Cobra 1.0' },
-  { key: 'rollRate', label: 'Roll', step: 0.1, hint: 'rad/s · Cobra 2.0' },
-  { key: 'hull', label: 'Hull', step: 10, hint: 'Cobra 100' },
-  { key: 'shields', label: 'Shields', step: 10, hint: 'Cobra 60' },
-  { key: 'cargo', label: 'Hold', step: 1, hint: 'tonnes · Cobra 20' },
+  { key: 'maxSpeed', label: 'Top speed', step: 10, hint: like('maxSpeed', 'm/s') },
+  { key: 'pitchRate', label: 'Pitch', step: 0.1, hint: like('pitchRate', 'rad/s') },
+  { key: 'rollRate', label: 'Roll', step: 0.1, hint: like('rollRate', 'rad/s') },
+  { key: 'hull', label: 'Hull', step: 10, hint: like('hull') },
+  { key: 'shields', label: 'Shields', step: 10, hint: like('shields') },
+  { key: 'cargo', label: 'Hold', step: 1, hint: like('cargo', 'tonnes') },
   { key: 'missiles', label: 'Missiles', step: 1, hint: 'up to 8' },
   { key: 'price', label: 'Price', step: 1000, hint: 'Cr' },
   { key: 'ratingValue', label: 'Rating value', step: 0.05, hint: 'for shooting one down' },
@@ -495,13 +509,36 @@ async function previewLink(file: Record<string, unknown>) {
   $<HTMLAnchorElement>('#preview').href = `/ship-preview/#${await shipHash(file)}`;
 }
 
-// --- A ship from a link (/ship-editor/#ship=…, from a preview page) ----------------------------
+// --- A ship from a link (/ship-editor/#ship=…, from a preview page) or a file -------------------
 
 const offer = $('#link-offer');
 async function fromLink() {
   const ship = await shipFromHash(location.hash);
   history.replaceState(null, '', location.pathname + location.search);
-  if (!ship) return;
+  if (ship) openShip(ship);
+}
+addEventListener('hashchange', () => void fromLink());
+
+const fileInput = $<HTMLInputElement>('#open-file');
+$('#open').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', async () => {
+  const f = fileInput.files?.[0];
+  fileInput.value = '';
+  if (!f) return;
+  let ship = null;
+  try {
+    ship = asShip(JSON.parse(await f.text()));
+  } catch {
+    /* not JSON */
+  }
+  const note = $('#open-note');
+  note.hidden = Boolean(ship);
+  note.textContent = ship ? '' : `${f.name} isn't a ship file we can read: it needs a name, geometry, stats and style, as the ships in the fleet have.`;
+  if (ship) openShip(ship);
+});
+
+/** Open a ship file as the drawing; one of your own is never replaced without asking. */
+function openShip(ship: ShipDef) {
   const take = () => {
     offer.hidden = true;
     const linked = fromShip(ship, 'improve');
@@ -514,14 +551,13 @@ async function fromLink() {
     fillShip();
     render();
   };
-  // A drawing of your own is never replaced without asking.
   if (JSON.stringify(draft) === JSON.stringify(blank())) return take();
   offer.querySelector('strong')!.textContent = ship.name || 'the ship';
   offer.hidden = false;
-  offer.querySelector('[data-link="open"]')!.addEventListener('click', take, { once: true });
-  offer.querySelector('[data-link="keep"]')!.addEventListener('click', () => (offer.hidden = true), { once: true });
+  offer.querySelector<HTMLButtonElement>('[data-link="open"]')!.onclick = take;
+  offer.querySelector<HTMLButtonElement>('[data-link="keep"]')!.onclick = () => (offer.hidden = true);
+  offer.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
-addEventListener('hashchange', () => void fromLink());
 
 // --- Start ------------------------------------------------------------------------------------
 
