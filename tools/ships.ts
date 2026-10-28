@@ -1,13 +1,11 @@
 // The website's ship pages: an index of the fleet, and a page for each ship
 // with its story, its stats, who designed it, and how to make it better.
-// Everything comes from the ship's own file in content/ships/.
-
-import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+// Everything comes from the ship's own file in content/ships/. No Node here: the
+// ship preview page (src/site/shipPreview.ts) builds its page in the browser.
 
 const REPO = 'https://github.com/witchspace-game/witchspace/blob/main/';
 
-interface ShipFile {
+export interface ShipFile {
   id: string;
   name: string;
   manufacturer?: string;
@@ -19,9 +17,11 @@ interface ShipFile {
   style?: { lineColor?: string };
   insignia?: { color: string; vertices: number[][]; lines: number[][] };
   modules?: string[];
+  /** A maker's concept: shown off, not flying yet. */
+  concept?: true;
 }
 
-interface ModuleFile {
+export interface ModuleFile {
   id: string;
   name: string;
   zone: string;
@@ -29,11 +29,6 @@ interface ModuleFile {
   description: string;
   designer: string;
 }
-
-/** Ships worth a page: the fleet, not the props. */
-const SKIP = new Set(['missile', 'cargo-canister']);
-/** Shown first: the ship every commander starts in. */
-const FIRST = 'cobra-mk3';
 
 /** Where a ship's design is written down, when it has more than its file. */
 const DESIGN: Record<string, { href: string; label: string }> = {
@@ -56,15 +51,6 @@ const firstSentence = (text: string) => {
 };
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-export function loadShips(root: string): ShipFile[] {
-  const dir = join(root, 'content/ships');
-  const all = readdirSync(dir)
-    .filter((f) => f.endsWith('.json'))
-    .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as ShipFile)
-    .filter((s) => !SKIP.has(s.id));
-  return all.sort((a, b) => (a.id === FIRST ? -1 : b.id === FIRST ? 1 : a.name.localeCompare(b.name)));
-}
 
 /**
  * A wireframe drawing of the ship, seen from above and to one side, as an
@@ -162,10 +148,17 @@ const STAT_LABELS: [string, string, (n: number) => string][] = [
 ];
 
 function roleLine(s: ShipFile) {
-  return [s.manufacturer && s.manufacturer !== 'None' ? s.manufacturer : '', ROLE[s.role ?? ''] ?? s.role ?? ''].filter(Boolean).join(' · ');
+  return [s.concept ? 'Concept' : '', s.manufacturer && s.manufacturer !== 'None' ? s.manufacturer : '', ROLE[s.role ?? ''] ?? s.role ?? ''].filter(Boolean).join(' · ');
 }
 
+const shipCard = (s: ShipFile) => `    <a class="card link ship-card${s.concept ? ' concept' : ''}" href="/ships/${s.id}/">
+      ${shipSvg(s)}
+      <h3>${esc(s.name)}</h3>
+      <p class="muted">${esc(roleLine(s))}</p>
+    </a>`;
+
 export function shipsIndex(ships: ShipFile[]): string {
+  const concepts = ships.filter((s) => s.concept);
   return `<section class="section">
   <div class="section-head">
     <p class="kicker">The fleet</p>
@@ -173,31 +166,21 @@ export function shipsIndex(ships: ShipFile[]): string {
     <p class="lede">Every ship in Witchspace is a small file anyone can read, improve or add to. Here's the fleet so far, who flies each one, and who drew it.</p>
   </div>
   <div class="ship-grid">
-${ships
-  .map(
-    (s) => `    <a class="card link ship-card" href="/ships/${s.id}/">
-      ${shipSvg(s)}
-      <h3>${esc(s.name)}</h3>
-      <p class="muted">${esc(roleLine(s))}</p>
-    </a>`,
-  )
-  .join('\n')}
+${ships.filter((s) => !s.concept).map(shipCard).join('\n')}
   </div>
+${concepts.length ? `  <div class="ship-concepts">
+    <h3>Coming soon</h3>
+    <p class="muted">Concepts: what the makers are showing off before they fly.</p>
+    <div class="ship-grid">
+${concepts.map(shipCard).join('\n')}
+    </div>
+  </div>` : ''}
   <div class="ship-make">
     <h3>Design a ship</h3>
     <p>A ship is a small file: points, faces and a few glowing details. You don't need to code to make one. <a href="/get-involved/#ai">Add Witchspace to your AI assistant</a>, ask it for the ship you have in mind, and it checks the design against the game's rules and draws it beside a Cobra. Then email the file to <a href="mailto:hello@witchspace.org.uk?subject=A%20ship%20for%20Witchspace">hello@witchspace.org.uk</a>, or <a href="/ideas/">put the idea on the ideas board</a> for someone to draw. Nods to films and books are welcome, copies of their designs aren't (<a href="${REPO}CONTRIBUTING.md#legends-and-homages">the rules on homages</a>).</p>
     <p class="muted small">If you code: ships live in <a href="https://github.com/witchspace-game/witchspace/tree/main/content/ships">content/ships</a> on GitHub, open to pull requests (<a href="${REPO}CONTRIBUTING.md">how to contribute</a>).</p>
   </div>
 </section>`;
-}
-
-/** The Titanoboa's modules, from content/modules. */
-export function loadModules(root: string): Map<string, ModuleFile> {
-  const dir = join(root, 'content/modules');
-  return new Map(readdirSync(dir).filter((f) => f.endsWith('.json')).map((f) => {
-    const m = JSON.parse(readFileSync(join(dir, f), 'utf8')) as ModuleFile;
-    return [m.id, m];
-  }));
 }
 
 /** A modular ship's sections, fore to aft, each with its job and its designer. */
@@ -218,10 +201,15 @@ function modulesCard(s: ShipFile, modules: Map<string, ModuleFile>): string {
     </div>`;
 }
 
-export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map()) {
+/**
+ * A ship's page. `preview` is for a ship file from a link (/ship-preview/):
+ * not in the fleet yet, so no GitHub file, ideas or share address of its own.
+ */
+export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map(), preview = false) {
   const c = s.credits ?? {};
   const stats = STAT_LABELS.filter(([k]) => s.stats?.[k] !== undefined)
-    .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${esc(f(s.stats![k]))}</dd></div>`)
+    // A concept's numbers are the makers' promises.
+    .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${s.concept && k === 'price' && s.stats![k] ? 'About ' : ''}${esc(f(s.stats![k]))}</dd></div>`)
     .join('');
   const design = DESIGN[s.id];
   const authors = (c.authors ?? []).join(', ') || 'Witchspace contributors';
@@ -243,6 +231,7 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
     description: `${s.name}${roleLine(s) ? ` (${roleLine(s)})` : ''}: ${s.description ?? 'a ship in Witchspace'}`.slice(0, 300),
     content: `<section class="section ship-page">
   <a class="back" href="/ships/">← All ships</a>
+  ${preview ? '<p class="preview-note">A preview: this ship isn’t in the fleet or the game yet. It’s the ship file from the link you opened, exactly as drawn.</p>' : ''}
   <div class="ship-hero">
     <div class="ship-view" data-ship="${esc(s.id)}">
       ${shipSvg(s, 'ship-svg fallback')}
@@ -252,14 +241,15 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
       <p class="kicker">${esc(roleLine(s))}</p>
       <h1>${esc(s.name)}</h1>
       <p class="lede">${esc(s.description ?? '')}</p>
+      ${s.concept ? '<p class="concept-note">Coming soon. A concept: its makers are showing it off, and it isn’t flying yet. Its numbers may change before it does.</p>' : ''}
       ${stats ? `<dl class="ship-stats">${stats}</dl>` : ''}
-      <p class="ship-share"><button type="button" class="button ghost small" data-share data-share-url="/ships/${esc(s.id)}/" data-share-title="${esc(s.name)}">Share the ${esc(s.name)}</button></p>
+      <p class="ship-share"><button type="button" class="button ghost small" data-share${preview ? '' : ` data-share-url="/ships/${esc(s.id)}/"`} data-share-title="${esc(s.name)}">Share the ${esc(s.name)}</button></p>
     </div>
   </div>
   <script type="application/json" id="ship-def">${def}</script>
   ${modulesCard(s, modules)}
 
-  <div class="ship-columns">
+  ${preview ? previewCard(s) : `<div class="ship-columns">
     <div class="card">
       <h3>Its design</h3>
       ${c.notes ? `<p>${esc(c.notes)}</p>` : ''}
@@ -273,7 +263,20 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
       <p><a class="button primary small" href="/ideas/?about=${encodeURIComponent(s.name)}">Suggest an improvement</a></p>
       <p class="muted small">Want to redraw it yourself? <a href="/get-involved/#ai">Ask your AI assistant</a> to rework <a href="${REPO}content/ships/${esc(s.id)}.json">its file</a> and email the result to <a href="mailto:hello@witchspace.org.uk?subject=${encodeURIComponent(`A better ${s.name}`)}">hello@witchspace.org.uk</a>. If you code, a pull request works too.</p>
     </div>
-  </div>
+  </div>`}
 </section>`,
   };
+}
+
+/** A preview's file: who drew it, and what you can do with it. */
+function previewCard(s: ShipFile): string {
+  const c = s.credits ?? {};
+  const authors = (c.authors ?? []).join(', ');
+  return `<div class="card ship-preview-file">
+    <h3>The file</h3>
+    ${c.notes ? `<p>${esc(c.notes)}</p>` : ''}
+    ${authors ? `<p class="muted">Drawn by ${esc(authors)}${c.aiAssisted ? ', with AI assistance' : ''}.</p>` : ''}
+    <p class="muted small" id="preview-editor-note" hidden></p>
+    <p class="connect-buttons"><a class="button primary small" id="preview-edit" href="/ship-editor/">Open it in the ship editor</a> <button type="button" class="button ghost small" id="preview-download">Download the file</button></p>
+  </div>`;
 }

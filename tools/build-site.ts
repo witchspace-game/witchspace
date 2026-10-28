@@ -9,7 +9,8 @@ import { dirname, join, posix, relative, resolve } from 'node:path';
 import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from './media';
 import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLARS, roadmapCompactHtml, roadmapHtml, roadmapSummaryHtml, STATUS } from './docs';
 import { companyPage, jobsPage, loadJobs } from './jobs';
-import { loadModules, loadShips, shipPage, shipsIndex } from './ships';
+import { loadModules, loadShips } from './shipFiles';
+import { shipPage, shipsIndex } from './ships';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
 
 const root = resolve(import.meta.dirname, '..');
@@ -60,6 +61,7 @@ const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/ideas/': { ship: 'cobra-mk3', kicker: 'Ideas', title: 'What should Witchspace do next?', sub: 'Suggest an idea, or vote the ones you care about up or down.' },
   '/press/': { ship: 'falcon', kicker: 'Press kit', sub: 'A new trailer, short films, screenshots, facts and words about Witchspace.' },
   '/review/': { ship: 'falcon', kicker: 'Build', title: 'Review submissions', sub: 'For maintainers: accept a design, or send it back with notes.' },
+  '/ship-preview/': { ship: 'cobra-mk3', kicker: 'Ships', title: 'Ship preview', sub: 'A ship that isn’t in the fleet yet, from a link.' },
   '/connect/': { ship: 'titanoboa', kicker: 'Build connector', title: 'Connect your AI assistant', sub: 'Let your assistant hand in ships and modules as you. Nothing goes public until it is accepted.' },
   '/ship-editor/': { ship: 'falcon', kicker: 'Build', title: 'Ship editor', sub: 'Shape a ship from points, see it glow, and hand it in. No code, no GitHub.' },
   '/submit/': { ship: 'titanoboa', kicker: 'Build', title: 'Hand in a design', sub: 'A ship or a Titanoboa module, checked as you go. No GitHub needed.' },
@@ -84,7 +86,7 @@ const GAME = {
 };
 
 /** Names for breadcrumbs, by URL section. */
-const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', jobs: 'Jobs', companies: 'Jobs', submit: 'Hand in a design', connect: 'Connect your AI assistant', 'ship-editor': 'Ship editor', review: 'Review submissions' };
+const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', jobs: 'Jobs', companies: 'Jobs', submit: 'Hand in a design', connect: 'Connect your AI assistant', 'ship-editor': 'Ship editor', review: 'Review submissions', 'ship-preview': 'Ship preview' };
 /** Sections without an index page of their own: their breadcrumb points here instead. */
 const SECTION_URLS: Record<string, string> = { companies: '/jobs/' };
 

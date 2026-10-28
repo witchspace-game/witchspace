@@ -54,3 +54,4 @@ notebook/
 
 # Maintainer-only guidance for Claude Code
 CLAUDE.local.md
+/ship-preview/
