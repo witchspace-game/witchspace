@@ -70,7 +70,9 @@ export type ServerMessage =
   /** Someone fired an ECM, here. */
   | { type: 'ecm'; id: string; p: Vec3 }
   /** Your account joined shared space from somewhere else: this ship has been taken out. One ship per account. */
-  | { type: 'replaced' };
+  | { type: 'replaced' }
+  /** This system's shared space has as many commanders flying as it takes: you fly solo for now. */
+  | { type: 'full'; max: number };
 
 /** The ships commanders can fly in shared space (stage 1: the Cobra). Must match content/ships. */
 export const SHIPS: Record<string, { maxSpeed: number; shields: number; hull: number; radius: number; missiles: number }> = {

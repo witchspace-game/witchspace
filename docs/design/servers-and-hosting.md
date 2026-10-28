@@ -80,6 +80,10 @@ Rough estimates **(to measure)**:
 
 A **load test** with simulated players will measure all this before launch.
 
+### How many commanders a system holds *(Mark, 28 October 2026)*
+
+A load test of a system's server (28 October 2026, on a local copy) found it forwards about 12,000 position updates a second. Each commander flying in a system sends ten a second, and each goes to everyone else there, so about 35 commanders flying at once keep up smoothly and more fall behind. Docked commanders aren't in shared space at all, so this is only about ships in flight. Mark's call, before Show HN: **a system holds 32 flying commanders**. The next one is told "Shared space in Lave is full · flying solo for now" and the game tries again every 30 seconds. A commander the server hasn't heard from for 15 seconds (a phone that lost its signal) gives up their place. Mark doesn't expect anything like that many in one place; when shared space gets busy, the server can gather everyone's positions into one update per commander ten times a second, about sixty times fewer messages.
+
 ## 4. Community-run system servers (later)
 
 Once the shared galaxy is established, **trusted volunteers** can host system servers, for example for a region of the galaxy or for players nearer them.

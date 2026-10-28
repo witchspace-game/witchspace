@@ -12,6 +12,7 @@ const SEND_INTERVAL = 0.1; // seconds
 const DELAY = 0.15; // seconds: draw others this far behind, to interpolate
 const KEEP = 1.5; // seconds of history kept per commander
 const RETRY = 5; // seconds before reconnecting after losing the server
+const FULL_RETRY = 30; // seconds before trying a full system again
 
 /** The shared space servers: local in development (cd server && npm run dev), ours in production. */
 export const SPACE_URL: string = import.meta.env.VITE_SPACE_URL ?? (import.meta.env.DEV ? 'ws://127.0.0.1:8787' : 'wss://space.witchspace.org.uk');
@@ -48,6 +49,8 @@ export type SpaceEvent =
   | { kind: 'left'; remote: Remote }
   | { kind: 'connected'; others: number }
   | { kind: 'lost' }
+  /** The system's shared space is full: flying solo, trying again now and then. */
+  | { kind: 'full'; max: number }
   /** We were hit (by a commander we may not have seen yet): the server's word on our shields and hull. */
   | { kind: 'hit'; by: Remote | null; damage: number; shields: number; hull: number }
   /** Our shot hit them. */
@@ -80,6 +83,9 @@ export class SharedSpace {
   private retryAt = 0;
   private myId = '';
   private lostReported = false;
+  /** The server said this system is full (its cap), just before closing. */
+  private fullAt = 0;
+  private fullReported = false;
   /** Taken out because the account joined elsewhere: stay out until asked back in (resume). */
   private replaced = false;
 
@@ -106,6 +112,14 @@ export class SharedSpace {
       this.ws = null;
       this.system = '';
       this.clearRemotes();
+      if (this.fullAt) {
+        // Not lost: full. Say so once, and look again less often.
+        this.retryAt = this.clock + FULL_RETRY;
+        if (!this.fullReported) this.onEvent({ kind: 'full', max: this.fullAt });
+        this.fullReported = true;
+        this.fullAt = 0;
+        return;
+      }
       this.retryAt = this.clock + RETRY;
       if (!this.lostReported) this.onEvent({ kind: 'lost' });
       this.lostReported = true;
@@ -168,6 +182,7 @@ export class SharedSpace {
     switch (msg.type) {
       case 'welcome':
         this.lostReported = false;
+        this.fullReported = false;
         this.myId = msg.id;
         for (const c of msg.others) this.add(c);
         this.onEvent({ kind: 'connected', others: msg.others.length });
@@ -192,6 +207,9 @@ export class SharedSpace {
       }
       case 'correct':
         this.correction = toV(msg.p);
+        break;
+      case 'full':
+        this.fullAt = msg.max;
         break;
       case 'replaced':
         // Don't reconnect, or the two would take turns throwing each other out.

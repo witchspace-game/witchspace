@@ -45,7 +45,9 @@ function cors(origin: string): Record<string, string> {
 /** Pages allowed to connect: the live site and local development. */
 const ORIGINS = [/^https:\/\/(www\.)?witchspace\.org\.uk$/, /^http:\/\/localhost(:\d+)?$/, /^http:\/\/127\.0\.0\.1(:\d+)?$/];
 
-const MAX_PER_SYSTEM = 64; // commanders closely simulated in one system (stage 1)
+// Commanders flying in one system at once (stage 1). Each one's position goes to all the others, one by one,
+// and a load test (28 October 2026) kept up smoothly to about 35; past the cap, the next commander flies solo.
+const MAX_PER_SYSTEM = 32;
 const MAX_MESSAGES_PER_SECOND = 30;
 
 export default {
@@ -235,7 +237,12 @@ interface Attachment {
   /** Rate limiting: messages in the current second. */
   window: number;
   count: number;
+  /** When it connected (ms): a connection that never says anything doesn't hold a place for long. */
+  since?: number;
 }
+
+/** A commander the server hasn't heard from in this long has gone (a phone that lost its signal): their place is freed. */
+const SILENT_MS = 15_000;
 
 /**
  * What the fight needs, per commander: recent positions (to judge shots where
@@ -275,11 +282,31 @@ export class SystemRoom extends DurableObject<Env> {
   private readonly inFlight = new Map<string, InFlight>();
 
   async fetch(request: Request): Promise<Response> {
-    if (this.ctx.getWebSockets().length >= MAX_PER_SYSTEM) return new Response('This system is full', { status: 503 });
+    // Only commanders still flying count: close any that have gone silent.
+    const now = Date.now();
+    const live = this.ctx.getWebSockets().filter((ws) => {
+      const a = ws.deserializeAttachment() as Attachment | null;
+      const heard = a?.track?.t ?? a?.since ?? now;
+      if (now - heard < SILENT_MS) return true;
+      try {
+        ws.close(4000, 'Gone quiet');
+      } catch {
+        // Already closing.
+      }
+      return false;
+    });
+    if (live.length >= MAX_PER_SYSTEM) {
+      // Full: say so and close, so the game can tell its player plainly (a refused upgrade only looks like a lost connection).
+      const [client, server] = Object.values(new WebSocketPair());
+      server.accept();
+      server.send(JSON.stringify({ type: 'full', max: MAX_PER_SYSTEM } satisfies ServerMessage));
+      server.close(4001, 'This system is full');
+      return new Response(null, { status: 101, webSocket: client });
+    }
     const m = new URL(request.url).pathname.match(/^\/system\/(\d)\/(\d{1,3})$/);
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ commander: null, room: m ? `${m[1]}:${m[2]}` : undefined, track: null, window: 0, count: 0 } satisfies Attachment);
+    server.serializeAttachment({ commander: null, room: m ? `${m[1]}:${m[2]}` : undefined, track: null, window: 0, count: 0, since: now } satisfies Attachment);
     return new Response(null, { status: 101, webSocket: client });
   }
 
