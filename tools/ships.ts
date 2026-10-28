@@ -21,6 +21,28 @@ export interface ShipFile {
   concept?: true;
 }
 
+/** A ship's owner's manual, as its page carries it for src/site/manual.ts (made in tools/shipFiles.ts). */
+export interface ManualData {
+  id: string;
+  name: string;
+  colour: string;
+  meta: string;
+  description: string;
+  notes: string[];
+  /** Label, value, against a Cobra. */
+  handling: string[][];
+  /** Room to spare in the slot ('' for the Cobra). */
+  span: string;
+  /** Degrees off level the slot allows. */
+  roll: number;
+  /** Equipment, luxuries and editions by id: [name, blurb]. */
+  kit: Record<string, string[]>;
+  luxuries: Record<string, string[]>;
+  editions: Record<string, string>;
+  /** The phone's drawer, from play/index.html: what each button does comes from the controls list (src/game/controls.ts drawerHelp). */
+  drawer: { key?: string; label: string; title: string }[];
+}
+
 /** A special edition, as its ship's page shows it (made in tools/shipFiles.ts). */
 export interface EditionCard {
   id: string;
@@ -222,7 +244,7 @@ function modulesCard(s: ShipFile, modules: Map<string, ModuleFile>): string {
  * A ship's page. `preview` is for a ship file from a link (/ship-preview/):
  * not in the fleet yet, so no GitHub file, ideas or share address of its own.
  */
-export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map(), preview = false, editions: EditionCard[] = []) {
+export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map(), preview = false, editions: EditionCard[] = [], manual = false) {
   const c = s.credits ?? {};
   const stats = STAT_LABELS.filter(([k]) => s.stats?.[k] !== undefined)
     // A concept's numbers are the makers' promises.
@@ -260,7 +282,7 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
       <p class="lede">${esc(s.description ?? '')}</p>
       ${s.concept ? '<p class="concept-note">Coming soon. A concept: its makers are showing it off, and it isn’t flying yet. Its numbers may change before it does.</p>' : ''}
       ${stats ? `<dl class="ship-stats">${stats}</dl>` : ''}
-      <p class="ship-share"><button type="button" class="button ghost small" data-share${preview ? '' : ` data-share-url="/ships/${esc(s.id)}/"`} data-share-title="${esc(s.name)}">Share the ${esc(s.name)}</button></p>
+      <p class="ship-share"><button type="button" class="button ghost small" data-share${preview ? '' : ` data-share-url="/ships/${esc(s.id)}/"`} data-share-title="${esc(s.name)}">Share the ${esc(s.name)}</button>${manual ? ` <a class="button ghost small" href="/ships/${esc(s.id)}/manual/">Owner’s manual</a>` : ''}</p>
     </div>
   </div>
   <script type="application/json" id="ship-def">${def}</script>
@@ -321,4 +343,32 @@ function previewCard(s: ShipFile): string {
     <p class="muted small" id="preview-editor-note" hidden></p>
     <p class="connect-buttons"><a class="button primary small" id="preview-edit" href="/ship-editor/">Open it in the ship editor</a> <button type="button" class="button ghost small" id="preview-download">Download the file</button></p>
   </div>`;
+}
+
+/** A ship's owner's manual: only its owner sees it. The page checks the save (src/site/manual.ts); everyone else is told it comes with the ship. */
+export function manualPage(s: ShipFile, m: ManualData) {
+  const data = JSON.stringify(m).replace(/</g, '\\u003c');
+  return {
+    card: { ship: s.id, kicker: 'Owner’s manual', title: `The ${s.name} owner’s manual`, sub: 'Comes with the ship: how she flies, how to dock her, and where every button is.' },
+    schema: [{ '@type': 'CreativeWork', name: `${s.name} owner’s manual`, about: { '@type': 'CreativeWork', name: s.name, url: `https://witchspace.org.uk/ships/${s.id}/` }, isPartOf: { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' } }],
+    title: `${s.name} owner’s manual · Ships · Witchspace`,
+    description: `The ${s.name} owner’s manual comes with the ship: how she flies against a Cobra, how to dock her, and every control. Owners only.`,
+    head: '    <meta name="robots" content="noindex" />\n',
+    content: `<section class="section ship-page manual-page" style="--hull:${esc(m.colour)}">
+  <a class="back" href="/ships/${esc(s.id)}/">← The ${esc(s.name)}</a>
+  <header class="man-cover">
+    <p class="kicker">Owner’s manual · ${esc(m.meta)}</p>
+    <h1 id="man-title">${esc(s.name)}</h1>
+    <p class="lede">${esc(m.description)}</p>
+  </header>
+  <div class="card manual-gate" id="manual-gate">
+    <h3>For owners only</h3>
+    <p id="manual-why">Every ${esc(s.name)} comes with her manual: how she flies against a Cobra, how to dock her, and where every button is. Checking whether she’s yours…</p>
+    <div id="account" hidden></div>
+    <p class="connect-buttons"><a class="button primary small" href="/ships/${esc(s.id)}/">See the ${esc(s.name)}</a> <a class="button ghost small" href="/play/">Play Witchspace</a></p>
+  </div>
+  <article class="manual" id="manual" hidden></article>
+  <script type="application/json" id="manual-data">${data}</script>
+</section>`,
+  };
 }
