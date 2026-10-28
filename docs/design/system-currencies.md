@@ -7,7 +7,7 @@ card: coriolis
 stages:
   - Bitcoin on the exchange, priced from the real market; it can't be taken from you | built
   - Bitcoin limit orders, filled against the real price, even while you're away | built
-  - Single-player system currencies: policies, minting and burning, a pool per station | proposed
+  - Single-player system currencies: policies, a pool per station, stablecoins, the Money tab | built
   - Shared galaxy: a ledger anyone can check, player liquidity, order books | proposed
   - Later: crises driven by players, currency futures, stablecoins pegged to the credit | proposed
 help:
@@ -284,6 +284,17 @@ The ledger keeps the double-entry, append-only and invariant rules already in th
 
 - **Classic** stays as in 1984: credits only.
 - **Single-player Modern** can have system currencies with NPC traders providing the market, as a way to learn the system before the shared galaxy. Its ledger lives in the browser, like the rest of the commander.
+
+## 9b. Stage one, as built *(Mark: "now", 28 October 2026)*
+
+- **A currency for every system but the anarchies**, from its seed: an original name from the system's (Lave's is Lavar, or similar), a three-letter code unique in its galaxy and never a real currency's, and its government's policy.
+- **Policies**, as section 2: Corporate States peg 1:1 with full reserves (a stablecoin); Feudal worlds peg by algorithm (a stablecoin, until it breaks); Democracies inflate about 2% a month; Dictatorships print about 3% a week, faster in a crisis; Communist states fix an official rate and let each visitor change only 2,000 Cr a visit; Confederacies have a fixed supply (fewer units buy a credit as the economy grows, with hard swings); Multi-government systems follow a basket of their three nearest neighbours.
+- **Crises** come from the seed: a Feudal peg breaks some months (its coin falls to an eighth) and a Dictatorship's presses run. Each eases over a few days, but **the damage stays**: the money re-pegs lower, so buying the bottom is a bet, not a certainty. The news board carries them, at the speed of news.
+- **A pool at every station** for its own money: local × credits = k, a 0.3% fee, slippage on big swaps, drifting back to the fair rate over about an hour.
+- **Stablecoins** (Corporate and Feudal coins) are taken at any station at their rate, less 0.3%: the way out when a system's money fails.
+- **The wallet**: balances by issuing system, no hold space, they survive the ship. Every swap goes in the ledger, and the server checks it (only money you had, never above what it was worth).
+- **The Money tab** at each station: the money's name, policy in plain words, a crisis warning, the rate here and the fair rate, the week's change, the pool, a swap form, and your wallet.
+- **Not yet:** prices shown in local money, minting and burning from production, Bitcoin-backed reserves, company stablecoins, liquidity provision, the Compact.
 
 ## 10. Building it in stages
 

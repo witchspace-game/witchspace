@@ -61,4 +61,24 @@ describe('checking a ledger', () => {
     record(c, { t: T, k: 'sell', d: 3000 * hi * 0.8, g: 'gems', q: -3000, s: [0, 7] });
     expect(verify(a0, c).flags).toEqual([]);
   });
+
+  it('checks money changed: only what you had, at what it was worth', async () => {
+    const { buyLocal, sellLocal } = await import('../../src/economy/money');
+    const { galaxy } = await import('../../src/galaxy/generate');
+    const dem = galaxy(0).find((s) => s.government === 6)!;
+    const c = newCommander('modern');
+    ledgerOf(c);
+    c.credits = 10_000;
+    const a0 = firstAnchor(c);
+    buyLocal(c, dem, 5000, T, T);
+    sellLocal(c, dem, 1e9, T + 1000, T);
+    expect(verify(a0, c).flags).toEqual([]);
+    // Money from nowhere, then cashed: flagged.
+    const d = newCommander('modern');
+    ledgerOf(d);
+    const b0 = firstAnchor(d);
+    d.wallet = { [`0:${dem.index}`]: 1e7 };
+    sellLocal(d, dem, 1e7, T, T);
+    expect(verify(b0, d).flags.join()).toMatch(/never had/);
+  });
 });

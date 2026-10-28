@@ -16,7 +16,7 @@ const NOTES: Record<string, string[]> = {
     'Everyone notices her. Pirates go out of their way for a ship this rich, and the police know your name before you hail them.',
   ],
   'cobra-mk3': [
-    'The ship everyone learns in, and for good reason: she forgives. Twenty tonnes of hold, three missiles, a little of everything.',
+    'The ship everyone learns in, and for good reason: she forgives. Twenty tonnes of hold, rails for four missiles (she leaves the yard with three), a little of everything.',
     'Neither the fastest nor the toughest: you win in a Cobra by choosing your fights.',
   ],
 };
@@ -56,3 +56,9 @@ export function handling(def: ShipDef, cobra: ShipDef): Handling[] {
 }
 
 export const notesFor = (def: ShipDef) => NOTES[def.id] ?? [];
+
+// Earned, not bought: the Solos' Falcon. Police and Marshals' hulls have no price.
+const NOT_IN_YARDS = new Set(['falcon']);
+
+/** The ships the shipyards show and sell (each comes with an owner's manual). */
+export const inYards = (def: ShipDef) => Boolean(def.stats.price) && !NOT_IN_YARDS.has(def.id) && !['missile', 'cargo', 'station', 'debris', 'alien'].includes(def.role);

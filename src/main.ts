@@ -81,13 +81,16 @@ import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
 import { claimEdition, editionCounts, heldEditions, redeemVoucher, releaseEdition } from './net/shipyard';
+import { crisis, currencyOf, fairRate, moneyNews, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, walletHome, walletKey } from './economy/currencies';
+import { buyLocal, cashStable, officialLeft, poolHere, sellLocal, valueOf, walletOf } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
 import { cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
 import { record as ledgerRecord } from './game/ledger';
-import { handling, notesFor } from './game/manual';
+import { handling, inYards, notesFor } from './game/manual';
+import { controlRows as sharedControlRows, DOCKING, drawerHelp, PHONE, SCHEMES, SCOOP_SPEED, TILT } from './game/controls';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
@@ -116,7 +119,7 @@ import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type S
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
-import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsOf, setCausedEvents } from './economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsDelay, newsOf, setCausedEvents } from './economy/events';
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
@@ -650,6 +653,7 @@ function enterDocked(newShip = false) {
   showOwnShip();
   forgive(cmdr(), Date.now());
   boardSeenAt = Date.now(); // what's on the board as you dock isn't news; what's posted while you're here is
+  dockedAt = Date.now();
   payCommissions();
   // Work that's due here is handed in however you arrived: docking does it
   // first, but waking here in a new ship or loading the game docked must too
@@ -742,7 +746,7 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard';
+type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard' | 'money';
 let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
@@ -755,6 +759,8 @@ function setDockTab(tab: DockTab) {
   $('#tab-saloon').hidden = tab !== 'saloon';
   if (tab === 'saloon') renderSaloon();
   $('#tab-shipyard').hidden = tab !== 'shipyard';
+  $('#tab-money').hidden = tab !== 'money';
+  if (tab === 'money') renderMoney();
   document.body.classList.toggle('yard-open', tab === 'shipyard');
   if (tab === 'shipyard') renderShipyard();
   else if (state === 'docked') {
@@ -1199,8 +1205,6 @@ $('#news-list').addEventListener('click', (e) => {
 /** Stations with a shipyard: the better-built worlds. */
 const SHIPYARD_TECH = 7;
 const hasShipyard = (s: StarSystem) => s.techLevel >= SHIPYARD_TECH;
-// Earned, not bought: the Solos' Falcon. Police and Marshals' hulls have no price.
-const NOT_IN_YARDS = new Set(['falcon']);
 let yardPick: string | null = null;
 /** The ship being specced, while the configurator is open. */
 let spec: Spec | null = null;
@@ -1285,7 +1289,7 @@ function renderShipyard() {
   const now = Date.now();
   const yard = ships
     .map((def, i) => ({ def, i }))
-    .filter(({ def }) => def.stats.price && !NOT_IN_YARDS.has(def.id) && !['missile', 'cargo', 'station', 'debris', 'alien'].includes(def.role))
+    .filter(({ def }) => inYards(def))
     // Concepts first: the reveal, then the yard's line from the dearest.
     .sort((a, b) => Number(Boolean(b.def.concept)) - Number(Boolean(a.def.concept)) || b.def.stats.price - a.def.stats.price);
   // How many of each edition are left: asked of the server now and then, and shown when it answers.
@@ -1729,6 +1733,104 @@ function renderShipyard() {
     };
 }
 
+// --- Money: the system's currency, the station's pool and your wallet ----------------------
+// (docs/design/system-currencies.md, stage one.)
+
+/** When you docked: an official-rate station's limit is per visit. */
+let dockedAt = 0;
+let moneySide: 'buy' | 'sell' = 'buy';
+let moneyMessage = '';
+
+function renderMoney() {
+  const c = cmdr();
+  const here = currentSystem();
+  const now = Date.now();
+  const cur = currencyOf(here);
+  const el = $('#money');
+  const fmtN = (n: number, d = n < 10 ? 2 : 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: n < 10 && n > 0 ? Math.min(d, 2) : 0 });
+  const msg = moneyMessage ? `<p class="yard-message">${escapeHtml(moneyMessage)}</p>` : '';
+  moneyMessage = '';
+  const wallet = Object.entries(walletOf(c)).filter(([, u]) => u > 1e-6);
+  const holdings = wallet.length
+    ? `<ul class="money-wallet">${wallet
+        .map(([key, units]) => {
+          const home = walletHome(key);
+          const hc = currencyOf(home)!;
+          const atHome = key === walletKey(here);
+          const value = valueOf(key, units, now);
+          const action = atHome ? '<small>Change it above</small>' : hc.stable ? `<button type="button" data-cash="${key}">Cash it · ${fmtN(stableValue(home, units, now), 0)} Cr</button>` : `<small>Change it at ${escapeHtml(home.name)}</small>`;
+          return `<li><strong>${fmtN(units)} ${hc.ticker}</strong><span>${escapeHtml(hc.name)} · ${escapeHtml(home.name)} · about ${fmtN(value, 0)} Cr</span>${action}</li>`;
+        })
+        .join('')}</ul>`
+    : '<p class="meta">Nothing yet. Money you change takes no hold space and survives your ship, like Bitcoin.</p>';
+  if (!cur) {
+    el.innerHTML = `${msg}<h3>No money is issued here</h3><p class="money-line">${escapeHtml(POLICY_TEXT.none.line)} Stablecoins from elsewhere are taken here at their rate.</p><h3>Your wallet</h3>${holdings}`;
+  } else {
+    const pol = POLICY_TEXT[cur.policy];
+    const pool = poolHere(c, here, now);
+    const rate = poolRate(pool);
+    const fair = fairRate(here, now);
+    const week = fairRate(here, now - 7 * 86_400_000);
+    const change = (week / fair - 1) * 100; // the money's value against the credit
+    const trouble = cur.policy === 'feudal' ? crisis(here, now, 0.15) : cur.policy === 'printing' ? crisis(here, now, 0.12) : 0;
+    const left = officialLeft(c, here, dockedAt);
+    const have = walletOf(c)[walletKey(here)] ?? 0;
+    el.innerHTML = `${msg}
+      <h3 class="money-title">${escapeHtml(cur.name)} <span>${cur.ticker}</span></h3>
+      <p class="money-policy"><b>${escapeHtml(pol.name)}.</b> ${escapeHtml(pol.line)}</p>
+      ${trouble > 0.05 ? `<p class="money-crisis">${cur.policy === 'feudal' ? `The peg has broken: a ${cur.ticker} is worth ${fmtN(1 / fair, 2)} Cr. The algorithm is minting to defend it, which only makes it worse.` : 'The presses are running day and night: prices here are climbing by the hour.'}</p>` : ''}
+      <dl class="money-rates">
+        <div><dt>Here</dt><dd>1 Cr = ${fmtN(rate, 3)} ${cur.ticker}</dd></div>
+        <div><dt>Fair rate</dt><dd>${fmtN(fair, 3)} ${cur.ticker}</dd></div>
+        <div><dt>This week</dt><dd class="${change < -0.05 ? 'down' : change > 0.05 ? 'up' : ''}">${Math.abs(change) < 0.05 ? 'Steady against the credit' : `${change > 0 ? '+' : ''}${change.toFixed(1)}% against the credit`}</dd></div>
+        <div><dt>The pool</dt><dd>${fmtN(pool.local, 0)} ${cur.ticker} · ${fmtN(pool.credits, 0)} Cr</dd></div>
+      </dl>
+      <div class="money-form">
+        <div class="yard-lasers money-sides"><button type="button" data-side="buy" aria-pressed="${moneySide === 'buy'}">Buy ${cur.ticker}</button><button type="button" data-side="sell" aria-pressed="${moneySide === 'sell'}">Sell ${cur.ticker}</button></div>
+        <label class="money-amount"><span>${moneySide === 'buy' ? 'Credits to change' : `${cur.ticker} to sell (you have ${fmtN(have)})`}</span><input id="money-n" type="number" min="0" step="any" inputmode="decimal" /></label>
+        <p class="money-quote" id="money-quote">&nbsp;</p>
+        <button type="button" class="primary money-go">${moneySide === 'buy' ? `Change for ${cur.ticker}` : 'Change for credits'}</button>
+        ${Number.isFinite(left) ? `<p class="yard-note">The state lets each visitor change ${fmtN(OFFICIAL_LIMIT, 0)} Cr a visit: ${fmtN(left, 0)} Cr left.</p>` : ''}
+        <p class="yard-note">The pool charges ${(POOL_FEE * 100).toFixed(1)}%, and a big swap moves the rate against you; it drifts back as other traders arbitrage.</p>
+      </div>
+      <h3>Your wallet</h3>${holdings}`;
+    const input = el.querySelector<HTMLInputElement>('#money-n')!;
+    const quote = el.querySelector<HTMLElement>('#money-quote')!;
+    const update = () => {
+      const n = Number(input.value);
+      if (!(n > 0)) return (quote.innerHTML = '&nbsp;');
+      quote.textContent = moneySide === 'buy' ? `You get about ${fmtN(quoteBuy(pool, Math.min(n, c.credits)))} ${cur.ticker}` : `You get about ${fmtN(quoteSell(pool, Math.min(n, have)), 1)} Cr`;
+    };
+    input.oninput = update;
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-side]'))
+      b.onclick = () => {
+        moneySide = b.dataset.side as 'buy' | 'sell';
+        renderMoney();
+      };
+    el.querySelector<HTMLButtonElement>('.money-go')!.onclick = () => {
+      const n = Number(input.value);
+      const r = moneySide === 'buy' ? buyLocal(c, here, n, Date.now(), dockedAt) : sellLocal(c, here, n, Date.now(), dockedAt);
+      moneyMessage = r.message;
+      if (r.ok) {
+        saveCommander(c);
+        sfx.beep();
+      }
+      renderMoney();
+    };
+  }
+  for (const b of el.querySelectorAll<HTMLButtonElement>('[data-cash]'))
+    b.onclick = () => {
+      const key = b.dataset.cash!;
+      const r = cashStable(c, here, key, walletOf(c)[key] ?? 0, Date.now());
+      moneyMessage = r.message;
+      if (r.ok) {
+        saveCommander(c);
+        sfx.beep();
+      }
+      renderMoney();
+    };
+}
+
 function renderSaloon() {
   const c = cmdr();
   const here = currentSystem();
@@ -1812,6 +1914,14 @@ function renderNews() {
         <small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · heard ${ago(now - n.heard)} ago · Wanted: whatever it imports</small></li>`,
     )
     .join('');
+  // Money in trouble in the region: a peg breaking, the presses running (Modern).
+  const money =
+    cmdr().difficulty === 'modern'
+      ? moneyNews(here, now, (w) => newsDelay(w, here))
+          .slice(0, 3)
+          .map((n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(n.text, n.where)}</b><small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · stablecoins and Bitcoin are the ways out</small></li>`)
+          .join('')
+      : '';
   // Wexley-Yorozu yards in the region: news, not a market event (Modern).
   const yards = exploring()
     ? yardsNear(here, now)
@@ -1825,8 +1935,8 @@ function renderNews() {
         )
         .join('')
     : '';
-  $('#news-list').innerHTML = (attacks || yards || items.length)
-    ? attacks + yards + items
+  $('#news-list').innerHTML = (attacks || money || yards || items.length)
+    ? attacks + money + yards + items
         .map((n) => {
           const kind = EVENT_KINDS[n.event.type];
           const local = n.where === here;
@@ -1987,6 +2097,8 @@ function holdList(c: Commander): string {
 function renderDocked() {
   // The saloon is Modern's: Classic stations are as they were in 1984.
   document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
+  document.querySelector<HTMLElement>('.tabs [data-tab="money"]')!.hidden = cmdr().difficulty === 'classic';
+  if (cmdr().difficulty === 'classic' && dockTab === 'money') setDockTab('station');
   const noYard = cmdr().difficulty === 'classic' || !hasShipyard(currentSystem());
   document.querySelector<HTMLElement>('.tabs [data-tab="shipyard"]')!.hidden = noYard;
   if (noYard && dockTab === 'shipyard') setDockTab('station');
@@ -4878,7 +4990,6 @@ function checkAdrift() {
 // --- Fuel scoops: canisters and sun-skimming ----------------------------------------
 
 const SCOOP_RANGE = 45; // metres from the ship's centre
-const SCOOP_SPEED = 0.4; // fraction of top speed; any faster and the canister bounces off
 const HEAT_RANGE = SUN_RADIUS * 2.5; // above the surface: the cabin starts to warm
 const SKIM_RANGE = SUN_RADIUS * 0.8; // above the surface: close enough to scoop fuel
 const SKIM_RATE = 0.12; // light years per second at full speed
@@ -5471,60 +5582,7 @@ const KEYS_HINT = {
 
 /** Every control, as key and what it does: the controls card and the owner's manual both read this. */
 function controlRows(mouse: boolean): string[][] {
-  return (
-    mouse
-      ? [
-          ['Click', 'Capture the mouse (Esc releases it)'],
-          ['Mouse', 'Aim: the ship turns to follow the ring'],
-          ['Left click / F', gimballed() || (commander && isWorking(cmdr(), 'gimbal-mount')) ? 'Fire: gimballed lasers hit what\'s under the ring' : 'Fire: lasers fire straight ahead at the centre cross'],
-          ['Right click', 'Centre the aim and level the wings'],
-          ['Hold right + mouse', 'Roll, nose held steady; the ship keeps that bank'],
-          ['W / S', 'Throttle up / down'],
-          ['A / D', 'Roll'],
-          ['Q / E', 'Yaw (fine sideways adjustment)'],
-          ['Swipe / scroll', 'Throttle; sideways swipe rolls (Magic Mouse, trackpad)'],
-        ]
-      : [
-          ['W / S', 'Dive / climb (I inverts)'],
-          ['A / D', 'Roll'],
-          ['Space / Shift', 'Throttle up / down'],
-          ['F', 'Fire laser'],
-          ['Swipe / scroll', 'Throttle; sideways swipe rolls'],
-        ]
-  )
-    .concat([
-      ['C', 'Docking computer'],
-      ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
-      ['O', 'Combat computer: it flies, you man the turrets (needs one fitted; any flight control takes over)'],
-      ['9', 'Survey autopilot: flies to whatever is left to survey or find here, and holds you in range (explorers; any flight control takes over)'],
-      ['P', 'Take a photo of the view, without the HUD, into your flight log (share it when docked)'],
-      ['Shift+P', 'Flight recorder: keep the last 30 seconds (or hold the camera button)'],
-      ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
-      ['T', 'Arm a missile: hold a ship in your sights until the tone goes solid (Classic: lock at once). Again to disarm'],
-      ['X', 'Launch the locked missile'],
-      ['Z', 'ECM: destroy every missile nearby, yours included (needs an ECM)'],
-      ['1 2 3 4 / V', 'Look front, rear, left or right (V cycles); fire uses that mount\'s laser'],
-      ['R', 'Scanner range: 4 km for dogfights, 12 km for traffic'],
-      ['B', 'Energy bomb: destroy every ship within 6 km (single use)'],
-      ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
-      ['U', 'Surrender to the police: the ship stops itself, then 5 seconds (fine, record cleared)'],
-      ...(commander?.difficulty === 'modern' ? [['0', 'Transponder off / on: run dark, unidentified (police will hail you; it switches back on after a jump, or to dock when it\'s safe)']] : []),
-      ...(commander?.difficulty === 'modern'
-        ? [
-            ['L', 'Hail the ship in your sights (or the station, within 5 km; anywhere with a comms array)'],
-            ["'", 'Radio log: open / close'],
-            ['Enter', 'Accept the latest offer on the radio'],
-            ['`', 'Emergency beacon: Mayday, out of fuel, hull failing, request escort (1–4 to send)'],
-          ]
-        : []),
-      ['Scoop', `Fly slowly (under ${Math.round(SCOOP_SPEED * 100)}% speed) straight into a cargo canister, a yellow dot on the scanner (needs Fuel Scoops)`],
-      ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
-      ['K', 'Switch control scheme'],
-      ['I', 'Invert pitch'],
-      ['M', '1984 mode'],
-      ['N', 'Sound: full / effects only / off'],
-      ['F1', 'Show / hide this card'],
-    ]);
+  return sharedControlRows(mouse, { gimballed: gimballed() || Boolean(commander && isWorking(cmdr(), 'gimbal-mount')), modern: commander?.difficulty === 'modern' });
 }
 
 // --- The owner's manual ---------------------------------------------------------
@@ -5533,15 +5591,7 @@ function controlRows(mouse: boolean): string[][] {
 // are read from the game's own lists, so the manual can't drift from the buttons.
 
 /** What a phone button does: from the key it presses (the controls list), or its own title. */
-function touchHelp(b: HTMLElement, rows: string[][]): string {
-  const code = b.dataset.key;
-  if (code) {
-    const k = code === 'Backquote' ? '`' : code.replace(/^Key|^Digit/, '');
-    const row = rows.find((r) => r[0].split(/[\s/]+/).includes(k));
-    if (row) return row[1];
-  }
-  return b.title || b.getAttribute('aria-label') || '';
-}
+const touchHelp = (b: HTMLElement, rows: string[][]) => drawerHelp(b.dataset.key, b.title || b.getAttribute('aria-label') || '', rows);
 
 function openManual(def: ShipDef) {
   const c = commander;
@@ -5574,34 +5624,25 @@ function openManual(def: ShipDef) {
 
     <section id="man-dock"><h3>Docking</h3>
       <ol>
-        <li>Fly towards the station and slow down. The slot is the lit rectangle on the face that points at the planet.</li>
-        <li>Within 3 km a docking aid opens: <b>Slot</b> (how far), <b>Approach</b> (how straight you're coming in) and <b>Roll</b> (how level you are with the slot). Green is good.</li>
-        <li>The station turns. Roll until the marker sits in the middle: your wings must be within ${roll}° of the slot. On a phone, drag sideways on the left of the screen, or tilt if you've turned Tilt on.</li>
-        <li>Fly straight in, slowly. Too fast, too crooked or too far off level and you scrape the hull: shields first, then the ship.</li>
-        <li><b>Or let the docking computer do it</b> (C, or the Dock button that appears by itself on a phone when you're close). It's 1,500 Cr at any station, and the best money a new pilot spends.</li>
-      </ol>
+${DOCKING(roll).map((li) => `        <li>${li}</li>
+`).join('')}      </ol>
       ${def.id !== 'cobra-mk3' ? `<p class="meta">${escapeHtml(def.name)}: ${escapeHtml(handling(def, cobra).find((h) => h.label === 'Span')!.versus)}.</p>` : ''}
     </section>
 
     <section id="man-desk"><h3>On a computer</h3>
-      <p>Two ways to fly: <b>mouse and keyboard</b> (the ship follows the ring) or <b>keyboard only</b>, as in 1984. K switches between them, F1 shows the card in flight.</p>
+      <p>${SCHEMES}</p>
       <h4>Mouse and keyboard</h4><dl class="man-keys">${rows(true)}</dl>
       <h4>Keyboard only</h4><dl class="man-keys">${rows(false)}</dl>
     </section>
 
     <section id="man-phone"><h3>On a phone</h3>
       <dl class="man-keys">
-        <dt>Left side</dt><dd>Drag to aim, like a stick: the further you drag, the faster she turns. Sideways rolls.</dd>
-        <dt>Speed</dt><dd>Slide up for faster; it stays where you leave it. The fill is the speed you're doing, the tick the speed you asked for: when the docking computer slows you, the fill falls and the tick stays.</dd>
-        <dt>Fire</dt><dd>Hold to fire the laser.</dd>
-        <dt>Arm</dt><dd>Arm a missile, hold a ship in your sights until it locks, then press again (red) to launch.</dd>
-        <dt>ECM</dt><dd>Destroys every missile nearby, yours included (needs an E.C.M. system).</dd>
-        <dt>The big button</dt><dd>The obvious next thing, by itself: Dock near a station (with a docking computer), Survey near something to survey, Hyper when your destination is in range, otherwise Jump.</dd>
-      </dl>
+${PHONE.map(([k, v]) => `        <dt>${k}</dt><dd>${v}</dd>
+`).join('')}      </dl>
       <h4>The drawer: everything else</h4>
       <p>Tap the <b>‹</b> tab on the right edge of the screen to slide it open, and again to close it.</p>
       <dl class="man-keys">${drawer}</dl>
-      <p class="meta">Tilt steers by tilting the phone, like a flight stick: tip the top towards you to climb. Invert swaps up and down, for dragging and tilting. Turn the phone on its side for the widest view.</p>
+      <p class="meta">${TILT}</p>
     </section>
 
     ${kit.length ? `<section id="man-kit"><h3>Your kit</h3><dl class="man-keys">${kit.map((e) => `<dt>${escapeHtml(e!.name)}</dt><dd>${escapeHtml(e!.blurb)}</dd>`).join('')}</dl></section>` : ''}

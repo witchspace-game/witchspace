@@ -10,6 +10,7 @@
 import { chain, type Entry, type Ledger } from '../../src/game/ledger';
 import { priceBounds } from '../../src/economy/market';
 import { systemAt } from '../../src/galaxy/generate';
+import { fairRate } from '../../src/economy/currencies';
 
 /** What the server remembers between saves: where it got to, and what it has counted. */
 export interface Anchor {
@@ -19,6 +20,8 @@ export interface Anchor {
   precious: Record<string, number>;
   /** Sats had. */
   sats: number;
+  /** System currencies had, by issuing system. */
+  fx?: Record<string, number>;
   /** "Other" money gained, for the rate check: [time, credits] for the last day. */
   other: [number, number][];
   flags: string[];
@@ -35,7 +38,7 @@ const DAY = 86_400_000;
 const SLACK = 1.02;
 
 type Held = { orders?: { id: string; side: string; qty: number }[]; storage?: Record<string, number> };
-export type Save = { credits?: number; cargo?: Record<string, number>; sats?: number; ledger?: Ledger; markets?: object };
+export type Save = { credits?: number; cargo?: Record<string, number>; sats?: number; wallet?: Record<string, number>; ledger?: Ledger; markets?: object };
 
 /** Precious goods anywhere they could be: the hold, station storage and open sell orders. */
 function preciousHeld(save: Save): Record<string, number> {
@@ -53,13 +56,13 @@ function preciousHeld(save: Save): Record<string, number> {
 export function firstAnchor(save: Save): Anchor {
   const l = save.ledger;
   const last = l?.entries.length ? l.entries[l.entries.length - 1].h : (l?.head ?? 'start');
-  return { h: last, precious: preciousHeld(save), sats: save.sats ?? 0, other: [], flags: [] };
+  return { h: last, precious: preciousHeld(save), sats: save.sats ?? 0, fx: { ...(save.wallet ?? {}) }, other: [], flags: [] };
 }
 
 /** Check what's new in the ledger since the anchor. Returns the anchor moved on, with any new flags. */
 export function verify(anchor: Anchor, save: Save): Anchor {
   const l = save.ledger;
-  const out: Anchor = { ...anchor, precious: { ...anchor.precious }, other: [...anchor.other], flags: [...anchor.flags] };
+  const out: Anchor = { ...anchor, precious: { ...anchor.precious }, fx: { ...(anchor.fx ?? {}) }, other: [...anchor.other], flags: [...anchor.flags] };
   const flag = (why: string) => {
     if (!out.flags.includes(why)) out.flags = [...out.flags, why].slice(-12);
   };
@@ -100,6 +103,17 @@ function check(e: Entry, out: Anchor, flag: (why: string) => void) {
       flag(`sold ${e.g} never had`);
       out.precious[e.g] = 0;
     }
+  }
+  // System currencies: only what you've had, and never for more than that money was worth.
+  if (e.k === 'fx' && e.g) {
+    const [g, i] = e.g.split(':').map(Number);
+    const home = Number.isInteger(g) && Number.isInteger(i) ? systemAt(g, i) : null;
+    out.fx![e.g] = (out.fx![e.g] ?? 0) + q;
+    if (out.fx![e.g] < -0.5) {
+      flag(`changed ${e.g} money never had`);
+      out.fx![e.g] = 0;
+    }
+    if (home && q < 0 && e.d > 0 && e.d / -q > (1 / fairRate(home, e.t)) * 1.5 + 0.01) flag(`fx: ${home.name}'s money changed at more than it was ever worth`);
   }
   if (e.g === 'btc') {
     out.sats += q;
