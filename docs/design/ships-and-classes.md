@@ -109,6 +109,8 @@ Earned ships still need upkeep, insurance and the career's goodwill: lose your s
 ## 5. Buying, selling and owning
 
 - **Shipyards** at stations, stocking the makers present in that system and its tech level: Solo & Sons hulls only where nobody asks questions; Wexley-Yorozu's at their worlds.
+- **Something to save for, and to earn** *(Mark, 28 October 2026)*. A shipyard gives credits a purpose, and the better hulls also ask for a better pilot: a yard won't sell its best to a commander below the rating it sets ("above Competent", say). Money buys the hull; your record lets you fly it out. A suggestion for how: each class asks for the record that suits it. Fighting ships ask for a combat rating, the big haulers for trading standing with the companies, and long-range ships for an explorer's rank. A trader never has to become a killer for an Anaconda. The yard's message says what you're short of, so it reads as a goal, not a wall.
+- **Upward, not sideways.** Everyone starts in a Cobra Mk III (100,000 Cr), and the hulls flying today below it are cheaper (Sidewinder 30,000, Mamba 55,000). A shipyard needs ships above the Cobra to aim for (the Python, Boa and Anaconda), so it depends on the [shipbuilders](shipbuilders.md)' first new hulls.
 - **Trade in** your ship against the next; its value follows its condition ([ship condition](ship-condition.md)) and what's fitted.
 - **Second-hand ships with a history:** cheaper, a little worn, and sometimes with a past (a former owner's record, a hidden compartment, a Falcon's old paint under the new).
 - **Insurance** follows the ship's value ([law and travel](law-and-travel.md#7-losing-your-ship-insurance-loans-and-loan-sharks)).
