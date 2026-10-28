@@ -58,6 +58,7 @@ export function editionsFor(s: ShipFile): EditionCard[] {
       glowLevel: GLOWS[e.glow].glow,
       finishDays: Math.round(e.finishHours / 24),
       deposit: depositFor(editionQuote(s as unknown as ShipDef, e)),
+      lights: e.luxuries.includes('black-light-lights'),
     };
   });
 }

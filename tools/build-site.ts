@@ -43,7 +43,7 @@ interface Page {
   /** Extra tags for <head>. */
   head?: string;
   /** This page's own branded share card (tools/share-cards.mjs makes it): the ship on it, a kicker and a line. */
-  card?: { ship: string; kicker: string; sub: string; title?: string; paint?: { colour: string; glow: number; trim: string | null } };
+  card?: { ship: string; kicker: string; sub: string; title?: string; paint?: { colour: string; glow: number; trim: string | null; lights?: boolean } };
   /** Structured data for search engines (schema.org), besides the site and breadcrumbs added to every page. */
   schema?: Record<string, unknown>[];
 }
@@ -51,7 +51,7 @@ interface Page {
 // --- Share cards and structured data ----------------------------------------------
 
 /** Every page's card, for tools/share-cards.mjs to photograph into public/share/. */
-const cards: { file: string; ship: string; kicker: string; title: string; sub: string; paint?: { colour: string; glow: number; trim: string | null } }[] = [];
+const cards: { file: string; ship: string; kicker: string; title: string; sub: string; paint?: { colour: string; glow: number; trim: string | null; lights?: boolean } }[] = [];
 const cardFile = (path: string) => (path === '/' ? 'home' : path.replace(/^\/|\/$/g, '').replace(/\//g, '-')) + '.jpg';
 
 /** Branded cards for the hand-written pages (ships and design docs get theirs where they're made). */
