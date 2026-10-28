@@ -32,6 +32,8 @@ export const PALETTE: { colour: string; name: string; price: number; line: strin
   // Priced as before, so the edition's price holds; they're simply not offered on their own.
   { colour: '#7df9ff', name: 'Witch-fire', price: 18_000, line: 'The light at the edge of a jump that never closed.', edition: 'witch-fire' },
   { colour: '#ff4dff', name: 'Orerve Nebula', price: 24_000, line: 'The cloud you see from Orerve on a clear night.', edition: 'witch-fire' },
+  // The Dark Edition's own.
+  { colour: '#6a3dff', name: 'Black-light', price: 30_000, line: 'The light you only see in the dark.', edition: 'dark' },
 ];
 
 /** The colours the configurator offers: everything but an edition's own. */

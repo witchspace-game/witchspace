@@ -36,6 +36,22 @@ export const EDITIONS: Edition[] = [
     luxuries: ['suite', 'gold-name', 'starlight'],
     premium: 75_000,
   },
+  {
+    // Dark by palette, never by dimming (Mark's idea; the glow is the signature):
+    // black-light lines at full strength over faces as dark as the rest, one white-hot canopy.
+    id: 'dark',
+    name: 'Dark Edition',
+    ship: 'fer-de-lance',
+    limit: 50,
+    blurb: 'Black-light lines over a hull you lose against the stars, and one white-hot canopy. For pilots who would rather not be seen. Fifty will be built, each numbered beside its name.',
+    colour: '#6a3dff',
+    trim: '#f2f6ff',
+    glow: 'deep',
+    laser: 'beam',
+    upgrades: ['docking-computer', 'ecm', 'distress-jammer', 'escape-pod'],
+    luxuries: ['suite', 'voice'],
+    premium: 140_000,
+  },
 ];
 
 export const editionById = (id: string) => EDITIONS.find((e) => e.id === id);

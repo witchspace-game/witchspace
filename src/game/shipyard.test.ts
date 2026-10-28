@@ -24,10 +24,15 @@ describe('speccing a ship', () => {
 
   it('keeps the Witch-fire Edition’s colours for the edition, at the price it was announced at', () => {
     expect(editionQuote(fdl, EDITIONS[0])).toBe(468_380);
+    // The Dark Edition: fifty, in its own black-light, never dimmer than the yard's own glow.
+    const dark = EDITIONS.find((e) => e.id === 'dark')!;
+    expect(dark.limit).toBe(50);
+    expect(dark.glow).not.toBe('standard');
     const c = newCommander('modern');
     c.credits = 1e6;
     expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff' }, yard, 0)).toMatchObject({ ok: false });
     expect(placeOrder(c, fdl, { ...defaultSpec(fdl), trim: '#7df9ff' }, yard, 0)).toMatchObject({ ok: false });
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: dark.colour }, yard, 0)).toMatchObject({ ok: false });
     expect(placeOrder(c, fdl, defaultSpec(fdl), yard, 0, { edition: { edition: EDITIONS[0], number: 2 } })).toMatchObject({ ok: true });
   });
 
