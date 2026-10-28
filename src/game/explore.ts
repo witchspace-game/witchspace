@@ -167,6 +167,20 @@ const HULLS = [
 const SHIP_NAMES = ['Long Odds', 'Quiet Margin', 'Second Wind', 'Halcyon', 'Persistence', 'Lucky Strike', 'Mother’s Ruin', 'Far Horizon', 'Brass Neck', 'Last Orders', 'Night Heron', 'Small Hours'];
 const SALVAGE = ['food', 'textiles', 'liquor', 'machinery', 'alloys', 'computers', 'luxuries', 'minerals', 'radioactives', 'gold', 'platinum', 'gems', 'medicine'];
 
+/**
+ * What one salvage canister holds, in the good's own unit. A tonne of most
+ * things, but precious goods come in a find's worth, about a tonne and a half of
+ * luxuries: a tonne of gem-stones would be a million grams, seventeen million credits.
+ */
+const FIND: Record<string, number> = { gold: 4, platinum: 2, gems: 8 };
+
+/** A signal's salvage as a cargo manifest, in each good's own unit. */
+export function salvageCargo(salvage: { id: string; qty: number }[]): Record<string, number> {
+  const cargo: Record<string, number> = {};
+  for (const s of salvage) cargo[s.id] = (cargo[s.id] ?? 0) + s.qty * (FIND[s.id] ?? 1);
+  return cargo;
+}
+
 interface LogContext {
   ship: string;
   sys: string;

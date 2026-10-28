@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { galaxy, systemAt } from '../galaxy/generate';
 import { commodityById } from '../economy/commodities';
 import { newCommander } from './commander';
-import { bodiesOf, dataValue, explorerRank, hasVisited, poisOf, recordDiscovery, recordSurvey, recordVisit, sellData, worldOf, exploreOf } from './explore';
+import { bodiesOf, dataValue, explorerRank, hasVisited, poisOf, recordDiscovery, salvageCargo, recordSurvey, recordVisit, sellData, worldOf, exploreOf } from './explore';
 
 const all = Array.from({ length: 8 }, (_, g) => galaxy(g)).flat();
 const lave = systemAt(0, 7);
@@ -101,5 +101,18 @@ describe('the explorer’s record', () => {
     expect(explorerRank(40)).toBe('Surveyor');
     expect(explorerRank(10_000)).toBe('Pioneer');
     expect(explorerRank(18_000)).toBe('Voyager');
+  });
+});
+
+describe('salvage', () => {
+  it('is a find, not a fortune: no canister is worth more than a couple of tonnes of luxuries', () => {
+    const luxuries = commodityById('luxuries')!.basePrice;
+    const found = new Set(all.flatMap((s) => poisOf(s)).flatMap((p) => p.salvage.map((s) => s.id)));
+    expect(found.has('gems')).toBe(true);
+    // And the trails' treasure: firearms, narcotics and the rest.
+    for (const id of [...found, 'firearms', 'narcotics']) {
+      const qty = salvageCargo([{ id, qty: 1 }])[id];
+      expect(qty * commodityById(id)!.basePrice, id).toBeLessThanOrEqual(luxuries * 2);
+    }
   });
 });
