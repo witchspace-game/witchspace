@@ -3,7 +3,7 @@ import { shipById } from '../content/ships';
 import { buildPlanet, disposePlanet } from '../render/bodies';
 import { Explosion } from '../render/explosion';
 import { atSize, makeSpace, render, type Space } from '../render/renderer';
-import { buildShip, disposeShip, showUnidentified, type ShipModel } from '../render/shipModel';
+import { buildPainted, disposeShip, showUnidentified, type ShipModel } from '../render/shipModel';
 import { Beams } from '../game/weapons';
 import { focusOf, killerOf, poseAt, SAMPLE_RATE, smoothPosition, timelines, type Timeline, type TrackData } from '../game/track';
 import { encodeVideo } from './encodeVideo';
@@ -167,7 +167,7 @@ export class KillCam {
     for (const s of data.ships) {
       const def = shipById(s.def);
       if (!def) continue;
-      const model = buildShip(def);
+      const model = buildPainted(def, s.look);
       model.root.visible = false;
       this.space.scene.add(model.root);
       this.models.set(s.id, model);

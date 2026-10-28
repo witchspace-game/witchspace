@@ -15,6 +15,8 @@ export interface TrackShip {
   def: string;
   role: string;
   label: string;
+  /** Its paint from the yard, if any: the kill cam and clips show it. */
+  look?: { colour: string; glow: number; trim: string | null };
 }
 
 export interface Pose {

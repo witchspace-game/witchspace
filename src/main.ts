@@ -100,11 +100,11 @@ import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
 import { riftClose, riftDrone, riftGroan, type Drone } from './audio/rift';
 import { camera, isRetro, lens, makeSpace, render, setRetro } from './render/renderer';
-import { buildShip, disposeShip, heatShip, showUnidentified, UNIDENTIFIED, type ShipModel } from './render/shipModel';
+import { buildPainted, buildShip, disposeShip, heatShip, showUnidentified, UNIDENTIFIED, type Look, type ShipModel } from './render/shipModel';
 import { buildHangar } from './render/hangar';
 import { stationName } from './galaxy/stationNames';
 import { savePhoto, takePhoto } from './ui/photo';
-import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
+import { clearFlash, flash, setDashColour, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { countDevice, countNewCommander } from './net/stats';
 import { claimFirsts, firstsIn, loadFirsts } from './net/firsts';
@@ -1137,12 +1137,6 @@ let editionsLeft: Record<string, { limit: number; taken: number }> = {};
 let editionsAsked = 0;
 let yardMessage = '';
 
-/** How a hull in the berth looks: its colour, how hard it glows, and a trim colour for the fine lines. */
-interface Look {
-  colour: string;
-  glow: number;
-  trim: string | null;
-}
 const berthLooks: string[] = [];
 
 /** A hull in the berth in another finish: rebuilt from its file with the look changed. */
@@ -1152,12 +1146,7 @@ function recolourShowroom(i: number, look: Look) {
   if ((berthLooks[i] ?? `${base.style.lineColor}|${base.style.glow ?? 1}|`) === key) return;
   berthLooks[i] = key;
   const old = showroomModels[i];
-  const m = buildShip({ ...base, style: { ...base.style, lineColor: look.colour, glow: look.glow } });
-  // Two-tone: the fine lines (the canopy, the vents) in the trim colour.
-  if (look.trim && base.geometry.details && m.lines[1]) {
-    m.lines[1].material.color.set(look.trim).multiplyScalar(1.1 * look.glow);
-    m.lines[1].base.copy(m.lines[1].material.color);
-  }
+  const m = buildPainted(base, look);
   showroom.scene.remove(old.root);
   disposeShip(old);
   showroom.scene.add(m.root);
@@ -1167,6 +1156,12 @@ function recolourShowroom(i: number, look: Look) {
 const plainLook = (def: ShipDef): Look => ({ colour: def.style.lineColor, glow: def.style.glow ?? 1, trim: null });
 const paintLook = (def: ShipDef, p: { colour: string; glow?: GlowId; trim?: string | null }): Look => ({ colour: p.colour, glow: GLOWS[p.glow ?? 'standard'].glow * (def.style.glow ?? 1), trim: p.trim ?? null });
 
+/** Your own ship's look, for the kill cam, clips and other commanders; null in the maker's colours. */
+const myLook = (): Look | null => {
+  const c = commander;
+  return c?.paint ? paintLook(player.def, c.paint) : null;
+};
+
 /** Your hull in the berth, in its paint, and every other hull in its maker's own. */
 function showOwnShip() {
   const c = commander;
@@ -1174,10 +1169,17 @@ function showOwnShip() {
   showShip(ownIndex());
 }
 
-/** Fly the hull your commander owns. */
+/** Fly the hull your commander owns, with its paint on the dashboard and its name on the plate. */
 function boardShip() {
-  const def = shipById(hullOf(cmdr())) ?? shipById('cobra-mk3')!;
+  const c = cmdr();
+  const def = shipById(hullOf(c)) ?? shipById('cobra-mk3')!;
   if (player.def.id !== def.id) player.fly(def);
+  setDashColour(c.paint?.colour ?? null);
+  const plate = $('#dash-plate');
+  const ed = c.paint?.edition && editionById(c.paint.edition.id);
+  const words = [c.paint?.name, ed ? `${ed.name} ${editionNo(c.paint!.edition!.number)}` : c.paint ? def.name : ''].filter(Boolean);
+  plate.textContent = words.join(' · ');
+  plate.hidden = !words.length;
 }
 
 /** The way to take delivery: here at the yard that built it, the bill with your trade-in; elsewhere, where to go. */
@@ -6301,7 +6303,7 @@ function recordTrack() {
   const here = player.obj.position;
   const poses: Pose[] = [];
   if (state === 'flying') {
-    track.ship({ id: 1, def: player.def.id, role: 'you', label: `CMDR ${cmdr().name}` });
+    track.ship({ id: 1, def: player.def.id, role: 'you', label: `CMDR ${cmdr().name}`, ...(myLook() ? { look: myLook()! } : {}) });
     poses.push(poseOf(1, player.obj));
   }
   for (const npc of npcs) {
@@ -6576,7 +6578,8 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
     return;
   }
   const here = currentSystem();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken());
+  const look = myLook();
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken(), look ? { c: look.colour, g: look.glow, ...(look.trim ? { t: look.trim } : {}) } : undefined);
   const back = sharedSpace.takeCorrection();
   if (back) player.obj.position.copy(back);
   sharedSpace.update(dt, {
@@ -6591,8 +6594,8 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
   for (const r of sharedSpace.remotes.values()) {
     let m = remoteModels.get(r.id);
     if (!m) {
-      // Other commanders fly their ships in the ship's own colours; their callsign tag says who they are.
-      const model = buildShip(shipById(r.ship) ?? shipById('cobra-mk3')!);
+      // Other commanders fly their ships in their own paint, or the maker's colours; their callsign tag says who they are.
+      const model = buildPainted(shipById(r.ship) ?? shipById('cobra-mk3')!, r.paint ? { colour: r.paint.c, glow: r.paint.g ?? 1, trim: r.paint.t ?? null } : null);
       space.scene.add(model.root);
       m = { model, fireCooldown: 0, unidentified: false };
       remoteModels.set(r.id, m);
@@ -7556,6 +7559,19 @@ function frame(now?: number) {
 }
 
 // Handy for poking at the game from the browser console during development.
+// Dev only: /play/?demo=fdl starts you docked at Leesti in a Witch-fire Edition 001 of your own, to see it.
+if (import.meta.env.DEV && new URLSearchParams(location.search).get('demo') === 'fdl') {
+  const leesti = galaxy(0).find((s) => s.name === 'Leesti')!;
+  const e = EDITIONS[0];
+  const c = newCommander('modern');
+  c.name = 'Moxon';
+  c.location = { galaxy: 0, system: leesti.index };
+  c.ship = e.ship;
+  c.paint = { colour: e.colour, glow: e.glow, trim: e.trim, name: 'Moxon', luxuries: [...e.luxuries], edition: { id: e.id, number: 1 }, gifted: true };
+  saveCommander(c);
+  history.replaceState(null, '', location.pathname);
+}
+
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {

@@ -306,6 +306,11 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
   max-width: calc(100vw - 16px);
 }
 #scanner { width: 360px; height: 140px; max-width: 46vw; }
+/* Your ship's paint on the dashboard, and its name on a quiet plate. */
+.dash { border-color: color-mix(in srgb, var(--dash, var(--accent)) 35%, transparent); }
+.dash .gauges { color: color-mix(in srgb, var(--dash, var(--accent)) 60%, var(--dim)); }
+#dash-plate { position: absolute; left: 50%; top: -20px; transform: translateX(-50%); white-space: nowrap; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--dash, var(--accent)); text-shadow: 0 0 6px var(--dash, var(--accent)); opacity: 0.85; }
+body.retro #dash-plate { color: #fff; text-shadow: none; }
 .gauges { display: flex; flex-direction: column; gap: 6px; font-size: 13px; letter-spacing: 0.1em; color: var(--dim); }
 .gauges label { display: flex; align-items: center; gap: 8px; }
 .bar {
@@ -774,6 +779,8 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
   position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--v, 0) * 100%);
   background: linear-gradient(to top, rgba(61, 255, 176, 0.15), rgba(61, 255, 176, 0.45)); border-top: 2px solid var(--accent);
 }
+#touch .speed::after { content: ''; position: absolute; left: -4px; right: -4px; bottom: calc(var(--t, 0) * 100%); height: 2px; background: var(--fg); opacity: 0; transition: opacity 0.3s; }
+#touch .speed.apart::after { opacity: 0.7; }
 #touch .speed b { position: absolute; left: 0; right: 0; bottom: -18px; text-align: center; font-size: 10px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); }
 #touch .fire {
   width: 92px; height: 92px; border-radius: 50%; border: 2px solid var(--danger); color: var(--danger);

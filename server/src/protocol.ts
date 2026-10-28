@@ -22,11 +22,20 @@ export interface Commander {
   f: boolean;
   /** Running dark (transponder off): others see an unidentified ship until close. */
   d?: boolean;
+  /** Its paint from the yard: colour, glow, trim. */
+  paint?: Paint;
+}
+
+/** A ship's paint as others see it: its colour, how hard it glows (1 to 1.5) and a trim colour for the fine lines. */
+export interface Paint {
+  c: string;
+  g?: number;
+  t?: string;
 }
 
 export type ClientMessage =
   /** First message: who you are, what you fly, and the lasers fitted. */
-  | { type: 'hello'; name: string; ship: string; lasers?: string[]; rank?: string; missiles?: number; ecm?: boolean; session?: string; v?: number }
+  | { type: 'hello'; name: string; ship: string; lasers?: string[]; rank?: string; missiles?: number; ecm?: boolean; session?: string; v?: number; paint?: Paint }
   /** About ten times a second: where you are, and your shields and hull (which can only go down this way). */
   | { type: 'state'; p: Vec3; q: Quat; s: number; f: boolean; h?: [number, number]; d?: boolean }
   /** A laser shot: the direction it went, and which laser. The server decides what it hit. */
