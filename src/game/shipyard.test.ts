@@ -47,6 +47,21 @@ describe('speccing a ship', () => {
   });
 });
 
+describe('military lasers', () => {
+  it('are sold only to Competent pilots and above, under Modern rules', async () => {
+    const { laserLocked } = await import('./shipyard');
+    const c = newCommander('modern');
+    expect(laserLocked(c, 'military')).toMatch(/Competent/);
+    expect(laserLocked(c, 'beam')).toBeNull();
+    c.credits = 1e6;
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), laser: 'military' }, yard, 0)).toMatchObject({ ok: false });
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), rear: 'military' }, yard, 0)).toMatchObject({ ok: false });
+    c.kills = 128;
+    expect(laserLocked(c, 'military')).toBeNull();
+    expect(laserLocked({ ...newCommander('classic') }, 'military')).toBeNull(); // 1984 sold them to anyone
+  });
+});
+
 describe('a deposit', () => {
   it('puts a concept into production, and holds the price', () => {
     const c = newCommander('modern');

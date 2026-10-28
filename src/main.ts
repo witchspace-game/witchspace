@@ -81,7 +81,7 @@ import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
 import { claimEdition, editionCounts, redeemVoucher, releaseEdition } from './net/shipyard';
-import { cancelOrder, collection, collectOrder, defaultSpec, ORDERABLE, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
@@ -1257,7 +1257,7 @@ function renderShipyard() {
       `<div class="yard-colours">${ORDERABLE.map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${escapeHtml(p.line)}" style="--sw:${p.colour}" ${gift && p.price ? 'disabled' : ''}><i></i><span>${p.name}</span><small>${p.price ? `${p.price.toLocaleString()} Cr` : 'Included'}</small></button>`).join('')}</div>`;
     const chosenColour = PALETTE.find((p) => p.colour === spec!.colour);
     const laserRow = (Object.keys(PLAYER_LASERS) as LaserId[])
-      .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}">${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
+      .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}" ${laserLocked(c, id) ? `disabled title="${escapeHtml(laserLocked(c, id)!)}"` : ''}>${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
       .join('');
     const kit = UPGRADES.filter((e) => !e.modernOnly || c.difficulty === 'modern')
       .map((e) => `<label><input type="checkbox" data-up="${e.id}" ${spec!.upgrades.includes(e.id) ? 'checked' : ''} /> <span>${escapeHtml(e.name)}</span><small>${Math.round(e.price * fitScale(def)).toLocaleString()} Cr</small></label>`)
@@ -1323,7 +1323,7 @@ function renderShipyard() {
       <p class="yard-label">Its laser</p>
       <div class="yard-lasers">${laserRow}</div>
       <p class="yard-label">Rear laser</p>
-      <div class="yard-lasers yard-rear"><button type="button" data-rear="" aria-pressed="${!spec.rear}">None<small>—</small></button>${(Object.keys(PLAYER_LASERS) as LaserId[]).map((id) => `<button type="button" data-rear="${id}" aria-pressed="${spec!.rear === id}">${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`).join('')}</div>
+      <div class="yard-lasers yard-rear"><button type="button" data-rear="" aria-pressed="${!spec.rear}">None<small>—</small></button>${(Object.keys(PLAYER_LASERS) as LaserId[]).map((id) => `<button type="button" data-rear="${id}" aria-pressed="${spec!.rear === id}" ${laserLocked(c, id) ? `disabled title="${escapeHtml(laserLocked(c, id)!)}"` : ''}>${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`).join('')}</div>
       <p class="yard-label">Upgrades <span>fitted to a hull this size: ×${fitScale(def).toFixed(1)}</span></p>
       <div class="yard-kit">${kit}</div>
       <p class="yard-label">Luxuries <span>comfort and showing off, nothing that flies or fights better</span></p>
@@ -2057,9 +2057,12 @@ function renderDocked() {
         mounts.append(fit);
         continue;
       }
-      fit.disabled = !sold || c.credits < cost;
+      const locked = laserLocked(c, laser.id as LaserId);
+      fit.disabled = !sold || Boolean(locked) || c.credits < cost;
       fit.title = !sold
           ? `Needs tech level ${laser.minTech}`
+          : locked
+          ? locked
           : `Fit to the ${mount} mount: ${cost.toLocaleString()} Cr${tradeIn ? ` after ${tradeIn.toLocaleString()} Cr for the ${PLAYER_LASERS[old!].name.toLowerCase()}` : ''}`;
       fit.addEventListener('click', () => {
         c.credits -= cost;

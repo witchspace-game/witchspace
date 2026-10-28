@@ -1,13 +1,21 @@
 import type { ShipDef } from '../content/types';
 import { editionById, type Edition } from '../content/editions';
 import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
-import { PLAYER_LASERS } from './weapons';
+import { PLAYER_LASERS, type LaserId } from './weapons';
+import { combatRating, ratingPoints } from './rating';
 
 // Speccing a ship and putting down a deposit, as you would on a new car
 // (docs/design/ships-and-classes.md, "Spec it, and put down a deposit"). You
 // choose its glow, its name and its fit-out at a shipyard, put down a tenth of
 // the price, and it goes into production for you at that yard. The deposit is
 // refundable until it's built; the price is held at the quote.
+
+/** Why a commander can't have this laser yet (Modern: a rating), or null if they can. Classic sells as 1984 did. */
+export function laserLocked(c: Commander, id: LaserId): string | null {
+  const need = PLAYER_LASERS[id].minRating;
+  if (!need || c.difficulty === 'classic' || c.kills >= ratingPoints(need)) return null;
+  return `Sold only to pilots rated ${need} and above (you're ${combatRating(c.kills)})`;
+}
 
 export const DEPOSIT_RATE = 0.1;
 /** Real hours from deposit to built. */
@@ -156,7 +164,9 @@ export function placeOrder(
   if (!def.concept) return { ok: false, message: 'Hulls already flying are bought outright, when shipyards sell' };
   const giftEdition = extra.gift && c.gift?.edition ? editionById(c.gift.edition.id) : undefined;
   if (extra.gift && (c.gift?.ship !== def.id || (!giftEdition && !giftable(def, spec)))) return { ok: false, message: 'A gift is the hull with an included colour and its name' };
-  if (!extra.edition && !giftEdition && !orderable(spec)) return { ok: false, message: 'Those colours belong to the Witch-fire Edition' };
+  if (!extra.edition && !giftEdition && !orderable(spec)) return { ok: false, message: 'Those colours belong to an edition' };
+  const locked = !giftEdition && !extra.edition ? [spec.laser, spec.rear].map((l) => (l ? laserLocked(c, l) : null)).find(Boolean) : null;
+  if (locked) return { ok: false, message: locked };
   const e = extra.edition;
   const s = giftEdition ? editionGiftSpec(giftEdition, spec.name) : e ? editionSpec(e.edition, spec.name) : spec;
   const number = giftEdition ? c.gift!.edition! : e ? { id: e.edition.id, number: e.number } : null;
