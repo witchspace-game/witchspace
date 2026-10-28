@@ -232,6 +232,10 @@ export interface ShipOrder {
   name: string;
   laser: 'pulse' | 'beam' | 'military';
   upgrades: EquipmentId[];
+  glow?: 'standard' | 'deep' | 'blazing';
+  /** The fine lines' colour, if two-tone. */
+  trim?: string | null;
+  luxuries?: string[];
   /** The price quoted, hull and fit-out, held when the deposit went down. */
   quoted: number;
   deposit: number;

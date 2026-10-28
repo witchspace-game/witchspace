@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { shipById } from '../content/ships';
 import { newCommander } from './commander';
-import { cancelOrder, cleanName, defaultSpec, depositFor, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote } from './shipyard';
+import { cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
 
 const fdl = shipById('fer-de-lance')!;
 const cobra = shipById('cobra-mk3')!;
@@ -11,8 +11,14 @@ const H = 3600_000;
 describe('speccing a ship', () => {
   it('prices the hull, its laser and its upgrades', () => {
     const spec = { ...defaultSpec(fdl), laser: 'beam' as const, upgrades: ['docking-computer' as const, 'fuel-scoops' as const] };
-    expect(quote(fdl, spec)).toBe(fdl.stats.price + 1000 + 1500 + 600);
+    expect(quote(fdl, spec)).toBe(fdl.stats.price + Math.round((1000 + 1500 + 600) * 1.8));
     expect(depositFor(quote(fdl, spec))).toBe(Math.round(quote(fdl, spec) / 10));
+  });
+
+  it('makes a fully specced statement ship cost a fortune, all of it looks and comfort', () => {
+    const all = { ...defaultSpec(fdl), colour: '#ff4dff', laser: 'military' as const, upgrades: UPGRADES.map((e) => e.id), glow: 'blazing' as const, trim: '#7df9ff', luxuries: LUXURIES.map((l) => l.id) };
+    expect(quote(fdl, all)).toBeGreaterThan(fdl.stats.price * 2);
+    expect(quote(cobra, defaultSpec(cobra))).toBe(cobra.stats.price + 400); // a plain one is the list price
   });
 
   it('keeps the law’s colours off the palette', () => {

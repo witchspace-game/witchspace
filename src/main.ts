@@ -77,7 +77,7 @@ import { Missile, MISSILE } from './game/missile';
 import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rightOn, type Foe } from './game/rating';
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
-import { cancelOrder, defaultSpec, depositFor, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES, type Spec } from './game/shipyard';
+import { cancelOrder, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
@@ -678,7 +678,7 @@ function setDockTab(tab: DockTab) {
   else if (state === 'docked') {
     // Your own ship back in the berth, and the yard's hulls in their own glow.
     spec = null;
-    ships.forEach((def, i) => recolourShowroom(i, def.style.lineColor));
+    ships.forEach((def, i) => recolourShowroom(i, plainLook(def)));
     if (shipIndex !== cobraIndex) showShip(cobraIndex);
   }
   $('#tab-contracts').hidden = tab !== 'contracts';
@@ -1125,18 +1125,34 @@ let yardPick: string | null = null;
 let spec: Spec | null = null;
 let yardMessage = '';
 
-/** A hull in the berth in another glow: rebuilt from its file with the colour changed. */
-function recolourShowroom(i: number, colour: string) {
-  const old = showroomModels[i];
-  if (old.def.style.lineColor === colour) return;
+/** How a hull in the berth looks: its colour, how hard it glows, and a trim colour for the fine lines. */
+interface Look {
+  colour: string;
+  glow: number;
+  trim: string | null;
+}
+const berthLooks: string[] = [];
+
+/** A hull in the berth in another finish: rebuilt from its file with the look changed. */
+function recolourShowroom(i: number, look: Look) {
   const base = ships[i];
-  const m = buildShip(colour === base.style.lineColor ? base : { ...base, style: { ...base.style, lineColor: colour } });
+  const key = `${look.colour}|${look.glow}|${look.trim ?? ''}`;
+  if ((berthLooks[i] ?? `${base.style.lineColor}|${base.style.glow ?? 1}|`) === key) return;
+  berthLooks[i] = key;
+  const old = showroomModels[i];
+  const m = buildShip({ ...base, style: { ...base.style, lineColor: look.colour, glow: look.glow } });
+  // Two-tone: the fine lines (the canopy, the vents) in the trim colour.
+  if (look.trim && base.geometry.details && m.lines[1]) {
+    m.lines[1].material.color.set(look.trim).multiplyScalar(1.1 * look.glow);
+    m.lines[1].base.copy(m.lines[1].material.color);
+  }
   showroom.scene.remove(old.root);
   disposeShip(old);
   showroom.scene.add(m.root);
   m.root.visible = i === shipIndex;
   showroomModels[i] = m;
 }
+const plainLook = (def: ShipDef): Look => ({ colour: def.style.lineColor, glow: def.style.glow ?? 1, trim: null });
 
 function renderShipyard() {
   const c = cmdr();
@@ -1151,8 +1167,11 @@ function renderShipyard() {
   if (!pick) return;
   yardPick = pick.def.id;
   // The berth shows the glow you're choosing, or the one you ordered.
-  const glowOf = (def: ShipDef) => (spec && def.id === spec.ship ? spec.colour : c.order?.ship === def.id ? c.order.colour : def.style.lineColor);
-  for (const { i, def } of yard) recolourShowroom(i, glowOf(def));
+  const lookOf = (def: ShipDef): Look => {
+    const o = spec && def.id === spec.ship ? spec : c.order?.ship === def.id ? c.order : null;
+    return o ? { colour: o.colour, glow: GLOWS[o.glow ?? 'standard'].glow * (def.style.glow ?? 1), trim: o.trim ?? null } : plainLook(def);
+  };
+  for (const { i, def } of yard) recolourShowroom(i, lookOf(def));
   if (shipIndex !== pick.i) showShip(pick.i);
   const el = $('#shipyard');
   const msg = `<p class="yard-funds">You have <b>${Math.floor(c.credits).toLocaleString()} Cr</b></p>${yardMessage ? `<p class="yard-message">${escapeHtml(yardMessage)}</p>` : ''}`;
@@ -1178,12 +1197,17 @@ function renderShipyard() {
   if (spec) {
     const def = pick.def;
     const total = quote(def, spec);
+    const lines = priceLines(def, spec);
     const deposit = depositFor(total);
+    const cost = (n: number) => (n ? `${n.toLocaleString()} Cr` : 'Included');
+    const swatches = (attr: string, chosen: string | null) =>
+      PALETTE.map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${p.name}${p.price ? ` · ${p.price.toLocaleString()} Cr` : ''}" aria-label="${p.name}${p.price ? `, ${p.price.toLocaleString()} credits` : ''}" style="--sw:${p.colour}">${p.price ? '<i>★</i>' : ''}</button>`).join('');
+    const chosenColour = PALETTE.find((p) => p.colour === spec!.colour);
     const laserRow = (Object.keys(PLAYER_LASERS) as LaserId[])
-      .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}">${escapeHtml(PLAYER_LASERS[id].name)}<small>${PLAYER_LASERS[id].price.toLocaleString()} Cr</small></button>`)
+      .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}">${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
       .join('');
     const kit = UPGRADES.filter((e) => !e.modernOnly || c.difficulty === 'modern')
-      .map((e) => `<label><input type="checkbox" data-up="${e.id}" ${spec!.upgrades.includes(e.id) ? 'checked' : ''} /> <span>${escapeHtml(e.name)}</span><small>${e.price.toLocaleString()} Cr</small></label>`)
+      .map((e) => `<label><input type="checkbox" data-up="${e.id}" ${spec!.upgrades.includes(e.id) ? 'checked' : ''} /> <span>${escapeHtml(e.name)}</span><small>${Math.round(e.price * fitScale(def)).toLocaleString()} Cr</small></label>`)
       .join('');
     const action = def.concept
       ? c.order
@@ -1193,15 +1217,21 @@ function renderShipyard() {
       : '<p class="yard-note">Shipyards open soon: you\'ll buy it outright then.</p>';
     el.innerHTML = `${msg}${orderCard}<button type="button" class="yard-back">‹ The yard</button>
       <h3 class="yard-title" style="--hull:${spec.colour}">Spec your ${escapeHtml(def.name)}</h3>
-      <p class="yard-label">Its glow</p>
-      <div class="yard-swatches">${PALETTE.map((p) => `<button type="button" data-colour="${p.colour}" aria-pressed="${spec!.colour === p.colour}" title="${p.name}" aria-label="${p.name}" style="--sw:${p.colour}"></button>`).join('')}</div>
+      <p class="yard-label">Its colour <span>${chosenColour ? `${chosenColour.name} · ${cost(chosenColour.price)}` : 'The maker’s own'}</span></p>
+      <div class="yard-swatches">${swatches('data-colour', spec.colour)}</div>
+      <p class="yard-label">How hard it glows</p>
+      <div class="yard-lasers">${(Object.keys(GLOWS) as GlowId[]).map((g) => `<button type="button" data-glow="${g}" aria-pressed="${spec!.glow === g}">${GLOWS[g].name}<small>${cost(GLOWS[g].price)}</small></button>`).join('')}</div>
+      <label class="yard-check"><input type="checkbox" class="yard-two-tone" ${spec.trim ? 'checked' : ''} /> <span>Two-tone: the fine lines in a second colour</span><small>${TRIM_PRICE.toLocaleString()} Cr</small></label>
+      ${spec.trim ? `<div class="yard-swatches">${swatches('data-trim', spec.trim)}</div>` : ''}
       <label class="yard-label" for="spec-name">Its name, painted on</label>
       <input id="spec-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" />
       <p class="yard-label">Its laser</p>
       <div class="yard-lasers">${laserRow}</div>
-      <p class="yard-label">Upgrades</p>
+      <p class="yard-label">Upgrades <span>fitted to a hull this size: ×${fitScale(def).toFixed(1)}</span></p>
       <div class="yard-kit">${kit}</div>
-      <p class="yard-total"><span>Hull ${def.stats.price.toLocaleString()} + fit-out ${(total - def.stats.price).toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>
+      <p class="yard-label">Luxuries <span>comfort and showing off, nothing that flies or fights better</span></p>
+      <div class="yard-kit yard-lux">${LUXURIES.map((l) => `<label><input type="checkbox" data-lux="${l.id}" ${spec!.luxuries.includes(l.id) ? 'checked' : ''} /> <span>${escapeHtml(l.name)}<em>${escapeHtml(l.blurb)}</em></span><small>${l.price.toLocaleString()} Cr</small></label>`).join('')}</div>
+      <p class="yard-total"><span>Hull ${lines.hull.toLocaleString()} · fit-out ${lines.fit.toLocaleString()} · finish ${lines.finish.toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>
       ${action}`;
     const keep = () => renderShipyard();
     el.querySelector<HTMLButtonElement>('.yard-back')!.onclick = () => {
@@ -1211,6 +1241,26 @@ function renderShipyard() {
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-colour]'))
       b.onclick = () => {
         spec!.colour = b.dataset.colour!;
+        keep();
+      };
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-trim]'))
+      b.onclick = () => {
+        spec!.trim = b.dataset.trim!;
+        keep();
+      };
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-glow]'))
+      b.onclick = () => {
+        spec!.glow = b.dataset.glow as GlowId;
+        keep();
+      };
+    el.querySelector<HTMLInputElement>('.yard-two-tone')!.onchange = (e) => {
+      spec!.trim = (e.target as HTMLInputElement).checked ? (PALETTE.find((p) => p.colour !== spec!.colour)?.colour ?? '#f2f6ff') : null;
+      keep();
+    };
+    for (const box of el.querySelectorAll<HTMLInputElement>('[data-lux]'))
+      box.onchange = () => {
+        const id = box.dataset.lux!;
+        spec!.luxuries = box.checked ? [...spec!.luxuries, id] : spec!.luxuries.filter((l) => l !== id);
         keep();
       };
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-laser]'))
