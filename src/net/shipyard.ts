@@ -31,3 +31,6 @@ export const redeemVoucher = (code: string) => call<{ ship: string; edition?: st
 /** A ship specced on the site, saved to your account so it reaches every device (docs/design/ship-configurator.md). */
 export const accountSpec = () => call<{ spec: unknown; at: number | null }>('GET', '/me/spec');
 export const forgetAccountSpec = () => call<{ ok: true }>('DELETE', '/me/spec');
+
+/** Ships signed over to this account (no code): where each is waiting, and its edition number if it has one. */
+export const signedOver = () => call<{ gifts: { ship: string; edition: string | null; number: number | null; galaxy: number; system: number }[] }>('GET', '/me/gifts');

@@ -529,7 +529,7 @@ export const NINEFOLD_REPORT = {
   lines: [
     'SCIENCE DIVISION. Colony: Ninefold. Status: closed. Distribution: Science Division only.',
     'Agronomy (Dr L. Marsh): seed stock class 4 failed on the third sowing. It was never tested for this sky. Testing was deferred to save fourteen months. Dr Marsh has been reassigned.',
-    'Colonial Accounts (C. Ashe, Regional Director): the colony’s debt now exceeds its lifetime output. Relief would cost 310,000 Cr; recovery under clause 214, 40,000 Cr. Residents to be relocated to yard work until the balance is cleared. Keep the relay running: the families should not be alarmed.',
+    'Colonial Accounts (C. Ashe, Regional Director): the colony’s debt now exceeds its lifetime output. Relief would cost 31,000,000 Cr; recovery under clause 214, 4,000,000 Cr. Residents to be relocated to yard work until the balance is cleared. Keep the relay running: the families should not be alarmed.',
     'Bridge log (T. Vasse, Administrator): “They call us assets. I have sealed the bridge. Two hundred people, air for ninety days. Anyone hearing this: please come.”',
     'Recovery: 158 residents taken off for relocation. 41 missing, believed carried off by the unlicensed tug Hold Fast, pilot S. Dray; recommend he is found. Administrator Vasse stayed aboard so the tug could leave, and was recovered last.',
     'Attached, from the relay queue, unsent: “Gran, did the yellow flowers come up? Ours didn’t. Dad says next year. Love, Mira.”',

@@ -21,6 +21,8 @@ help:
 
 **Decided (Mark, 28 October 2026): the makers keep their 1984 names, as homage.** "I say we just use the legacy names in our universe as homage." Cowell & MgRath, Faulcon deLacy and Zorgon Petterson stay, as tributes in the same spirit as the 1984 ship names. What follows about design languages, design offices, tenders and jobs applies to them; the new names proposed below (Granta Yards, Arden Kell or Marrow & Vane, Castellane) are set aside. There's no rename, so no launch-week freeze.
 
+**Home yards** *(Mark, 28 October 2026: "a high tech yard where the shipbuilders are actually situated")*. Each maker has a home yard, where their ships are built and signed over. **Zorgon Petterson: Onrira** (galaxy 1, tech level 14, a rich industrial Corporate State, three jumps from Lave). The others are still to choose.
+
 ## Why
 
 Ships are the heart of the game: what you fly says who you are, and what you'd want to fly next is why you keep playing. Today our ships have makers on paper. The makers don't yet have a home, people, or a look you'd know. Three of them are also not ours.

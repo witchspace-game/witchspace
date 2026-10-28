@@ -174,7 +174,7 @@ A company is people, and people are driven by feelings, not strategy. Wexley-Yor
 
 - **Glad.** The colonists who signed up. Free passage, a world of their own, and the first breathable morning. Most of them are glad still.
 - **Sad.** The families at home, listening to a relay that says "all well" because nobody has switched it off.
-- **Bad.** **Corwin Ashe**, Regional Director, Colonial Accounts: not a monster, just a man who writes "relief: 310,000 Cr; recovery: 40,000 Cr" and signs the cheaper one. He is promoted.
+- **Bad.** **Corwin Ashe**, Regional Director, Colonial Accounts: not a monster, just a man who writes "relief: 31,000,000 Cr; recovery: 4,000,000 Cr" and signs the cheaper one. He is promoted.
 - **Mad.** **Teodor Vasse**, administrator of the *Ninefold*, who sealed his bridge rather than hand his people over; **Sam Dray**, the tug pilot who was told not to answer and answered; **Dr L. Marsh**, the agronomist who warned them and was reassigned.
 
 The *Ninefold* is the first of these stories ([exploration](design/exploration.md#trails)): an untested seed, a failed harvest, a debt, and clause 214. The explorer who finds its report decides who learns the truth.

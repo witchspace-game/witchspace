@@ -80,12 +80,12 @@ import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rig
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
-import { accountSpec, claimEdition, editionCounts, forgetAccountSpec, heldEditions, redeemVoucher, releaseEdition } from './net/shipyard';
+import { accountSpec, claimEdition, editionCounts, forgetAccountSpec, heldEditions, redeemVoucher, releaseEdition, signedOver } from './net/shipyard';
 import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } from './game/spec';
 import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, walletHome, walletKey } from './economy/currencies';
 import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
-import { ORDERABLE_LUXURIES, cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
@@ -899,6 +899,7 @@ function answerAdvert() {
   enterDocked();
   setDockTab('contracts');
   void checkSiteSpec(true);
+  void checkSignedOver();
 }
 
 /** Wexley-Yorozu's commissions for modules you designed, paid when you dock after one is first fitted. */
@@ -1270,6 +1271,43 @@ async function checkSiteSpec(announce: boolean) {
   if (dockTab === 'shipyard' && !spec) renderShipyard();
 }
 
+/**
+ * A ship signed over to you by the yard's office (no code to type: Mark, for Mark Moxon's 001): she
+ * becomes your gift, waiting at the maker's own yard, and the maker writes to say so. Asked on load
+ * and on docking, signed in; one already had (waiting, on order, or flown) is left alone.
+ */
+async function checkSignedOver() {
+  if (!signedIn() || !commander || commander.difficulty !== 'modern') return;
+  const r = await signedOver();
+  if ('error' in r) return;
+  const c = cmdr();
+  for (const g of r.gifts) {
+    const def = shipById(g.ship);
+    const id = `gift:${g.ship}:${g.edition ?? ''}:${g.number ?? ''}`;
+    const same = (e?: { id: string; number: number }) => Boolean(g.edition && e && e.id === g.edition && e.number === g.number);
+    if (!def || c.messages?.some((m) => m.id === id) || same(c.gift?.edition) || same(c.order?.edition) || same(c.paint?.edition) || (c.gift && !g.edition)) continue;
+    const at = systemAt(g.galaxy, g.system);
+    const edition = g.edition ? editionById(g.edition) : undefined;
+    const what = edition && g.number ? `${edition.name} ${editionNo(g.number)}` : `A ${def.name}`;
+    c.gift = { ship: g.ship, ...(edition && g.number ? { edition: { id: edition.id, number: g.number } } : {}), at: { galaxy: g.galaxy, system: g.system } };
+    c.messages = [
+      {
+        id,
+        company: 'hexon' as const, // shown as from the maker, not a company
+        from: def.manufacturer ?? 'The yard',
+        subject: `${what} is yours`,
+        body: `Commander ${c.name}, ${what} has been signed over to you, built and paid for. She's waiting at our own yard, ${stationName(at).name}, ${at.name}. Bring your ship: we'll take it in part, and hand you the keys.`,
+        at: Date.now(),
+      },
+      ...(c.messages ?? []),
+    ].slice(0, 20);
+    saveCommander(c);
+    markInbox(c);
+    flash(`${def.manufacturer ?? 'The yard'}: ${what} has been signed over to you · see Contracts`, 6);
+    if (state === 'docked' && dockTab === 'shipyard' && !spec) renderShipyard();
+  }
+}
+
 /** The site's spec is ordered: it's done with, here and on the account. */
 function forgetSiteSpec() {
   if (!siteSpec) return;
@@ -1349,6 +1387,9 @@ function renderShipyard() {
   const c = cmdr();
   const here = currentSystem();
   const now = Date.now();
+  // A ship signed over to you waits at one yard (the maker's own): elsewhere, the yard says where.
+  const giftAt = c.gift?.at;
+  const giftWaiting = giftAt && !(giftAt.galaxy === here.galaxy && giftAt.system === here.index) ? systemAt(giftAt.galaxy, giftAt.system) : null;
   const yard = ships
     .map((def, i) => ({ def, i }))
     .filter(({ def }) => inYards(def))
@@ -1413,7 +1454,11 @@ function renderShipyard() {
       .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}" ${laserLocked(c, id) ? `disabled title="${escapeHtml(laserLocked(c, id)!)}"` : ''}>${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
       .join('');
     const kit = UPGRADES.filter((e) => !e.modernOnly || c.difficulty === 'modern')
-      .map((e) => `<label><input type="checkbox" data-up="${e.id}" ${spec!.upgrades.includes(e.id) ? 'checked' : ''} /> <span>${escapeHtml(e.name)}</span><small>${Math.round(e.price * fitScale(def)).toLocaleString()} Cr</small></label>`)
+      .map((e) =>
+        standardKit(def).includes(e.id)
+          ? `<label><input type="checkbox" checked disabled /> <span>${escapeHtml(e.name)}</span><small>Standard</small></label>`
+          : `<label><input type="checkbox" data-up="${e.id}" ${spec!.upgrades.includes(e.id) ? 'checked' : ''} /> <span>${escapeHtml(e.name)}</span><small>${Math.round(e.price * fitScale(def)).toLocaleString()} Cr</small></label>`,
+      )
       .join('');
     const repainting = yardMode === 'repaint';
     const repaintCost = repainting ? repaintQuote(def, { colour: spec.colour, glow: spec.glow, trim: spec.trim }, c.paint) : 0;
@@ -1465,7 +1510,7 @@ function renderShipyard() {
             <li>${escapeHtml(nameOf(giftEdition.colour))}${giftEdition.trim ? `, the fine lines in ${escapeHtml(nameOf(giftEdition.trim))}` : ''}, ${GLOWS[giftEdition.glow].name.toLowerCase()}</li>
             <li>${giftEdition.luxuries.map((l) => escapeHtml(LUXURIES.find((x) => x.id === l)?.name ?? l)).join(' · ')}</li>
             <li>${editionNo(c.gift!.edition!.number)} beside its name</li>
-            <li>Beam lasers front and rear, and a combat computer: the rest is yours to earn</li>
+            <li>Beam lasers front and rear, a docking computer and a combat computer: the rest is yours to earn</li>
           </ul>
           ${nameField}
           <p class="yard-total"><span>${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}</span><b>A gift</b></p>`
@@ -1667,7 +1712,7 @@ function renderShipyard() {
         }).join('')}</ul>
       <p class="yard-desc">${escapeHtml(edition ? edition.blurb : pick.def.description)}</p>
       ${siteSpec && !c.order && shipById(siteSpec.spec.ship) ? `<div class="yard-order" style="--hull:${siteSpec.spec.colour}"><strong>Your ${escapeHtml(shipById(siteSpec.spec.ship)!.name)} spec from the website is here</strong><span>${siteSpec.spec.name ? `“${escapeHtml(siteSpec.spec.name)}”, ` : ''}${escapeHtml(nameOf(siteSpec.spec.colour))}: ${quote(shipById(siteSpec.spec.ship)!, siteSpec.spec).toLocaleString()} Cr as specced.</span><button type="button" class="primary yard-open-site">Open it</button></div>` : ''}
-      ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span><button type="button" class="primary yard-open-gift">Spec your gift</button></div>` : ''}
+      ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span>${giftWaiting ? `<span>Waiting for you at the maker’s own yard: ${escapeHtml(stationName(giftWaiting).name)}, ${escapeHtml(giftWaiting.name)}${giftWaiting.galaxy === here.galaxy ? `, ${jumpsBetween(here, giftWaiting, 12)} jumps from here` : ''}.</span>${giftWaiting.galaxy === here.galaxy ? `<button type="button" class="primary yard-gift-course">${c.target === giftWaiting.index ? 'On course' : 'Set course'}</button>` : ''}` : '<button type="button" class="primary yard-open-gift">Spec your gift</button>'}</div>` : ''}
       ${pick.def.id === hullOf(c) && !edition ? `<button type="button" class="yard-manual yard-repaint-open">Repaint your ${escapeHtml(pick.def.name)}</button>` : ''}
       <button type="button" class="yard-manual">The ${escapeHtml(edition ? (shipById(edition.ship)?.name ?? '') : pick.def.name)} owner's manual</button>
       <button type="button" class="primary yard-spec">${edition ? `Choose its name and reserve one` : `Spec your ${escapeHtml(pick.def.name)}`}</button>
@@ -1712,6 +1757,13 @@ function renderShipyard() {
       renderShipyard();
     };
     el.querySelector<HTMLButtonElement>('.yard-open-gift')?.addEventListener('click', openGift);
+    el.querySelector<HTMLButtonElement>('.yard-gift-course')?.addEventListener('click', () => {
+      if (!giftWaiting) return;
+      yardMessage = plotCourse(c, giftWaiting.index);
+      saveCommander(c);
+      sfx.beep();
+      renderShipyard();
+    });
     el.querySelector<HTMLButtonElement>('.yard-open-site')?.addEventListener('click', () => {
       if (!siteSpec) return;
       yardMode = 'spec';
@@ -5759,7 +5811,7 @@ function openManual(def: ShipDef) {
 
     <section id="man-dock"><h3>Docking</h3>
       <ol>
-${DOCKING(roll).map((li) => `        <li>${li}</li>
+${DOCKING(roll, standardKit(def).includes('docking-computer')).map((li) => `        <li>${li}</li>
 `).join('')}      </ol>
       ${def.id !== 'cobra-mk3' ? `<p class="meta">${escapeHtml(def.name)}: ${escapeHtml(handling(def, cobra).find((h) => h.label === 'Span')!.versus)}.</p>` : ''}
     </section>
@@ -5985,6 +6037,7 @@ async function dock() {
   else if (smuggling && inspectionChance(c, sys) > 0) flash('Docked · your hold was not inspected this time', 3);
   // The yard's word on a spec from the site, unless the dock had more pressing news.
   void checkSiteSpec(!settlement && !delivered.length && !collected.length && !gone.length && !news.length);
+  void checkSignedOver();
 }
 
 function settlementMessage(s: Settlement, lead: string) {
@@ -7657,6 +7710,7 @@ function handleKey(code: string) {
         if (commander) {
           enterDocked();
           void checkSiteSpec(true);
+          void checkSignedOver();
         } else showNewGame();
       } else if (code === 'KeyN') {
         const saved = loadCommander();

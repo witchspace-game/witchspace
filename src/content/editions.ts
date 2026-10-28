@@ -40,7 +40,7 @@ export const EDITIONS: Edition[] = [
     laser: 'beam',
     upgrades: ['docking-computer', 'fuel-scoops', 'escape-pod'],
     luxuries: ['suite', 'gold-name', 'starlight'],
-    premium: 75_000,
+    premium: 77_700, // 468,380 in all, as published: the docking computer became standard (2,700) and the premium took it up
     finishHours: 120,
   },
   {

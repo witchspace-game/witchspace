@@ -9,6 +9,13 @@
 //   npx tsx tools/voucher.ts make fer-de-lance "Mark Moxon, with thanks" --edition witch-fire
 //   npx tsx tools/voucher.ts list
 //
+// Or sign a ship over to a commander's email address, waiting at one yard: no
+// code. They're told in the game when they next play signed in (and by
+// notification, if they've an account with notifications on). --number takes
+// over the unused voucher holding that edition number, whose code stops working.
+//
+//   npx tsx tools/voucher.ts gift fer-de-lance <email> --edition witch-fire --number 1 --at Onrira
+//
 // Add --local to talk to `wrangler dev` instead of the live server. The admin
 // key comes from WITCHSPACE_ADMIN_KEY or ~/.witchspace-admin-key.
 
@@ -17,9 +24,15 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 const argv = process.argv.slice(2);
-const editionAt = argv.indexOf('--edition');
-const edition = editionAt >= 0 ? argv[editionAt + 1] : undefined;
-const args = argv.filter((a, i) => a !== '--local' && (editionAt < 0 || (i !== editionAt && i !== editionAt + 1)));
+const flag = (name: string) => {
+  const i = argv.indexOf(name);
+  return i >= 0 ? argv[i + 1] : undefined;
+};
+const edition = flag('--edition');
+const number = flag('--number');
+const yard = flag('--at');
+const valued = new Set(['--edition', '--number', '--at']);
+const args = argv.filter((a, i) => a !== '--local' && !valued.has(a) && !valued.has(argv[i - 1]));
 const local = process.argv.includes('--local');
 const API = local ? 'http://127.0.0.1:8787' : 'https://space.witchspace.org.uk';
 const ORIGIN = local ? 'http://localhost:5173' : 'https://witchspace.org.uk';
@@ -54,10 +67,21 @@ if (command === 'make' && ship) {
   const held = r.edition ? ` (${r.edition} ${String(r.number).padStart(3, '0')}, held for whoever redeems it)` : '';
   console.log(`Voucher for a ${r.ship}${held}: ${r.code}\nRedeem it at any shipyard in the game, signed in. It works once; this is the only time it's shown.`);
 } else if (command === 'list') {
-  const r = (await call('/admin/vouchers')) as { vouchers: { ship: string; note: string; created: number; used: number; redeemed: number | null; edition: string | null; number: number | null }[] };
+  const r = (await call('/admin/vouchers')) as { vouchers: { ship: string; note: string; created: number; used: number; redeemed: number | null; edition: string | null; number: number | null; signed: number }[] };
   for (const v of r.vouchers)
-    console.log(`${new Date(v.created).toISOString().slice(0, 10)}  ${v.ship.padEnd(14)} ${v.edition ? `${v.edition} ${String(v.number).padStart(3, '0')}  ` : ''}${v.used ? `used ${new Date(v.redeemed!).toISOString().slice(0, 10)}` : 'unused'}  ${v.note}`);
+    console.log(`${new Date(v.created).toISOString().slice(0, 10)}  ${v.ship.padEnd(14)} ${v.edition ? `${v.edition} ${String(v.number).padStart(3, '0')}  ` : ''}${v.signed ? (v.used ? `signed over, attached ${new Date(v.redeemed!).toISOString().slice(0, 10)}` : 'signed over, waiting for them to sign in') : v.used ? `used ${new Date(v.redeemed!).toISOString().slice(0, 10)}` : 'unused'}  ${v.note}`);
   if (!r.vouchers.length) console.log('No vouchers yet.');
+} else if (command === 'gift' && ship && note && yard) {
+  // `note` is the email address here. The yard is a system name, in whichever galaxy has it first.
+  const { galaxy } = await import('../src/galaxy/generate');
+  const at = [0, 1, 2, 3, 4, 5, 6, 7].flatMap((g) => galaxy(g)).find((s) => s.name.toLowerCase() === yard.toLowerCase());
+  if (!at) {
+    console.error(`No system called ${yard}`);
+    process.exit(1);
+  }
+  const r = await call('/admin/gifts', { ship, email: note, galaxy: at.galaxy, system: at.index, ...(edition ? { edition } : {}), ...(number ? { number: Number(number) } : {}) });
+  const what = r.edition ? `${r.edition} ${String(r.number).padStart(3, '0')}` : `a ${r.ship}`;
+  console.log(`Signed over: ${what}, waiting at ${at.name} (galaxy ${at.galaxy + 1}). ${r.attached ? `Their account has it now${r.told ? ', and a notification went to their devices' : ''}.` : 'It attaches when they sign in with that address.'}`);
 } else {
-  console.log('Usage: npx tsx tools/voucher.ts make <ship id> "<note>" [--edition <id>] | list   [--local]');
+  console.log('Usage: npx tsx tools/voucher.ts make <ship id> "<note>" [--edition <id>] | gift <ship id> <email> --at <system> [--edition <id> [--number <n>]] | list   [--local]');
 }

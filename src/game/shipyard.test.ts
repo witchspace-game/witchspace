@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { shipById } from '../content/ships';
 import { newCommander } from './commander';
 import { EDITIONS } from '../content/editions';
-import { editionGiftSpec, editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, ORDERABLE, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
+import { editionGiftSpec, editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, ORDERABLE, PALETTE, placeOrder, standardKit, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
 
 const fdl = shipById('fer-de-lance')!;
 const cobra = shipById('cobra-mk3')!;
@@ -12,7 +12,8 @@ const H = 3600_000;
 describe('speccing a ship', () => {
   it('prices the hull, its laser and its upgrades', () => {
     const spec = { ...defaultSpec(fdl), laser: 'beam' as const, upgrades: ['docking-computer' as const, 'fuel-scoops' as const] };
-    expect(quote(fdl, spec)).toBe(fdl.stats.price + Math.round((1000 + 1500 + 600) * 1.8));
+    // The docking computer is standard on a hull of her calibre: no charge (Mark).
+    expect(quote(fdl, spec)).toBe(fdl.stats.price + Math.round((1000 + 600) * 1.8));
     expect(depositFor(quote(fdl, spec))).toBe(Math.round(quote(fdl, spec) / 10));
   });
 
@@ -118,8 +119,8 @@ describe('collecting it', () => {
     expect(c.ship).toBe('fer-de-lance');
     expect(c.paint).toMatchObject({ colour: '#9b6bff', name: 'Brass Neck' });
     expect(c.lasers).toEqual({ front: 'beam' });
-    // The old ship's kit went with it; your papers stayed.
-    expect(c.equipment.sort()).toEqual(['fuel-scoops', 'transponder', 'weapons-licence']);
+    // The old ship's kit went with it; your papers stayed, and she came with her own docking computer.
+    expect(c.equipment.sort()).toEqual(['docking-computer', 'fuel-scoops', 'transponder', 'weapons-licence']);
     expect(c.order).toBeUndefined();
   });
 
@@ -143,6 +144,18 @@ describe('editions and gifts', () => {
     expect(r.ok).toBe(true);
     expect(c.order).toMatchObject({ colour: witch.colour, trim: witch.trim, glow: witch.glow, name: 'Halcyon', edition: { id: witch.id, number: 37 } });
     expect(c.order!.quoted).toBe(editionQuote(fdl, witch));
+  });
+
+  it('fits every Fer-de-lance with a docking computer, at no charge, and keeps a signed-over ship at her yard', () => {
+    expect(standardKit(fdl)).toEqual(['docking-computer']);
+    expect(standardKit(cobra)).toEqual([]);
+    expect(defaultSpec(fdl).upgrades).toEqual(['docking-computer']);
+    expect(quote(fdl, defaultSpec(fdl))).toBe(fdl.stats.price + Math.round(1000 * 1.8)); // the hull and her beam laser
+    const c = newCommander('modern');
+    c.gift = { ship: 'fer-de-lance', edition: { id: 'witch-fire', number: 1 }, at: { galaxy: 0, system: 23 } };
+    expect(placeOrder(c, fdl, defaultSpec(fdl), yard, 0, { gift: true })).toMatchObject({ ok: false });
+    expect(placeOrder(c, fdl, defaultSpec(fdl), { galaxy: 0, system: 23 }, 0, { gift: true }).ok).toBe(true);
+    expect(c.order!.upgrades).toEqual(['docking-computer', 'combat-computer']);
   });
 
   it('prices the Dark Edition at 950,000, with her rear beam and her own luxuries, which nobody else can order', async () => {
@@ -189,7 +202,7 @@ describe('editions and gifts', () => {
     expect(placeOrder(c, fdl, { ...defaultSpec(fdl), name: 'Moxon' }, yard, 0, { gift: true })).toMatchObject({ ok: true });
     expect(c.order).toMatchObject({ ...editionGiftSpec(witch, 'Moxon'), quoted: 0, gifted: true, edition: { id: witch.id, number: 1 } });
     // Beam lasers front and rear, and a combat computer (Mark).
-    expect(c.order).toMatchObject({ laser: 'beam', rear: 'beam', upgrades: ['combat-computer'] });
+    expect(c.order).toMatchObject({ laser: 'beam', rear: 'beam', upgrades: ['docking-computer', 'combat-computer'] });
     collectOrder(c, cobra, fdl, yard, 0, 0);
     expect(c.lasers).toEqual({ front: 'beam', rear: 'beam' });
     expect(c.equipment).toContain('combat-computer');
