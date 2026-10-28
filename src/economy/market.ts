@@ -503,30 +503,43 @@ function round1(n: number) {
   return Math.max(0.1, Math.round(n * 10) / 10);
 }
 
-/** One commodity's posted price when its own stock is `own` and outside effects add `outside`. Same as quoteModern's. */
-function unitPrice(system: StarSystem, state: MarketState, c: Commodity, i: number, own: number, outside: number): number {
+/**
+ * The sum of the unit prices with your own stock at each level from `lo` to `hi`.
+ * Only the stock moves the price, and past a point it stops moving it (pressure is
+ * clamped), so a long run there counts in one step: selling two tonnes of gems,
+ * two million grams, used to price every gram at every market and froze the
+ * trade computer (Mark).
+ */
+function priceSum(system: StarSystem, state: MarketState, c: Commodity, i: number, lo: number, hi: number, outside: number): number {
+  if (hi < lo) return 0;
   const eq = equilibriumStock(system, c, i);
-  return round1(equilibriumPrice(system, c, i) * drift(system, c, i, state.updated) * crisis(system, c.id, state.updated) * pressure(eq, own + outside));
+  const base = equilibriumPrice(system, c, i) * drift(system, c, i, state.updated) * crisis(system, c.id, state.updated);
+  const at = (own: number) => round1(base * pressure(eq, own + outside));
+  if (eq <= 0) return at(lo) * (hi - lo + 1);
+  const e = Math.max(eq, 1);
+  const glut = Math.ceil(e * Math.pow(2, 1 / ELASTICITY) - outside) + 2; // from here up, the lowest price
+  const scarce = Math.floor(e / Math.pow(2.5, 1 / ELASTICITY) - outside) - 2; // from here down, the highest
+  let total = 0;
+  if (lo <= scarce) total += (Math.min(hi, scarce) - lo + 1) * at(Math.min(hi, scarce));
+  for (let own = Math.max(lo, scarce + 1); own <= Math.min(hi, glut - 1); own++) total += at(own);
+  if (hi >= glut) total += (hi - Math.max(lo, glut) + 1) * at(Math.max(lo, glut));
+  return total;
 }
 
 /** Total paid for selling `qty` one at a time into a living market (price falls as stock rises). */
 export function proceedsToSell(system: StarSystem, state: MarketState, id: string, qty: number): number {
   const i = COMMODITIES.findIndex((c) => c.id === id);
   const own = state.stock[id] ?? equilibriumStock(system, COMMODITIES[i], i);
-  let total = 0;
   // Each unit sold adds to the stock first, so buying and selling back the
   // same goods comes out even, never at a profit.
   const outside = external(system, state, id, state.updated, true);
-  for (let n = 1; n <= qty; n++) total += unitPrice(system, state, COMMODITIES[i], i, own + n, outside);
-  return Math.round(total * 10) / 10;
+  return Math.round(priceSum(system, state, COMMODITIES[i], i, own + 1, own + qty, outside) * 10) / 10;
 }
 
 /** Total cost of buying `qty` one at a time from a living market (price rises as stock falls). */
 export function costToBuy(system: StarSystem, state: MarketState, id: string, qty: number): number {
   const i = COMMODITIES.findIndex((c) => c.id === id);
   const own = state.stock[id] ?? equilibriumStock(system, COMMODITIES[i], i);
-  let total = 0;
   const outside = external(system, state, id, state.updated, true);
-  for (let n = 0; n < qty; n++) total += unitPrice(system, state, COMMODITIES[i], i, own - n, outside);
-  return Math.round(total * 10) / 10;
+  return Math.round(priceSum(system, state, COMMODITIES[i], i, own - qty + 1, own, outside) * 10) / 10;
 }

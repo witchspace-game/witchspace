@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy, systemAt } from '../galaxy/generate';
 import { cargoTonnage, COMMODITIES } from './commodities';
-import { candles, costToBuy, drift, equilibriumPrice, equilibriumStock, freshMarket, loseDelivery, npcTrades, orderBook, priceAt, quoteClassic, quoteModern, recentTrades, recover, stationOrder, stockFor, tradeBalance, upcomingDeliveries } from './market';
+import { candles, costToBuy, drift, equilibriumPrice, equilibriumStock, freshMarket, loseDelivery, npcTrades, orderBook, priceAt, proceedsToSell, quoteClassic, quoteModern, recentTrades, recover, stationOrder, stockFor, tradeBalance, upcomingDeliveries } from './market';
 
 const price = (q: ReturnType<typeof quoteModern>, id: string) => q.find((x) => x.commodity.id === id)!.price;
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
@@ -259,5 +259,41 @@ describe('risk pays', () => {
     const s = all.find((x) => x.government >= 4)!;
     const anarchy = { ...s, government: 0 };
     expect(quoteClassic(anarchy, 1)[food].price).toBe(quoteClassic(s, 1)[food].price);
+  });
+});
+
+describe('selling and buying in bulk', () => {
+  const lave = systemAt(0, 7);
+  const m = freshMarket(lave, Date.UTC(2026, 9, 22, 12));
+  /** One unit at a time, the long way. */
+  const oneByOne = (id: string, qty: number, sell: boolean) => {
+    let total = 0;
+    for (let n = 0; n < qty; n++) {
+      const own = (m.stock[id] ?? 0) + (sell ? n : -n);
+      total += sell ? proceedsToSell(lave, { ...m, stock: { ...m.stock, [id]: own } }, id, 1) : costToBuy(lave, { ...m, stock: { ...m.stock, [id]: own } }, id, 1);
+    }
+    return total;
+  };
+
+  it('comes to the same as pricing each unit, through scarcity and glut', () => {
+    for (const [id, qty] of [['food', 400], ['gold', 30_000], ['gems', 60_000], ['computers', 200]] as const) {
+      expect(Math.abs(proceedsToSell(lave, m, id, qty) - oneByOne(id, qty, true)), id).toBeLessThan(0.2);
+      const most = Math.min(qty, m.stock[id] ?? 0);
+      expect(Math.abs(costToBuy(lave, m, id, most) - oneByOne(id, most, false)), id).toBeLessThan(0.2);
+    }
+  });
+
+  it('two tonnes of gems are priced in a moment, not seconds (Mark: the trade computer froze)', () => {
+    const t = performance.now();
+    expect(proceedsToSell(lave, m, 'gems', 2_000_000)).toBeGreaterThan(0);
+    expect(performance.now() - t).toBeLessThan(50);
+  });
+
+  it('buying and selling straight back still comes out even', () => {
+    for (const id of ['food', 'gems', 'luxuries']) {
+      const qty = Math.min(50, m.stock[id] ?? 0);
+      const after = { ...m, stock: { ...m.stock, [id]: (m.stock[id] ?? 0) - qty } };
+      expect(proceedsToSell(lave, after, id, qty), id).toBe(costToBuy(lave, m, id, qty));
+    }
   });
 });
