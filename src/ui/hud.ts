@@ -8,6 +8,15 @@ const DOCK_AID_RANGE = 3000;
 // The scanner: the original's ellipse with stalks for height. Two ranges
 // (R switches): close for dogfights, wide for traffic.
 const SCANNER_RANGES = [4000, 12000]; // metres
+
+// The dashboard glows in your ship's paint: green in a Cobra from the yard,
+// Nebula pink in a Witch-fire Edition. The scanner's contacts keep their own colours.
+let dash = '61,255,176';
+export function setDashColour(hex: string | null) {
+  const n = parseInt((hex ?? '#3dffb0').slice(1), 16);
+  dash = `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+  document.documentElement.style.setProperty('--dash', `rgb(${dash})`);
+}
 let rangeIndex = (() => {
   try {
     return Number(localStorage.getItem('witchspace.scannerRange') ?? 0) === 1 ? 1 : 0;
@@ -153,7 +162,7 @@ function drawScanner(ship: PlayerShip, blips: Blip[]) {
   const cy = h / 2;
   const rx = w / 2 - 6;
   const ry = h / 2 - 6;
-  const line = retro ? '#ffffff' : 'rgba(61,255,176,0.55)';
+  const line = retro ? '#ffffff' : `rgba(${dash},0.55)`;
 
   ctx.lineWidth = retro ? 2 : 1.25;
   ctx.strokeStyle = line;
@@ -269,7 +278,7 @@ function drawCompass(ship: PlayerShip, target: THREE.Vector3) {
   const retro = isRetro();
   const r = w / 2 - 3;
   ctx.clearRect(0, 0, w, h);
-  ctx.strokeStyle = retro ? '#fff' : 'rgba(61,255,176,0.6)';
+  ctx.strokeStyle = retro ? '#fff' : `rgba(${dash},0.6)`;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2);

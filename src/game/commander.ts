@@ -338,7 +338,7 @@ export interface Commander {
   /** The saloon: drinks bought this visit, and the tips you've heard (game/saloon.ts). */
   saloon?: { drinks: string[]; heard: Heard[] };
   /** A gift voucher redeemed, waiting to be specced at a shipyard. */
-  gift?: { ship: string };
+  gift?: { ship: string; edition?: { id: string; number: number } };
   /** A ship you've specced and put a deposit on, in production at a yard (src/game/shipyard.ts). */
   order?: ShipOrder;
   /** The hull you fly, by content id; a Cobra Mk III until you collect another. */

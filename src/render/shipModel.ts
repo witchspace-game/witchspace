@@ -117,3 +117,21 @@ export function disposeShip(model: ShipModel) {
   unregisterParts(model.parts);
   disposeObject(model.root);
 }
+
+/** A ship's finish from the yard: its colour, how hard it glows, and a trim colour for the fine lines. */
+export interface Look {
+  colour: string;
+  glow: number;
+  trim: string | null;
+}
+
+/** A ship built in its owner's paint (two-tone: the fine lines in the trim colour). */
+export function buildPainted(def: ShipDef, look: Look | null | undefined): ShipModel {
+  if (!look) return buildShip(def);
+  const m = buildShip({ ...def, style: { ...def.style, lineColor: look.colour, glow: look.glow } });
+  if (look.trim && def.geometry.details && m.lines[1]) {
+    m.lines[1].material.color.set(look.trim).multiplyScalar(1.1 * look.glow);
+    m.lines[1].base.copy(m.lines[1].material.color);
+  }
+  return m;
+}

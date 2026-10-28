@@ -122,6 +122,14 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE TABLE IF NOT EXISTS vouchers (hash TEXT PRIMARY KEY, ship TEXT NOT NULL, note TEXT NOT NULL, created INTEGER NOT NULL, account TEXT, redeemed INTEGER)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS editions (edition TEXT NOT NULL, number INTEGER NOT NULL, account TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (edition, number))');
     this.sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS editions_account ON editions (edition, account)');
+    // A voucher can carry an edition number, held for whoever redeems it.
+    for (const col of ['edition TEXT', 'number INTEGER']) {
+      try {
+        this.sql.exec(`ALTER TABLE vouchers ADD COLUMN ${col}`);
+      } catch {
+        // Already there.
+      }
+    }
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -390,12 +398,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const body = (await request.json().catch(() => null)) as { code?: unknown } | null;
     const code = typeof body?.code === 'string' ? normaliseVoucher(body.code) : '';
     if (!code) return json({ error: 'That isn’t a voucher code' }, 400);
-    const row = this.sql.exec('SELECT ship, account FROM vouchers WHERE hash = ?', await sha256(code)).toArray()[0];
+    const hash = await sha256(code);
+    const row = this.sql.exec('SELECT ship, account, edition, number FROM vouchers WHERE hash = ?', hash).toArray()[0];
     if (!row) return json({ error: 'That code isn’t one of ours' }, 404);
     // Once: even for the account that redeemed it, or a second redeem would be a second ship.
     if (row.account) return json({ error: row.account === account.id ? 'You’ve already redeemed this voucher: your gift is in the shipyard' : 'That voucher has already been used' }, 409);
-    this.sql.exec('UPDATE vouchers SET account = ?, redeemed = ? WHERE hash = ? AND account IS NULL', account.id, Date.now(), await sha256(code));
-    return json({ ship: row.ship });
+    this.sql.exec('UPDATE vouchers SET account = ?, redeemed = ? WHERE hash = ? AND account IS NULL', account.id, Date.now(), hash);
+    if (!row.edition) return json({ ship: row.ship });
+    // The held number becomes theirs (unless they already hold one of this edition: then they keep theirs, and this one stays held).
+    const theirs = this.sql.exec('SELECT number FROM editions WHERE edition = ? AND account = ?', row.edition, account.id).toArray()[0];
+    if (!theirs) this.sql.exec('UPDATE editions SET account = ? WHERE edition = ? AND account = ?', account.id, row.edition, `voucher:${hash}`);
+    return json({ ship: row.ship, edition: row.edition, number: theirs ? theirs.number : row.number });
   }
 
   /** The next number of an edition, one per account; your own back if you already hold one. */
@@ -426,15 +439,27 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return json({ error: 'Forbidden' }, 403);
     // A gift voucher for a ship: the code comes back once, and only its hash is kept.
     if (request.method === 'POST' && path === '/admin/vouchers') {
-      const body = (await request.json().catch(() => null)) as { ship?: unknown; note?: unknown } | null;
+      const body = (await request.json().catch(() => null)) as { ship?: unknown; note?: unknown; edition?: unknown } | null;
       const ship = typeof body?.ship === 'string' && /^[a-z0-9-]{2,40}$/.test(body.ship) ? body.ship : null;
       if (!ship) return json({ error: 'Which ship? (its id, e.g. fer-de-lance)' }, 400);
+      const edition = typeof body?.edition === 'string' ? editionById(body.edition) : undefined;
+      if (body?.edition !== undefined && (!edition || edition.ship !== ship)) return json({ error: `No such edition of the ${ship}` }, 400);
       const code = voucherCode();
-      this.sql.exec('INSERT INTO vouchers (hash, ship, note, created) VALUES (?, ?, ?, ?)', await sha256(code), ship, String(body?.note ?? '').slice(0, 200), Date.now());
-      return json({ code, ship });
+      const hash = await sha256(code);
+      // An edition voucher holds the next number now, so it's taken before anyone else can reserve it.
+      let number: number | null = null;
+      if (edition) {
+        const used = new Set(this.sql.exec('SELECT number FROM editions WHERE edition = ?', edition.id).toArray().map((r) => r.number as number));
+        number = 1;
+        while (used.has(number)) number++;
+        if (number > edition.limit) return json({ error: `All ${edition.limit} are spoken for` }, 409);
+        this.sql.exec('INSERT INTO editions (edition, number, account, at) VALUES (?, ?, ?, ?)', edition.id, number, `voucher:${hash}`, Date.now());
+      }
+      this.sql.exec('INSERT INTO vouchers (hash, ship, note, created, edition, number) VALUES (?, ?, ?, ?, ?, ?)', hash, ship, String(body?.note ?? '').slice(0, 200), Date.now(), edition?.id ?? null, number);
+      return json({ code, ship, ...(edition ? { edition: edition.id, number } : {}) });
     }
     if (request.method === 'GET' && path === '/admin/vouchers') {
-      return json({ vouchers: this.sql.exec('SELECT ship, note, created, account IS NOT NULL AS used, redeemed FROM vouchers ORDER BY created').toArray() });
+      return json({ vouchers: this.sql.exec('SELECT ship, note, created, account IS NOT NULL AS used, redeemed, edition, number FROM vouchers ORDER BY created').toArray() });
     }
     if (request.method === 'GET' && path === '/admin/names') {
       const releases = this.sql.exec('SELECT name, email, created FROM releases ORDER BY created').toArray();

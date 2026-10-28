@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { ClientMessage, Commander, ServerMessage } from '../../server/src/protocol';
+import type { ClientMessage, Commander, Paint, ServerMessage } from '../../server/src/protocol';
 
 // Shared space (stage 1, Modern rules, opt-in): other commanders in your
 // star system, flying their own ships. One WebSocket to that system's server
@@ -30,6 +30,8 @@ export interface Remote {
   /** Signed in, with their account's callsign; otherwise a guest. */
   verified: boolean;
   ship: string;
+  /** Their paint from the yard, if any. */
+  paint?: Paint;
   /** Where to draw them now (interpolated). */
   position: THREE.Vector3;
   quaternion: THREE.Quaternion;
@@ -88,7 +90,7 @@ export class SharedSpace {
   }
 
   /** Be in this system's shared space (or none). Reconnects only when it changes. */
-  join(galaxy: number, system: number, name: string, ship: string, lasers: string[], rank: string, missiles: number, ecm: boolean, session?: string) {
+  join(galaxy: number, system: number, name: string, ship: string, lasers: string[], rank: string, missiles: number, ecm: boolean, session?: string, paint?: Paint) {
     const key = `${galaxy}/${system}`;
     if (key === this.system && this.ws) return;
     if (this.clock < this.retryAt || this.replaced) return;
@@ -97,7 +99,7 @@ export class SharedSpace {
     const ws = new WebSocket(`${SPACE_URL}/system/${key}`);
     this.ws = ws;
     // v2: we understand being replaced (one ship per account), and won't reconnect after it.
-    ws.onopen = () => this.send({ type: 'hello', name, ship, lasers, rank, missiles, ecm, session, v: 2 });
+    ws.onopen = () => this.send({ type: 'hello', name, ship, lasers, rank, missiles, ecm, session, v: 2, ...(paint ? { paint } : {}) });
     ws.onmessage = (e) => this.receive(JSON.parse(e.data as string) as ServerMessage);
     ws.onclose = () => {
       if (this.ws !== ws) return; // a deliberate leave
@@ -248,7 +250,7 @@ export class SharedSpace {
   }
 
   private add(c: Commander): Remote {
-    const r: Remote = { id: c.id, name: c.name, rank: c.rank ?? 'Harmless', verified: Boolean(c.verified), ship: c.ship, position: toV(c.p), quaternion: toQ(c.q), firing: c.f, history: [{ t: this.clock, p: toV(c.p), q: toQ(c.q), f: c.f }], hostileUntil: 0, dark: c.d === true };
+    const r: Remote = { id: c.id, name: c.name, rank: c.rank ?? 'Harmless', verified: Boolean(c.verified), ship: c.ship, ...(c.paint ? { paint: c.paint } : {}), position: toV(c.p), quaternion: toQ(c.q), firing: c.f, history: [{ t: this.clock, p: toV(c.p), q: toQ(c.q), f: c.f }], hostileUntil: 0, dark: c.d === true };
     this.remotes.set(c.id, r);
     return r;
   }

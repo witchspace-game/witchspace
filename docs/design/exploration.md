@@ -43,6 +43,10 @@ This builds on the first slice (rings, moons, surveys, signals; see [ideas](../i
   - **Wrecks are solid cover** *(October 2026)*. Derelicts, wreck fields and beacons stop lasers, yours and the enemy's, and bounce you off with a scrape. Found wrecks stay, so a system you know has places to hide.
 - **The record:** the chart rings systems you've visited; explorer points and a rank from Homebody to Voyager. *(Elite is the combat rank only: nobody reaches it by exploring.)*
 
+## Surveying needs rethinking *(Mark, 28 October 2026)*
+
+"The surveying needs to be improved. It's boring and isn't very good, as you could potentially fly into the planet as well." Holding a low orbit while a bar fills is a chore, not play, and flying low over a planet is a crash waiting to happen. To be designed: surveying as something you do, not wait through (sweeps you choose, features to find and frame, a scan that reveals the surface as you pass), with the ship keeping itself out of the ground: a safe orbit the computer holds while you work, or a warning and a pull-up, never a death by survey.
+
 ## Stage 1: reasons to go, things to spend on *(built, October 2026)*
 
 ### Trails

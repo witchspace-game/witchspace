@@ -200,7 +200,7 @@ export function initTouch() {
   for (const type of ['pointerup', 'pointercancel'] as const) speed.addEventListener(type, () => (sliding = null));
 }
 
-/** Each frame: joystick-style aiming, and the slider showing the speed asked for (or the actual speed). */
+/** Each frame: joystick-style aiming, and the slider showing the actual speed, with the speed asked for marked. */
 export function updateTouch(dt: number, speedFraction: number) {
   if (!isTouch) return;
   if (tiltOn) {
@@ -219,6 +219,11 @@ export function updateTouch(dt: number, speedFraction: number) {
       touchAim(ox * k, oy * k);
     }
   }
-  const v = touchSpeedTarget() ?? speedFraction;
-  document.querySelector<HTMLElement>('#touch .speed')!.style.setProperty('--v', String(v));
+  // The fill is the speed you're doing; a tick marks the speed you asked for. They part company when the
+  // docking computer or the autopilot takes the throttle, or the engines are still catching up (Mark).
+  const el = document.querySelector<HTMLElement>('#touch .speed')!;
+  el.style.setProperty('--v', String(speedFraction));
+  const want = touchSpeedTarget();
+  el.style.setProperty('--t', String(want ?? speedFraction));
+  el.classList.toggle('apart', want !== null && want !== undefined && Math.abs(want - speedFraction) > 0.03);
 }

@@ -1,7 +1,7 @@
 // Special editions: a set spec, numbered and limited, built to order like any
 // concept (docs/design/ships-and-classes.md, "Spec it, and put down a deposit").
 // Nobody configures an edition: that's what makes it one. The server hands out
-// the numbers (server/src/accounts.ts), one each, so "No. 37 of 100" is true.
+// the numbers (server/src/accounts.ts), one each, so a painted 037 is true.
 // No dependencies: the game and the server both read this.
 
 export interface Edition {
@@ -39,3 +39,6 @@ export const EDITIONS: Edition[] = [
 ];
 
 export const editionById = (id: string) => EDITIONS.find((e) => e.id === id);
+
+/** An edition's number as it's painted: a quiet 001, not "No. 1". */
+export const editionNo = (n: number) => String(n).padStart(3, '0');

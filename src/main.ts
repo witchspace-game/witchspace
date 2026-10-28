@@ -79,9 +79,9 @@ import { Missile, MISSILE } from './game/missile';
 import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rightOn, type Foe } from './game/rating';
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
-import { EDITIONS, editionById } from './content/editions';
+import { EDITIONS, editionById, editionNo } from './content/editions';
 import { claimEdition, editionCounts, redeemVoucher, releaseEdition } from './net/shipyard';
-import { cancelOrder, collection, collectOrder, defaultSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { cancelOrder, collection, collectOrder, defaultSpec, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
@@ -100,11 +100,11 @@ import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
 import { riftClose, riftDrone, riftGroan, type Drone } from './audio/rift';
 import { camera, isRetro, lens, makeSpace, render, setRetro } from './render/renderer';
-import { buildShip, disposeShip, heatShip, showUnidentified, UNIDENTIFIED, type ShipModel } from './render/shipModel';
+import { buildPainted, buildShip, disposeShip, heatShip, showUnidentified, UNIDENTIFIED, type Look, type ShipModel } from './render/shipModel';
 import { buildHangar } from './render/hangar';
 import { stationName } from './galaxy/stationNames';
 import { savePhoto, takePhoto } from './ui/photo';
-import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
+import { clearFlash, flash, setDashColour, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { countDevice, countNewCommander } from './net/stats';
 import { claimFirsts, firstsIn, loadFirsts } from './net/firsts';
@@ -1137,12 +1137,6 @@ let editionsLeft: Record<string, { limit: number; taken: number }> = {};
 let editionsAsked = 0;
 let yardMessage = '';
 
-/** How a hull in the berth looks: its colour, how hard it glows, and a trim colour for the fine lines. */
-interface Look {
-  colour: string;
-  glow: number;
-  trim: string | null;
-}
 const berthLooks: string[] = [];
 
 /** A hull in the berth in another finish: rebuilt from its file with the look changed. */
@@ -1152,12 +1146,7 @@ function recolourShowroom(i: number, look: Look) {
   if ((berthLooks[i] ?? `${base.style.lineColor}|${base.style.glow ?? 1}|`) === key) return;
   berthLooks[i] = key;
   const old = showroomModels[i];
-  const m = buildShip({ ...base, style: { ...base.style, lineColor: look.colour, glow: look.glow } });
-  // Two-tone: the fine lines (the canopy, the vents) in the trim colour.
-  if (look.trim && base.geometry.details && m.lines[1]) {
-    m.lines[1].material.color.set(look.trim).multiplyScalar(1.1 * look.glow);
-    m.lines[1].base.copy(m.lines[1].material.color);
-  }
+  const m = buildPainted(base, look);
   showroom.scene.remove(old.root);
   disposeShip(old);
   showroom.scene.add(m.root);
@@ -1167,6 +1156,12 @@ function recolourShowroom(i: number, look: Look) {
 const plainLook = (def: ShipDef): Look => ({ colour: def.style.lineColor, glow: def.style.glow ?? 1, trim: null });
 const paintLook = (def: ShipDef, p: { colour: string; glow?: GlowId; trim?: string | null }): Look => ({ colour: p.colour, glow: GLOWS[p.glow ?? 'standard'].glow * (def.style.glow ?? 1), trim: p.trim ?? null });
 
+/** Your own ship's look, for the kill cam, clips and other commanders; null in the maker's colours. */
+const myLook = (): Look | null => {
+  const c = commander;
+  return c?.paint ? paintLook(player.def, c.paint) : null;
+};
+
 /** Your hull in the berth, in its paint, and every other hull in its maker's own. */
 function showOwnShip() {
   const c = commander;
@@ -1174,10 +1169,17 @@ function showOwnShip() {
   showShip(ownIndex());
 }
 
-/** Fly the hull your commander owns. */
+/** Fly the hull your commander owns, with its paint on the dashboard and its name on the plate. */
 function boardShip() {
-  const def = shipById(hullOf(cmdr())) ?? shipById('cobra-mk3')!;
+  const c = cmdr();
+  const def = shipById(hullOf(c)) ?? shipById('cobra-mk3')!;
   if (player.def.id !== def.id) player.fly(def);
+  setDashColour(c.paint?.colour ?? null);
+  const plate = $('#dash-plate');
+  const ed = c.paint?.edition && editionById(c.paint.edition.id);
+  const words = [c.paint?.name, ed ? `${ed.name} ${editionNo(c.paint!.edition!.number)}` : c.paint ? def.name : ''].filter(Boolean);
+  plate.textContent = words.join(' · ');
+  plate.hidden = !words.length;
 }
 
 /** The way to take delivery: here at the yard that built it, the bill with your trade-in; elsewhere, where to go. */
@@ -1233,7 +1235,7 @@ function renderShipyard() {
     const where = at ? `${stationName(at).name}, ${at.name}` : 'a yard in another galaxy';
     orderCard = `<div class="yard-order" style="--hull:${o.colour}">
       <strong>Your ${escapeHtml(def?.name ?? o.ship)}${o.name ? ` “${escapeHtml(o.name)}”` : ''}</strong>
-      ${o.edition ? `<span class="yard-edition-no">${escapeHtml(editionById(o.edition.id)?.name ?? '')} · No. ${o.edition.number} of ${editionById(o.edition.id)?.limit ?? '?'}</span>` : o.gifted ? '<span class="yard-edition-no">A gift</span>' : ''}
+      ${o.edition ? `<span class="yard-edition-no">${escapeHtml(editionById(o.edition.id)?.name ?? '')} ${editionNo(o.edition.number)}${o.gifted ? ' · a gift' : ''}</span>` : o.gifted ? '<span class="yard-edition-no">A gift</span>' : ''}
       <span>${p.built ? `Built, and waiting for you at ${escapeHtml(where)}.` : `In production at ${escapeHtml(where)}: ${p.stage.toLowerCase()} · about ${p.hoursLeft} h to go`}</span>
       <div class="rec-meter"><span style="width:${(p.fraction * 100).toFixed(1)}%"></span></div>
       <span>${o.gifted ? 'Built for you by the yard, with its thanks: nothing to pay' : `Deposit ${o.deposit.toLocaleString()} Cr paid · ${(o.quoted - o.deposit).toLocaleString()} Cr on collection`}</span>
@@ -1245,6 +1247,7 @@ function renderShipyard() {
     const def = pick.def;
     const fixed = yardMode === 'edition' ? editionById(editionSel ?? '') : undefined;
     const gift = yardMode === 'gift';
+    const giftEdition = gift && c.gift?.edition ? editionById(c.gift.edition.id) : undefined;
     const total = fixed ? editionQuote(def, fixed) : gift ? 0 : quote(def, spec);
     const lines = priceLines(def, spec);
     const deposit = depositFor(total);
@@ -1268,8 +1271,8 @@ function renderShipyard() {
       : gift
         ? c.order
           ? '<p class="meta">One ship in production at a time: collect that one first.</p>'
-          : `<button type="button" class="primary yard-gift">Put her into production · a gift</button>
-            <p class="yard-note">The hull as it leaves the yard, in your colour, with your name on her. Upgrades are yours to earn. It's a gift: it can't be cancelled, and the yard won't buy the hull back.</p>`
+          : `<button type="button" class="primary yard-gift">Take her now · a gift</button>
+            <p class="yard-note">${giftEdition ? 'In the edition’s colours' : 'The hull as it leaves the yard, in your colour'}, with your name on her: built and waiting. The yard keeps your ${escapeHtml(player.def.name)} as part of the gift. Upgrades are yours to earn, and the yard won't buy her back.</p>`
         : def.concept
       ? c.order
         ? '<p class="meta">One ship in production at a time.</p>'
@@ -1289,14 +1292,24 @@ function renderShipyard() {
         </ul>
         ${nameField}
         <p class="yard-total"><span>The spec ${quote(def, spec).toLocaleString()} · numbered ${fixed.premium.toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>`
-      : gift
+      : gift && giftEdition
+        ? `<p class="yard-desc">${escapeHtml(giftEdition.blurb)}</p>
+          <ul class="yard-spec-list">
+            <li>${escapeHtml(nameOf(giftEdition.colour))}${giftEdition.trim ? `, the fine lines in ${escapeHtml(nameOf(giftEdition.trim))}` : ''}, ${GLOWS[giftEdition.glow].name.toLowerCase()}</li>
+            <li>${giftEdition.luxuries.map((l) => escapeHtml(LUXURIES.find((x) => x.id === l)?.name ?? l)).join(' · ')}</li>
+            <li>${editionNo(c.gift!.edition!.number)} beside its name</li>
+            <li>Pulse laser and the standard fit: the rest is yours to earn</li>
+          </ul>
+          ${nameField}
+          <p class="yard-total"><span>${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}</span><b>A gift</b></p>`
+        : gift
         ? `<p class="yard-label">Its colour <span>${escapeHtml(nameOf(spec.colour))} · the included colours</span></p>
           ${swatches('data-colour', spec.colour)}
           ${nameField}
           <p class="yard-total"><span>Hull, pulse laser, standard fit</span><b>A gift</b></p>`
         : '';
     el.innerHTML = `${msg}${orderCard}<button type="button" class="yard-back">‹ The yard</button>
-      <h3 class="yard-title" style="--hull:${spec.colour}">${fixed ? `${escapeHtml(fixed.name)}: ${escapeHtml(def.name)}` : gift ? `Your gift: a ${escapeHtml(def.name)}` : `Spec your ${escapeHtml(def.name)}`}</h3>
+      <h3 class="yard-title" style="--hull:${spec.colour}">${fixed ? `${escapeHtml(fixed.name)}: ${escapeHtml(def.name)}` : giftEdition ? `Your gift: ${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}` : gift ? `Your gift: a ${escapeHtml(def.name)}` : `Spec your ${escapeHtml(def.name)}`}</h3>
       ${body ? `${body}${action}` : `<p class="yard-label">Its colour <span>${chosenColour ? `${chosenColour.name} · ${cost(chosenColour.price)}` : 'The maker’s own'}</span></p>
       ${swatches('data-colour', spec.colour)}
       ${chosenColour ? `<p class="yard-note">${escapeHtml(chosenColour.line)}</p>` : ''}
@@ -1393,7 +1406,7 @@ function renderShipyard() {
             yardMessage = r.message;
             void releaseEdition(fixed.id);
           } else {
-            yardMessage = `Reserved: ${fixed.name} No. ${n.number} of ${n.limit}${r.order.name ? `, “${r.order.name}”` : ''}. She goes into production at ${stationName(here).name}.`;
+            yardMessage = `Reserved: ${fixed.name} ${editionNo(n.number)}${r.order.name ? `, “${r.order.name}”` : ''}. She goes into production at ${stationName(here).name}.`;
             spec = null;
             yardMode = 'spec';
             editionsAsked = 0;
@@ -1406,10 +1419,19 @@ function renderShipyard() {
     const giftGo = el.querySelector<HTMLButtonElement>('.yard-gift');
     if (giftGo && gift)
       giftGo.onclick = () => {
-        const r = placeOrder(c, def, spec!, { galaxy: here.galaxy, system: here.index }, Date.now(), { gift: true });
+        const at = { galaxy: here.galaxy, system: here.index };
+        const r = placeOrder(c, def, spec!, at, Date.now(), { gift: true });
+        // Built and waiting: you fly out in her now.
+        const got = r.ok ? collectOrder(c, player.def, def, at, cargoTonnes(c), Date.now()) : null;
         if (!r.ok) yardMessage = r.message;
+        else if (got && !got.ok) yardMessage = `Built and waiting for you here: ${got.message}.`;
         else {
-          yardMessage = `Your gift goes into production at ${stationName(here).name}: a ${def.name}${r.order.name ? ` “${r.order.name}”` : ''}.`;
+          boardShip();
+          const ed = c.paint?.edition && editionById(c.paint.edition.id);
+          yardMessage = `She's yours: your ${def.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}${ed ? `, ${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''}, in the berth and ready to fly. With the yard's thanks.`;
+          yardPick = def.id;
+        }
+        if (r.ok) {
           spec = null;
           yardMode = 'spec';
           saveCommander(c);
@@ -1422,7 +1444,7 @@ function renderShipyard() {
       <ul class="yard">${yard
         .map(({ def }) => {
           const st = def.stats;
-          const tag = def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : def.id === hullOf(c) ? `<em>Your ship${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</em>` : '';
+          const tag = def.id === hullOf(c) ? `<em>Your ship${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</em>` : def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : '';
           return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${def.style.lineColor}">
             <strong>${escapeHtml(def.name)}</strong> ${tag}
             <span>${[def.manufacturer, def.role].filter(Boolean).map((x) => escapeHtml(x!)).join(' · ')}</span>
@@ -1442,7 +1464,7 @@ function renderShipyard() {
           </button></li>`;
         }).join('')}</ul>
       <p class="yard-desc">${escapeHtml(edition ? edition.blurb : pick.def.description)}</p>
-      ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.</span><button type="button" class="primary yard-open-gift">Spec your gift</button></div>` : ''}
+      ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span><button type="button" class="primary yard-open-gift">Spec your gift</button></div>` : ''}
       <button type="button" class="primary yard-spec">${edition ? `Choose its name and reserve one` : `Spec your ${escapeHtml(pick.def.name)}`}</button>
       <form class="yard-voucher"><label for="voucher">Have a gift voucher?</label><input id="voucher" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" /><button type="submit">Redeem</button></form>`;
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-yard]'))
@@ -1473,7 +1495,8 @@ function renderShipyard() {
       if (!d) return;
       yardMode = 'gift';
       editionSel = null;
-      spec = defaultSpec(d);
+      const e = c.gift!.edition && editionById(c.gift!.edition.id);
+      spec = e ? editionGiftSpec(e) : defaultSpec(d);
       renderShipyard();
     };
     el.querySelector<HTMLButtonElement>('.yard-open-gift')?.addEventListener('click', openGift);
@@ -1489,7 +1512,7 @@ function renderShipyard() {
       if ('error' in r) yardMessage = r.error;
       else if (!shipById(r.ship)) yardMessage = 'That voucher is for a ship this version of the game doesn’t know: reload and try again.';
       else {
-        c.gift = { ship: r.ship };
+        c.gift = { ship: r.ship, ...(r.edition && r.number ? { edition: { id: r.edition, number: r.number } } : {}) };
         saveCommander(c);
         sfx.beep();
         openGift();
@@ -6289,7 +6312,7 @@ function recordTrack() {
   const here = player.obj.position;
   const poses: Pose[] = [];
   if (state === 'flying') {
-    track.ship({ id: 1, def: player.def.id, role: 'you', label: `CMDR ${cmdr().name}` });
+    track.ship({ id: 1, def: player.def.id, role: 'you', label: `CMDR ${cmdr().name}`, ...(myLook() ? { look: myLook()! } : {}) });
     poses.push(poseOf(1, player.obj));
   }
   for (const npc of npcs) {
@@ -6564,7 +6587,8 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
     return;
   }
   const here = currentSystem();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken());
+  const look = myLook();
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken(), look ? { c: look.colour, g: look.glow, ...(look.trim ? { t: look.trim } : {}) } : undefined);
   const back = sharedSpace.takeCorrection();
   if (back) player.obj.position.copy(back);
   sharedSpace.update(dt, {
@@ -6579,8 +6603,8 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
   for (const r of sharedSpace.remotes.values()) {
     let m = remoteModels.get(r.id);
     if (!m) {
-      // Other commanders fly their ships in the ship's own colours; their callsign tag says who they are.
-      const model = buildShip(shipById(r.ship) ?? shipById('cobra-mk3')!);
+      // Other commanders fly their ships in their own paint, or the maker's colours; their callsign tag says who they are.
+      const model = buildPainted(shipById(r.ship) ?? shipById('cobra-mk3')!, r.paint ? { colour: r.paint.c, glow: r.paint.g ?? 1, trim: r.paint.t ?? null } : null);
       space.scene.add(model.root);
       m = { model, fireCooldown: 0, unidentified: false };
       remoteModels.set(r.id, m);
@@ -7544,6 +7568,19 @@ function frame(now?: number) {
 }
 
 // Handy for poking at the game from the browser console during development.
+// Dev only: /play/?demo=fdl starts you docked at Leesti in a Witch-fire Edition 001 of your own, to see it.
+if (import.meta.env.DEV && new URLSearchParams(location.search).get('demo') === 'fdl') {
+  const leesti = galaxy(0).find((s) => s.name === 'Leesti')!;
+  const e = EDITIONS[0];
+  const c = newCommander('modern');
+  c.name = 'Moxon';
+  c.location = { galaxy: 0, system: leesti.index };
+  c.ship = e.ship;
+  c.paint = { colour: e.colour, glow: e.glow, trim: e.trim, name: 'Moxon', luxuries: [...e.luxuries], edition: { id: e.id, number: 1 }, gifted: true };
+  saveCommander(c);
+  history.replaceState(null, '', location.pathname);
+}
+
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {

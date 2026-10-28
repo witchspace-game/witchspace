@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { shipById } from '../content/ships';
 import { newCommander } from './commander';
 import { EDITIONS } from '../content/editions';
-import { editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
+import { editionGiftSpec, editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
 
 const fdl = shipById('fer-de-lance')!;
 const cobra = shipById('cobra-mk3')!;
@@ -122,12 +122,25 @@ describe('editions and gifts', () => {
     expect(c.gift).toBeUndefined();
     expect(c.order).toMatchObject({ quoted: 0, deposit: 0, gifted: true });
     expect(cancelOrder(c, 0)).toBe(0);
-    collectOrder(c, cobra, fdl, yard, 0, PRODUCTION_HOURS * H);
+    // Ready on redeem, and the yard keeps the old Cobra: nothing paid either way.
+    expect(collection(c, cobra)).toEqual({ balance: 0, tradeIn: 0, due: 0 });
+    const before = c.credits;
+    expect(collectOrder(c, cobra, fdl, yard, 0, 0)).toEqual({ ok: true, paid: 0 });
+    expect(c.credits).toBe(before);
     expect(c.paint?.gifted).toBe(true);
     // Traded in, a gifted hull fetches nothing but its kit.
     c.equipment = [];
     c.lasers = {};
     c.order = { ...defaultSpec(fdl), quoted: 0, deposit: 0, placed: 0, ...yard };
     expect(collection(c, fdl)!.tradeIn).toBe(0);
+  });
+
+  it('dresses a gift with an edition number in that edition, with the plain fit-out', () => {
+    const c = newCommander('modern');
+    c.gift = { ship: 'fer-de-lance', edition: { id: witch.id, number: 1 } };
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), name: 'Moxon' }, yard, 0, { gift: true })).toMatchObject({ ok: true });
+    expect(c.order).toMatchObject({ ...editionGiftSpec(witch, 'Moxon'), quoted: 0, gifted: true, edition: { id: witch.id, number: 1 } });
+    expect(c.order!.laser).toBe('pulse');
+    expect(c.order!.upgrades).toEqual([]);
   });
 });

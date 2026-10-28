@@ -1,9 +1,12 @@
 // Gift vouchers for a ship (server/src/accounts.ts): make one, and see which
 // have been used. The code is shown once, when it's made; only its hash is kept.
 // The holder redeems it at any shipyard (signed in) and specs the hull in the
-// included colours, with their name on it: upgrades are theirs to earn.
+// included colours, with their name on it: upgrades are theirs to earn. With
+// --edition, the voucher holds the edition's next number (001 first) and the
+// gift wears that edition's look; the fit-out is still the plain one.
 //
 //   npx tsx tools/voucher.ts make fer-de-lance "Mark Moxon, with thanks"
+//   npx tsx tools/voucher.ts make fer-de-lance "Mark Moxon, with thanks" --edition witch-fire
 //   npx tsx tools/voucher.ts list
 //
 // Add --local to talk to `wrangler dev` instead of the live server. The admin
@@ -13,7 +16,10 @@ import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const args = process.argv.slice(2).filter((a) => a !== '--local');
+const argv = process.argv.slice(2);
+const editionAt = argv.indexOf('--edition');
+const edition = editionAt >= 0 ? argv[editionAt + 1] : undefined;
+const args = argv.filter((a, i) => a !== '--local' && (editionAt < 0 || (i !== editionAt && i !== editionAt + 1)));
 const local = process.argv.includes('--local');
 const API = local ? 'http://127.0.0.1:8787' : 'https://space.witchspace.org.uk';
 const ORIGIN = local ? 'http://localhost:5173' : 'https://witchspace.org.uk';
@@ -44,12 +50,14 @@ async function call(path: string, body?: unknown) {
 
 const [command, ship, note] = args;
 if (command === 'make' && ship) {
-  const r = await call('/admin/vouchers', { ship, note: note ?? '' });
-  console.log(`Voucher for a ${r.ship}: ${r.code}\nRedeem it at any shipyard in the game, signed in. It works once; this is the only time it's shown.`);
+  const r = await call('/admin/vouchers', { ship, note: note ?? '', ...(edition ? { edition } : {}) });
+  const held = r.edition ? ` (${r.edition} ${String(r.number).padStart(3, '0')}, held for whoever redeems it)` : '';
+  console.log(`Voucher for a ${r.ship}${held}: ${r.code}\nRedeem it at any shipyard in the game, signed in. It works once; this is the only time it's shown.`);
 } else if (command === 'list') {
-  const r = (await call('/admin/vouchers')) as { vouchers: { ship: string; note: string; created: number; used: number; redeemed: number | null }[] };
-  for (const v of r.vouchers) console.log(`${new Date(v.created).toISOString().slice(0, 10)}  ${v.ship.padEnd(14)} ${v.used ? `used ${new Date(v.redeemed!).toISOString().slice(0, 10)}` : 'unused'}  ${v.note}`);
+  const r = (await call('/admin/vouchers')) as { vouchers: { ship: string; note: string; created: number; used: number; redeemed: number | null; edition: string | null; number: number | null }[] };
+  for (const v of r.vouchers)
+    console.log(`${new Date(v.created).toISOString().slice(0, 10)}  ${v.ship.padEnd(14)} ${v.edition ? `${v.edition} ${String(v.number).padStart(3, '0')}  ` : ''}${v.used ? `used ${new Date(v.redeemed!).toISOString().slice(0, 10)}` : 'unused'}  ${v.note}`);
   if (!r.vouchers.length) console.log('No vouchers yet.');
 } else {
-  console.log('Usage: npx tsx tools/voucher.ts make <ship id> "<note>" | list   [--local]');
+  console.log('Usage: npx tsx tools/voucher.ts make <ship id> "<note>" [--edition <id>] | list   [--local]');
 }

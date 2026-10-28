@@ -5,7 +5,7 @@
 // See docs/design/servers-and-hosting.md.
 
 import { DurableObject } from 'cloudflare:workers';
-import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, LOCK_RANGE, MISSILE, RANKS, REWIND, SHIPS, type ClientMessage, type Commander, type ServerMessage, type Vec3 } from './protocol';
+import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, LOCK_RANGE, MISSILE, RANKS, REWIND, SHIPS, type ClientMessage, type Commander, type Paint, type ServerMessage, type Vec3 } from './protocol';
 import { nameRule } from './names';
 import { Accounts, type AccountsEnv } from './accounts';
 import { IdeasBoard, type IdeasEnv } from './ideas';
@@ -309,7 +309,8 @@ export class SystemRoom extends DurableObject<Env> {
       // A guest can't borrow a reserved name either.
       const guestName = cleanName(msg.name);
       const name = verified ? who!.callsign! : nameRule(guestName) ? 'Commander' : guestName;
-      a.commander = { id: crypto.randomUUID().slice(0, 8), name, rank, verified, ship, p: [0, 0, 0], q: [0, 0, 0, 1], s: 0, f: false };
+      const paint = cleanPaint(msg.paint);
+      a.commander = { id: crypto.randomUUID().slice(0, 8), name, rank, verified, ship, p: [0, 0, 0], q: [0, 0, 0, 1], s: 0, f: false, ...(paint ? { paint } : {}) };
       ws.serializeAttachment(a);
       const lasers = Array.isArray(msg.lasers) ? msg.lasers.filter((l): l is string => typeof l === 'string' && l in LASERS) : [];
       this.combat.set(a.commander.id, {
@@ -609,4 +610,16 @@ function rotate(v: Vec3, q: [number, number, number, number]): Vec3 {
   const iz = w * v[2] + x * v[1] - y * v[0];
   const iw = -x * v[0] - y * v[1] - z * v[2];
   return [ix * w + iw * -x + iy * -z - iz * -y, iy * w + iw * -y + iz * -x - ix * -z, iz * w + iw * -z + ix * -y - iy * -x];
+}
+
+/** A ship's paint, as sent: hex colours and a glow in range, or nothing. */
+function cleanPaint(p: unknown): Paint | undefined {
+  if (!p || typeof p !== 'object') return undefined;
+  const { c, g, t } = p as { c?: unknown; g?: unknown; t?: unknown };
+  const hex = (x: unknown) => (typeof x === 'string' && /^#[0-9a-f]{6}$/i.test(x) ? x : undefined);
+  const colour = hex(c);
+  if (!colour) return undefined;
+  const glow = typeof g === 'number' && g >= 1 && g <= 1.5 ? g : undefined;
+  const trim = hex(t);
+  return { c: colour, ...(glow ? { g: glow } : {}), ...(trim ? { t: trim } : {}) };
 }

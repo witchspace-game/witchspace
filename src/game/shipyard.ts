@@ -1,5 +1,5 @@
 import type { ShipDef } from '../content/types';
-import type { Edition } from '../content/editions';
+import { editionById, type Edition } from '../content/editions';
 import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
 import { PLAYER_LASERS } from './weapons';
 
@@ -113,6 +113,9 @@ export const editionSpec = (e: Edition, name = ''): Spec => ({
 
 export const editionQuote = (def: ShipDef, e: Edition) => quote(def, editionSpec(e)) + e.premium;
 
+/** An edition as a gift: its whole look, and the plain fit-out (the kit is earned, as with any gift). */
+export const editionGiftSpec = (e: Edition, name = ''): Spec => ({ ...editionSpec(e, name), laser: 'pulse', upgrades: [] });
+
 /** A gift is the hull as it leaves the yard: your choice of the included colours and a name, nothing that costs. */
 export const giftable = (def: ShipDef, spec: Spec) => spec.laser === 'pulse' && !spec.upgrades.length && priceLines(def, spec).finish === 0;
 
@@ -131,9 +134,11 @@ export function placeOrder(
 ): OrderResult {
   if (c.order) return { ok: false, message: 'You already have a ship in production' };
   if (!def.concept) return { ok: false, message: 'Hulls already flying are bought outright, when shipyards sell' };
-  if (extra.gift && (c.gift?.ship !== def.id || !giftable(def, spec))) return { ok: false, message: 'A gift is the hull with an included colour and its name' };
+  const giftEdition = extra.gift && c.gift?.edition ? editionById(c.gift.edition.id) : undefined;
+  if (extra.gift && (c.gift?.ship !== def.id || (!giftEdition && !giftable(def, spec)))) return { ok: false, message: 'A gift is the hull with an included colour and its name' };
   const e = extra.edition;
-  const s = e ? editionSpec(e.edition, spec.name) : spec;
+  const s = giftEdition ? editionGiftSpec(giftEdition, spec.name) : e ? editionSpec(e.edition, spec.name) : spec;
+  const number = giftEdition ? c.gift!.edition! : e ? { id: e.edition.id, number: e.number } : null;
   const quoted = extra.gift ? 0 : e ? editionQuote(def, e.edition) : quote(def, s);
   const deposit = depositFor(quoted);
   if (c.credits < deposit) return { ok: false, message: `The deposit is ${deposit.toLocaleString()} Cr` };
@@ -146,7 +151,7 @@ export function placeOrder(
     deposit,
     placed: now,
     ...at,
-    ...(e ? { edition: { id: e.edition.id, number: e.number } } : {}),
+    ...(number ? { edition: number } : {}),
     ...(extra.gift ? { gifted: true as const } : {}),
   };
   if (extra.gift) delete c.gift;
@@ -175,6 +180,8 @@ export const STAGES: { at: number; text: string }[] = [
 ];
 
 export function production(o: ShipOrder, now: number): { fraction: number; stage: string; built: boolean; hoursLeft: number } {
+  // A gift is waiting when you redeem it: the yard built it for you already (Mark).
+  if (o.gifted) return { fraction: 1, stage: 'Built', built: true, hoursLeft: 0 };
   const fraction = Math.min(1, Math.max(0, (now - o.placed) / (PRODUCTION_HOURS * 3600_000)));
   const stage = [...STAGES].reverse().find((s) => fraction >= s.at)!.text;
   return { fraction, stage, built: fraction >= 1, hoursLeft: Math.ceil((1 - fraction) * PRODUCTION_HOURS) };
@@ -200,7 +207,8 @@ export function collection(c: Commander, current: ShipDef): { balance: number; t
   const o = c.order;
   if (!o) return null;
   const balance = o.quoted - o.deposit;
-  const t = tradeIn(c, current);
+  // With a gift, the yard keeps your old ship as part of it: no windfall for a new pilot (Mark: not too much, too early).
+  const t = o.gifted ? 0 : tradeIn(c, current);
   return { balance, tradeIn: t, due: balance - t };
 }
 
