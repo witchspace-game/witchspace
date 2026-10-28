@@ -11,6 +11,11 @@ export interface ShipDef {
   name: string;
   manufacturer?: string;
   role: ShipRole;
+  /**
+   * A maker's concept: shown off on the site and in the showroom, coming soon,
+   * but not flying yet (docs/design/ships-and-classes.md, concepts).
+   */
+  concept?: true;
   /** False for a ship that never docks (a carrier, a yard hauler): it needn't fit the slot (src/content/slot.ts). */
   docks?: boolean;
   description: string;

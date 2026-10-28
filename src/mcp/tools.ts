@@ -359,7 +359,7 @@ export const TOOLS: Tool[] = [
     description: 'Every ship in the game: id, name, maker, role, key stats and a one-line description. Real ships are the best examples to learn the format from.',
     inputSchema: { type: 'object', properties: {} },
     run: (_args, data) =>
-      json(data.ships.map((s) => ({ id: s.id, name: s.name, manufacturer: s.manufacturer ?? null, role: s.role, maxSpeed: s.stats.maxSpeed, hull: s.stats.hull, shields: s.stats.shields, cargo: s.stats.cargo, price: s.stats.price, description: s.description }))),
+      json(data.ships.map((s) => ({ id: s.id, name: s.name, manufacturer: s.manufacturer ?? null, role: s.role, ...(s.concept ? { concept: 'a concept: shown off, not flying yet' } : {}), maxSpeed: s.stats.maxSpeed, hull: s.stats.hull, shields: s.stats.shields, cargo: s.stats.cargo, price: s.stats.price, description: s.description }))),
   },
   {
     name: 'get_ship',
