@@ -11,7 +11,7 @@ import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLAR
 import { currencyExamplesHtml } from './economy';
 import { companyPage, jobsPage, loadJobs } from './jobs';
 import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
-import { buildPage, editionPage, manualPage, shipPage, shipsIndex } from './ships';
+import { buildPage, editionPage, manualPage, papersPage, shipPage, shipsIndex } from './ships';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
 
 const root = resolve(import.meta.dirname, '..');
@@ -208,6 +208,8 @@ for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/manual/`, .
 for (const s of ships) {
   const eds = editionsFor(s);
   for (const e of eds) write({ path: `/ships/${s.id}/${e.id}/`, ...editionPage(s, e, eds.filter((o) => o !== e)), scripts: ['/src/site/edition.ts'], bodyClass: 'ships-page edition-body' });
+  // Her papers: one page for every number, which vercel.json serves at /ships/<ship>/<edition>/<no>/.
+  for (const e of eds) write({ path: `/ships/${s.id}/${e.id}/papers/`, ...papersPage(s, e), scripts: ['/src/site/papers.ts'], bodyClass: 'ships-page papers-body' });
 }
 // The configurator: spec any hull the yard sells, and order her for the yard.
 const yardNames = Object.fromEntries(ships.filter(ownable).map((s) => [s.id, s.name]));

@@ -493,3 +493,47 @@ export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) 
 </section>`,
   };
 }
+
+/**
+ * A numbered ship's papers: the maker's certificate of build, at /ships/<ship>/<edition>/<no>/ (vercel.json sends
+ * every number to this one page). Private to her owner: the facts come from the yard's office only with the token
+ * in her owner's link (#t=…), so nobody can walk the numbers and list who holds them (docs/design/edition-certificate.md).
+ * This is the frame; src/site/papers.ts fills it in.
+ */
+export function papersPage(s: ShipFile, e: EditionCard) {
+  const def = JSON.stringify({ id: s.id, name: s.name, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
+  const look = JSON.stringify({ colour: e.colour, glow: e.glowLevel, trim: e.trimColour, ...(e.lights ? { lights: true } : {}) });
+  const maker = s.manufacturer && s.manufacturer !== 'None' ? s.manufacturer : 'The yard';
+  const paper = JSON.stringify({ ship: s.id, edition: e.id, name: e.name, limit: e.limit, maker }).replace(/</g, '\\u003c');
+  return {
+    card: { ship: s.id, kicker: `${maker} · Certificate of build`, title: e.name, sub: `One of ${e.limit}, numbered, and signed over by the maker.`, paint: { colour: e.colour, glow: e.glowLevel, trim: e.trimColour, ...(e.lights ? { lights: true } : {}) } },
+    schema: [],
+    title: `Certificate of build · ${e.name} · Witchspace`,
+    description: `${maker}’s certificate of build for a ${s.name} ${e.name}, one of ${e.limit}.`,
+    head: '    <meta name="robots" content="noindex" />\n',
+    content: `<section class="section papers-page" style="--edition:${esc(e.colour)};--trim:${esc(e.trimColour ?? e.colour)}">
+  <article class="papers" aria-labelledby="papers-edition">
+    <div class="ship-view papers-view" data-look='${esc(look)}'>
+      ${shipSvg(s, 'ship-svg fallback')}
+      <canvas class="ship-canvas" aria-label="The ${esc(e.name)}, turning: drag to rotate"></canvas>
+    </div>
+    <header class="papers-head">
+      <p class="papers-maker">${esc(maker)}</p>
+      <p class="papers-kind">Certificate of build</p>
+      <h1 id="papers-edition">${esc(e.name)}</h1>
+      <p class="papers-no"><b id="papers-no">No. ···</b> <span>of ${e.limit}</span></p>
+    </header>
+    <p class="papers-state" id="papers-state">Reading her papers…</p>
+    <dl class="papers-rows" id="papers-rows" hidden></dl>
+    <footer class="papers-foot" id="papers-foot" hidden>
+      <p class="papers-one">One of ${e.limit}. The number is painted beside her name, and no other ship will carry it.</p>
+      <p class="papers-sign">Signed for the yard: <b>${esc(maker)}</b><span id="papers-yard"></span></p>
+    </footer>
+  </article>
+  <p class="connect-buttons papers-actions" id="papers-actions" hidden><button type="button" class="button primary" id="papers-save">Save as image</button> <button type="button" class="button ghost" id="papers-share" data-share data-share-title="${esc(e.name)}: her certificate of build">Share</button></p>
+  <p class="papers-small">Witchspace is a free, open-source tribute to Elite (1984), not affiliated with Frontier. This certificate is for a ship in the game. <a href="/ships/${esc(s.id)}/${esc(e.id)}/">The ${esc(e.name)}</a></p>
+  <script type="application/json" id="ship-def">${def}</script>
+  <script type="application/json" id="papers-def">${paper}</script>
+</section>`,
+  };
+}

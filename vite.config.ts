@@ -22,6 +22,19 @@ for (const dir of PAGE_DIRS) findPages(dir, input);
 
 export default defineConfig({
   build: { rollupOptions: { input } },
+  // A numbered ship's papers, /ships/<ship>/<edition>/<no>/, are one page per edition: as vercel.json serves them.
+  plugins: [
+    {
+      name: 'papers',
+      configureServer(server) {
+        server.middlewares.use((req, _res, next) => {
+          const m = /^\/ships\/([\w-]+)\/([\w-]+)\/\d{3}\/?(\?.*)?$/.exec(req.url ?? '');
+          if (m) req.url = `/ships/${m[1]}/${m[2]}/papers/index.html`;
+          next();
+        });
+      },
+    },
+  ],
   // Helper agents work in copies of the repo under .claude/worktrees: don't run their tests twice.
   test: { exclude: ['**/node_modules/**', '**/.claude/**'] },
 });

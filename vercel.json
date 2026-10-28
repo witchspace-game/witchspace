@@ -55,6 +55,14 @@
   ],
   "rewrites": [
     {
+      "source": "/ships/:ship/:edition/:no(\\d{3})",
+      "destination": "/ships/:ship/:edition/papers/index.html"
+    },
+    {
+      "source": "/ships/:ship/:edition/:no(\\d{3})/",
+      "destination": "/ships/:ship/:edition/papers/index.html"
+    },
+    {
       "source": "/clip/:id",
       "has": [
         {

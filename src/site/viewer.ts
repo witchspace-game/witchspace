@@ -15,6 +15,8 @@ import { setLineResolution } from '../render/wire';
 export interface Viewer {
   /** Show this ship instead (a new file, an edit), in its maker's colours or a paint of your own (the configurator). */
   show(def: ShipDef, look?: Look | null): void;
+  /** The ship as she is now, drawn afresh at this size, for a picture of her (a certificate saved as an image). */
+  snapshot(width: number, height: number): HTMLCanvasElement;
 }
 
 export function viewer(canvas: HTMLCanvasElement): Viewer {
@@ -62,6 +64,14 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
   let visible = true;
   new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
   let last = performance.now();
+  const draw = () => {
+    if (!model) return;
+    model.root.rotation.set(spin.x, spin.y, 0);
+    const dist = (model.radius * 1.2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1, camera.aspect);
+    camera.position.set(0, 0, dist);
+    camera.lookAt(0, 0, 0);
+    composer.render();
+  };
   const frame = (now: number) => {
     requestAnimationFrame(frame);
     const dt = Math.min(0.1, (now - last) / 1000);
@@ -69,11 +79,7 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
     if (!model || !visible || document.hidden) return;
     spin.idle += dt;
     if (!spin.dragging && spin.idle > 1.5 && !reducedMotion) spin.y += dt * 0.25;
-    model.root.rotation.set(spin.x, spin.y, 0);
-    const dist = (model.radius * 1.2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1, camera.aspect);
-    camera.position.set(0, 0, dist);
-    camera.lookAt(0, 0, 0);
-    composer.render();
+    draw();
   };
   requestAnimationFrame(frame);
 
@@ -86,6 +92,25 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
       }
       model = next;
       scene.add(model.root);
+    },
+    snapshot(width, height) {
+      // Drawn at full size, then copied out at once: the drawing buffer is cleared once the browser shows a frame.
+      const ratio = renderer.getPixelRatio();
+      renderer.setPixelRatio(1);
+      renderer.setSize(width, height, false);
+      composer.setSize(width, height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      setLineResolution(new THREE.Vector2(width, height));
+      draw();
+      const out = document.createElement('canvas');
+      out.width = width;
+      out.height = height;
+      out.getContext('2d')!.drawImage(canvas, 0, 0);
+      renderer.setPixelRatio(ratio);
+      resize();
+      draw();
+      return out;
     },
   };
 }
