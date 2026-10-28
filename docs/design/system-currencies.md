@@ -310,6 +310,13 @@ The ledger keeps the double-entry, append-only and invariant rules already in th
 - **The server checks it**: company coins are never worth more than a credit; reserve, Bitcoin and basket money get looser bounds (Bitcoin moves); only a liquidity position's gain counts towards the daily cap, not the stake coming back.
 - **Not yet:** prices in local money, minting from production, order books for currencies, the Compact.
 
+## 9d. Single-player finished *(Mark: "do the three small ones", 28 October 2026)*
+
+- **Prices in local money.** The exchange shows each price and total in the station's money too, at the pool's rate. Credits are still what's paid.
+- **Minting and burning from production.** World events move a world's output (a boom +25%, a war −30%). A floating money weakens while output is down and strengthens in a boom (by 1 ÷ √output); pegged money holds and its issuer mints or burns instead. The supply in circulation (productivity × output × rate) and the day's minting or burning are published on the Money tab.
+- **The server counts goods by the tonne**, not only precious goods, so a sale of goods never had is flagged.
+- **Not yet (the shared galaxy):** order books for currencies, fees and fines burned in local money, supply shocks caused by players, the Compact.
+
 ## 10. Building it in stages
 
 | Stage | What |

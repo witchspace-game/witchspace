@@ -18,6 +18,8 @@ interface EventKind {
   wanted: string;
   /** Stock shift by good, as a share of the usual level; `imports` means every good the world imports. */
   effects: Record<string, number>;
+  /** What it does to the world's output, at its height: −0.3 is a cut of 30%. Its money follows (economy/currencies.ts). */
+  output: number;
   /** How likely this kind is at a world, relative to the others. */
   weight: (s: StarSystem) => number;
 }
@@ -31,6 +33,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Famine grips ${s}: food stores run dry`,
     wanted: 'Food, Water',
     effects: { food: -0.7, water: -0.2 },
+    output: -0.15,
     weight: () => 1,
   },
   drought: {
@@ -38,6 +41,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Drought on ${s}: water rationing begins`,
     wanted: 'Water, Food',
     effects: { water: -0.7, food: -0.3, hydrogen: -0.2 },
+    output: -0.12,
     weight: () => 0.8,
   },
   plague: {
@@ -45,6 +49,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Plague outbreak on ${s}: medicine urgently needed`,
     wanted: 'Medicine',
     effects: { medicine: -0.8, luxuries: 0.3, liquor: 0.3 },
+    output: -0.2,
     weight: (s) => 0.5 + (15 - s.techLevel) / 15,
   },
   boom: {
@@ -52,6 +57,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Boom times on ${s}: buyers out in force`,
     wanted: 'Luxuries, Liquor/Wines, Computers',
     effects: { luxuries: -0.5, liquor: -0.4, computers: -0.3, furs: -0.3 },
+    output: 0.25,
     weight: (s) => (s.economy === 0 || s.economy === 5 ? 1.4 : 0.6),
   },
   strike: {
@@ -59,6 +65,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Miners down tools on ${s}: ore shipments halted`,
     wanted: 'Minerals, Gold, Platinum',
     effects: { minerals: -0.8, gold: -0.5, platinum: -0.5 },
+    output: -0.2,
     weight: (s) => (INDUSTRIAL(s) ? 1.2 : 0.4),
   },
   war: {
@@ -66,6 +73,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Civil war on ${s}: arms and medicine in demand`,
     wanted: 'Firearms, Medicine, Food',
     effects: { firearms: -0.8, medicine: -0.6, food: -0.3, machinery: -0.3 },
+    output: -0.3,
     weight: (s) => (LAWLESS(s) ? 1.2 : 0.15),
   },
   blockade: {
@@ -73,6 +81,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Pirates blockade ${s}: imports dry up`,
     wanted: 'Anything it imports',
     effects: { imports: -0.5 },
+    output: -0.25,
     weight: (s) => (s.government <= 1 ? 0.9 : 0.25),
   },
   incursion: {
@@ -80,6 +89,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Thargoids sighted near ${s}: traffic flees`,
     wanted: 'Alloys, Firearms, Medicine',
     effects: { alloys: -0.6, firearms: -0.6, medicine: -0.4, imports: -0.3 },
+    output: -0.3,
     weight: () => 0.15,
   },
   crackdown: {
@@ -87,6 +97,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Police crackdown on ${s}: contraband scarce`,
     wanted: 'Contraband, at a risk',
     effects: { narcotics: -0.8, slaves: -0.7, firearms: -0.4 },
+    output: -0.05,
     weight: (s) => (s.government >= 1 && s.government <= 4 ? 0.8 : 0),
   },
   // Only ever caused (a company's case opened, or fallen), never by chance.
@@ -95,6 +106,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `${s} station in lockdown: "containment breach", docking suspended`,
     wanted: 'Nothing: the station is closed',
     effects: { imports: -0.4, medicine: -0.4 },
+    output: -0.2,
     weight: () => 0,
   },
   bloom: {
@@ -102,6 +114,7 @@ export const EVENT_KINDS: Record<EventType, EventKind> = {
     headline: (s) => `Strange bloom spreads across ${s}: crops overrun, scientists baffled`,
     wanted: 'Food, Water',
     effects: { food: -0.6, water: -0.3, textiles: -0.3 },
+    output: -0.15,
     weight: () => 0,
   },
 };
@@ -157,6 +170,16 @@ export function eventsAt(s: StarSystem, from: number, to: number): WorldEvent[] 
 /** The event happening at a system at time `t`, if any. */
 export function activeEvent(s: StarSystem, t: number): WorldEvent | null {
   return eventsAt(s, t, t).find((e) => e.start <= t && t <= e.end) ?? null;
+}
+
+/**
+ * The world's output at `t`, against its usual: 1 normally, lower while a
+ * famine, strike, war or blockade cuts it, higher in a boom.
+ */
+export function outputAt(s: StarSystem, t: number): number {
+  let out = 1;
+  for (const e of eventsAt(s, t, t)) out += EVENT_KINDS[e.type].output * strength(e, t);
+  return Math.max(0.4, out);
 }
 
 /** How strongly an event is felt at time `t`: building up, in full, then easing. */

@@ -80,9 +80,9 @@ import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rig
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
-import { accountSpec, claimEdition, editionCounts, forgetAccountSpec, heldEditions, redeemVoucher, releaseEdition, signedOver } from './net/shipyard';
+import { accountSpec, editionCounts, forgetAccountSpec, heldEditions, redeemVoucher, signedOver } from './net/shipyard';
 import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } from './game/spec';
-import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, walletHome, walletKey } from './economy/currencies';
+import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, mintedToday, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, supplyOf, walletHome, walletKey } from './economy/currencies';
 import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
 import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
@@ -120,7 +120,7 @@ import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type S
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
-import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsDelay, newsOf, setCausedEvents } from './economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsDelay, newsOf, outputAt, setCausedEvents } from './economy/events';
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
@@ -1253,6 +1253,8 @@ let yardMode: 'spec' | 'edition' | 'gift' | 'repaint' = 'spec';
 let editionSel: string | null = null;
 let editionsLeft: Record<string, { limit: number; taken: number }> = {};
 let editionsAsked = 0;
+/** Special editions are by invitation (Mark): signed over by the maker, never reserved at the counter. */
+const INVITATION = '<p class="yard-note yard-invite"><b>If you have to ask, you can’t afford one.</b> Special editions are by invitation: for now, the maker signs them over to the people who build Witchspace.</p>';
 let yardMessage = '';
 /** A ship specced on the site, waiting for you at the next shipyard: the newer of this browser's and your account's. */
 let siteSpec: WaitingSpec | null = null;
@@ -1472,12 +1474,7 @@ function renderShipyard() {
       ? `<button type="button" class="primary yard-repaint" ${c.credits < repaintCost ? 'disabled' : ''}>Repaint her · ${repaintCost.toLocaleString()} Cr</button>
         <p class="yard-note">Done while you wait. Her name${c.paint?.edition ? ', her number' : ''} and what's aboard stay as they are.</p>`
       : fixed
-      ? c.order
-        ? '<p class="meta">One ship in production at a time.</p>'
-        : !signedIn()
-          ? '<p class="yard-note">Numbered editions are held for your account: sign in (from the menu) to reserve yours.</p>'
-          : `<button type="button" class="primary yard-reserve" ${c.credits < deposit ? 'disabled' : ''}>Reserve yours · deposit ${deposit.toLocaleString()} Cr</button>
-            <p class="yard-note">Your number comes from the yard's office, in order: ${editionsLeft[fixed.id] ? `${fixed.limit - editionsLeft[fixed.id].taken} of ${fixed.limit} left` : `${fixed.limit} in all`}. Each one is finished by hand: about ${Math.round(fixed.finishHours / 24)} days from the line to ready. A tenth now, refundable until she's ready (your number goes back if you cancel).</p>`
+      ? INVITATION
       : gift
         ? c.order
           ? '<p class="meta">One ship in production at a time: collect that one first.</p>'
@@ -1616,38 +1613,6 @@ function renderShipyard() {
         }
         renderShipyard();
       };
-    const reserve = el.querySelector<HTMLButtonElement>('.yard-reserve');
-    if (reserve && fixed)
-      reserve.onclick = async () => {
-        if (!reserve.dataset.armed) {
-          reserve.dataset.armed = '1';
-          reserve.textContent = `Pay ${deposit.toLocaleString()} Cr and take a number? Press again`;
-          return;
-        }
-        reserve.disabled = true;
-        if (c.tampered) {
-          yardMessage = 'The yard’s office won’t take a number from a commander whose papers have been altered.';
-          renderShipyard();
-          return;
-        }
-        const n = await claimEdition(fixed.id);
-        if ('error' in n) yardMessage = n.error;
-        else {
-          const r = placeOrder(c, def, spec!, { galaxy: here.galaxy, system: here.index }, Date.now(), { edition: { edition: fixed, number: n.number } });
-          if (!r.ok) {
-            yardMessage = r.message;
-            void releaseEdition(fixed.id);
-          } else {
-            yardMessage = `Reserved: ${fixed.name} ${editionNo(n.number)}${r.order.name ? `, “${r.order.name}”` : ''}. She's the next off the line, finished by hand at ${stationName(here).name}.`;
-            spec = null;
-            yardMode = 'spec';
-            editionsAsked = 0;
-            saveCommander(c);
-            sfx.beep();
-          }
-        }
-        renderShipyard();
-      };
     const paintGo = el.querySelector<HTMLButtonElement>('.yard-repaint');
     if (paintGo && repainting)
       paintGo.onclick = () => {
@@ -1708,12 +1673,12 @@ function renderShipyard() {
         .join('')}${EDITIONS.map((e) => {
           const d = shipById(e.ship);
           if (!d) return '';
-          const left = editionsLeft[e.id] ? e.limit - editionsLeft[e.id].taken : null;
+          const taken = editionsLeft[e.id]?.taken ?? 0;
           return `<li><button type="button" data-edition="${e.id}" aria-pressed="${editionSel === e.id}" style="--hull:${e.colour}">
             <strong>${escapeHtml(e.name)}</strong> <em class="yard-concept">${escapeHtml(d.name)} · numbered</em>
-            <span>${left === null ? `${e.limit} will be built` : left > 0 ? `${left} of ${e.limit} left` : `All ${e.limit} spoken for`}</span>
+            <span>${taken ? `${taken} of ${e.limit} signed over` : `${e.limit} will be built`} · for contributors</span>
             <span>${escapeHtml(nameOf(e.colour))}${e.trim ? ` · ${escapeHtml(nameOf(e.trim))} trim` : ''} · ${GLOWS[e.glow].name}</span>
-            <b>${editionQuote(d, e).toLocaleString()} Cr</b>
+            <b>By invitation</b>
           </button></li>`;
         }).join('')}</ul>
       <p class="yard-desc">${escapeHtml(edition ? edition.blurb : pick.def.description)}</p>
@@ -1721,7 +1686,7 @@ function renderShipyard() {
       ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span>${giftWaiting ? `<span>Waiting for you at the maker’s own yard: ${escapeHtml(stationName(giftWaiting).name)}, ${escapeHtml(giftWaiting.name)}${giftWaiting.galaxy === here.galaxy ? `, ${jumpsBetween(here, giftWaiting, 12)} jumps from here` : ''}.</span>${giftWaiting.galaxy === here.galaxy ? `<button type="button" class="primary yard-gift-course">${c.target === giftWaiting.index ? 'On course' : 'Set course'}</button>` : ''}` : '<button type="button" class="primary yard-open-gift">Spec your gift</button>'}</div>` : ''}
       ${pick.def.id === hullOf(c) && !edition ? `<button type="button" class="yard-manual yard-repaint-open">Repaint your ${escapeHtml(pick.def.name)}</button>` : ''}
       <button type="button" class="yard-manual">The ${escapeHtml(edition ? (shipById(edition.ship)?.name ?? '') : pick.def.name)} owner's manual</button>
-      <button type="button" class="primary yard-spec">${edition ? `Choose its name and reserve one` : `Spec your ${escapeHtml(pick.def.name)}`}</button>
+      ${edition ? INVITATION : `<button type="button" class="primary yard-spec">Spec your ${escapeHtml(pick.def.name)}</button>`}
       <form class="yard-voucher"><label for="voucher">Have a gift voucher?</label><input id="voucher" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" /><button type="submit">Redeem</button></form>`;
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-yard]'))
       b.onclick = () => {
@@ -1743,7 +1708,8 @@ function renderShipyard() {
       renderShipyard();
     });
     el.querySelector<HTMLButtonElement>('.yard-manual:not(.yard-repaint-open)')!.onclick = () => openManual(edition ? shipById(edition.ship)! : pick.def);
-    el.querySelector<HTMLButtonElement>('.yard-spec')!.onclick = () => {
+    const specOpen = el.querySelector<HTMLButtonElement>('.yard-spec');
+    if (specOpen) specOpen.onclick = () => {
       if (edition) {
         yardMode = 'edition';
         spec = editionSpec(edition);
@@ -1852,12 +1818,7 @@ function renderShipyard() {
         cancel.textContent = 'Cancel the build? Press again';
         return;
       }
-      const held = c.order?.edition;
       const back = cancelOrder(c, Date.now());
-      if (back && held) {
-        void releaseEdition(held.id);
-        editionsAsked = 0;
-      }
       yardMessage = back ? `Cancelled. ${back.toLocaleString()} Cr refunded.` : '';
       saveCommander(c);
       renderShipyard();
@@ -1950,6 +1911,24 @@ function renderMoney() {
     const trouble = cur.policy === 'feudal' ? crisis(here, now, 0.15) : cur.policy === 'printing' ? crisis(here, now, 0.12) : 0;
     const left = officialLeft(c, here, dockedAt);
     const have = walletOf(c)[walletKey(here)] ?? 0;
+    const supply = supplyOf(here, now, btc);
+    const minted = mintedToday(here, now, btc);
+    const big = (n: number) => (n >= 1e9 ? `${fmtN(n / 1e9, 1)}bn` : n >= 1e6 ? `${fmtN(n / 1e6, 1)}m` : fmtN(n, 0));
+    const output = outputAt(here, now);
+    const shock = activeEvent(here, now);
+    const floats = cur.policy === 'inflation' || cur.policy === 'printing' || cur.policy === 'scarce';
+    const outputLine =
+      Math.abs(output - 1) < 0.02
+        ? ''
+        : `<p class="money-line ${output < 1 ? 'short' : ''}">${shock ? `${escapeHtml(EVENT_KINDS[shock.type].name)}: o` : 'O'}utput here is ${output < 1 ? 'down' : 'up'} ${Math.round(Math.abs(output - 1) * 100)}%. ${
+            floats
+              ? output < 1
+                ? `The same ${cur.ticker} chases fewer goods, so each buys less until it recovers.`
+                : `More goods for the same ${cur.ticker}: each buys more while it lasts.`
+              : cur.stable
+                ? `The issuer ${output < 1 ? 'burns' : 'mints'} ${cur.ticker} to hold the peg.`
+                : 'The state holds its rate regardless.'
+          }</p>`;
     el.innerHTML = `${msg}
       <h3 class="money-title">${escapeHtml(cur.name)} <span>${cur.ticker}</span></h3>
       <p class="money-policy"><b>${escapeHtml(pol.name)}.</b> ${escapeHtml(pol.line)}</p>
@@ -1961,7 +1940,10 @@ function renderMoney() {
         <div><dt>Fair rate</dt><dd>${fmtN(fair, 3)} ${cur.ticker}</dd></div>
         <div><dt>This week</dt><dd class="${change < -0.05 ? 'down' : change > 0.05 ? 'up' : ''}">${Math.abs(change) < 0.05 ? 'Steady against the credit' : `${change > 0 ? '+' : ''}${change.toFixed(1)}% against the credit`}</dd></div>
         <div><dt>The pool</dt><dd>${fmtN(pool.local, 0)} ${cur.ticker} · ${fmtN(pool.credits, 0)} Cr</dd></div>
+        <div><dt>In circulation</dt><dd>${big(supply)} ${cur.ticker}</dd></div>
+        <div><dt>Today</dt><dd>${Math.abs(minted) < supply * 0.0005 ? 'Nothing minted or burned' : `${big(Math.abs(minted))} ${minted > 0 ? 'minted' : 'burned'}`}</dd></div>
       </dl>
+      ${outputLine}
       <div class="money-form">
         <div class="yard-lasers money-sides"><button type="button" data-side="buy" aria-pressed="${moneySide === 'buy'}">Buy ${cur.ticker}</button><button type="button" data-side="sell" aria-pressed="${moneySide === 'sell'}">Sell ${cur.ticker}</button></div>
         <label class="money-amount"><span>${moneySide === 'buy' ? 'Credits to change' : `${cur.ticker} to sell (you have ${fmtN(have)})`}</span><input id="money-n" type="number" min="0" step="any" inputmode="decimal" /></label>
@@ -2146,6 +2128,15 @@ function renderNews() {
 // mode keep the plain price list.
 const exchange = mountExchange($('#exchange'), {
   context: tradeContext,
+  localMoney(sys) {
+    const cur = currencyOf(sys);
+    if (!cur) return null;
+    const here = currentSystem();
+    const now = Date.now();
+    // Here, the pool's rate (what changing would give); another market on screen, its fair rate.
+    const rate = sys.galaxy === here.galaxy && sys.index === here.index ? poolRate(poolHere(cmdr(), sys, now, btcNow())) : fairRate(sys, now, btcNow());
+    return { ticker: cur.ticker, rate };
+  },
   setCourse(dest) {
     cmdr().target = dest.index;
     saveCommander(cmdr());

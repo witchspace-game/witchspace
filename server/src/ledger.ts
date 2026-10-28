@@ -1,9 +1,10 @@
 // Checking a commander's ledger (src/game/ledger.ts) against the universe, each
 // time their cloud save arrives. Everything in Witchspace comes from seeds, so
 // the server can work out again what any good could have fetched at any station
-// at any minute, and it keeps its own running account of the precious goods
-// (gem-stones, gold, platinum) each commander has had. A sale that couldn't have
-// happened, precious goods sold that were never had, or money from nowhere at an
+// at any minute, and it keeps its own running account of the goods each
+// commander has had: precious goods (gem-stones, gold, platinum) and goods by the
+// tonne alike. A sale that couldn't have happened, goods sold that were never
+// had, or money from nowhere at an
 // impossible rate, flags the account. Flags don't stop anyone playing; they
 // close the numbered editions until a maintainer looks (tools/editions.ts).
 
@@ -18,6 +19,8 @@ export interface Anchor {
   h: string;
   /** Precious goods had (grams or kilograms), by good. */
   precious: Record<string, number>;
+  /** Every other good had, in its own unit. Missing on anchors from before it was counted: started from the next save. */
+  goods?: Record<string, number>;
   /** Sats had. */
   sats: number;
   /** System currencies had, by issuing system. */
@@ -42,10 +45,10 @@ const SLACK = 1.02;
 type Held = { orders?: { id: string; side: string; qty: number }[]; storage?: Record<string, number> };
 export type Save = { credits?: number; cargo?: Record<string, number>; sats?: number; wallet?: Record<string, number>; ledger?: Ledger; markets?: object };
 
-/** Precious goods anywhere they could be: the hold, station storage and open sell orders. */
-function preciousHeld(save: Save): Record<string, number> {
+/** Goods anywhere they could be: the hold, station storage and open sell orders. Precious goods, or the rest. */
+function held(save: Save, precious: boolean): Record<string, number> {
   const out: Record<string, number> = {};
-  const add = (id: string, q: number) => PRECIOUS.has(id) && q > 0 && (out[id] = (out[id] ?? 0) + q);
+  const add = (id: string, q: number) => PRECIOUS.has(id) === precious && q > 0 && (out[id] = (out[id] ?? 0) + q);
   for (const [id, q] of Object.entries(save.cargo ?? {})) add(id, q);
   for (const m of Object.values((save.markets ?? {}) as Record<string, Held>)) {
     for (const [id, q] of Object.entries(m.storage ?? {})) add(id, q);
@@ -53,18 +56,19 @@ function preciousHeld(save: Save): Record<string, number> {
   }
   return out;
 }
+const preciousHeld = (save: Save) => held(save, true);
 
 /** The first time the server sees a ledger: what the commander has then is taken as theirs. */
 export function firstAnchor(save: Save): Anchor {
   const l = save.ledger;
   const last = l?.entries.length ? l.entries[l.entries.length - 1].h : (l?.head ?? 'start');
-  return { h: last, precious: preciousHeld(save), sats: save.sats ?? 0, fx: { ...(save.wallet ?? {}) }, other: [], flags: [] };
+  return { h: last, precious: preciousHeld(save), goods: held(save, false), sats: save.sats ?? 0, fx: { ...(save.wallet ?? {}) }, other: [], flags: [] };
 }
 
 /** Check what's new in the ledger since the anchor. Returns the anchor moved on, with any new flags. */
 export function verify(anchor: Anchor, save: Save): Anchor {
   const l = save.ledger;
-  const out: Anchor = { ...anchor, precious: { ...anchor.precious }, fx: { ...(anchor.fx ?? {}) }, lpIn: { ...(anchor.lpIn ?? {}) }, other: [...anchor.other], flags: [...anchor.flags] };
+  const out: Anchor = { ...anchor, precious: { ...anchor.precious }, goods: anchor.goods && { ...anchor.goods }, fx: { ...(anchor.fx ?? {}) }, lpIn: { ...(anchor.lpIn ?? {}) }, other: [...anchor.other], flags: [...anchor.flags] };
   const flag = (why: string) => {
     if (!out.flags.includes(why)) out.flags = [...out.flags, why].slice(-12);
   };
@@ -82,6 +86,8 @@ export function verify(anchor: Anchor, save: Save): Anchor {
     check(e, out, flag);
   }
   out.h = prev;
+  // An anchor from before goods by the tonne were counted: what's held now is taken as theirs.
+  out.goods ??= held(save, false);
   if (typeof save.credits === 'number' && Math.abs(save.credits - l.balance) > 1) flag(`credits ${save.credits} don’t match the ledger’s ${l.balance}`);
   return out;
 }
@@ -104,6 +110,14 @@ function check(e: Entry, out: Anchor, flag: (why: string) => void) {
     if (out.precious[e.g] < -0.5) {
       flag(`sold ${e.g} never had`);
       out.precious[e.g] = 0;
+    }
+  }
+  // Goods by the tonne likewise (counted once the anchor has a count; contract cargo is the company's, never in the hold).
+  if (e.g && e.g !== 'btc' && !PRECIOUS.has(e.g) && out.goods && (e.k === 'sell' || e.k === 'buy' || e.k === 'fill' || e.k === 'back' || e.k === 'scoop')) {
+    out.goods[e.g] = (out.goods[e.g] ?? 0) + q;
+    if (out.goods[e.g] < -0.5) {
+      flag(`sold ${e.g} never had`);
+      out.goods[e.g] = 0;
     }
   }
   // System currencies: only what you've had, and never for more than that money was worth.

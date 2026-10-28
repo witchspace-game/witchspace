@@ -81,4 +81,36 @@ describe('checking a ledger', () => {
     sellLocal(d, dem, 1e7, T, T);
     expect(verify(b0, d).flags.join()).toMatch(/never had/);
   });
+
+  it('counts goods by the tonne too: scooped then sold is fine, sold from nowhere is flagged', () => {
+    const c = newCommander('modern');
+    c.cargo = {};
+    ledgerOf(c);
+    const a0 = firstAnchor(c);
+    const { lo } = priceBounds(lave, 'furs', T);
+    c.cargo.furs = 3;
+    record(c, { t: T, k: 'scoop', d: 0, g: 'furs', q: 3, s: [0, 7] });
+    c.credits += 3 * lo;
+    delete c.cargo.furs;
+    record(c, { t: T + 1, k: 'sell', d: 3 * lo, g: 'furs', q: -3, s: [0, 7] });
+    const a1 = verify(a0, c);
+    expect(a1.flags).toEqual([]);
+    c.credits += 40 * lo;
+    record(c, { t: T + 2, k: 'sell', d: 40 * lo, g: 'furs', q: -40, s: [0, 7] });
+    expect(verify(a1, c).flags.join()).toMatch(/sold furs never had/);
+  });
+
+  it('starts counting goods by the tonne from the next save on an older anchor', () => {
+    const c = newCommander('modern');
+    c.cargo = { furs: 20 };
+    ledgerOf(c);
+    const { goods: _, ...old } = firstAnchor(c);
+    const { lo } = priceBounds(lave, 'furs', T);
+    c.credits += 20 * lo;
+    c.cargo = {};
+    record(c, { t: T, k: 'sell', d: 20 * lo, g: 'furs', q: -20, s: [0, 7] });
+    const a1 = verify(old, c);
+    expect(a1.flags).toEqual([]);
+    expect(a1.goods).toEqual({});
+  });
 });

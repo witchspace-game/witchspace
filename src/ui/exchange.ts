@@ -47,6 +47,8 @@ export interface ExchangeDeps {
   dealt(result: BackRoomResult): void;
   /** Set the hyperspace destination (the trade computer's "Set course"). */
   setCourse(system: StarSystem): void;
+  /** A system's own money and how many units a credit buys there, for prices in local money; null in an anarchy. */
+  localMoney?(system: StarSystem): { ticker: string; rate: number } | null;
 }
 
 const TICKERS: Record<string, string> = {
@@ -258,6 +260,14 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   // here, what sells well here, then everything else (docs/design/trading.md).
   let restOpen = false;
 
+  /** A price in credits, in the local money too: "≈ 2,350 LVR". Credits are what's paid. */
+  function inLocal(ctx: TradeContext, credits: number): string {
+    const m = deps.localMoney?.(ctx.system);
+    if (!m) return '';
+    const n = credits * m.rate;
+    return `≈ ${fmt(n, n >= 100 ? 0 : 2)} ${m.ticker}`;
+  }
+
   function renderPairs(ctx: TradeContext) {
     const state = marketState(ctx);
     const now = ctx.now;
@@ -367,7 +377,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     $('.ex-head').innerHTML = `
       ${eventPill}
       <div class="ex-title"><b>${c.name}</b><span>/CR</span><small>per ${u}${c.legality === 'illegal' ? ' · <em>Illegal</em>' : ''}</small></div>
-      <div class="ex-last ${change >= 0 ? 'up' : 'down'}">${fmt(q.price)}<small>Cr</small></div>
+      <div class="ex-last ${change >= 0 ? 'up' : 'down'}">${fmt(q.price)}<small>Cr</small>${inLocal(ctx, q.price) ? `<span class="ex-local" title="In the money here, at the station's rate. You pay in credits.">${inLocal(ctx, q.price)}</span>` : ''}</div>
       <dl>
         <div><dt>1h change</dt><dd class="${change >= 0 ? 'up' : 'down'}">${pct(change)}</dd></div>
         <div><dt>1h high</dt><dd>${fmt(high)}</dd></div>
@@ -718,7 +728,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     $('.ex-est').innerHTML = `
       <div><dt>Average price</dt><dd>${avg ? `${fmt(avg, 2)} Cr` : '-'}</dd></div>
       <div><dt>Price impact</dt><dd class="${impact > 0.02 ? 'warn' : ''}">${avg ? pct(impact).replace('+', '') : '-'}</dd></div>
-      <div><dt>${side === 'buy' ? 'Total cost' : 'You receive'}</dt><dd><b>${total ? `${fmt(total)} Cr` : '-'}</b></dd></div>`;
+      <div><dt>${side === 'buy' ? 'Total cost' : 'You receive'}</dt><dd><b>${total ? `${fmt(total)} Cr` : '-'}</b>${total && inLocal(ctx, total) ? `<small class="ex-local">${inLocal(ctx, total)}</small>` : ''}</dd></div>`;
 
     const submit = $<HTMLButtonElement>('.ex-submit');
     let reason = '';
