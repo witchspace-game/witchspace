@@ -802,6 +802,18 @@ button.button { cursor: pointer; }
 .ship-make h3 { margin: 0 0 8px; }
 
 .ship-page .back { display: inline-block; margin-bottom: 18px; font-size: 15px; font-weight: 500; text-decoration: none; }
+.concept-note { margin: 0; padding-left: 12px; border-left: 2px solid var(--accent); font-size: 15px; }
+.ship-concepts { margin-top: 40px; }
+.ship-concepts h3 { margin: 0 0 4px; }
+.ship-concepts .ship-grid { margin-top: 16px; }
+.preview-note { margin: 0 0 18px; padding: 10px 14px; border: 1px solid var(--amber); border-radius: var(--radius); color: var(--amber); font-size: 15px; }
+.ship-preview-file { margin-top: 32px; max-width: 70ch; }
+.ship-preview-file h3 { margin: 0 0 8px; }
+.ship-preview-file .connect-buttons { margin-top: 16px; }
+.link-offer { margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--accent); border-radius: var(--radius); }
+.link-offer p { margin: 0 0 10px; }
+.link-offer p:last-child { margin: 0; }
+.link-offer .connect-buttons, .ship-preview-file .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
 .ship-hero { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 32px; align-items: center; }
 .ship-view { position: relative; aspect-ratio: 1; border: 1px solid var(--border); border-radius: 16px; background: radial-gradient(60% 60% at 50% 50%, rgba(61, 255, 176, 0.06), transparent 70%), #04060b; overflow: hidden; }
 .ship-view .fallback { position: absolute; inset: 12%; width: 76%; max-width: none; }

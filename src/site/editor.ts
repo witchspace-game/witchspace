@@ -5,6 +5,7 @@ import { escapeHtml } from '../ui/escape';
 import { blueprint, blueprintSvg, VIEWS, type Handle, type Scene } from './blueprint';
 import { convexHull, mirrorX, partBodies, type Mirror, type Part } from './hull';
 import { blank, extent, fromShip, MAKERS, readDraft, ROLES, shipFile, slug, type Draft } from './shipDraft';
+import { shipFromHash, shipHash } from './shipLink';
 import { plainly, type Check } from './submission';
 import { viewer, type Viewer } from './viewer';
 
@@ -291,7 +292,7 @@ document.addEventListener('keydown', (e) => {
 // --- Starting points --------------------------------------------------------------------------
 
 const start = $<HTMLSelectElement>('#start');
-start.insertAdjacentHTML('beforeend', FLEET.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join(''));
+start.insertAdjacentHTML('beforeend', FLEET.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}${s.concept ? ' (concept)' : ''}</option>`).join(''));
 const improveButton = $<HTMLButtonElement>('#improve');
 const syncStart = () => (improveButton.disabled = !start.value);
 start.addEventListener('change', syncStart);
@@ -406,7 +407,10 @@ function localCheck(file: Record<string, unknown>) {
   if (!draft.name.trim()) local.push('Give it a name.');
   if (draft.description.trim().length < 10) local.push('Give it a description: who flies it, and why.');
   clearTimeout(checkTimer);
-  checkTimer = window.setTimeout(() => void serverCheck(file), CHECK_DELAY);
+  checkTimer = window.setTimeout(() => {
+    void serverCheck(file);
+    void previewLink(file);
+  }, CHECK_DELAY);
   showCheck(null);
 }
 
@@ -486,9 +490,43 @@ function download() {
 }
 $('#download').addEventListener('click', download);
 
+/** Its preview page, a link with the whole file in it, to send to anyone (or your phone). */
+async function previewLink(file: Record<string, unknown>) {
+  $<HTMLAnchorElement>('#preview').href = `/ship-preview/#${await shipHash(file)}`;
+}
+
+// --- A ship from a link (/ship-editor/#ship=…, from a preview page) ----------------------------
+
+const offer = $('#link-offer');
+async function fromLink() {
+  const ship = await shipFromHash(location.hash);
+  history.replaceState(null, '', location.pathname + location.search);
+  if (!ship) return;
+  const take = () => {
+    offer.hidden = true;
+    const linked = fromShip(ship, 'improve');
+    // It improves a fleet ship only if there is one by that id.
+    if (!FLEET.some((s) => s.id === ship.id)) linked.improves = undefined;
+    change(() => (draft = linked));
+    sel = { part: 0, point: null };
+    if (draft.improves) start.value = draft.improves;
+    syncStart();
+    fillShip();
+    render();
+  };
+  // A drawing of your own is never replaced without asking.
+  if (JSON.stringify(draft) === JSON.stringify(blank())) return take();
+  offer.querySelector('strong')!.textContent = ship.name || 'the ship';
+  offer.hidden = false;
+  offer.querySelector('[data-link="open"]')!.addEventListener('click', take, { once: true });
+  offer.querySelector('[data-link="keep"]')!.addEventListener('click', () => (offer.hidden = true), { once: true });
+}
+addEventListener('hashchange', () => void fromLink());
+
 // --- Start ------------------------------------------------------------------------------------
 
 if (draft.improves) start.value = draft.improves;
 syncStart();
 fillShip();
 render();
+void fromLink();

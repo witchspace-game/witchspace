@@ -6,6 +6,11 @@
     <p class="lede">Shape a ship from points: the editor mirrors them and makes the faces, so it's always a sound hull. Start from a ship in the fleet or a plain wedge, give it a name, a maker and a reason to exist, and hand it in. Your drawing is kept in this browser as you go.</p>
   </div>
 
+  <div class="link-offer" id="link-offer" role="alert" hidden>
+    <p>Open the <strong></strong> from your link? It replaces your drawing here (Undo brings it back).</p>
+    <p class="connect-buttons"><button type="button" class="button primary small" data-link="open">Open it</button> <button type="button" class="button ghost small" data-link="keep">Keep my drawing</button></p>
+  </div>
+
   <div class="editor-layout">
     <div class="editor-stage">
       <div class="editor-3d">
@@ -87,7 +92,8 @@
         <div class="check" id="check" aria-live="polite"></div>
         <button type="button" class="button primary" id="hand-in">Hand it in</button>
         <p class="small muted">You'll sign in and send it on <a href="/submit/">Hand in a design</a>, where a maintainer reviews it. It's credited to your callsign.</p>
-        <p class="small"><button type="button" class="link" id="download">Download the file</button> · <button type="button" class="link" id="reset">Start again</button></p>
+        <p class="small"><a id="preview" href="/ship-preview/">Its preview page</a> · <button type="button" class="link" id="download">Download the file</button> · <button type="button" class="link" id="reset">Start again</button></p>
+        <p class="small muted">The preview page's link holds your whole ship: send it to anyone to show them.</p>
       </div>
     </aside>
   </div>
