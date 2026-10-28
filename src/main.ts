@@ -85,7 +85,7 @@ import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, S
 import { ADRIFT_HOLD, assignmentFor, offerFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase, type Message } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
-import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
+import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, salvageCargo, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
 import { SpaceDust } from './render/dust';
 import { buildYard, type YardScene } from './render/yard';
 import { stageInfo, stageLabel, yardAt, yardsNear, yardsOf } from './game/yards';
@@ -2739,9 +2739,7 @@ function discover(p: ScenePoi) {
     setTimeout(() => state === 'flying' && flash('Will-o’-the-Wisp fitted · enemy lasers miss half the time, half the missiles are spoofed · Wexley-Yorozu will want it back', 6), 5200);
   }
   if (p.poi.salvage.length) {
-    const cargo: Record<string, number> = {};
-    for (const s of p.poi.salvage) cargo[s.id] = (cargo[s.id] ?? 0) + s.qty * UNITS_PER_TONNE[commodityById(s.id)?.unit ?? 't'];
-    spillCargo(p.position, new THREE.Vector3(), cargo);
+    spillCargo(p.position, new THREE.Vector3(), salvageCargo(p.poi.salvage));
   }
   // A trail step: the clue points on, and the course is plotted for you.
   const next = advanceTrail(c, p.poi);

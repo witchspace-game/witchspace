@@ -145,7 +145,7 @@ export interface Poi {
   /** For derelicts and wreck fields: the ship type, as a content id. */
   ship?: string;
   /** What's left aboard, as cargo canisters. */
-  salvage: { id: string; qty: number }[];
+  salvage: Salvage[];
   /** What you find: a few lines, ours (no original prose). */
   log: string;
   /** A step on a trail: which, and where the clue points next. */
@@ -166,6 +166,31 @@ const HULLS = [
 ];
 const SHIP_NAMES = ['Long Odds', 'Quiet Margin', 'Second Wind', 'Halcyon', 'Persistence', 'Lucky Strike', 'Mother’s Ruin', 'Far Horizon', 'Brass Neck', 'Last Orders', 'Night Heron', 'Small Hours'];
 const SALVAGE = ['food', 'textiles', 'liquor', 'machinery', 'alloys', 'computers', 'luxuries', 'minerals', 'radioactives', 'gold', 'platinum', 'gems', 'medicine'];
+
+/**
+ * Salvage: `qty` canisters of a good, or, for a trail's treasure, exactly
+ * `units` of it in the good's own unit (grams of gems, kilos of gold).
+ */
+export interface Salvage {
+  id: string;
+  qty: number;
+  units?: number;
+}
+
+/**
+ * What one canister found by chance holds, in the good's own unit. A tonne of
+ * most things, but precious goods come in a find's worth, about a tonne and a
+ * half of luxuries: a tonne of gem-stones would be a million grams, seventeen
+ * million credits. A trail's end is different: that's treasure (`units`).
+ */
+const FIND: Record<string, number> = { gold: 4, platinum: 2, gems: 8 };
+
+/** A signal's salvage as a cargo manifest, in each good's own unit. */
+export function salvageCargo(salvage: Salvage[]): Record<string, number> {
+  const cargo: Record<string, number> = {};
+  for (const s of salvage) cargo[s.id] = (cargo[s.id] ?? 0) + (s.units ?? s.qty * (FIND[s.id] ?? 1));
+  return cargo;
+}
 
 interface LogContext {
   ship: string;
@@ -210,7 +235,7 @@ export function poisOf(sys: StarSystem): Poi[] {
     const distance = 2.5 + roll(sys, 24, i) * 3;
     const near = pick(neighbours.slice(0, 4), roll(sys, 25, i)).name;
     const hull = pick(HULLS, roll(sys, 26, i));
-    const salvage: { id: string; qty: number }[] = [];
+    const salvage: Salvage[] = [];
     if (kind !== 'beacon') {
       const n = 1 + Math.floor(roll(sys, 27, i) * (kind === 'wrecks' ? 4 : 3));
       for (let k = 0; k < n; k++) salvage.push({ id: pick(SALVAGE, roll(sys, 28, i * 8 + k)), qty: 1 });
@@ -247,7 +272,8 @@ interface Story {
   title: string;
   /** Opening, middle steps (in turn), and the end. Each a kind, a name and a log. */
   steps: { first: Step; middle: Step[]; last: Step };
-  end: { salvage: { id: string; qty: number }[]; value: number; report?: 'ninefold' };
+  /** Its treasure: worth a few weeks' trading, a good way towards a better ship. */
+  end: { salvage: Salvage[]; value: number; report?: 'ninefold' };
 }
 interface Step {
   kind: PoiKind;
@@ -284,7 +310,8 @@ const STORIES: Record<StoryId, Story> = {
       ],
       last: { kind: 'derelict', ship: 'cobra-mk3', name: 'Derelict Cobra Mk III “Far Horizon”', log: () => `Ada’s ship, out of fuel, one jump short. The escape pod is gone, aimed at home. The last letter is still in the printer: “If you find this before anyone finds me, sell what’s in the hold and send Noor the money. Tell her I was nearly there.”` },
     },
-    end: { salvage: [{ id: 'gems', qty: 1 }, { id: 'gold', qty: 1 }, { id: 'platinum', qty: 1 }, { id: 'luxuries', qty: 1 }], value: 250 },
+    // Ada's savings, nine years of them: about 17,500 Cr.
+    end: { salvage: [{ id: 'gems', qty: 1, units: 600 }, { id: 'gold', qty: 1, units: 100 }, { id: 'platinum', qty: 1, units: 50 }, { id: 'luxuries', qty: 2 }], value: 250 },
   },
   survey: {
     title: 'The lost survey',
@@ -310,10 +337,14 @@ const STORIES: Record<StoryId, Story> = {
       ],
       last: { kind: 'derelict', ship: 'mamba', name: 'Bel’s cache', log: () => `Wired to an old mine that failed years ago. Under the guns and narcotics she took off them, eleven envelopes, one for each family, and a note: “If I don’t come back, the envelopes go to the Mutual. Keep the rest. Some of it the police would like to see.”` },
     },
-    end: { salvage: [{ id: 'firearms', qty: 1 }, { id: 'narcotics', qty: 1 }, { id: 'gold', qty: 1 }], value: 250 },
+    // What Bel took off them: about 10,000 Cr, some of it the police would like to see.
+    end: { salvage: [{ id: 'firearms', qty: 3 }, { id: 'narcotics', qty: 2 }, { id: 'gold', qty: 1, units: 250 }], value: 250 },
   },
 };
 const STORY_ORDER: StoryId[] = ['colony', 'home', 'survey', 'debt'];
+
+/** Each story's treasure, for the tests. */
+export const trailTreasures = (): Salvage[][] => STORY_ORDER.map((id) => STORIES[id].end.salvage);
 
 export interface Trail {
   /** "galaxy.n" */
