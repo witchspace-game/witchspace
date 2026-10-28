@@ -88,7 +88,7 @@ For anything bigger than a bug fix, open an issue first so we can talk it throug
 - **Rendering and the glow:** `src/render/` (`renderer.ts` sets up the scene and the bloom; `wire.ts` and `shipModel.ts` draw the ships).
 - **Flight and input:** `src/game/input.ts` (keyboard, mouse, tilt and the flight assist), `src/game/controls.ts` (the controls card's text).
 - **The game's rules:** the rest of `src/game/` (the commander and save, combat, the shipyard, ratings, the ledger).
-- **The economy:** `src/economy/` (markets, the exchange, Bitcoin, system currencies).
+- **The economy:** `src/economy/` (markets, the exchange, Bitcoin, system currencies). [docs/economy.md](docs/economy.md) explains how it all works.
 - **The galaxy:** `src/galaxy/` (the eight galaxies, generated from their seeds as in 1984).
 - **UI:** `src/ui/` (the HUD, galaxy map, flight log, touch controls, kill cam).
 - **`src/main.ts`:** the game loop and the glue: states (title, docked, flying), the station tabs, docking, and key handling. It's big; search it for the name of what you see on screen.

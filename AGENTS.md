@@ -20,7 +20,7 @@ Most contributions are **content files** (JSON validated by JSON Schema), not co
 | `src/content/types.ts` | TypeScript mirror of the schemas. Keep them in sync. |
 | `src/content/geometry.ts` | Geometry rules shared by the game and the validator. |
 | `src/render/` | three.js rendering. |
-| `src/game/`, `src/economy/`, `src/ui/`, `src/net/` | Flight, combat and the law; markets, events and companies; screens and HUD; accounts and shared space. `src/main.ts` ties them together. |
+| `src/game/`, `src/economy/`, `src/ui/`, `src/net/` | Flight, combat and the law; markets, events and companies; screens and HUD; accounts and shared space. `src/main.ts` ties them together. How the economy works, with its numbers, is in `docs/economy.md`: update it in the same pull request as any economy change. |
 | `site/`, `src/site/` | The website (witchspace.org.uk): pages in `site/pages/`, built by `tools/build-site.ts` along with the design, ship and roadmap pages. |
 | `server/` | The Cloudflare Worker at space.witchspace.org.uk: shared space, accounts, the ideas board, clips, notifications and the MCP server. Has its own `package.json`. |
 | `relay/` | A small price relay for the Bitcoin exchange. |
