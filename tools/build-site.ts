@@ -197,7 +197,8 @@ const cobra = ships.find((s) => s.id === 'cobra-mk3')!;
 const drawer = drawerButtons(root);
 for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/manual/`, ...manualPage(s, manualFor(s, cobra, drawer)), scripts: ['/src/site/manual.ts'], bodyClass: 'ships-page' });
 // The configurator: spec any hull the yard sells, and order her for the yard.
-for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/build/`, ...buildPage(s, editionsFor(s)), scripts: ['/src/site/build.ts'], bodyClass: 'ships-page build-body' });
+const yardNames = Object.fromEntries(ships.filter(ownable).map((s) => [s.id, s.name]));
+for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/build/`, ...buildPage(s, editionsFor(s), yardNames), scripts: ['/src/site/build.ts'], bodyClass: 'ships-page build-body' });
 
 // --- Design documents, the roadmap and the library (tools/docs.ts) --------------
 

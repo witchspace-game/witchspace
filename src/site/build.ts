@@ -1,7 +1,10 @@
 import type { ShipDef } from '../content/types';
-import { cleanName, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
+import { checkSpec, cleanName, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
+import { API, refresh, sessionToken, signedIn } from '../net/account';
+import { accountSpec } from '../net/shipyard';
 import { escapeHtml } from '../ui/escape';
+import { signInBox } from './signin';
 import { viewer, type Viewer } from './viewer';
 
 // The configurator (docs/design/ship-configurator.md; Mark: "similar to the
@@ -11,7 +14,7 @@ import { viewer, type Viewer } from './viewer';
 // yard can't disagree. Ordering puts the spec where the game finds it; the
 // game takes the deposit at the next shipyard you dock at.
 
-/** Where the game looks for a spec from the site (docs/design/ship-configurator.md). */
+/** Where the game looks for a spec from the site (src/game/spec.ts; the site shares the game's origin). */
 const SPEC_KEY = 'witchspace.spec.v1';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -26,24 +29,8 @@ const colourOf = (c: string | null) => PALETTE.find((p) => p.colour === c);
 const toB64 = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromB64 = (s: string) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0)));
 
-/** A spec for this ship from anywhere (a link, a save), kept to what the yard offers. */
-function sane(x: unknown): Spec | null {
-  const s = x as Partial<Spec> | null;
-  if (!s || s.ship !== def.id) return null;
-  const base = defaultSpec(def);
-  const offered = (c: unknown) => typeof c === 'string' && ORDERABLE.some((p) => p.colour === c);
-  return {
-    ship: def.id,
-    colour: offered(s.colour) || s.colour === base.colour ? s.colour! : base.colour,
-    name: typeof s.name === 'string' ? cleanName(s.name) : '',
-    laser: LASERS.includes(s.laser as LaserId) ? s.laser! : base.laser,
-    ...(LASERS.includes(s.rear as LaserId) ? { rear: s.rear } : {}),
-    upgrades: Array.isArray(s.upgrades) ? [...new Set(s.upgrades.filter((u) => UPGRADES.some((e) => e.id === u)))] : [],
-    glow: (s.glow as GlowId) in GLOWS ? s.glow! : 'standard',
-    trim: offered(s.trim) ? s.trim! : null,
-    luxuries: Array.isArray(s.luxuries) ? [...new Set(s.luxuries.filter((l) => LUXURIES.some((x) => x.id === l)))] : [],
-  };
-}
+/** A spec for this ship from anywhere (a link, a save), checked by the game's own rule, or null. */
+const sane = (x: unknown): Spec | null => checkSpec(x, (id) => (id === def.id ? def : undefined));
 
 function fromLink(): Spec | null {
   const m = /^#spec=([\w-]+)$/.exec(location.hash);
@@ -54,17 +41,36 @@ function fromLink(): Spec | null {
   }
 }
 
-function saved(): { spec: Spec; at: number } | null {
+/** What's waiting for the yard: the newer of this browser's spec and the account's. `ship` may be another hull. */
+interface Waiting {
+  ship: string;
+  name: string;
+  spec: Spec | null;
+  at: number;
+}
+
+/** What waiting specs might be: the raw ship id and name, whichever hull it's for. */
+const about = (x: unknown) => {
+  const o = (x ?? {}) as { ship?: unknown; name?: unknown };
+  return { ship: typeof o.ship === 'string' ? o.ship : '', name: typeof o.name === 'string' ? cleanName(o.name) : '' };
+};
+
+function local(): Waiting | null {
   try {
-    const s = JSON.parse(localStorage.getItem(SPEC_KEY) ?? 'null') as { spec: unknown; at: number } | null;
-    const spec = s && sane(s.spec);
-    return spec ? { spec, at: s!.at } : null;
+    const s = JSON.parse(localStorage.getItem(SPEC_KEY) ?? 'null') as { spec?: unknown; at?: unknown } | null;
+    return s && typeof s.at === 'number' && about(s.spec).ship ? { ...about(s.spec), spec: sane(s.spec), at: s.at } : null;
   } catch {
     return null;
   }
 }
 
-let spec: Spec = fromLink() ?? saved()?.spec ?? defaultSpec(def);
+let fromAccount: Waiting | null = null;
+const waiting = () => {
+  const a = local();
+  return !a ? fromAccount : !fromAccount ? a : a.at >= fromAccount.at ? a : fromAccount;
+};
+
+let spec: Spec = fromLink() ?? local()?.spec ?? defaultSpec(def);
 const link = () => `${location.origin}${location.pathname}#spec=${toB64(JSON.stringify(spec))}`;
 
 // --- The steps ------------------------------------------------------------------------------
@@ -129,8 +135,6 @@ function summary(): string {
 
 function orderStep(): string {
   const total = quote(def, spec);
-  const waiting = saved();
-  const days = Math.round(productionHours({}) / 24);
   return `<h2>Her name <span>painted on, 24 letters at most</span></h2>
     <input class="build-name" id="build-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" aria-label="Her name" />
     <h2>Your ${escapeHtml(def.name)}</h2>
@@ -138,13 +142,22 @@ function orderStep(): string {
     <p class="build-order-total"><span>Price</span><b>${cr(total)}</b></p>
     ${def.concept ? `<p class="build-order-total"><span>Deposit, a tenth, refundable until she’s ready</span><b>${cr(depositFor(total))}</b></p>` : ''}
     <p class="connect-buttons"><button type="button" class="button primary" id="build-order">${def.concept ? 'Order her' : 'Save her for the yard'}</button> <button type="button" class="button ghost" id="build-share" data-share data-share-title="My ${escapeHtml(def.name)}">Share your spec</button></p>
-    <p class="build-note" id="build-ordered">${
-      waiting
-        ? `You have a ${escapeHtml(def.name)} spec waiting for the yard${waiting.spec.name ? `: “${escapeHtml(waiting.spec.name)}”` : ''}. Ordering again replaces it.`
-        : def.concept
-          ? `Nothing is paid here. Dock at any shipyard and your spec is there: the deposit is one tap, in credits. ${escapeHtml(def.manufacturer ?? 'The yard')} then finish her for you, in about ${days} days.`
-          : `Nothing is paid here. Shipyards will sell the ${escapeHtml(def.name)} outright soon; your spec waits at the yard until they do.`
-    }</p>`;
+    <p class="build-note" id="build-ordered">${note()}</p>`;
+}
+
+/** The yard's hulls by id, for a spec waiting for another one (tools/ships.ts buildPage). */
+const NAMES = JSON.parse($('#yard-names').textContent!) as Record<string, string>;
+const shipName = (id: string) => NAMES[id] ?? 'ship';
+
+/** What the order step says before you order: what's waiting already, or what ordering does. */
+function note(): string {
+  const w = waiting();
+  const days = Math.round(productionHours({}) / 24);
+  const where = signedIn() ? 'It’s saved to your account too, so it reaches the game on any device.' : 'Sign in below and it reaches the game on any device, the Home Screen app included.';
+  if (w) return `You have a${w.ship === def.id ? '' : 'nother'} ${escapeHtml(shipName(w.ship))} spec waiting at the yard${w.name ? `: “${escapeHtml(w.name)}”` : ''}. Ordering this one replaces it.`;
+  return def.concept
+    ? `Nothing is paid here. Dock at any shipyard and your spec is there: the deposit is one tap, in credits. ${escapeHtml(def.manufacturer ?? 'The yard')} then finish her for you, in about ${days} days. ${where}`
+    : `Nothing is paid here. Shipyards will sell the ${escapeHtml(def.name)} outright soon; your spec waits at the yard until they do. ${where}`;
 }
 
 // --- Drawing it -----------------------------------------------------------------------------
@@ -183,6 +196,7 @@ function bar() {
 function render() {
   $('#build-steps').innerHTML = STEPS.map(([s, label], i) => `<button type="button" data-step="${s}" aria-current="${s === step ? 'step' : 'false'}"><small>${i + 1}</small>${label}</button>`).join('');
   $('#build-options').innerHTML = options();
+  $('#account').hidden = step !== 'order';
   paint();
   bar();
   history.replaceState(null, '', link().slice(location.origin.length));
@@ -213,7 +227,7 @@ document.addEventListener('click', (e) => {
       if (d.rear) spec.rear = d.rear as LaserId;
       else delete spec.rear;
     });
-  else if (b.id === 'build-order') order();
+  else if (b.id === 'build-order') void order();
 });
 
 document.addEventListener('change', (e) => {
@@ -230,20 +244,44 @@ document.addEventListener('input', (e) => {
   history.replaceState(null, '', link().slice(location.origin.length));
 });
 
-/** Put the spec where the game finds it (this browser; your account too, once the server has /me/spec). */
-function order() {
+/** Put the spec where the game finds it: this browser, and your account if you're signed in (PUT /me/spec). */
+async function order() {
   spec.name = cleanName(spec.name);
   $<HTMLInputElement>('#build-name').value = spec.name;
+  const say = $('#build-ordered');
+  const button = $<HTMLButtonElement>('#build-order');
+  let here = true;
   try {
     localStorage.setItem(SPEC_KEY, JSON.stringify({ spec, at: Date.now() }));
   } catch {
-    $('#build-ordered').textContent = 'This browser won’t keep it (private browsing?). Share the link to yourself, and open it where you play.';
+    here = false;
+  }
+  let account = false;
+  if (signedIn()) {
+    button.disabled = true;
+    try {
+      const res = await fetch(`${API}/me/spec`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionToken()}` }, body: JSON.stringify({ spec }) });
+      const data = (await res.json()) as { at?: number; error?: string };
+      if (!res.ok) throw new Error(data.error ?? 'The yard’s office isn’t answering');
+      fromAccount = { ship: def.id, name: spec.name, spec, at: data.at ?? Date.now() };
+      account = true;
+    } catch (e) {
+      if (!here) {
+        say.textContent = `${(e as Error).message}. Try again in a moment.`;
+        button.disabled = false;
+        return;
+      }
+    }
+    button.disabled = false;
+  }
+  if (!here && !account) {
+    say.textContent = 'This browser won’t keep it (private browsing?). Sign in below to save her to your account, or share the link to yourself and open it where you play.';
     return;
   }
   const total = quote(def, spec);
-  $('#build-ordered').innerHTML = `<b>She’s on order.</b> Dock at any shipyard${def.concept ? ` and your ${escapeHtml(def.name)} is waiting for your deposit of ${cr(depositFor(total))}` : ` and your spec is waiting`}. On another device? Share the link to yourself, and open it there.`;
-  $('#build-ordered').classList.add('done');
-  $('#build-order').textContent = 'Ordered ✓';
+  say.innerHTML = `<b>She’s on order.</b> Dock at any shipyard${def.concept ? ` and your ${escapeHtml(def.name)} is waiting for your deposit of ${cr(depositFor(total))}` : ' and your spec is waiting'}${account ? ', on any device you’re signed in on' : ', in this browser. Sign in below to have her waiting on your other devices too'}.`;
+  say.classList.add('done');
+  button.textContent = 'Ordered ✓';
 }
 
 window.addEventListener('hashchange', () => {
@@ -251,4 +289,21 @@ window.addEventListener('hashchange', () => {
   if (s) change(() => (spec = s));
 });
 
+// Signed in: what's waiting on your account, and a sign-in box on the order step for everyone else.
+const box = signInBox($('#account'), { why: 'Signed in, your order reaches the game on every device, the Home Screen app included.', callsignWhy: 'it’s how other pilots know you.' }, () => void account());
+
+async function account() {
+  if (signedIn()) {
+    try {
+      const r = await accountSpec();
+      if (!('error' in r)) fromAccount = r.spec && r.at ? { ...about(r.spec), spec: sane(r.spec), at: r.at } : null;
+    } catch {
+      // The account's copy stays unknown: this browser's still counts.
+    }
+  }
+  box.render();
+  if (step === 'order') $('#build-ordered').innerHTML = note();
+}
+
 render();
+void refresh().then(account);

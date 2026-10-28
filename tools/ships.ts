@@ -375,7 +375,7 @@ export function manualPage(s: ShipFile, m: ManualData) {
 }
 
 /** The configurator: spec her as you would a new car, then order her for the yard (docs/design/ship-configurator.md). The choices and prices come from the game's own code (src/site/build.ts). */
-export function buildPage(s: ShipFile, editions: EditionCard[]) {
+export function buildPage(s: ShipFile, editions: EditionCard[], names: Record<string, string>) {
   const def = JSON.stringify(s).replace(/</g, '\\u003c');
   return {
     card: { ship: s.id, kicker: 'Build yours', title: `Spec your ${s.name}`, sub: 'Her colour, her glow, her name and her fit-out, priced as you go. Order her, and she’s waiting at the yard.' },
@@ -398,11 +398,13 @@ export function buildPage(s: ShipFile, editions: EditionCard[]) {
       <p class="lede">${s.concept ? `A concept: ${esc(s.manufacturer ?? 'her makers')} build her to order. Spec her here, and the deposit is one tap at the next shipyard you dock at.` : `Spec her here, and she’s waiting at the next shipyard you dock at.`}</p>
       <nav class="build-steps" id="build-steps" aria-label="Steps"></nav>
       <div id="build-options"></div>
+      <div class="build-account" id="account" hidden></div>
     </div>
   </div>
   ${editions.length ? `<p class="build-editions">Or one of the numbered editions: ${editions.map((e) => `<a href="/ships/${esc(s.id)}/#edition-${esc(e.id)}" style="--edition:${esc(e.colour)}">${esc(e.name)}</a>`).join(' · ')}, each one set by the maker, and ordered at a shipyard.</p>` : ''}
   <div class="build-bar" id="build-bar" aria-live="polite"></div>
   <script type="application/json" id="ship-def">${def}</script>
+  <script type="application/json" id="yard-names">${JSON.stringify(names).replace(/</g, '\\u003c')}</script>
 </section>`,
   };
 }

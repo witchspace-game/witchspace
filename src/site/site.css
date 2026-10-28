@@ -857,6 +857,7 @@ button.button { cursor: pointer; }
 .build-dot { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; background: var(--sw); box-shadow: 0 0 8px var(--sw); }
 .build-order-total { display: flex; justify-content: space-between; gap: 12px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--border); }
 .build-order-total span { color: var(--muted); }
+.build-order-total b { white-space: nowrap; }
 .build-panel .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .build-editions { margin-top: 32px; color: var(--muted); }
 .build-editions a { color: var(--edition); }
