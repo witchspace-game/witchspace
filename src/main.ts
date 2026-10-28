@@ -5106,8 +5106,10 @@ function updateSpace(dt: number) {
       aim.reset(player);
     }
 
-    if (input.mouseRoll) bankHeld = true;
-    else if (input.level || input.roll !== 0) bankHeld = false;
+    // A roll you make (mouse or keys) holds its bank until you tap to level: the flight
+    // assist mustn't undo it the moment you let go (a Stardot pilot found the keys "obstinate").
+    if (input.mouseRoll || input.roll !== 0) bankHeld = true;
+    if (input.level) bankHeld = false;
     rollAssist = !autopilot && !surveyPilot && !combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
     if (rollAssist) {
       input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);

@@ -72,7 +72,7 @@ export type ServerMessage =
 
 /** The ships commanders can fly in shared space (stage 1: the Cobra). Must match content/ships. */
 export const SHIPS: Record<string, { maxSpeed: number; shields: number; hull: number; radius: number; missiles: number }> = {
-  'cobra-mk3': { maxSpeed: 280, shields: 100, hull: 150, radius: 28, missiles: 3 },
+  'cobra-mk3': { maxSpeed: 280, shields: 100, hull: 150, radius: 28, missiles: 4 },
 };
 
 /** Player lasers, as in src/game/weapons.ts (a test checks they match). */

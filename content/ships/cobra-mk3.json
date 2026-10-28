@@ -51,7 +51,7 @@
     "hull": 150,
     "shields": 100,
     "cargo": 20,
-    "missiles": 3,
+    "missiles": 4,
     "price": 100000,
     "ratingValue": 0.91
   },
