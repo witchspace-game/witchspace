@@ -328,6 +328,8 @@ function updateBerth(dt: number, model: ShipModel) {
     centre.y + Math.sin(elevation) * dist,
     Math.cos(spin.y) * Math.cos(elevation) * dist,
   );
+  // In the shipyard on a phone, the panel takes the lower part of the screen: lift the ship above it.
+  if (document.body.classList.contains('yard-open') && innerWidth <= 700) centre.y -= dist * 0.3;
   camera.lookAt(centre);
 }
 
@@ -656,7 +658,7 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon';
+type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard';
 let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
@@ -668,6 +670,10 @@ function setDockTab(tab: DockTab) {
   $('#tab-news').hidden = tab !== 'news';
   $('#tab-saloon').hidden = tab !== 'saloon';
   if (tab === 'saloon') renderSaloon();
+  $('#tab-shipyard').hidden = tab !== 'shipyard';
+  document.body.classList.toggle('yard-open', tab === 'shipyard');
+  if (tab === 'shipyard') renderShipyard();
+  else if (state === 'docked' && shipIndex !== cobraIndex) showShip(cobraIndex); // your own ship back in the berth
   $('#tab-contracts').hidden = tab !== 'contracts';
   if (tab === 'news') renderNews();
   if (tab === 'contracts') renderContracts();
@@ -1097,6 +1103,50 @@ $('#news-list').addEventListener('click', (e) => {
 // they talk; the ones who know something early want paying properly, and so do
 // the liars. Their record builds as their tips come true or don't.
 
+// --- The shipyard: a showroom for now ------------------------------------------
+// Higher-tech stations show the hulls you'll be able to buy, each turning in the
+// berth, and the makers' concepts, coming soon (docs/design/ships-and-classes.md:
+// "something to drool over"). Buying, selling and trading in come later.
+
+/** Stations with a shipyard: the better-built worlds. */
+const SHIPYARD_TECH = 7;
+const hasShipyard = (s: StarSystem) => s.techLevel >= SHIPYARD_TECH;
+// Earned, not bought: the Solos' Falcon. Police and Marshals' hulls have no price.
+const NOT_IN_YARDS = new Set(['falcon']);
+let yardPick: string | null = null;
+
+function renderShipyard() {
+  const yard = showroomModels
+    .map((m, i) => ({ def: m.def, i }))
+    .filter(({ def }) => def.stats.price && !NOT_IN_YARDS.has(def.id) && !['missile', 'cargo', 'station', 'debris', 'alien'].includes(def.role))
+    // Concepts first: the reveal, then the yard's line from the dearest.
+    .sort((a, b) => Number(Boolean(b.def.concept)) - Number(Boolean(a.def.concept)) || b.def.stats.price - a.def.stats.price);
+  const pick = yard.find((y) => y.def.id === yardPick) ?? yard[0];
+  if (!pick) return;
+  yardPick = pick.def.id;
+  showShip(pick.i);
+  $('#shipyard').innerHTML = `<p class="meta">Shipyards open soon: you'll buy, sell and trade in here. For now, come and look. Tap a ship to see it in the berth.</p>
+    <ul class="yard">${yard
+      .map(({ def }) => {
+        const s = def.stats;
+        const tag = def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : def.id === 'cobra-mk3' ? '<em>Your ship</em>' : '';
+        return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${def.style.lineColor}">
+          <strong>${escapeHtml(def.name)}</strong> ${tag}
+          <span>${[def.manufacturer, def.role].filter(Boolean).map((x) => escapeHtml(x!)).join(' · ')}</span>
+          <span>${s.maxSpeed} m/s · hull ${s.hull} · shields ${s.shields} · ${s.cargo} t · ${s.missiles ?? 0} missiles</span>
+          <b>${def.concept ? 'About ' : ''}${s.price.toLocaleString()} Cr</b>
+        </button></li>`;
+      })
+      .join('')}</ul>
+    <p class="yard-desc">${escapeHtml(pick.def.description)}</p>`;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-yard]'))
+    b.onclick = () => {
+      yardPick = b.dataset.yard!;
+      resetShowroomView();
+      renderShipyard();
+    };
+}
+
 function renderSaloon() {
   const c = cmdr();
   const here = currentSystem();
@@ -1355,6 +1405,10 @@ function holdList(c: Commander): string {
 function renderDocked() {
   // The saloon is Modern's: Classic stations are as they were in 1984.
   document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
+  const noYard = cmdr().difficulty === 'classic' || !hasShipyard(currentSystem());
+  document.querySelector<HTMLElement>('.tabs [data-tab="shipyard"]')!.hidden = noYard;
+  if (noYard && dockTab === 'shipyard') setDockTab('station');
+  else if (dockTab === 'shipyard') renderShipyard(); // docking put your own ship in the berth
   const c = cmdr();
   showFittings(c);
   refreshFlightLog();
