@@ -80,12 +80,13 @@ import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rig
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
-import { claimEdition, editionCounts, redeemVoucher, releaseEdition } from './net/shipyard';
+import { claimEdition, editionCounts, heldEditions, redeemVoucher, releaseEdition } from './net/shipyard';
 import { enablePush, needsHomeScreen } from './net/notify';
 import { cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
+import { record as ledgerRecord } from './game/ledger';
 import { handling, notesFor } from './game/manual';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
@@ -1391,7 +1392,7 @@ function renderShipyard() {
           <div class="yard-lasers">${(Object.keys(GLOWS) as GlowId[]).map((g) => `<button type="button" data-glow="${g}" aria-pressed="${spec!.glow === g}">${GLOWS[g].name}<small>${cost(GLOWS[g].price)}</small></button>`).join('')}</div>
           <label class="yard-check"><input type="checkbox" class="yard-two-tone" ${spec.trim ? 'checked' : ''} /> <span>Two-tone: the fine lines in a second colour</span><small>${TRIM_PRICE.toLocaleString()} Cr</small></label>
           ${spec.trim ? swatches('data-trim', spec.trim) : ''}
-          <p class="yard-total"><span>Labour ${repaintLabour(def).toLocaleString()} · finish ${(repaintCost - repaintLabour(def)).toLocaleString()}</span><b>${repaintCost.toLocaleString()} Cr</b></p>`
+          <p class="yard-total"><span>Labour ${repaintLabour(def, spec.glow).toLocaleString()} · finish ${(repaintCost - repaintLabour(def, spec.glow)).toLocaleString()}</span><b>${repaintCost.toLocaleString()} Cr</b></p>`
         : gift && giftEdition
         ? `<p class="yard-desc">${escapeHtml(giftEdition.blurb)}</p>
           <ul class="yard-spec-list">
@@ -1506,6 +1507,11 @@ function renderShipyard() {
           return;
         }
         reserve.disabled = true;
+        if (c.tampered) {
+          yardMessage = 'The yard’s office won’t take a number from a commander whose papers have been altered.';
+          renderShipyard();
+          return;
+        }
         const n = await claimEdition(fixed.id);
         if ('error' in n) yardMessage = n.error;
         else {
@@ -1674,13 +1680,24 @@ function renderShipyard() {
     };
   const take = el.querySelector<HTMLButtonElement>('.yard-collect');
   if (take && c.order)
-    take.onclick = () => {
+    take.onclick = async () => {
       if (!take.dataset.armed) {
         take.dataset.armed = '1';
         take.textContent = `Trade in your ${player.def.name} and take her? Press again`;
         return;
       }
       const next = shipById(c.order!.ship)!;
+      // A numbered edition is handed over only if the yard's office has the number down as yours.
+      const ed = c.order!.edition;
+      if (ed) {
+        take.disabled = true;
+        const held = await heldEditions();
+        if ('error' in held || !held.editions.some((x) => x.edition === ed.id && x.number === ed.number)) {
+          yardMessage = 'error' in held ? held.error : 'The yard’s office has no record of that number in your name. Get in touch: hello@witchspace.org.uk';
+          renderShipyard();
+          return;
+        }
+      }
       const r = collectOrder(c, player.def, next, { galaxy: here.galaxy, system: here.index }, cargoTonnes(c), Date.now());
       if (!r.ok) yardMessage = r.message;
       else {
@@ -4923,6 +4940,7 @@ function tryScoop(d: Drifter): boolean {
     return false;
   }
   c.cargo[contents.id] = (c.cargo[contents.id] ?? 0) + contents.qty;
+  { const here = currentSystem(); ledgerRecord(c, { k: 'scoop', d: 0, g: contents.id, q: contents.qty, s: [here.galaxy, here.index] }); }
   if (d.stolen) markStolen(c, contents.id, contents.qty);
   saveCommander(c);
   sfx.beep();

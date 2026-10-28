@@ -2,6 +2,7 @@ import { cargoTonnes, cleanQty, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './commodities';
 import { priceAt, RECOVERY_MINUTES, TRADE_MEMORY, type MarketState } from './market';
+import { record } from '../game/ledger';
 
 // Limit orders on a station's exchange (Modern rules). A buy order holds your
 // credits and a sell order holds your goods until it fills or you cancel.
@@ -64,6 +65,8 @@ export function placeOrder(c: Commander, system: StarSystem, state: OrderState, 
     const hold = Math.round(limit * qty * 10) / 10;
     if (hold > c.credits) return { ok: false, message: 'Not enough credits to cover the order' };
     c.credits = Math.round((c.credits - hold) * 10) / 10;
+    // In the ledger as bought now, at your price: the credits are spent and the goods are yours, waiting to arrive.
+    record(c, { t: now, k: 'fill', d: -hold, g: id, q: qty, s: [system.galaxy, system.index] });
   } else {
     if ((c.cargo[id] ?? 0) < qty) return { ok: false, message: `You haven't got that much ${good.name}` };
     if (system.government > 0 && qty > cleanQty(c, id)) return { ok: false, message: `Some of your ${good.name} is stolen: the station won't take it` };
@@ -91,6 +94,7 @@ export function sendOrder(c: Commander, system: StarSystem, state: OrderState, i
     const hold = Math.round(limit * qty * 10) / 10;
     if (hold + fee > c.credits) return { ok: false, message: 'Not enough credits to cover the order and the broker' };
     c.credits = Math.round((c.credits - hold - fee) * 10) / 10;
+    record(c, { t: now, k: 'fill', d: -hold, g: id, q: qty, s: [system.galaxy, system.index] });
   } else {
     if ((state.storage?.[id] ?? 0) < qty) return { ok: false, message: `You haven't that much ${good.name} in storage at ${system.name}` };
     if (fee > c.credits) return { ok: false, message: 'Not enough credits for the broker' };
@@ -110,7 +114,10 @@ export function cancelOrder(c: Commander, state: OrderState, oid: number, capaci
   const order = (state.orders ?? []).find((o) => o.oid === oid);
   if (!order) return { ok: false, message: 'No such order' };
   state.orders = state.orders!.filter((o) => o.oid !== oid);
-  if (order.side === 'buy') c.credits = Math.round((c.credits + order.limit * order.qty) * 10) / 10;
+  if (order.side === 'buy') {
+    c.credits = Math.round((c.credits + order.limit * order.qty) * 10) / 10;
+    record(c, { k: 'fill', d: order.limit * order.qty, g: order.id, q: -order.qty });
+  }
   else {
     state.storage = { ...(state.storage ?? {}), [order.id]: (state.storage?.[order.id] ?? 0) + order.qty };
     if (here) collect(c, state, capacity); // elsewhere, the goods stay in storage there
@@ -147,7 +154,10 @@ export function checkOrders(c: Commander, system: StarSystem, state: OrderState,
         .sort((a, b) => a.t - b.t)
         .slice(-TRADE_MEMORY);
       if (order.side === 'buy') state.storage = { ...(state.storage ?? {}), [order.id]: (state.storage?.[order.id] ?? 0) + qty };
-      else c.credits = Math.round((c.credits + order.limit * qty) * 10) / 10;
+      else {
+        c.credits = Math.round((c.credits + order.limit * qty) * 10) / 10;
+        record(c, { t, k: 'fill', d: order.limit * qty, g: order.id, q: -qty, s: [system.galaxy, system.index] });
+      }
       order.qty -= qty;
     }
   }

@@ -190,7 +190,9 @@ describe('repainting', () => {
     const f = { colour: '#9fe8ff', glow: 'standard' as const, trim: null };
     expect(repaintQuote(fdl, f)).toBe(repaintLabour(fdl));
     // What she already has costs nothing: only the labour to touch her up.
-    expect(repaintQuote(fdl, { colour: '#ff4dff', glow: 'blazing', trim: '#7df9ff' }, c.paint)).toBe(repaintLabour(fdl));
+    expect(repaintQuote(fdl, { colour: '#ff4dff', glow: 'blazing', trim: '#7df9ff' }, c.paint)).toBe(repaintLabour(fdl, 'blazing'));
+    expect(repaintLabour(fdl)).toBe(18_000); // a tenth of the hull
+    expect(repaintLabour(fdl, 'blazing')).toBe(27_000);
     expect(repaint(c, fdl, f)).toMatchObject({ ok: true });
     expect(c.paint).toMatchObject({ colour: '#9fe8ff', name: 'Moxon', edition: { number: 1 }, gifted: true });
     // An edition owner may have their edition's colours back; nobody else may.

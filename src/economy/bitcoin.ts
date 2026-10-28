@@ -1,4 +1,5 @@
 import type { Commander } from '../game/commander';
+import { record as ledger } from '../game/ledger';
 import type { TradeResult } from './trade';
 
 // Bitcoin on the exchange, stage 1 (docs/design/system-currencies.md, 6b): the
@@ -85,6 +86,7 @@ export function buyBitcoin(c: Commander, q: BtcQuote | null, credits: number, no
   c.credits = tenth(c.credits - total);
   c.sats = satsOf(c) + sats;
   record(c, { t: now, side: 'buy', sats, price: q.price, total, fee: cents(fee) });
+  ledger(c, { t: now, k: 'btc', d: -total, g: 'btc', q: sats });
   return { ok: true, message: `Bought ${formatSats(sats)} for ${total.toLocaleString()} Cr · fee ${cents(fee).toLocaleString()} Cr` };
 }
 
@@ -97,6 +99,7 @@ export function sellBitcoin(c: Commander, q: BtcQuote | null, sats: number, now 
   c.sats = satsOf(c) - n;
   c.credits = tenth(c.credits + total);
   record(c, { t: now, side: 'sell', sats: n, price: q.price, total, fee: cents(fee) });
+  ledger(c, { t: now, k: 'btc', d: total, g: 'btc', q: -n });
   return { ok: true, message: `Sold ${formatSats(n)} for ${total.toLocaleString()} Cr · fee ${cents(fee).toLocaleString()} Cr` };
 }
 

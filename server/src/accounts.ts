@@ -29,6 +29,8 @@ import { gitHubReady, openPullRequest, type GitHubEnv } from './github';
 import { CHECKS } from './checks';
 import { EDITIONS, editionById } from '../../src/content/editions';
 import { normaliseVoucher, voucherCode } from './vouchers';
+import { firstAnchor, verify, type Anchor, type Save as LedgerSave } from './ledger';
+type Save = LedgerSave & { tampered?: boolean };
 import { ACCESS_TTL, challengeOk, clientName, CODE_TTL, connectPage, isMetadataUrl, redirectMatches, redirectOk, REFRESH_TTL, REQUEST_TTL, s256, SCOPE, verifierOk, withParams } from './oauth';
 
 export interface AccountsEnv extends GitHubEnv {
@@ -124,6 +126,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE TABLE IF NOT EXISTS vouchers (hash TEXT PRIMARY KEY, ship TEXT NOT NULL, note TEXT NOT NULL, created INTEGER NOT NULL, account TEXT, redeemed INTEGER)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS editions (edition TEXT NOT NULL, number INTEGER NOT NULL, account TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (edition, number))');
     this.sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS editions_account ON editions (edition, account)');
+    // Each commander's ledger, as checked so far (server/src/ledger.ts).
+    this.sql.exec('CREATE TABLE IF NOT EXISTS ledgers (account TEXT PRIMARY KEY, anchor TEXT NOT NULL)');
     // A voucher can carry an edition number, held for whoever redeems it.
     for (const col of ['edition TEXT', 'number INTEGER']) {
       try {
@@ -174,6 +178,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'POST' && path === '/me/voucher') return this.redeemVoucher(request, account);
     if (m === 'POST' && path === '/me/edition') return this.claimEdition(request, account);
     if (m === 'DELETE' && path === '/me/edition') return this.releaseEdition(request, account);
+    if (m === 'GET' && path === '/me/editions') return json({ editions: this.sql.exec('SELECT edition, number FROM editions WHERE account = ?', account.id).toArray() });
     if (m === 'DELETE' && path === '/me/connections') return this.disconnect(account, url.searchParams.get('client') ?? '');
     // A maintainer, signed in as themselves, reviews from the site's review page: the queue, any submission, the decision.
     if (sub && this.isMaintainer(account) && ((m === 'GET' && !sub[1]) || sub[2] === 'review' || (m === 'GET' && sub[1] && sub[1] !== 'mine')))
@@ -388,6 +393,24 @@ export class Accounts extends DurableObject<AccountsEnv> {
   // --- Admin: releasing protected callsigns --------------------------------------
 
   /** GET /admin/names, POST /admin/names/release {name, email}, POST /admin/names/revoke {name}. Needs the admin key. */
+  /** Check what's new in a commander's ledger against the universe. Never stands in the way of saving. */
+  private checkLedger(account: string, save: Save) {
+    try {
+      const row = this.sql.exec('SELECT anchor FROM ledgers WHERE account = ?', account).toArray()[0];
+      const anchor = row ? verify(JSON.parse(row.anchor as string) as Anchor, save) : firstAnchor(save);
+      if (save.tampered) anchor.flags = [...new Set([...anchor.flags, 'save: didn’t match its checksum'])];
+      this.sql.exec('INSERT OR REPLACE INTO ledgers (account, anchor) VALUES (?, ?)', account, JSON.stringify(anchor));
+    } catch (e) {
+      console.error('ledger check failed', account, e);
+    }
+  }
+
+  /** Why an account can't reserve a numbered edition, if it can't. */
+  private ledgerFlags(account: string): string[] {
+    const row = this.sql.exec('SELECT anchor FROM ledgers WHERE account = ?', account).toArray()[0];
+    return row ? (JSON.parse(row.anchor as string) as Anchor).flags : [];
+  }
+
   /** How many of each edition are spoken for: public, for the shipyard and the ship's page. */
   private editionCounts(): Response {
     const taken: Record<string, number> = {};
@@ -420,6 +443,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (!edition) return json({ error: 'No such edition' }, 404);
     const mine = this.sql.exec('SELECT number FROM editions WHERE edition = ? AND account = ?', edition.id, account.id).toArray()[0];
     if (mine) return json({ number: mine.number, limit: edition.limit });
+    // The yard's office checks the money is real: a ledger that doesn't add up, or a hand-edited save, can't take a number.
+    if (this.ledgerFlags(account.id).length) return json({ error: 'The yard’s office couldn’t verify your funds. If you think that’s wrong, get in touch: hello@witchspace.org.uk' }, 403);
     const used = new Set(this.sql.exec('SELECT number FROM editions WHERE edition = ?', edition.id).toArray().map((r) => r.number as number));
     let number = 1;
     while (used.has(number)) number++;
@@ -459,6 +484,31 @@ export class Accounts extends DurableObject<AccountsEnv> {
       }
       this.sql.exec('INSERT INTO vouchers (hash, ship, note, created, edition, number) VALUES (?, ?, ?, ?, ?, ?)', hash, ship, String(body?.note ?? '').slice(0, 200), Date.now(), edition?.id ?? null, number);
       return json({ code, ship, ...(edition ? { edition: edition.id, number } : {}) });
+    }
+    // Who holds which numbered edition, and whether their ledger is in good order; and putting a number back.
+    if (request.method === 'GET' && path === '/admin/editions') {
+      const rows = this.sql
+        .exec('SELECT e.edition, e.number, e.at, e.account, a.callsign, a.email FROM editions e LEFT JOIN accounts a ON a.id = e.account ORDER BY e.edition, e.number')
+        .toArray()
+        .map((r) => ({ ...r, flags: this.ledgerFlags(r.account as string) }));
+      return json({ holders: rows });
+    }
+    if (request.method === 'POST' && path === '/admin/editions/revoke') {
+      const body = (await request.json().catch(() => null)) as { edition?: unknown; number?: unknown } | null;
+      const n = this.sql.exec('DELETE FROM editions WHERE edition = ? AND number = ?', String(body?.edition), Number(body?.number)).rowsWritten;
+      return json({ revoked: n > 0 });
+    }
+    if (request.method === 'GET' && path === '/admin/ledger') {
+      const rows = this.sql.exec('SELECT l.anchor, a.callsign, a.email FROM ledgers l JOIN accounts a ON a.id = l.account').toArray();
+      return json({ flagged: rows.map((r) => ({ callsign: r.callsign, email: r.email, flags: (JSON.parse(r.anchor as string) as Anchor).flags })).filter((r) => r.flags.length) });
+    }
+    if (request.method === 'POST' && path === '/admin/ledger/clear') {
+      const body = (await request.json().catch(() => null)) as { callsign?: unknown } | null;
+      const acc = this.sql.exec('SELECT id FROM accounts WHERE callsign = ?', String(body?.callsign ?? '')).toArray()[0];
+      if (!acc) return json({ error: 'No such callsign' }, 404);
+      const row = this.sql.exec('SELECT anchor FROM ledgers WHERE account = ?', acc.id).toArray()[0];
+      if (row) this.sql.exec('UPDATE ledgers SET anchor = ? WHERE account = ?', JSON.stringify({ ...(JSON.parse(row.anchor as string) as Anchor), flags: [] }), acc.id);
+      return json({ cleared: true });
     }
     if (request.method === 'GET' && path === '/admin/vouchers') {
       return json({ vouchers: this.sql.exec('SELECT ship, note, created, account IS NOT NULL AS used, redeemed, edition, number FROM vouchers ORDER BY created').toArray() });
@@ -590,6 +640,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (current !== null && typeof body.base === 'number' && current > body.base) return json({ error: 'conflict', updated: current }, 409);
     const updated = Math.max(body.updated, (current ?? 0) + 1);
     this.sql.exec('INSERT OR REPLACE INTO saves (account, data, updated) VALUES (?, ?, ?)', account.id, JSON.stringify(body.data), updated);
+    this.checkLedger(account.id, body.data as Save);
     return json({ updated });
   }
 

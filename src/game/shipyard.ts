@@ -3,6 +3,7 @@ import { editionById, type Edition } from '../content/editions';
 import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
 import { PLAYER_LASERS, type LaserId } from './weapons';
 import { PRODUCTION_HOURS, productionHours } from './production';
+import { record } from './ledger';
 import { combatRating, ratingPoints } from './rating';
 
 // Speccing a ship and putting down a deposit, as you would on a new car
@@ -175,6 +176,7 @@ export function placeOrder(
   const deposit = depositFor(quoted);
   if (c.credits < deposit) return { ok: false, message: `The deposit is ${deposit.toLocaleString()} Cr` };
   c.credits = Math.round((c.credits - deposit) * 10) / 10;
+  if (deposit) record(c, { t: now, k: 'yard', d: -deposit });
   const order: ShipOrder = {
     ...s,
     name: cleanName(s.name),
@@ -197,6 +199,7 @@ export function cancelOrder(c: Commander, now: number): number {
   // A gift is built whatever: it's yours, not refundable.
   if (!o || o.gifted || production(o, now).built) return 0;
   c.credits = Math.round((c.credits + o.deposit) * 10) / 10;
+  record(c, { t: now, k: 'yard', d: o.deposit });
   delete c.order;
   return o.deposit;
 }
@@ -264,6 +267,7 @@ export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here
   const room = next.stats.cargo + (o.upgrades.includes('large-cargo-bay') ? LARGE_CARGO_BAY : 0);
   if (cargoTonnes > room + 1e-9) return { ok: false, message: `Your hold won’t fit: sell ${Math.ceil(cargoTonnes - room)} t first` };
   c.credits = Math.round((c.credits - bill.due) * 10) / 10;
+  if (bill.due) record(c, { t: now, k: 'yard', d: -bill.due });
   const keep = c.equipment.filter((id) => !UPGRADES.some((e) => e.id === id));
   c.equipment = [...new Set([...keep, ...o.upgrades])];
   c.damaged = [];
@@ -285,8 +289,12 @@ export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here
 
 // --- Repainting --------------------------------------------------------------------
 
-/** The yard's labour for a repaint: a little of what the hull is worth, never less than a day's work. */
-export const repaintLabour = (def: ShipDef) => Math.max(2_000, Math.round(def.stats.price * 0.03));
+/**
+ * The yard's labour for a repaint: a tenth of what the hull is worth (Mark: a respray on a
+ * ship like that costs real money), never less than a day's work; half as much again to
+ * refinish at Blazing.
+ */
+export const repaintLabour = (def: ShipDef, glow: GlowId = 'standard') => Math.round(Math.max(2_000, def.stats.price * 0.1) * (glow === 'blazing' ? 1.5 : 1));
 
 export interface Finish {
   colour: string;
@@ -305,7 +313,7 @@ export function repaintQuote(def: ShipDef, f: Finish, now?: Partial<Finish> | nu
   const colour = f.colour === now?.colour ? 0 : colourPrice(f.colour);
   const glow = f.glow === (now?.glow ?? 'standard') ? 0 : GLOWS[f.glow].price;
   const trim = !f.trim || f.trim === now?.trim ? 0 : (now?.trim ? 0 : TRIM_PRICE) + colourPrice(f.trim);
-  return repaintLabour(def) + colour + glow + trim;
+  return repaintLabour(def, f.glow) + colour + glow + trim;
 }
 
 /** Repaint the ship you fly, at a yard, while you wait. Its name, edition and luxuries stay. */
@@ -315,6 +323,7 @@ export function repaint(c: Commander, def: ShipDef, f: Finish): OrderResult | { 
   const cost = repaintQuote(def, f, c.paint);
   if (c.credits < cost) return { ok: false, message: `A repaint like that is ${cost.toLocaleString()} Cr` };
   c.credits = Math.round((c.credits - cost) * 10) / 10;
+  record(c, { k: 'yard', d: -cost });
   c.paint = { name: '', luxuries: [], ...c.paint, colour: f.colour, glow: f.glow, trim: f.trim };
   return { ok: true, paid: cost };
 }

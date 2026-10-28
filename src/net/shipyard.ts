@@ -23,4 +23,7 @@ export async function editionCounts(): Promise<Record<string, { limit: number; t
 
 export const claimEdition = (edition: string) => call<{ number: number; limit: number }>('POST', '/me/edition', { edition });
 export const releaseEdition = (edition: string) => call<{ ok: true }>('DELETE', '/me/edition', { edition });
+/** The numbered editions this account holds, as the yard's office has them. */
+export const heldEditions = () => call<{ editions: { edition: string; number: number }[] }>('GET', '/me/editions');
+
 export const redeemVoucher = (code: string) => call<{ ship: string; edition?: string; number?: number }>('POST', '/me/voucher', { code });

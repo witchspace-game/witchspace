@@ -159,3 +159,12 @@ In single-player, your commander, credits included, is saved in your own browser
 ## Big orders fill in parts *(Mark, 28 October 2026)*
 
 A limit order used to fill in one go the moment the price touched it, so a hoard sold at a single good price however big it was, and the market only crashed afterwards. Now an order fills only as much as the market takes before its price passes your limit; the rest stays on the order and fills as the market comes back. A million grams of gem-stones on one order sells over many hours at your price, not all at once.
+
+## Honest money: a checksum and a ledger *(Mark, 28 October 2026)*
+
+"I'm sure we can make it a little more secure using mathematics like Ian and David did." Two layers:
+
+- **A checksum on the save**, as Elite's commander files had. A save that doesn't match it was edited by hand: it still plays, but it's marked, and the numbered editions are closed to it. The code is open, so this stops casual cheats, not determined ones.
+- **A ledger the server can replay against the universe.** The game records how money is made (market sales and purchases, limit-order fills, the back room, Bitcoin, salvage, the yard), each entry chained to the last by hash; anything else that moves the balance is kept as "other". Each cloud save, the server checks what's new: the chain continues, the balance adds up, every price per unit was one that market could have given at that minute (the seeds say what it could have been: the price without the market's own pressure, at its floor and ceiling), precious goods sold were really had (the server keeps its own count), and "other" money stays under 400,000 Cr a day. A save that fails is flagged: play carries on, but the yard's office won't take a number for a numbered edition until a maintainer looks (`tools/editions.ts flagged`, `clear`). What a commander already had when the server first saw their ledger is taken as theirs.
+
+Still open: tonnage goods aren't counted the way precious goods are, and shared order books will need the server to run the markets, not only check them.

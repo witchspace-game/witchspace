@@ -360,6 +360,20 @@ function yourDeviation(state: MarketState, id: string, t: number): number {
 }
 
 /** A living market's price for one commodity at any moment up to now (unrounded). */
+/**
+ * The cheapest and dearest a unit of this good could have traded at, here, at
+ * time t, whatever anyone's trading had done to the stock: the price without
+ * the market's own pressure, at its floor and its ceiling. The server checks
+ * a ledger against these (server/src/ledger.ts).
+ */
+export function priceBounds(system: StarSystem, id: string, t: number): { lo: number; hi: number } {
+  const i = COMMODITIES.findIndex((c) => c.id === id);
+  if (i < 0) return { lo: 0, hi: 0 };
+  const c = COMMODITIES[i];
+  const base = equilibriumPrice(system, c, i) * drift(system, c, i, t) * crisis(system, id, t);
+  return { lo: base * 0.5, hi: base * 2.5 };
+}
+
 export function priceAt(system: StarSystem, state: MarketState, id: string, t: number): number {
   const i = COMMODITIES.findIndex((c) => c.id === id);
   const c = COMMODITIES[i];

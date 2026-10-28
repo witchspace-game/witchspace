@@ -1,6 +1,7 @@
 import { cargoTonnes, cleanQty, stolenQty, tidyStolen, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
 import { commodityById, inSafe, SAFE_LIMIT, UNITS_PER_TONNE } from './commodities';
+import { record } from '../game/ledger';
 import { stationTrades } from './legality';
 import { checkOrders } from './orders';
 import { costToBuy, freshMarket, proceedsToSell, quoteClassic, quoteModern, recover, TRADE_MEMORY, type MarketState, type Quote } from './market';
@@ -115,6 +116,7 @@ export function buy(ctx: TradeContext, id: string, qty: number): TradeResult {
   state.stock[id] -= qty;
   ctx.commander.cargo[id] = (ctx.commander.cargo[id] ?? 0) + qty;
   logTrade(ctx, state, id, 'buy', qty, cost);
+  record(ctx.commander, { t: ctx.now, k: 'buy', d: -cost, g: id, q: qty, s: [ctx.system.galaxy, ctx.system.index] });
   return { ok: true, message: `Bought ${qty} ${c.unit} of ${c.name} for ${cost.toFixed(1)} Cr` };
 }
 
@@ -130,6 +132,7 @@ export function sell(ctx: TradeContext, id: string, qty: number): TradeResult {
   }
   const proceeds = price(ctx, id, qty, false);
   ctx.commander.credits = Math.round((ctx.commander.credits + proceeds) * 10) / 10;
+  record(ctx.commander, { t: ctx.now, k: 'sell', d: proceeds, g: id, q: -qty, s: [ctx.system.galaxy, ctx.system.index] });
   const state = marketState(ctx);
   state.stock[id] = (state.stock[id] ?? 0) + qty;
   ctx.commander.cargo[id] = held - qty;
