@@ -132,6 +132,12 @@ Makers show ships before they fly, and the site shows them as **concepts**, with
 
 Then you **place a deposit** on a concept: a tenth of the price, refundable until it ships. It holds your build slot, and when the concept flies the deposit-holders get theirs first, built to their spec, at the price they were quoted. Pre-orders show on its page ("214 commanders are waiting"), which is the hype, and the order of your deposit is a bragging right. Hulls already flying are configured and bought outright, when shipyards sell.
 
+**Built** *(28 October 2026)*: the configurator, deposits, production in stages, collection with a trade-in, and ships you own (your hull and its paint, insured as yours). Colours are named for our galaxy (Lave Dusk, Riedquat Ice, Witch-fire, Orerve Nebula), five included and five that cost.
+
+**Special editions** *(Mark: "the specials should be just that, and numbered")*: a set spec nobody configures but for the name, numbered and limited, at a premium. The first is the *Witch-fire Edition* of the Fer-de-lance: Orerve Nebula with the glass deck lit in Witch-fire, Blazing, a hundred to be built. The server hands out the numbers in order, one per account; a cancelled order gives its number back.
+
+**Gift vouchers** *(Mark)*: a one-off code (`tools/voucher.ts`), redeemed at any shipyard by a signed-in pilot. A gift is the hull as it leaves the yard: an included colour and a name, nothing that costs, because a fully loaded statement ship early on would spoil the game, and it would sell for a fortune. So a gift can't be cancelled, and in part exchange the yard pays for its kit only, never the hull. The first is for Mark Moxon.
+
 This is where Build meets most pilots. The few who design hulls do it in their own tools or with an AI assistant ([ideas](../ideas.md)), and their ships end up in this configurator for everyone else.
 
 ### The Fer-de-lance, a concept

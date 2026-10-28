@@ -1411,6 +1411,12 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard-title { margin: 10px 0 4px; color: var(--hull); }
 .yard-label { display: block; margin: 12px 0 6px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 .yard-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.yard-colours { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.yard-colours button { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 6px 8px; text-align: left; text-transform: none; letter-spacing: normal; }
+.yard-colours i { grid-row: 1 / span 2; width: 18px; height: 18px; border-radius: 50%; background: var(--sw); box-shadow: 0 0 8px var(--sw); }
+.yard-colours span { font-size: 13px; color: var(--fg); }
+.yard-colours small { font-size: 11px; color: var(--dim); }
+.yard-colours button[aria-pressed='true'] { border-color: var(--sw); box-shadow: 0 0 10px color-mix(in srgb, var(--sw) 40%, transparent); }
 .yard-swatches button { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--sw); border: 2px solid transparent; box-shadow: 0 0 10px var(--sw); }
 .yard-swatches button[aria-pressed='true'] { border-color: #fff; }
 .yard-swatches button { position: relative; }
@@ -1437,6 +1443,12 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard-order span { font-size: 13px; color: var(--dim); }
 .yard-order .rec-meter { margin: 4px 0; }
 .yard-order .rec-meter span { background: var(--hull); box-shadow: 0 0 8px var(--hull); }
+.yard-edition-no { color: var(--hull) !important; font-weight: 600; letter-spacing: 0.04em; }
+.yard-spec-list { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
+.yard-voucher { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--edge); }
+.yard-voucher label { grid-column: 1 / -1; font-size: 13px; color: var(--dim); }
+.yard-voucher input { min-width: 0; padding: 6px 10px; border: 1px solid var(--edge); border-radius: 6px; background: rgba(0, 0, 0, 0.35); color: var(--fg); font: 600 15px var(--font); letter-spacing: 0.08em; text-transform: uppercase; }
+.yard-colours button:disabled { opacity: 0.35; }
 .yard-cancel { justify-self: start; min-height: 30px; padding: 2px 10px; font-size: 12px; }
 /* On a phone the ship is the point: a short panel, the hulls in a row to swipe, the berth above. */
 @media (max-width: 700px) {

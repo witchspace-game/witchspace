@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { shipById } from '../content/ships';
 import { newCommander } from './commander';
-import { collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
+import { EDITIONS } from '../content/editions';
+import { editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
 
 const fdl = shipById('fer-de-lance')!;
 const cobra = shipById('cobra-mk3')!;
@@ -97,5 +98,36 @@ describe('collecting it', () => {
     const poor = ordered();
     poor.credits = 0;
     expect(collectOrder(poor, cobra, fdl, yard, 0, built)).toMatchObject({ ok: false });
+  });
+});
+
+describe('editions and gifts', () => {
+  const witch = EDITIONS[0];
+
+  it('builds an edition to its own spec, numbered, at its premium; only the name is yours', () => {
+    const c = newCommander('modern');
+    c.credits = 200_000;
+    const r = placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#3dffb0', name: 'Halcyon' }, yard, 0, { edition: { edition: witch, number: 37 } });
+    expect(r.ok).toBe(true);
+    expect(c.order).toMatchObject({ colour: witch.colour, trim: witch.trim, glow: witch.glow, name: 'Halcyon', edition: { id: witch.id, number: 37 } });
+    expect(c.order!.quoted).toBe(editionQuote(fdl, witch));
+  });
+
+  it('gives a voucher holder the plain hull for nothing, not to be cancelled or sold on', () => {
+    const c = newCommander('modern');
+    expect(placeOrder(c, fdl, defaultSpec(fdl), yard, 0, { gift: true })).toMatchObject({ ok: false }); // no voucher
+    c.gift = { ship: 'fer-de-lance' };
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff' }, yard, 0, { gift: true })).toMatchObject({ ok: false }); // a special colour costs
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#9fe8ff', name: 'Moxon' }, yard, 0, { gift: true })).toMatchObject({ ok: true });
+    expect(c.gift).toBeUndefined();
+    expect(c.order).toMatchObject({ quoted: 0, deposit: 0, gifted: true });
+    expect(cancelOrder(c, 0)).toBe(0);
+    collectOrder(c, cobra, fdl, yard, 0, PRODUCTION_HOURS * H);
+    expect(c.paint?.gifted).toBe(true);
+    // Traded in, a gifted hull fetches nothing but its kit.
+    c.equipment = [];
+    c.lasers = {};
+    c.order = { ...defaultSpec(fdl), quoted: 0, deposit: 0, placed: 0, ...yard };
+    expect(collection(c, fdl)!.tradeIn).toBe(0);
   });
 });
