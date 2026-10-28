@@ -123,6 +123,17 @@ Makers show ships before they fly, and the site shows them as **concepts**, with
 
 **Something to drool over** *(Mark, 28 October 2026)*. "Just like the real world we should drool over a new design even if it's a 'concept' ship coming soon." A concept is a reveal, like a car at a motor show: it turns in the game's showroom marked *Concept · coming soon* with its expected price, it has its page and share card on the site, and you can open it in the ship editor. Nothing in the game spawns or sells it until it flies. Built: the `concept` flag in the ship file (game dev), with the site's badge, Concepts row and editor label (website). The first is the [Fer-de-lance](#the-fer-de-lance-a-concept).
 
+**Spec it, and put down a deposit** *(Mark, 28 October 2026)*. "I don't think anyone would use our editor. However what they would do is spec out their perfect ship, just like you do when you pre-order or place a deposit on a Tesla." Most pilots won't design a hull, but every pilot wants to spec one. At a shipyard, a concept (or any hull on sale) opens a **configurator**:
+
+- **Its glow:** the hull's colour, from the maker's palette (never the law's liveries).
+- **Its name**, painted on: *Halcyon*, *Brass Neck*, whatever you like. Other commanders see it, and so do your clips.
+- **Its fit-out:** lasers, shields, cargo bay or a bigger fuel tank, priced as you go, with the total in the corner.
+- **Turning in the berth** as you change it, so you see what you're buying.
+
+Then you **place a deposit** on a concept: a tenth of the price, refundable until it ships. It holds your build slot, and when the concept flies the deposit-holders get theirs first, built to their spec, at the price they were quoted. Pre-orders show on its page ("214 commanders are waiting"), which is the hype, and the order of your deposit is a bragging right. Hulls already flying are configured and bought outright, when shipyards sell.
+
+This is where Build meets most pilots. The few who design hulls do it in their own tools or with an AI assistant ([ideas](../ideas.md)), and their ships end up in this configurator for everyone else.
+
 ### The Fer-de-lance, a concept
 
 *(Mark, 28 October 2026: "Build it in the Neo for Witchspace.")* A statement ship: a private hotel with a fighter's bones. A lance-head hull twice a Cobra's length (118 m), a glass deck along its spine, two barbs swept back past the tail, 30 t of hold, about 180,000 Cr. Original geometry; its size, hold and character come from Samuel Penn's Traveller sheet. Its maker is announced with the [shipbuilders](shipbuilders.md) (the flashy yard), so the file has none yet. It beats a Cobra at almost everything, as a statement ship should; what it costs is the price, and being the biggest, most tempting target in the sky.

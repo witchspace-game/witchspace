@@ -117,7 +117,7 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .panel.docked.wide { width: min(640px, calc(100vw - 32px)); }
 .tabs { display: flex; gap: 4px; margin: 4px 0 12px; } /* one row, however narrow the panel */
 .tabs button { flex: 1 1 auto; min-width: 0; font-size: 13px; padding: 5px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 440px) { .tabs { gap: 3px; } .tabs button { padding: 5px 3px; font-size: 12.5px; } .tab-badge-word { display: none; } }
+@media (max-width: 440px) { .tabs { gap: 3px; overflow-x: auto; scrollbar-width: none; } .tabs::-webkit-scrollbar { display: none; } .tabs button { flex: none; padding: 5px 8px; font-size: 12.5px; overflow: visible; } .tab-badge-word { display: none; } }
 .tab-badge { display: inline-block; min-width: 16px; margin-left: 4px; padding: 0 4px; border-radius: 8px; color: #000; background: var(--accent); font-size: 10px; line-height: 16px; letter-spacing: 0; text-align: center; vertical-align: 1px; }
 .tabs button.active { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
 .market-summary { margin: 0 0 8px; font-size: 14px; color: var(--dim); }
@@ -1391,6 +1391,26 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .regular-actions button { min-height: 34px; padding: 4px 12px; }
 #saloon h3 small { color: var(--dim); font-weight: 400; font-size: 13px; letter-spacing: 0.04em; text-transform: none; }
 #saloon .meta { text-transform: none; letter-spacing: normal; font-size: 14px; }
+/* The shipyard: a showroom, each hull a card in its own colour. */
+#shipyard .meta { text-transform: none; letter-spacing: normal; font-size: 14px; }
+.yard { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.yard button { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; text-align: left; text-transform: none; letter-spacing: normal; border: 1px solid var(--edge); border-left: 3px solid var(--hull); border-radius: 8px; background: rgba(0, 12, 8, 0.6); }
+.yard button[aria-pressed='true'] { border-color: var(--hull); box-shadow: 0 0 14px color-mix(in srgb, var(--hull) 35%, transparent); }
+.yard strong { color: var(--hull); }
+.yard em { font-style: normal; font-size: 12px; color: var(--dim); }
+.yard em.yard-concept { color: var(--hull); }
+.yard span { grid-column: 1; font-size: 12px; color: var(--dim); }
+.yard b { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-weight: 600; white-space: nowrap; }
+.yard-desc { margin: 10px 0 0; font-size: 14px; color: var(--dim); }
+/* On a phone the ship is the point: a short panel, the hulls in a row to swipe, the berth above. */
+@media (max-width: 700px) {
+  body.yard-open .panel.docked { max-height: 40vh; }
+  body.yard-open #shipyard > .meta { display: none; }
+  body.yard-open .yard { grid-auto-flow: column; grid-auto-columns: 78%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+  body.yard-open .yard li { scroll-snap-align: start; }
+  body.yard-open .yard button { height: 100%; }
+  body.yard-open .yard-desc { font-size: 13px; }
+}
 .saloon-back { border-style: dashed; border-color: rgba(255, 77, 109, 0.5); color: #ff8da1; }
 .contracts li.message.unread { border-left-color: var(--amber); background: rgba(255, 179, 71, 0.08); }
 .contracts li.message.receipt { padding-top: 5px; padding-bottom: 5px; }
