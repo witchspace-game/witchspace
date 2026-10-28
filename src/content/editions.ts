@@ -15,10 +15,14 @@ export interface Edition {
   trim: string | null;
   glow: 'standard' | 'deep' | 'blazing';
   laser: 'pulse' | 'beam' | 'military';
+  /** A rear laser, if she has one. */
+  rear?: 'pulse' | 'beam' | 'military';
   upgrades: string[];
   luxuries: string[];
   /** On top of the spec's price: what being one of a hundred costs. */
-  premium: number;
+  premium?: number;
+  /** Or her whole price, set by the maker: the premium is whatever the spec leaves. */
+  price?: number;
   /** Real hours the yard takes to finish one by hand: longer than an ordinary order, because it's special. */
   finishHours: number;
 }
@@ -51,9 +55,10 @@ export const EDITIONS: Edition[] = [
     trim: '#f2f6ff',
     glow: 'deep',
     laser: 'beam',
-    upgrades: ['docking-computer', 'ecm', 'distress-jammer', 'escape-pod'],
-    luxuries: ['suite', 'voice'],
-    premium: 140_000,
+    rear: 'beam',
+    upgrades: ['docking-computer', 'ecm', 'distress-jammer', 'escape-pod', 'combat-computer'],
+    luxuries: ['suite', 'voice', 'black-light-lights', 'instrument-cabin'],
+    price: 950_000, // Mark: "make it 950K with two new Dark-only luxuries"
     finishHours: 168,
   },
 ];

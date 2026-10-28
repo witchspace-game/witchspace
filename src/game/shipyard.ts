@@ -62,13 +62,18 @@ export type GlowId = keyof typeof GLOWS;
 export const TRIM_PRICE = 16_000;
 
 /** Comfort and showing off. Nothing here makes the ship fly or fight better: money buys a statement, not an edge. */
-export const LUXURIES: { id: string; name: string; blurb: string; price: number }[] = [
+export const LUXURIES: { id: string; name: string; blurb: string; price: number; edition?: string }[] = [
   { id: 'suite', name: 'Owner’s suite', blurb: 'The whole glass deck: a bed under the stars, and a bar.', price: 48_000 },
   { id: 'voice', name: 'A ship’s voice', blurb: 'It greets you by name, and it has opinions about your flying.', price: 32_000 },
   { id: 'gold-name', name: 'Name in gold leaf', blurb: 'Hand-laid, and catches the station lights as you dock.', price: 14_000 },
   { id: 'starlight', name: 'Starlight cabin', blurb: 'The ceiling shows the sky outside, a little brighter than it is.', price: 21_000 },
   { id: 'hangar-crew', name: 'A crew at every berth', blurb: 'Your ship is washed, fuelled and waiting before you are.', price: 38_000 },
+  // The Dark Edition's own (Mark): like her Black-light paint, nobody else can order them.
+  { id: 'black-light-lights', name: 'Black-light running lights', blurb: 'Lights you only see up close, and only if she lets you.', price: 45_000, edition: 'dark' },
+  { id: 'instrument-cabin', name: 'An instrument-lit cabin', blurb: 'No lamps aboard: the cabin glows with her own readouts, for the long dark.', price: 60_000, edition: 'dark' },
 ];
+/** The luxuries anyone can order: an edition's own belong to that edition. */
+export const ORDERABLE_LUXURIES = LUXURIES.filter((l) => !l.edition);
 
 /** Fitting out a bigger, dearer hull costs more than fitting a Cobra. */
 export const fitScale = (def: ShipDef) => Math.max(1, def.stats.price / 100_000);
@@ -98,7 +103,8 @@ export const defaultSpec = (def: ShipDef): Spec => ({ ship: def.id, colour: def.
 const colourPrice = (colour: string | null) => (colour ? (PALETTE.find((p) => p.colour === colour)?.price ?? 0) : 0);
 
 /** A spec in colours anyone can order: an edition's own colours belong to that edition. */
-export const orderable = (spec: Spec) => [spec.colour, spec.trim].every((c) => !c || !PALETTE.find((p) => p.colour === c)?.edition);
+export const orderable = (spec: Spec) =>
+  [spec.colour, spec.trim].every((c) => !c || !PALETTE.find((p) => p.colour === c)?.edition) && spec.luxuries.every((id) => !LUXURIES.find((l) => l.id === id)?.edition);
 
 /** The price, line by line: the hull, its fit-out (scaled to the hull) and its finish. */
 export function priceLines(def: ShipDef, spec: Spec): { hull: number; fit: number; finish: number } {
@@ -144,7 +150,7 @@ export function checkSpec(spec: unknown, find: (id: string) => ShipDef | undefin
   const glow = o.glow ?? 'standard';
   if (!colour(o.colour) || (o.trim != null && !colour(o.trim)) || !laser(o.laser) || (o.rear != null && !laser(o.rear))) return null;
   if (typeof glow !== 'string' || !Object.hasOwn(GLOWS, glow) || !upgrades || !luxuries) return null;
-  if (!upgrades.every((id) => UPGRADES.some((e) => e.id === id)) || !luxuries.every((id) => LUXURIES.some((l) => l.id === id))) return null;
+  if (!upgrades.every((id) => UPGRADES.some((e) => e.id === id)) || !luxuries.every((id) => ORDERABLE_LUXURIES.some((l) => l.id === id))) return null;
   return {
     ship: def.id,
     colour: o.colour as string,
@@ -166,13 +172,14 @@ export const editionSpec = (e: Edition, name = ''): Spec => ({
   colour: e.colour,
   name,
   laser: e.laser,
+  ...(e.rear ? { rear: e.rear } : {}),
   upgrades: e.upgrades as EquipmentId[],
   glow: e.glow,
   trim: e.trim,
   luxuries: [...e.luxuries],
 });
 
-export const editionQuote = (def: ShipDef, e: Edition) => quote(def, editionSpec(e)) + e.premium;
+export const editionQuote = (def: ShipDef, e: Edition) => e.price ?? quote(def, editionSpec(e)) + (e.premium ?? 0);
 
 /**
  * An edition as a gift: its whole look, beam lasers front and rear, and a combat
@@ -200,7 +207,7 @@ export function placeOrder(
   if (!def.concept) return { ok: false, message: 'Hulls already flying are bought outright, when shipyards sell' };
   const giftEdition = extra.gift && c.gift?.edition ? editionById(c.gift.edition.id) : undefined;
   if (extra.gift && (c.gift?.ship !== def.id || (!giftEdition && !giftable(def, spec)))) return { ok: false, message: 'A gift is the hull with an included colour and its name' };
-  if (!extra.edition && !giftEdition && !orderable(spec)) return { ok: false, message: 'Those colours belong to an edition' };
+  if (!extra.edition && !giftEdition && !orderable(spec)) return { ok: false, message: 'Those colours and luxuries belong to an edition' };
   const locked = !giftEdition && !extra.edition ? [spec.laser, spec.rear].map((l) => (l ? laserLocked(c, l) : null)).find(Boolean) : null;
   if (locked) return { ok: false, message: locked };
   const e = extra.edition;

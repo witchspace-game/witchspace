@@ -115,10 +115,9 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 /* A desktop has room: the docked panel widens so its tabs read in full, keys and all (Mark). */
 @media (min-width: 900px) { .panel.docked { width: 500px; } }
 .panel.docked.wide { width: min(640px, calc(100vw - 32px)); }
-.tabs { display: flex; gap: 4px; margin: 4px 0 12px; overflow-x: auto; scrollbar-width: none; } /* one row, however narrow the panel: it scrolls */
-.tabs::-webkit-scrollbar { display: none; }
+.tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0 12px; } /* two tidy rows rather than tabs hidden off the edge (Mark) */
 .tabs button { flex: 1 0 auto; font-size: 13px; padding: 5px 8px; white-space: nowrap; }
-@media (max-width: 440px) { .tabs { gap: 3px; overflow-x: auto; scrollbar-width: none; } .tabs::-webkit-scrollbar { display: none; } .tabs button { flex: none; padding: 5px 8px; font-size: 12.5px; overflow: visible; } .tab-badge-word { display: none; } }
+@media (max-width: 440px) { .tabs button { padding: 7px 4px; font-size: 12.5px; overflow: visible; } .tabs .key { display: none; } .tab-badge-word { display: none; } }
 .tab-badge { display: inline-block; min-width: 16px; margin-left: 4px; padding: 0 4px; border-radius: 8px; color: #000; background: var(--accent); font-size: 10px; line-height: 16px; letter-spacing: 0; text-align: center; vertical-align: 1px; }
 .tabs button.active { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
 .market-summary { margin: 0 0 8px; font-size: 14px; color: var(--dim); }
@@ -1040,7 +1039,7 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
 }
 .panel.docked.exchange h2 { font-size: 20px; }
 .panel.docked.exchange .meta { margin: 0; }
-.panel.docked.exchange .tabs { margin: 0; }
+.panel.docked.exchange .tabs { margin: 0; display: flex; } /* the full-screen exchange is wide: one row */
 .dock-bar { display: none; }
 .panel.docked.exchange .dock-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .dock-bar button { font-size: 13px; padding: 5px 12px; }
