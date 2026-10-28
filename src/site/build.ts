@@ -1,6 +1,6 @@
 import { EDITIONS, editionNo, type Edition } from '../content/editions';
 import type { ShipDef } from '../content/types';
-import { checkSpec, cleanName, editionQuote, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, ORDERABLE_LUXURIES, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
+import { checkSpec, cleanName, editionQuote, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, ORDERABLE_LUXURIES, standardKit, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
 import { API, refresh, sessionToken, signedIn } from '../net/account';
 import { accountSpec, editionCounts } from '../net/shipyard';
@@ -72,6 +72,8 @@ const waiting = () => {
 };
 
 let spec: Spec = fromLink() ?? local()?.spec ?? defaultSpec(def);
+// Whatever the link or the save says, she has what the yard fits as standard (placeOrder adds it too).
+spec.upgrades = [...new Set([...standardKit(def), ...spec.upgrades])];
 
 // The numbered editions: set by the maker, so they're looked at here, not specced (Mark: "if I choose one of
 // the special editions it doesn't show what it looks like"). They're reserved in the game, where the number comes from.
@@ -107,6 +109,11 @@ const choice = (attr: string, value: string, on: boolean, name: string, price: s
 const tick = (attr: string, value: string, on: boolean, name: string, price: string, note = '') =>
   `<label class="build-tick"><input type="checkbox" ${attr}="${value}" ${on ? 'checked' : ''} /><span>${escapeHtml(name)}${note ? `<em>${escapeHtml(note)}</em>` : ''}</span><small>${price}</small></label>`;
 
+/** What this hull leaves the yard with, at no charge (the game's standardKit): ticked, and not for taking off. */
+const STANDARD: string[] = standardKit(def);
+const standard = (name: string, note: string) =>
+  `<label class="build-tick standard"><input type="checkbox" checked disabled /><span>${escapeHtml(name)}<em>${escapeHtml(note)}</em></span><small>Standard</small></label>`;
+
 function options(): string {
   const k = fitScale(def);
   const laser = (id: LaserId) => cr(Math.round(PLAYER_LASERS[id].price * k));
@@ -127,7 +134,7 @@ function options(): string {
     case 'fit':
       return `<h2>Her laser</h2><div class="build-choices">${LASERS.map((id) => choice('data-laser', id, spec.laser === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>
         <h2>Rear laser</h2><div class="build-choices">${choice('data-rear', '', !spec.rear, 'None', '—')}${LASERS.map((id) => choice('data-rear', id, spec.rear === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>
-        <h2>Upgrades <span>fitted to a hull this size: ×${k.toFixed(1)}</span></h2><div class="build-ticks">${UPGRADES.map((e) => tick('data-up', e.id, spec.upgrades.includes(e.id), e.name, cr(Math.round(e.price * k)), e.blurb)).join('')}</div>`;
+        <h2>Upgrades <span>fitted to a hull this size: ×${k.toFixed(1)}</span></h2><div class="build-ticks">${UPGRADES.map((e) => (STANDARD.includes(e.id) ? standard(e.name, e.blurb) : tick('data-up', e.id, spec.upgrades.includes(e.id), e.name, cr(Math.round(e.price * k)), e.blurb))).join('')}</div>`;
     case 'order':
       return orderStep();
   }

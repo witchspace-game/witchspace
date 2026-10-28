@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { ShipDef } from '../src/content/types';
 import { EDITIONS } from '../src/content/editions';
 import { EQUIPMENT } from '../src/game/commander';
-import { depositFor, editionQuote, GLOWS, LUXURIES, PALETTE } from '../src/game/shipyard';
+import { depositFor, editionQuote, GLOWS, LUXURIES, PALETTE, standardKit } from '../src/game/shipyard';
 import { handling, inYards, notesFor } from '../src/game/manual';
 import { MAX_ROLL_ERROR } from '../src/game/station';
 import { PLAYER_LASERS } from '../src/game/weapons';
@@ -89,6 +89,7 @@ export function manualFor(s: ShipFile, cobra: ShipFile, drawer: ManualData['draw
     handling: rows.map((h) => [h.label, h.value, s.id === 'cobra-mk3' ? '' : h.versus]),
     span: s.id === 'cobra-mk3' ? '' : rows.find((h) => h.label === 'Span')!.versus,
     roll: Math.round((MAX_ROLL_ERROR * 180) / Math.PI),
+    dockingFitted: standardKit(def).includes('docking-computer'),
     kit: Object.fromEntries(EQUIPMENT.map((e) => [e.id, [e.name, e.blurb]])),
     luxuries: Object.fromEntries(LUXURIES.map((l) => [l.id, [l.name, l.blurb]])),
     editions: Object.fromEntries(EDITIONS.map((e) => [e.id, e.name])),

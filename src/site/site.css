@@ -953,6 +953,8 @@ button.button { cursor: pointer; }
 .build-choice span, .build-tick span { flex: 1; }
 .build-choice em, .build-tick em { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; font-style: normal; }
 .build-tick input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--hull); }
+.build-tick.standard { cursor: default; opacity: 0.85; }
+.build-tick.standard small { color: var(--accent); }
 .build-tick:has(input:checked) { border-color: var(--hull); background: color-mix(in srgb, var(--hull) 10%, transparent); }
 .build-note { margin: 12px 0 0; color: var(--muted); font-size: 14px; }
 .build-note.done { color: var(--fg); }

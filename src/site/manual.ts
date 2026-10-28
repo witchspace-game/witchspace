@@ -71,7 +71,7 @@ function show(c: Owner) {
       <tbody>${m.handling.map(([label, value, versus]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td><td>${escapeHtml(versus)}</td></tr>`).join('')}</tbody></table>
     </section>
     <section class="card" id="man-dock"><h3>Docking</h3>
-      <ol>${DOCKING(m.roll).map((step) => `<li>${step}</li>`).join('')}</ol>
+      <ol>${DOCKING(m.roll, m.dockingFitted).map((step) => `<li>${step}</li>`).join('')}</ol>
       ${m.span ? `<p class="muted">${escapeHtml(m.name)}: ${escapeHtml(m.span)}.</p>` : ''}
     </section>
     <section class="card" id="man-desk"><h3>On a computer</h3>
