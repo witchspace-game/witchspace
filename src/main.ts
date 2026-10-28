@@ -1271,8 +1271,8 @@ function renderShipyard() {
       : gift
         ? c.order
           ? '<p class="meta">One ship in production at a time: collect that one first.</p>'
-          : `<button type="button" class="primary yard-gift">Put her into production · a gift</button>
-            <p class="yard-note">${giftEdition ? 'In the edition’s colours' : 'The hull as it leaves the yard, in your colour'}, with your name on her. Upgrades are yours to earn. It's a gift: it can't be cancelled, and the yard won't buy the hull back.</p>`
+          : `<button type="button" class="primary yard-gift">Take her now · a gift</button>
+            <p class="yard-note">${giftEdition ? 'In the edition’s colours' : 'The hull as it leaves the yard, in your colour'}, with your name on her: built and waiting. The yard keeps your ${escapeHtml(player.def.name)} as part of the gift. Upgrades are yours to earn, and the yard won't buy her back.</p>`
         : def.concept
       ? c.order
         ? '<p class="meta">One ship in production at a time.</p>'
@@ -1419,10 +1419,19 @@ function renderShipyard() {
     const giftGo = el.querySelector<HTMLButtonElement>('.yard-gift');
     if (giftGo && gift)
       giftGo.onclick = () => {
-        const r = placeOrder(c, def, spec!, { galaxy: here.galaxy, system: here.index }, Date.now(), { gift: true });
+        const at = { galaxy: here.galaxy, system: here.index };
+        const r = placeOrder(c, def, spec!, at, Date.now(), { gift: true });
+        // Built and waiting: you fly out in her now.
+        const got = r.ok ? collectOrder(c, player.def, def, at, cargoTonnes(c), Date.now()) : null;
         if (!r.ok) yardMessage = r.message;
+        else if (got && !got.ok) yardMessage = `Built and waiting for you here: ${got.message}.`;
         else {
-          yardMessage = `Your gift goes into production at ${stationName(here).name}: a ${def.name}${r.order.name ? ` “${r.order.name}”` : ''}.`;
+          boardShip();
+          const ed = c.paint?.edition && editionById(c.paint.edition.id);
+          yardMessage = `She's yours: your ${def.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}${ed ? `, ${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''}, in the berth and ready to fly. With the yard's thanks.`;
+          yardPick = def.id;
+        }
+        if (r.ok) {
           spec = null;
           yardMode = 'spec';
           saveCommander(c);
@@ -1435,7 +1444,7 @@ function renderShipyard() {
       <ul class="yard">${yard
         .map(({ def }) => {
           const st = def.stats;
-          const tag = def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : def.id === hullOf(c) ? `<em>Your ship${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</em>` : '';
+          const tag = def.id === hullOf(c) ? `<em>Your ship${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</em>` : def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : '';
           return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${def.style.lineColor}">
             <strong>${escapeHtml(def.name)}</strong> ${tag}
             <span>${[def.manufacturer, def.role].filter(Boolean).map((x) => escapeHtml(x!)).join(' · ')}</span>

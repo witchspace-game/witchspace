@@ -180,6 +180,8 @@ export const STAGES: { at: number; text: string }[] = [
 ];
 
 export function production(o: ShipOrder, now: number): { fraction: number; stage: string; built: boolean; hoursLeft: number } {
+  // A gift is waiting when you redeem it: the yard built it for you already (Mark).
+  if (o.gifted) return { fraction: 1, stage: 'Built', built: true, hoursLeft: 0 };
   const fraction = Math.min(1, Math.max(0, (now - o.placed) / (PRODUCTION_HOURS * 3600_000)));
   const stage = [...STAGES].reverse().find((s) => fraction >= s.at)!.text;
   return { fraction, stage, built: fraction >= 1, hoursLeft: Math.ceil((1 - fraction) * PRODUCTION_HOURS) };
@@ -205,7 +207,8 @@ export function collection(c: Commander, current: ShipDef): { balance: number; t
   const o = c.order;
   if (!o) return null;
   const balance = o.quoted - o.deposit;
-  const t = tradeIn(c, current);
+  // With a gift, the yard keeps your old ship as part of it: no windfall for a new pilot (Mark: not too much, too early).
+  const t = o.gifted ? 0 : tradeIn(c, current);
   return { balance, tradeIn: t, due: balance - t };
 }
 

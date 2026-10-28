@@ -122,7 +122,11 @@ describe('editions and gifts', () => {
     expect(c.gift).toBeUndefined();
     expect(c.order).toMatchObject({ quoted: 0, deposit: 0, gifted: true });
     expect(cancelOrder(c, 0)).toBe(0);
-    collectOrder(c, cobra, fdl, yard, 0, PRODUCTION_HOURS * H);
+    // Ready on redeem, and the yard keeps the old Cobra: nothing paid either way.
+    expect(collection(c, cobra)).toEqual({ balance: 0, tradeIn: 0, due: 0 });
+    const before = c.credits;
+    expect(collectOrder(c, cobra, fdl, yard, 0, 0)).toEqual({ ok: true, paid: 0 });
+    expect(c.credits).toBe(before);
     expect(c.paint?.gifted).toBe(true);
     // Traded in, a gifted hull fetches nothing but its kit.
     c.equipment = [];
