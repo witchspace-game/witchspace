@@ -179,3 +179,28 @@ describe('editions and gifts', () => {
     expect(c.equipment).toContain('combat-computer');
   });
 });
+
+describe('repainting', () => {
+  it('repaints the ship you fly, for the finish and the labour, keeping its name and edition', async () => {
+    const { repaint, repaintQuote, repaintLabour } = await import('./shipyard');
+    const c = newCommander('modern');
+    c.ship = 'fer-de-lance';
+    c.paint = { colour: '#ff4dff', glow: 'blazing', trim: '#7df9ff', name: 'Moxon', luxuries: ['suite'], edition: { id: 'witch-fire', number: 1 }, gifted: true };
+    c.credits = 1_000_000;
+    const f = { colour: '#9fe8ff', glow: 'standard' as const, trim: null };
+    expect(repaintQuote(fdl, f)).toBe(repaintLabour(fdl));
+    // What she already has costs nothing: only the labour to touch her up.
+    expect(repaintQuote(fdl, { colour: '#ff4dff', glow: 'blazing', trim: '#7df9ff' }, c.paint)).toBe(repaintLabour(fdl, 'blazing'));
+    expect(repaintLabour(fdl)).toBe(18_000); // a tenth of the hull
+    expect(repaintLabour(fdl, 'blazing')).toBe(27_000);
+    expect(repaint(c, fdl, f)).toMatchObject({ ok: true });
+    expect(c.paint).toMatchObject({ colour: '#9fe8ff', name: 'Moxon', edition: { number: 1 }, gifted: true });
+    // An edition owner may have their edition's colours back; nobody else may.
+    expect(repaint(c, fdl, { colour: '#ff4dff', glow: 'blazing', trim: '#7df9ff' })).toMatchObject({ ok: true });
+    const other = newCommander('modern');
+    other.ship = 'fer-de-lance';
+    other.credits = 1e6;
+    expect(repaint(other, fdl, { colour: '#ff4dff', glow: 'standard', trim: null })).toMatchObject({ ok: false });
+    expect(repaint(other, cobra, { colour: '#9fe8ff', glow: 'standard', trim: null })).toMatchObject({ ok: false }); // not the ship he flies
+  });
+});

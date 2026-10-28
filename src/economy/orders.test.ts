@@ -48,30 +48,47 @@ describe('limit orders', () => {
     const state: OrderState = freshMarket(lave, NOW);
     const { lo } = range(state, 12);
     const limit = lo + 0.02;
-    expect(placeOrder(c, lave, state, 'food', 'buy', 5, limit, NOW).ok).toBe(true);
+    expect(placeOrder(c, lave, state, 'food', 'buy', 1, limit, NOW).ok).toBe(true);
     state.updated = NOW + 12 * HOUR;
     const fills = checkOrders(c, lave, state, NOW + 12 * HOUR);
     expect(fills).toHaveLength(1);
     expect(state.orders).toHaveLength(0);
-    expect(state.storage?.food).toBe(5);
-    expect(state.trades?.some((t) => t.id === 'food' && t.side === 'buy' && t.qty === 5)).toBe(true);
+    expect(state.storage?.food).toBe(1);
+    expect(state.trades?.some((t) => t.id === 'food' && t.side === 'buy' && t.qty === 1)).toBe(true);
     collect(c, state, 20);
-    expect(c.cargo.food).toBe(5);
+    expect(c.cargo.food).toBe(1);
     expect(state.storage?.food).toBeUndefined();
   });
 
   it('pay for a sell order when it fills', () => {
     const c = newCommander('modern');
-    c.cargo = { food: 4 };
+    c.cargo = { food: 1 };
     const state: OrderState = freshMarket(lave, NOW);
     const { hi } = range(state, 12);
     const limit = hi - 0.02;
-    expect(placeOrder(c, lave, state, 'food', 'sell', 4, limit, NOW).ok).toBe(true);
+    expect(placeOrder(c, lave, state, 'food', 'sell', 1, limit, NOW).ok).toBe(true);
     expect(c.cargo.food).toBeUndefined(); // held by the order
     const before = c.credits;
     state.updated = NOW + 12 * HOUR;
     checkOrders(c, lave, state, NOW + 12 * HOUR);
-    expect(c.credits).toBeCloseTo(before + Math.round(limit * 100) / 100 * 4, 0);
+    expect(c.credits).toBeCloseTo(before + Math.round(limit * 100) / 100, 0);
+  });
+
+  it('fill a big order in parts, only as much as the market takes at your price (Mark: no cashing a hoard in one go)', () => {
+    const c = newCommander('modern');
+    c.cargo = { gems: 1_000_000 };
+    const state: OrderState = freshMarket(lave, NOW);
+    const limit = priceAt(lave, state, 'gems', NOW) * 1.02;
+    expect(placeOrder(c, lave, state, 'gems', 'sell', 1_000_000, limit, NOW).ok).toBe(true);
+    const before = c.credits;
+    state.updated = NOW + 12 * HOUR;
+    const fills = checkOrders(c, lave, state, NOW + 12 * HOUR);
+    const sold = fills.reduce((n, f) => n + f.order.qty, 0);
+    // Some sells, every gram at your price or better for the market; most of it waits on the order.
+    expect(sold).toBeGreaterThan(0);
+    expect(sold).toBeLessThan(50_000);
+    expect(c.credits - before).toBeCloseTo(Math.round(limit * 100) / 100 * sold, -1);
+    expect(state.orders?.[0].qty).toBe(1_000_000 - sold);
   });
 
   it('give everything back when cancelled', () => {

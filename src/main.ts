@@ -80,12 +80,13 @@ import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rig
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
-import { claimEdition, editionCounts, redeemVoucher, releaseEdition } from './net/shipyard';
+import { claimEdition, editionCounts, heldEditions, redeemVoucher, releaseEdition } from './net/shipyard';
 import { enablePush, needsHomeScreen } from './net/notify';
-import { cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
+import { record as ledgerRecord } from './game/ledger';
 import { handling, notesFor } from './game/manual';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
@@ -1204,7 +1205,7 @@ let yardPick: string | null = null;
 /** The ship being specced, while the configurator is open. */
 let spec: Spec | null = null;
 /** What the configurator is doing: your own spec, naming a numbered edition, or a gift from a voucher. */
-let yardMode: 'spec' | 'edition' | 'gift' = 'spec';
+let yardMode: 'spec' | 'edition' | 'gift' | 'repaint' = 'spec';
 /** The special edition you're looking at in the yard, if any. */
 let editionSel: string | null = null;
 let editionsLeft: Record<string, { limit: number; taken: number }> = {};
@@ -1340,7 +1341,7 @@ function renderShipyard() {
     const deposit = depositFor(total);
     const cost = (n: number) => (n ? `${n.toLocaleString()} Cr` : 'Included');
     const swatches = (attr: string, chosen: string | null) =>
-      `<div class="yard-colours">${ORDERABLE.map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${escapeHtml(p.line)}" style="--sw:${p.colour}" ${gift && p.price ? 'disabled' : ''}><i></i><span>${p.name}</span><small>${p.price ? `${p.price.toLocaleString()} Cr` : 'Included'}</small></button>`).join('')}</div>`;
+      `<div class="yard-colours">${(yardMode === 'repaint' ? PALETTE.filter((p) => paintable(c, p.colour)) : ORDERABLE).map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${escapeHtml(p.line)}" style="--sw:${p.colour}" ${gift && p.price ? 'disabled' : ''}><i></i><span>${p.name}</span><small>${p.price ? `${p.price.toLocaleString()} Cr` : 'Included'}</small></button>`).join('')}</div>`;
     const chosenColour = PALETTE.find((p) => p.colour === spec!.colour);
     const laserRow = (Object.keys(PLAYER_LASERS) as LaserId[])
       .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}" ${laserLocked(c, id) ? `disabled title="${escapeHtml(laserLocked(c, id)!)}"` : ''}>${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
@@ -1348,7 +1349,12 @@ function renderShipyard() {
     const kit = UPGRADES.filter((e) => !e.modernOnly || c.difficulty === 'modern')
       .map((e) => `<label><input type="checkbox" data-up="${e.id}" ${spec!.upgrades.includes(e.id) ? 'checked' : ''} /> <span>${escapeHtml(e.name)}</span><small>${Math.round(e.price * fitScale(def)).toLocaleString()} Cr</small></label>`)
       .join('');
-    const action = fixed
+    const repainting = yardMode === 'repaint';
+    const repaintCost = repainting ? repaintQuote(def, { colour: spec.colour, glow: spec.glow, trim: spec.trim }, c.paint) : 0;
+    const action = repainting
+      ? `<button type="button" class="primary yard-repaint" ${c.credits < repaintCost ? 'disabled' : ''}>Repaint her · ${repaintCost.toLocaleString()} Cr</button>
+        <p class="yard-note">Done while you wait. Her name${c.paint?.edition ? ', her number' : ''} and what's aboard stay as they are.</p>`
+      : fixed
       ? c.order
         ? '<p class="meta">One ship in production at a time.</p>'
         : !signedIn()
@@ -1379,7 +1385,15 @@ function renderShipyard() {
         </ul>
         ${nameField}
         <p class="yard-total"><span>The spec ${quote(def, spec).toLocaleString()} · numbered ${fixed.premium.toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>`
-      : gift && giftEdition
+      : repainting
+        ? `<p class="yard-label">Her colour <span>${escapeHtml(nameOf(spec.colour))}</span></p>
+          ${swatches('data-colour', spec.colour)}
+          <p class="yard-label">How hard she glows</p>
+          <div class="yard-lasers">${(Object.keys(GLOWS) as GlowId[]).map((g) => `<button type="button" data-glow="${g}" aria-pressed="${spec!.glow === g}">${GLOWS[g].name}<small>${cost(GLOWS[g].price)}</small></button>`).join('')}</div>
+          <label class="yard-check"><input type="checkbox" class="yard-two-tone" ${spec.trim ? 'checked' : ''} /> <span>Two-tone: the fine lines in a second colour</span><small>${TRIM_PRICE.toLocaleString()} Cr</small></label>
+          ${spec.trim ? swatches('data-trim', spec.trim) : ''}
+          <p class="yard-total"><span>Labour ${repaintLabour(def, spec.glow).toLocaleString()} · finish ${(repaintCost - repaintLabour(def, spec.glow)).toLocaleString()}</span><b>${repaintCost.toLocaleString()} Cr</b></p>`
+        : gift && giftEdition
         ? `<p class="yard-desc">${escapeHtml(giftEdition.blurb)}</p>
           <ul class="yard-spec-list">
             <li>${escapeHtml(nameOf(giftEdition.colour))}${giftEdition.trim ? `, the fine lines in ${escapeHtml(nameOf(giftEdition.trim))}` : ''}, ${GLOWS[giftEdition.glow].name.toLowerCase()}</li>
@@ -1396,7 +1410,7 @@ function renderShipyard() {
           <p class="yard-total"><span>Hull, ${escapeHtml(PLAYER_LASERS[standardLaser(def)].name.toLowerCase())}, standard fit</span><b>A gift</b></p>`
         : '';
     el.innerHTML = `${msg}${orderCard}<button type="button" class="yard-back">‹ The yard</button> <button type="button" class="yard-photo">Photograph her</button>
-      <h3 class="yard-title" style="--hull:${spec.colour}">${fixed ? `${escapeHtml(fixed.name)}: ${escapeHtml(def.name)}` : giftEdition ? `Your gift: ${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}` : gift ? `Your gift: a ${escapeHtml(def.name)}` : `Spec your ${escapeHtml(def.name)}`}</h3>
+      <h3 class="yard-title" style="--hull:${spec.colour}">${repainting ? `Repaint your ${escapeHtml(def.name)}` : fixed ? `${escapeHtml(fixed.name)}: ${escapeHtml(def.name)}` : giftEdition ? `Your gift: ${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}` : gift ? `Your gift: a ${escapeHtml(def.name)}` : `Spec your ${escapeHtml(def.name)}`}</h3>
       ${body ? `${body}${action}` : `<p class="yard-label">Its colour <span>${chosenColour ? `${chosenColour.name} · ${cost(chosenColour.price)}` : 'The maker’s own'}</span></p>
       ${swatches('data-colour', spec.colour)}
       ${chosenColour ? `<p class="yard-note">${escapeHtml(chosenColour.line)}</p>` : ''}
@@ -1464,8 +1478,8 @@ function renderShipyard() {
         spec!.upgrades = box.checked ? [...spec!.upgrades, id] : spec!.upgrades.filter((u) => u !== id);
         keep();
       };
-    const name = el.querySelector<HTMLInputElement>('#spec-name')!;
-    name.oninput = () => (spec!.name = name.value);
+    const name = el.querySelector<HTMLInputElement>('#spec-name');
+    if (name) name.oninput = () => (spec!.name = name.value);
     const dep = el.querySelector<HTMLButtonElement>('.yard-deposit');
     if (dep)
       dep.onclick = () => {
@@ -1493,6 +1507,11 @@ function renderShipyard() {
           return;
         }
         reserve.disabled = true;
+        if (c.tampered) {
+          yardMessage = 'The yard’s office won’t take a number from a commander whose papers have been altered.';
+          renderShipyard();
+          return;
+        }
         const n = await claimEdition(fixed.id);
         if ('error' in n) yardMessage = n.error;
         else {
@@ -1508,6 +1527,25 @@ function renderShipyard() {
             saveCommander(c);
             sfx.beep();
           }
+        }
+        renderShipyard();
+      };
+    const paintGo = el.querySelector<HTMLButtonElement>('.yard-repaint');
+    if (paintGo && repainting)
+      paintGo.onclick = () => {
+        if (!paintGo.dataset.armed) {
+          paintGo.dataset.armed = '1';
+          paintGo.textContent = `Pay ${repaintCost.toLocaleString()} Cr and repaint her? Press again`;
+          return;
+        }
+        const r = repaint(c, def, { colour: spec!.colour, glow: spec!.glow, trim: spec!.trim });
+        if (!r.ok) yardMessage = r.message;
+        else {
+          yardMessage = `Repainted in ${nameOf(spec!.colour)}. She looks the part.`;
+          spec = null;
+          yardMode = 'spec';
+          saveCommander(c);
+          sfx.beep();
         }
         renderShipyard();
       };
@@ -1562,6 +1600,7 @@ function renderShipyard() {
         }).join('')}</ul>
       <p class="yard-desc">${escapeHtml(edition ? edition.blurb : pick.def.description)}</p>
       ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span><button type="button" class="primary yard-open-gift">Spec your gift</button></div>` : ''}
+      ${pick.def.id === hullOf(c) && !edition ? `<button type="button" class="yard-manual yard-repaint-open">Repaint your ${escapeHtml(pick.def.name)}</button>` : ''}
       <button type="button" class="yard-manual">The ${escapeHtml(edition ? (shipById(edition.ship)?.name ?? '') : pick.def.name)} owner's manual</button>
       <button type="button" class="primary yard-spec">${edition ? `Choose its name and reserve one` : `Spec your ${escapeHtml(pick.def.name)}`}</button>
       <form class="yard-voucher"><label for="voucher">Have a gift voucher?</label><input id="voucher" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" /><button type="submit">Redeem</button></form>`;
@@ -1578,7 +1617,13 @@ function renderShipyard() {
         resetShowroomView();
         renderShipyard();
       };
-    el.querySelector<HTMLButtonElement>('.yard-manual')!.onclick = () => openManual(edition ? shipById(edition.ship)! : pick.def);
+    el.querySelector<HTMLButtonElement>('.yard-repaint-open')?.addEventListener('click', () => {
+      yardMode = 'repaint';
+      const p = c.paint;
+      spec = { ...defaultSpec(pick.def), colour: p?.colour ?? pick.def.style.lineColor, glow: p?.glow ?? 'standard', trim: p?.trim ?? null };
+      renderShipyard();
+    });
+    el.querySelector<HTMLButtonElement>('.yard-manual:not(.yard-repaint-open)')!.onclick = () => openManual(edition ? shipById(edition.ship)! : pick.def);
     el.querySelector<HTMLButtonElement>('.yard-spec')!.onclick = () => {
       if (edition) {
         yardMode = 'edition';
@@ -1635,13 +1680,24 @@ function renderShipyard() {
     };
   const take = el.querySelector<HTMLButtonElement>('.yard-collect');
   if (take && c.order)
-    take.onclick = () => {
+    take.onclick = async () => {
       if (!take.dataset.armed) {
         take.dataset.armed = '1';
         take.textContent = `Trade in your ${player.def.name} and take her? Press again`;
         return;
       }
       const next = shipById(c.order!.ship)!;
+      // A numbered edition is handed over only if the yard's office has the number down as yours.
+      const ed = c.order!.edition;
+      if (ed) {
+        take.disabled = true;
+        const held = await heldEditions();
+        if ('error' in held || !held.editions.some((x) => x.edition === ed.id && x.number === ed.number)) {
+          yardMessage = 'error' in held ? held.error : 'The yard’s office has no record of that number in your name. Get in touch: hello@witchspace.org.uk';
+          renderShipyard();
+          return;
+        }
+      }
       const r = collectOrder(c, player.def, next, { galaxy: here.galaxy, system: here.index }, cargoTonnes(c), Date.now());
       if (!r.ok) yardMessage = r.message;
       else {
@@ -4884,6 +4940,7 @@ function tryScoop(d: Drifter): boolean {
     return false;
   }
   c.cargo[contents.id] = (c.cargo[contents.id] ?? 0) + contents.qty;
+  { const here = currentSystem(); ledgerRecord(c, { k: 'scoop', d: 0, g: contents.id, q: contents.qty, s: [here.galaxy, here.index] }); }
   if (d.stolen) markStolen(c, contents.id, contents.qty);
   saveCommander(c);
   sfx.beep();

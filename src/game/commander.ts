@@ -215,6 +215,7 @@ export const EQUIPMENT: Equipment[] = [
 import { cargoTonnage } from '../economy/commodities';
 import type { MarketState } from '../economy/market';
 import type { LaserId } from './weapons';
+import { fnv, reconcile, type Ledger } from './ledger';
 import type { ExploreRecord } from './explore';
 import type { ActiveContract, CompanyLog } from './contracts';
 import type { AdriftCase, Message } from './assignments';
@@ -339,6 +340,10 @@ export interface Commander {
   btcOrders?: BtcOrder[];
   /** The saloon: drinks bought this visit, and the tips you've heard (game/saloon.ts). */
   saloon?: { drinks: string[]; heard: Heard[] };
+  /** How the money was made, chained by hash, for the server to check (src/game/ledger.ts). */
+  ledger?: Ledger;
+  /** Set when the save didn't match its checksum: hand-edited. Numbered editions are closed to it. */
+  tampered?: true;
   /** A gift voucher redeemed, waiting to be specced at a shipyard. */
   gift?: { ship: string; edition?: { id: string; number: number } };
   /** A ship you've specced and put a deposit on, in production at a yard (src/game/shipyard.ts). */
@@ -395,7 +400,10 @@ export function loadCommander(): Commander | null {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const { legal: _old, ...saved } = JSON.parse(raw); // pre-records saves had one global status
+      const { chk, ...stored } = JSON.parse(raw);
+      const { legal: _old, ...saved } = stored; // pre-records saves had one global status
+      // As Elite's commander files did: a save that doesn't match its checksum was edited by hand.
+      if (typeof chk === 'string' && chk !== checksum(JSON.stringify(stored))) saved.tampered = true;
       const c: Commander = { ...newCommander('modern'), ...saved };
       if (c.impound && !c.impound.items.length) c.impound = null; // a debt with nothing held is written off
       return c;
@@ -410,9 +418,14 @@ const saveListeners: ((c: Commander) => void)[] = [];
 /** Be told after every save (the cloud save uses this). */
 export const onSave = (fn: (c: Commander) => void) => saveListeners.push(fn);
 
+/** The save's checksum, as Elite's commander files had: it stops casual editing, not a determined cheat (the code is open). */
+const checksum = (json: string) => fnv(`witchspace:${json}`);
+
 export function saveCommander(c: Commander) {
+  reconcile(c);
   try {
-    localStorage.setItem(KEY, JSON.stringify(c));
+    const json = JSON.stringify({ ...c, chk: undefined });
+    localStorage.setItem(KEY, JSON.stringify({ ...c, chk: checksum(json) }));
   } catch {
     // Ignore; see loadCommander.
   }

@@ -1,6 +1,7 @@
 import { cargoTonnes, removeStolen, stolenQty, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
 import { COMMODITIES, UNITS_PER_TONNE } from './commodities';
+import { record } from '../game/ledger';
 import { eventShare } from './events';
 import { hasLicence, legalityAt } from './legality';
 import { drift, equilibriumPrice, npcTrades, priceAt, type MarketState } from './market';
@@ -139,6 +140,7 @@ export function backRoomTrade(
   const units = good.unit === 't' ? ' t' : ` ${good.unit}`;
   if (side === 'buy') {
     c.credits = Math.round((c.credits - total) * 10) / 10;
+    record(c, { t: now, k: 'back', d: -total, g: id, q: sting ? 0 : qty, s: [s.galaxy, s.index] });
     if (sting) return { ok: true, caught: true, message: `Sting! Undercover police took your ${total.toFixed(1)} Cr` };
     c.cargo[id] = (c.cargo[id] ?? 0) + qty;
   } else {
@@ -146,6 +148,7 @@ export function backRoomTrade(
     if (c.cargo[id] <= 0) delete c.cargo[id];
     if (sting) return { ok: true, caught: true, message: `Sting! The buyer was police: ${qty}${units} of ${good.name} seized` };
     c.credits = Math.round((c.credits + total) * 10) / 10;
+    record(c, { t: now, k: 'back', d: total, g: id, q: -qty, s: [s.galaxy, s.index] });
   }
   state.backRoom = [...(state.backRoom ?? []).filter((x) => x.t > now - MEMORY_MS), { t: now, id, side, qty }];
   return { ok: true, caught: false, message: `${side === 'buy' ? 'Bought' : 'Sold'} ${qty}${units} of ${good.name} for ${total.toFixed(1)} Cr, no questions asked` };
