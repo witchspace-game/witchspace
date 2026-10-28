@@ -79,9 +79,9 @@ import { Missile, MISSILE } from './game/missile';
 import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rightOn, type Foe } from './game/rating';
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
-import { EDITIONS, editionById } from './content/editions';
+import { EDITIONS, editionById, editionNo } from './content/editions';
 import { claimEdition, editionCounts, redeemVoucher, releaseEdition } from './net/shipyard';
-import { cancelOrder, collection, collectOrder, defaultSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { cancelOrder, collection, collectOrder, defaultSpec, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
@@ -1233,7 +1233,7 @@ function renderShipyard() {
     const where = at ? `${stationName(at).name}, ${at.name}` : 'a yard in another galaxy';
     orderCard = `<div class="yard-order" style="--hull:${o.colour}">
       <strong>Your ${escapeHtml(def?.name ?? o.ship)}${o.name ? ` “${escapeHtml(o.name)}”` : ''}</strong>
-      ${o.edition ? `<span class="yard-edition-no">${escapeHtml(editionById(o.edition.id)?.name ?? '')} · No. ${o.edition.number} of ${editionById(o.edition.id)?.limit ?? '?'}</span>` : o.gifted ? '<span class="yard-edition-no">A gift</span>' : ''}
+      ${o.edition ? `<span class="yard-edition-no">${escapeHtml(editionById(o.edition.id)?.name ?? '')} ${editionNo(o.edition.number)}${o.gifted ? ' · a gift' : ''}</span>` : o.gifted ? '<span class="yard-edition-no">A gift</span>' : ''}
       <span>${p.built ? `Built, and waiting for you at ${escapeHtml(where)}.` : `In production at ${escapeHtml(where)}: ${p.stage.toLowerCase()} · about ${p.hoursLeft} h to go`}</span>
       <div class="rec-meter"><span style="width:${(p.fraction * 100).toFixed(1)}%"></span></div>
       <span>${o.gifted ? 'Built for you by the yard, with its thanks: nothing to pay' : `Deposit ${o.deposit.toLocaleString()} Cr paid · ${(o.quoted - o.deposit).toLocaleString()} Cr on collection`}</span>
@@ -1245,6 +1245,7 @@ function renderShipyard() {
     const def = pick.def;
     const fixed = yardMode === 'edition' ? editionById(editionSel ?? '') : undefined;
     const gift = yardMode === 'gift';
+    const giftEdition = gift && c.gift?.edition ? editionById(c.gift.edition.id) : undefined;
     const total = fixed ? editionQuote(def, fixed) : gift ? 0 : quote(def, spec);
     const lines = priceLines(def, spec);
     const deposit = depositFor(total);
@@ -1269,7 +1270,7 @@ function renderShipyard() {
         ? c.order
           ? '<p class="meta">One ship in production at a time: collect that one first.</p>'
           : `<button type="button" class="primary yard-gift">Put her into production · a gift</button>
-            <p class="yard-note">The hull as it leaves the yard, in your colour, with your name on her. Upgrades are yours to earn. It's a gift: it can't be cancelled, and the yard won't buy the hull back.</p>`
+            <p class="yard-note">${giftEdition ? 'In the edition’s colours' : 'The hull as it leaves the yard, in your colour'}, with your name on her. Upgrades are yours to earn. It's a gift: it can't be cancelled, and the yard won't buy the hull back.</p>`
         : def.concept
       ? c.order
         ? '<p class="meta">One ship in production at a time.</p>'
@@ -1289,14 +1290,24 @@ function renderShipyard() {
         </ul>
         ${nameField}
         <p class="yard-total"><span>The spec ${quote(def, spec).toLocaleString()} · numbered ${fixed.premium.toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>`
-      : gift
+      : gift && giftEdition
+        ? `<p class="yard-desc">${escapeHtml(giftEdition.blurb)}</p>
+          <ul class="yard-spec-list">
+            <li>${escapeHtml(nameOf(giftEdition.colour))}${giftEdition.trim ? `, the fine lines in ${escapeHtml(nameOf(giftEdition.trim))}` : ''}, ${GLOWS[giftEdition.glow].name.toLowerCase()}</li>
+            <li>${giftEdition.luxuries.map((l) => escapeHtml(LUXURIES.find((x) => x.id === l)?.name ?? l)).join(' · ')}</li>
+            <li>${editionNo(c.gift!.edition!.number)} beside its name</li>
+            <li>Pulse laser and the standard fit: the rest is yours to earn</li>
+          </ul>
+          ${nameField}
+          <p class="yard-total"><span>${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}</span><b>A gift</b></p>`
+        : gift
         ? `<p class="yard-label">Its colour <span>${escapeHtml(nameOf(spec.colour))} · the included colours</span></p>
           ${swatches('data-colour', spec.colour)}
           ${nameField}
           <p class="yard-total"><span>Hull, pulse laser, standard fit</span><b>A gift</b></p>`
         : '';
     el.innerHTML = `${msg}${orderCard}<button type="button" class="yard-back">‹ The yard</button>
-      <h3 class="yard-title" style="--hull:${spec.colour}">${fixed ? `${escapeHtml(fixed.name)}: ${escapeHtml(def.name)}` : gift ? `Your gift: a ${escapeHtml(def.name)}` : `Spec your ${escapeHtml(def.name)}`}</h3>
+      <h3 class="yard-title" style="--hull:${spec.colour}">${fixed ? `${escapeHtml(fixed.name)}: ${escapeHtml(def.name)}` : giftEdition ? `Your gift: ${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}` : gift ? `Your gift: a ${escapeHtml(def.name)}` : `Spec your ${escapeHtml(def.name)}`}</h3>
       ${body ? `${body}${action}` : `<p class="yard-label">Its colour <span>${chosenColour ? `${chosenColour.name} · ${cost(chosenColour.price)}` : 'The maker’s own'}</span></p>
       ${swatches('data-colour', spec.colour)}
       ${chosenColour ? `<p class="yard-note">${escapeHtml(chosenColour.line)}</p>` : ''}
@@ -1393,7 +1404,7 @@ function renderShipyard() {
             yardMessage = r.message;
             void releaseEdition(fixed.id);
           } else {
-            yardMessage = `Reserved: ${fixed.name} No. ${n.number} of ${n.limit}${r.order.name ? `, “${r.order.name}”` : ''}. She goes into production at ${stationName(here).name}.`;
+            yardMessage = `Reserved: ${fixed.name} ${editionNo(n.number)}${r.order.name ? `, “${r.order.name}”` : ''}. She goes into production at ${stationName(here).name}.`;
             spec = null;
             yardMode = 'spec';
             editionsAsked = 0;
@@ -1442,7 +1453,7 @@ function renderShipyard() {
           </button></li>`;
         }).join('')}</ul>
       <p class="yard-desc">${escapeHtml(edition ? edition.blurb : pick.def.description)}</p>
-      ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.</span><button type="button" class="primary yard-open-gift">Spec your gift</button></div>` : ''}
+      ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span><button type="button" class="primary yard-open-gift">Spec your gift</button></div>` : ''}
       <button type="button" class="primary yard-spec">${edition ? `Choose its name and reserve one` : `Spec your ${escapeHtml(pick.def.name)}`}</button>
       <form class="yard-voucher"><label for="voucher">Have a gift voucher?</label><input id="voucher" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" /><button type="submit">Redeem</button></form>`;
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-yard]'))
@@ -1473,7 +1484,8 @@ function renderShipyard() {
       if (!d) return;
       yardMode = 'gift';
       editionSel = null;
-      spec = defaultSpec(d);
+      const e = c.gift!.edition && editionById(c.gift!.edition.id);
+      spec = e ? editionGiftSpec(e) : defaultSpec(d);
       renderShipyard();
     };
     el.querySelector<HTMLButtonElement>('.yard-open-gift')?.addEventListener('click', openGift);
@@ -1489,7 +1501,7 @@ function renderShipyard() {
       if ('error' in r) yardMessage = r.error;
       else if (!shipById(r.ship)) yardMessage = 'That voucher is for a ship this version of the game doesn’t know: reload and try again.';
       else {
-        c.gift = { ship: r.ship };
+        c.gift = { ship: r.ship, ...(r.edition && r.number ? { edition: { id: r.edition, number: r.number } } : {}) };
         saveCommander(c);
         sfx.beep();
         openGift();

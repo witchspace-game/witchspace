@@ -23,4 +23,4 @@ export async function editionCounts(): Promise<Record<string, { limit: number; t
 
 export const claimEdition = (edition: string) => call<{ number: number; limit: number }>('POST', '/me/edition', { edition });
 export const releaseEdition = (edition: string) => call<{ ok: true }>('DELETE', '/me/edition', { edition });
-export const redeemVoucher = (code: string) => call<{ ship: string }>('POST', '/me/voucher', { code });
+export const redeemVoucher = (code: string) => call<{ ship: string; edition?: string; number?: number }>('POST', '/me/voucher', { code });

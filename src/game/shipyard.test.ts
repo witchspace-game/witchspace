@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { shipById } from '../content/ships';
 import { newCommander } from './commander';
 import { EDITIONS } from '../content/editions';
-import { editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
+import { editionGiftSpec, editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
 
 const fdl = shipById('fer-de-lance')!;
 const cobra = shipById('cobra-mk3')!;
@@ -129,5 +129,14 @@ describe('editions and gifts', () => {
     c.lasers = {};
     c.order = { ...defaultSpec(fdl), quoted: 0, deposit: 0, placed: 0, ...yard };
     expect(collection(c, fdl)!.tradeIn).toBe(0);
+  });
+
+  it('dresses a gift with an edition number in that edition, with the plain fit-out', () => {
+    const c = newCommander('modern');
+    c.gift = { ship: 'fer-de-lance', edition: { id: witch.id, number: 1 } };
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), name: 'Moxon' }, yard, 0, { gift: true })).toMatchObject({ ok: true });
+    expect(c.order).toMatchObject({ ...editionGiftSpec(witch, 'Moxon'), quoted: 0, gifted: true, edition: { id: witch.id, number: 1 } });
+    expect(c.order!.laser).toBe('pulse');
+    expect(c.order!.upgrades).toEqual([]);
   });
 });
