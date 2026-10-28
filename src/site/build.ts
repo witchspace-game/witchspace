@@ -1,6 +1,6 @@
 import { EDITIONS, editionNo, type Edition } from '../content/editions';
 import type { ShipDef } from '../content/types';
-import { checkSpec, cleanName, editionQuote, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
+import { checkSpec, cleanName, editionQuote, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, ORDERABLE_LUXURIES, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
 import { API, refresh, sessionToken, signedIn } from '../net/account';
 import { accountSpec, editionCounts } from '../net/shipyard';
@@ -123,7 +123,7 @@ function options(): string {
         <div class="build-choices">${choice('data-two-tone', '', !spec.trim, 'One colour', 'Included')}${choice('data-two-tone', '1', Boolean(spec.trim), 'Two-tone: the fine lines in a second colour', cr(TRIM_PRICE))}</div>
         ${spec.trim ? swatches('data-trim', spec.trim) : ''}${def.geometry.details ? '' : '<p class="build-note">This hull has few fine lines, so the trim is subtle.</p>'}`;
     case 'aboard':
-      return `<h2>Aboard <span>comfort and showing off: nothing that flies or fights better</span></h2><div class="build-ticks">${LUXURIES.map((l) => tick('data-lux', l.id, spec.luxuries.includes(l.id), l.name, cr(l.price), l.blurb)).join('')}</div>`;
+      return `<h2>Aboard <span>comfort and showing off: nothing that flies or fights better</span></h2><div class="build-ticks">${ORDERABLE_LUXURIES.map((l) => tick('data-lux', l.id, spec.luxuries.includes(l.id), l.name, cr(l.price), l.blurb)).join('')}</div>`;
     case 'fit':
       return `<h2>Her laser</h2><div class="build-choices">${LASERS.map((id) => choice('data-laser', id, spec.laser === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>
         <h2>Rear laser</h2><div class="build-choices">${choice('data-rear', '', !spec.rear, 'None', '—')}${LASERS.map((id) => choice('data-rear', id, spec.rear === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>

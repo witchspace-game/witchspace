@@ -52,7 +52,7 @@ export function editionsFor(s: ShipFile): EditionCard[] {
       finish: [colour?.name, trim ? `${trim.name} trim` : ''].filter(Boolean).join(', with '),
       line: colour?.line ?? '',
       glow: GLOWS[e.glow].name,
-      fit: [PLAYER_LASERS[e.laser].name, ...e.upgrades.map((id) => EQUIPMENT.find((q) => q.id === id)?.name ?? id)],
+      fit: [PLAYER_LASERS[e.laser].name, ...(e.rear ? [`${PLAYER_LASERS[e.rear].name} at the rear`] : []), ...e.upgrades.map((id) => EQUIPMENT.find((q) => q.id === id)?.name ?? id)],
       luxuries: e.luxuries.map((id) => LUXURIES.find((l) => l.id === id)?.name ?? id),
       aboard: e.luxuries.map((id) => LUXURIES.find((l) => l.id === id)).filter((l) => l !== undefined).map((l) => [l.name, l.blurb]),
       glowLevel: GLOWS[e.glow].glow,

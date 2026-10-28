@@ -443,7 +443,7 @@ export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) 
     <ul class="edition-facts">
       <li><b data-edition-left="${esc(e.id)}" data-limit="${e.limit}">${e.limit}</b><span>built, numbered</span></li>
       <li><b>${e.price.toLocaleString('en-GB')}</b><span>credits</span></li>
-      <li><b>${esc(e.glow)}</b><span>glow</span></li>
+      <li><b>${esc(e.glow.replace(/ glow$/, ''))}</b><span>glow</span></li>
       <li><b>${e.finishDays} days</b><span>finished by hand</span></li>
     </ul>
     <p class="connect-buttons"><a class="button primary big" href="#reserve">Reserve yours</a> <button type="button" class="button ghost big" data-share data-share-url="/ships/${esc(s.id)}/${esc(e.id)}/" data-share-title="The ${esc(s.name)} ${esc(e.name)}">Share her</button></p>
@@ -459,7 +459,7 @@ export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) 
       <p class="kicker">The finish</p>
       <h2><span class="edition-swatch" aria-hidden="true"></span>${esc(e.finish)}</h2>
       ${e.line ? `<p>${esc(e.line)}</p>` : ''}
-      <p class="muted">${esc(e.glow)} glow. These colours are hers alone: nobody can order them on another ship.</p>
+      <p class="muted">${esc(e.glow.replace(/ glow$/, ''))} glow. These colours are hers alone: nobody can order them on another ship.</p>
     </section>
     <section class="card">
       <p class="kicker">Fitted</p>
