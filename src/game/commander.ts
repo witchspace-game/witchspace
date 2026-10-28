@@ -11,7 +11,7 @@ export const DIFFICULTIES: Record<Difficulty, { name: string; tagline: string; b
   },
   modern: {
     name: 'Modern',
-    tagline: 'Witchspace: the shared galaxy, companies and contracts',
+    tagline: 'Witchspace: living markets, companies and contracts, and shared space in beta',
     blurb: 'Scrapes cost shields and hull instead of your life. If you are destroyed, your insurers replace the ship and its equipment, less an excess, but they won\'t pay for a Fugitive. Your cargo is still lost to space.',
   },
 };

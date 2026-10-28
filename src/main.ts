@@ -738,8 +738,14 @@ async function showNewMoments(newShip: boolean) {
       onLibrary: () => setFlightLog(true),
       onChange: () => logOpen && refreshFlightLog(),
     });
-  else if (newShip && recorder.available && !recorderIntroduced()) setFlightLog(true);
+  // The recorder asks once whether to stay on: after a first flight, not before a new commander has flown at all.
+  else if (!newShip && recorder.available && !recorderIntroduced()) {
+    setFlightLog(true);
+    logForIntro = logOpen;
+  }
 }
+/** The flight log opened only to ask about the recorder: answering closes it, back to the station. */
+let logForIntro = false;
 
 function setLogBadge(n: number) {
   for (const b of document.querySelectorAll<HTMLButtonElement>('.log-button')) b.innerHTML = `<span class="key">F · </span>Flight log${n ? ` · ${n} new` : ''}`;
@@ -750,6 +756,7 @@ function setLogBadge(n: number) {
 let logOpen = false;
 function setFlightLog(open: boolean) {
   logOpen = open && state === 'docked';
+  if (!logOpen) logForIntro = false;
   $('#flight-log-view').hidden = !logOpen;
   if (logOpen) {
     if (isTripOpen()) tripDone();
@@ -7992,6 +7999,12 @@ function refreshFlightLog() {
         localStorage.setItem(RECORDER_INTRO_KEY, 'done');
       } catch {
         /* storage blocked: stays as it is */
+      }
+      if (logForIntro) {
+        logForIntro = false;
+        setFlightLog(false);
+        flash(on ? 'Flight recorder on · your best moments wait in the flight log (F)' : 'Flight recorder off · turn it on again in the flight log (F)', 3);
+        return;
       }
       refreshFlightLog();
     },
