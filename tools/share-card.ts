@@ -6,7 +6,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { shipById } from '../src/content/ships';
-import { buildShip } from '../src/render/shipModel';
+import { buildPainted } from '../src/render/shipModel';
 import { setLineResolution } from '../src/render/wire';
 
 const q = new URLSearchParams(location.search);
@@ -45,7 +45,9 @@ const camera = new THREE.PerspectiveCamera(30, W / H, 1, 100000);
 }
 
 const def = shipById(q.get('ship') ?? 'cobra-mk3') ?? shipById('cobra-mk3')!;
-const model = buildShip(def);
+// A paint of its own (a numbered edition), or the maker's colours.
+const paint = q.get('paint');
+const model = buildPainted(def, paint ? JSON.parse(paint) : null);
 model.root.rotation.set(Number(q.get('pitch') ?? 0.35), Number(q.get('yaw') ?? -0.75), 0);
 scene.add(model.root);
 // The ship fits a circle on the right of the card, clear of the words:

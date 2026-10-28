@@ -58,6 +58,13 @@ export interface EditionCard {
   glow: string;
   fit: string[];
   luxuries: string[];
+  /** What's aboard, with what each is: [name, blurb]. */
+  aboard: string[][];
+  /** How hard she glows (the renderer's number). */
+  glowLevel: number;
+  /** Days the yard takes to finish one by hand. */
+  finishDays: number;
+  deposit: number;
 }
 
 export interface ModuleFile {
@@ -288,7 +295,7 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
   </div>
   <script type="application/json" id="ship-def">${def}</script>
   ${modulesCard(s, modules)}
-  ${editionsCard(editions)}
+  ${editionsCard(editions, s.id)}
 
   ${preview ? previewCard(s) : `<div class="ship-columns">
     <div class="card">
@@ -310,7 +317,7 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
 }
 
 /** Numbered special editions: a set spec, a hundred built. How many are left comes live (src/site/ship.ts). */
-function editionsCard(editions: EditionCard[]): string {
+function editionsCard(editions: EditionCard[], ship: string): string {
   if (!editions.length) return '';
   return `<div class="ship-editions">
     ${editions
@@ -327,6 +334,7 @@ function editionsCard(editions: EditionCard[]): string {
       </dl>
       <p class="edition-count" data-edition="${esc(e.id)}" data-limit="${e.limit}">Numbered 001 to ${String(e.limit).padStart(3, '0')}, each painted beside its name.</p>
       <p class="edition-price"><b>${e.price.toLocaleString('en-GB')} Cr</b> · Reserve one in the game, at a shipyard.</p>
+      <p class="edition-see"><a class="button ghost small" href="/ships/${esc(ship)}/${esc(e.id)}/">See the ${esc(e.name)} →</a></p>
     </article>`,
       )
       .join('')}
@@ -375,7 +383,7 @@ export function manualPage(s: ShipFile, m: ManualData) {
 }
 
 /** The configurator: spec her as you would a new car, then order her for the yard (docs/design/ship-configurator.md). The choices and prices come from the game's own code (src/site/build.ts). */
-export function buildPage(s: ShipFile, editions: EditionCard[], names: Record<string, string>) {
+export function buildPage(s: ShipFile, names: Record<string, string>) {
   const def = JSON.stringify(s).replace(/</g, '\\u003c');
   return {
     card: { ship: s.id, kicker: 'Build yours', title: `Spec your ${s.name}`, sub: 'Her colour, her glow, her name and her fit-out, priced as you go. Order her, and she’s waiting at the yard.' },
@@ -396,15 +404,91 @@ export function buildPage(s: ShipFile, editions: EditionCard[], names: Record<st
       <p class="kicker">${esc(roleLine(s))}</p>
       <h1>Spec your ${esc(s.name)}</h1>
       <p class="lede">${s.concept ? `A concept: ${esc(s.manufacturer ?? 'her makers')} build her to order. Spec her here, and the deposit is one tap at the next shipyard you dock at.` : `Spec her here, and she’s waiting at the next shipyard you dock at.`}</p>
+      <div id="build-models"></div>
       <nav class="build-steps" id="build-steps" aria-label="Steps"></nav>
       <div id="build-options"></div>
       <div class="build-account" id="account" hidden></div>
     </div>
   </div>
-  ${editions.length ? `<p class="build-editions">Or one of the numbered editions: ${editions.map((e) => `<a href="/ships/${esc(s.id)}/#edition-${esc(e.id)}" style="--edition:${esc(e.colour)}">${esc(e.name)}</a>`).join(' · ')}, each one set by the maker, and ordered at a shipyard.</p>` : ''}
   <div class="build-bar" id="build-bar" aria-live="polite"></div>
   <script type="application/json" id="ship-def">${def}</script>
   <script type="application/json" id="yard-names">${JSON.stringify(names).replace(/</g, '\\u003c')}</script>
+</section>`,
+  };
+}
+
+/** A numbered edition's own page (Mark: "surely the special editions would have their own marketing page"): she turns in her paint, and the yard's office says how many are left (src/site/edition.ts). */
+export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) {
+  const def = JSON.stringify({ id: s.id, name: s.name, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
+  const look = JSON.stringify({ colour: e.colour, glow: e.glowLevel, trim: e.trimColour });
+  const no = (n: number) => String(n).padStart(3, '0');
+  const maker = s.manufacturer && s.manufacturer !== 'None' ? s.manufacturer : 'The yard';
+  return {
+    card: { ship: s.id, kicker: `${maker} · ${e.limit} built`, title: e.name, sub: e.blurb.split('. ')[0] + '.', paint: { colour: e.colour, glow: e.glowLevel, trim: e.trimColour } },
+    schema: [{ '@type': 'CreativeWork', name: `${s.name} ${e.name}`, description: e.blurb, about: { '@type': 'CreativeWork', name: s.name, url: `https://witchspace.org.uk/ships/${s.id}/` }, isPartOf: { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' } }],
+    title: `${e.name} · ${s.name} · Ships · Witchspace`,
+    description: `The ${s.name} ${e.name}: ${e.blurb} ${e.price.toLocaleString('en-GB')} Cr, reserved in the game.`.slice(0, 300),
+    content: `<section class="section ship-page edition-page" style="--edition:${esc(e.colour)};--trim:${esc(e.trimColour ?? e.colour)}">
+  <a class="back" href="/ships/${esc(s.id)}/">← The ${esc(s.name)}</a>
+  <div class="edition-stage">
+    <div class="ship-view edition-view" data-look='${esc(look)}'>
+      ${shipSvg(s, 'ship-svg fallback')}
+      <canvas class="ship-canvas" aria-label="The ${esc(e.name)}, turning: drag to rotate"></canvas>
+    </div>
+  </div>
+  <header class="edition-head">
+    <p class="kicker">${esc(maker)} · ${esc(s.name)} · Special edition</p>
+    <h1>${esc(e.name)}</h1>
+    <p class="lede">${esc(e.blurb)}</p>
+    <ul class="edition-facts">
+      <li><b data-edition-left="${esc(e.id)}" data-limit="${e.limit}">${e.limit}</b><span>built, numbered</span></li>
+      <li><b>${e.price.toLocaleString('en-GB')}</b><span>credits</span></li>
+      <li><b>${esc(e.glow)}</b><span>glow</span></li>
+      <li><b>${e.finishDays} days</b><span>finished by hand</span></li>
+    </ul>
+    <p class="connect-buttons"><a class="button primary big" href="#reserve">Reserve yours</a> <button type="button" class="button ghost big" data-share data-share-url="/ships/${esc(s.id)}/${esc(e.id)}/" data-share-title="The ${esc(s.name)} ${esc(e.name)}">Share her</button></p>
+  </header>
+
+  <div class="edition-sections">
+    <section class="card edition-number">
+      <p class="kicker">One of ${e.limit}</p>
+      <h2 data-edition-count="${esc(e.id)}">Numbered 001 to ${no(e.limit)}</h2>
+      <p>Each one carries its number painted beside its name, from 001 to ${no(e.limit)}. Numbers are given out in order by the yard’s office, for the whole galaxy: when they’re gone, they’re gone.</p>
+    </section>
+    <section class="card">
+      <p class="kicker">The finish</p>
+      <h2><span class="edition-swatch" aria-hidden="true"></span>${esc(e.finish)}</h2>
+      ${e.line ? `<p>${esc(e.line)}</p>` : ''}
+      <p class="muted">${esc(e.glow)} glow. These colours are hers alone: nobody can order them on another ship.</p>
+    </section>
+    <section class="card">
+      <p class="kicker">Fitted</p>
+      <ul class="edition-list">${e.fit.map((f) => `<li>${esc(f)}</li>`).join('')}</ul>
+    </section>
+    <section class="card">
+      <p class="kicker">Aboard</p>
+      <dl class="edition-aboard">${e.aboard.map(([n, b]) => `<div><dt>${esc(n)}</dt><dd>${esc(b)}</dd></div>`).join('')}</dl>
+    </section>
+  </div>
+
+  <section class="card edition-reserve" id="reserve">
+    <p class="kicker">Reserve yours</p>
+    <h2>${e.price.toLocaleString('en-GB')} Cr, with ${e.deposit.toLocaleString('en-GB')} Cr down</h2>
+    <ol class="edition-steps">
+      <li><b>Play Witchspace</b> and earn the deposit: a tenth of the price, refundable until she’s ready.</li>
+      <li><b>Sign in</b> (from the menu), so your number is held for you, on every device.</li>
+      <li><b>Dock at any shipyard</b>, choose the ${esc(e.name)}, give her a name, and reserve her. The next number is yours.</li>
+      <li><b>Collect her</b> when the yard has finished her by hand, in about ${e.finishDays} days. The yard tells you when she’s ready.</li>
+    </ol>
+    <p class="connect-buttons"><a class="button primary" href="/play/">Play now, it’s free</a></p>
+    <p class="muted small">Credits are earned in the game, never bought: nothing here costs real money.</p>
+  </section>
+
+  <section class="edition-more">
+    ${others.map((o) => `<a class="card link edition-other" href="/ships/${esc(s.id)}/${esc(o.id)}/" style="--edition:${esc(o.colour)}"><span class="kicker">Also numbered · ${o.limit} built</span><h3>${esc(o.name)}</h3><p>${esc(o.blurb)}</p></a>`).join('')}
+    <a class="card link edition-other" href="/ships/${esc(s.id)}/build/"><span class="kicker">Or your own way</span><h3>Spec your own ${esc(s.name)}</h3><p>Your colour, your glow, your name and your fit-out, priced as you go.</p></a>
+  </section>
+  <script type="application/json" id="ship-def">${def}</script>
 </section>`,
   };
 }

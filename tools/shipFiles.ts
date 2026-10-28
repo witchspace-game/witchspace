@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { ShipDef } from '../src/content/types';
 import { EDITIONS } from '../src/content/editions';
 import { EQUIPMENT } from '../src/game/commander';
-import { editionQuote, GLOWS, LUXURIES, PALETTE } from '../src/game/shipyard';
+import { depositFor, editionQuote, GLOWS, LUXURIES, PALETTE } from '../src/game/shipyard';
 import { handling, inYards, notesFor } from '../src/game/manual';
 import { MAX_ROLL_ERROR } from '../src/game/station';
 import { PLAYER_LASERS } from '../src/game/weapons';
@@ -54,6 +54,10 @@ export function editionsFor(s: ShipFile): EditionCard[] {
       glow: GLOWS[e.glow].name,
       fit: [PLAYER_LASERS[e.laser].name, ...e.upgrades.map((id) => EQUIPMENT.find((q) => q.id === id)?.name ?? id)],
       luxuries: e.luxuries.map((id) => LUXURIES.find((l) => l.id === id)?.name ?? id),
+      aboard: e.luxuries.map((id) => LUXURIES.find((l) => l.id === id)).filter((l) => l !== undefined).map((l) => [l.name, l.blurb]),
+      glowLevel: GLOWS[e.glow].glow,
+      finishDays: Math.round(e.finishHours / 24),
+      deposit: depositFor(editionQuote(s as unknown as ShipDef, e)),
     };
   });
 }
