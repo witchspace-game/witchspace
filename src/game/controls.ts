@@ -6,6 +6,12 @@
 /** Fraction of top speed under which a canister can be scooped; any faster and it bounces off. */
 export const SCOOP_SPEED = 0.4;
 
+/** The two ways to fly on a computer, as HTML. */
+export const SCHEMES = 'Two ways to fly: <b>mouse and keyboard</b> (the ship follows the ring) or <b>keyboard only</b>, as in 1984. K switches between them, F1 shows the card in flight.';
+
+/** Tilt and Invert on a phone. */
+export const TILT = 'Tilt steers by tilting the phone, like a flight stick: tip the top towards you to climb. Invert swaps up and down, for dragging and tilting. Turn the phone on its side for the widest view.';
+
 /** Every control, as key and what it does. */
 export function controlRows(mouse: boolean, o: { gimballed: boolean; modern: boolean }): string[][] {
   return (

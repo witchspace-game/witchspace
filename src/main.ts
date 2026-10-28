@@ -88,7 +88,7 @@ import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
 import { record as ledgerRecord } from './game/ledger';
 import { handling, inYards, notesFor } from './game/manual';
-import { controlRows as sharedControlRows, DOCKING, drawerHelp, PHONE, SCOOP_SPEED } from './game/controls';
+import { controlRows as sharedControlRows, DOCKING, drawerHelp, PHONE, SCHEMES, SCOOP_SPEED, TILT } from './game/controls';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
@@ -5517,7 +5517,7 @@ ${DOCKING(roll).map((li) => `        <li>${li}</li>
     </section>
 
     <section id="man-desk"><h3>On a computer</h3>
-      <p>Two ways to fly: <b>mouse and keyboard</b> (the ship follows the ring) or <b>keyboard only</b>, as in 1984. K switches between them, F1 shows the card in flight.</p>
+      <p>${SCHEMES}</p>
       <h4>Mouse and keyboard</h4><dl class="man-keys">${rows(true)}</dl>
       <h4>Keyboard only</h4><dl class="man-keys">${rows(false)}</dl>
     </section>
@@ -5529,7 +5529,7 @@ ${PHONE.map(([k, v]) => `        <dt>${k}</dt><dd>${v}</dd>
       <h4>The drawer: everything else</h4>
       <p>Tap the <b>‹</b> tab on the right edge of the screen to slide it open, and again to close it.</p>
       <dl class="man-keys">${drawer}</dl>
-      <p class="meta">Tilt steers by tilting the phone, like a flight stick: tip the top towards you to climb. Invert swaps up and down, for dragging and tilting. Turn the phone on its side for the widest view.</p>
+      <p class="meta">${TILT}</p>
     </section>
 
     ${kit.length ? `<section id="man-kit"><h3>Your kit</h3><dl class="man-keys">${kit.map((e) => `<dt>${escapeHtml(e!.name)}</dt><dd>${escapeHtml(e!.blurb)}</dd>`).join('')}</dl></section>` : ''}
