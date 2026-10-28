@@ -1319,7 +1319,7 @@ function renderShipyard() {
     orderCard = `<div class="yard-order" style="--hull:${o.colour}">
       <strong>Your ${escapeHtml(def?.name ?? o.ship)}${o.name ? ` “${escapeHtml(o.name)}”` : ''}</strong>
       ${o.edition ? `<span class="yard-edition-no">${escapeHtml(editionById(o.edition.id)?.name ?? '')} ${editionNo(o.edition.number)}${o.gifted ? ' · a gift' : ''}</span>` : o.gifted ? '<span class="yard-edition-no">A gift</span>' : ''}
-      <span>${p.built ? `Built, and waiting for you at ${escapeHtml(where)}.` : `In production at ${escapeHtml(where)}: ${p.stage.toLowerCase()} · about ${p.hoursLeft} h to go`}</span>
+      <span>${p.built ? `Ready, and waiting for you at ${escapeHtml(where)}.` : `Being finished at ${escapeHtml(where)}: ${p.stage.toLowerCase()} · about ${p.hoursLeft} h to go`}</span>
       <div class="rec-meter"><span style="width:${(p.fraction * 100).toFixed(1)}%"></span></div>
       <span>${o.gifted ? 'Built for you by the yard, with its thanks: nothing to pay' : `Deposit ${o.deposit.toLocaleString()} Cr paid · ${(o.quoted - o.deposit).toLocaleString()} Cr on collection`}</span>
       ${!p.built && !notifyAsked ? notifyPrompt() : ''}
@@ -1351,7 +1351,7 @@ function renderShipyard() {
         : !signedIn()
           ? '<p class="yard-note">Numbered editions are held for your account: sign in (from the menu) to reserve yours.</p>'
           : `<button type="button" class="primary yard-reserve" ${c.credits < deposit ? 'disabled' : ''}>Reserve yours · deposit ${deposit.toLocaleString()} Cr</button>
-            <p class="yard-note">Your number comes from the yard's office, in order: ${editionsLeft[fixed.id] ? `${fixed.limit - editionsLeft[fixed.id].taken} of ${fixed.limit} left` : `${fixed.limit} in all`}. A tenth now, refundable until it's built (your number goes back if you cancel).</p>`
+            <p class="yard-note">Your number comes from the yard's office, in order: ${editionsLeft[fixed.id] ? `${fixed.limit - editionsLeft[fixed.id].taken} of ${fixed.limit} left` : `${fixed.limit} in all`}. Each one is finished by hand: about ${Math.round(fixed.finishHours / 24)} days from the line to ready. A tenth now, refundable until she's ready (your number goes back if you cancel).</p>`
       : gift
         ? c.order
           ? '<p class="meta">One ship in production at a time: collect that one first.</p>'
@@ -1361,7 +1361,7 @@ function renderShipyard() {
       ? c.order
         ? '<p class="meta">One ship in production at a time.</p>'
         : `<button type="button" class="primary yard-deposit" ${c.credits < deposit ? 'disabled' : ''}>Place a deposit · ${deposit.toLocaleString()} Cr</button>
-          <p class="yard-note">A tenth now, refundable until it's built. It goes into production here, at ${escapeHtml(stationName(here).name)}, takes about ${PRODUCTION_HOURS / 24} days, and is built to this spec at this price.</p>`
+          <p class="yard-note">${escapeHtml(def.manufacturer ?? 'The yard')} lay down a ${escapeHtml(def.name)} every few months, so there's always one on the line: yours is the next off it. Finishing her to your spec takes about ${PRODUCTION_HOURS / 24} days, here at ${escapeHtml(stationName(here).name)}, at this price. A tenth now, refundable until she's ready.</p>`
       : '<p class="yard-note">Shipyards open soon: you\'ll buy it outright then.</p>';
     const nameField = `<label class="yard-label" for="spec-name">Its name, painted on${fixed ? ' beside its number' : ''}</label>
       <input id="spec-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" />`;
@@ -1474,7 +1474,7 @@ function renderShipyard() {
         const r = placeOrder(c, def, spec!, { galaxy: here.galaxy, system: here.index }, Date.now());
         if (!r.ok) yardMessage = r.message;
         else {
-          yardMessage = `Deposit paid. Your ${def.name}${r.order.name ? ` “${r.order.name}”` : ''} goes into production at ${stationName(here).name}.`;
+          yardMessage = `Deposit paid. Your ${def.name}${r.order.name ? ` “${r.order.name}”` : ''} is the next off the line: the yard at ${stationName(here).name} is finishing her to your spec.`;
           spec = null;
           saveCommander(c);
           sfx.beep();
@@ -1498,7 +1498,7 @@ function renderShipyard() {
             yardMessage = r.message;
             void releaseEdition(fixed.id);
           } else {
-            yardMessage = `Reserved: ${fixed.name} ${editionNo(n.number)}${r.order.name ? `, “${r.order.name}”` : ''}. She goes into production at ${stationName(here).name}.`;
+            yardMessage = `Reserved: ${fixed.name} ${editionNo(n.number)}${r.order.name ? `, “${r.order.name}”` : ''}. She's the next off the line, finished by hand at ${stationName(here).name}.`;
             spec = null;
             yardMode = 'spec';
             editionsAsked = 0;

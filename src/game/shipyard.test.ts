@@ -84,9 +84,12 @@ describe('a deposit', () => {
     const c = newCommander('modern');
     c.credits = 50_000;
     placeOrder(c, fdl, defaultSpec(fdl), yard, 0);
-    expect(production(c.order!, 0)).toMatchObject({ stage: 'Keel laid', built: false, hoursLeft: PRODUCTION_HOURS });
-    expect(production(c.order!, PRODUCTION_HOURS * 0.5 * H).stage).toBe('Drives fitted');
-    expect(production(c.order!, PRODUCTION_HOURS * H)).toMatchObject({ stage: 'Built', built: true, hoursLeft: 0 });
+    expect(production(c.order!, 0)).toMatchObject({ stage: 'Your hull comes off the line', built: false, hoursLeft: PRODUCTION_HOURS });
+    expect(production(c.order!, PRODUCTION_HOURS * 0.5 * H).stage).toBe('Your colours applied');
+    expect(production(c.order!, PRODUCTION_HOURS * H)).toMatchObject({ stage: 'Ready', built: true, hoursLeft: 0 });
+    // An edition is finished by hand: longer.
+    expect(production({ ...c.order!, edition: { id: 'witch-fire', number: 2 } }, PRODUCTION_HOURS * H).built).toBe(false);
+    expect(production({ ...c.order!, edition: { id: 'witch-fire', number: 2 } }, 120 * H).built).toBe(true);
     expect(cancelOrder(c, PRODUCTION_HOURS * H)).toBe(0); // built: it's yours, not refundable
     const { deposit } = c.order!;
     expect(cancelOrder(c, H)).toBe(deposit);
