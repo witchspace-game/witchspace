@@ -820,6 +820,36 @@ button.button { cursor: pointer; }
 .edition-count.gone b { color: var(--muted); }
 .edition-price { margin-bottom: 0; }
 .edition-price b { font-size: 20px; }
+/* An owner's manual (/ships/<id>/manual/): in her colours, for her owner only. */
+.manual-page { max-width: 860px; }
+.manual-page .man-cover { padding-bottom: 20px; border-bottom: 1px solid color-mix(in srgb, var(--hull) 40%, transparent); }
+.manual-page .man-cover h1 { margin: 4px 0 14px; font-family: 'Space Grotesk', sans-serif; font-size: clamp(36px, 6vw, 56px); line-height: 1.05; letter-spacing: -0.02em; color: var(--hull); text-shadow: 0 0 14px color-mix(in srgb, var(--hull) 55%, transparent); }
+.manual-page .man-cover h1 span { display: inline-block; font-size: 0.5em; letter-spacing: 0; }
+.manual-page .man-cover h1 small { display: block; margin-top: 8px; font-size: 0.45em; letter-spacing: 0.02em; }
+.manual-page .man-cover .kicker { color: var(--hull); }
+.manual-gate { margin-top: 24px; max-width: 65ch; }
+.manual-gate h3 { margin: 0 0 8px; }
+.manual-gate .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.manual { display: grid; gap: 16px; margin-top: 24px; }
+.manual h3 { margin: 0 0 12px; color: var(--hull); }
+.manual h4 { margin: 18px 0 8px; }
+.manual ul, .manual ol { margin: 0 0 14px; padding-left: 20px; }
+.manual li { margin: 6px 0; }
+.man-toc { display: flex; flex-wrap: wrap; gap: 8px; }
+.man-toc a { padding: 6px 12px; border: 1px solid var(--border-strong); border-radius: 999px; font-size: 14px; text-decoration: none; }
+.man-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.man-table th, .man-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.man-table th { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.man-table td:first-child { color: var(--muted); }
+.man-table td:last-child { color: var(--hull); }
+.man-keys { display: grid; grid-template-columns: max-content 1fr; gap: 8px 18px; margin: 0; }
+.man-keys dt { font-weight: 600; white-space: nowrap; }
+.man-keys dd { margin: 0; color: var(--fg); }
+@media (max-width: 600px) {
+  .man-keys { grid-template-columns: 1fr; gap: 2px; }
+  .man-keys dd { margin-bottom: 10px; color: var(--muted); }
+  .man-table th, .man-table td { padding: 8px 6px; font-size: 14px; }
+}
 .ship-preview-file { margin-top: 32px; max-width: 70ch; }
 .ship-preview-file h3 { margin: 0 0 8px; }
 .ship-preview-file .connect-buttons { margin-top: 16px; }

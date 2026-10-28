@@ -7,8 +7,10 @@ import type { ShipDef } from '../src/content/types';
 import { EDITIONS } from '../src/content/editions';
 import { EQUIPMENT } from '../src/game/commander';
 import { editionQuote, GLOWS, LUXURIES, PALETTE } from '../src/game/shipyard';
+import { handling, notesFor } from '../src/game/manual';
+import { MAX_ROLL_ERROR } from '../src/game/station';
 import { PLAYER_LASERS } from '../src/game/weapons';
-import type { EditionCard, ModuleFile, ShipFile } from './ships';
+import type { EditionCard, ManualData, ModuleFile, ShipFile } from './ships';
 
 /** Ships worth a page: the fleet, not the props. */
 const SKIP = new Set(['missile', 'cargo-canister']);
@@ -54,4 +56,30 @@ export function editionsFor(s: ShipFile): EditionCard[] {
       luxuries: e.luxuries.map((id) => LUXURIES.find((l) => l.id === id)?.name ?? id),
     };
   });
+}
+
+// --- Owner's manuals ------------------------------------------------------------------------
+
+/** Ships the yard sells, so ships that can be owned. The same rule as the yard's (main.ts, NOT_IN_YARDS). */
+const NOT_IN_YARDS = new Set(['falcon']);
+export const inYards = (s: ShipFile) => Boolean(s.stats?.price) && !NOT_IN_YARDS.has(s.id) && !['missile', 'cargo', 'station', 'debris', 'alien'].includes(s.role ?? '');
+
+/** What a ship's owner's manual says, for the page to show its owner (src/site/manual.ts). */
+export function manualFor(s: ShipFile, cobra: ShipFile): ManualData {
+  const def = s as unknown as ShipDef;
+  const rows = handling(def, cobra as unknown as ShipDef);
+  return {
+    id: s.id,
+    name: s.name,
+    colour: s.style?.lineColor ?? '#7fd4ff',
+    meta: `${s.concept ? 'Concept' : (s.manufacturer ?? 'Witchspace')} · ${s.role ?? ''}`,
+    description: s.description ?? '',
+    notes: notesFor(def),
+    handling: rows.map((h) => [h.label, h.value, s.id === 'cobra-mk3' ? '' : h.versus]),
+    span: s.id === 'cobra-mk3' ? '' : rows.find((h) => h.label === 'Span')!.versus,
+    roll: Math.round((MAX_ROLL_ERROR * 180) / Math.PI),
+    kit: Object.fromEntries(EQUIPMENT.map((e) => [e.id, [e.name, e.blurb]])),
+    luxuries: Object.fromEntries(LUXURIES.map((l) => [l.id, [l.name, l.blurb]])),
+    editions: Object.fromEntries(EDITIONS.map((e) => [e.id, e.name])),
+  };
 }
