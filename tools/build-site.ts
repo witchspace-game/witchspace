@@ -10,7 +10,7 @@ import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from
 import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLARS, roadmapCompactHtml, roadmapHtml, roadmapSummaryHtml, STATUS } from './docs';
 import { companyPage, jobsPage, loadJobs } from './jobs';
 import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
-import { manualPage, shipPage, shipsIndex } from './ships';
+import { buildPage, manualPage, shipPage, shipsIndex } from './ships';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
 
 const root = resolve(import.meta.dirname, '..');
@@ -196,6 +196,8 @@ for (const s of ships) write({ path: `/ships/${s.id}/`, ...shipPage(s, shipModul
 const cobra = ships.find((s) => s.id === 'cobra-mk3')!;
 const drawer = drawerButtons(root);
 for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/manual/`, ...manualPage(s, manualFor(s, cobra, drawer)), scripts: ['/src/site/manual.ts'], bodyClass: 'ships-page' });
+// The configurator: spec any hull the yard sells, and order her for the yard.
+for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/build/`, ...buildPage(s, editionsFor(s)), scripts: ['/src/site/build.ts'], bodyClass: 'ships-page build-body' });
 
 // --- Design documents, the roadmap and the library (tools/docs.ts) --------------
 
