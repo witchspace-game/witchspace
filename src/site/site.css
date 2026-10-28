@@ -820,6 +820,59 @@ button.button { cursor: pointer; }
 .edition-count.gone b { color: var(--muted); }
 .edition-price { margin-bottom: 0; }
 .edition-price b { font-size: 20px; }
+/* The configurator (/ships/<id>/build/): the ship in your paint, the choices beside her, the price along the bottom. */
+.build-body { padding-bottom: 96px; }
+.build { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+.build-stage { position: sticky; top: 84px; }
+.build-view { box-shadow: 0 0 40px color-mix(in srgb, var(--hull) 12%, transparent); transition: box-shadow 0.4s; }
+.build-caption { margin: 10px 0 0; text-align: center; color: var(--muted); font-size: 14px; }
+.build-panel h1 { margin: 4px 0 12px; font-family: 'Space Grotesk', sans-serif; font-size: clamp(32px, 4.5vw, 48px); line-height: 1.05; letter-spacing: -0.02em; }
+.build-panel h2 { margin: 22px 0 10px; font-size: 17px; }
+.build-panel h2 span { margin-left: 6px; color: var(--muted); font-size: 13px; font-weight: 400; }
+.build-steps { display: flex; flex-wrap: wrap; gap: 6px; margin: 20px 0 4px; scroll-margin-top: 90px; }
+.build-steps button { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--border-strong); border-radius: 999px; background: none; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; }
+.build-steps small { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--surface-2); font-size: 11px; }
+.build-steps [aria-current='step'] { border-color: var(--hull); color: var(--fg); box-shadow: 0 0 12px color-mix(in srgb, var(--hull) 30%, transparent); }
+.build-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.build-swatches button, .build-choice, .build-tick { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--fg); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.build-swatches button { flex-wrap: wrap; row-gap: 2px; }
+.build-swatches i { flex: 0 0 auto; width: 18px; height: 18px; border-radius: 50%; background: var(--sw); box-shadow: 0 0 10px var(--sw); }
+.build-swatches span { flex: 1; min-width: 0; }
+.build-swatches small { flex-basis: 100%; padding-left: 28px; }
+.build-swatches small, .build-choice small, .build-tick small { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.build-swatches [aria-pressed='true'], .build-choice[aria-pressed='true'] { border-color: var(--hull); background: color-mix(in srgb, var(--hull) 10%, transparent); }
+.build-choices, .build-ticks { display: grid; gap: 8px; }
+.build-choices + .build-swatches { margin-top: 10px; }
+.build-choice span, .build-tick span { flex: 1; }
+.build-choice em, .build-tick em { display: block; margin-top: 2px; color: var(--muted); font-size: 13px; font-style: normal; }
+.build-tick input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--hull); }
+.build-tick:has(input:checked) { border-color: var(--hull); background: color-mix(in srgb, var(--hull) 10%, transparent); }
+.build-note { margin: 12px 0 0; color: var(--muted); font-size: 14px; }
+.build-note.done { color: var(--fg); }
+.build-note.done b { color: var(--hull); }
+.build-name { width: 100%; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--surface); color: var(--hull); font: 600 20px 'Space Grotesk', sans-serif; }
+.build-summary { display: grid; gap: 10px; margin: 0; }
+.build-summary dt { color: var(--muted); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.build-summary dd { margin: 2px 0 0; }
+.build-dot { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; background: var(--sw); box-shadow: 0 0 8px var(--sw); }
+.build-order-total { display: flex; justify-content: space-between; gap: 12px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--border); }
+.build-order-total span { color: var(--muted); }
+.build-order-total b { white-space: nowrap; }
+.build-panel .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.build-editions { margin-top: 32px; color: var(--muted); }
+.build-editions a { color: var(--edition); }
+.build-bar { position: fixed; z-index: 20; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); background: rgba(5, 7, 13, 0.92); backdrop-filter: blur(12px); }
+.build-bar-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 1180px; margin: 0 auto; }
+.build-price b { display: block; color: var(--hull); font: 700 22px 'Space Grotesk', sans-serif; }
+.build-price span { color: var(--muted); font-size: 13px; }
+@media (max-width: 860px) {
+  .build { grid-template-columns: 1fr; gap: 16px; }
+  .build-stage { top: 64px; z-index: 2; background: var(--bg); padding-bottom: 6px; }
+  .build .build-view { aspect-ratio: 16 / 9; }
+  .build-steps { scroll-margin-top: calc(64px + 56vw + 40px); }
+  .build-caption { margin-top: 6px; font-size: 13px; }
+  .build-price span { display: none; }
+}
 /* An owner's manual (/ships/<id>/manual/): in her colours, for her owner only. */
 .manual-page { max-width: 860px; }
 .manual-page .man-cover { padding-bottom: 20px; border-bottom: 1px solid color-mix(in srgb, var(--hull) 40%, transparent); }

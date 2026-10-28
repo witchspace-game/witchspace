@@ -4,7 +4,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { ShipDef } from '../content/types';
-import { buildShip, disposeShip, type ShipModel } from '../render/shipModel';
+import { buildPainted, disposeShip, type Look, type ShipModel } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 
 // A ship turning in neo-vector on a canvas: drag to turn it; left alone, it
@@ -13,8 +13,8 @@ import { setLineResolution } from '../render/wire';
 // the caller can leave its drawing in place.
 
 export interface Viewer {
-  /** Show this ship instead (a new file, an edit). */
-  show(def: ShipDef): void;
+  /** Show this ship instead (a new file, an edit), in its maker's colours or a paint of your own (the configurator). */
+  show(def: ShipDef, look?: Look | null): void;
 }
 
 export function viewer(canvas: HTMLCanvasElement): Viewer {
@@ -78,8 +78,8 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
   requestAnimationFrame(frame);
 
   return {
-    show(def) {
-      const next = buildShip(def);
+    show(def, look) {
+      const next = buildPainted(def, look);
       if (model) {
         scene.remove(model.root);
         disposeShip(model);
