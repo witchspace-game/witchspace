@@ -17,7 +17,7 @@ export const PRODUCTION_HOURS = 72;
  * The yard's palette: five at no charge, and the special glows, which cost.
  * No police blue and red, no Marshals' gold: only the law wears those.
  */
-export const PALETTE: { colour: string; name: string; price: number; line: string }[] = [
+export const PALETTE: { colour: string; name: string; price: number; line: string; edition?: string }[] = [
   { colour: '#c9a8ff', name: 'Lave Dusk', price: 0, line: 'The sky over Lave as the station lights come on.' },
   { colour: '#3dffb0', name: 'Witchspace Green', price: 0, line: 'The glow of the jump itself.' },
   { colour: '#9fe8ff', name: 'Riedquat Ice', price: 0, line: 'Cold, clean and a long way from help.' },
@@ -26,9 +26,15 @@ export const PALETTE: { colour: string; name: string; price: number; line: strin
   { colour: '#ff7a45', name: 'Leesti Ember', price: 9_500, line: 'Hot, like the trade in Leesti’s back rooms.' },
   { colour: '#ff6fae', name: 'Zaonce Rose', price: 9_500, line: 'For pilots who want to be noticed in Zaonce.' },
   { colour: '#b6ff5c', name: 'Reorte Acid', price: 12_000, line: 'Loud. Very loud.' },
-  { colour: '#7df9ff', name: 'Witch-fire', price: 18_000, line: 'The light at the edge of a jump that never closed.' },
-  { colour: '#ff4dff', name: 'Orerve Nebula', price: 24_000, line: 'The cloud you see from Orerve on a clear night.' },
+  { colour: '#9b6bff', name: 'Xeer Ultraviolet', price: 18_000, line: 'The light the eye half sees, at the edge of Xeer’s sun.' },
+  { colour: '#ff8f7a', name: 'Tibedied Coral', price: 14_000, line: 'Warm as the bars on Tibedied’s night side.' },
+  // The Witch-fire Edition's own colours: nobody can order them on another ship (Mark: they're for the edition only).
+  { colour: '#7df9ff', name: 'Witch-fire', price: 0, line: 'The light at the edge of a jump that never closed.', edition: 'witch-fire' },
+  { colour: '#ff4dff', name: 'Orerve Nebula', price: 0, line: 'The cloud you see from Orerve on a clear night.', edition: 'witch-fire' },
 ];
+
+/** The colours the configurator offers: everything but an edition's own. */
+export const ORDERABLE = PALETTE.filter((p) => !p.edition);
 
 /** How hard it glows. Never dimmer than the yard's own: the glow is the signature. */
 export const GLOWS = {
@@ -74,6 +80,9 @@ export const standardLaser = (def: ShipDef): ShipOrder['laser'] => (def.stats.pr
 export const defaultSpec = (def: ShipDef): Spec => ({ ship: def.id, colour: def.style.lineColor, name: '', laser: standardLaser(def), upgrades: [], glow: 'standard', trim: null, luxuries: [] });
 
 const colourPrice = (colour: string | null) => (colour ? (PALETTE.find((p) => p.colour === colour)?.price ?? 0) : 0);
+
+/** A spec in colours anyone can order: an edition's own colours belong to that edition. */
+export const orderable = (spec: Spec) => [spec.colour, spec.trim].every((c) => !c || !PALETTE.find((p) => p.colour === c)?.edition);
 
 /** The price, line by line: the hull, its fit-out (scaled to the hull) and its finish. */
 export function priceLines(def: ShipDef, spec: Spec): { hull: number; fit: number; finish: number } {
@@ -139,6 +148,7 @@ export function placeOrder(
   if (!def.concept) return { ok: false, message: 'Hulls already flying are bought outright, when shipyards sell' };
   const giftEdition = extra.gift && c.gift?.edition ? editionById(c.gift.edition.id) : undefined;
   if (extra.gift && (c.gift?.ship !== def.id || (!giftEdition && !giftable(def, spec)))) return { ok: false, message: 'A gift is the hull with an included colour and its name' };
+  if (!extra.edition && !giftEdition && !orderable(spec)) return { ok: false, message: 'Those colours belong to the Witch-fire Edition' };
   const e = extra.edition;
   const s = giftEdition ? editionGiftSpec(giftEdition, spec.name) : e ? editionSpec(e.edition, spec.name) : spec;
   const number = giftEdition ? c.gift!.edition! : e ? { id: e.edition.id, number: e.number } : null;

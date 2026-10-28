@@ -17,9 +17,17 @@ describe('speccing a ship', () => {
   });
 
   it('makes a fully specced statement ship cost a fortune, all of it looks and comfort', () => {
-    const all = { ...defaultSpec(fdl), colour: '#ff4dff', laser: 'military' as const, upgrades: UPGRADES.map((e) => e.id), glow: 'blazing' as const, trim: '#7df9ff', luxuries: LUXURIES.map((l) => l.id) };
+    const all = { ...defaultSpec(fdl), colour: '#9b6bff', laser: 'military' as const, upgrades: UPGRADES.map((e) => e.id), glow: 'blazing' as const, trim: '#ff8f7a', luxuries: LUXURIES.map((l) => l.id) };
     expect(quote(fdl, all)).toBeGreaterThan(fdl.stats.price * 2);
     expect(quote(cobra, defaultSpec(cobra))).toBe(cobra.stats.price + 400); // a plain one is the list price, with its pulse laser
+  });
+
+  it('keeps the Witch-fire Edition’s colours for the edition', () => {
+    const c = newCommander('modern');
+    c.credits = 1e6;
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff' }, yard, 0)).toMatchObject({ ok: false });
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), trim: '#7df9ff' }, yard, 0)).toMatchObject({ ok: false });
+    expect(placeOrder(c, fdl, defaultSpec(fdl), yard, 0, { edition: { edition: EDITIONS[0], number: 2 } })).toMatchObject({ ok: true });
   });
 
   it('keeps the law’s colours off the palette', () => {
@@ -72,7 +80,7 @@ describe('collecting it', () => {
     const c = newCommander('modern');
     c.credits = 400_000;
     c.equipment = ['docking-computer', 'weapons-licence', 'transponder'];
-    placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff', name: 'Brass Neck', laser: 'beam', upgrades: ['fuel-scoops'] }, yard, 0);
+    placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#9b6bff', name: 'Brass Neck', laser: 'beam', upgrades: ['fuel-scoops'] }, yard, 0);
     return c;
   };
 
@@ -84,7 +92,7 @@ describe('collecting it', () => {
     expect(collectOrder(c, cobra, fdl, yard, 0, built)).toEqual({ ok: true, paid: bill.due });
     expect(c.credits).toBe(Math.round((before - bill.due) * 10) / 10);
     expect(c.ship).toBe('fer-de-lance');
-    expect(c.paint).toMatchObject({ colour: '#ff4dff', name: 'Brass Neck' });
+    expect(c.paint).toMatchObject({ colour: '#9b6bff', name: 'Brass Neck' });
     expect(c.lasers).toEqual({ front: 'beam' });
     // The old ship's kit went with it; your papers stayed.
     expect(c.equipment.sort()).toEqual(['fuel-scoops', 'transponder', 'weapons-licence']);
@@ -117,7 +125,7 @@ describe('editions and gifts', () => {
     const c = newCommander('modern');
     expect(placeOrder(c, fdl, defaultSpec(fdl), yard, 0, { gift: true })).toMatchObject({ ok: false }); // no voucher
     c.gift = { ship: 'fer-de-lance' };
-    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff' }, yard, 0, { gift: true })).toMatchObject({ ok: false }); // a special colour costs
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#9b6bff' }, yard, 0, { gift: true })).toMatchObject({ ok: false }); // a special colour costs
     expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#9fe8ff', name: 'Moxon' }, yard, 0, { gift: true })).toMatchObject({ ok: true });
     expect(c.gift).toBeUndefined();
     expect(c.order).toMatchObject({ quoted: 0, deposit: 0, gifted: true });

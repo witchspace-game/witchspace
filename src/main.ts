@@ -81,7 +81,7 @@ import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
 import { claimEdition, editionCounts, redeemVoucher, releaseEdition } from './net/shipyard';
-import { cancelOrder, collection, collectOrder, defaultSpec, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { cancelOrder, collection, collectOrder, defaultSpec, ORDERABLE, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
@@ -1254,7 +1254,7 @@ function renderShipyard() {
     const deposit = depositFor(total);
     const cost = (n: number) => (n ? `${n.toLocaleString()} Cr` : 'Included');
     const swatches = (attr: string, chosen: string | null) =>
-      `<div class="yard-colours">${PALETTE.map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${escapeHtml(p.line)}" style="--sw:${p.colour}" ${gift && p.price ? 'disabled' : ''}><i></i><span>${p.name}</span><small>${p.price ? `${p.price.toLocaleString()} Cr` : 'Included'}</small></button>`).join('')}</div>`;
+      `<div class="yard-colours">${ORDERABLE.map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${escapeHtml(p.line)}" style="--sw:${p.colour}" ${gift && p.price ? 'disabled' : ''}><i></i><span>${p.name}</span><small>${p.price ? `${p.price.toLocaleString()} Cr` : 'Included'}</small></button>`).join('')}</div>`;
     const chosenColour = PALETTE.find((p) => p.colour === spec!.colour);
     const laserRow = (Object.keys(PLAYER_LASERS) as LaserId[])
       .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}">${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
@@ -1350,7 +1350,7 @@ function renderShipyard() {
         keep();
       };
     el.querySelector<HTMLInputElement>('.yard-two-tone')?.addEventListener('change', (e) => {
-      spec!.trim = (e.target as HTMLInputElement).checked ? (PALETTE.find((p) => p.colour !== spec!.colour)?.colour ?? '#f2f6ff') : null;
+      spec!.trim = (e.target as HTMLInputElement).checked ? (ORDERABLE.find((p) => p.colour !== spec!.colour)?.colour ?? '#f2f6ff') : null;
       keep();
     });
     for (const box of el.querySelectorAll<HTMLInputElement>('[data-lux]'))
@@ -1501,7 +1501,7 @@ function renderShipyard() {
       yardMode = 'gift';
       editionSel = null;
       const e = c.gift!.edition && editionById(c.gift!.edition.id);
-      spec = e ? editionGiftSpec(e) : defaultSpec(d);
+      spec = e ? editionGiftSpec(e, c.name) : { ...defaultSpec(d), name: c.name };
       renderShipyard();
     };
     el.querySelector<HTMLButtonElement>('.yard-open-gift')?.addEventListener('click', openGift);
