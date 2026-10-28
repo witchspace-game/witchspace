@@ -237,6 +237,8 @@ export interface Paint {
   edition?: { id: string; number: number };
   /** A gift: the yard gives nothing for the hull in part exchange. */
   gifted?: true;
+  /** Black-light running lights switched off: the full ghost (Mark), just the hull. */
+  ghost?: boolean;
 }
 
 /** The hull a commander flies. */

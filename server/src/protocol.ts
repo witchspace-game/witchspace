@@ -31,6 +31,8 @@ export interface Paint {
   c: string;
   g?: number;
   t?: string;
+  /** Black-light running lights (the Dark Edition's luxury), unless she's flown as a full ghost. */
+  l?: 1;
 }
 
 export type ClientMessage =

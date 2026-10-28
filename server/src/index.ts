@@ -615,11 +615,11 @@ function rotate(v: Vec3, q: [number, number, number, number]): Vec3 {
 /** A ship's paint, as sent: hex colours and a glow in range, or nothing. */
 function cleanPaint(p: unknown): Paint | undefined {
   if (!p || typeof p !== 'object') return undefined;
-  const { c, g, t } = p as { c?: unknown; g?: unknown; t?: unknown };
+  const { c, g, t, l } = p as { c?: unknown; g?: unknown; t?: unknown; l?: unknown };
   const hex = (x: unknown) => (typeof x === 'string' && /^#[0-9a-f]{6}$/i.test(x) ? x : undefined);
   const colour = hex(c);
   if (!colour) return undefined;
   const glow = typeof g === 'number' && g >= 1 && g <= 1.5 ? g : undefined;
   const trim = hex(t);
-  return { c: colour, ...(glow ? { g: glow } : {}), ...(trim ? { t: trim } : {}) };
+  return { c: colour, ...(glow ? { g: glow } : {}), ...(trim ? { t: trim } : {}), ...(l === 1 ? { l: 1 as const } : {}) };
 }

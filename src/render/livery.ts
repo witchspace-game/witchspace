@@ -135,3 +135,45 @@ export function applyCompanyBand(model: ShipModel, colour: string) {
   model.parts.retro.push(retro);
   applyParts(model.parts);
 }
+
+// Black-light running lights: the Dark Edition's own luxury (Mark: "full ghost
+// sounds really cool"). Small violet strips at the wingtips and the tail,
+// pulsing slowly, seen only close to: within about a kilometre, and not at
+// all while she's an unidentified ship (running dark, too far for a hull read).
+// Added on top of the hull lines, never in place of them: nothing dims.
+
+const BLACK_LIGHT = new THREE.Color(2.4, 1.3, 6.5);
+/** Metres: fully lit inside NEAR, gone beyond FAR. */
+const NEAR = 700;
+const FAR = 1000;
+/** Seconds for one slow pulse, and for the lights to fade in once her hull is read. */
+const PULSE = 2.6;
+const FADE = 1.2;
+
+export function applyRunningLights(def: ShipDef, root: THREE.Group): { neo: THREE.Object3D[]; retro: THREE.Object3D[] } {
+  const verts = def.geometry.vertices;
+  const pick = (score: (v: Vec3) => number) => verts.reduce((best, v, k) => (score(v) > score(verts[best]) ? k : best), 0);
+  // The wingtips (widest each side), and the tail: the rearmost point on the centre line.
+  const span = Math.max(...verts.map((v) => Math.abs(v[0]))) || 1;
+  const tips = [pick((v) => v[0]), pick((v) => -v[0]), pick((v) => -v[2] - (Math.abs(v[0]) / span) * 1000)];
+  const strip = [...new Set(tips)].flatMap((t) => lightStrip(def, t, 1.03));
+  const neo = neoLines(strip, BLACK_LIGHT, 2.6);
+  Object.assign(neo.material, { transparent: true, depthWrite: false, opacity: 0 });
+  const world = new THREE.Vector3();
+  let fade = 0;
+  let last = performance.now();
+  (neo as THREE.Object3D).onBeforeRender = (_r: THREE.WebGLRenderer, _s: THREE.Scene, camera: THREE.Camera) => {
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    // Hidden while unidentified; once her hull is read they fade in, so you realise what she is.
+    fade = root.userData.unidentified ? 0 : Math.min(1, fade + dt / FADE);
+    const d = camera.position.distanceTo(root.getWorldPosition(world));
+    const near = Math.min(1, Math.max(0, (FAR - d) / (FAR - NEAR)));
+    const pulse = 0.55 + 0.45 * Math.sin((now / 1000 / PULSE) * Math.PI * 2);
+    neo.material.opacity = near * fade * pulse * ((root.userData.lights as number | undefined) ?? 1);
+  };
+  root.add(neo);
+  // 1984 mode has no colour to show them in: the hull alone, as the Dark Edition was meant to be seen.
+  return { neo: [neo], retro: [] };
+}
