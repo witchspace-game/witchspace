@@ -1142,6 +1142,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-title em { font-style: normal; color: var(--ex-down); }
 .ex-last { font-size: 22px; font-weight: 700; }
 .ex-last small { margin-left: 4px; font-size: 12px; font-weight: 500; color: var(--ex-dim); }
+.ex-local { display: block; font-size: 12px; font-weight: 500; color: var(--ex-dim); }
 .ex-head dl { display: flex; gap: 20px; flex-wrap: wrap; margin: 0; font-size: 12px; }
 .ex-head dl div { display: grid; }
 .ex-head dt { color: var(--ex-dim); font-size: 11px; }

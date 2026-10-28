@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy } from '../galaxy/generate';
-import { backing, BTC_REF, companyValue, crisis, currencyOf, fairRate, poolNow, poolRate, positionNow, quoteBuy, quoteSell, reserveShare, stableValue } from './currencies';
+import { backing, BTC_REF, companyValue, crisis, currencyOf, fairRate, poolNow, poolRate, positionNow, quoteBuy, quoteSell, reserveShare, mintedToday, stableValue, supplyOf } from './currencies';
+import { activeEvent, EVENT_KINDS, outputAt } from './events';
 
 const g0 = galaxy(0);
 const T = Date.UTC(2026, 10, 1);
@@ -107,5 +108,42 @@ describe('providing liquidity', () => {
     const year = positionNow(dem, p, T + 365 * DAY);
     expect(year.fees).toBeGreaterThan(credits * 0.1); // a year's fees
     expect(year.value - year.fees).toBeLessThan(year.held); // the rate moved: impermanent loss
+  });
+});
+
+describe('money follows what a world makes', () => {
+  // A floating money at a world in the middle of an event that cuts its output.
+  const find = (policy: string, cut: boolean) => {
+    for (const s of galaxy(0))
+      if (currencyOf(s)?.policy === policy)
+        for (let t = Date.UTC(2026, 10, 1); t < Date.UTC(2026, 11, 1); t += 3600_000) {
+          const e = activeEvent(s, t);
+          if (e && t > e.start + 3600_000 && t < e.end - 3600_000 && EVENT_KINDS[e.type].output < 0 === cut) return { s, t, e };
+        }
+    throw new Error('none found');
+  };
+
+  it('cuts output in a war or a famine, and raises it in a boom', () => {
+    const { s, t, e } = find('inflation', true);
+    expect(outputAt(s, t)).toBeCloseTo(1 + EVENT_KINDS[e.type].output, 5);
+    expect(outputAt(s, e.end + 3600_000)).toBe(1);
+  });
+
+  it('weakens a floating money while output is down, and the issuer mints and burns with it', () => {
+    const { s, t, e } = find('inflation', true);
+    const after = e.end + 3600_000;
+    // More units to the credit during the cut than just after it (inflation over a few hours is tiny).
+    expect(fairRate(s, t) / fairRate(s, after)).toBeGreaterThan(1.03);
+    expect(supplyOf(s, t)).toBeGreaterThan(0);
+    const reserve = galaxy(0).find((x) => currencyOf(x)?.policy === 'reserve')!;
+    // A pegged money doesn't move; its supply follows output instead.
+    expect(supplyOf(reserve, t)).toBeCloseTo(reserve.productivity * 1000 * outputAt(reserve, t) * fairRate(reserve, t), 0);
+    expect(Number.isFinite(mintedToday(s, t))).toBe(true);
+    expect(supplyOf(galaxy(0).find((x) => !currencyOf(x))!, t)).toBe(0);
+  });
+
+  it('strengthens a floating money in a boom', () => {
+    const { s, t, e } = find('printing', false);
+    expect(fairRate(s, t) / fairRate(s, e.end + 3600_000)).toBeLessThan(1);
   });
 });

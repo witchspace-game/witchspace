@@ -5,9 +5,13 @@
 // rate, and the pool drifts back to the fair rate as other traders arbitrage.
 // Stablecoins (Corporate States' fully backed coins, Feudal worlds' algorithmic
 // ones) are taken at any station at their rate: the way out when a system's
-// money fails, until an algorithmic peg breaks. Virtual only, Modern only.
+// money fails, until an algorithmic peg breaks. Each money's supply follows what
+// its world makes (section 3): when a war or a strike cuts output, the same money
+// chases fewer goods and a floating one weakens; in a boom it strengthens.
+// Virtual only, Modern only.
 
 import { distanceLy, systemAt, systemsWithin, type StarSystem } from '../galaxy/generate';
+import { outputAt } from './events';
 import { hash } from './seed';
 
 export type Policy = 'none' | 'feudal' | 'basket' | 'printing' | 'official' | 'scarce' | 'inflation' | 'reserve';
@@ -163,6 +167,8 @@ export function fairRate(s: StarSystem, t: number, btc = BTC_REF): number {
   const c = currencyOf(s);
   if (!c) return 1;
   const weeks = (t - EPOCH) / WEEK;
+  // Fewer goods for the same money: a floating money weakens while output is down, and strengthens in a boom.
+  const goods = 1 / Math.sqrt(outputAt(s, t));
   switch (c.policy) {
     case 'reserve': {
       // Holds 1:1 while the reserves cover every coin; short, and holders run for the door.
@@ -173,14 +179,14 @@ export function fairRate(s: StarSystem, t: number, btc = BTC_REF): number {
       // While it holds, steady; when it breaks, the coin falls to an eighth of its value, and re-pegs lower.
       return scarred(s, t, 0.15, 8.3, 0.85) * (1 + smooth(s, 71, t, DAY) * 0.004);
     case 'inflation':
-      return c.base * Math.pow(1.02, weeks / 4.35) * (1 + smooth(s, 72, t, DAY) * 0.01);
+      return c.base * Math.pow(1.02, weeks / 4.35) * goods * (1 + smooth(s, 72, t, DAY) * 0.01);
     case 'printing':
-      return c.base * Math.pow(1.03, weeks) * scarred(s, t, 0.12, 5, 0.85) * (1 + smooth(s, 73, t, 6 * 3600_000) * 0.03);
+      return c.base * Math.pow(1.03, weeks) * scarred(s, t, 0.12, 5, 0.85) * goods * (1 + smooth(s, 73, t, 6 * 3600_000) * 0.03);
     case 'official':
       return c.base;
     case 'scarce':
       // Confederacies run on Bitcoin: their money moves with the real price, and gains as the economy grows.
-      return c.base * Math.exp(-0.01 * weeks) * (BTC_REF / btc) * (1 + smooth(s, 74, t, 2 * DAY) * 0.04);
+      return c.base * Math.exp(-0.01 * weeks) * (BTC_REF / btc) * goods * (1 + smooth(s, 74, t, 2 * DAY) * 0.04);
     case 'basket': {
       const ns = neighbours(s);
       if (!ns.length) return c.base;
@@ -191,6 +197,20 @@ export function fairRate(s: StarSystem, t: number, btc = BTC_REF): number {
       return 1;
   }
 }
+
+/**
+ * The money in circulation: as much as the world's output needs at its rate.
+ * The issuer mints as output grows and burns as it falls (a pegged money's
+ * algorithm or reserve does it to hold the peg); a printing press or a broken
+ * peg mints far more. The same for everyone, so it can be published.
+ */
+export function supplyOf(s: StarSystem, t: number, btc = BTC_REF): number {
+  if (!currencyOf(s)) return 0;
+  return s.productivity * 1000 * outputAt(s, t) * fairRate(s, t, btc);
+}
+
+/** Minted (+) or burned (−) over the last day. */
+export const mintedToday = (s: StarSystem, t: number, btc = BTC_REF) => supplyOf(s, t, btc) - supplyOf(s, t - DAY, btc);
 
 /** The three nearest systems with a money of their own that isn't itself a basket. */
 function neighbours(s: StarSystem): StarSystem[] {

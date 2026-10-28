@@ -1,6 +1,6 @@
 # How Witchspace's economy works
 
-*A record of the economy as it's built (28 October 2026), kept up to date as it changes (Mark: "we definitely should keep a record of how this economy works"). The design documents say why and what's next; this says what's there now, with the real numbers. Everything is virtual: no real money goes in or comes out.*
+*A record of the economy as it's built (28 October 2026; output, supply and local prices added the same day), kept up to date as it changes (Mark: "we definitely should keep a record of how this economy works"). The design documents say why and what's next; this says what's there now, with the real numbers. Everything is virtual: no real money goes in or comes out.*
 
 **When you change the economy, change this page in the same pull request.**
 
@@ -25,6 +25,8 @@
 - **Shortage and surplus:** below 0.8× its usual stock a good is short, and above 1.25× it's in surplus. Stations post orders for what they're short of.
 - **Danger pays:** a premium of 45% at anarchies, 32% at feudal worlds, 16% at multi-government worlds and 7% at dictatorships.
 - **A floor and a ceiling:** whatever trading does, a good's price stays between 0.5× and 2.5× its undisturbed price (`priceBounds`). The server checks sales against this.
+
+**Prices in local money.** On the exchange, every price and total also shows in the station's own money, at its pool's rate (or the fair rate, for another market on screen). You still pay in credits.
 
 ### Limit orders
 
@@ -57,6 +59,12 @@
 | Communist | **Official rate** | A fixed rate, and each visitor can change only 2,000 Cr a visit. |
 | Confederacy | **Scarce (runs on Bitcoin)** | A fixed supply, priced in Bitcoin: it rises and falls with the real market, and each unit buys more as the economy grows. |
 | Multi-government | **Basket** | Follows its three nearest neighbours. |
+
+### Money follows what a world makes
+
+- **Output.** World events move a world's output: a boom raises it by 25%; a famine, strike, plague, war, blockade or Thargoid incursion cuts it, by 5% to 30% (`output` in `src/economy/events.ts`, `outputAt`).
+- **Floating money follows.** For inflating, printed and Bitcoin money, the same money chases fewer goods when output is down, so each unit buys less: the rate moves by 1 ÷ √output. A war's 30% cut weakens it by about a fifth, and a boom strengthens it by about a tenth. It recovers when the event ends. Pegged money holds its peg, official rates stay fixed, and basket money follows its neighbours.
+- **Supply is published.** The money in circulation is the world's productivity × 1,000 × its output × its rate (`supplyOf`). The issuer mints as output grows and burns as it falls, and a printing press or a broken peg mints far more. The Money tab shows the supply, what was minted or burned in the last day, and any change in output.
 
 **Crises leave scars.** When a peg breaks or the presses run, the money recovers over a few days, but only partly: it re-pegs lower (`scarred()`). Buying the bottom is a bet, not a sure thing.
 
@@ -94,7 +102,7 @@ Balances are kept by issuing system (`"galaxy:index"`) or by company (`"co:hexon
 - **The server replays the ledger** when a save is uploaded. It checks:
   - the chain is unbroken, and the balance adds up;
   - each sale is within the good's price bounds;
-  - precious goods (gems, gold, platinum) didn't come from nowhere;
+  - goods didn't come from nowhere: it keeps its own count of every good bought, filled or scooped, precious goods (gems, gold, platinum) and goods by the tonne alike, and flags a sale of more than was had;
   - currency swaps only spent money you had, at a rate within bounds. Company coins are never worth more than a credit; reserve, Bitcoin and basket money get a 4× bound, because Bitcoin moves;
   - `other` credits, plus liquidity *gains* (not your stake coming back), stay under 400,000 Cr a day.
 - **A flagged account** can still play, but it can't reserve a numbered edition.
@@ -116,7 +124,8 @@ Balances are kept by issuing system (`"galaxy:index"`) or by company (`"co:hexon
 | Markets, prices, bounds | `src/economy/market.ts`, `src/economy/commodities.ts` |
 | Limit and remote orders | `src/economy/orders.ts` |
 | Bitcoin | `src/economy/bitcoin.ts`, `server/src/btc.ts`, `server/src/shipsLog.ts` |
-| System currencies, pools, company coins, liquidity | `src/economy/currencies.ts`, `src/economy/money.ts` |
+| System currencies, pools, company coins, liquidity, supply | `src/economy/currencies.ts`, `src/economy/money.ts` |
+| World events and output | `src/economy/events.ts` |
 | The ledger and its checks | `src/game/ledger.ts`, `server/src/ledger.ts` |
 | The shipyard | `src/game/shipyard.ts` |
 | The Money tab and exchange screens | `src/main.ts` (`renderMoney`), `src/ui/exchange.ts` |

@@ -82,7 +82,7 @@ import { buildFittings, disposeFittings, type Fittings, type Loadout } from './r
 import { EDITIONS, editionById, editionNo } from './content/editions';
 import { accountSpec, claimEdition, editionCounts, forgetAccountSpec, heldEditions, redeemVoucher, releaseEdition, signedOver } from './net/shipyard';
 import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } from './game/spec';
-import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, walletHome, walletKey } from './economy/currencies';
+import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, mintedToday, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, supplyOf, walletHome, walletKey } from './economy/currencies';
 import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
 import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
@@ -120,7 +120,7 @@ import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type S
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
-import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsDelay, newsOf, setCausedEvents } from './economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsDelay, newsOf, outputAt, setCausedEvents } from './economy/events';
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
@@ -1950,6 +1950,24 @@ function renderMoney() {
     const trouble = cur.policy === 'feudal' ? crisis(here, now, 0.15) : cur.policy === 'printing' ? crisis(here, now, 0.12) : 0;
     const left = officialLeft(c, here, dockedAt);
     const have = walletOf(c)[walletKey(here)] ?? 0;
+    const supply = supplyOf(here, now, btc);
+    const minted = mintedToday(here, now, btc);
+    const big = (n: number) => (n >= 1e9 ? `${fmtN(n / 1e9, 1)}bn` : n >= 1e6 ? `${fmtN(n / 1e6, 1)}m` : fmtN(n, 0));
+    const output = outputAt(here, now);
+    const shock = activeEvent(here, now);
+    const floats = cur.policy === 'inflation' || cur.policy === 'printing' || cur.policy === 'scarce';
+    const outputLine =
+      Math.abs(output - 1) < 0.02
+        ? ''
+        : `<p class="money-line ${output < 1 ? 'short' : ''}">${shock ? `${escapeHtml(EVENT_KINDS[shock.type].name)}: o` : 'O'}utput here is ${output < 1 ? 'down' : 'up'} ${Math.round(Math.abs(output - 1) * 100)}%. ${
+            floats
+              ? output < 1
+                ? `The same ${cur.ticker} chases fewer goods, so each buys less until it recovers.`
+                : `More goods for the same ${cur.ticker}: each buys more while it lasts.`
+              : cur.stable
+                ? `The issuer ${output < 1 ? 'burns' : 'mints'} ${cur.ticker} to hold the peg.`
+                : 'The state holds its rate regardless.'
+          }</p>`;
     el.innerHTML = `${msg}
       <h3 class="money-title">${escapeHtml(cur.name)} <span>${cur.ticker}</span></h3>
       <p class="money-policy"><b>${escapeHtml(pol.name)}.</b> ${escapeHtml(pol.line)}</p>
@@ -1961,7 +1979,10 @@ function renderMoney() {
         <div><dt>Fair rate</dt><dd>${fmtN(fair, 3)} ${cur.ticker}</dd></div>
         <div><dt>This week</dt><dd class="${change < -0.05 ? 'down' : change > 0.05 ? 'up' : ''}">${Math.abs(change) < 0.05 ? 'Steady against the credit' : `${change > 0 ? '+' : ''}${change.toFixed(1)}% against the credit`}</dd></div>
         <div><dt>The pool</dt><dd>${fmtN(pool.local, 0)} ${cur.ticker} · ${fmtN(pool.credits, 0)} Cr</dd></div>
+        <div><dt>In circulation</dt><dd>${big(supply)} ${cur.ticker}</dd></div>
+        <div><dt>Today</dt><dd>${Math.abs(minted) < supply * 0.0005 ? 'Nothing minted or burned' : `${big(Math.abs(minted))} ${minted > 0 ? 'minted' : 'burned'}`}</dd></div>
       </dl>
+      ${outputLine}
       <div class="money-form">
         <div class="yard-lasers money-sides"><button type="button" data-side="buy" aria-pressed="${moneySide === 'buy'}">Buy ${cur.ticker}</button><button type="button" data-side="sell" aria-pressed="${moneySide === 'sell'}">Sell ${cur.ticker}</button></div>
         <label class="money-amount"><span>${moneySide === 'buy' ? 'Credits to change' : `${cur.ticker} to sell (you have ${fmtN(have)})`}</span><input id="money-n" type="number" min="0" step="any" inputmode="decimal" /></label>
@@ -2146,6 +2167,15 @@ function renderNews() {
 // mode keep the plain price list.
 const exchange = mountExchange($('#exchange'), {
   context: tradeContext,
+  localMoney(sys) {
+    const cur = currencyOf(sys);
+    if (!cur) return null;
+    const here = currentSystem();
+    const now = Date.now();
+    // Here, the pool's rate (what changing would give); another market on screen, its fair rate.
+    const rate = sys.galaxy === here.galaxy && sys.index === here.index ? poolRate(poolHere(cmdr(), sys, now, btcNow())) : fairRate(sys, now, btcNow());
+    return { ticker: cur.ticker, rate };
+  },
   setCourse(dest) {
     cmdr().target = dest.index;
     saveCommander(cmdr());
