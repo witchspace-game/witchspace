@@ -3,7 +3,12 @@
 
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ModuleFile, ShipFile } from './ships';
+import type { ShipDef } from '../src/content/types';
+import { EDITIONS } from '../src/content/editions';
+import { EQUIPMENT } from '../src/game/commander';
+import { editionQuote, GLOWS, LUXURIES, PALETTE } from '../src/game/shipyard';
+import { PLAYER_LASERS } from '../src/game/weapons';
+import type { EditionCard, ModuleFile, ShipFile } from './ships';
 
 /** Ships worth a page: the fleet, not the props. */
 const SKIP = new Set(['missile', 'cargo-canister']);
@@ -26,4 +31,27 @@ export function loadModules(root: string): Map<string, ModuleFile> {
     const m = JSON.parse(readFileSync(join(dir, f), 'utf8')) as ModuleFile;
     return [m.id, m];
   }));
+}
+
+/** A ship's special editions, in words and at the price the shipyard asks. */
+export function editionsFor(s: ShipFile): EditionCard[] {
+  const named = (colour: string | null) => (colour ? (PALETTE.find((p) => p.colour === colour) ?? null) : null);
+  return EDITIONS.filter((e) => e.ship === s.id).map((e) => {
+    const colour = named(e.colour);
+    const trim = named(e.trim);
+    return {
+      id: e.id,
+      name: e.name,
+      blurb: e.blurb,
+      limit: e.limit,
+      price: editionQuote(s as unknown as ShipDef, e),
+      colour: e.colour,
+      trimColour: e.trim,
+      finish: [colour?.name, trim ? `${trim.name} trim` : ''].filter(Boolean).join(', with '),
+      line: colour?.line ?? '',
+      glow: GLOWS[e.glow].name,
+      fit: [PLAYER_LASERS[e.laser].name, ...e.upgrades.map((id) => EQUIPMENT.find((q) => q.id === id)?.name ?? id)],
+      luxuries: e.luxuries.map((id) => LUXURIES.find((l) => l.id === id)?.name ?? id),
+    };
+  });
 }
