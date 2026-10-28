@@ -405,7 +405,10 @@ function updateBooth(model: ShipModel) {
   if (camera.view?.enabled) camera.clearViewOffset();
   // Free all the way round, and from well below: the angles the berth can't reach.
   const elevation = THREE.MathUtils.clamp(spin.x * 0.6, -1.45, 1.45);
-  const dist = (model.radius * 4.6) / zoom;
+  // Fit her to the narrower of the two sides, so a phone held upright frames her whole.
+  const half = THREE.MathUtils.degToRad(BOOTH_FOV / 2);
+  const narrow = Math.min(half, Math.atan(Math.tan(half) * camera.aspect));
+  const dist = (model.radius * 1.1) / Math.sin(narrow) / zoom;
   camera.position.set(Math.sin(spin.y) * Math.cos(elevation) * dist, Math.sin(elevation) * dist, Math.cos(spin.y) * Math.cos(elevation) * dist);
   camera.lookAt(0, 0, 0);
   showroom.stars.position.copy(camera.position);
@@ -5103,8 +5106,10 @@ function updateSpace(dt: number) {
       aim.reset(player);
     }
 
-    if (input.mouseRoll) bankHeld = true;
-    else if (input.level || input.roll !== 0) bankHeld = false;
+    // A roll you make (mouse or keys) holds its bank until you tap to level: the flight
+    // assist mustn't undo it the moment you let go (a Stardot pilot found the keys "obstinate").
+    if (input.mouseRoll || input.roll !== 0) bankHeld = true;
+    if (input.level) bankHeld = false;
     rollAssist = !autopilot && !surveyPilot && !combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
     if (rollAssist) {
       input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
