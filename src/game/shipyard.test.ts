@@ -19,7 +19,7 @@ describe('speccing a ship', () => {
   it('makes a fully specced statement ship cost a fortune, all of it looks and comfort', () => {
     const all = { ...defaultSpec(fdl), colour: '#ff4dff', laser: 'military' as const, upgrades: UPGRADES.map((e) => e.id), glow: 'blazing' as const, trim: '#7df9ff', luxuries: LUXURIES.map((l) => l.id) };
     expect(quote(fdl, all)).toBeGreaterThan(fdl.stats.price * 2);
-    expect(quote(cobra, defaultSpec(cobra))).toBe(cobra.stats.price + 400); // a plain one is the list price
+    expect(quote(cobra, defaultSpec(cobra))).toBe(cobra.stats.price + 400); // a plain one is the list price, with its pulse laser
   });
 
   it('keeps the law’s colours off the palette', () => {
@@ -140,7 +140,7 @@ describe('editions and gifts', () => {
     c.gift = { ship: 'fer-de-lance', edition: { id: witch.id, number: 1 } };
     expect(placeOrder(c, fdl, { ...defaultSpec(fdl), name: 'Moxon' }, yard, 0, { gift: true })).toMatchObject({ ok: true });
     expect(c.order).toMatchObject({ ...editionGiftSpec(witch, 'Moxon'), quoted: 0, gifted: true, edition: { id: witch.id, number: 1 } });
-    expect(c.order!.laser).toBe('pulse');
+    expect(c.order!.laser).toBe('beam'); // a ship of this calibre leaves the yard with a beam laser
     expect(c.order!.upgrades).toEqual([]);
   });
 });

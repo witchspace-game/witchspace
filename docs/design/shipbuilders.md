@@ -5,7 +5,7 @@ pillar: build
 summary: Who builds the ships of the eight galaxies, and why it matters. Makers with a home, people, a line-up and a design language you can see in every hull. Each one has a design office that takes the community's improvements and new builds, and a job for the designers it trusts.
 card: cobra-mk3
 stages:
-  - The makers settled; the borrowed names replaced | proposed
+  - The makers settled: the 1984 names kept, as homage (Mark) | built
   - Each maker's design language, shown in the ship editor | proposed
   - The Cobra, Viper and Sidewinder made recognisable, by their makers | proposed
   - Design offices take submissions; tenders for the classic hulls | proposed
@@ -17,7 +17,9 @@ help:
 
 # Design: the shipbuilders
 
-*Proposal, 28 October 2026. For Mark to decide: nothing here is in the lore yet.*
+*Proposal, 28 October 2026.*
+
+**Decided (Mark, 28 October 2026): the makers keep their 1984 names, as homage.** "I say we just use the legacy names in our universe as homage." Cowell & MgRath, Faulcon deLacy and Zorgon Petterson stay, as tributes in the same spirit as the 1984 ship names. What follows about design languages, design offices, tenders and jobs applies to them; the new names proposed below (Granta Yards, Arden Kell or Marrow & Vane, Castellane) are set aside. There's no rename, so no launch-week freeze.
 
 ## Why
 

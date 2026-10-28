@@ -68,7 +68,10 @@ export interface Spec {
   luxuries: string[];
 }
 
-export const defaultSpec = (def: ShipDef): Spec => ({ ship: def.id, colour: def.style.lineColor, name: '', laser: 'pulse', upgrades: [], glow: 'standard', trim: null, luxuries: [] });
+/** The laser a hull leaves the yard with: a pulse laser on a working ship, a beam on a ship of real calibre (Mark: "a pulse laser is silly on a ship of this calibre"). */
+export const standardLaser = (def: ShipDef): ShipOrder['laser'] => (def.stats.price >= 150_000 ? 'beam' : 'pulse');
+
+export const defaultSpec = (def: ShipDef): Spec => ({ ship: def.id, colour: def.style.lineColor, name: '', laser: standardLaser(def), upgrades: [], glow: 'standard', trim: null, luxuries: [] });
 
 const colourPrice = (colour: string | null) => (colour ? (PALETTE.find((p) => p.colour === colour)?.price ?? 0) : 0);
 
@@ -114,10 +117,10 @@ export const editionSpec = (e: Edition, name = ''): Spec => ({
 export const editionQuote = (def: ShipDef, e: Edition) => quote(def, editionSpec(e)) + e.premium;
 
 /** An edition as a gift: its whole look, and the plain fit-out (the kit is earned, as with any gift). */
-export const editionGiftSpec = (e: Edition, name = ''): Spec => ({ ...editionSpec(e, name), laser: 'pulse', upgrades: [] });
+export const editionGiftSpec = (e: Edition, name = ''): Spec => ({ ...editionSpec(e, name), upgrades: [] });
 
 /** A gift is the hull as it leaves the yard: your choice of the included colours and a name, nothing that costs. */
-export const giftable = (def: ShipDef, spec: Spec) => spec.laser === 'pulse' && !spec.upgrades.length && priceLines(def, spec).finish === 0;
+export const giftable = (def: ShipDef, spec: Spec) => spec.laser === standardLaser(def) && !spec.upgrades.length && priceLines(def, spec).finish === 0;
 
 /**
  * Put down the deposit: it goes into production at this yard. Only a concept

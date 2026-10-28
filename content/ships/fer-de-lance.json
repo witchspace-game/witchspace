@@ -3,13 +3,14 @@
   "id": "fer-de-lance",
   "name": "Fer-de-lance",
   "concept": true,
+  "manufacturer": "Zorgon Petterson",
   "role": "multirole",
-  "description": "A concept, and the most talked-about hull in the galaxy: a private hotel with a fighter's bones. Twice the length of a Cobra, a glass deck along its spine, and barbs swept back from its shoulders like the head of a lance. Its makers say it is for people who never ask the price. Everyone else is already saving.",
+  "description": "A concept, and the most talked-about hull in the galaxy: a private hotel with a fighter's bones. Twice the length of a Cobra, a glass deck along its spine, and barbs swept back from its shoulders like the head of a lance. Zorgon Petterson say it is for people who never ask the price. Everyone else is already saving.",
   "credits": {
     "authors": ["Witchspace contributors"],
     "license": "CC-BY-SA-4.0",
     "aiAssisted": true,
-    "notes": "Original Witchspace geometry: a lance-head hull, one hexagon scaled along its length so every panel is flat, swelling to a shoulder, with two barbs swept back past the tail. A nod to the 1984 name; its size, hold and character come from Samuel Penn's Ships of Elite for Mongoose Traveller (CC BY-SA 4.0). Nothing traced. Its maker is to be announced."
+    "notes": "Original Witchspace geometry: a lance-head hull, one hexagon scaled along its length so every panel is flat, swelling to a shoulder, with two barbs swept back past the tail. A nod to the 1984 name; its size, hold and character come from Samuel Penn's Ships of Elite for Mongoose Traveller (CC BY-SA 4.0). Nothing traced. Built by Zorgon Petterson, the 1984 maker's name kept as homage."
   },
   "geometry": {
     "vertices": [
