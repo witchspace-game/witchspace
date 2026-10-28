@@ -820,6 +820,38 @@ button.button { cursor: pointer; }
 .edition-count.gone b { color: var(--muted); }
 .edition-price { margin-bottom: 0; }
 .edition-price b { font-size: 20px; }
+/* Shared space (/shared-space/): another commander's ship, with the tag and scanner diamond the game gives them. */
+.eyebrow a { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 60%, transparent); text-underline-offset: 3px; }
+.shared-hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 40px; align-items: center; }
+.shared-hero h1 { margin: 4px 0 14px; font-family: 'Space Grotesk', sans-serif; font-size: clamp(44px, 7vw, 76px); line-height: 1; letter-spacing: -0.02em; }
+.shared-live { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 6px; color: var(--accent); font-size: 15px; }
+.shared-live::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: live-pulse 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .shared-live::before { animation: none; } }
+.shared-hero .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.shared-scene { position: relative; }
+.shared-view { aspect-ratio: 4 / 3; }
+.shared-tag { position: absolute; left: 50%; top: 14%; transform: translateX(-50%); padding: 3px 10px; border: 1px solid rgba(223, 233, 255, 0.35); border-radius: 6px; background: rgba(4, 6, 11, 0.7); color: #dfe9ff; font: 600 14px ui-monospace, 'SF Mono', Menlo, monospace; white-space: nowrap; text-shadow: 0 0 8px rgba(223, 233, 255, 0.6); }
+.shared-scanner { position: absolute; right: 4%; bottom: 5%; width: 38%; max-width: 220px; fill: none; stroke: rgba(61, 255, 176, 0.35); stroke-width: 1; }
+.shared-scanner ellipse:first-child { fill: rgba(4, 6, 11, 0.75); }
+.shared-scanner .mark line { stroke-width: 1.2; }
+.shared-scanner .you circle { fill: var(--accent); stroke: none; }
+.shared-scanner .cmdr line { stroke: #dfe9ff; }
+.shared-scanner .cmdr path { fill: #dfe9ff; stroke: none; filter: drop-shadow(0 0 3px #dfe9ff); }
+.shared-scanner .hostile line { stroke: var(--danger); }
+.shared-scanner .hostile path { fill: var(--danger); stroke: none; filter: drop-shadow(0 0 3px var(--danger)); }
+.shared-scanner .npc line { stroke: var(--amber); }
+.shared-scanner .npc rect { fill: var(--amber); stroke: none; }
+.shared-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.shared-grid .card h3 { margin: 0 0 8px; }
+.shared-grid .card p { margin: 0; color: var(--muted); }
+.shared-steps li { margin-bottom: 10px; }
+.shared-rules { display: grid; gap: 12px; max-width: 75ch; margin: 0 0 18px; padding-left: 20px; }
+.shared-page .section .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+.shared-page .connect-buttons .button { flex: 0 0 auto; }
+@media (max-width: 860px) {
+  .shared-hero { grid-template-columns: 1fr; gap: 24px; }
+  .shared-tag { font-size: 12px; }
+}
 /* The configurator (/ships/<id>/build/): the ship in your paint, the choices beside her, the price along the bottom. */
 .build-body { padding-bottom: 96px; }
 .build { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; align-items: start; }
