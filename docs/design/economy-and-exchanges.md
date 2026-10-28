@@ -155,3 +155,7 @@ In single-player, your commander, credits included, is saved in your own browser
 - How should contract disputes be handled, and by whom?
 - What limits stop a large guild dominating an exchange without stifling ambitious traders?
 - Should the Bankers' Guild be one institution, or several competing banks under Guild rules?
+
+## Big orders fill in parts *(Mark, 28 October 2026)*
+
+A limit order used to fill in one go the moment the price touched it, so a hoard sold at a single good price however big it was, and the market only crashed afterwards. Now an order fills only as much as the market takes before its price passes your limit; the rest stays on the order and fills as the market comes back. A million grams of gem-stones on one order sells over many hours at your price, not all at once.

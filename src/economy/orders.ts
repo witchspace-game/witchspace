@@ -132,29 +132,53 @@ export function checkOrders(c: Commander, system: StarSystem, state: OrderState,
   const from = Math.max(state.ordersChecked ?? now, now - LOOKBACK);
   const filled: Fill[] = [];
   for (const order of open) {
-    for (let t = Math.max(from, order.placed) + STEP; t <= now; t += STEP) {
+    for (let t = Math.max(from, order.placed) + STEP; t <= now && order.qty > 0; t += STEP) {
       const price = priceAt(system, state, order.id, t);
       if (order.side === 'buy' ? price > order.limit : price < order.limit) continue;
-      filled.push({ order, t });
+      // Only as much as the market takes at your price: a big order fills in parts, as the
+      // market comes back to it, rather than all at once at a price nobody would pay for that much.
+      const qty = fillable(system, state, order, t);
+      filled.push({ order: { ...order, qty }, t });
       // The fill is a trade like any other: it moves the market, and the
       // station's stock now still feels it.
       const sign = order.side === 'buy' ? -1 : 1;
-      state.stock[order.id] = Math.round((state.stock[order.id] ?? 0) + sign * order.qty * Math.exp(-(now - t) / 60000 / RECOVERY_MINUTES));
-      state.trades = [...(state.trades ?? []), { t, id: order.id, side: order.side, qty: order.qty, total: Math.round(order.limit * order.qty * 10) / 10 }]
+      state.stock[order.id] = Math.round((state.stock[order.id] ?? 0) + sign * qty * Math.exp(-(now - t) / 60000 / RECOVERY_MINUTES));
+      state.trades = [...(state.trades ?? []), { t, id: order.id, side: order.side, qty, total: Math.round(order.limit * qty * 10) / 10 }]
         .sort((a, b) => a.t - b.t)
         .slice(-TRADE_MEMORY);
-      if (order.side === 'buy') state.storage = { ...(state.storage ?? {}), [order.id]: (state.storage?.[order.id] ?? 0) + order.qty };
-      else c.credits = Math.round((c.credits + order.limit * order.qty) * 10) / 10;
-      break;
+      if (order.side === 'buy') state.storage = { ...(state.storage ?? {}), [order.id]: (state.storage?.[order.id] ?? 0) + qty };
+      else c.credits = Math.round((c.credits + order.limit * qty) * 10) / 10;
+      order.qty -= qty;
     }
   }
   if (filled.length) {
-    const done = new Set(filled.map((f) => f.order.oid));
-    state.orders = open.filter((o) => !done.has(o.oid));
+    state.orders = open.filter((o) => o.qty > 0);
     state.fills = [...(state.fills ?? []), ...filled];
   }
   state.ordersChecked = now;
   return filled;
+}
+
+/**
+ * How much of an order the market takes at time `t` without the price going past
+ * its limit: at least one unit (the price was there), at most what's left.
+ */
+function fillable(system: StarSystem, state: OrderState, order: LimitOrder, t: number): number {
+  const ok = (q: number) => {
+    state.trades = [...(state.trades ?? []), { t, id: order.id, side: order.side, qty: q, total: 0 }];
+    const p = priceAt(system, state, order.id, t);
+    state.trades.pop();
+    return order.side === 'buy' ? p <= order.limit : p >= order.limit;
+  };
+  if (ok(order.qty)) return order.qty;
+  let lo = 1;
+  let hi = order.qty;
+  while (hi - lo > 1) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (ok(mid)) lo = mid;
+    else hi = mid;
+  }
+  return lo;
 }
 
 /** Move what's in the station's storage into the hold, as far as it fits. Returns what moved. */
