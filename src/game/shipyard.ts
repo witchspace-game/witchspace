@@ -2,6 +2,7 @@ import type { ShipDef } from '../content/types';
 import { editionById, type Edition } from '../content/editions';
 import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
 import { PLAYER_LASERS, type LaserId } from './weapons';
+import { PRODUCTION_HOURS } from './production';
 import { combatRating, ratingPoints } from './rating';
 
 // Speccing a ship and putting down a deposit, as you would on a new car
@@ -18,8 +19,7 @@ export function laserLocked(c: Commander, id: LaserId): string | null {
 }
 
 export const DEPOSIT_RATE = 0.1;
-/** Real hours from deposit to built. */
-export const PRODUCTION_HOURS = 72;
+export { PRODUCTION_HOURS };
 
 /**
  * The yard's palette: five at no charge, and the special glows, which cost.

@@ -1457,6 +1457,7 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard-voucher label { grid-column: 1 / -1; font-size: 13px; color: var(--dim); }
 .yard-voucher input { min-width: 0; padding: 6px 10px; border: 1px solid var(--edge); border-radius: 6px; background: rgba(0, 0, 0, 0.35); color: var(--fg); font: 600 15px var(--font); letter-spacing: 0.08em; text-transform: uppercase; }
 .yard-colours button:disabled { opacity: 0.35; }
+.yard-notify { justify-self: start; min-height: 30px; padding: 2px 10px; font-size: 12px; border-color: var(--hull); }
 .yard-cancel { justify-self: start; min-height: 30px; padding: 2px 10px; font-size: 12px; }
 /* On a phone the ship is the point: a short panel, the hulls in a row to swipe, the berth above. */
 @media (max-width: 700px) {
@@ -1613,6 +1614,13 @@ body.retro .ship-nav-name { font-size: 9px; }
 #flight-log-view { position: fixed; inset: 0; z-index: 30; overflow-y: auto; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(0, 6, 4, 0.94); backdrop-filter: blur(6px); }
 #flight-log-view[hidden] { display: none; }
 /* The owner's manual: full screen, like the flight log, and easy to read on a phone. */
+/* The photo booth: everything but the ship goes, and a bar of three buttons. */
+body.photo-booth .panel, body.photo-booth nav.controls, body.photo-booth #look, body.photo-booth .showroom-hint, body.photo-booth .tribute, body.photo-booth #flash { display: none !important; }
+#booth { position: fixed; left: 0; right: 0; bottom: max(16px, env(safe-area-inset-bottom)); z-index: 25; display: grid; justify-items: center; gap: 8px; pointer-events: none; }
+#booth[hidden] { display: none; }
+.booth-hint { margin: 0; font-size: 12px; letter-spacing: 0.12em; color: var(--dim); }
+.booth-bar { display: flex; gap: 8px; pointer-events: auto; }
+.yard-photo { min-height: 30px; padding: 2px 10px; font-size: 13px; }
 #manual { position: fixed; inset: 0; z-index: 31; overflow-y: auto; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(0, 6, 4, 0.96); backdrop-filter: blur(6px); }
 #manual[hidden] { display: none; }
 #manual .log-head, #manual-body { max-width: 760px; margin-inline: auto; }

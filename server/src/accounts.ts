@@ -20,6 +20,8 @@ import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES, type Compa
 import { companyEmail, signInEmail } from './emails';
 import { isPushEndpoint, sendPush } from './push';
 import type { ClipBoard } from './clips';
+import { readyMessage, type SavedOrder } from './yard';
+import data from './mcp-data.json';
 import { awake, btcItems, heartItems, LOG_EVERY, logMessage, type LogItem, type LogKinds } from './shipsLog';
 import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
 import { CHECKS_PER_MINUTE, KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
@@ -701,6 +703,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
       try {
         await this.contactOne(row, now);
         await this.shipsLog(row, now);
+        await this.yardReady(row, now);
       } catch (e) {
         console.error('contact failed', row.account, e);
       }
@@ -755,6 +758,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (!fresh.length) return;
     const { title, body } = logMessage(fresh);
     if (await this.notify(row.account, title, body)) this.sql.exec('UPDATE contact SET logged = ?, seen = ? WHERE account = ?', now, JSON.stringify([...seen, ...fresh.map((i) => i.key)].slice(-300)), row.account);
+  }
+
+  /** Your ship is finished: the yard says so, once, on any device you've switched on, outside quiet hours. */
+  private async yardReady(row: ContactRow, now: number) {
+    if (!this.devicesOf(row.account).length || !awake(now, row.tz ?? 0)) return;
+    const save = this.sql.exec('SELECT data FROM saves WHERE account = ?', row.account).toArray()[0];
+    const order = save ? (JSON.parse(save.data as string) as { order?: SavedOrder }).order : undefined;
+    const msg = readyMessage(order, (id) => SHIP_NAME.get(id) ?? 'ship', now);
+    const seen = new Set(JSON.parse(row.seen ?? '[]') as string[]);
+    if (!msg || seen.has(msg.key)) return;
+    if (await this.notify(row.account, msg.title, msg.body)) this.sql.exec('UPDATE contact SET seen = ? WHERE account = ?', JSON.stringify([...seen, msg.key].slice(-300)), row.account);
   }
 
   private async contactEmail(row: ContactRow, company: CompanyId, name: string, subject: string): Promise<boolean> {
@@ -1127,6 +1141,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
 const CONTACT_EVERY = 3600_000; // how often to look for waiting assignments
 const CONTACT_PER_WEEK = 2;
 /** SQL: the contact row's account has a device to notify. */
+const SHIP_NAME = new Map((data as { ships: { id: string; name: string }[] }).ships.map((s) => [s.id, s.name]));
 const HAS_DEVICE = 'EXISTS (SELECT 1 FROM devices d WHERE d.account = contact.account)';
 
 interface ContactRow {
