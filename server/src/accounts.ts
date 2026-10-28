@@ -22,6 +22,8 @@ import { isPushEndpoint, sendPush } from './push';
 import type { ClipBoard } from './clips';
 import { readyMessage, type SavedOrder } from './yard';
 import data from './mcp-data.json';
+import { checkSpec } from '../../src/game/shipyard';
+import type { ShipDef } from '../../src/content/types';
 import { awake, btcItems, heartItems, LOG_EVERY, logMessage, type LogItem, type LogKinds } from './shipsLog';
 import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
 import { CHECKS_PER_MINUTE, KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
@@ -32,6 +34,9 @@ import { normaliseVoucher, voucherCode } from './vouchers';
 import { firstAnchor, verify, type Anchor, type Save as LedgerSave } from './ledger';
 type Save = LedgerSave & { tampered?: boolean };
 import { ACCESS_TTL, challengeOk, clientName, CODE_TTL, connectPage, isMetadataUrl, redirectMatches, redirectOk, REFRESH_TTL, REQUEST_TTL, s256, SCOPE, verifierOk, withParams } from './oauth';
+
+/** A spec from the site, checked against the ships the Worker carries. */
+const validSpec = (spec: unknown) => checkSpec(spec, (id) => (data.ships as unknown as ShipDef[]).find((d) => d.id === id));
 
 export interface AccountsEnv extends GitHubEnv {
   /** Resend, for sign-in emails. Without it (local development) the link is returned instead of sent. */
@@ -128,6 +133,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS editions_account ON editions (edition, account)');
     // Each commander's ledger, as checked so far (server/src/ledger.ts).
     this.sql.exec('CREATE TABLE IF NOT EXISTS ledgers (account TEXT PRIMARY KEY, anchor TEXT NOT NULL)');
+    // A ship specced on the site, waiting for the next shipyard (docs/design/ship-configurator.md): one an account, the latest wins.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS specs (account TEXT PRIMARY KEY, spec TEXT NOT NULL, at INTEGER NOT NULL)');
     // A voucher can carry an edition number, held for whoever redeems it.
     for (const col of ['edition TEXT', 'number INTEGER']) {
       try {
@@ -178,6 +185,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'POST' && path === '/me/voucher') return this.redeemVoucher(request, account);
     if (m === 'POST' && path === '/me/edition') return this.claimEdition(request, account);
     if (m === 'DELETE' && path === '/me/edition') return this.releaseEdition(request, account);
+    if (m === 'GET' && path === '/me/spec') return this.getSpec(account);
+    if (m === 'PUT' && path === '/me/spec') return this.putSpec(request, account);
+    if (m === 'DELETE' && path === '/me/spec') {
+      this.sql.exec('DELETE FROM specs WHERE account = ?', account.id);
+      return json({ ok: true });
+    }
     if (m === 'GET' && path === '/me/editions') return json({ editions: this.sql.exec('SELECT edition, number FROM editions WHERE account = ?', account.id).toArray() });
     if (m === 'DELETE' && path === '/me/connections') return this.disconnect(account, url.searchParams.get('client') ?? '');
     // A maintainer, signed in as themselves, reviews from the site's review page: the queue, any submission, the decision.
@@ -689,6 +702,21 @@ export class Accounts extends DurableObject<AccountsEnv> {
   }
 
   /** GET /me/contact?e=sha256(endpoint): `push` is whether this device (`e`) is on; `devices`, how many are. */
+  private getSpec(account: Account): Response {
+    const row = this.sql.exec('SELECT spec, at FROM specs WHERE account = ?', account.id).toArray()[0] as { spec: string; at: number } | undefined;
+    const spec = row ? validSpec(JSON.parse(row.spec)) : null;
+    return json({ spec, at: spec ? row!.at : null });
+  }
+
+  private async putSpec(request: Request, account: Account): Promise<Response> {
+    const body = (await request.json().catch(() => null)) as { spec?: unknown } | null;
+    const spec = validSpec(body?.spec);
+    if (!spec) return json({ error: 'That isn’t a ship the yards can build' }, 400);
+    const at = Date.now();
+    this.sql.exec('INSERT OR REPLACE INTO specs (account, spec, at) VALUES (?, ?, ?)', account.id, JSON.stringify(spec), at);
+    return json({ spec, at });
+  }
+
   private getContact(account: Account, url: URL): Response {
     const row = this.contactRow(account.id);
     const devices = this.devicesOf(account.id);

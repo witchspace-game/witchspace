@@ -547,6 +547,9 @@ body.retro #seeker.locked { border-color: #fff; border-width: 3px; }
   bottom: auto;
   transform: translate(-50%, -50%);
   width: min(460px, calc(100vw - 32px));
+  /* A short window (or a phone held sideways) scrolls the card rather than losing its ends (iainfm, Stardot t=33815). */
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
   z-index: 7;
 }
 #controls-card dl { grid-template-columns: auto 1fr; gap: 6px 16px; margin-top: 8px; }
@@ -708,7 +711,7 @@ body.retro .fuel-row, body.retro .tabs button, body.retro #target-info, body.ret
 body.retro #market-table .illegal, body.retro #equip .damaged, body.retro #equip .mount, body.retro #indicators .bracket span,
 body.retro #rules button em, body.retro #touch .speed b { font-size: 8px; }
 body.retro #view-label, body.retro #galaxy-map .map-close, body.retro #touch .fire { font-size: 16px; text-shadow: none; }
-body.retro #controls-card { width: min(720px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; }
+body.retro #controls-card { width: min(720px, calc(100vw - 32px)); }
 body.retro #controls-card dl { font-size: 12px; line-height: 1.4; }
 /* On short or narrow screens the pixel font runs out of room: smaller headings,
    and the small print goes back to a plain font rather than overlapping. */
@@ -1424,6 +1427,9 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .money-amount { display: grid; gap: 4px; font-size: 13px; color: var(--dim); }
 .money-amount input { padding: 7px 10px; border: 1px solid var(--edge); border-radius: 6px; background: rgba(0, 0, 0, 0.35); color: var(--fg); font: 600 16px var(--font); }
 .money-quote { margin: 0; font-size: 14px; }
+.money-line.short { color: var(--danger, #ff4d6d); }
+.co-row { display: grid; grid-template-columns: 1fr 110px; gap: 6px; }
+.co-row select, .co-row input { padding: 6px 8px; border: 1px solid var(--edge); border-radius: 6px; background: rgba(0, 0, 0, 0.35); color: var(--fg); font: inherit; }
 .money-wallet { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .money-wallet li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--edge); border-radius: 8px; }
 .money-wallet span { grid-column: 1; font-size: 12px; color: var(--dim); }

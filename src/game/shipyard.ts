@@ -5,6 +5,7 @@ import { PLAYER_LASERS, type LaserId } from './weapons';
 import { PRODUCTION_HOURS, productionHours } from './production';
 import { record } from './ledger';
 import { combatRating, ratingPoints } from './rating';
+import { inYards } from './manual';
 
 // Speccing a ship and putting down a deposit, as you would on a new car
 // (docs/design/ships-and-classes.md, "Spec it, and put down a deposit"). You
@@ -123,6 +124,39 @@ export const cleanName = (s: string) =>
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 24);
+
+/**
+ * A spec from outside the game (the site's configurator, an account, a link),
+ * made safe or refused: a hull the yards sell, colours anyone can order, and
+ * only real glows, lasers, upgrades and luxuries. The ships are passed in, so
+ * the server can use its own bundle (docs/design/ship-configurator.md).
+ */
+export function checkSpec(spec: unknown, find: (id: string) => ShipDef | undefined): Spec | null {
+  if (!spec || typeof spec !== 'object') return null;
+  const o = spec as Record<string, unknown>;
+  const def = typeof o.ship === 'string' ? find(o.ship) : undefined;
+  if (!def || !inYards(def)) return null;
+  const colour = (c: unknown) => typeof c === 'string' && (c === def.style.lineColor || ORDERABLE.some((p) => p.colour === c));
+  const laser = (l: unknown): l is LaserId => typeof l === 'string' && Object.hasOwn(PLAYER_LASERS, l);
+  const list = (v: unknown) => (Array.isArray(v) && v.every((x) => typeof x === 'string') ? [...new Set(v as string[])] : null);
+  const upgrades = list(o.upgrades ?? []);
+  const luxuries = list(o.luxuries ?? []);
+  const glow = o.glow ?? 'standard';
+  if (!colour(o.colour) || (o.trim != null && !colour(o.trim)) || !laser(o.laser) || (o.rear != null && !laser(o.rear))) return null;
+  if (typeof glow !== 'string' || !Object.hasOwn(GLOWS, glow) || !upgrades || !luxuries) return null;
+  if (!upgrades.every((id) => UPGRADES.some((e) => e.id === id)) || !luxuries.every((id) => LUXURIES.some((l) => l.id === id))) return null;
+  return {
+    ship: def.id,
+    colour: o.colour as string,
+    name: cleanName(typeof o.name === 'string' ? o.name : ''),
+    laser: o.laser as LaserId,
+    ...(o.rear != null ? { rear: o.rear as LaserId } : {}),
+    upgrades: upgrades as EquipmentId[],
+    glow: glow as GlowId,
+    trim: (o.trim as string | null | undefined) ?? null,
+    luxuries,
+  };
+}
 
 export type OrderResult = { ok: true; order: ShipOrder } | { ok: false; message: string };
 

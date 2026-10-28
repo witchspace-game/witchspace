@@ -56,6 +56,8 @@ const held = new Map<string, number>(); // code -> time first pressed (ms)
 const FLIGHT_KEYS = new Set([
   'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
   'Space', 'ShiftLeft', 'ShiftRight', 'Slash', 'Comma', 'Period', 'KeyX', 'KeyF',
+  // The controls card: without this, Chrome and others open their own help (iainfm, Stardot t=33815).
+  'F1',
 ]);
 
 addEventListener('keydown', (e) => {

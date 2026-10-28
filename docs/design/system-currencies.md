@@ -8,7 +8,8 @@ stages:
   - Bitcoin on the exchange, priced from the real market; it can't be taken from you | built
   - Bitcoin limit orders, filled against the real price, even while you're away | built
   - Single-player system currencies: policies, a pool per station, stablecoins, the Money tab | built
-  - Shared galaxy: a ledger anyone can check, player liquidity, order books | proposed
+  - Bitcoin-backed reserves, Confederacies on Bitcoin, company stablecoins, liquidity provision, money news | built
+  - Shared galaxy: a ledger anyone can check, order books | proposed
   - Later: crises driven by players, currency futures, stablecoins pegged to the credit | proposed
 help:
   - Model a currency crisis for one government type | design
@@ -295,6 +296,19 @@ The ledger keeps the double-entry, append-only and invariant rules already in th
 - **The wallet**: balances by issuing system, no hold space, they survive the ship. Every swap goes in the ledger, and the server checks it (only money you had, never above what it was worth).
 - **The Money tab** at each station: the money's name, policy in plain words, a crisis warning, the rate here and the fair rate, the week's change, the pool, a swap form, and your wallet.
 - **Not yet:** prices shown in local money, minting and burning from production, Bitcoin-backed reserves, company stablecoins, liquidity provision, the Compact.
+
+*How the whole economy works now, with the real numbers: [docs/economy.md](../economy.md).*
+
+## 9c. Stage two, as built *(Mark: "build the next currency stage", 28 October 2026)*
+
+- **Bitcoin-backed reserves.** Each Corporate State holds between 10% and 45% of its reserves in Bitcoin, from its seed, and the Money tab publishes the split. Priced against the real Bitcoin market: while the reserves cover the coin, it holds 1:1; if Bitcoin falls far enough that they don't, the coin slips below its peg (harder the deeper the shortfall), and the news board reports a run ("reserves cover 84%"). It recovers when Bitcoin does.
+- **Confederacies run on Bitcoin.** Their fixed-supply money is priced in Bitcoin, so it moves with the real market: when Bitcoin rises, each unit buys more credits.
+- **Company stablecoins** (like DAI). Each big company (Hexon Holdings, Vorg Industries, Carriers' Mutual, Wexley-Yorozu) issues a coin backed by Bitcoin locked up at 150% of its value. Mint at a credit each (0.3% fee), redeem at any station. They hold their peg unless Bitcoin falls by a third from 80,000 Cr; then each coin is worth what its collateral is.
+- **Liquidity provision.** Put credits and the same value of the local money into the station's pool, one position per station, and earn a share of its fees: higher at small, busy stations (about 20% to 42% a year). Impermanent loss is real: if the rate moves, you come out holding more of whichever side fell. Withdraw any time.
+- **Deeper pools for stablecoins**, six times a floating money's, since anyone can redeem them at the peg and traders keep the pool close to it.
+- **Money news**: runs on reserves and company coin slips join the crises on the news board.
+- **The server checks it**: company coins are never worth more than a credit; reserve, Bitcoin and basket money get looser bounds (Bitcoin moves); only a liquidity position's gain counts towards the daily cap, not the stake coming back.
+- **Not yet:** prices in local money, minting from production, order books for currencies, the Compact.
 
 ## 10. Building it in stages
 

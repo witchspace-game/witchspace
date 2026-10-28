@@ -27,3 +27,7 @@ export const releaseEdition = (edition: string) => call<{ ok: true }>('DELETE', 
 export const heldEditions = () => call<{ editions: { edition: string; number: number }[] }>('GET', '/me/editions');
 
 export const redeemVoucher = (code: string) => call<{ ship: string; edition?: string; number?: number }>('POST', '/me/voucher', { code });
+
+/** A ship specced on the site, saved to your account so it reaches every device (docs/design/ship-configurator.md). */
+export const accountSpec = () => call<{ spec: unknown; at: number | null }>('GET', '/me/spec');
+export const forgetAccountSpec = () => call<{ ok: true }>('DELETE', '/me/spec');

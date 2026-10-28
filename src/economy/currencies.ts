@@ -17,12 +17,12 @@ const POLICY: Policy[] = ['none', 'feudal', 'basket', 'printing', 'official', 's
 
 export const POLICY_TEXT: Record<Policy, { name: string; line: string }> = {
   none: { name: 'No currency', line: 'Nobody issues money here: prices are in credits, or whatever you bring.' },
-  reserve: { name: 'Stablecoin, fully backed', line: 'Pegged 1:1 to the credit, every coin backed by credits the system publishes. Safe and dull; taken at any station.' },
+  reserve: { name: 'Stablecoin, backed by reserves', line: 'Pegged 1:1 to the credit, backed by reserves the system publishes, partly in Bitcoin. Safe while the reserves cover every coin; taken at any station.' },
   feudal: { name: 'Algorithmic stablecoin', line: 'Pegged to the credit by an algorithm that mints or burns to hold the peg, with no reserves behind it. Taken at any station, while it holds. When it breaks, it spirals, and re-pegs lower: the loss stays.' },
   inflation: { name: 'Managed inflation', line: 'A central bank lets it lose about two per cent a month, steadily. Fine to spend, poor to save.' },
   printing: { name: 'Printed to order', line: 'The government prints what it spends, faster in a crisis. Spend it, don’t save it.' },
   official: { name: 'Official rate', line: 'The state fixes the rate, and limits how much each visitor may change.' },
-  scarce: { name: 'Fixed supply', line: 'New issue halves on a schedule. Scarce and volatile; holders gain as the economy grows.' },
+  scarce: { name: 'Runs on Bitcoin', line: 'Fixed supply, and reckoned in Bitcoin: it rises and falls with the real Bitcoin price, and gains as the economy grows.' },
   basket: { name: 'Basket of neighbours', line: 'Tied to a basket of its neighbours’ money: smooth, but it drags when they do.' },
 };
 
@@ -141,14 +141,34 @@ function scarred(s: StarSystem, t: number, chance: number, peak: number, keep: n
   return easing ? level * Math.exp(Math.log(lasting) + (Math.log(peak) - Math.log(lasting)) * k) : level * (1 + (peak - 1) * k);
 }
 
-/** Units a credit buys, fairly, at time t: what the pools drift back to. */
-export function fairRate(s: StarSystem, t: number): number {
+/**
+ * The Bitcoin price reserves are reckoned against: roughly the real price when
+ * this stage was built (28 October 2026). Above it, a reserve holding Bitcoin is
+ * over-backed; below it, short.
+ */
+export const BTC_REF = 80_000;
+
+/** A Corporate State's reserves: the share held in Bitcoin, from the seed (a tenth to nearly half). */
+export const reserveShare = (s: StarSystem) => 0.1 + hash(s, 66, 0) * 0.35;
+
+/** How well a Corporate State's coins are backed at this Bitcoin price: 1 is fully. */
+export const backing = (s: StarSystem, btc = BTC_REF) => 1 - reserveShare(s) + reserveShare(s) * (btc / BTC_REF);
+
+/**
+ * Units a credit buys, fairly, at time t: what the pools drift back to. `btc` is
+ * the real Bitcoin price, where it matters (Corporate reserves, Confederacies);
+ * without it, the reference price.
+ */
+export function fairRate(s: StarSystem, t: number, btc = BTC_REF): number {
   const c = currencyOf(s);
   if (!c) return 1;
   const weeks = (t - EPOCH) / WEEK;
   switch (c.policy) {
-    case 'reserve':
-      return 1 + smooth(s, 70, t, DAY) * 0.002;
+    case 'reserve': {
+      // Holds 1:1 while the reserves cover every coin; short, and holders run for the door.
+      const b = backing(s, btc);
+      return (b >= 1 ? 1 : Math.pow(1 / b, 1.4)) + smooth(s, 70, t, DAY) * 0.002;
+    }
     case 'feudal':
       // While it holds, steady; when it breaks, the coin falls to an eighth of its value, and re-pegs lower.
       return scarred(s, t, 0.15, 8.3, 0.85) * (1 + smooth(s, 71, t, DAY) * 0.004);
@@ -159,12 +179,12 @@ export function fairRate(s: StarSystem, t: number): number {
     case 'official':
       return c.base;
     case 'scarce':
-      // Fewer units buy a credit as the economy grows; it swings hard on the way.
-      return c.base * Math.exp(-0.01 * weeks) * (1 + smooth(s, 74, t, 2 * DAY) * 0.12 + smooth(s, 75, t, 6 * 3600_000) * 0.05);
+      // Confederacies run on Bitcoin: their money moves with the real price, and gains as the economy grows.
+      return c.base * Math.exp(-0.01 * weeks) * (BTC_REF / btc) * (1 + smooth(s, 74, t, 2 * DAY) * 0.04);
     case 'basket': {
       const ns = neighbours(s);
       if (!ns.length) return c.base;
-      const drift = ns.reduce((p, n) => p * (fairRate(n, t) / currencyOf(n)!.base), 1) ** (1 / ns.length);
+      const drift = ns.reduce((p, n) => p * (fairRate(n, t, btc) / currencyOf(n)!.base), 1) ** (1 / ns.length);
       return c.base * drift;
     }
     default:
@@ -192,13 +212,14 @@ export interface Pool {
 }
 
 /** How deep a station's pool is, in credits: bigger worlds trade more. */
-export const poolDepth = (s: StarSystem) => Math.round(40_000 * Math.sqrt(Math.max(0.1, s.population)));
+export const poolDepth = (s: StarSystem) => Math.round(40_000 * Math.sqrt(Math.max(0.1, s.population)) * (currencyOf(s)?.stable ? 6 : 1));
+// (A stablecoin's pool is deep: anyone can redeem it at its peg, so traders keep the pool close to it.)
 const POOL_RECOVERY_MINUTES = 60;
 
 /** The pool as it stands now: drifted back towards the fair rate since it was last touched. */
-export function poolNow(s: StarSystem, saved: Pool | undefined, t: number): Pool {
+export function poolNow(s: StarSystem, saved: Pool | undefined, t: number, btc = BTC_REF): Pool {
   const depth = poolDepth(s);
-  const fair = fairRate(s, t);
+  const fair = fairRate(s, t, btc);
   if (!saved) return { local: depth * fair, credits: depth, updated: t };
   const k = 1 - Math.exp(-Math.max(0, t - saved.updated) / 60_000 / POOL_RECOVERY_MINUTES);
   const credits = saved.credits + (depth - saved.credits) * k;
@@ -222,7 +243,7 @@ export function quoteSell(p: Pool, units: number): number {
 }
 
 /** A stablecoin taken away from home: its rate, less the network's fee, no slippage. */
-export const stableValue = (home: StarSystem, units: number, t: number) => (units / fairRate(home, t)) * (1 - STATIONS_WIDE_FEE);
+export const stableValue = (home: StarSystem, units: number, t: number, btc = BTC_REF) => (units / fairRate(home, t, btc)) * (1 - STATIONS_WIDE_FEE);
 
 // --- News -----------------------------------------------------------------------------
 
@@ -236,15 +257,67 @@ export interface MoneyNews {
  * Pegs breaking and presses running in the region, as the news has reached here:
  * what was true there when the last ship left (`delay` says how long ago that was).
  */
-export function moneyNews(here: StarSystem, now: number, delay: (where: StarSystem) => number): MoneyNews[] {
+export function moneyNews(here: StarSystem, now: number, delay: (where: StarSystem) => number, btc = BTC_REF): MoneyNews[] {
   const out: MoneyNews[] = [];
+  // The companies' coins are everywhere: a slip is news everywhere.
+  if (companyValue(btc) < 1) out.push({ where: here, distance: 0, text: `Company stablecoins slip to ${companyValue(btc).toFixed(2)} Cr as Bitcoin's fall outruns their backing` });
   for (const s of [here, ...systemsWithin(here, 15)]) {
     const c = currencyOf(s);
     if (!c) continue;
     const then = now - delay(s);
     if (c.policy === 'feudal' && crisis(s, then, 0.15) > 0.3)
       out.push({ where: s, distance: distanceLy(here, s), text: `${c.name} (${c.ticker}) breaks its peg: one now buys ${(1 / fairRate(s, then)).toFixed(2)} Cr` });
+    else if (c.policy === 'reserve' && backing(s, btc) < 1)
+      out.push({ where: s, distance: distanceLy(here, s), text: `Run on the ${c.name}: ${s.name}'s reserves cover ${Math.round(backing(s, btc) * 100)}% of its coins` });
     else if (c.policy === 'printing' && crisis(s, then, 0.12) > 0.3) out.push({ where: s, distance: distanceLy(here, s), text: `Presses running at ${s.name}: the ${c.name} is losing value by the hour` });
   }
   return out.sort((a, b) => a.distance - b.distance);
+}
+
+// --- Company stablecoins ---------------------------------------------------------------
+// The big companies issue coins of their own, backed by Bitcoin locked up at half
+// as much again as the coins are worth (as DAI is): no bank needed, taken at any
+// station. Minted at a credit each; redeemed at a credit while the Bitcoin covers
+// them. A fast enough real crash outruns the backing, and the coin slips.
+
+export const COLLATERAL = 1.5;
+
+/** A company coin's backing at this Bitcoin price: 1.5 at the reference, 1 a third lower. */
+export const companyBacking = (btc = BTC_REF) => COLLATERAL * (btc / BTC_REF);
+
+/** What a company coin redeems for, in credits: 1 while covered. */
+export const companyValue = (btc = BTC_REF) => Math.min(1, companyBacking(btc));
+
+/** Wallet keys for the company coins. */
+export const companyKey = (company: string) => `co:${company}`;
+export const isCompanyKey = (key: string) => key.startsWith('co:');
+
+// --- Providing liquidity -----------------------------------------------------------------
+// Add both currencies to a station's pool, in step with its rate, and share in its
+// fees. The real risk comes with it: if the rate moves, you come out holding more of
+// whichever side fell (impermanent loss), worked out by the constant-product rule.
+
+export interface Position {
+  /** The constant product of what you put in. */
+  k: number;
+  /** Credits per unit when you put it in. */
+  price: number;
+  /** Credits you put in (half the value). */
+  credits: number;
+  added: number;
+}
+
+/** What the pool's traders pay its providers in fees, a year, as a share of what's in: busier worlds, a thinner share. */
+export const feeYield = (s: StarSystem) => 0.08 + 0.3 / Math.sqrt(Math.max(0.5, s.population));
+
+/** Your share now: local and credits by the constant-product rule at today's price, and the fees you've earned. */
+export function positionNow(s: StarSystem, p: Position, t: number, btc = BTC_REF): { local: number; credits: number; fees: number; value: number; held: number } {
+  const price = 1 / fairRate(s, t, btc);
+  const local = Math.sqrt(p.k / price);
+  const credits = Math.sqrt(p.k * price);
+  const fees = 2 * p.credits * feeYield(s) * (Math.max(0, t - p.added) / (365 * DAY));
+  const value = credits + local * price + fees;
+  // What you'd have if you'd simply held what you put in.
+  const held = p.credits + (p.credits / p.price) * price;
+  return { local, credits, fees, value, held };
 }
