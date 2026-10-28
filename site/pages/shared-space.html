@@ -1,0 +1,109 @@
+<!-- {"path": "/shared-space/", "title": "Shared space · Witchspace", "description": "Fly in the same star system as other real commanders: see their ships, fly together, run from them or trade shots. Shared space is Witchspace's multiplayer, in beta, free in your browser.", "scripts": ["/src/site/sharedSpace.ts"], "bodyClass": "shared-page"} -->
+<section class="section shared-hero">
+  <div class="shared-hero-copy">
+    <p class="kicker">Multiplayer · in beta</p>
+    <h1>Shared space</h1>
+    <p class="lede">The other ship on your scanner might be a person. In shared space you fly in the same star system as other commanders, live: you see their ships, read their callsigns and ranks, and choose whether to fly together, keep your distance or fight.</p>
+    <p class="shared-live" id="shared-live" hidden></p>
+    <p class="connect-buttons"><a class="button primary big" href="/play/">Play now, it’s free</a> <a class="button ghost big" href="#how">How to join</a></p>
+  </div>
+  <div class="shared-scene" aria-hidden="true">
+    <div class="ship-view shared-view">
+      <canvas class="ship-canvas"></canvas>
+    </div>
+    <span class="shared-tag" id="shared-tag">◆◆ CMDR Jameson · 0.8 km</span>
+    <svg class="shared-scanner" viewBox="0 0 200 100">
+      <ellipse cx="100" cy="50" rx="94" ry="44" />
+      <ellipse cx="100" cy="50" rx="62" ry="29" />
+      <ellipse cx="100" cy="50" rx="30" ry="14" />
+      <line x1="100" y1="6" x2="100" y2="94" />
+      <line x1="6" y1="50" x2="194" y2="50" />
+      <g class="mark you"><line x1="100" y1="50" x2="100" y2="50" /><circle cx="100" cy="50" r="3" /></g>
+      <g class="mark cmdr"><line x1="132" y1="40" x2="132" y2="28" /><path d="M132 22 l5 5 -5 5 -5 -5z" /></g>
+      <g class="mark hostile"><line x1="62" y1="62" x2="62" y2="54" /><path d="M62 48 l5 5 -5 5 -5 -5z" /></g>
+      <g class="mark npc"><line x1="150" y1="66" x2="150" y2="60" /><rect x="147" y="58.5" width="6" height="3" /></g>
+    </svg>
+  </div>
+</section>
+
+<section class="section" id="how">
+  <div class="section-head">
+    <p class="kicker">How to join</p>
+    <h2>One key, on the title screen</h2>
+  </div>
+  <ol class="steps shared-steps">
+    <li><strong>Open the game</strong> at <a href="/play/">witchspace.org.uk/play</a>, on a computer or a phone. Nothing to install.</li>
+    <li><strong>Press S</strong> on the title screen, or tap <b>Shared space (beta)</b>, until it says <b>on</b>. It stays on until you turn it off.</li>
+    <li><strong>Fly under Modern rules.</strong> Shared space is Modern only; Classic stays the 1984 game, alone.</li>
+    <li><strong>Launch.</strong> As you leave the station the game tells you who else is in the system: “Shared space · 2 other commanders in Lave”. Hyperspace takes you to the next system’s, and whoever is there.</li>
+  </ol>
+  <p class="muted">Want to meet someone? Pick a system and a time, and both launch there. Lave, where every commander starts, is a good place to look.</p>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="kicker">What you’ll see</p>
+    <h2>Every commander is a person, and you’ll know which</h2>
+  </div>
+  <div class="shared-grid">
+    <div class="card"><h3>Their ship, in their paint</h3><p>Other commanders fly the ships they own, in the colours they chose at the yard: a Cobra in Diso Amber is somebody’s Cobra.</p></div>
+    <div class="card"><h3>A callsign and a rank</h3><p>A tag follows each one: their rank insignia, callsign and range, like <b>◆◆ CMDR Jameson · 0.8 km</b>. Signed-out players show as guests.</p></div>
+    <div class="card"><h3>A diamond on the scanner</h3><p>Commanders are diamonds; the ships the game flies are short bars. A commander who has just fired on you turns red, and stays red for a while.</p></div>
+    <div class="card"><h3>Ships running dark</h3><p>Switch your transponder off (0) and you’re an unidentified ship until someone gets close enough to read your hull. The police will want a word.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="kicker">Fair play</p>
+    <h2>The server referees</h2>
+    <p class="lede">Each star system has its own small server, and it decides what happened, not your browser.</p>
+  </div>
+  <ul class="shared-rules">
+    <li><strong>Flying:</strong> it refuses impossible moves (too fast, teleporting, outside the system) and puts you back where you were.</li>
+    <li><strong>Lasers:</strong> it checks the laser is fitted and not firing faster than it can, then judges the shot where the shooter saw the target. It keeps everyone’s shields and hull, and only the server says who was destroyed.</li>
+    <li><strong>Missiles and ECM:</strong> lock on (T), launch (X). The server flies the missile and decides if it hits. An ECM destroys every missile nearby, yours included.</li>
+    <li><strong>Collisions:</strong> both ships take damage, more the faster they met. A collision is an accident: no crime, no kill.</li>
+    <li><strong>The law:</strong> firing on a commander makes you an Offender. Destroying one brings a Marshals warrant, anywhere there’s law. Anarchies have none: fly there at your own risk.</li>
+  </ul>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="kicker">Your callsign</p>
+    <h2>Sign in, and it’s yours alone</h2>
+  </div>
+  <div class="shared-grid">
+    <div class="card"><h3>A callsign nobody else has</h3><p>Sign in with your email (no password: we send a code) and your callsign belongs to your account. Without an account you fly as a guest.</p></div>
+    <div class="card"><h3>One ship per account</h3><p>Join from a second window or device and the first one leaves shared space, so nobody meets themselves or flies two ships at once.</p></div>
+    <div class="card"><h3>The same commander everywhere</h3><p>Your commander is saved to your account, so the phone and the computer carry on from each other.</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="kicker">Even when you fly alone</p>
+    <h2>One galaxy, the same for everyone</h2>
+    <p class="lede">With shared space off, you don’t see other ships, but you still live in the same galaxy as every other commander.</p>
+  </div>
+  <ul class="shared-rules">
+    <li><strong>One clock:</strong> the news, the markets, the contracts and the shipyards’ build lines are worked out from the galaxy’s own clock, so a famine at Riedquat is a famine for everyone.</li>
+    <li><strong>Firsts:</strong> the first commander to survey a world or finish a trail goes on the chart, and on the <a href="/">home page</a>, for everyone to see.</li>
+    <li><strong>Numbered editions:</strong> when the yard says 41 of 100 are left, that’s 41 for the whole galaxy.</li>
+  </ul>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="kicker">It’s a beta</p>
+    <h2>What’s coming</h2>
+  </div>
+  <ul class="shared-rules">
+    <li><strong>Talking to each other:</strong> hails and messages between commanders, with mute, block and report. <a href="/design/radio-and-comms/">The design</a>.</li>
+    <li><strong>Commanders kept on the server:</strong> trading, kit and kills decided there, so nobody can claim a rank or a ship they didn’t earn. <a href="/design/servers-and-hosting/">The design</a>.</li>
+    <li><strong>Guilds</strong> and team insignia, and later, servers run by the community.</li>
+  </ul>
+  <p>Found something broken? That’s the most useful thing you can tell us. Fly shared space with a friend, and <a href="https://github.com/witchspace-game/witchspace/issues/new/choose">report what broke</a> or email <a href="mailto:hello@witchspace.org.uk?subject=Shared%20space">hello@witchspace.org.uk</a>.</p>
+  <p class="muted small">In shared space, your position, callsign and rank are sent to the other commanders in your system while you’re there, and nothing is kept after you leave. <a href="/privacy/">Privacy</a>.</p>
+  <p class="connect-buttons"><a class="button primary big" href="/play/">Play now, it’s free</a></p>
+</section>
