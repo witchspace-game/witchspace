@@ -29,8 +29,9 @@ export const PALETTE: { colour: string; name: string; price: number; line: strin
   { colour: '#9b6bff', name: 'Xeer Ultraviolet', price: 18_000, line: 'The light the eye half sees, at the edge of Xeer’s sun.' },
   { colour: '#ff8f7a', name: 'Tibedied Coral', price: 14_000, line: 'Warm as the bars on Tibedied’s night side.' },
   // The Witch-fire Edition's own colours: nobody can order them on another ship (Mark: they're for the edition only).
-  { colour: '#7df9ff', name: 'Witch-fire', price: 0, line: 'The light at the edge of a jump that never closed.', edition: 'witch-fire' },
-  { colour: '#ff4dff', name: 'Orerve Nebula', price: 0, line: 'The cloud you see from Orerve on a clear night.', edition: 'witch-fire' },
+  // Priced as before, so the edition's price holds; they're simply not offered on their own.
+  { colour: '#7df9ff', name: 'Witch-fire', price: 18_000, line: 'The light at the edge of a jump that never closed.', edition: 'witch-fire' },
+  { colour: '#ff4dff', name: 'Orerve Nebula', price: 24_000, line: 'The cloud you see from Orerve on a clear night.', edition: 'witch-fire' },
 ];
 
 /** The colours the configurator offers: everything but an edition's own. */
@@ -67,6 +68,8 @@ export interface Spec {
   colour: string;
   name: string;
   laser: ShipOrder['laser'];
+  /** The rear mount: none, or a laser. */
+  rear?: ShipOrder['laser'];
   upgrades: EquipmentId[];
   glow: GlowId;
   /** The fine lines' colour, if two-tone. */
@@ -88,7 +91,7 @@ export const orderable = (spec: Spec) => [spec.colour, spec.trim].every((c) => !
 export function priceLines(def: ShipDef, spec: Spec): { hull: number; fit: number; finish: number } {
   const k = fitScale(def);
   const kit = spec.upgrades.reduce((sum, id) => sum + (UPGRADES.find((e) => e.id === id)?.price ?? 0), 0);
-  const fit = Math.round((PLAYER_LASERS[spec.laser].price + kit) * k);
+  const fit = Math.round((PLAYER_LASERS[spec.laser].price + (spec.rear ? PLAYER_LASERS[spec.rear].price : 0) + kit) * k);
   const luxuries = spec.luxuries.reduce((sum, id) => sum + (LUXURIES.find((l) => l.id === id)?.price ?? 0), 0);
   const finish = colourPrice(spec.colour) + GLOWS[spec.glow].price + (spec.trim ? TRIM_PRICE + colourPrice(spec.trim) : 0) + luxuries;
   return { hull: def.stats.price, fit, finish };
@@ -125,8 +128,11 @@ export const editionSpec = (e: Edition, name = ''): Spec => ({
 
 export const editionQuote = (def: ShipDef, e: Edition) => quote(def, editionSpec(e)) + e.premium;
 
-/** An edition as a gift: its whole look, and the plain fit-out (the kit is earned, as with any gift). */
-export const editionGiftSpec = (e: Edition, name = ''): Spec => ({ ...editionSpec(e, name), upgrades: [] });
+/**
+ * An edition as a gift: its whole look, beam lasers front and rear, and a combat
+ * computer (Mark, for Mark Moxon's 001); the rest of the kit is earned.
+ */
+export const editionGiftSpec = (e: Edition, name = ''): Spec => ({ ...editionSpec(e, name), laser: 'beam', rear: 'beam', upgrades: ['combat-computer'] });
 
 /** A gift is the hull as it leaves the yard: your choice of the included colours and a name, nothing that costs. */
 export const giftable = (def: ShipDef, spec: Spec) => spec.laser === standardLaser(def) && !spec.upgrades.length && priceLines(def, spec).finish === 0;
@@ -247,7 +253,7 @@ export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here
   const keep = c.equipment.filter((id) => !UPGRADES.some((e) => e.id === id));
   c.equipment = [...new Set([...keep, ...o.upgrades])];
   c.damaged = [];
-  c.lasers = { front: o.laser };
+  c.lasers = { front: o.laser, ...(o.rear ? { rear: o.rear } : {}) };
   c.missiles = Math.min(c.missiles, next.stats.missiles ?? 0);
   c.ship = next.id;
   c.paint = {

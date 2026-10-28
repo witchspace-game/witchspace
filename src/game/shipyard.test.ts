@@ -22,7 +22,8 @@ describe('speccing a ship', () => {
     expect(quote(cobra, defaultSpec(cobra))).toBe(cobra.stats.price + 400); // a plain one is the list price, with its pulse laser
   });
 
-  it('keeps the Witch-fire Edition’s colours for the edition', () => {
+  it('keeps the Witch-fire Edition’s colours for the edition, at the price it was announced at', () => {
+    expect(editionQuote(fdl, EDITIONS[0])).toBe(468_380);
     const c = newCommander('modern');
     c.credits = 1e6;
     expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff' }, yard, 0)).toMatchObject({ ok: false });
@@ -148,7 +149,10 @@ describe('editions and gifts', () => {
     c.gift = { ship: 'fer-de-lance', edition: { id: witch.id, number: 1 } };
     expect(placeOrder(c, fdl, { ...defaultSpec(fdl), name: 'Moxon' }, yard, 0, { gift: true })).toMatchObject({ ok: true });
     expect(c.order).toMatchObject({ ...editionGiftSpec(witch, 'Moxon'), quoted: 0, gifted: true, edition: { id: witch.id, number: 1 } });
-    expect(c.order!.laser).toBe('beam'); // a ship of this calibre leaves the yard with a beam laser
-    expect(c.order!.upgrades).toEqual([]);
+    // Beam lasers front and rear, and a combat computer (Mark).
+    expect(c.order).toMatchObject({ laser: 'beam', rear: 'beam', upgrades: ['combat-computer'] });
+    collectOrder(c, cobra, fdl, yard, 0, 0);
+    expect(c.lasers).toEqual({ front: 'beam', rear: 'beam' });
+    expect(c.equipment).toContain('combat-computer');
   });
 });

@@ -1299,7 +1299,7 @@ function renderShipyard() {
             <li>${escapeHtml(nameOf(giftEdition.colour))}${giftEdition.trim ? `, the fine lines in ${escapeHtml(nameOf(giftEdition.trim))}` : ''}, ${GLOWS[giftEdition.glow].name.toLowerCase()}</li>
             <li>${giftEdition.luxuries.map((l) => escapeHtml(LUXURIES.find((x) => x.id === l)?.name ?? l)).join(' · ')}</li>
             <li>${editionNo(c.gift!.edition!.number)} beside its name</li>
-            <li>${escapeHtml(PLAYER_LASERS[giftEdition.laser].name)} and the standard fit: the rest is yours to earn</li>
+            <li>Beam lasers front and rear, and a combat computer: the rest is yours to earn</li>
           </ul>
           ${nameField}
           <p class="yard-total"><span>${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}</span><b>A gift</b></p>`
@@ -1322,6 +1322,8 @@ function renderShipyard() {
       <input id="spec-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" />
       <p class="yard-label">Its laser</p>
       <div class="yard-lasers">${laserRow}</div>
+      <p class="yard-label">Rear laser</p>
+      <div class="yard-lasers yard-rear"><button type="button" data-rear="" aria-pressed="${!spec.rear}">None<small>—</small></button>${(Object.keys(PLAYER_LASERS) as LaserId[]).map((id) => `<button type="button" data-rear="${id}" aria-pressed="${spec!.rear === id}">${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`).join('')}</div>
       <p class="yard-label">Upgrades <span>fitted to a hull this size: ×${fitScale(def).toFixed(1)}</span></p>
       <div class="yard-kit">${kit}</div>
       <p class="yard-label">Luxuries <span>comfort and showing off, nothing that flies or fights better</span></p>
@@ -1357,6 +1359,11 @@ function renderShipyard() {
       box.onchange = () => {
         const id = box.dataset.lux!;
         spec!.luxuries = box.checked ? [...spec!.luxuries, id] : spec!.luxuries.filter((l) => l !== id);
+        keep();
+      };
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-rear]'))
+      b.onclick = () => {
+        spec!.rear = (b.dataset.rear || undefined) as LaserId | undefined;
         keep();
       };
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-laser]'))
