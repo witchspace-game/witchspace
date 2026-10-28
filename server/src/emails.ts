@@ -5,6 +5,7 @@
 // writes in its own voice (docs/companies.md).
 
 import type { CompanyId } from './contact';
+import type { Papers } from '../../src/game/papers';
 
 const SITE = 'https://witchspace.org.uk';
 const FONT = "Arial,Helvetica,sans-serif";
@@ -14,7 +15,7 @@ interface Look {
   accent: string;
   /** The button's text colour (readable on the accent). */
   ink: string;
-  /** The banner: public/email/<hero>.jpg. */
+  /** The banner: public/email/<hero>.jpg, or a full address. */
   hero: string;
   /** Above the headline, small and spaced: who it's from. */
   eyebrow: string;
@@ -89,7 +90,7 @@ function frame(look: Look, opts: { preheader: string; title: string; body: strin
 <div style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(opts.preheader)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#05070d"><tr><td align="center" style="padding:28px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#0b111c;border:1px solid #1f2a3a;border-top:4px solid ${look.accent};border-radius:14px;overflow:hidden">
-<tr><td><img src="${SITE}/email/${look.hero}.jpg" width="520" alt="" style="display:block;width:100%;max-width:520px;height:auto;border:0"></td></tr>
+<tr><td><img src="${look.hero.startsWith('https://') ? look.hero : `${SITE}/email/${look.hero}.jpg`}" width="520" alt="" style="display:block;width:100%;max-width:520px;height:auto;border:0"></td></tr>
 <tr><td style="padding:26px 30px 8px">
   <table role="presentation" cellpadding="0" cellspacing="0"><tr>
     <td style="width:42px;height:42px;border:2px solid ${look.accent};border-radius:8px;text-align:center;vertical-align:middle;font:bold 16px ${FONT};color:${look.accent};letter-spacing:1px">${esc(look.mark)}</td>
@@ -146,5 +147,53 @@ export function companyEmail(company: CompanyId, name: string, subject: string, 
       foot: `You asked the companies in Witchspace to contact you. <a href="${stop}" style="color:#7d8ba0">Stop these messages</a>.`,
     }),
     text: `${name.toUpperCase()}\n\n${subject}.\n\n${body}\n\n${look.pitch}\n\n${SITE}/play/\n\n${look.sign}\n\nYou asked the companies in Witchspace to contact you. To stop: ${stop}`,
+  };
+}
+
+/**
+ * The maker's letter when a numbered edition is signed over (the edition delivery
+ * pack, Mark): sent once, in the edition's own colours, with her papers' private
+ * link. Every fact is from her papers (src/game/papers.ts), never typed in.
+ */
+export function editionEmail(p: Papers, maker: string, callsign: string | null, link: string): { subject: string; html: string; text: string } {
+  const who = callsign ? `Commander ${callsign}` : 'Commander';
+  const glow = p.glow.replace(/ glow$/i, '').toLowerCase();
+  const look: Look = {
+    accent: p.colour,
+    ink: '#05070d',
+    hero: `${SITE}/share/ships-${p.shipId}-${p.editionId}.jpg`,
+    eyebrow: `${maker} · ${p.system}`.toUpperCase(),
+    mark: maker.split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
+    sign: 'Fast ships for people in a hurry.',
+    button: 'See her papers',
+    pitch: '',
+  };
+  const trim = p.trim ?? p.colour;
+  const paras = [
+    `${who},`,
+    `She’s finished. ${p.edition} ${p.no} of ${p.limit}, built by hand at our own yard and signed over to you, paid for in full.`,
+    `${p.finish}. The glow is ${glow}. She carries ${p.fittedLine}${p.aboard.length ? `, and aboard there’s ${p.aboardLine}` : ''}.`,
+    `She’s waiting at ${p.yard}, ${p.system}. Bring whatever you’re flying: we’ll take it in part, give her a name, and hand you the keys.`,
+    'Her papers are at the link below.',
+  ];
+  const foot = 'Witchspace is a free, open-source tribute to Elite (1984), not affiliated with Frontier. ' + `${maker} is a shipbuilder in the game. You’re getting this once, because a ship was signed over to this address. No further emails unless you turn them on.`;
+  const block = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;border:1px solid ${trim};border-radius:10px;background:#07090f"><tr><td style="padding:16px 18px">
+  <p style="margin:0 0 6px;font:bold 17px ${FONT};color:#ffffff">${esc(p.edition)} · No. ${esc(p.no)} of ${p.limit}</p>
+  <p style="margin:0 0 6px;font:14px/1.5 ${FONT};color:${trim}">${esc(p.ship)} · ${esc(p.finish)}</p>
+  <p style="margin:0;font:13px/1.5 ${FONT};color:#95a3b8">Held for ${esc(who)} at ${esc(p.yard)}, ${esc(p.system)}</p>
+</td></tr></table>
+<p style="margin:0 0 6px;font:15px/1.5 ${FONT};color:#c2cddb">${esc(maker)}, ${esc(p.yard)}</p>
+<p style="margin:0 0 20px;font:13px ${FONT}"><a href="${SITE}/play/" style="color:${trim}">Play Witchspace</a></p>`;
+  return {
+    subject: `${p.edition} ${p.no} is ready for you, Commander`,
+    html: frame(look, {
+      preheader: `${p.edition} ${p.no} of ${p.limit}, signed over to you and waiting at ${p.yard}, ${p.system}.`,
+      title: `${p.edition} ${p.no}`,
+      body: `<span style="display:block;margin:-6px 0 18px;font:15px ${FONT};color:${trim}">Built for ${esc(who)}</span>${paras.map(esc).join('<br><br>')}`,
+      link,
+      extra: block,
+      foot,
+    }),
+    text: `${maker.toUpperCase()} · ${p.system.toUpperCase()}\n\n${p.edition} ${p.no}\nBuilt for ${who}\n\n${paras.join('\n\n')}\n\nHer papers: ${link}\n\n${p.edition} · No. ${p.no} of ${p.limit}\n${p.ship} · ${p.finish}\nHeld for ${who} at ${p.yard}, ${p.system}\n\n${maker}, ${p.yard}\nFast ships for people in a hurry.\n\nPlay Witchspace: ${SITE}/play/\n\n${foot}`,
   };
 }
