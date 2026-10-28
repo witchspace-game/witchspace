@@ -131,7 +131,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
           <button data-type="market">Market</button><button data-type="limit">Limit</button>
         </div>
         <p class="ex-ordertype"></p>
-        <label class="ex-price" hidden><span>Price</span><input type="number" min="0" step="0.01" inputmode="decimal" /><b>Cr</b></label>
+        <label class="ex-price" hidden><span>Limit price</span><input type="number" min="0" step="0.01" inputmode="decimal" /><b>Cr</b></label>
         <p class="ex-avail"></p>
         <label class="ex-qty"><span>Quantity</span><input type="number" min="0" step="1" inputmode="numeric" /><b class="ex-qty-unit"></b></label>
         <input class="ex-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Quantity as a share of the most you can trade" />
@@ -666,7 +666,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const limit = orderType === 'limit';
     $('.ex-price').hidden = !limit;
     $('.ex-ordertype').innerHTML = remote()
-      ? `Order to ${ctx.system.name} <span>arrives in ${age(newsDelay(ctx.system, deps.context().system))}, then waits for your price; ${side === 'buy' ? 'what it buys waits in storage there' : 'sells from your storage there'}</span>`
+      ? `Order to ${ctx.system.name} <span>arrives in ${age(newsDelay(ctx.system, deps.context().system))}, then waits for your price; ${side === 'buy' ? 'what it buys waits in storage there' : 'sells from your storage there'}. Remote orders always wait for a price: the market you see there is old news.</span>`
       : limit
       ? `Limit order <span>waits until the price reaches yours; ${side === 'buy' ? 'your credits are held' : 'your goods are held'} until then</span>`
       : `Market order <span>fills now, at the station's prices</span>`;
