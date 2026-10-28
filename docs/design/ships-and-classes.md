@@ -121,6 +121,12 @@ Earned ships still need upkeep, insurance and the career's goodwill: lose your s
 
 Makers show ships before they fly, and the site shows them as **concepts**, with their page, their story and the model turning, before they're in the game ([the Dragonfly](ship-the-dragonfly.md): Halloran Sisters showing off a new hull; Solo & Sons' come as *leaked plans*, since their yard is in hiding). A concept says its class and maker from the start. Community designs submitted through the ship editor ([the community platform](community-platform.md)) appear the same way while people vote on them.
 
+**Something to drool over** *(Mark, 28 October 2026)*. "Just like the real world we should drool over a new design even if it's a 'concept' ship coming soon." A concept is a reveal, like a car at a motor show: it turns in the game's showroom marked *Concept · coming soon* with its expected price, it has its page and share card on the site, and you can open it in the ship editor. Nothing in the game spawns or sells it until it flies. Built: the `concept` flag in the ship file (game dev), with the site's badge, Concepts row and editor label (website). The first is the [Fer-de-lance](#the-fer-de-lance-a-concept).
+
+### The Fer-de-lance, a concept
+
+*(Mark, 28 October 2026: "Build it in the Neo for Witchspace.")* A statement ship: a private hotel with a fighter's bones. A lance-head hull twice a Cobra's length (118 m), a glass deck along its spine, two barbs swept back past the tail, 30 t of hold, about 180,000 Cr. Original geometry; its size, hold and character come from Samuel Penn's Traveller sheet. Its maker is announced with the [shipbuilders](shipbuilders.md) (the flashy yard), so the file has none yet. It beats a Cobra at almost everything, as a statement ship should; what it costs is the price, and being the biggest, most tempting target in the sky.
+
 ## 7. Stages
 
 1. **Classes in the ship files** (a `class` field beside `role`), class and maker on every ship page, and **concepts** (a ship file can be marked as one: on the site, not yet in the game).
