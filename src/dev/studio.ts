@@ -144,6 +144,10 @@ const photo = {
     return shot;
   },
   get: () => shot,
+  /** The ship model, for looking into how it's drawn. */
+  get model() {
+    return model;
+  },
   /** A still at `scale` times the window size, with the glow settled: a PNG data URL. */
   async still(scale = 2): Promise<string> {
     await settle(10);
