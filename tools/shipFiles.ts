@@ -7,7 +7,7 @@ import type { ShipDef } from '../src/content/types';
 import { EDITIONS } from '../src/content/editions';
 import { EQUIPMENT } from '../src/game/commander';
 import { editionQuote, GLOWS, LUXURIES, PALETTE } from '../src/game/shipyard';
-import { handling, notesFor } from '../src/game/manual';
+import { handling, inYards, notesFor } from '../src/game/manual';
 import { MAX_ROLL_ERROR } from '../src/game/station';
 import { PLAYER_LASERS } from '../src/game/weapons';
 import type { EditionCard, ManualData, ModuleFile, ShipFile } from './ships';
@@ -60,12 +60,19 @@ export function editionsFor(s: ShipFile): EditionCard[] {
 
 // --- Owner's manuals ------------------------------------------------------------------------
 
-/** Ships the yard sells, so ships that can be owned. The same rule as the yard's (main.ts, NOT_IN_YARDS). */
-const NOT_IN_YARDS = new Set(['falcon']);
-export const inYards = (s: ShipFile) => Boolean(s.stats?.price) && !NOT_IN_YARDS.has(s.id) && !['missile', 'cargo', 'station', 'debris', 'alien'].includes(s.role ?? '');
+/** Ships the yard sells, so ships that can be owned: the yard's own rule (src/game/manual.ts). */
+export const ownable = (s: ShipFile) => inYards(s as unknown as ShipDef);
+
+/** The phone's drawer buttons, read from the game's page as the game reads them (src/main.ts openManual). */
+export function drawerButtons(root: string): ManualData['drawer'] {
+  const html = readFileSync(join(root, 'play/index.html'), 'utf8');
+  const block = html.match(/<div class="touch-actions">([\s\S]*?)<\/div>/)![1];
+  const attr = (tag: string, name: string) => tag.match(new RegExp(`${name}="([^"]*)"`))?.[1];
+  return [...block.matchAll(/<button([^>]*)>([^<]*)<\/button>/g)].map(([, tag, label]) => ({ key: attr(tag, 'data-key'), label: label.trim(), title: attr(tag, 'title') ?? attr(tag, 'aria-label') ?? '' }));
+}
 
 /** What a ship's owner's manual says, for the page to show its owner (src/site/manual.ts). */
-export function manualFor(s: ShipFile, cobra: ShipFile): ManualData {
+export function manualFor(s: ShipFile, cobra: ShipFile, drawer: ManualData['drawer']): ManualData {
   const def = s as unknown as ShipDef;
   const rows = handling(def, cobra as unknown as ShipDef);
   return {
@@ -81,5 +88,6 @@ export function manualFor(s: ShipFile, cobra: ShipFile): ManualData {
     kit: Object.fromEntries(EQUIPMENT.map((e) => [e.id, [e.name, e.blurb]])),
     luxuries: Object.fromEntries(LUXURIES.map((l) => [l.id, [l.name, l.blurb]])),
     editions: Object.fromEntries(EDITIONS.map((e) => [e.id, e.name])),
+    drawer,
   };
 }

@@ -39,6 +39,8 @@ export interface ManualData {
   kit: Record<string, string[]>;
   luxuries: Record<string, string[]>;
   editions: Record<string, string>;
+  /** The phone's drawer, from play/index.html: what each button does comes from the controls list (src/game/controls.ts drawerHelp). */
+  drawer: { key?: string; label: string; title: string }[];
 }
 
 /** A special edition, as its ship's page shows it (made in tools/shipFiles.ts). */

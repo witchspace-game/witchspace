@@ -9,7 +9,7 @@ import { dirname, join, posix, relative, resolve } from 'node:path';
 import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from './media';
 import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLARS, roadmapCompactHtml, roadmapHtml, roadmapSummaryHtml, STATUS } from './docs';
 import { companyPage, jobsPage, loadJobs } from './jobs';
-import { editionsFor, inYards, loadModules, loadShips, manualFor } from './shipFiles';
+import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
 import { manualPage, shipPage, shipsIndex } from './ships';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
 
@@ -191,10 +191,11 @@ for (const item of media.items) {
 const ships = loadShips(root);
 write({ path: '/ships/', title: 'Ships · Witchspace', description: 'The Witchspace fleet: every ship, who flies it, who drew it, and how to make it better.', content: shipsIndex(ships), bodyClass: 'ships-page', card: { ship: 'falcon', kicker: 'The fleet', title: 'Ships', sub: 'Every ship, who flies it, who drew it, and how to make it better.' }, schema: [{ '@type': 'CollectionPage', name: 'Ships', hasPart: ships.map((sh) => ({ '@type': 'CreativeWork', name: sh.name, url: `${SITE}/ships/${sh.id}/` })) }] });
 const shipModules = loadModules(root);
-for (const s of ships) write({ path: `/ships/${s.id}/`, ...shipPage(s, shipModules, false, editionsFor(s), inYards(s)), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
+for (const s of ships) write({ path: `/ships/${s.id}/`, ...shipPage(s, shipModules, false, editionsFor(s), ownable(s)), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
 // Owner's manuals: one for every ship the yard sells, shown only to her owner.
 const cobra = ships.find((s) => s.id === 'cobra-mk3')!;
-for (const s of ships.filter(inYards)) write({ path: `/ships/${s.id}/manual/`, ...manualPage(s, manualFor(s, cobra)), scripts: ['/src/site/manual.ts'], bodyClass: 'ships-page' });
+const drawer = drawerButtons(root);
+for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/manual/`, ...manualPage(s, manualFor(s, cobra, drawer)), scripts: ['/src/site/manual.ts'], bodyClass: 'ships-page' });
 
 // --- Design documents, the roadmap and the library (tools/docs.ts) --------------
 
