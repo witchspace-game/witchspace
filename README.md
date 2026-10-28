@@ -108,7 +108,7 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
 Witchspace is built to work with AI assistants such as Claude, ChatGPT, Grok and Cursor. Every content type has a strict JSON Schema, and [AGENTS.md](AGENTS.md) tells any AI everything it needs to know. Point your assistant at this repo and ask it to *"design a pirate gunship for Witchspace"*. It will write against the schema and check its work with the validator.
 
-Coming soon: a **Witchspace MCP server** with tools to validate, preview and balance-check content directly from Claude Desktop, Claude Code and other MCP clients.
+The **Witchspace MCP server** is live at `https://space.witchspace.org.uk/mcp`: tools to read the ships, validate, preview and balance-check a design, look up any system, see what help is wanted and hand your work in for review, from Claude, ChatGPT, Cursor and other MCP clients. Setup is at [witchspace.org.uk/get-involved](https://witchspace.org.uk/get-involved/).
 
 ## Roadmap
 

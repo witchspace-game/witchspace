@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ideas board
+    url: https://witchspace.org.uk/ideas/
+    about: Suggest a feature or vote on others' ideas.
+  - name: Hand in a ship or a story (no GitHub needed)
+    url: https://witchspace.org.uk/submit/
+    about: Submit content for review straight from the site.

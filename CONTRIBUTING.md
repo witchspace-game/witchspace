@@ -60,6 +60,8 @@ You're encouraged to. See [AGENTS.md](AGENTS.md), which your AI assistant can re
 - **Look at and playtest what you submit.** You are the author and you're responsible for it.
 - Keep pull requests focused. One good ship is better than ten rushed ones.
 
+**The Witchspace MCP server** is live at `https://space.witchspace.org.uk/mcp`. Add it to Claude, ChatGPT, Cursor or any MCP client, and your assistant can list and read the ships, validate, preview and balance-check a design, look up any system in the galaxy, see what help is wanted, and hand your work in for review (credited to you). Setup for each client is at [witchspace.org.uk/get-involved](https://witchspace.org.uk/get-involved/).
+
 ## Ground rules
 
 - **Original work only.** Don't copy code, vertex data, text or art from *Elite*, *Elite Dangerous*, *Oolite* or any other game. Ship *names* from the original *Elite* are welcome as a tribute (see [CREDITS.md](CREDITS.md)), but the geometry and words must be yours.
@@ -73,8 +75,24 @@ You're encouraged to. See [AGENTS.md](AGENTS.md), which your AI assistant can re
 npm install
 npm run dev        # play locally
 npm run typecheck  # TypeScript checks
+npm test           # the tests (Vitest)
 npm run validate   # content checks
 npm run build      # production build
+cd server && npx tsc --noEmit   # the Worker's TypeScript checks, if you touched server/
 ```
 
 For anything bigger than a bug fix, open an issue first so we can talk it through.
+
+### Where things live
+
+- **Rendering and the glow:** `src/render/` (`renderer.ts` sets up the scene and the bloom; `wire.ts` and `shipModel.ts` draw the ships).
+- **Flight and input:** `src/game/input.ts` (keyboard, mouse, tilt and the flight assist), `src/game/controls.ts` (the controls card's text).
+- **The game's rules:** the rest of `src/game/` (the commander and save, combat, the shipyard, ratings, the ledger).
+- **The economy:** `src/economy/` (markets, the exchange, Bitcoin, system currencies).
+- **The galaxy:** `src/galaxy/` (the eight galaxies, generated from their seeds as in 1984).
+- **UI:** `src/ui/` (the HUD, galaxy map, flight log, touch controls, kill cam).
+- **`src/main.ts`:** the game loop and the glue: states (title, docked, flying), the station tabs, docking, and key handling. It's big; search it for the name of what you see on screen.
+- **The Worker:** `server/src/` (accounts and cloud saves, the ideas board, the shipyard's office, the MCP server), on Cloudflare at space.witchspace.org.uk.
+- **Content:** `content/` (ships, modules, legends), checked by `schemas/` and `npm run validate`.
+
+**Running the Worker locally** is only needed for accounts, saves and the other online parts: `cd server && npx wrangler dev --port 8787`. `npm run dev` talks to it there automatically. Without an email service set up, sign-in hands back the code instead of emailing it.

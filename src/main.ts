@@ -80,7 +80,8 @@ import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rig
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
-import { claimEdition, editionCounts, heldEditions, redeemVoucher, releaseEdition } from './net/shipyard';
+import { accountSpec, claimEdition, editionCounts, forgetAccountSpec, heldEditions, redeemVoucher, releaseEdition } from './net/shipyard';
+import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } from './game/spec';
 import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, walletHome, walletKey } from './economy/currencies';
 import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
@@ -861,6 +862,7 @@ function answerAdvert() {
   setCausedEvents(saved.caused);
   enterDocked();
   setDockTab('contracts');
+  void checkSiteSpec(true);
 }
 
 /** Wexley-Yorozu's commissions for modules you designed, paid when you dock after one is first fitted. */
@@ -1215,6 +1217,30 @@ let editionSel: string | null = null;
 let editionsLeft: Record<string, { limit: number; taken: number }> = {};
 let editionsAsked = 0;
 let yardMessage = '';
+/** A ship specced on the site, waiting for you at the next shipyard: the newer of this browser's and your account's. */
+let siteSpec: WaitingSpec | null = null;
+
+/** Look for a spec from the site; when there is one and nothing's in production, the yard says so. */
+async function checkSiteSpec(announce: boolean) {
+  siteSpec = localSpec();
+  if (signedIn()) {
+    const r = await accountSpec();
+    const spec = 'error' in r ? null : validSpec(r.spec);
+    if (spec && !('error' in r) && r.at) siteSpec = newerSpec(siteSpec, { spec, at: r.at });
+  }
+  const def = siteSpec && shipById(siteSpec.spec.ship);
+  if (!def || cmdr().order || state !== 'docked' || !hasShipyard(currentSystem())) return;
+  if (announce) flash(`The yard: your ${def.name} spec from the website is here · see the Shipyard`, 5);
+  if (dockTab === 'shipyard' && !spec) renderShipyard();
+}
+
+/** The site's spec is ordered: it's done with, here and on the account. */
+function forgetSiteSpec() {
+  if (!siteSpec) return;
+  siteSpec = null;
+  clearLocalSpec();
+  if (signedIn()) void forgetAccountSpec();
+}
 
 const berthLooks: string[] = [];
 
@@ -1497,6 +1523,7 @@ function renderShipyard() {
         else {
           yardMessage = `Deposit paid. Your ${def.name}${r.order.name ? ` “${r.order.name}”` : ''} is the next off the line: the yard at ${stationName(here).name} is finishing her to your spec.`;
           spec = null;
+          forgetSiteSpec();
           saveCommander(c);
           sfx.beep();
         }
@@ -1603,6 +1630,7 @@ function renderShipyard() {
           </button></li>`;
         }).join('')}</ul>
       <p class="yard-desc">${escapeHtml(edition ? edition.blurb : pick.def.description)}</p>
+      ${siteSpec && !c.order && shipById(siteSpec.spec.ship) ? `<div class="yard-order" style="--hull:${siteSpec.spec.colour}"><strong>Your ${escapeHtml(shipById(siteSpec.spec.ship)!.name)} spec from the website is here</strong><span>${siteSpec.spec.name ? `“${escapeHtml(siteSpec.spec.name)}”, ` : ''}${escapeHtml(nameOf(siteSpec.spec.colour))}: ${quote(shipById(siteSpec.spec.ship)!, siteSpec.spec).toLocaleString()} Cr as specced.</span><button type="button" class="primary yard-open-site">Open it</button></div>` : ''}
       ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span><button type="button" class="primary yard-open-gift">Spec your gift</button></div>` : ''}
       ${pick.def.id === hullOf(c) && !edition ? `<button type="button" class="yard-manual yard-repaint-open">Repaint your ${escapeHtml(pick.def.name)}</button>` : ''}
       <button type="button" class="yard-manual">The ${escapeHtml(edition ? (shipById(edition.ship)?.name ?? '') : pick.def.name)} owner's manual</button>
@@ -1648,6 +1676,15 @@ function renderShipyard() {
       renderShipyard();
     };
     el.querySelector<HTMLButtonElement>('.yard-open-gift')?.addEventListener('click', openGift);
+    el.querySelector<HTMLButtonElement>('.yard-open-site')?.addEventListener('click', () => {
+      if (!siteSpec) return;
+      yardMode = 'spec';
+      editionSel = null;
+      yardPick = siteSpec.spec.ship;
+      spec = { ...siteSpec.spec, upgrades: [...siteSpec.spec.upgrades], luxuries: [...siteSpec.spec.luxuries] };
+      resetShowroomView();
+      renderShipyard();
+    });
     const form = el.querySelector<HTMLFormElement>('.yard-voucher')!;
     form.onsubmit = async (e) => {
       e.preventDefault();
@@ -5908,6 +5945,8 @@ async function dock() {
   else if (gone.length) flash(gone.join(' · '), 5);
   else if (news.length) flash(`New message from ${COMPANIES[news[0].company].name}: ${news[0].subject}`, 5);
   else if (smuggling && inspectionChance(c, sys) > 0) flash('Docked · your hold was not inspected this time', 3);
+  // The yard's word on a spec from the site, unless the dock had more pressing news.
+  void checkSiteSpec(!settlement && !delivered.length && !collected.length && !gone.length && !news.length);
 }
 
 function settlementMessage(s: Settlement, lead: string) {
@@ -7577,8 +7616,10 @@ function handleKey(code: string) {
       else if (code === 'KeyY' || code === 'Enter') {
         commander = loadCommander();
         setCausedEvents(commander?.caused);
-        if (commander) enterDocked();
-        else showNewGame();
+        if (commander) {
+          enterDocked();
+          void checkSiteSpec(true);
+        } else showNewGame();
       } else if (code === 'KeyN') {
         const saved = loadCommander();
         if (saved && !newCommanderArmed) armNewCommander(saved);
@@ -7605,6 +7646,7 @@ function handleKey(code: string) {
       // The beacon's calls, while its panel is open: 1-4 send, Esc or ` cancel.
       if (beaconOpen && /^Digit[1-4]$/.test(code)) return sendBeacon(BEACON_CALLS[Number(code.slice(5)) - 1].call);
       if (beaconOpen && code === 'Escape') return toggleBeacon(false);
+      if (code === 'Escape' && !$('#controls-card').hidden) return toggleControlsCard(false);
       if (code === 'F1') {
         toggleControlsCard();
       } else if (code === 'KeyH') {

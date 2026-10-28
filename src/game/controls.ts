@@ -66,7 +66,7 @@ export function controlRows(mouse: boolean, o: { gimballed: boolean; modern: boo
       ['I', 'Invert pitch'],
       ['M', '1984 mode'],
       ['N', 'Sound: full / effects only / off'],
-      ['F1', 'Show / hide this card'],
+      ['F1', 'Show / hide this card (Esc hides it too)'],
     ]);
 }
 

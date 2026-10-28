@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { shipById } from '../content/ships';
 import { newCommander } from './commander';
 import { EDITIONS } from '../content/editions';
-import { editionGiftSpec, editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
+import { editionGiftSpec, editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, ORDERABLE, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
 
 const fdl = shipById('fer-de-lance')!;
 const cobra = shipById('cobra-mk3')!;
@@ -202,5 +202,27 @@ describe('repainting', () => {
     other.credits = 1e6;
     expect(repaint(other, fdl, { colour: '#ff4dff', glow: 'standard', trim: null })).toMatchObject({ ok: false });
     expect(repaint(other, cobra, { colour: '#9fe8ff', glow: 'standard', trim: null })).toMatchObject({ ok: false }); // not the ship he flies
+  });
+});
+
+describe('a spec from the site', () => {
+  const fdl = shipById('fer-de-lance')!;
+  it('takes a good spec and cleans its name', async () => {
+    const { validSpec } = await import('./spec');
+    const s = validSpec({ ...defaultSpec(fdl), name: '  Night <b>Heron</b> ', upgrades: ['ecm', 'ecm'], luxuries: ['suite'], glow: 'deep', trim: ORDERABLE[1].colour });
+    expect(s).toMatchObject({ ship: 'fer-de-lance', name: 'Night bHeronb', upgrades: ['ecm'], luxuries: ['suite'], glow: 'deep' });
+  });
+  it('refuses what the yards do not sell or make', async () => {
+    const { validSpec } = await import('./spec');
+    const good = defaultSpec(fdl);
+    expect(validSpec(null)).toBeNull();
+    expect(validSpec({ ...good, ship: 'coriolis' })).toBeNull();
+    expect(validSpec({ ...good, ship: 'falcon' })).toBeNull();
+    expect(validSpec({ ...good, colour: '#123456' })).toBeNull();
+    expect(validSpec({ ...good, colour: PALETTE.find((p) => p.edition)!.colour })).toBeNull();
+    expect(validSpec({ ...good, laser: 'antimatter' })).toBeNull();
+    expect(validSpec({ ...good, glow: 'nuclear' })).toBeNull();
+    expect(validSpec({ ...good, upgrades: ['wisp'] })).toBeNull();
+    expect(validSpec({ ...good, luxuries: ['moon'] })).toBeNull();
   });
 });
