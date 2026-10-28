@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { galaxy, systemAt } from '../galaxy/generate';
 import { commodityById } from '../economy/commodities';
 import { newCommander } from './commander';
-import { bodiesOf, dataValue, explorerRank, hasVisited, poisOf, recordDiscovery, salvageCargo, recordSurvey, recordVisit, sellData, worldOf, exploreOf } from './explore';
+import { bodiesOf, dataValue, explorerRank, hasVisited, poisOf, recordDiscovery, salvageCargo, trailTreasures, recordSurvey, recordVisit, sellData, worldOf, exploreOf } from './explore';
 
 const all = Array.from({ length: 8 }, (_, g) => galaxy(g)).flat();
 const lave = systemAt(0, 7);
@@ -109,10 +109,17 @@ describe('salvage', () => {
     const luxuries = commodityById('luxuries')!.basePrice;
     const found = new Set(all.flatMap((s) => poisOf(s)).flatMap((p) => p.salvage.map((s) => s.id)));
     expect(found.has('gems')).toBe(true);
-    // And the trails' treasure: firearms, narcotics and the rest.
-    for (const id of [...found, 'firearms', 'narcotics']) {
+    for (const id of found) {
       const qty = salvageCargo([{ id, qty: 1 }])[id];
       expect(qty * commodityById(id)!.basePrice, id).toBeLessThanOrEqual(luxuries * 2);
     }
+  });
+
+  it('but a trail’s end is treasure: a good way towards a better ship, and none of it a fortune', () => {
+    const worth = (salvage: { id: string; qty: number; units?: number }[]) =>
+      Object.entries(salvageCargo(salvage)).reduce((sum, [id, qty]) => sum + qty * commodityById(id)!.basePrice, 0);
+    const hoards = trailTreasures().filter((t) => t.length).map(worth);
+    expect(hoards.filter((w) => w >= 5000).length).toBeGreaterThanOrEqual(2);
+    for (const w of hoards) expect(w).toBeLessThan(30000); // a Sidewinder is 30,000
   });
 });
