@@ -279,7 +279,7 @@ async function order() {
     return;
   }
   const total = quote(def, spec);
-  say.innerHTML = `<b>She’s on order.</b> Dock at any shipyard${def.concept ? ` and your ${escapeHtml(def.name)} is waiting for your deposit of ${cr(depositFor(total))}` : ' and your spec is waiting'}${account ? ', on any device you’re signed in on' : ', in this browser. Sign in below to have her waiting on your other devices too'}.`;
+  say.innerHTML = `<b>She’s on order.</b> Dock at any shipyard${def.concept ? ` and your ${escapeHtml(def.name)} is waiting for your deposit of ${cr(depositFor(total))}` : ' and your spec is waiting'}${account ? ', on any device you’re signed in on' : signedIn() ? ', in this browser. Your account didn’t answer, so order again later to have her waiting on your other devices too' : ', in this browser. Sign in below to have her waiting on your other devices too'}.`;
   say.classList.add('done');
   button.textContent = 'Ordered ✓';
 }

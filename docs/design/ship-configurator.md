@@ -1,12 +1,12 @@
 ---
 title: The ship configurator on the site
-status: building
+status: built
 pillar: build
 summary: Spec your perfect ship on the website, Tesla-style, with the ship turning in your paint and the price adding up as you go. Order it, and it's waiting for you at the next shipyard you dock at, where the deposit is one tap.
 card: fer-de-lance
 stages:
-  - The configurator page - /ships/<id>/build/, every hull the yard sells, priced by the game's own code | building
-  - Waiting at the yard - the spec saved to this browser or your account, and the game offers it at the next shipyard | proposed
+  - The configurator page - /ships/<id>/build/, every hull the yard sells, priced by the game's own code | built
+  - Waiting at the yard - the spec saved to this browser or your account, and the game offers it at the next shipyard | built
 ---
 
 # Design: the ship configurator on the site
