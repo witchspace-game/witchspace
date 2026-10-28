@@ -109,8 +109,10 @@ export function blueprint(svg: SVGSVGElement, view: View, on: BlueprintEvents) {
   const end = (e: PointerEvent) => {
     if (!drag || e.pointerId !== drag.pointer) return;
     const to = moved(drag.handle, e);
-    if (to) on.move(drag.handle.part, drag.handle.point, to, true);
+    const { part, point } = drag.handle;
+    // Let go first, so the last move refits the view to the ship.
     drag = null;
+    if (to) on.move(part, point, to, true);
   };
   svg.addEventListener('pointerup', end);
   svg.addEventListener('pointercancel', end);
