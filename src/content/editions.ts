@@ -53,7 +53,7 @@ export const EDITIONS: Edition[] = [
     laser: 'beam',
     upgrades: ['docking-computer', 'ecm', 'distress-jammer', 'escape-pod'],
     luxuries: ['suite', 'voice'],
-    premium: 140_000,
+    premium: 160_000, // over 500,000 Cr in all (Mark)
     finishHours: 168,
   },
 ];
