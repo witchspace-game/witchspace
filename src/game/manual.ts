@@ -16,7 +16,7 @@ const NOTES: Record<string, string[]> = {
     'Everyone notices her. Pirates go out of their way for a ship this rich, and the police know your name before you hail them.',
   ],
   'cobra-mk3': [
-    'The ship everyone learns in, and for good reason: she forgives. Twenty tonnes of hold, three missiles, a little of everything.',
+    'The ship everyone learns in, and for good reason: she forgives. Twenty tonnes of hold, rails for four missiles (she leaves the yard with three), a little of everything.',
     'Neither the fastest nor the toughest: you win in a Cobra by choosing your fights.',
   ],
 };

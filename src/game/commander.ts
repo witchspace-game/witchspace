@@ -217,6 +217,7 @@ import type { MarketState } from '../economy/market';
 import type { LaserId } from './weapons';
 import { fnv, reconcile, type Ledger } from './ledger';
 import { SAVE_KEY } from './saveKey';
+import type { FxState } from '../economy/money';
 import type { ExploreRecord } from './explore';
 import type { ActiveContract, CompanyLog } from './contracts';
 import type { AdriftCase, Message } from './assignments';
@@ -341,6 +342,10 @@ export interface Commander {
   btcOrders?: BtcOrder[];
   /** The saloon: drinks bought this visit, and the tips you've heard (game/saloon.ts). */
   saloon?: { drinks: string[]; heard: Heard[] };
+  /** System currencies held, by issuing system ("galaxy:index"); no hold space, and they survive the ship. */
+  wallet?: Record<string, number>;
+  /** Each station's currency pool as you've left it, and an official-rate station's limit this visit. */
+  fx?: FxState;
   /** How the money was made, chained by hash, for the server to check (src/game/ledger.ts). */
   ledger?: Ledger;
   /** Set when the save didn't match its checksum: hand-edited. Numbered editions are closed to it. */

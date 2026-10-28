@@ -115,8 +115,9 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 /* A desktop has room: the docked panel widens so its tabs read in full, keys and all (Mark). */
 @media (min-width: 900px) { .panel.docked { width: 500px; } }
 .panel.docked.wide { width: min(640px, calc(100vw - 32px)); }
-.tabs { display: flex; gap: 4px; margin: 4px 0 12px; } /* one row, however narrow the panel */
-.tabs button { flex: 1 1 auto; min-width: 0; font-size: 13px; padding: 5px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tabs { display: flex; gap: 4px; margin: 4px 0 12px; overflow-x: auto; scrollbar-width: none; } /* one row, however narrow the panel: it scrolls */
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { flex: 1 0 auto; font-size: 13px; padding: 5px 8px; white-space: nowrap; }
 @media (max-width: 440px) { .tabs { gap: 3px; overflow-x: auto; scrollbar-width: none; } .tabs::-webkit-scrollbar { display: none; } .tabs button { flex: none; padding: 5px 8px; font-size: 12.5px; overflow: visible; } .tab-badge-word { display: none; } }
 .tab-badge { display: inline-block; min-width: 16px; margin-left: 4px; padding: 0 4px; border-radius: 8px; color: #000; background: var(--accent); font-size: 10px; line-height: 16px; letter-spacing: 0; text-align: center; vertical-align: 1px; }
 .tabs button.active { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
@@ -1408,6 +1409,26 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard em.yard-concept { color: var(--hull); }
 .yard span { grid-column: 1; font-size: 12px; color: var(--dim); }
 .yard b { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-weight: 600; white-space: nowrap; }
+/* Money: the system's currency. */
+#money h3 { margin: 12px 0 6px; }
+.money-title span { margin-left: 6px; font-size: 13px; letter-spacing: 0.12em; color: var(--dim); }
+.money-policy, .money-line { font-size: 14px; color: var(--dim); margin: 0 0 10px; }
+.money-policy b { color: var(--fg); }
+.money-crisis { margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--danger, #ff4d6d); border-radius: 8px; font-size: 14px; color: var(--danger, #ff4d6d); }
+.money-rates { grid-template-columns: 1fr; gap: 4px; margin: 0 0 12px; }
+.money-rates div { display: flex; justify-content: space-between; font-size: 14px; }
+.money-rates dd.down { color: var(--danger, #ff4d6d); }
+.money-rates dd.up { color: var(--accent); }
+.money-form { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 8px; }
+.money-sides { grid-template-columns: 1fr 1fr; }
+.money-amount { display: grid; gap: 4px; font-size: 13px; color: var(--dim); }
+.money-amount input { padding: 7px 10px; border: 1px solid var(--edge); border-radius: 6px; background: rgba(0, 0, 0, 0.35); color: var(--fg); font: 600 16px var(--font); }
+.money-quote { margin: 0; font-size: 14px; }
+.money-wallet { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.money-wallet li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--edge); border-radius: 8px; }
+.money-wallet span { grid-column: 1; font-size: 12px; color: var(--dim); }
+.money-wallet small, .money-wallet button { grid-column: 2; grid-row: 1 / span 2; font-size: 12px; color: var(--dim); }
+.money-wallet button { min-height: 30px; padding: 2px 10px; color: var(--fg); }
 .yard-desc { margin: 10px 0 0; font-size: 14px; color: var(--dim); }
 /* The configurator and your order. */
 .yard-funds { margin: 0 0 8px; font-size: 13px; color: var(--dim); }

@@ -81,6 +81,8 @@ import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
 import { claimEdition, editionCounts, heldEditions, redeemVoucher, releaseEdition } from './net/shipyard';
+import { crisis, currencyOf, fairRate, moneyNews, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, walletHome, walletKey } from './economy/currencies';
+import { buyLocal, cashStable, officialLeft, poolHere, sellLocal, valueOf, walletOf } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
 import { cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
@@ -117,7 +119,7 @@ import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type S
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
-import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsOf, setCausedEvents } from './economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsDelay, newsOf, setCausedEvents } from './economy/events';
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
@@ -651,6 +653,7 @@ function enterDocked(newShip = false) {
   showOwnShip();
   forgive(cmdr(), Date.now());
   boardSeenAt = Date.now(); // what's on the board as you dock isn't news; what's posted while you're here is
+  dockedAt = Date.now();
   payCommissions();
   // Work that's due here is handed in however you arrived: docking does it
   // first, but waking here in a new ship or loading the game docked must too
@@ -743,7 +746,7 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard';
+type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard' | 'money';
 let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
@@ -756,6 +759,8 @@ function setDockTab(tab: DockTab) {
   $('#tab-saloon').hidden = tab !== 'saloon';
   if (tab === 'saloon') renderSaloon();
   $('#tab-shipyard').hidden = tab !== 'shipyard';
+  $('#tab-money').hidden = tab !== 'money';
+  if (tab === 'money') renderMoney();
   document.body.classList.toggle('yard-open', tab === 'shipyard');
   if (tab === 'shipyard') renderShipyard();
   else if (state === 'docked') {
@@ -1728,6 +1733,104 @@ function renderShipyard() {
     };
 }
 
+// --- Money: the system's currency, the station's pool and your wallet ----------------------
+// (docs/design/system-currencies.md, stage one.)
+
+/** When you docked: an official-rate station's limit is per visit. */
+let dockedAt = 0;
+let moneySide: 'buy' | 'sell' = 'buy';
+let moneyMessage = '';
+
+function renderMoney() {
+  const c = cmdr();
+  const here = currentSystem();
+  const now = Date.now();
+  const cur = currencyOf(here);
+  const el = $('#money');
+  const fmtN = (n: number, d = n < 10 ? 2 : 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: n < 10 && n > 0 ? Math.min(d, 2) : 0 });
+  const msg = moneyMessage ? `<p class="yard-message">${escapeHtml(moneyMessage)}</p>` : '';
+  moneyMessage = '';
+  const wallet = Object.entries(walletOf(c)).filter(([, u]) => u > 1e-6);
+  const holdings = wallet.length
+    ? `<ul class="money-wallet">${wallet
+        .map(([key, units]) => {
+          const home = walletHome(key);
+          const hc = currencyOf(home)!;
+          const atHome = key === walletKey(here);
+          const value = valueOf(key, units, now);
+          const action = atHome ? '<small>Change it above</small>' : hc.stable ? `<button type="button" data-cash="${key}">Cash it · ${fmtN(stableValue(home, units, now), 0)} Cr</button>` : `<small>Change it at ${escapeHtml(home.name)}</small>`;
+          return `<li><strong>${fmtN(units)} ${hc.ticker}</strong><span>${escapeHtml(hc.name)} · ${escapeHtml(home.name)} · about ${fmtN(value, 0)} Cr</span>${action}</li>`;
+        })
+        .join('')}</ul>`
+    : '<p class="meta">Nothing yet. Money you change takes no hold space and survives your ship, like Bitcoin.</p>';
+  if (!cur) {
+    el.innerHTML = `${msg}<h3>No money is issued here</h3><p class="money-line">${escapeHtml(POLICY_TEXT.none.line)} Stablecoins from elsewhere are taken here at their rate.</p><h3>Your wallet</h3>${holdings}`;
+  } else {
+    const pol = POLICY_TEXT[cur.policy];
+    const pool = poolHere(c, here, now);
+    const rate = poolRate(pool);
+    const fair = fairRate(here, now);
+    const week = fairRate(here, now - 7 * 86_400_000);
+    const change = (week / fair - 1) * 100; // the money's value against the credit
+    const trouble = cur.policy === 'feudal' ? crisis(here, now, 0.15) : cur.policy === 'printing' ? crisis(here, now, 0.12) : 0;
+    const left = officialLeft(c, here, dockedAt);
+    const have = walletOf(c)[walletKey(here)] ?? 0;
+    el.innerHTML = `${msg}
+      <h3 class="money-title">${escapeHtml(cur.name)} <span>${cur.ticker}</span></h3>
+      <p class="money-policy"><b>${escapeHtml(pol.name)}.</b> ${escapeHtml(pol.line)}</p>
+      ${trouble > 0.05 ? `<p class="money-crisis">${cur.policy === 'feudal' ? `The peg has broken: a ${cur.ticker} is worth ${fmtN(1 / fair, 2)} Cr. The algorithm is minting to defend it, which only makes it worse.` : 'The presses are running day and night: prices here are climbing by the hour.'}</p>` : ''}
+      <dl class="money-rates">
+        <div><dt>Here</dt><dd>1 Cr = ${fmtN(rate, 3)} ${cur.ticker}</dd></div>
+        <div><dt>Fair rate</dt><dd>${fmtN(fair, 3)} ${cur.ticker}</dd></div>
+        <div><dt>This week</dt><dd class="${change < -0.05 ? 'down' : change > 0.05 ? 'up' : ''}">${Math.abs(change) < 0.05 ? 'Steady against the credit' : `${change > 0 ? '+' : ''}${change.toFixed(1)}% against the credit`}</dd></div>
+        <div><dt>The pool</dt><dd>${fmtN(pool.local, 0)} ${cur.ticker} · ${fmtN(pool.credits, 0)} Cr</dd></div>
+      </dl>
+      <div class="money-form">
+        <div class="yard-lasers money-sides"><button type="button" data-side="buy" aria-pressed="${moneySide === 'buy'}">Buy ${cur.ticker}</button><button type="button" data-side="sell" aria-pressed="${moneySide === 'sell'}">Sell ${cur.ticker}</button></div>
+        <label class="money-amount"><span>${moneySide === 'buy' ? 'Credits to change' : `${cur.ticker} to sell (you have ${fmtN(have)})`}</span><input id="money-n" type="number" min="0" step="any" inputmode="decimal" /></label>
+        <p class="money-quote" id="money-quote">&nbsp;</p>
+        <button type="button" class="primary money-go">${moneySide === 'buy' ? `Change for ${cur.ticker}` : 'Change for credits'}</button>
+        ${Number.isFinite(left) ? `<p class="yard-note">The state lets each visitor change ${fmtN(OFFICIAL_LIMIT, 0)} Cr a visit: ${fmtN(left, 0)} Cr left.</p>` : ''}
+        <p class="yard-note">The pool charges ${(POOL_FEE * 100).toFixed(1)}%, and a big swap moves the rate against you; it drifts back as other traders arbitrage.</p>
+      </div>
+      <h3>Your wallet</h3>${holdings}`;
+    const input = el.querySelector<HTMLInputElement>('#money-n')!;
+    const quote = el.querySelector<HTMLElement>('#money-quote')!;
+    const update = () => {
+      const n = Number(input.value);
+      if (!(n > 0)) return (quote.innerHTML = '&nbsp;');
+      quote.textContent = moneySide === 'buy' ? `You get about ${fmtN(quoteBuy(pool, Math.min(n, c.credits)))} ${cur.ticker}` : `You get about ${fmtN(quoteSell(pool, Math.min(n, have)), 1)} Cr`;
+    };
+    input.oninput = update;
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-side]'))
+      b.onclick = () => {
+        moneySide = b.dataset.side as 'buy' | 'sell';
+        renderMoney();
+      };
+    el.querySelector<HTMLButtonElement>('.money-go')!.onclick = () => {
+      const n = Number(input.value);
+      const r = moneySide === 'buy' ? buyLocal(c, here, n, Date.now(), dockedAt) : sellLocal(c, here, n, Date.now(), dockedAt);
+      moneyMessage = r.message;
+      if (r.ok) {
+        saveCommander(c);
+        sfx.beep();
+      }
+      renderMoney();
+    };
+  }
+  for (const b of el.querySelectorAll<HTMLButtonElement>('[data-cash]'))
+    b.onclick = () => {
+      const key = b.dataset.cash!;
+      const r = cashStable(c, here, key, walletOf(c)[key] ?? 0, Date.now());
+      moneyMessage = r.message;
+      if (r.ok) {
+        saveCommander(c);
+        sfx.beep();
+      }
+      renderMoney();
+    };
+}
+
 function renderSaloon() {
   const c = cmdr();
   const here = currentSystem();
@@ -1811,6 +1914,14 @@ function renderNews() {
         <small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · heard ${ago(now - n.heard)} ago · Wanted: whatever it imports</small></li>`,
     )
     .join('');
+  // Money in trouble in the region: a peg breaking, the presses running (Modern).
+  const money =
+    cmdr().difficulty === 'modern'
+      ? moneyNews(here, now, (w) => newsDelay(w, here))
+          .slice(0, 3)
+          .map((n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(n.text, n.where)}</b><small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · stablecoins and Bitcoin are the ways out</small></li>`)
+          .join('')
+      : '';
   // Wexley-Yorozu yards in the region: news, not a market event (Modern).
   const yards = exploring()
     ? yardsNear(here, now)
@@ -1824,8 +1935,8 @@ function renderNews() {
         )
         .join('')
     : '';
-  $('#news-list').innerHTML = (attacks || yards || items.length)
-    ? attacks + yards + items
+  $('#news-list').innerHTML = (attacks || money || yards || items.length)
+    ? attacks + money + yards + items
         .map((n) => {
           const kind = EVENT_KINDS[n.event.type];
           const local = n.where === here;
@@ -1986,6 +2097,8 @@ function holdList(c: Commander): string {
 function renderDocked() {
   // The saloon is Modern's: Classic stations are as they were in 1984.
   document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
+  document.querySelector<HTMLElement>('.tabs [data-tab="money"]')!.hidden = cmdr().difficulty === 'classic';
+  if (cmdr().difficulty === 'classic' && dockTab === 'money') setDockTab('station');
   const noYard = cmdr().difficulty === 'classic' || !hasShipyard(currentSystem());
   document.querySelector<HTMLElement>('.tabs [data-tab="shipyard"]')!.hidden = noYard;
   if (noYard && dockTab === 'shipyard') setDockTab('station');
