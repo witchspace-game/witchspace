@@ -1544,10 +1544,7 @@ body.retro .ship-nav-name { font-size: 9px; }
 #flight-log-view .log-list li { grid-template-columns: 1fr; gap: 8px; padding: 10px; border: 1px solid var(--edge); border-radius: 10px; background: rgba(0, 12, 8, 0.7); }
 #flight-log-view .log-play { width: 100%; }
 body.retro #flight-log-view { background: #000; backdrop-filter: none; }
-#flight-log .log-quality { display: block; margin-top: 4px; }
-#flight-log .log-hd { margin-left: 4px; padding: 2px 10px; font-size: 13px; }
 #flight-log .meta { color: var(--dim); text-transform: none; letter-spacing: normal; font-size: 15px; }
-#flight-log .log-toggle { margin-left: 6px; padding: 2px 10px; font-size: 13px; }
 .log-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
 .log-list li { display: grid; grid-template-columns: 132px 1fr; gap: 12px; align-items: start; }
 .log-play { position: relative; padding: 0; width: 132px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 6px; background: #000; }
@@ -1559,16 +1556,41 @@ body.retro #flight-log-view { background: #000; backdrop-filter: none; }
 .log-actions button { padding: 2px 10px; font-size: 13px; min-height: 30px; }
 body.retro #replay { backdrop-filter: none; }
 .replay-card > img { display: block; width: 100%; max-height: 60vh; object-fit: contain; border-radius: 8px; background: #000; }
-.log-public { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--edge); border-left: 3px solid #ff8da1; border-radius: 8px; }
-.log-public h3 { margin: 0 0 8px; }
-.log-public h3 small { display: block; margin-top: 2px; font-size: 11px; letter-spacing: 0.04em; text-transform: none; color: var(--dim); }
-.log-public ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.log-public li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
-.log-public li a { flex: 1 1 12em; color: var(--fg); }
-.log-public li small { color: var(--dim); }
-.log-public li.down a { color: var(--dim); text-decoration: line-through; }
-.log-public li button { min-height: 32px; padding: 4px 10px; font-size: 12px; }
+/* Your clips on the site: compact rows, the whole row plays it, one quiet action at the end. */
+.log-public { margin: 0 0 14px; padding: 12px; border: 1px solid var(--edge); border-radius: 10px; background: rgba(0, 12, 8, 0.7); }
+.log-public h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.log-public h3::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #ff8da1; box-shadow: 0 0 8px #ff8da1; }
+.log-public .clip-sub { margin: 2px 0 8px; font-size: 13px; color: var(--dim); }
+.log-public ul { list-style: none; margin: 0; padding: 0; }
+.log-public li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(61, 255, 176, 0.12); }
+.log-public li a { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; color: var(--fg); text-decoration: none; }
+.clip-thumb { flex: none; position: relative; width: 64px; aspect-ratio: 16 / 9; border-radius: 5px; overflow: hidden; background: #000; border: 1px solid rgba(61, 255, 176, 0.18); }
+.clip-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.clip-thumb::after { content: ''; position: absolute; left: 50%; top: 50%; translate: -35% -50%; border-style: solid; border-width: 6px 0 6px 10px; border-color: transparent transparent transparent var(--fg); opacity: 0.85; filter: drop-shadow(0 0 3px #000); }
+.clip-text { min-width: 0; display: flex; flex-direction: column; }
+.clip-title { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; font-size: 14px; line-height: 1.3; }
+.clip-meta { font-size: 12px; color: var(--dim); }
+.log-public li.down a { opacity: 0.55; }
+.log-public li.down .clip-title { text-decoration: line-through; }
+.log-public li.down .clip-thumb::after { display: none; }
+.log-public .clip-act { flex: none; min-height: 32px; padding: 4px 10px; font-size: 12px; border-color: rgba(61, 255, 176, 0.25); color: var(--dim); background: transparent; }
+.log-public .clip-act[data-armed] { color: #ff8da1; border-color: #ff8da1; }
+.log-public .clip-more { display: block; width: 100%; margin-top: 4px; min-height: 36px; font-size: 13px; border: 0; border-top: 1px solid rgba(61, 255, 176, 0.12); border-radius: 0; background: transparent; color: var(--accent); }
 .log-public-mark { margin-left: 6px; font-style: normal; font-size: 11px; color: #ff8da1; }
+/* The recorder: a switch, a meter, and clearing out. */
+.log-recorder { margin: 0 0 6px; padding: 12px; border: 1px solid var(--edge); border-radius: 10px; }
+.rec-row { display: flex; align-items: center; gap: 10px; }
+.rec-row strong { flex: 1; }
+.rec-small { margin-top: 6px; font-size: 13px; color: var(--dim); }
+.rec-small span { flex: 1; }
+#flight-log .log-quality { font-size: 12px; color: var(--dim); }
+#flight-log .log-hd { margin-left: 4px; padding: 2px 8px; min-height: 26px; font-size: 12px; }
+#flight-log .log-toggle { min-width: 56px; min-height: 32px; padding: 4px 12px; border-radius: 999px; font-size: 13px; }
+#flight-log .log-toggle[aria-pressed='true'] { background: rgba(61, 255, 176, 0.16); border-color: var(--accent); color: var(--accent); }
+.rec-meter { height: 6px; margin-top: 10px; border-radius: 3px; background: rgba(61, 255, 176, 0.12); overflow: hidden; }
+.rec-meter span { display: block; height: 100%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+.log-clear { min-height: 30px; padding: 2px 10px; font-size: 12px; }
+.rec-note { margin: 4px 0 0; font-size: 12px; color: var(--dim); }
 .log-intro { padding: 12px 14px; border: 1px solid var(--accent); border-radius: 10px; background: rgba(61, 255, 176, 0.06); }
 .log-intro p { margin: 0 0 10px; }
 .log-intro-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 !important; }

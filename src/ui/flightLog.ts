@@ -167,18 +167,34 @@ export function closeReplay() {
  * the server, so a clip shared from another device signed in as you shows too. Take it down: gone
  * from its page and the live feed; Put it back undoes that.
  */
+let allClips = false;
+
 async function showPublic(el: HTMLElement, moments: LoggedMoment[]) {
   const box = el.querySelector<HTMLElement>('.log-public');
   if (!box) return;
   const clips = await myClips();
   if (!box.isConnected || !clips?.length) return;
   const up = clips.filter((c) => c.up);
+  // Each clip's picture, from the moment it was shared from, when that's still on this device.
+  const posters = new Map<string, string>();
+  for (const m of moments) {
+    const link = sharedLink(m.id);
+    if (link) posters.set(link, url(m.poster ?? media(m)));
+  }
+  const when = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   const row = (c: MyClip) => `<li data-clip="${c.id}" class="${c.up ? '' : 'down'}">
-      <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">${escapeHtml(c.title.replace(/^CMDR [^:]+: /, ''))}</a>
-      <small>${c.up ? `♥ ${c.hearts} · ${new Date(c.created).toLocaleDateString()}` : 'Taken down'}</small>
-      <button type="button" data-${c.up ? 'down' : 'up'}="${c.id}">${c.up ? 'Take it down' : 'Put it back'}</button>
+      <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">
+        <span class="clip-thumb">${posters.has(c.url) ? `<img src="${posters.get(c.url)}" alt="" />` : ''}</span>
+        <span class="clip-text"><span class="clip-title">${escapeHtml(c.title.replace(/^CMDR [^:]+: /, ''))}</span>
+        <span class="clip-meta">${c.up ? `♥ ${c.hearts} · ${when(c.created)}` : 'Taken down · only you can see it'}</span></span>
+      </a>
+      <button type="button" class="clip-act" data-${c.up ? 'down' : 'up'}="${c.id}">${c.up ? 'Take down' : 'Put back'}</button>
     </li>`;
-  box.innerHTML = `<h3>Your clips on witchspace.org.uk <small>${up.length} up · anyone with the link can watch them</small></h3><ul>${clips.map(row).join('')}</ul>`;
+  // A long list folds to the newest three.
+  const fold = clips.length > 4 && !allClips;
+  box.innerHTML = `<h3>On witchspace.org.uk</h3><p class="clip-sub">${up.length} up · anyone with the link can watch them</p>
+    <ul>${(fold ? clips.slice(0, 3) : clips).map(row).join('')}</ul>
+    ${clips.length > 4 ? `<button type="button" class="clip-more">${fold ? `Show all ${clips.length}` : 'Show fewer'}</button>` : ''}`;
   box.hidden = false;
   // The moments here that are up get a mark: public, with their hearts.
   const byUrl = new Map(up.map((c) => [c.url, c]));
@@ -197,12 +213,17 @@ async function showPublic(el: HTMLElement, moments: LoggedMoment[]) {
       watchClip(link.closest<HTMLElement>('li[data-clip]')!.dataset.clip!);
       return;
     }
+    if ((e.target as HTMLElement).closest('.clip-more')) {
+      allClips = !allClips;
+      void showPublic(el, moments);
+      return;
+    }
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-down], button[data-up]');
     if (!b) return;
     const down = Boolean(b.dataset.down);
     if (down && !b.dataset.armed) {
       b.dataset.armed = '1';
-      b.textContent = 'Take it down? Press again';
+      b.textContent = 'Sure? Tap again';
       return;
     }
     b.disabled = true;
@@ -230,12 +251,12 @@ export async function renderFlightLog(opts: {
   const el = $('#flight-log');
   revoke(logUrls);
   const moments = await listMoments();
-  const toggle = opts.available ? `<button type="button" class="log-toggle" aria-pressed="${opts.enabled}">Flight recorder: ${opts.enabled ? 'on' : 'off'}</button>` : '';
+  const toggle = opts.available ? `<button type="button" class="log-toggle" aria-pressed="${opts.enabled}" aria-label="Flight recorder">${opts.enabled ? 'On' : 'Off'}</button>` : '';
   const q = opts.available && opts.enabled ? opts.quality : undefined;
   const quality = q
     ? q.hd
-      ? '<span class="log-quality">Recording in HD (720p)</span>'
-      : `<span class="log-quality">Recording at 480p: in HD the game was slowing down on this device.${q.canRetry ? ' <button type="button" class="log-hd">Try HD again</button>' : ''}</span>`
+      ? '<span class="log-quality">HD 720p</span>'
+      : `<span class="log-quality">480p: HD was slowing the game${q.canRetry ? ' <button type="button" class="log-hd">Try HD</button>' : ''}</span>`
     : '';
   const how = 'Your ship keeps the last minute of flight in memory and saves only the moments worth keeping: a fight, a Legend, the Marshals, a discovery and your last moments. Shift+P (or holding the camera button) keeps the last 30 seconds yourself; P takes a photo.';
   let head: string;
@@ -243,12 +264,19 @@ export async function renderFlightLog(opts: {
   else if (opts.intro)
     head = `<div class="log-intro"><p><strong>Your flight recorder</strong> ${how} Everything stays on this device (up to ${megabytes(BUDGET)}) unless you share it, and what you don't Keep clears after a week.</p>
       <p class="log-intro-actions"><button type="button" class="primary" data-intro="on">Keep it on</button><button type="button" data-intro="off">Turn it off</button></p></div>`;
-  else if (!moments.length) head = `<p class="meta">${opts.enabled ? how : 'The flight recorder is off. Photos (P) still come here.'} ${toggle} ${quality}</p>`;
+  else if (!moments.length) head = `<p class="meta">${opts.enabled ? how : 'The flight recorder is off. Photos (P) still come here.'}</p>`;
   else head = '';
+  // The recorder: its switch, how full this device is, and clearing out.
+  const used = moments.reduce((n, m) => n + momentBytes(m), 0);
+  if (opts.available && !opts.intro)
+    head += `<div class="log-recorder">
+      <div class="rec-row"><strong>Flight recorder</strong>${quality}${toggle}</div>
+      ${moments.length ? `<div class="rec-meter" role="meter" aria-valuemin="0" aria-valuemax="${BUDGET}" aria-valuenow="${used}" aria-label="Space used on this device"><span style="width:${Math.min(100, (used / BUDGET) * 100).toFixed(1)}%"></span></div>
+      <div class="rec-row rec-small"><span>${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} · ${megabytes(used)} of ${megabytes(BUDGET)} on this device</span>${moments.some((m) => !m.saved) ? '<button type="button" class="log-clear">Clear unkept</button>' : ''}</div>
+      <p class="rec-note">What you don't Keep clears after a week.</p>` : ''}
+    </div>`;
   if (moments.length) {
-    const used = moments.reduce((n, m) => n + momentBytes(m), 0);
-    const unkept = moments.some((m) => !m.saved);
-    head += `<p class="meta">${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} · ${megabytes(used)} of ${megabytes(BUDGET)} on this device · what you don't Keep clears after a week. ${opts.intro ? '' : toggle} ${unkept ? '<button type="button" class="log-clear">Clear unkept</button>' : ''} ${quality}</p>
+    head += `
       <ul class="log-list">${moments
         .map(
           (m) => `<li data-id="${m.id}">
