@@ -223,6 +223,18 @@ import type { CompanyId } from './companies';
 import type { BtcOrder, BtcTrade } from '../economy/bitcoin';
 import type { Heard } from './saloon';
 
+/** A ship's finish from the yard. */
+export interface Paint {
+  colour: string;
+  glow: 'standard' | 'deep' | 'blazing';
+  trim: string | null;
+  name: string;
+  luxuries: string[];
+}
+
+/** The hull a commander flies. */
+export const hullOf = (c: Commander) => c.ship ?? 'cobra-mk3';
+
 /** A ship specced at a shipyard, with a deposit down: built to order (src/game/shipyard.ts). */
 export interface ShipOrder {
   ship: string;
@@ -321,6 +333,10 @@ export interface Commander {
   saloon?: { drinks: string[]; heard: Heard[] };
   /** A ship you've specced and put a deposit on, in production at a yard (src/game/shipyard.ts). */
   order?: ShipOrder;
+  /** The hull you fly, by content id; a Cobra Mk III until you collect another. */
+  ship?: string;
+  /** Its finish, from the yard: colour, glow, trim and the name painted on. */
+  paint?: Paint;
 }
 
 const KEY = 'witchspace.commander.v1';

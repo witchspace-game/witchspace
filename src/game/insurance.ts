@@ -1,4 +1,5 @@
-import { EQUIPMENT, FUEL_CAPACITY, MISSILE_PRICE, STAKE, newCommander, removeEquipment, type Commander } from './commander';
+import { shipById } from '../content/ships';
+import { EQUIPMENT, FUEL_CAPACITY, hullOf, MISSILE_PRICE, STAKE, newCommander, removeEquipment, type Commander } from './commander';
 import { legalStatus, spareCredits } from './law';
 import { PLAYER_LASERS } from './weapons';
 
@@ -10,8 +11,11 @@ import { PLAYER_LASERS } from './weapons';
 // The new ship comes with a full tank, and you never wake up poorer than a
 // new commander (STAKE): losing the hold hurts enough to start again from.
 // Whatever part of the excess you can't pay is written off.
+// You get your own hull back, in its paint: a ship dearer than a Cobra adds a
+// twentieth of the difference to the excess. A Fugitive without a pod loses
+// the hull too, and flies out in the Co-operative's bare Cobra.
 
-export const EXCESS = { fraction: 0.1, minimum: 250 };
+export const EXCESS = { fraction: 0.1, minimum: 250, hull: 0.05 };
 
 /** What the fitted kit would cost new: equipment, lasers and missiles. */
 export function kitValue(c: Commander) {
@@ -20,7 +24,10 @@ export function kitValue(c: Commander) {
   return equipment + lasers + c.missiles * MISSILE_PRICE;
 }
 
-export const excessFor = (c: Commander) => Math.max(EXCESS.minimum, Math.round(kitValue(c) * EXCESS.fraction));
+/** How much dearer than a Cobra your hull is: what the insurers replace beyond the standard ship. */
+const hullAbove = (c: Commander) => Math.max(0, (shipById(hullOf(c))?.stats.price ?? 0) - (shipById('cobra-mk3')?.stats.price ?? 0));
+
+export const excessFor = (c: Commander) => Math.max(EXCESS.minimum, Math.round(kitValue(c) * EXCESS.fraction + hullAbove(c) * EXCESS.hull));
 
 export type Claim =
   | { kind: 'paid'; pod: boolean; excess: number; paid: number }
@@ -38,6 +45,8 @@ export function claimInsurance(c: Commander): Claim {
     c.damaged = [];
     c.lasers = bare.lasers;
     c.missiles = bare.missiles;
+    delete c.ship;
+    delete c.paint;
     // The Co-operative won't leave anyone stranded: enough to start again.
     const stake = Math.max(0, STAKE - c.credits);
     c.credits += stake;

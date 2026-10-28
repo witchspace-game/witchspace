@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FUEL_CAPACITY, STAKE, newCommander } from './commander';
-import { claimInsurance, EXCESS, excessFor } from './insurance';
+import { claimInsurance, EXCESS, excessFor, kitValue } from './insurance';
 import { legalStatus, recordCrime } from './law';
 
 const kitted = () => {
@@ -73,5 +73,31 @@ describe('insurance (Modern rules)', () => {
     expect(claim.kind).toBe('paid');
     expect(c.equipment).toEqual(['fuel-scoops', 'ecm', 'extra-energy']);
     expect(c.lasers).toEqual({ front: 'military', rear: 'beam' });
+  });
+});
+
+describe('your own ship back', () => {
+  const fdl = () => {
+    const c = newCommander('modern');
+    c.ship = 'fer-de-lance';
+    c.paint = { colour: '#ff4dff', glow: 'standard', trim: null, name: 'Brass Neck', luxuries: [] };
+    c.credits = 1e6;
+    return c;
+  };
+
+  it('replaces a dearer hull, in its paint, for a twentieth of the difference on the excess', () => {
+    const c = fdl();
+    expect(excessFor(c)).toBe(Math.round(kitValue(c) * EXCESS.fraction + 80_000 * EXCESS.hull));
+    claimInsurance(c);
+    expect(c.ship).toBe('fer-de-lance');
+    expect(c.paint?.name).toBe('Brass Neck');
+  });
+
+  it('takes the hull from a Fugitive without a pod', () => {
+    const c = fdl();
+    recordCrime(c, 'fugitive', true);
+    claimInsurance(c);
+    expect(c.ship).toBeUndefined();
+    expect(c.paint).toBeUndefined();
   });
 });

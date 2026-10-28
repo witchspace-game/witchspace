@@ -18,9 +18,15 @@ export class PlayerShip {
   private rollVel = 0;
   private yawVel = 0;
 
-  constructor(readonly def: ShipDef) {
+  constructor(public def: ShipDef) {
     this.shields = def.stats.shields;
     this.hull = def.stats.hull;
+  }
+
+  /** Change hulls (a new ship from the yard, or the insurers'): fresh shields and hull. */
+  fly(def: ShipDef) {
+    this.def = def;
+    this.repair();
   }
 
   get maxSpeed() {
