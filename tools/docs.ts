@@ -204,11 +204,15 @@ ${items.map((d) => `    <a class="card link" href="/design/${d.slug}/"><span cla
 </section>`;
 }
 
+/** GitHub's list of starter issues, for anyone who codes. */
+export const GOOD_FIRST = 'https://github.com/witchspace-game/witchspace/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22';
+
 /** Every task from every design, by skill, for the get-involved page. */
 export function helpWantedHtml(docs: Doc[]): string {
   const bySkill = new Map<string, { task: string; doc: Doc }[]>();
   for (const d of docs) for (const h of d.help) bySkill.set(h.skill, [...(bySkill.get(h.skill) ?? []), { task: h.task, doc: d }]);
-  const skills = Object.keys(SKILLS).filter((s) => bySkill.has(s));
+  // Code is always there: its tasks are mostly GitHub issues labelled "good first issue", listed live (src/site/helpWanted.ts).
+  const skills = Object.keys(SKILLS).filter((s) => bySkill.has(s) || s === 'code');
   // One row per skill, closed: open the one you're good at.
   return `<section class="section" id="help-wanted">
   <div class="section-head">
@@ -219,13 +223,16 @@ export function helpWantedHtml(docs: Doc[]): string {
   <div class="help-list">
 ${skills
   .map(
-    (s) => `    <details class="help-skill ${s}">
-      <summary><span class="skill ${s}">${SKILLS[s]}</span><small>${bySkill.get(s)!.length} ${bySkill.get(s)!.length === 1 ? 'task' : 'tasks'}</small></summary>
-      <ul>${bySkill
-        .get(s)!
-        .map((h) => `<li><span>${esc(h.task)}</span><a href="/design/${h.doc.slug}/">${esc(h.doc.title)}</a></li>`)
-        .join('')}</ul>
-    </details>`,
+    (s) => {
+      const tasks = bySkill.get(s) ?? [];
+      const code = s === 'code';
+      const count = code ? 'good first issues' : `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`;
+      return `    <details class="help-skill ${s}"${code ? ' id="help-code"' : ''}>
+      <summary><span class="skill ${s}">${SKILLS[s]}</span><small${code ? ' id="help-code-count"' : ''}>${count}</small></summary>
+      <ul${code ? ' id="help-code-list"' : ''}>${tasks.map((h) => `<li><span>${esc(h.task)}</span><a href="/design/${h.doc.slug}/">${esc(h.doc.title)}</a></li>`).join('')}</ul>
+      ${code ? `<p class="muted small help-code-foot">TypeScript and three.js: flight, combat, the economy, the shared galaxy. Start with an issue labelled <a href="${GOOD_FIRST}">good first issue</a> (ask in it, and we'll help you get going), and read <a href="https://github.com/witchspace-game/witchspace/blob/main/CONTRIBUTING.md">how to contribute</a>.</p>` : ''}
+    </details>`;
+    },
   )
   .join('\n')}
   </div>
