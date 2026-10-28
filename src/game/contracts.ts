@@ -100,6 +100,21 @@ export function jumpsBetween(a: StarSystem, b: StarSystem, limit = 6): number {
   return Infinity;
 }
 
+/** The nearest system (fewest jumps, then fewest light years) where `ok` holds, within `limit` jumps. */
+export function nearestWhere(a: StarSystem, ok: (s: StarSystem) => boolean, limit = 8): { system: StarSystem; jumps: number } | null {
+  if (ok(a)) return { system: a, jumps: 0 };
+  let frontier = [a];
+  const seen = new Set([a.index]);
+  for (let n = 1; n <= limit && frontier.length; n++) {
+    const next: StarSystem[] = [];
+    for (const s of frontier) for (const t of systemsWithin(s, ROUTE_HOP)) if (!seen.has(t.index)) seen.add(t.index), next.push(t);
+    const found = next.filter(ok).sort((x, y) => distanceLy(a, x) - distanceLy(a, y))[0];
+    if (found) return { system: found, jumps: n };
+    frontier = next;
+  }
+  return null;
+}
+
 /**
  * The first jump on the shortest route from `a` to `b` (each hop within a
  * full tank), or null if `b` is here or out of reach. Among equally short

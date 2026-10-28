@@ -3,7 +3,7 @@ import { EVENT_KINDS, eventsAt, setCausedEvents, type EventType, type WorldEvent
 import { DANGER_PREMIUM } from '../economy/market';
 import type { Commander } from './commander';
 import { COMPANIES, COMPANY_IDS, presence, standingName, type CompanyId } from './companies';
-import { addStanding, finish, jumpsBetween, logContract, logOf, standing, type Contract } from './contracts';
+import { addStanding, finish, jumpsBetween, logContract, nearestWhere, logOf, standing, type Contract } from './contracts';
 import { exploreOf } from './explore';
 import { ASSIGNMENT_OPEN, ASSIGNMENT_SLOT, assignmentId, assignmentWaiting, roll, slotOf } from '../../server/src/contact';
 import { legalStatus, recordCrime } from './law';
@@ -108,6 +108,21 @@ export function assignmentFor(c: Commander, company: CompanyId, here: StarSystem
 
 /** Can this company's assignment be picked up here? Only where it does business. */
 export const companyHere = (company: CompanyId, s: StarSystem) => presence(s)[company] > 0.5;
+
+/** Where a company's message stands now: takeable here, waiting at its nearest station, taken, or closed. */
+export function offerFor(c: Commander, m: Message, here: StarSystem, now: number):
+  | { kind: 'here'; offer: Contract & { expires: number } }
+  | { kind: 'elsewhere'; offer: Contract & { expires: number }; station: { system: StarSystem; jumps: number } | null }
+  | { kind: 'taken' }
+  | { kind: 'closed' }
+  | null {
+  if (!/^special:[a-z]+:\d+$/.test(m.id) || m.from || !COMPANY_IDS.includes(m.company)) return null; // not an offer: receipts, incidents
+  if (c.contracts?.some((a) => a.id === m.id) || c.contractsDone?.includes(m.id)) return { kind: 'taken' };
+  const offer = assignmentFor(c, m.company, here, now);
+  if (!offer || offer.id !== m.id) return { kind: 'closed' };
+  if (companyHere(m.company, here)) return { kind: 'here', offer };
+  return { kind: 'elsewhere', offer, station: nearestWhere(here, (s) => companyHere(m.company, s)) };
+}
 
 /**
  * New messages from the companies since you last looked: one for each
