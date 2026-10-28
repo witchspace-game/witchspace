@@ -1321,8 +1321,8 @@ const berthLooks: string[] = [];
 /** A hull in the berth in another finish: rebuilt from its file with the look changed. */
 function recolourShowroom(i: number, look: Look) {
   const base = ships[i];
-  const key = `${look.colour}|${look.glow}|${look.trim ?? ''}`;
-  if ((berthLooks[i] ?? `${base.style.lineColor}|${base.style.glow ?? 1}|`) === key) return;
+  const key = `${look.colour}|${look.glow}|${look.trim ?? ''}|${look.lights ? 'l' : ''}`;
+  if ((berthLooks[i] ?? `${base.style.lineColor}|${base.style.glow ?? 1}||`) === key) return;
   berthLooks[i] = key;
   const old = showroomModels[i];
   const m = buildPainted(base, look);
@@ -1333,7 +1333,13 @@ function recolourShowroom(i: number, look: Look) {
   showroomModels[i] = m;
 }
 const plainLook = (def: ShipDef): Look => ({ colour: def.style.lineColor, glow: def.style.glow ?? 1, trim: null });
-const paintLook = (def: ShipDef, p: { colour: string; glow?: GlowId; trim?: string | null }): Look => ({ colour: p.colour, glow: GLOWS[p.glow ?? 'standard'].glow * (def.style.glow ?? 1), trim: p.trim ?? null });
+const paintLook = (def: ShipDef, p: { colour: string; glow?: GlowId; trim?: string | null; luxuries?: string[]; ghost?: boolean }): Look => ({
+  colour: p.colour,
+  glow: GLOWS[p.glow ?? 'standard'].glow * (def.style.glow ?? 1),
+  trim: p.trim ?? null,
+  // Black-light running lights, unless the owner flies her as a full ghost.
+  ...(p.luxuries?.includes('black-light-lights') && !p.ghost ? { lights: true } : {}),
+});
 
 /** Your own ship's look, for the kill cam, clips and other commanders; null in the maker's colours. */
 const myLook = (): Look | null => {
@@ -2310,6 +2316,10 @@ function renderDocked() {
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ...(satsOf(c) ? ([['Bitcoin', `${formatBtc(satsOf(c))} · ${btcValue(c).toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr · no hold space`]] as [string, string][]) : []),
     ['Ship', `${escapeHtml(player.def.name)} <button type="button" class="small manual-open">Owner's manual</button> <button type="button" class="small manual-open booth-open">Photograph her</button>`],
+    // The Dark Edition's running lights, or the full ghost: just the hull (Mark).
+    ...(c.paint?.luxuries.includes('black-light-lights')
+      ? ([['Running lights', `${c.paint.ghost ? 'Off: the full ghost, just the hull' : 'Black-light, seen only close to'} <button type="button" class="small lights-toggle">${c.paint.ghost ? 'Lights on' : 'Go full ghost'}</button>`]] as [string, string][])
+      : []),
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
     ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
@@ -2321,6 +2331,14 @@ function renderDocked() {
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   $('#cmdr .manual-open:not(.booth-open)')?.addEventListener('click', () => openManual(player.def));
+  $('#cmdr .lights-toggle')?.addEventListener('click', () => {
+    if (!c.paint) return;
+    c.paint.ghost = !c.paint.ghost;
+    saveCommander(c);
+    showOwnShip();
+    flash(c.paint.ghost ? 'Running lights off · the full ghost' : 'Running lights on', 2);
+    renderDocked();
+  });
   $('#cmdr .booth-open')?.addEventListener('click', () => {
     showOwnShip();
     openBooth();
@@ -7098,7 +7116,7 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
   }
   const here = currentSystem();
   const look = myLook();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken(), look ? { c: look.colour, g: look.glow, ...(look.trim ? { t: look.trim } : {}) } : undefined);
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken(), look ? { c: look.colour, g: look.glow, ...(look.trim ? { t: look.trim } : {}), ...(look.lights ? { l: 1 as const } : {}) } : undefined);
   const back = sharedSpace.takeCorrection();
   if (back) player.obj.position.copy(back);
   sharedSpace.update(dt, {
@@ -7114,7 +7132,7 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
     let m = remoteModels.get(r.id);
     if (!m) {
       // Other commanders fly their ships in their own paint, or the maker's colours; their callsign tag says who they are.
-      const model = buildPainted(shipById(r.ship) ?? shipById('cobra-mk3')!, r.paint ? { colour: r.paint.c, glow: r.paint.g ?? 1, trim: r.paint.t ?? null } : null);
+      const model = buildPainted(shipById(r.ship) ?? shipById('cobra-mk3')!, r.paint ? { colour: r.paint.c, glow: r.paint.g ?? 1, trim: r.paint.t ?? null, lights: r.paint.l === 1 } : null);
       space.scene.add(model.root);
       m = { model, fireCooldown: 0, unidentified: false };
       remoteModels.set(r.id, m);

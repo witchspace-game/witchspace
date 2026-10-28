@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { deriveEdges } from '../content/geometry';
 import type { ShipDef, Vec3 } from '../content/types';
 import type { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
-import { applyLivery } from './livery';
+import { applyLivery, applyRunningLights } from './livery';
 import { behindLines, disposeObject, neoLines, registerParts, retroLines, unregisterParts } from './wire';
 
 export interface ShipModel {
@@ -102,6 +102,7 @@ export const UNIDENTIFIED = new THREE.Color('#d8e2f0');
  * tell what it is.
  */
 export function showUnidentified(model: ShipModel, on: boolean) {
+  model.root.userData.unidentified = on; // running lights stay dark until the hull is read
   model.unidentified ??= model.lines.map((l) => l.base.clone());
   model.lines.forEach((l, i) => {
     l.base.copy(on ? UNIDENTIFIED.clone().multiplyScalar(i === 0 ? 1.6 : 1.1) : model.unidentified![i]);
@@ -123,6 +124,8 @@ export interface Look {
   colour: string;
   glow: number;
   trim: string | null;
+  /** Black-light running lights (the Dark Edition's luxury), unless the owner has them off. */
+  lights?: boolean;
 }
 
 /** A ship built in its owner's paint (two-tone: the fine lines in the trim colour). */
@@ -132,6 +135,12 @@ export function buildPainted(def: ShipDef, look: Look | null | undefined): ShipM
   if (look.trim && def.geometry.details && m.lines[1]) {
     m.lines[1].material.color.set(look.trim).multiplyScalar(1.1 * look.glow);
     m.lines[1].base.copy(m.lines[1].material.color);
+  }
+  if (look.lights) {
+    const lights = applyRunningLights(def, m.root);
+    unregisterParts(m.parts);
+    m.parts.neo.push(...lights.neo);
+    registerParts(m.parts);
   }
   return m;
 }
