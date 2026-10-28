@@ -230,6 +230,10 @@ export interface Paint {
   trim: string | null;
   name: string;
   luxuries: string[];
+  /** A numbered special edition. */
+  edition?: { id: string; number: number };
+  /** A gift: the yard gives nothing for the hull in part exchange. */
+  gifted?: true;
 }
 
 /** The hull a commander flies. */
@@ -248,6 +252,8 @@ export interface ShipOrder {
   /** The fine lines' colour, if two-tone. */
   trim?: string | null;
   luxuries?: string[];
+  edition?: { id: string; number: number };
+  gifted?: true;
   /** The price quoted, hull and fit-out, held when the deposit went down. */
   quoted: number;
   deposit: number;
@@ -331,6 +337,8 @@ export interface Commander {
   btcOrders?: BtcOrder[];
   /** The saloon: drinks bought this visit, and the tips you've heard (game/saloon.ts). */
   saloon?: { drinks: string[]; heard: Heard[] };
+  /** A gift voucher redeemed, waiting to be specced at a shipyard. */
+  gift?: { ship: string };
   /** A ship you've specced and put a deposit on, in production at a yard (src/game/shipyard.ts). */
   order?: ShipOrder;
   /** The hull you fly, by content id; a Cobra Mk III until you collect another. */

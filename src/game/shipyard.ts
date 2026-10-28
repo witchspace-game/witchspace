@@ -1,4 +1,5 @@
 import type { ShipDef } from '../content/types';
+import type { Edition } from '../content/editions';
 import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
 import { PLAYER_LASERS } from './weapons';
 
@@ -16,17 +17,17 @@ export const PRODUCTION_HOURS = 72;
  * The yard's palette: five at no charge, and the special glows, which cost.
  * No police blue and red, no Marshals' gold: only the law wears those.
  */
-export const PALETTE: { colour: string; name: string; price: number }[] = [
-  { colour: '#c9a8ff', name: 'Lavender', price: 0 },
-  { colour: '#3dffb0', name: 'Witchspace green', price: 0 },
-  { colour: '#9fe8ff', name: 'Ice', price: 0 },
-  { colour: '#f2f6ff', name: 'White hot', price: 0 },
-  { colour: '#ffb347', name: 'Amber', price: 0 },
-  { colour: '#ff7a45', name: 'Ember', price: 9_500 },
-  { colour: '#ff6fae', name: 'Rose', price: 9_500 },
-  { colour: '#b6ff5c', name: 'Acid lime', price: 12_000 },
-  { colour: '#7df9ff', name: 'Witch-fire', price: 18_000 },
-  { colour: '#ff4dff', name: 'Nebula', price: 24_000 },
+export const PALETTE: { colour: string; name: string; price: number; line: string }[] = [
+  { colour: '#c9a8ff', name: 'Lave Dusk', price: 0, line: 'The sky over Lave as the station lights come on.' },
+  { colour: '#3dffb0', name: 'Witchspace Green', price: 0, line: 'The glow of the jump itself.' },
+  { colour: '#9fe8ff', name: 'Riedquat Ice', price: 0, line: 'Cold, clean and a long way from help.' },
+  { colour: '#f2f6ff', name: 'Coriolis White', price: 0, line: 'The colour of a docking slot at full beam.' },
+  { colour: '#ffb347', name: 'Diso Amber', price: 0, line: 'Diso’s old sun, low on the horizon.' },
+  { colour: '#ff7a45', name: 'Leesti Ember', price: 9_500, line: 'Hot, like the trade in Leesti’s back rooms.' },
+  { colour: '#ff6fae', name: 'Zaonce Rose', price: 9_500, line: 'For pilots who want to be noticed in Zaonce.' },
+  { colour: '#b6ff5c', name: 'Reorte Acid', price: 12_000, line: 'Loud. Very loud.' },
+  { colour: '#7df9ff', name: 'Witch-fire', price: 18_000, line: 'The light at the edge of a jump that never closed.' },
+  { colour: '#ff4dff', name: 'Orerve Nebula', price: 24_000, line: 'The cloud you see from Orerve on a clear night.' },
 ];
 
 /** How hard it glows. Never dimmer than the yard's own: the glow is the signature. */
@@ -98,15 +99,57 @@ export const cleanName = (s: string) =>
 
 export type OrderResult = { ok: true; order: ShipOrder } | { ok: false; message: string };
 
-/** Put down the deposit: it goes into production at this yard. Only a concept takes deposits; one order at a time. */
-export function placeOrder(c: Commander, def: ShipDef, spec: Spec, at: { galaxy: number; system: number }, now: number): OrderResult {
+/** An edition's spec: set by the maker, not you (only the name is yours). */
+export const editionSpec = (e: Edition, name = ''): Spec => ({
+  ship: e.ship,
+  colour: e.colour,
+  name,
+  laser: e.laser,
+  upgrades: e.upgrades as EquipmentId[],
+  glow: e.glow,
+  trim: e.trim,
+  luxuries: [...e.luxuries],
+});
+
+export const editionQuote = (def: ShipDef, e: Edition) => quote(def, editionSpec(e)) + e.premium;
+
+/** A gift is the hull as it leaves the yard: your choice of the included colours and a name, nothing that costs. */
+export const giftable = (def: ShipDef, spec: Spec) => spec.laser === 'pulse' && !spec.upgrades.length && priceLines(def, spec).finish === 0;
+
+/**
+ * Put down the deposit: it goes into production at this yard. Only a concept
+ * takes deposits; one order at a time. An edition carries its number (from the
+ * server) and its premium; a gift (a redeemed voucher) costs nothing.
+ */
+export function placeOrder(
+  c: Commander,
+  def: ShipDef,
+  spec: Spec,
+  at: { galaxy: number; system: number },
+  now: number,
+  extra: { edition?: { edition: Edition; number: number }; gift?: boolean } = {},
+): OrderResult {
   if (c.order) return { ok: false, message: 'You already have a ship in production' };
   if (!def.concept) return { ok: false, message: 'Hulls already flying are bought outright, when shipyards sell' };
-  const quoted = quote(def, spec);
+  if (extra.gift && (c.gift?.ship !== def.id || !giftable(def, spec))) return { ok: false, message: 'A gift is the hull with an included colour and its name' };
+  const e = extra.edition;
+  const s = e ? editionSpec(e.edition, spec.name) : spec;
+  const quoted = extra.gift ? 0 : e ? editionQuote(def, e.edition) : quote(def, s);
   const deposit = depositFor(quoted);
   if (c.credits < deposit) return { ok: false, message: `The deposit is ${deposit.toLocaleString()} Cr` };
   c.credits = Math.round((c.credits - deposit) * 10) / 10;
-  const order: ShipOrder = { ...spec, name: cleanName(spec.name), upgrades: [...new Set(spec.upgrades)], quoted, deposit, placed: now, ...at };
+  const order: ShipOrder = {
+    ...s,
+    name: cleanName(s.name),
+    upgrades: [...new Set(s.upgrades)],
+    quoted,
+    deposit,
+    placed: now,
+    ...at,
+    ...(e ? { edition: { id: e.edition.id, number: e.number } } : {}),
+    ...(extra.gift ? { gifted: true as const } : {}),
+  };
+  if (extra.gift) delete c.gift;
   c.order = order;
   return { ok: true, order };
 }
@@ -114,7 +157,8 @@ export function placeOrder(c: Commander, def: ShipDef, spec: Spec, at: { galaxy:
 /** Cancel before it's built: the deposit comes back in full. */
 export function cancelOrder(c: Commander, now: number): number {
   const o = c.order;
-  if (!o || production(o, now).built) return 0;
+  // A gift is built whatever: it's yours, not refundable.
+  if (!o || o.gifted || production(o, now).built) return 0;
   c.credits = Math.round((c.credits + o.deposit) * 10) / 10;
   delete c.order;
   return o.deposit;
@@ -148,7 +192,8 @@ function shipKitValue(c: Commander) {
   return kit + lasers;
 }
 
-export const tradeIn = (c: Commander, current: ShipDef) => Math.round(current.stats.price * TRADE_IN.hull + shipKitValue(c) * TRADE_IN.kit);
+/** A gifted hull isn't for selling on: the yard takes it in part exchange for its kit only. */
+export const tradeIn = (c: Commander, current: ShipDef) => Math.round((c.paint?.gifted ? 0 : current.stats.price * TRADE_IN.hull) + shipKitValue(c) * TRADE_IN.kit);
 
 /** The bill on collection: the balance, less what the yard gives for your ship (it can come out in your favour). */
 export function collection(c: Commander, current: ShipDef): { balance: number; tradeIn: number; due: number } | null {
@@ -184,7 +229,15 @@ export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here
   c.lasers = { front: o.laser };
   c.missiles = Math.min(c.missiles, next.stats.missiles ?? 0);
   c.ship = next.id;
-  c.paint = { colour: o.colour, glow: o.glow ?? 'standard', trim: o.trim ?? null, name: o.name, luxuries: o.luxuries ?? [] };
+  c.paint = {
+    colour: o.colour,
+    glow: o.glow ?? 'standard',
+    trim: o.trim ?? null,
+    name: o.name,
+    luxuries: o.luxuries ?? [],
+    ...(o.edition ? { edition: o.edition } : {}),
+    ...(o.gifted ? { gifted: true as const } : {}),
+  };
   delete c.order;
   return { ok: true, paid: bill.due };
 }

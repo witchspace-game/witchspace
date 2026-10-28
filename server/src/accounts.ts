@@ -25,6 +25,8 @@ import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
 import { CHECKS_PER_MINUTE, KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
 import { gitHubReady, openPullRequest, type GitHubEnv } from './github';
 import { CHECKS } from './checks';
+import { EDITIONS, editionById } from '../../src/content/editions';
+import { normaliseVoucher, voucherCode } from './vouchers';
 import { ACCESS_TTL, challengeOk, clientName, CODE_TTL, connectPage, isMetadataUrl, redirectMatches, redirectOk, REFRESH_TTL, REQUEST_TTL, s256, SCOPE, verifierOk, withParams } from './oauth';
 
 export interface AccountsEnv extends GitHubEnv {
@@ -116,6 +118,10 @@ export class Accounts extends DurableObject<AccountsEnv> {
       account TEXT NOT NULL, expires INTEGER NOT NULL)`);
     this.sql.exec('CREATE TABLE IF NOT EXISTS oauth_tokens (hash TEXT PRIMARY KEY, kind TEXT NOT NULL, account TEXT NOT NULL, client TEXT NOT NULL, expires INTEGER NOT NULL)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS oauth_tokens_account ON oauth_tokens (account)');
+    // Gift vouchers for a ship (a code, used once) and the numbers of special editions (one each).
+    this.sql.exec('CREATE TABLE IF NOT EXISTS vouchers (hash TEXT PRIMARY KEY, ship TEXT NOT NULL, note TEXT NOT NULL, created INTEGER NOT NULL, account TEXT, redeemed INTEGER)');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS editions (edition TEXT NOT NULL, number INTEGER NOT NULL, account TEXT NOT NULL, at INTEGER NOT NULL, PRIMARY KEY (edition, number))');
+    this.sql.exec('CREATE UNIQUE INDEX IF NOT EXISTS editions_account ON editions (edition, account)');
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -128,6 +134,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'GET' && path === '/contact/key') return json({ key: this.env.VAPID_PUBLIC ?? null });
     if (m === 'POST' && path === '/stats/ping') return this.ping(request);
     if (m === 'GET' && path === '/push/latest') return this.latest(url);
+    if (m === 'GET' && path === '/shipyard/editions') return this.editionCounts();
     if (m === 'GET' && path === '/contact/stop') return this.stop(url);
     const galaxy = path.match(/^\/firsts\/([0-7])$/);
     if (m === 'GET' && galaxy) return this.firstsOf(Number(galaxy[1]));
@@ -154,6 +161,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'PUT' && path === '/me/contact') return this.putContact(request, account);
     if (m === 'POST' && path === '/me/firsts') return this.claimFirsts(request, account);
     if (m === 'GET' && path === '/me/connections') return this.connections(account);
+    if (m === 'POST' && path === '/me/voucher') return this.redeemVoucher(request, account);
+    if (m === 'POST' && path === '/me/edition') return this.claimEdition(request, account);
+    if (m === 'DELETE' && path === '/me/edition') return this.releaseEdition(request, account);
     if (m === 'DELETE' && path === '/me/connections') return this.disconnect(account, url.searchParams.get('client') ?? '');
     // A maintainer, signed in as themselves, reviews from the site's review page: the queue, any submission, the decision.
     if (sub && this.isMaintainer(account) && ((m === 'GET' && !sub[1]) || sub[2] === 'review' || (m === 'GET' && sub[1] && sub[1] !== 'mine')))
@@ -368,9 +378,64 @@ export class Accounts extends DurableObject<AccountsEnv> {
   // --- Admin: releasing protected callsigns --------------------------------------
 
   /** GET /admin/names, POST /admin/names/release {name, email}, POST /admin/names/revoke {name}. Needs the admin key. */
+  /** How many of each edition are spoken for: public, for the shipyard and the ship's page. */
+  private editionCounts(): Response {
+    const taken: Record<string, number> = {};
+    for (const row of this.sql.exec('SELECT edition, COUNT(*) AS n FROM editions GROUP BY edition').toArray()) taken[row.edition as string] = row.n as number;
+    return json({ editions: EDITIONS.map((e) => ({ id: e.id, limit: e.limit, taken: taken[e.id] ?? 0 })) });
+  }
+
+  /** Redeem a gift voucher: once, by whoever holds the code. */
+  private async redeemVoucher(request: Request, account: Account): Promise<Response> {
+    const body = (await request.json().catch(() => null)) as { code?: unknown } | null;
+    const code = typeof body?.code === 'string' ? normaliseVoucher(body.code) : '';
+    if (!code) return json({ error: 'That isn’t a voucher code' }, 400);
+    const row = this.sql.exec('SELECT ship, account FROM vouchers WHERE hash = ?', await sha256(code)).toArray()[0];
+    if (!row) return json({ error: 'That code isn’t one of ours' }, 404);
+    // Once: even for the account that redeemed it, or a second redeem would be a second ship.
+    if (row.account) return json({ error: row.account === account.id ? 'You’ve already redeemed this voucher: your gift is in the shipyard' : 'That voucher has already been used' }, 409);
+    this.sql.exec('UPDATE vouchers SET account = ?, redeemed = ? WHERE hash = ? AND account IS NULL', account.id, Date.now(), await sha256(code));
+    return json({ ship: row.ship });
+  }
+
+  /** The next number of an edition, one per account; your own back if you already hold one. */
+  private async claimEdition(request: Request, account: Account): Promise<Response> {
+    const body = (await request.json().catch(() => null)) as { edition?: unknown } | null;
+    const edition = typeof body?.edition === 'string' ? editionById(body.edition) : undefined;
+    if (!edition) return json({ error: 'No such edition' }, 404);
+    const mine = this.sql.exec('SELECT number FROM editions WHERE edition = ? AND account = ?', edition.id, account.id).toArray()[0];
+    if (mine) return json({ number: mine.number, limit: edition.limit });
+    const used = new Set(this.sql.exec('SELECT number FROM editions WHERE edition = ?', edition.id).toArray().map((r) => r.number as number));
+    let number = 1;
+    while (used.has(number)) number++;
+    if (number > edition.limit) return json({ error: `All ${edition.limit} are spoken for` }, 409);
+    this.sql.exec('INSERT INTO editions (edition, number, account, at) VALUES (?, ?, ?, ?)', edition.id, number, account.id, Date.now());
+    return json({ number, limit: edition.limit });
+  }
+
+  /** Give a number back (an order cancelled): the next pilot can have it. */
+  private async releaseEdition(request: Request, account: Account): Promise<Response> {
+    const body = (await request.json().catch(() => null)) as { edition?: unknown } | null;
+    if (typeof body?.edition !== 'string') return json({ error: 'Which edition?' }, 400);
+    this.sql.exec('DELETE FROM editions WHERE edition = ? AND account = ?', body.edition, account.id);
+    return json({ ok: true });
+  }
+
   private async admin(request: Request, path: string): Promise<Response> {
     const key = request.headers.get('X-Admin-Key');
     if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return json({ error: 'Forbidden' }, 403);
+    // A gift voucher for a ship: the code comes back once, and only its hash is kept.
+    if (request.method === 'POST' && path === '/admin/vouchers') {
+      const body = (await request.json().catch(() => null)) as { ship?: unknown; note?: unknown } | null;
+      const ship = typeof body?.ship === 'string' && /^[a-z0-9-]{2,40}$/.test(body.ship) ? body.ship : null;
+      if (!ship) return json({ error: 'Which ship? (its id, e.g. fer-de-lance)' }, 400);
+      const code = voucherCode();
+      this.sql.exec('INSERT INTO vouchers (hash, ship, note, created) VALUES (?, ?, ?, ?)', await sha256(code), ship, String(body?.note ?? '').slice(0, 200), Date.now());
+      return json({ code, ship });
+    }
+    if (request.method === 'GET' && path === '/admin/vouchers') {
+      return json({ vouchers: this.sql.exec('SELECT ship, note, created, account IS NOT NULL AS used, redeemed FROM vouchers ORDER BY created').toArray() });
+    }
     if (request.method === 'GET' && path === '/admin/names') {
       const releases = this.sql.exec('SELECT name, email, created FROM releases ORDER BY created').toArray();
       return json({ rules: NAMES, releases });
