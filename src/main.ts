@@ -28,6 +28,7 @@ import {
   removeEquipment,
   saveCommander,
   type Commander,
+  type EquipmentId,
   type Difficulty,
 } from './game/commander';
 import { DockingComputer } from './game/dockingComputer';
@@ -76,6 +77,7 @@ import { Missile, MISSILE } from './game/missile';
 import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rightOn, type Foe } from './game/rating';
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
+import { cancelOrder, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
@@ -673,7 +675,12 @@ function setDockTab(tab: DockTab) {
   $('#tab-shipyard').hidden = tab !== 'shipyard';
   document.body.classList.toggle('yard-open', tab === 'shipyard');
   if (tab === 'shipyard') renderShipyard();
-  else if (state === 'docked' && shipIndex !== cobraIndex) showShip(cobraIndex); // your own ship back in the berth
+  else if (state === 'docked') {
+    // Your own ship back in the berth, and the yard's hulls in their own glow.
+    spec = null;
+    ships.forEach((def, i) => recolourShowroom(i, plainLook(def)));
+    if (shipIndex !== cobraIndex) showShip(cobraIndex);
+  }
   $('#tab-contracts').hidden = tab !== 'contracts';
   if (tab === 'news') renderNews();
   if (tab === 'contracts') renderContracts();
@@ -1114,35 +1121,217 @@ const hasShipyard = (s: StarSystem) => s.techLevel >= SHIPYARD_TECH;
 // Earned, not bought: the Solos' Falcon. Police and Marshals' hulls have no price.
 const NOT_IN_YARDS = new Set(['falcon']);
 let yardPick: string | null = null;
+/** The ship being specced, while the configurator is open. */
+let spec: Spec | null = null;
+let yardMessage = '';
+
+/** How a hull in the berth looks: its colour, how hard it glows, and a trim colour for the fine lines. */
+interface Look {
+  colour: string;
+  glow: number;
+  trim: string | null;
+}
+const berthLooks: string[] = [];
+
+/** A hull in the berth in another finish: rebuilt from its file with the look changed. */
+function recolourShowroom(i: number, look: Look) {
+  const base = ships[i];
+  const key = `${look.colour}|${look.glow}|${look.trim ?? ''}`;
+  if ((berthLooks[i] ?? `${base.style.lineColor}|${base.style.glow ?? 1}|`) === key) return;
+  berthLooks[i] = key;
+  const old = showroomModels[i];
+  const m = buildShip({ ...base, style: { ...base.style, lineColor: look.colour, glow: look.glow } });
+  // Two-tone: the fine lines (the canopy, the vents) in the trim colour.
+  if (look.trim && base.geometry.details && m.lines[1]) {
+    m.lines[1].material.color.set(look.trim).multiplyScalar(1.1 * look.glow);
+    m.lines[1].base.copy(m.lines[1].material.color);
+  }
+  showroom.scene.remove(old.root);
+  disposeShip(old);
+  showroom.scene.add(m.root);
+  m.root.visible = i === shipIndex;
+  showroomModels[i] = m;
+}
+const plainLook = (def: ShipDef): Look => ({ colour: def.style.lineColor, glow: def.style.glow ?? 1, trim: null });
 
 function renderShipyard() {
-  const yard = showroomModels
-    .map((m, i) => ({ def: m.def, i }))
+  const c = cmdr();
+  const here = currentSystem();
+  const now = Date.now();
+  const yard = ships
+    .map((def, i) => ({ def, i }))
     .filter(({ def }) => def.stats.price && !NOT_IN_YARDS.has(def.id) && !['missile', 'cargo', 'station', 'debris', 'alien'].includes(def.role))
     // Concepts first: the reveal, then the yard's line from the dearest.
     .sort((a, b) => Number(Boolean(b.def.concept)) - Number(Boolean(a.def.concept)) || b.def.stats.price - a.def.stats.price);
-  const pick = yard.find((y) => y.def.id === yardPick) ?? yard[0];
+  const pick = yard.find((y) => y.def.id === (spec?.ship ?? yardPick)) ?? yard[0];
   if (!pick) return;
   yardPick = pick.def.id;
-  showShip(pick.i);
-  $('#shipyard').innerHTML = `<p class="meta">Shipyards open soon: you'll buy, sell and trade in here. For now, come and look. Tap a ship to see it in the berth.</p>
-    <ul class="yard">${yard
-      .map(({ def }) => {
-        const s = def.stats;
-        const tag = def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : def.id === 'cobra-mk3' ? '<em>Your ship</em>' : '';
-        return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${def.style.lineColor}">
-          <strong>${escapeHtml(def.name)}</strong> ${tag}
-          <span>${[def.manufacturer, def.role].filter(Boolean).map((x) => escapeHtml(x!)).join(' · ')}</span>
-          <span>${s.maxSpeed} m/s · hull ${s.hull} · shields ${s.shields} · ${s.cargo} t · ${s.missiles ?? 0} missiles</span>
-          <b>${def.concept ? 'About ' : ''}${s.price.toLocaleString()} Cr</b>
-        </button></li>`;
-      })
-      .join('')}</ul>
-    <p class="yard-desc">${escapeHtml(pick.def.description)}</p>`;
-  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-yard]'))
-    b.onclick = () => {
-      yardPick = b.dataset.yard!;
-      resetShowroomView();
+  // The berth shows the glow you're choosing, or the one you ordered.
+  const lookOf = (def: ShipDef): Look => {
+    const o = spec && def.id === spec.ship ? spec : c.order?.ship === def.id ? c.order : null;
+    return o ? { colour: o.colour, glow: GLOWS[o.glow ?? 'standard'].glow * (def.style.glow ?? 1), trim: o.trim ?? null } : plainLook(def);
+  };
+  for (const { i, def } of yard) recolourShowroom(i, lookOf(def));
+  if (shipIndex !== pick.i) showShip(pick.i);
+  const el = $('#shipyard');
+  const msg = `<p class="yard-funds">You have <b>${Math.floor(c.credits).toLocaleString()} Cr</b></p>${yardMessage ? `<p class="yard-message">${escapeHtml(yardMessage)}</p>` : ''}`;
+  yardMessage = '';
+
+  // Your ship in production, at the top whatever you're looking at.
+  let orderCard = '';
+  if (c.order) {
+    const o = c.order;
+    const def = shipById(o.ship);
+    const p = production(o, now);
+    const at = o.galaxy === here.galaxy ? systemAt(o.galaxy, o.system) : null;
+    const where = at ? `${stationName(at).name}, ${at.name}` : 'a yard in another galaxy';
+    orderCard = `<div class="yard-order" style="--hull:${o.colour}">
+      <strong>Your ${escapeHtml(def?.name ?? o.ship)}${o.name ? ` “${escapeHtml(o.name)}”` : ''}</strong>
+      <span>${p.built ? `Built, and waiting for you at ${escapeHtml(where)}. Collection opens with the shipyards.` : `In production at ${escapeHtml(where)}: ${p.stage.toLowerCase()} · about ${p.hoursLeft} h to go`}</span>
+      <div class="rec-meter"><span style="width:${(p.fraction * 100).toFixed(1)}%"></span></div>
+      <span>Deposit ${o.deposit.toLocaleString()} Cr paid · ${(o.quoted - o.deposit).toLocaleString()} Cr on collection${p.built ? '' : ''}</span>
+      ${p.built ? '' : `<button type="button" class="yard-cancel">Cancel and refund ${o.deposit.toLocaleString()} Cr</button>`}
+    </div>`;
+  }
+
+  if (spec) {
+    const def = pick.def;
+    const total = quote(def, spec);
+    const lines = priceLines(def, spec);
+    const deposit = depositFor(total);
+    const cost = (n: number) => (n ? `${n.toLocaleString()} Cr` : 'Included');
+    const swatches = (attr: string, chosen: string | null) =>
+      PALETTE.map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${p.name}${p.price ? ` · ${p.price.toLocaleString()} Cr` : ''}" aria-label="${p.name}${p.price ? `, ${p.price.toLocaleString()} credits` : ''}" style="--sw:${p.colour}">${p.price ? '<i>★</i>' : ''}</button>`).join('');
+    const chosenColour = PALETTE.find((p) => p.colour === spec!.colour);
+    const laserRow = (Object.keys(PLAYER_LASERS) as LaserId[])
+      .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}">${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
+      .join('');
+    const kit = UPGRADES.filter((e) => !e.modernOnly || c.difficulty === 'modern')
+      .map((e) => `<label><input type="checkbox" data-up="${e.id}" ${spec!.upgrades.includes(e.id) ? 'checked' : ''} /> <span>${escapeHtml(e.name)}</span><small>${Math.round(e.price * fitScale(def)).toLocaleString()} Cr</small></label>`)
+      .join('');
+    const action = def.concept
+      ? c.order
+        ? '<p class="meta">One ship in production at a time.</p>'
+        : `<button type="button" class="primary yard-deposit" ${c.credits < deposit ? 'disabled' : ''}>Place a deposit · ${deposit.toLocaleString()} Cr</button>
+          <p class="yard-note">A tenth now, refundable until it's built. It goes into production here, at ${escapeHtml(stationName(here).name)}, takes about ${PRODUCTION_HOURS / 24} days, and is built to this spec at this price.</p>`
+      : '<p class="yard-note">Shipyards open soon: you\'ll buy it outright then.</p>';
+    el.innerHTML = `${msg}${orderCard}<button type="button" class="yard-back">‹ The yard</button>
+      <h3 class="yard-title" style="--hull:${spec.colour}">Spec your ${escapeHtml(def.name)}</h3>
+      <p class="yard-label">Its colour <span>${chosenColour ? `${chosenColour.name} · ${cost(chosenColour.price)}` : 'The maker’s own'}</span></p>
+      <div class="yard-swatches">${swatches('data-colour', spec.colour)}</div>
+      <p class="yard-label">How hard it glows</p>
+      <div class="yard-lasers">${(Object.keys(GLOWS) as GlowId[]).map((g) => `<button type="button" data-glow="${g}" aria-pressed="${spec!.glow === g}">${GLOWS[g].name}<small>${cost(GLOWS[g].price)}</small></button>`).join('')}</div>
+      <label class="yard-check"><input type="checkbox" class="yard-two-tone" ${spec.trim ? 'checked' : ''} /> <span>Two-tone: the fine lines in a second colour</span><small>${TRIM_PRICE.toLocaleString()} Cr</small></label>
+      ${spec.trim ? `<div class="yard-swatches">${swatches('data-trim', spec.trim)}</div>` : ''}
+      <label class="yard-label" for="spec-name">Its name, painted on</label>
+      <input id="spec-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" />
+      <p class="yard-label">Its laser</p>
+      <div class="yard-lasers">${laserRow}</div>
+      <p class="yard-label">Upgrades <span>fitted to a hull this size: ×${fitScale(def).toFixed(1)}</span></p>
+      <div class="yard-kit">${kit}</div>
+      <p class="yard-label">Luxuries <span>comfort and showing off, nothing that flies or fights better</span></p>
+      <div class="yard-kit yard-lux">${LUXURIES.map((l) => `<label><input type="checkbox" data-lux="${l.id}" ${spec!.luxuries.includes(l.id) ? 'checked' : ''} /> <span>${escapeHtml(l.name)}<em>${escapeHtml(l.blurb)}</em></span><small>${l.price.toLocaleString()} Cr</small></label>`).join('')}</div>
+      <p class="yard-total"><span>Hull ${lines.hull.toLocaleString()} · fit-out ${lines.fit.toLocaleString()} · finish ${lines.finish.toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>
+      ${action}`;
+    const keep = () => renderShipyard();
+    el.querySelector<HTMLButtonElement>('.yard-back')!.onclick = () => {
+      spec = null;
+      keep();
+    };
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-colour]'))
+      b.onclick = () => {
+        spec!.colour = b.dataset.colour!;
+        keep();
+      };
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-trim]'))
+      b.onclick = () => {
+        spec!.trim = b.dataset.trim!;
+        keep();
+      };
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-glow]'))
+      b.onclick = () => {
+        spec!.glow = b.dataset.glow as GlowId;
+        keep();
+      };
+    el.querySelector<HTMLInputElement>('.yard-two-tone')!.onchange = (e) => {
+      spec!.trim = (e.target as HTMLInputElement).checked ? (PALETTE.find((p) => p.colour !== spec!.colour)?.colour ?? '#f2f6ff') : null;
+      keep();
+    };
+    for (const box of el.querySelectorAll<HTMLInputElement>('[data-lux]'))
+      box.onchange = () => {
+        const id = box.dataset.lux!;
+        spec!.luxuries = box.checked ? [...spec!.luxuries, id] : spec!.luxuries.filter((l) => l !== id);
+        keep();
+      };
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-laser]'))
+      b.onclick = () => {
+        spec!.laser = b.dataset.laser as LaserId;
+        keep();
+      };
+    for (const box of el.querySelectorAll<HTMLInputElement>('[data-up]'))
+      box.onchange = () => {
+        const id = box.dataset.up as EquipmentId;
+        spec!.upgrades = box.checked ? [...spec!.upgrades, id] : spec!.upgrades.filter((u) => u !== id);
+        keep();
+      };
+    const name = el.querySelector<HTMLInputElement>('#spec-name')!;
+    name.oninput = () => (spec!.name = name.value);
+    const dep = el.querySelector<HTMLButtonElement>('.yard-deposit');
+    if (dep)
+      dep.onclick = () => {
+        if (!dep.dataset.armed) {
+          dep.dataset.armed = '1';
+          dep.textContent = `Pay ${deposit.toLocaleString()} Cr now? Press again`;
+          return;
+        }
+        const r = placeOrder(c, def, spec!, { galaxy: here.galaxy, system: here.index }, Date.now());
+        if (!r.ok) yardMessage = r.message;
+        else {
+          yardMessage = `Deposit paid. Your ${def.name}${r.order.name ? ` “${r.order.name}”` : ''} goes into production at ${stationName(here).name}.`;
+          spec = null;
+          saveCommander(c);
+          sfx.beep();
+        }
+        renderShipyard();
+      };
+  } else {
+    el.innerHTML = `${msg}${orderCard}<p class="meta">Shipyards open soon: you'll buy, sell and trade in here. Spec your perfect ship now, and put a deposit on a concept to have it built for you.</p>
+      <ul class="yard">${yard
+        .map(({ def }) => {
+          const st = def.stats;
+          const tag = def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : def.id === 'cobra-mk3' ? '<em>Your ship</em>' : '';
+          return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${def.style.lineColor}">
+            <strong>${escapeHtml(def.name)}</strong> ${tag}
+            <span>${[def.manufacturer, def.role].filter(Boolean).map((x) => escapeHtml(x!)).join(' · ')}</span>
+            <span>${st.maxSpeed} m/s · hull ${st.hull} · shields ${st.shields} · ${st.cargo} t · ${st.missiles ?? 0} missiles</span>
+            <b>${def.concept ? 'About ' : ''}${st.price.toLocaleString()} Cr</b>
+          </button></li>`;
+        })
+        .join('')}</ul>
+      <p class="yard-desc">${escapeHtml(pick.def.description)}</p>
+      <button type="button" class="primary yard-spec">Spec your ${escapeHtml(pick.def.name)}</button>`;
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-yard]'))
+      b.onclick = () => {
+        yardPick = b.dataset.yard!;
+        resetShowroomView();
+        renderShipyard();
+      };
+    el.querySelector<HTMLButtonElement>('.yard-spec')!.onclick = () => {
+      spec = defaultSpec(pick.def);
+      renderShipyard();
+    };
+  }
+  const cancel = el.querySelector<HTMLButtonElement>('.yard-cancel');
+  if (cancel)
+    cancel.onclick = () => {
+      if (!cancel.dataset.armed) {
+        cancel.dataset.armed = '1';
+        cancel.textContent = 'Cancel the build? Press again';
+        return;
+      }
+      const back = cancelOrder(c, Date.now());
+      yardMessage = back ? `Cancelled. ${back.toLocaleString()} Cr refunded.` : '';
+      saveCommander(c);
       renderShipyard();
     };
 }
