@@ -81,7 +81,7 @@ import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
 import { claimEdition, editionCounts, redeemVoucher, releaseEdition } from './net/shipyard';
-import { cancelOrder, collection, collectOrder, defaultSpec, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
@@ -1254,10 +1254,10 @@ function renderShipyard() {
     const deposit = depositFor(total);
     const cost = (n: number) => (n ? `${n.toLocaleString()} Cr` : 'Included');
     const swatches = (attr: string, chosen: string | null) =>
-      `<div class="yard-colours">${PALETTE.map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${escapeHtml(p.line)}" style="--sw:${p.colour}" ${gift && p.price ? 'disabled' : ''}><i></i><span>${p.name}</span><small>${p.price ? `${p.price.toLocaleString()} Cr` : 'Included'}</small></button>`).join('')}</div>`;
+      `<div class="yard-colours">${ORDERABLE.map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${escapeHtml(p.line)}" style="--sw:${p.colour}" ${gift && p.price ? 'disabled' : ''}><i></i><span>${p.name}</span><small>${p.price ? `${p.price.toLocaleString()} Cr` : 'Included'}</small></button>`).join('')}</div>`;
     const chosenColour = PALETTE.find((p) => p.colour === spec!.colour);
     const laserRow = (Object.keys(PLAYER_LASERS) as LaserId[])
-      .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}">${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
+      .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}" ${laserLocked(c, id) ? `disabled title="${escapeHtml(laserLocked(c, id)!)}"` : ''}>${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
       .join('');
     const kit = UPGRADES.filter((e) => !e.modernOnly || c.difficulty === 'modern')
       .map((e) => `<label><input type="checkbox" data-up="${e.id}" ${spec!.upgrades.includes(e.id) ? 'checked' : ''} /> <span>${escapeHtml(e.name)}</span><small>${Math.round(e.price * fitScale(def)).toLocaleString()} Cr</small></label>`)
@@ -1299,7 +1299,7 @@ function renderShipyard() {
             <li>${escapeHtml(nameOf(giftEdition.colour))}${giftEdition.trim ? `, the fine lines in ${escapeHtml(nameOf(giftEdition.trim))}` : ''}, ${GLOWS[giftEdition.glow].name.toLowerCase()}</li>
             <li>${giftEdition.luxuries.map((l) => escapeHtml(LUXURIES.find((x) => x.id === l)?.name ?? l)).join(' · ')}</li>
             <li>${editionNo(c.gift!.edition!.number)} beside its name</li>
-            <li>${escapeHtml(PLAYER_LASERS[giftEdition.laser].name)} and the standard fit: the rest is yours to earn</li>
+            <li>Beam lasers front and rear, and a combat computer: the rest is yours to earn</li>
           </ul>
           ${nameField}
           <p class="yard-total"><span>${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}</span><b>A gift</b></p>`
@@ -1322,6 +1322,8 @@ function renderShipyard() {
       <input id="spec-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" />
       <p class="yard-label">Its laser</p>
       <div class="yard-lasers">${laserRow}</div>
+      <p class="yard-label">Rear laser</p>
+      <div class="yard-lasers yard-rear"><button type="button" data-rear="" aria-pressed="${!spec.rear}">None<small>—</small></button>${(Object.keys(PLAYER_LASERS) as LaserId[]).map((id) => `<button type="button" data-rear="${id}" aria-pressed="${spec!.rear === id}" ${laserLocked(c, id) ? `disabled title="${escapeHtml(laserLocked(c, id)!)}"` : ''}>${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`).join('')}</div>
       <p class="yard-label">Upgrades <span>fitted to a hull this size: ×${fitScale(def).toFixed(1)}</span></p>
       <div class="yard-kit">${kit}</div>
       <p class="yard-label">Luxuries <span>comfort and showing off, nothing that flies or fights better</span></p>
@@ -1350,13 +1352,18 @@ function renderShipyard() {
         keep();
       };
     el.querySelector<HTMLInputElement>('.yard-two-tone')?.addEventListener('change', (e) => {
-      spec!.trim = (e.target as HTMLInputElement).checked ? (PALETTE.find((p) => p.colour !== spec!.colour)?.colour ?? '#f2f6ff') : null;
+      spec!.trim = (e.target as HTMLInputElement).checked ? (ORDERABLE.find((p) => p.colour !== spec!.colour)?.colour ?? '#f2f6ff') : null;
       keep();
     });
     for (const box of el.querySelectorAll<HTMLInputElement>('[data-lux]'))
       box.onchange = () => {
         const id = box.dataset.lux!;
         spec!.luxuries = box.checked ? [...spec!.luxuries, id] : spec!.luxuries.filter((l) => l !== id);
+        keep();
+      };
+    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-rear]'))
+      b.onclick = () => {
+        spec!.rear = (b.dataset.rear || undefined) as LaserId | undefined;
         keep();
       };
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-laser]'))
@@ -1501,7 +1508,7 @@ function renderShipyard() {
       yardMode = 'gift';
       editionSel = null;
       const e = c.gift!.edition && editionById(c.gift!.edition.id);
-      spec = e ? editionGiftSpec(e) : defaultSpec(d);
+      spec = e ? editionGiftSpec(e, c.name) : { ...defaultSpec(d), name: c.name };
       renderShipyard();
     };
     el.querySelector<HTMLButtonElement>('.yard-open-gift')?.addEventListener('click', openGift);
@@ -2050,9 +2057,12 @@ function renderDocked() {
         mounts.append(fit);
         continue;
       }
-      fit.disabled = !sold || c.credits < cost;
+      const locked = laserLocked(c, laser.id as LaserId);
+      fit.disabled = !sold || Boolean(locked) || c.credits < cost;
       fit.title = !sold
           ? `Needs tech level ${laser.minTech}`
+          : locked
+          ? locked
           : `Fit to the ${mount} mount: ${cost.toLocaleString()} Cr${tradeIn ? ` after ${tradeIn.toLocaleString()} Cr for the ${PLAYER_LASERS[old!].name.toLowerCase()}` : ''}`;
       fit.addEventListener('click', () => {
         c.credits -= cost;

@@ -16,6 +16,9 @@ const RATINGS: [number, string][] = [
   [0, 'Harmless'],
 ];
 
+/** Rating points needed for a rating, by name. */
+export const ratingPoints = (name: string) => RATINGS.find(([, n]) => n === name)?.[0] ?? 0;
+
 export function combatRating(kills: number): string {
   return RATINGS.find(([min]) => kills >= min)![1];
 }

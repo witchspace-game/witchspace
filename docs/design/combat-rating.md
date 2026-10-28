@@ -194,6 +194,8 @@ Exploring never earns rating points (Elite means a combat pilot), but **explorin
 1. **It pays for the fighter.** A proper fighting fit (military laser 6,000, a rear beam 1,000, extra energy 1,500, ECM 600, escape pod 1,000, missiles) costs 10,000–16,000 Cr: about what Pathfinder takes to earn at the [new pacing](exploration.md#fairness-and-pacing-reviewed-october-2026), with no money risked on cargo.
 2. **It teaches the flying:** jumps, fuel, mass lock, docking, the chart, closing on a target, staying out of the star.
 3. **It teaches the map:** where the anarchies and big bounties are, which high-tech stations sell military lasers, where to refuel on the run.
+
+**Military lasers are earned** *(Mark, 28 October 2026)*: "I thought military lasers were only available much later on in the game and commanders would need to be at least Competent, or else it would be far too easy." Under Modern rules a station sells a military laser only to a pilot rated Competent or above (and still only at tech level 10 and up); the shipyard's configurator follows the same rule. Classic sells them as 1984 did.
 4. **The kit carries over:** long-range tanks for escape jumps and reaching the frontier; Wexley-Yorozu standing for guarding their yards and developments.
 
 To make the pairing designed rather than accidental (proposed):

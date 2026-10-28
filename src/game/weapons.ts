@@ -34,6 +34,8 @@ export interface LaserForSale extends Laser {
   price: number;
   /** Only sold at stations with at least this tech level. */
   minTech: number;
+  /** Modern: only sold to pilots of at least this combat rating (Mark: military lasers come later, or it's far too easy). */
+  minRating?: string;
   blurb: string;
 }
 
@@ -49,7 +51,7 @@ export const PLAYER_LASERS: Record<LaserId, LaserForSale> = {
   },
   military: {
     id: 'military', name: 'Military laser', interval: 0.1, damage: 13, range: 3600, heat: 3.4, cooling: 18, color: '#c78bff',
-    price: 6000, minTech: 10, blurb: 'Navy issue: hits hardest, runs coolest, and costs accordingly.',
+    price: 6000, minTech: 10, minRating: 'Competent', blurb: 'Navy issue: hits hardest, runs coolest, and costs accordingly. Sold only to pilots rated Competent and above.',
   },
 };
 

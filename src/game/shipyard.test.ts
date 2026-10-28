@@ -17,9 +17,23 @@ describe('speccing a ship', () => {
   });
 
   it('makes a fully specced statement ship cost a fortune, all of it looks and comfort', () => {
-    const all = { ...defaultSpec(fdl), colour: '#ff4dff', laser: 'military' as const, upgrades: UPGRADES.map((e) => e.id), glow: 'blazing' as const, trim: '#7df9ff', luxuries: LUXURIES.map((l) => l.id) };
+    const all = { ...defaultSpec(fdl), colour: '#9b6bff', laser: 'military' as const, upgrades: UPGRADES.map((e) => e.id), glow: 'blazing' as const, trim: '#ff8f7a', luxuries: LUXURIES.map((l) => l.id) };
     expect(quote(fdl, all)).toBeGreaterThan(fdl.stats.price * 2);
     expect(quote(cobra, defaultSpec(cobra))).toBe(cobra.stats.price + 400); // a plain one is the list price, with its pulse laser
+  });
+
+  it('keeps the Witch-fire Edition’s colours for the edition, at the price it was announced at', () => {
+    expect(editionQuote(fdl, EDITIONS[0])).toBe(468_380);
+    // The Dark Edition: fifty, in its own black-light, never dimmer than the yard's own glow.
+    const dark = EDITIONS.find((e) => e.id === 'dark')!;
+    expect(dark.limit).toBe(50);
+    expect(dark.glow).not.toBe('standard');
+    const c = newCommander('modern');
+    c.credits = 1e6;
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff' }, yard, 0)).toMatchObject({ ok: false });
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), trim: '#7df9ff' }, yard, 0)).toMatchObject({ ok: false });
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: dark.colour }, yard, 0)).toMatchObject({ ok: false });
+    expect(placeOrder(c, fdl, defaultSpec(fdl), yard, 0, { edition: { edition: EDITIONS[0], number: 2 } })).toMatchObject({ ok: true });
   });
 
   it('keeps the law’s colours off the palette', () => {
@@ -30,6 +44,21 @@ describe('speccing a ship', () => {
     expect(cleanName('  Brass   Neck!! <script>  ')).toBe('Brass Neck script');
     expect(cleanName('Halcyon')).toBe('Halcyon');
     expect(cleanName('x'.repeat(40))).toHaveLength(24);
+  });
+});
+
+describe('military lasers', () => {
+  it('are sold only to Competent pilots and above, under Modern rules', async () => {
+    const { laserLocked } = await import('./shipyard');
+    const c = newCommander('modern');
+    expect(laserLocked(c, 'military')).toMatch(/Competent/);
+    expect(laserLocked(c, 'beam')).toBeNull();
+    c.credits = 1e6;
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), laser: 'military' }, yard, 0)).toMatchObject({ ok: false });
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), rear: 'military' }, yard, 0)).toMatchObject({ ok: false });
+    c.kills = 128;
+    expect(laserLocked(c, 'military')).toBeNull();
+    expect(laserLocked({ ...newCommander('classic') }, 'military')).toBeNull(); // 1984 sold them to anyone
   });
 });
 
@@ -72,7 +101,7 @@ describe('collecting it', () => {
     const c = newCommander('modern');
     c.credits = 400_000;
     c.equipment = ['docking-computer', 'weapons-licence', 'transponder'];
-    placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff', name: 'Brass Neck', laser: 'beam', upgrades: ['fuel-scoops'] }, yard, 0);
+    placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#9b6bff', name: 'Brass Neck', laser: 'beam', upgrades: ['fuel-scoops'] }, yard, 0);
     return c;
   };
 
@@ -84,7 +113,7 @@ describe('collecting it', () => {
     expect(collectOrder(c, cobra, fdl, yard, 0, built)).toEqual({ ok: true, paid: bill.due });
     expect(c.credits).toBe(Math.round((before - bill.due) * 10) / 10);
     expect(c.ship).toBe('fer-de-lance');
-    expect(c.paint).toMatchObject({ colour: '#ff4dff', name: 'Brass Neck' });
+    expect(c.paint).toMatchObject({ colour: '#9b6bff', name: 'Brass Neck' });
     expect(c.lasers).toEqual({ front: 'beam' });
     // The old ship's kit went with it; your papers stayed.
     expect(c.equipment.sort()).toEqual(['fuel-scoops', 'transponder', 'weapons-licence']);
@@ -117,7 +146,7 @@ describe('editions and gifts', () => {
     const c = newCommander('modern');
     expect(placeOrder(c, fdl, defaultSpec(fdl), yard, 0, { gift: true })).toMatchObject({ ok: false }); // no voucher
     c.gift = { ship: 'fer-de-lance' };
-    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff' }, yard, 0, { gift: true })).toMatchObject({ ok: false }); // a special colour costs
+    expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#9b6bff' }, yard, 0, { gift: true })).toMatchObject({ ok: false }); // a special colour costs
     expect(placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#9fe8ff', name: 'Moxon' }, yard, 0, { gift: true })).toMatchObject({ ok: true });
     expect(c.gift).toBeUndefined();
     expect(c.order).toMatchObject({ quoted: 0, deposit: 0, gifted: true });
@@ -140,7 +169,10 @@ describe('editions and gifts', () => {
     c.gift = { ship: 'fer-de-lance', edition: { id: witch.id, number: 1 } };
     expect(placeOrder(c, fdl, { ...defaultSpec(fdl), name: 'Moxon' }, yard, 0, { gift: true })).toMatchObject({ ok: true });
     expect(c.order).toMatchObject({ ...editionGiftSpec(witch, 'Moxon'), quoted: 0, gifted: true, edition: { id: witch.id, number: 1 } });
-    expect(c.order!.laser).toBe('beam'); // a ship of this calibre leaves the yard with a beam laser
-    expect(c.order!.upgrades).toEqual([]);
+    // Beam lasers front and rear, and a combat computer (Mark).
+    expect(c.order).toMatchObject({ laser: 'beam', rear: 'beam', upgrades: ['combat-computer'] });
+    collectOrder(c, cobra, fdl, yard, 0, 0);
+    expect(c.lasers).toEqual({ front: 'beam', rear: 'beam' });
+    expect(c.equipment).toContain('combat-computer');
   });
 });

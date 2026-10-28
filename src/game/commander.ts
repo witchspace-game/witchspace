@@ -247,6 +247,8 @@ export interface ShipOrder {
   /** Painted on the hull. */
   name: string;
   laser: 'pulse' | 'beam' | 'military';
+  /** A second laser on the rear mount, if specced. */
+  rear?: 'pulse' | 'beam' | 'military';
   upgrades: EquipmentId[];
   glow?: 'standard' | 'deep' | 'blazing';
   /** The fine lines' colour, if two-tone. */

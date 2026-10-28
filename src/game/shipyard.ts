@@ -1,13 +1,21 @@
 import type { ShipDef } from '../content/types';
 import { editionById, type Edition } from '../content/editions';
 import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
-import { PLAYER_LASERS } from './weapons';
+import { PLAYER_LASERS, type LaserId } from './weapons';
+import { combatRating, ratingPoints } from './rating';
 
 // Speccing a ship and putting down a deposit, as you would on a new car
 // (docs/design/ships-and-classes.md, "Spec it, and put down a deposit"). You
 // choose its glow, its name and its fit-out at a shipyard, put down a tenth of
 // the price, and it goes into production for you at that yard. The deposit is
 // refundable until it's built; the price is held at the quote.
+
+/** Why a commander can't have this laser yet (Modern: a rating), or null if they can. Classic sells as 1984 did. */
+export function laserLocked(c: Commander, id: LaserId): string | null {
+  const need = PLAYER_LASERS[id].minRating;
+  if (!need || c.difficulty === 'classic' || c.kills >= ratingPoints(need)) return null;
+  return `Sold only to pilots rated ${need} and above (you're ${combatRating(c.kills)})`;
+}
 
 export const DEPOSIT_RATE = 0.1;
 /** Real hours from deposit to built. */
@@ -17,7 +25,7 @@ export const PRODUCTION_HOURS = 72;
  * The yard's palette: five at no charge, and the special glows, which cost.
  * No police blue and red, no Marshals' gold: only the law wears those.
  */
-export const PALETTE: { colour: string; name: string; price: number; line: string }[] = [
+export const PALETTE: { colour: string; name: string; price: number; line: string; edition?: string }[] = [
   { colour: '#c9a8ff', name: 'Lave Dusk', price: 0, line: 'The sky over Lave as the station lights come on.' },
   { colour: '#3dffb0', name: 'Witchspace Green', price: 0, line: 'The glow of the jump itself.' },
   { colour: '#9fe8ff', name: 'Riedquat Ice', price: 0, line: 'Cold, clean and a long way from help.' },
@@ -26,9 +34,18 @@ export const PALETTE: { colour: string; name: string; price: number; line: strin
   { colour: '#ff7a45', name: 'Leesti Ember', price: 9_500, line: 'Hot, like the trade in Leesti’s back rooms.' },
   { colour: '#ff6fae', name: 'Zaonce Rose', price: 9_500, line: 'For pilots who want to be noticed in Zaonce.' },
   { colour: '#b6ff5c', name: 'Reorte Acid', price: 12_000, line: 'Loud. Very loud.' },
-  { colour: '#7df9ff', name: 'Witch-fire', price: 18_000, line: 'The light at the edge of a jump that never closed.' },
-  { colour: '#ff4dff', name: 'Orerve Nebula', price: 24_000, line: 'The cloud you see from Orerve on a clear night.' },
+  { colour: '#9b6bff', name: 'Xeer Ultraviolet', price: 18_000, line: 'The light the eye half sees, at the edge of Xeer’s sun.' },
+  { colour: '#ff8f7a', name: 'Tibedied Coral', price: 14_000, line: 'Warm as the bars on Tibedied’s night side.' },
+  // The Witch-fire Edition's own colours: nobody can order them on another ship (Mark: they're for the edition only).
+  // Priced as before, so the edition's price holds; they're simply not offered on their own.
+  { colour: '#7df9ff', name: 'Witch-fire', price: 18_000, line: 'The light at the edge of a jump that never closed.', edition: 'witch-fire' },
+  { colour: '#ff4dff', name: 'Orerve Nebula', price: 24_000, line: 'The cloud you see from Orerve on a clear night.', edition: 'witch-fire' },
+  // The Dark Edition's own.
+  { colour: '#6a3dff', name: 'Black-light', price: 30_000, line: 'The light you only see in the dark.', edition: 'dark' },
 ];
+
+/** The colours the configurator offers: everything but an edition's own. */
+export const ORDERABLE = PALETTE.filter((p) => !p.edition);
 
 /** How hard it glows. Never dimmer than the yard's own: the glow is the signature. */
 export const GLOWS = {
@@ -61,6 +78,8 @@ export interface Spec {
   colour: string;
   name: string;
   laser: ShipOrder['laser'];
+  /** The rear mount: none, or a laser. */
+  rear?: ShipOrder['laser'];
   upgrades: EquipmentId[];
   glow: GlowId;
   /** The fine lines' colour, if two-tone. */
@@ -75,11 +94,14 @@ export const defaultSpec = (def: ShipDef): Spec => ({ ship: def.id, colour: def.
 
 const colourPrice = (colour: string | null) => (colour ? (PALETTE.find((p) => p.colour === colour)?.price ?? 0) : 0);
 
+/** A spec in colours anyone can order: an edition's own colours belong to that edition. */
+export const orderable = (spec: Spec) => [spec.colour, spec.trim].every((c) => !c || !PALETTE.find((p) => p.colour === c)?.edition);
+
 /** The price, line by line: the hull, its fit-out (scaled to the hull) and its finish. */
 export function priceLines(def: ShipDef, spec: Spec): { hull: number; fit: number; finish: number } {
   const k = fitScale(def);
   const kit = spec.upgrades.reduce((sum, id) => sum + (UPGRADES.find((e) => e.id === id)?.price ?? 0), 0);
-  const fit = Math.round((PLAYER_LASERS[spec.laser].price + kit) * k);
+  const fit = Math.round((PLAYER_LASERS[spec.laser].price + (spec.rear ? PLAYER_LASERS[spec.rear].price : 0) + kit) * k);
   const luxuries = spec.luxuries.reduce((sum, id) => sum + (LUXURIES.find((l) => l.id === id)?.price ?? 0), 0);
   const finish = colourPrice(spec.colour) + GLOWS[spec.glow].price + (spec.trim ? TRIM_PRICE + colourPrice(spec.trim) : 0) + luxuries;
   return { hull: def.stats.price, fit, finish };
@@ -116,8 +138,11 @@ export const editionSpec = (e: Edition, name = ''): Spec => ({
 
 export const editionQuote = (def: ShipDef, e: Edition) => quote(def, editionSpec(e)) + e.premium;
 
-/** An edition as a gift: its whole look, and the plain fit-out (the kit is earned, as with any gift). */
-export const editionGiftSpec = (e: Edition, name = ''): Spec => ({ ...editionSpec(e, name), upgrades: [] });
+/**
+ * An edition as a gift: its whole look, beam lasers front and rear, and a combat
+ * computer (Mark, for Mark Moxon's 001); the rest of the kit is earned.
+ */
+export const editionGiftSpec = (e: Edition, name = ''): Spec => ({ ...editionSpec(e, name), laser: 'beam', rear: 'beam', upgrades: ['combat-computer'] });
 
 /** A gift is the hull as it leaves the yard: your choice of the included colours and a name, nothing that costs. */
 export const giftable = (def: ShipDef, spec: Spec) => spec.laser === standardLaser(def) && !spec.upgrades.length && priceLines(def, spec).finish === 0;
@@ -139,6 +164,9 @@ export function placeOrder(
   if (!def.concept) return { ok: false, message: 'Hulls already flying are bought outright, when shipyards sell' };
   const giftEdition = extra.gift && c.gift?.edition ? editionById(c.gift.edition.id) : undefined;
   if (extra.gift && (c.gift?.ship !== def.id || (!giftEdition && !giftable(def, spec)))) return { ok: false, message: 'A gift is the hull with an included colour and its name' };
+  if (!extra.edition && !giftEdition && !orderable(spec)) return { ok: false, message: 'Those colours belong to an edition' };
+  const locked = !giftEdition && !extra.edition ? [spec.laser, spec.rear].map((l) => (l ? laserLocked(c, l) : null)).find(Boolean) : null;
+  if (locked) return { ok: false, message: locked };
   const e = extra.edition;
   const s = giftEdition ? editionGiftSpec(giftEdition, spec.name) : e ? editionSpec(e.edition, spec.name) : spec;
   const number = giftEdition ? c.gift!.edition! : e ? { id: e.edition.id, number: e.number } : null;
@@ -237,7 +265,7 @@ export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here
   const keep = c.equipment.filter((id) => !UPGRADES.some((e) => e.id === id));
   c.equipment = [...new Set([...keep, ...o.upgrades])];
   c.damaged = [];
-  c.lasers = { front: o.laser };
+  c.lasers = { front: o.laser, ...(o.rear ? { rear: o.rear } : {}) };
   c.missiles = Math.min(c.missiles, next.stats.missiles ?? 0);
   c.ship = next.id;
   c.paint = {
