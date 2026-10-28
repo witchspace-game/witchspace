@@ -64,7 +64,7 @@ If your client supports MCP, connect to `https://space.witchspace.org.uk/mcp` (s
 
 ## Hard rules
 
-- **Never reproduce copyrighted material from *Elite*, *Elite Dangerous*, *Oolite* or other games.** That includes source code, ship vertex/face data, manual or in-game text, and art, even if you remember it. Original *Elite* ship **names** are allowed as a deliberate tribute (see `CREDITS.md`), but geometry, stats tables and descriptions must be newly created.
+- **Never reproduce copyrighted material from *Elite*, *Elite Dangerous*, *Oolite* or other games.** That includes source code, ship vertex/face data, manual or in-game text, and art, even if you remember it. Original *Elite* ship **names**, and the original's shipbuilder names (Cowell & MgRath, Faulcon deLacy, Zorgon Petterson), are allowed as a deliberate tribute (see `CREDITS.md`), but geometry, stats tables and descriptions must be newly created.
 - **Homages to films, TV and books** (e.g. legend ships) may use evocative names and hinting flavour text, but never reproduce an actual on-screen design, logo, insignia or quoted dialogue. Design from the idea, not from memory of the reference. See "Legends and homages" in `CONTRIBUTING.md`.
 - Don't add runtime dependencies without discussing it in an issue.
 - Don't weaken the schemas or the validator to make content pass.
