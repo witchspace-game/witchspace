@@ -133,7 +133,7 @@ import { RecorderWatch } from './game/recorderWatch';
 import { addMoment, attachTrack, deleteMoment, listMoments, type LoggedMoment } from './game/flightLog';
 import { readTrack, TrackRecorder, trackBlob, type Pose } from './game/track';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
-import { closeReplay, isReplayOpen, openReplay, renderFlightLog, setOutsideView, setWatchClip } from './ui/flightLog';
+import { closeReplay, closeTrip, isReplayOpen, isTripOpen, openReplay, openTrip, renderFlightLog, setOutsideView, setWatchClip } from './ui/flightLog';
 import { KillCam } from './ui/killCam';
 import { record, regularsAt, slotOf, talk, venue } from './game/saloon';
 import { hasBackRoom } from './economy/blackmarket';
@@ -151,6 +151,7 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 function setState(next: State) {
   if (next !== 'title' && isAccountPanelOpen()) toggleAccountPanel(false);
   if (next !== 'docked' && logOpen) setFlightLog(false);
+  if (next !== 'docked') closeTrip();
   if (next !== 'flying') music.stop(); // the moment's over: docked, jumped or dead
   if (next !== 'flying') {
     countdown = null; // leaving flight cancels a hyperspace countdown
@@ -695,16 +696,49 @@ function autoRefuel(c: Commander): string | null {
   return `Refuelled · +${affordable.toFixed(1)} LY · ${(affordable * FUEL_PRICE).toFixed(1)} Cr${affordable < missing ? ' · as far as your credits go' : ''}`;
 }
 
-// The flight log is the first thing you see in a new ship, and whenever you
-// dock with new moments: the recorder is half the point of flying.
-let flightFrom = Date.now(); // when this flight began: moments after it are new
+// Docking with new moments shows this trip's, to keep, share or delete there and then; the
+// library is the flight log, from the button beside the map (Mark, 28 October 2026). A quiet
+// trip kept nothing, so nothing opens. A new commander's first ship opens the log once, for
+// the recorder's introduction.
+// The trip's start is kept, with whether its sheet was seen, so the Home Screen app reopening
+// (as iOS does) neither forgets the trip nor shows it twice.
+const TRIP_KEY = 'witchspace.trip.v1';
+const savedTrip = ((): { from: number; seen?: boolean } | null => {
+  try {
+    return JSON.parse(localStorage.getItem(TRIP_KEY) ?? 'null');
+  } catch {
+    return null;
+  }
+})();
+let flightFrom = savedTrip?.from ?? Date.now(); // when this flight began: moments after it are this trip's
+let tripSeen = savedTrip?.seen ?? false;
+/** This trip's sheet has been seen: dismissed, or the log opened over it. */
+function tripDone() {
+  setLogBadge(0);
+  tripSeen = true;
+  keepTrip();
+}
+function keepTrip() {
+  try {
+    localStorage.setItem(TRIP_KEY, JSON.stringify({ from: flightFrom, seen: tripSeen }));
+  } catch {
+    /* storage blocked: the trip lasts as long as the page */
+  }
+}
 
-/** Badge the Flight log button with what's new, and open the log if there is something (or the ship is new). */
+/** Badge the Flight log button with what's new, and show this trip's moments if there are any. */
 async function showNewMoments(newShip: boolean) {
-  if (classicRules() || !recorder.available) return setLogBadge(0);
+  if (classicRules()) return setLogBadge(0);
   const fresh = (await listMoments().catch(() => [])).filter((m) => m.created >= flightFrom).length;
   setLogBadge(fresh);
-  if ((fresh || newShip) && state === 'docked' && dockTab === 'station' && !isMapOpen()) setFlightLog(true);
+  if (state !== 'docked' || isMapOpen()) return;
+  if (fresh && !tripSeen)
+    void openTrip(flightFrom, {
+      onClose: tripDone,
+      onLibrary: () => setFlightLog(true),
+      onChange: () => logOpen && refreshFlightLog(),
+    });
+  else if (newShip && recorder.available && !recorderIntroduced()) setFlightLog(true);
 }
 
 function setLogBadge(n: number) {
@@ -718,6 +752,8 @@ function setFlightLog(open: boolean) {
   logOpen = open && state === 'docked';
   $('#flight-log-view').hidden = !logOpen;
   if (logOpen) {
+    if (isTripOpen()) tripDone();
+    closeTrip();
     refreshFlightLog();
     setLogBadge(0); // seen
   }
@@ -5864,6 +5900,8 @@ async function launch() {
   station.placeForLaunch(player);
   launchedAt = elapsed;
   flightFrom = Date.now();
+  tripSeen = false;
+  keepTrip();
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
@@ -7638,7 +7676,10 @@ function handleKey(code: string) {
       else if (code === 'Escape') showTitle();
       break;
     case 'docked':
-      if (code === 'KeyF' || (code === 'Escape' && logOpen)) setFlightLog(!logOpen);
+      if (code === 'Escape' && isTripOpen()) {
+        closeTrip();
+        tripDone();
+      } else if (code === 'KeyF' || (code === 'Escape' && logOpen)) setFlightLog(!logOpen);
       else if (code === 'KeyL' || code === 'Enter') void launch();
       else if (code === 'KeyT') setDockTab(dockTab === 'market' ? 'station' : 'market');
       break;
@@ -7794,6 +7835,7 @@ async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 
     system: ctx.system,
     ...media,
     saved: false,
+    trip: flightFrom,
   };
   if (!(await addMoment(m))) {
     flash('Flight log full · delete or unkeep something in the flight log', 3);
