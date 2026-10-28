@@ -3,6 +3,7 @@
 > Witchspace is an open-source, browser-based space trading game and a tribute to Elite (1984). It renders glowing "neo-vector" wireframe ships with three.js, has a switchable authentic 1984 mode, and is built so fans, and their AI assistants, can contribute ships, worlds and missions as validated JSON content files.
 
 Play it: https://witchspace.org.uk/play/
+Money and markets: https://witchspace.org.uk/economy/ (markets, limit orders, real-time Bitcoin, a currency per system, company stablecoins, liquidity pools; full record at https://witchspace.org.uk/design/economy/)
 Multiplayer: https://witchspace.org.uk/shared-space/ (shared space, in beta: other commanders in the same star system, live, refereed by a server per system)
 Website and design documents: https://witchspace.org.uk/design/
 
