@@ -1,8 +1,9 @@
+import { EDITIONS, editionNo, type Edition } from '../content/editions';
 import type { ShipDef } from '../content/types';
-import { checkSpec, cleanName, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
+import { checkSpec, cleanName, editionQuote, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
 import { API, refresh, sessionToken, signedIn } from '../net/account';
-import { accountSpec } from '../net/shipyard';
+import { accountSpec, editionCounts } from '../net/shipyard';
 import { escapeHtml } from '../ui/escape';
 import { signInBox } from './signin';
 import { viewer, type Viewer } from './viewer';
@@ -71,7 +72,18 @@ const waiting = () => {
 };
 
 let spec: Spec = fromLink() ?? local()?.spec ?? defaultSpec(def);
-const link = () => `${location.origin}${location.pathname}#spec=${toB64(JSON.stringify(spec))}`;
+
+// The numbered editions: set by the maker, so they're looked at here, not specced (Mark: "if I choose one of
+// the special editions it doesn't show what it looks like"). They're reserved in the game, where the number comes from.
+const MINE = EDITIONS.filter((e) => e.ship === def.id);
+const editionFromLink = () => MINE.find((e) => location.hash === `#edition=${e.id}`) ?? null;
+let edition: Edition | null = editionFromLink();
+/** How many of each are left, from the yard's office when it answers. */
+let left: Record<string, number> = {};
+
+/** What's on show: the edition, or your own spec. */
+const showing = (): Spec => (edition ? editionSpec(edition) : spec);
+const link = () => `${location.origin}${location.pathname}${edition ? `#edition=${edition.id}` : `#spec=${toB64(JSON.stringify(spec))}`}`;
 
 // --- The steps ------------------------------------------------------------------------------
 
@@ -121,13 +133,13 @@ function options(): string {
   }
 }
 
-function summary(): string {
-  const c = colourOf(spec.colour);
-  const t = colourOf(spec.trim);
-  const kit = [PLAYER_LASERS[spec.laser].name, ...(spec.rear ? [`${PLAYER_LASERS[spec.rear].name} at the rear`] : []), ...spec.upgrades.map((u) => UPGRADES.find((e) => e.id === u)!.name)];
-  const aboard = spec.luxuries.map((l) => LUXURIES.find((x) => x.id === l)!.name);
+function summary(s: Spec = spec): string {
+  const c = colourOf(s.colour);
+  const t = colourOf(s.trim);
+  const kit = [PLAYER_LASERS[s.laser].name, ...(s.rear ? [`${PLAYER_LASERS[s.rear].name} at the rear`] : []), ...s.upgrades.map((u) => UPGRADES.find((e) => e.id === u)?.name ?? u)];
+  const aboard = s.luxuries.map((l) => LUXURIES.find((x) => x.id === l)?.name ?? l);
   return `<dl class="build-summary">
-    <div><dt>Finish</dt><dd><span class="build-dot" style="--sw:${spec.colour}"></span>${escapeHtml(c?.name ?? 'The maker’s own')}${t ? `, with ${escapeHtml(t.name)} trim` : ''} · ${GLOWS[spec.glow].name}</dd></div>
+    <div><dt>Finish</dt><dd><span class="build-dot" style="--sw:${s.colour}"></span>${escapeHtml(c?.name ?? 'The maker’s own')}${t ? `, with ${escapeHtml(t.name)} trim` : ''} · ${GLOWS[s.glow].name}</dd></div>
     <div><dt>Fitted</dt><dd>${kit.map(escapeHtml).join(' · ')}</dd></div>
     ${aboard.length ? `<div><dt>Aboard</dt><dd>${aboard.map(escapeHtml).join(' · ')}</dd></div>` : ''}
   </dl>`;
@@ -143,6 +155,30 @@ function orderStep(): string {
     ${def.concept ? `<p class="build-order-total"><span>Deposit, a tenth, refundable until she’s ready</span><b>${cr(depositFor(total))}</b></p>` : ''}
     <p class="connect-buttons"><button type="button" class="button primary" id="build-order">${def.concept ? 'Order her' : 'Save her for the yard'}</button> <button type="button" class="button ghost" id="build-share" data-share data-share-title="My ${escapeHtml(def.name)}">Share your spec</button></p>
     <p class="build-note" id="build-ordered">${note()}</p>`;
+}
+
+/** A numbered edition, on show: what she is, how many are left, her price, and where to reserve one. */
+function editionView(e: Edition): string {
+  const total = editionQuote(def, e);
+  const n = left[e.id];
+  const days = Math.round(e.finishHours / 24);
+  return `<h2 class="build-edition-name" style="--edition:${e.colour}">${escapeHtml(e.name)} <span>${e.limit} built, numbered</span></h2>
+    <p>${escapeHtml(e.blurb)}</p>
+    ${summary(editionSpec(e))}
+    <p class="build-order-total"><span>Numbered 001 to ${editionNo(e.limit)}</span><b>${n === undefined ? `${e.limit} in all` : n ? `${n} of ${e.limit} left` : 'All spoken for'}</b></p>
+    <p class="build-order-total"><span>Price, the maker’s spec and its number</span><b>${cr(total)}</b></p>
+    <p class="build-order-total"><span>Deposit, a tenth, refundable until she’s ready</span><b>${cr(depositFor(total))}</b></p>
+    <p class="connect-buttons"><a class="button primary" href="/ships/${def.id}/${e.id}/">The ${escapeHtml(e.name)}, in full</a> <button type="button" class="button ghost" data-edition="">Spec your own instead</button></p>
+    <p class="build-note">The maker sets everything but her name, and each one is finished by hand, in about ${days} days. Numbers come from the yard’s office in order, so an edition is reserved in the game: dock at any shipyard, choose the ${escapeHtml(e.name)}, and sign in to hold your number.</p>`;
+}
+
+/** Your own spec, or one of the numbered editions: the first choice, as on a car maker's site. */
+function models(): string {
+  if (!MINE.length) return '';
+  return `<div class="build-models" role="group" aria-label="Your own spec or a numbered edition">
+    <button type="button" data-edition="" aria-pressed="${!edition}"><span class="build-dot" style="--sw:${spec.colour}"></span>Your own spec</button>
+    ${MINE.map((e) => `<button type="button" data-edition="${e.id}" aria-pressed="${edition === e}" style="--edition:${e.colour}"><span class="build-dot" style="--sw:${e.colour}"></span>${escapeHtml(e.name)}<small>${e.limit} built</small></button>`).join('')}
+  </div>`;
 }
 
 /** The yard's hulls by id, for a spec waiting for another one (tools/ships.ts buildPage). */
@@ -172,17 +208,26 @@ try {
 
 let shown = '';
 function paint() {
-  const key = `${spec.colour}|${spec.glow}|${spec.trim}`;
+  const s = showing();
+  const key = `${s.colour}|${s.glow}|${s.trim}`;
   if (key === shown) return;
   shown = key;
-  view?.show(def, { colour: spec.colour, glow: GLOWS[spec.glow].glow, trim: spec.trim });
-  document.querySelector<HTMLElement>('.build-page')!.style.setProperty('--hull', spec.colour);
-  const c = colourOf(spec.colour);
-  const t = colourOf(spec.trim);
-  $('#build-caption').textContent = `${c?.name ?? 'The maker’s own'}${t ? `, with ${t.name} trim` : ''} · ${GLOWS[spec.glow].name}`;
+  view?.show(def, { colour: s.colour, glow: GLOWS[s.glow].glow, trim: s.trim });
+  document.querySelector<HTMLElement>('.build-page')!.style.setProperty('--hull', s.colour);
+  const c = colourOf(s.colour);
+  const t = colourOf(s.trim);
+  $('#build-caption').textContent = `${edition ? `${edition.name} · ` : ''}${c?.name ?? 'The maker’s own'}${t ? `, with ${t.name} trim` : ''} · ${GLOWS[s.glow].name}`;
 }
 
 function bar() {
+  if (edition) {
+    const total = editionQuote(def, edition);
+    $('#build-bar').innerHTML = `<div class="build-bar-in">
+    <div class="build-price"><b>${cr(total)}</b><span>${escapeHtml(edition.name)} · deposit ${cr(depositFor(total))} · reserved in the game</span></div>
+    <button type="button" class="button primary" data-edition="">Spec your own →</button>
+  </div>`;
+    return;
+  }
   const total = quote(def, spec);
   const p = priceLines(def, spec);
   const i = STEPS.findIndex(([s]) => s === step);
@@ -194,9 +239,11 @@ function bar() {
 }
 
 function render() {
+  $('#build-models').innerHTML = models();
+  $('#build-steps').hidden = Boolean(edition);
   $('#build-steps').innerHTML = STEPS.map(([s, label], i) => `<button type="button" data-step="${s}" aria-current="${s === step ? 'step' : 'false'}"><small>${i + 1}</small>${label}</button>`).join('');
-  $('#build-options').innerHTML = options();
-  $('#account').hidden = step !== 'order';
+  $('#build-options').innerHTML = edition ? editionView(edition) : options();
+  $('#account').hidden = Boolean(edition) || step !== 'order';
   paint();
   bar();
   history.replaceState(null, '', link().slice(location.origin.length));
@@ -213,7 +260,11 @@ document.addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest<HTMLElement>('button');
   if (!b) return;
   const d = b.dataset;
-  if (d.step) {
+  if (d.edition !== undefined) {
+    edition = MINE.find((x) => x.id === d.edition) ?? null;
+    render();
+    if (b.closest('#build-bar') || b.closest('#build-options')) $('.build-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } else if (d.step) {
     step = d.step as Step;
     render();
     if (b.closest('#build-bar')) $('#build-steps').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -286,8 +337,21 @@ async function order() {
 
 window.addEventListener('hashchange', () => {
   const s = fromLink();
-  if (s) change(() => (spec = s));
+  const e = editionFromLink();
+  if (s) change(() => ((spec = s), (edition = null)));
+  else if (e) change(() => (edition = e));
 });
+
+// How many of each edition are left: the yard's office, when it answers.
+if (MINE.length)
+  void editionCounts()
+    .then((counts) => {
+      left = Object.fromEntries(Object.entries(counts).map(([id, c]) => [id, Math.max(0, c.limit - c.taken)]));
+      if (edition) render();
+    })
+    .catch(() => {
+      // The office isn't answering: each edition shows how many will be built.
+    });
 
 // Signed in: what's waiting on your account, and a sign-in box on the order step for everyone else.
 const box = signInBox($('#account'), { why: 'Signed in, your order reaches the game on every device, the Home Screen app included.', callsignWhy: 'it’s how other pilots know you.' }, () => void account());

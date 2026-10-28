@@ -24,7 +24,7 @@ mkdirSync(join(root, 'public/share'), { recursive: true });
 
 for (const c of cards) {
   if (only.length && !only.includes(c.file)) continue;
-  const q = new URLSearchParams({ ship: c.ship, kicker: c.kicker, title: c.title, sub: c.sub });
+  const q = new URLSearchParams({ ship: c.ship, kicker: c.kicker, title: c.title, sub: c.sub, ...(c.paint ? { paint: JSON.stringify(c.paint) } : {}) });
   await page.goto(`${base}tools/share-card.html?${q}`);
   await page.waitForFunction(() => document.body.classList.contains('ready'), null, { timeout: 20000 });
   await page.waitForTimeout(300);

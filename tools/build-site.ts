@@ -10,7 +10,7 @@ import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from
 import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLARS, roadmapCompactHtml, roadmapHtml, roadmapSummaryHtml, STATUS } from './docs';
 import { companyPage, jobsPage, loadJobs } from './jobs';
 import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
-import { buildPage, manualPage, shipPage, shipsIndex } from './ships';
+import { buildPage, editionPage, manualPage, shipPage, shipsIndex } from './ships';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
 
 const root = resolve(import.meta.dirname, '..');
@@ -42,7 +42,7 @@ interface Page {
   /** Extra tags for <head>. */
   head?: string;
   /** This page's own branded share card (tools/share-cards.mjs makes it): the ship on it, a kicker and a line. */
-  card?: { ship: string; kicker: string; sub: string; title?: string };
+  card?: { ship: string; kicker: string; sub: string; title?: string; paint?: { colour: string; glow: number; trim: string | null } };
   /** Structured data for search engines (schema.org), besides the site and breadcrumbs added to every page. */
   schema?: Record<string, unknown>[];
 }
@@ -50,7 +50,7 @@ interface Page {
 // --- Share cards and structured data ----------------------------------------------
 
 /** Every page's card, for tools/share-cards.mjs to photograph into public/share/. */
-const cards: { file: string; ship: string; kicker: string; title: string; sub: string }[] = [];
+const cards: { file: string; ship: string; kicker: string; title: string; sub: string; paint?: { colour: string; glow: number; trim: string | null } }[] = [];
 const cardFile = (path: string) => (path === '/' ? 'home' : path.replace(/^\/|\/$/g, '').replace(/\//g, '-')) + '.jpg';
 
 /** Branded cards for the hand-written pages (ships and design docs get theirs where they're made). */
@@ -111,7 +111,7 @@ const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;
 function render(page: Page): string {
   const card = page.card ?? PAGE_CARDS[page.path];
   const title = card?.title ?? page.title.replace(/ · .*$/, '');
-  if (card) cards.push({ file: cardFile(page.path), ship: card.ship, kicker: card.kicker, title, sub: card.sub });
+  if (card) cards.push({ file: cardFile(page.path), ship: card.ship, kicker: card.kicker, title, sub: card.sub, ...(card.paint ? { paint: card.paint } : {}) });
   const own = card && existsSync(join(root, 'public/share', cardFile(page.path)));
   const image = page.image ?? (own ? `${SITE}/share/${cardFile(page.path)}` : shareImage(media));
   const imageAlt = own ? `${title}: ${card!.sub}` : page.title;
@@ -197,9 +197,14 @@ for (const s of ships) write({ path: `/ships/${s.id}/`, ...shipPage(s, shipModul
 const cobra = ships.find((s) => s.id === 'cobra-mk3')!;
 const drawer = drawerButtons(root);
 for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/manual/`, ...manualPage(s, manualFor(s, cobra, drawer)), scripts: ['/src/site/manual.ts'], bodyClass: 'ships-page' });
+// Each numbered edition's own page, at /ships/<ship>/<edition>/.
+for (const s of ships) {
+  const eds = editionsFor(s);
+  for (const e of eds) write({ path: `/ships/${s.id}/${e.id}/`, ...editionPage(s, e, eds.filter((o) => o !== e)), scripts: ['/src/site/edition.ts'], bodyClass: 'ships-page edition-body' });
+}
 // The configurator: spec any hull the yard sells, and order her for the yard.
 const yardNames = Object.fromEntries(ships.filter(ownable).map((s) => [s.id, s.name]));
-for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/build/`, ...buildPage(s, editionsFor(s), yardNames), scripts: ['/src/site/build.ts'], bodyClass: 'ships-page build-body' });
+for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/build/`, ...buildPage(s, yardNames), scripts: ['/src/site/build.ts'], bodyClass: 'ships-page build-body' });
 
 // --- Design documents, the roadmap and the library (tools/docs.ts) --------------
 
