@@ -14,7 +14,14 @@
 // notification, if they've an account with notifications on). --number takes
 // over the unused voucher holding that edition number, whose code stops working.
 //
-//   npx tsx tools/voucher.ts gift fer-de-lance <email> --edition witch-fire --number 1 --at Onrira
+//   npx tsx tools/voucher.ts gift fer-de-lance <email> --edition witch-fire --at Onrira --callsign Moxon
+//
+// An edition signed over comes with the maker's letter (once) and her papers: a
+// build certificate at a private link (docs/design/ships-and-classes.md). --quiet
+// signs her over without the letter. `papers` shows a number's link, sets the
+// callsign it's held for, sends the letter (again) or issues a new link:
+//
+//   npx tsx tools/voucher.ts papers witch-fire 1 [--callsign Moxon] [--send] [--reissue]
 //
 // Add --local to talk to `wrangler dev` instead of the live server. The admin
 // key comes from WITCHSPACE_ADMIN_KEY or ~/.witchspace-admin-key.
@@ -31,8 +38,11 @@ const flag = (name: string) => {
 const edition = flag('--edition');
 const number = flag('--number');
 const yard = flag('--at');
-const valued = new Set(['--edition', '--number', '--at']);
-const args = argv.filter((a, i) => a !== '--local' && !valued.has(a) && !valued.has(argv[i - 1]));
+const callsign = flag('--callsign');
+const valued = new Set(['--edition', '--number', '--at', '--callsign']);
+const quiet = argv.includes('--quiet');
+// Positional arguments: not a flag, and not a flag's value.
+const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]));
 const local = process.argv.includes('--local');
 const API = local ? 'http://127.0.0.1:8787' : 'https://space.witchspace.org.uk';
 const ORIGIN = local ? 'http://localhost:5173' : 'https://witchspace.org.uk';
@@ -79,9 +89,16 @@ if (command === 'make' && ship) {
     console.error(`No system called ${yard}`);
     process.exit(1);
   }
-  const r = await call('/admin/gifts', { ship, email: note, galaxy: at.galaxy, system: at.index, ...(edition ? { edition } : {}), ...(number ? { number: Number(number) } : {}) });
+  const r = await call('/admin/gifts', { ship, email: note, galaxy: at.galaxy, system: at.index, ...(edition ? { edition } : {}), ...(number ? { number: Number(number) } : {}), ...(callsign ? { callsign } : {}), ...(quiet ? { quiet: true } : {}) });
   const what = r.edition ? `${r.edition} ${String(r.number).padStart(3, '0')}` : `a ${r.ship}`;
   console.log(`Signed over: ${what}, waiting at ${at.name} (galaxy ${at.galaxy + 1}). ${r.attached ? `Their account has it now${r.told ? ', and a notification went to their devices' : ''}.` : 'It attaches when they sign in with that address.'}`);
+  if (r.edition) console.log(`${r.emailed ? 'The maker’s letter has gone.' : `No letter sent${r.why ? ` (${r.why})` : quiet ? ' (--quiet)' : ''}.`}\nHer papers (private: only share it with them): ${r.link}`);
+} else if (command === 'papers' && ship && note) {
+  // `ship` is the edition here, and `note` its number.
+  const r = await call('/admin/papers', { edition: ship, number: Number(note), ...(callsign !== undefined ? { callsign } : {}), ...(argv.includes('--send') ? { send: true } : {}), ...(argv.includes('--reissue') ? { reissue: true } : {}) });
+  const day = (t: unknown) => (typeof t === 'number' ? new Date(t).toISOString().slice(0, 10) : 'not yet');
+  if ('sent' in r) console.log(r.sent ? 'The maker’s letter has gone.' : `Not sent: ${r.why}`);
+  console.log(`${r.edition} ${String(r.number).padStart(3, '0')}: letter ${day(r.emailed)} · collected ${day(r.collected)}${r.name ? ` as “${r.name}”` : ''}\nHer papers (private): ${r.link}`);
 } else {
-  console.log('Usage: npx tsx tools/voucher.ts make <ship id> "<note>" [--edition <id>] | gift <ship id> <email> --at <system> [--edition <id> [--number <n>]] | list   [--local]');
+  console.log('Usage: npx tsx tools/voucher.ts make <ship id> "<note>" [--edition <id>] | gift <ship id> <email> --at <system> [--edition <id> [--number <n>] [--callsign <name>] [--quiet]] | papers <edition> <number> [--callsign <name>] [--send] [--reissue] | list   [--local]');
 }

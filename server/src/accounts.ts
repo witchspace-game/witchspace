@@ -17,7 +17,7 @@ import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
 import { FEED_EACH, FLYING_NOW, type FirstEvent, type Flying } from './feed';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
 import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES, type CompanyId } from './contact';
-import { companyEmail, signInEmail } from './emails';
+import { companyEmail, editionEmail, signInEmail } from './emails';
 import { isPushEndpoint, sendPush } from './push';
 import type { ClipBoard } from './clips';
 import { readyMessage, type SavedOrder } from './yard';
@@ -31,6 +31,7 @@ import { gitHubReady, openPullRequest, type GitHubEnv } from './github';
 import { CHECKS } from './checks';
 import { EDITIONS, editionById, editionNo } from '../../src/content/editions';
 import { normaliseVoucher, voucherCode } from './vouchers';
+import { papersFor, papersLink, type Papers } from '../../src/game/papers';
 import { firstAnchor, verify, type Anchor, type Save as LedgerSave } from './ledger';
 type Save = LedgerSave & { tampered?: boolean };
 import { ACCESS_TTL, challengeOk, clientName, CODE_TTL, connectPage, isMetadataUrl, redirectMatches, redirectOk, REFRESH_TTL, REQUEST_TTL, s256, SCOPE, verifierOk, withParams } from './oauth';
@@ -144,6 +145,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
         // Already there.
       }
     }
+    // Each number's papers (the edition delivery pack): a private token for its certificate link, the
+    // callsign it was given for (before they've an account), her name and when she was collected (from
+    // her owner's save), and when the maker's letter went.
+    for (const col of ['token TEXT', 'callsign TEXT', 'name TEXT', 'collected INTEGER', 'emailed INTEGER']) {
+      try {
+        this.sql.exec(`ALTER TABLE editions ADD COLUMN ${col}`);
+      } catch {
+        // Already there.
+      }
+    }
+    this.sql.exec('UPDATE editions SET token = lower(hex(randomblob(16))) WHERE token IS NULL');
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -157,6 +169,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'POST' && path === '/stats/ping') return this.ping(request);
     if (m === 'GET' && path === '/push/latest') return this.latest(url);
     if (m === 'GET' && path === '/shipyard/editions') return this.editionCounts();
+    const papers = path.match(/^\/shipyard\/papers\/([a-z0-9-]{2,40})\/(\d{1,3})$/);
+    if (m === 'GET' && papers) return this.papers(papers[1], Number(papers[2]), url.searchParams.get('t') ?? '');
     if (m === 'GET' && path === '/contact/stop') return this.stop(url);
     const galaxy = path.match(/^\/firsts\/([0-7])$/);
     if (m === 'GET' && galaxy) return this.firstsOf(Number(galaxy[1]));
@@ -193,7 +207,13 @@ export class Accounts extends DurableObject<AccountsEnv> {
       this.sql.exec('DELETE FROM specs WHERE account = ?', account.id);
       return json({ ok: true });
     }
-    if (m === 'GET' && path === '/me/editions') return json({ editions: this.sql.exec('SELECT edition, number FROM editions WHERE account = ?', account.id).toArray() });
+    if (m === 'GET' && path === '/me/editions')
+      return json({
+        editions: this.sql.exec('SELECT edition, number, token FROM editions WHERE account = ?', account.id).toArray().map((r) => {
+          const p = this.papersOf(r.edition as string, r.number as number);
+          return { edition: r.edition, number: r.number, token: r.token, link: p ? papersLink(p, r.token as string) : null };
+        }),
+      });
     if (m === 'DELETE' && path === '/me/connections') return this.disconnect(account, url.searchParams.get('client') ?? '');
     // A maintainer, signed in as themselves, reviews from the site's review page: the queue, any submission, the decision.
     if (sub && this.isMaintainer(account) && ((m === 'GET' && !sub[1]) || sub[2] === 'review' || (m === 'GET' && sub[1] && sub[1] !== 'mine')))
@@ -469,6 +489,75 @@ export class Accounts extends DurableObject<AccountsEnv> {
       .toArray() as { ship: string; edition: string | null; number: number | null; galaxy: number; system: number }[];
   }
 
+  /** A number's papers, worked out from the game's data: where she waits is her gift's yard, or the maker's own. */
+  private papersOf(editionId: string, number: number): Papers | null {
+    const edition = editionById(editionId);
+    if (!edition) return null;
+    const v = this.sql.exec('SELECT galaxy, system FROM vouchers WHERE edition = ? AND number = ? AND galaxy IS NOT NULL ORDER BY created DESC LIMIT 1', editionId, number).toArray()[0];
+    const at = v ? { galaxy: v.galaxy as number, system: v.system as number } : edition.yard;
+    return papersFor(edition, number, SHIP_NAME.get(edition.ship) ?? edition.ship, at);
+  }
+
+  /** The callsign a number is held for: its owner's, once they've an account, or the one it was given for. */
+  private papersCallsign(row: Record<string, unknown>): string | null {
+    if (typeof row.account === 'string' && !row.account.startsWith('voucher:')) {
+      const c = this.sql.exec('SELECT callsign FROM accounts WHERE id = ?', row.account).toArray()[0]?.callsign;
+      if (typeof c === 'string' && c) return c;
+    }
+    return typeof row.callsign === 'string' && row.callsign ? row.callsign : null;
+  }
+
+  /**
+   * GET /shipyard/papers/<edition>/<no>?t=<token>: a numbered ship's certificate. Private by link
+   * (Mark): with its token, the whole record; without, only whether the number is signed over, so
+   * nobody can walk the numbers and list who holds what. Never an email address.
+   */
+  private papers(editionId: string, number: number, token: string): Response {
+    const edition = editionById(editionId);
+    if (!edition || number < 1 || number > edition.limit) return json({ error: 'No such edition' }, 404);
+    const row = this.sql.exec('SELECT account, at, token, callsign, name, collected FROM editions WHERE edition = ? AND number = ?', editionId, number).toArray()[0];
+    const open = { editionId, number, limit: edition.limit, signed: Boolean(row) };
+    if (!row || !token || !sameText(token, String(row.token))) return json(open);
+    const p = this.papersOf(editionId, number)!;
+    return json({
+      ...p,
+      signedAt: row.at,
+      callsign: this.papersCallsign(row),
+      name: typeof row.name === 'string' && row.name ? row.name : null,
+      status: row.collected ? 'in-service' : 'waiting',
+      link: papersLink(p, String(row.token)),
+    });
+  }
+
+  /** The maker's letter for a number, to the address it was signed over to (or its owner's): sent once, unless sent again on purpose. */
+  private async sendPapers(editionId: string, number: number): Promise<{ sent: boolean; why?: string }> {
+    const row = this.sql.exec('SELECT account, token, callsign FROM editions WHERE edition = ? AND number = ?', editionId, number).toArray()[0];
+    const p = this.papersOf(editionId, number);
+    if (!row || !p) return { sent: false, why: 'That number isn’t signed over' };
+    const signed = this.sql.exec('SELECT email FROM vouchers WHERE edition = ? AND number = ? AND email IS NOT NULL ORDER BY created DESC LIMIT 1', editionId, number).toArray()[0]?.email;
+    const owner = typeof row.account === 'string' && !row.account.startsWith('voucher:') ? this.sql.exec('SELECT email FROM accounts WHERE id = ?', row.account).toArray()[0]?.email : undefined;
+    const to = (signed ?? owner) as string | undefined;
+    if (!to) return { sent: false, why: 'No address for it (a voucher nobody has redeemed)' };
+    if (!this.env.RESEND_API_KEY) return { sent: false, why: 'No email service here (local)' };
+    const maker = (data.ships as unknown as ShipDef[]).find((d) => d.id === p.shipId)?.manufacturer ?? 'The yard';
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: `${maker} via Witchspace <contact@witchspace.org.uk>`, to: [to], ...editionEmail(p, maker, this.papersCallsign(row), papersLink(p, String(row.token))) }),
+    });
+    if (!res.ok) return { sent: false, why: `The email service said ${res.status}` };
+    this.sql.exec('UPDATE editions SET emailed = ? WHERE edition = ? AND number = ?', Date.now(), editionId, number);
+    return { sent: true };
+  }
+
+  /** Her owner's save has her: her name for the certificate, and in service from the first time. */
+  private noteCollected(account: string, save: { paint?: { name?: unknown; edition?: { id?: unknown; number?: unknown } } }) {
+    const e = save.paint?.edition;
+    if (typeof e?.id !== 'string' || typeof e.number !== 'number') return;
+    const name = typeof save.paint?.name === 'string' ? save.paint.name.slice(0, 40) : '';
+    this.sql.exec('UPDATE editions SET name = ?, collected = COALESCE(collected, ?) WHERE edition = ? AND number = ? AND account = ?', name || null, Date.now(), e.id, e.number, account);
+  }
+
   /**
    * Special editions are by invitation (Mark: "If you have to ask... you can't afford
    * the special editions. For now they are invite only to contributors."): numbers go
@@ -508,7 +597,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
         number = 1;
         while (used.has(number)) number++;
         if (number > edition.limit) return json({ error: `All ${edition.limit} are spoken for` }, 409);
-        this.sql.exec('INSERT INTO editions (edition, number, account, at) VALUES (?, ?, ?, ?)', edition.id, number, `voucher:${hash}`, Date.now());
+        this.sql.exec('INSERT INTO editions (edition, number, account, at, token) VALUES (?, ?, ?, ?, lower(hex(randomblob(16))))', edition.id, number, `voucher:${hash}`, Date.now());
       }
       this.sql.exec('INSERT INTO vouchers (hash, ship, note, created, edition, number) VALUES (?, ?, ?, ?, ?, ?)', hash, ship, String(body?.note ?? '').slice(0, 200), Date.now(), edition?.id ?? null, number);
       return json({ code, ship, ...(edition ? { edition: edition.id, number } : {}) });
@@ -516,7 +605,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     // A ship signed over to an email address, waiting at one yard: no code. With `number`, it takes
     // over the unredeemed voucher holding that edition number (whose code then stops working).
     if (request.method === 'POST' && path === '/admin/gifts') {
-      const body = (await request.json().catch(() => null)) as { ship?: unknown; email?: unknown; edition?: unknown; number?: unknown; galaxy?: unknown; system?: unknown; note?: unknown } | null;
+      const body = (await request.json().catch(() => null)) as { ship?: unknown; email?: unknown; edition?: unknown; number?: unknown; galaxy?: unknown; system?: unknown; note?: unknown; callsign?: unknown; quiet?: unknown } | null;
       const ship = typeof body?.ship === 'string' && /^[a-z0-9-]{2,40}$/.test(body.ship) ? body.ship : null;
       const email = typeof body?.email === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email.trim()) ? body.email.trim().toLowerCase() : null;
       const galaxy = Number(body?.galaxy);
@@ -540,12 +629,14 @@ export class Accounts extends DurableObject<AccountsEnv> {
         number = 1;
         while (used.has(number)) number++;
         if (number > edition.limit) return json({ error: `All ${edition.limit} are spoken for` }, 409);
-        this.sql.exec('INSERT INTO editions (edition, number, account, at) VALUES (?, ?, ?, ?)', edition.id, number, `voucher:${hash}`, Date.now());
+        this.sql.exec('INSERT INTO editions (edition, number, account, at, token) VALUES (?, ?, ?, ?, lower(hex(randomblob(16))))', edition.id, number, `voucher:${hash}`, Date.now());
       }
       this.sql.exec(
         'INSERT INTO vouchers (hash, ship, note, created, edition, number, email, galaxy, system) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         hash, ship, note, Date.now(), edition?.id ?? null, number, email, galaxy, system,
       );
+      const callsign = typeof body?.callsign === 'string' ? body.callsign.trim().slice(0, 24) : '';
+      if (edition && callsign) this.sql.exec('UPDATE editions SET callsign = ? WHERE edition = ? AND number = ?', callsign, edition.id, number);
       // Already a commander? It's theirs now, and their devices hear about it.
       const acc = this.sql.exec('SELECT id, email, callsign FROM accounts WHERE email = ?', email).toArray()[0] as unknown as Account | undefined;
       let told = false;
@@ -554,7 +645,24 @@ export class Accounts extends DurableObject<AccountsEnv> {
         const maker = (data.ships as unknown as ShipDef[]).find((d) => d.id === ship);
         told = await this.notify(acc.id, `${maker?.manufacturer ?? 'The yard'}: a ship signed over to you`, `${edition ? `${edition.name} ${editionNo(number!)}` : `A ${maker?.name ?? ship}`} is waiting for you at our yard. Open Witchspace to see where.`);
       }
-      return json({ ship, ...(edition ? { edition: edition.id, number } : {}), attached: Boolean(acc), told });
+      // An edition comes with the maker's letter and her papers, once.
+      const letter = edition && body?.quiet !== true ? await this.sendPapers(edition.id, number!) : null;
+      const row = edition ? this.sql.exec('SELECT token FROM editions WHERE edition = ? AND number = ?', edition.id, number).toArray()[0] : undefined;
+      const p = edition ? this.papersOf(edition.id, number!) : null;
+      return json({ ship, ...(edition ? { edition: edition.id, number, link: p && row ? papersLink(p, String(row.token)) : null } : {}), attached: Boolean(acc), told, ...(letter ? { emailed: letter.sent, why: letter.why } : {}) });
+    }
+    // A number's papers: set the callsign it's held for, send the maker's letter (again), or issue a new link if one leaked.
+    if (request.method === 'POST' && path === '/admin/papers') {
+      const body = (await request.json().catch(() => null)) as { edition?: unknown; number?: unknown; callsign?: unknown; send?: unknown; reissue?: unknown } | null;
+      const edition = typeof body?.edition === 'string' ? editionById(body.edition) : undefined;
+      const number = Number(body?.number);
+      if (!edition || !this.sql.exec('SELECT 1 FROM editions WHERE edition = ? AND number = ?', edition.id, number).toArray().length) return json({ error: 'That number isn’t signed over' }, 404);
+      if (typeof body?.callsign === 'string') this.sql.exec('UPDATE editions SET callsign = ? WHERE edition = ? AND number = ?', body.callsign.trim().slice(0, 24) || null, edition.id, number);
+      if (body?.reissue === true) this.sql.exec('UPDATE editions SET token = lower(hex(randomblob(16))) WHERE edition = ? AND number = ?', edition.id, number);
+      const letter = body?.send === true ? await this.sendPapers(edition.id, number) : null;
+      const row = this.sql.exec('SELECT token, emailed, collected, name FROM editions WHERE edition = ? AND number = ?', edition.id, number).toArray()[0];
+      const p = this.papersOf(edition.id, number)!;
+      return json({ edition: edition.id, number, link: papersLink(p, String(row.token)), emailed: row.emailed ?? null, collected: row.collected ?? null, name: row.name ?? null, ...(letter ? { sent: letter.sent, why: letter.why } : {}) });
     }
     // Who holds which numbered edition, and whether their ledger is in good order; and putting a number back.
     if (request.method === 'GET' && path === '/admin/editions') {
@@ -712,6 +820,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const updated = Math.max(body.updated, (current ?? 0) + 1);
     this.sql.exec('INSERT OR REPLACE INTO saves (account, data, updated) VALUES (?, ?, ?)', account.id, JSON.stringify(body.data), updated);
     this.checkLedger(account.id, body.data as Save);
+    this.noteCollected(account.id, body.data as { paint?: { name?: unknown; edition?: { id?: unknown; number?: unknown } } });
     return json({ updated });
   }
 
@@ -1278,6 +1387,14 @@ export class Accounts extends DurableObject<AccountsEnv> {
 const CONTACT_EVERY = 3600_000; // how often to look for waiting assignments
 const CONTACT_PER_WEEK = 2;
 /** SQL: the contact row's account has a device to notify. */
+/** Two strings compared in time that doesn't depend on where they differ: for tokens. */
+function sameText(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+
 const SHIP_NAME = new Map((data as { ships: { id: string; name: string }[] }).ships.map((s) => [s.id, s.name]));
 const HAS_DEVICE = 'EXISTS (SELECT 1 FROM devices d WHERE d.account = contact.account)';
 

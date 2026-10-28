@@ -25,7 +25,12 @@ export interface Edition {
   price?: number;
   /** Real hours the yard takes to finish one by hand: longer than an ordinary order, because it's special. */
   finishHours: number;
+  /** The maker's own yard, where she's built and waits to be collected (docs/design/shipbuilders.md). */
+  yard: { galaxy: number; system: number };
 }
+
+/** Zorgon Petterson's home yard: Goddard Ring, Onrira (galaxy one, three jumps from Lave). */
+const ZORGON_PETTERSON = { galaxy: 0, system: 23 };
 
 export const EDITIONS: Edition[] = [
   {
@@ -42,6 +47,7 @@ export const EDITIONS: Edition[] = [
     luxuries: ['suite', 'gold-name', 'starlight'],
     premium: 77_700, // 468,380 in all, as published: the docking computer became standard (2,700) and the premium took it up
     finishHours: 120,
+    yard: ZORGON_PETTERSON,
   },
   {
     // Dark by palette, never by dimming (Mark's idea; the glow is the signature):
@@ -60,6 +66,7 @@ export const EDITIONS: Edition[] = [
     luxuries: ['suite', 'voice', 'black-light-lights', 'instrument-cabin'],
     price: 950_000, // Mark: "make it 950K with two new Dark-only luxuries"
     finishHours: 168,
+    yard: ZORGON_PETTERSON,
   },
 ];
 

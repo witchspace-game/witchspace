@@ -79,7 +79,9 @@ import { Missile, MISSILE } from './game/missile';
 import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rightOn, type Foe } from './game/rating';
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
-import { EDITIONS, editionById, editionNo } from './content/editions';
+import { EDITIONS, editionById, editionNo, type Edition } from './content/editions';
+import { papersFor } from './game/papers';
+import { showHandover } from './ui/handover';
 import { accountSpec, editionCounts, forgetAccountSpec, heldEditions, redeemVoucher, signedOver } from './net/shipyard';
 import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } from './game/spec';
 import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, mintedToday, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, supplyOf, walletHome, walletKey } from './economy/currencies';
@@ -1278,6 +1280,36 @@ async function checkSiteSpec(announce: boolean) {
  * becomes your gift, waiting at the maker's own yard, and the maker writes to say so. Asked on load
  * and on docking, signed in; one already had (waiting, on order, or flown) is left alone.
  */
+/** Each held edition's certificate link (private: from the yard's office, for its owner only). */
+const papersLinks = new Map<string, string>();
+async function papersLinkFor(id: string, number: number): Promise<string | null> {
+  const key = `${id}:${number}`;
+  if (!papersLinks.has(key) && signedIn()) {
+    const r = await heldEditions();
+    if (!('error' in r)) for (const e of r.editions) if (e.link) papersLinks.set(`${e.edition}:${e.number}`, e.link);
+  }
+  return papersLinks.get(key) ?? null;
+}
+
+/** The maker hands over the keys: her certificate, full screen (the edition delivery pack). */
+function handOver(c: Commander, def: ShipDef, ed: Edition) {
+  const number = c.paint!.edition!.number;
+  // The maker's letter now points to her papers.
+  const letter = c.messages?.find((m) => m.id === `gift:${def.id}:${ed.id}:${number}`);
+  if (letter && !letter.body.includes('Her papers')) {
+    letter.body += ' Her papers: see your certificate, linked in her owner’s manual.';
+    saveCommander(c);
+  }
+  showHandover($('#handover'), {
+    papers: papersFor(ed, number, def.name, { galaxy: currentSystem().galaxy, system: currentSystem().index }),
+    maker: def.manufacturer ?? 'The yard',
+    name: c.paint?.name ?? '',
+    callsign: c.name,
+    at: Date.now(),
+    link: papersLinkFor(ed.id, number),
+  }, () => renderShipyard());
+}
+
 async function checkSignedOver() {
   if (!signedIn() || !commander || commander.difficulty !== 'modern') return;
   const r = await signedOver();
@@ -1646,6 +1678,7 @@ function renderShipyard() {
           const ed = c.paint?.edition && editionById(c.paint.edition.id);
           yardMessage = `She's yours: your ${def.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}${ed ? `, ${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''}, in the berth and ready to fly. With the yard's thanks.`;
           yardPick = def.id;
+          if (ed) handOver(c, def, ed);
         }
         if (r.ok) {
           spec = null;
@@ -1807,6 +1840,8 @@ function renderShipyard() {
         sfx.beep();
         yardMessage = `She's yours: your ${next.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}, in the berth and ready to fly.`;
         yardPick = next.id;
+        const owned = c.paint?.edition && editionById(c.paint.edition.id);
+        if (owned) handOver(c, next, owned);
       }
       renderShipyard();
     };
@@ -5804,13 +5839,33 @@ function openManual(def: ShipDef) {
   const notes = notesFor(def);
   const kit = mine ? c!.equipment.map((id) => EQUIPMENT.find((e) => e.id === id)).filter(Boolean) : [];
   const roll = Math.round(THREE.MathUtils.radToDeg(MAX_ROLL_ERROR));
-  $('#manual-body').innerHTML = `
-    <section class="man-cover" style="--hull:${mine && c!.paint ? c!.paint.colour : def.style.lineColor}">
+  // An edition's owner gets a manual made theirs: her own cover, and her edition's page (the edition delivery pack).
+  const papers = ed ? papersFor(ed, c!.paint!.edition!.number, def.name) : null;
+  const cover = papers
+    ? `<section class="man-cover man-edition-cover" style="--hull:${c!.paint!.colour}">
+      <p class="meta">${escapeHtml(def.manufacturer ?? 'Witchspace')} · ${escapeHtml(papers.edition)} ${papers.no}</p>
+      <h3>${c!.paint!.name ? `“${escapeHtml(c!.paint!.name)}”` : escapeHtml(`${papers.edition} ${papers.no}`)}</h3>
+      <p>The owner’s manual, prepared for Commander ${escapeHtml(c!.name)}</p>
+    </section>`
+    : `<section class="man-cover" style="--hull:${mine && c!.paint ? c!.paint.colour : def.style.lineColor}">
       <p class="meta">${escapeHtml(def.concept ? 'Concept' : def.manufacturer ?? 'Witchspace')} · ${escapeHtml(def.role)}</p>
       <h3>${escapeHtml(title)}</h3>
       <p>${escapeHtml(def.description)}</p>
-    </section>
-    <nav class="man-toc"><a href="#man-ship">How she flies</a><a href="#man-dock">Docking</a><a href="#man-desk">On a computer</a><a href="#man-phone">On a phone</a>${kit.length ? '<a href="#man-kit">Your kit</a>' : ''}</nav>
+    </section>`;
+  const yours = papers
+    ? `<section id="man-edition"><h3>Your edition</h3>
+      <dl class="man-keys">
+        <dt>Finish</dt><dd>${escapeHtml(papers.finish)}</dd>
+        <dt>Glow</dt><dd>${escapeHtml(papers.glow)}</dd>
+${papers.aboard.map((a) => `        <dt>${escapeHtml(a.name)}</dt><dd>${escapeHtml(a.blurb)}</dd>
+`).join('')}      </dl>
+      <p class="man-papers meta">One of ${papers.limit}, built at ${escapeHtml(papers.yard)}, ${escapeHtml(papers.system)}.</p>
+    </section>`
+    : '';
+  $('#manual-body').innerHTML = `
+    ${cover}
+    <nav class="man-toc">${papers ? '<a href="#man-edition">Your edition</a>' : ''}<a href="#man-ship">How she flies</a><a href="#man-dock">Docking</a><a href="#man-desk">On a computer</a><a href="#man-phone">On a phone</a>${kit.length ? '<a href="#man-kit">Your kit</a>' : ''}</nav>
+    ${yours}
 
     <section id="man-ship"><h3>How she flies</h3>
       ${notes.length ? `<ul>${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
@@ -5843,6 +5898,11 @@ ${PHONE.map(([k, v]) => `        <dt>${k}</dt><dd>${v}</dd>
 
     ${kit.length ? `<section id="man-kit"><h3>Your kit</h3><dl class="man-keys">${kit.map((e) => `<dt>${escapeHtml(e!.name)}</dt><dd>${escapeHtml(e!.blurb)}</dd>`).join('')}</dl></section>` : ''}
     ${mine && c!.paint?.luxuries?.length ? `<section><h3>Aboard</h3><ul>${c!.paint.luxuries.map((l) => LUXURIES.find((x) => x.id === l)).filter(Boolean).map((l) => `<li><b>${escapeHtml(l!.name)}</b>: ${escapeHtml(l!.blurb)}</li>`).join('')}</ul></section>` : ''}`;
+  if (papers)
+    void papersLinkFor(papers.editionId, papers.number).then((link) => {
+      const line = $('#manual-body').querySelector('.man-papers');
+      if (link && line) line.insertAdjacentHTML('beforeend', ` <a href="${escapeHtml(link)}" target="_blank" rel="noopener">Her certificate of build</a> (a private link: share it only if you want to).`);
+    });
   $('#manual').hidden = false;
   $('#manual').scrollTop = 0;
 }
