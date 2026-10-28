@@ -1556,3 +1556,32 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 }
 
 .ai-setup code { overflow-wrap: anywhere; }
+/* A numbered ship's papers (/ships/<ship>/<edition>/<no>/): the maker's certificate of build, in her colours on black. */
+.papers-page { max-width: 680px; }
+.papers { position: relative; padding: 18px 18px 30px; border: 1px solid color-mix(in srgb, var(--edition) 55%, transparent); border-radius: 6px; outline: 1px solid color-mix(in srgb, var(--trim) 30%, transparent); outline-offset: -8px; background: radial-gradient(70% 40% at 50% 18%, color-mix(in srgb, var(--edition) 14%, transparent), transparent 70%), #04060b; box-shadow: 0 0 60px color-mix(in srgb, var(--edition) 16%, transparent); text-align: center; }
+.papers .papers-view.ship-view { width: 100%; aspect-ratio: 16 / 9; height: auto; border: 0; border-radius: 0; background: none; box-shadow: none; }
+/* Her papers are shared by her owner, with the link that shows them: not the bare page. */
+.papers-body .page-share, .papers-actions[hidden] { display: none; }
+.papers-view .ship-canvas { -webkit-mask-image: radial-gradient(closest-side, #000 60%, transparent); mask-image: radial-gradient(closest-side, #000 60%, transparent); }
+.papers-maker { margin: 6px 0 0; color: var(--trim); font-size: 13px; font-weight: 600; letter-spacing: 0.32em; text-transform: uppercase; }
+.papers-kind { margin: 6px 0 0; color: var(--muted); }
+.papers-head h1 { margin: 14px 0 4px; color: var(--edition); font-size: clamp(34px, 7vw, 52px); text-shadow: 0 0 18px color-mix(in srgb, var(--edition) 55%, transparent); }
+.papers-no { margin: 0; color: var(--muted); }
+.papers-no b { color: var(--fg); font: 700 clamp(30px, 6vw, 40px) 'Space Grotesk', sans-serif; }
+.papers-state { margin: 22px auto 0; max-width: 46ch; color: var(--muted); }
+.papers-rows { margin: 22px 8px 0; text-align: left; }
+.papers-rows div { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+.papers-rows dt { padding-top: 3px; color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+.papers-rows dd { margin: 0; }
+.papers-rows .unnamed dd { color: var(--muted); font-style: italic; }
+.papers-foot { margin: 22px 8px 0; }
+.papers-one { margin: 0; color: var(--muted); font-style: italic; }
+.papers-sign { margin: 14px 0 0; }
+.papers-actions { justify-content: center; margin-top: 18px; }
+.papers-actions .button { flex: 0 0 auto; }
+.papers-small { margin-top: 18px; color: var(--muted); font-size: 13px; text-align: center; }
+@media (max-width: 560px) {
+  .papers { padding: 12px 12px 24px; }
+  .papers-rows { margin-left: 4px; margin-right: 4px; }
+  .papers-rows div { grid-template-columns: 1fr; gap: 2px; }
+}
