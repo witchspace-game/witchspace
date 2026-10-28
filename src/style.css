@@ -1284,7 +1284,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 
 /* Your callsign: chosen for a new commander, changed at a station. */
 .callsign { display: flex; align-items: center; gap: 12px; margin: 14px 0 4px; font-size: 14px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); }
-.callsign input, .rename-form input {
+.callsign input, .rename-form input, #spec-name {
   flex: 1;
   min-width: 0;
   padding: 7px 10px;
@@ -1297,7 +1297,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   text-transform: none;
   outline: none;
 }
-.callsign input:focus, .rename-form input:focus { border-color: var(--accent); }
+.callsign input:focus, .rename-form input:focus, #spec-name:focus { border-color: var(--accent); }
 .rename-form { display: inline-flex; gap: 6px; align-items: center; }
 .rename-form input { width: 12em; font-size: 15px; padding: 3px 8px; }
 #cmdr .rename, #cmdr .settle, .rename-form button { padding: 2px 10px; font-size: 12px; margin-left: 6px; }
@@ -1402,6 +1402,35 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard span { grid-column: 1; font-size: 12px; color: var(--dim); }
 .yard b { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-weight: 600; white-space: nowrap; }
 .yard-desc { margin: 10px 0 0; font-size: 14px; color: var(--dim); }
+/* The configurator and your order. */
+.yard-funds { margin: 0 0 8px; font-size: 13px; color: var(--dim); }
+.yard-funds b { color: var(--fg); }
+.yard-message { margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 8px; font-size: 14px; }
+.yard-spec { width: 100%; margin-top: 10px; }
+.yard-back { min-height: 30px; padding: 2px 10px; font-size: 13px; }
+.yard-title { margin: 10px 0 4px; color: var(--hull); }
+.yard-label { display: block; margin: 12px 0 6px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+.yard-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.yard-swatches button { width: 34px; height: 34px; min-height: 0; padding: 0; border-radius: 50%; background: var(--sw); border: 2px solid transparent; box-shadow: 0 0 10px var(--sw); }
+.yard-swatches button[aria-pressed='true'] { border-color: #fff; }
+#spec-name { width: 100%; box-sizing: border-box; }
+.yard-lasers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.yard-lasers button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; font-size: 13px; text-transform: none; letter-spacing: normal; }
+.yard-lasers button small { color: var(--dim); font-size: 11px; }
+.yard-lasers button[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); }
+.yard-kit { display: grid; gap: 4px; }
+.yard-kit label { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-size: 14px; }
+.yard-kit small { color: var(--dim); }
+.yard-total { display: flex; justify-content: space-between; align-items: baseline; margin: 14px 0 10px; padding-top: 10px; border-top: 1px solid var(--edge); font-size: 13px; color: var(--dim); }
+.yard-total b { font-size: 18px; color: var(--fg); }
+.yard-deposit { width: 100%; }
+.yard-note { margin: 8px 0 0; font-size: 13px; color: var(--dim); }
+.yard-order { display: grid; gap: 4px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--hull); border-radius: 8px; box-shadow: 0 0 14px color-mix(in srgb, var(--hull) 30%, transparent); }
+.yard-order strong { color: var(--hull); }
+.yard-order span { font-size: 13px; color: var(--dim); }
+.yard-order .rec-meter { margin: 4px 0; }
+.yard-order .rec-meter span { background: var(--hull); box-shadow: 0 0 8px var(--hull); }
+.yard-cancel { justify-self: start; min-height: 30px; padding: 2px 10px; font-size: 12px; }
 /* On a phone the ship is the point: a short panel, the hulls in a row to swipe, the berth above. */
 @media (max-width: 700px) {
   body.yard-open .panel.docked { max-height: 40vh; }

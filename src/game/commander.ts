@@ -223,6 +223,25 @@ import type { CompanyId } from './companies';
 import type { BtcOrder, BtcTrade } from '../economy/bitcoin';
 import type { Heard } from './saloon';
 
+/** A ship specced at a shipyard, with a deposit down: built to order (src/game/shipyard.ts). */
+export interface ShipOrder {
+  ship: string;
+  /** Its glow, from the yard's palette. */
+  colour: string;
+  /** Painted on the hull. */
+  name: string;
+  laser: 'pulse' | 'beam' | 'military';
+  upgrades: EquipmentId[];
+  /** The price quoted, hull and fit-out, held when the deposit went down. */
+  quoted: number;
+  deposit: number;
+  /** When the deposit went down (ms): production runs from here. */
+  placed: number;
+  /** The yard building it, where you collect it. */
+  galaxy: number;
+  system: number;
+}
+
 export interface Commander {
   name: string;
   difficulty: Difficulty;
@@ -296,6 +315,8 @@ export interface Commander {
   btcOrders?: BtcOrder[];
   /** The saloon: drinks bought this visit, and the tips you've heard (game/saloon.ts). */
   saloon?: { drinks: string[]; heard: Heard[] };
+  /** A ship you've specced and put a deposit on, in production at a yard (src/game/shipyard.ts). */
+  order?: ShipOrder;
 }
 
 const KEY = 'witchspace.commander.v1';
