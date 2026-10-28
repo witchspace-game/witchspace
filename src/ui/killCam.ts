@@ -315,7 +315,8 @@ export class KillCam {
         at.position.set(...e.p);
         // Line debris and a soft glow: the solid flash ball read as a white disc up close.
         // Burnt out in 2.6 s, so the screen is clear before the end card (Mark: the wreckage hanging there looked untidy).
-        const boom = new Explosion(def, at, new THREE.Vector3(), { flash: 'glow', lasts: BOOM_LASTS });
+        const painted = ship.look ? { ...def, style: { ...def.style, lineColor: ship.look.colour } } : def;
+        const boom = new Explosion(painted, at, new THREE.Vector3(), { flash: 'glow', lasts: BOOM_LASTS });
         this.space.scene.add(boom.group);
         // Catch up to where it should be.
         for (let age = 0; age < this.t - e.t; age += 1 / 30) boom.update(Math.min(1 / 30, this.t - e.t - age));

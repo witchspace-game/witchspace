@@ -81,10 +81,11 @@ import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS, editionById, editionNo } from './content/editions';
 import { claimEdition, editionCounts, redeemVoucher, releaseEdition } from './net/shipyard';
-import { cancelOrder, collection, collectOrder, defaultSpec, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { cancelOrder, collection, collectOrder, defaultSpec, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
-import { SLOT, Station } from './game/station';
+import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
+import { handling, notesFor } from './game/manual';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
@@ -1298,7 +1299,7 @@ function renderShipyard() {
             <li>${escapeHtml(nameOf(giftEdition.colour))}${giftEdition.trim ? `, the fine lines in ${escapeHtml(nameOf(giftEdition.trim))}` : ''}, ${GLOWS[giftEdition.glow].name.toLowerCase()}</li>
             <li>${giftEdition.luxuries.map((l) => escapeHtml(LUXURIES.find((x) => x.id === l)?.name ?? l)).join(' · ')}</li>
             <li>${editionNo(c.gift!.edition!.number)} beside its name</li>
-            <li>Pulse laser and the standard fit: the rest is yours to earn</li>
+            <li>${escapeHtml(PLAYER_LASERS[giftEdition.laser].name)} and the standard fit: the rest is yours to earn</li>
           </ul>
           ${nameField}
           <p class="yard-total"><span>${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}</span><b>A gift</b></p>`
@@ -1306,7 +1307,7 @@ function renderShipyard() {
         ? `<p class="yard-label">Its colour <span>${escapeHtml(nameOf(spec.colour))} · the included colours</span></p>
           ${swatches('data-colour', spec.colour)}
           ${nameField}
-          <p class="yard-total"><span>Hull, pulse laser, standard fit</span><b>A gift</b></p>`
+          <p class="yard-total"><span>Hull, ${escapeHtml(PLAYER_LASERS[standardLaser(def)].name.toLowerCase())}, standard fit</span><b>A gift</b></p>`
         : '';
     el.innerHTML = `${msg}${orderCard}<button type="button" class="yard-back">‹ The yard</button>
       <h3 class="yard-title" style="--hull:${spec.colour}">${fixed ? `${escapeHtml(fixed.name)}: ${escapeHtml(def.name)}` : giftEdition ? `Your gift: ${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}` : gift ? `Your gift: a ${escapeHtml(def.name)}` : `Spec your ${escapeHtml(def.name)}`}</h3>
@@ -1445,8 +1446,10 @@ function renderShipyard() {
         .map(({ def }) => {
           const st = def.stats;
           const tag = def.id === hullOf(c) ? `<em>Your ship${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</em>` : def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : '';
-          return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${def.style.lineColor}">
-            <strong>${escapeHtml(def.name)}</strong> ${tag}
+          const mine = def.id === hullOf(c) && c.paint;
+          const ed = mine && c.paint!.edition ? editionById(c.paint!.edition.id) : undefined;
+          return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${mine ? c.paint!.colour : def.style.lineColor}">
+            <strong>${escapeHtml(def.name)}${ed ? ` · ${escapeHtml(ed.name)} ${editionNo(c.paint!.edition!.number)}` : ''}</strong> ${tag}
             <span>${[def.manufacturer, def.role].filter(Boolean).map((x) => escapeHtml(x!)).join(' · ')}</span>
             <span>${st.maxSpeed} m/s · hull ${st.hull} · shields ${st.shields} · ${st.cargo} t · ${st.missiles ?? 0} missiles</span>
             <b>${def.concept ? 'About ' : ''}${st.price.toLocaleString()} Cr</b>
@@ -1465,6 +1468,7 @@ function renderShipyard() {
         }).join('')}</ul>
       <p class="yard-desc">${escapeHtml(edition ? edition.blurb : pick.def.description)}</p>
       ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span><button type="button" class="primary yard-open-gift">Spec your gift</button></div>` : ''}
+      <button type="button" class="yard-manual">The ${escapeHtml(edition ? (shipById(edition.ship)?.name ?? '') : pick.def.name)} owner's manual</button>
       <button type="button" class="primary yard-spec">${edition ? `Choose its name and reserve one` : `Spec your ${escapeHtml(pick.def.name)}`}</button>
       <form class="yard-voucher"><label for="voucher">Have a gift voucher?</label><input id="voucher" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" /><button type="submit">Redeem</button></form>`;
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-yard]'))
@@ -1480,6 +1484,7 @@ function renderShipyard() {
         resetShowroomView();
         renderShipyard();
       };
+    el.querySelector<HTMLButtonElement>('.yard-manual')!.onclick = () => openManual(edition ? shipById(edition.ship)! : pick.def);
     el.querySelector<HTMLButtonElement>('.yard-spec')!.onclick = () => {
       if (edition) {
         yardMode = 'edition';
@@ -1842,7 +1847,7 @@ function renderDocked() {
     ['Rules', DIFFICULTIES[c.difficulty].name],
     ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
     ...(satsOf(c) ? ([['Bitcoin', `${formatBtc(satsOf(c))} · ${btcValue(c).toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr · no hold space`]] as [string, string][]) : []),
-    ['Ship', player.def.name],
+    ['Ship', `${escapeHtml(player.def.name)} <button type="button" class="small manual-open">Owner's manual</button>`],
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
     ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
@@ -1853,6 +1858,7 @@ function renderDocked() {
     ...explorerTips(c, here),
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  $('#cmdr .manual-open')?.addEventListener('click', () => openManual(player.def));
   $('#cmdr .rename').addEventListener('click', () => startRename());
   document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
     flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);
@@ -5290,11 +5296,9 @@ const KEYS_HINT = {
   keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · T arm missile · X fire it · G map · H hyperspace · J jump · C docking · P photo · F1 controls',
 };
 
-function renderControlsCard() {
-  const mouse = controlScheme() === 'mouse';
-  $('#keys-hint').textContent = KEYS_HINT[controlScheme()];
-  $('#controls-scheme').textContent = mouse ? 'Mouse + keyboard' : 'Keyboard only (classic)';
-  $('#controls-list').innerHTML = (
+/** Every control, as key and what it does: the controls card and the owner's manual both read this. */
+function controlRows(mouse: boolean): string[][] {
+  return (
     mouse
       ? [
           ['Click', 'Capture the mouse (Esc releases it)'],
@@ -5347,7 +5351,104 @@ function renderControlsCard() {
       ['M', '1984 mode'],
       ['N', 'Sound: full / effects only / off'],
       ['F1', 'Show / hide this card'],
-    ])
+    ]);
+}
+
+// --- The owner's manual ---------------------------------------------------------
+// Every ship comes with one (Mark: "that's how owners find where the buttons are,
+// how Tilt works and Invert, and it will help them dock early on"). The controls
+// are read from the game's own lists, so the manual can't drift from the buttons.
+
+/** What a phone button does: from the key it presses (the controls list), or its own title. */
+function touchHelp(b: HTMLElement, rows: string[][]): string {
+  const code = b.dataset.key;
+  if (code) {
+    const k = code === 'Backquote' ? '`' : code.replace(/^Key|^Digit/, '');
+    const row = rows.find((r) => r[0].split(/[\s/]+/).includes(k));
+    if (row) return row[1];
+  }
+  return b.title || b.getAttribute('aria-label') || '';
+}
+
+function openManual(def: ShipDef) {
+  const c = commander;
+  const mine = c && def.id === hullOf(c);
+  const cobra = shipById('cobra-mk3')!;
+  const ed = mine && c!.paint?.edition ? editionById(c!.paint.edition.id) : undefined;
+  const title = `${def.name}${mine && c!.paint?.name ? ` “${c!.paint.name}”` : ''}${ed ? ` · ${ed.name} ${editionNo(c!.paint!.edition!.number)}` : ''}`;
+  const rows = (m: boolean) => controlRows(m).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  const all = [...controlRows(true), ...controlRows(false)];
+  const label = (b: HTMLElement) => escapeHtml(b.textContent?.trim() || b.getAttribute('aria-label') || '');
+  const drawer = [...document.querySelectorAll<HTMLElement>('#touch .touch-actions button')]
+    .map((b) => `<dt>${label(b)}</dt><dd>${escapeHtml(touchHelp(b, all))}</dd>`)
+    .join('');
+  const notes = notesFor(def);
+  const kit = mine ? c!.equipment.map((id) => EQUIPMENT.find((e) => e.id === id)).filter(Boolean) : [];
+  const roll = Math.round(THREE.MathUtils.radToDeg(MAX_ROLL_ERROR));
+  $('#manual-body').innerHTML = `
+    <section class="man-cover" style="--hull:${mine && c!.paint ? c!.paint.colour : def.style.lineColor}">
+      <p class="meta">${escapeHtml(def.concept ? 'Concept' : def.manufacturer ?? 'Witchspace')} · ${escapeHtml(def.role)}</p>
+      <h3>${escapeHtml(title)}</h3>
+      <p>${escapeHtml(def.description)}</p>
+    </section>
+    <nav class="man-toc"><a href="#man-ship">How she flies</a><a href="#man-dock">Docking</a><a href="#man-desk">On a computer</a><a href="#man-phone">On a phone</a>${kit.length ? '<a href="#man-kit">Your kit</a>' : ''}</nav>
+
+    <section id="man-ship"><h3>How she flies</h3>
+      ${notes.length ? `<ul>${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
+      <table class="man-table"><tr><th></th><th>${escapeHtml(def.name)}</th><th>against a Cobra</th></tr>
+      ${handling(def, cobra).map((h) => `<tr><td>${h.label}</td><td>${h.value}</td><td>${def.id === 'cobra-mk3' ? '' : h.versus}</td></tr>`).join('')}</table>
+    </section>
+
+    <section id="man-dock"><h3>Docking</h3>
+      <ol>
+        <li>Fly towards the station and slow down. The slot is the lit rectangle on the face that points at the planet.</li>
+        <li>Within 3 km a docking aid opens: <b>Slot</b> (how far), <b>Approach</b> (how straight you're coming in) and <b>Roll</b> (how level you are with the slot). Green is good.</li>
+        <li>The station turns. Roll until the marker sits in the middle: your wings must be within ${roll}° of the slot. On a phone, drag sideways on the left of the screen, or tilt if you've turned Tilt on.</li>
+        <li>Fly straight in, slowly. Too fast, too crooked or too far off level and you scrape the hull: shields first, then the ship.</li>
+        <li><b>Or let the docking computer do it</b> (C, or the Dock button that appears by itself on a phone when you're close). It's 1,500 Cr at any station, and the best money a new pilot spends.</li>
+      </ol>
+      ${def.id !== 'cobra-mk3' ? `<p class="meta">${escapeHtml(def.name)}: ${escapeHtml(handling(def, cobra).find((h) => h.label === 'Span')!.versus)}.</p>` : ''}
+    </section>
+
+    <section id="man-desk"><h3>On a computer</h3>
+      <p>Two ways to fly: <b>mouse and keyboard</b> (the ship follows the ring) or <b>keyboard only</b>, as in 1984. K switches between them, F1 shows the card in flight.</p>
+      <h4>Mouse and keyboard</h4><dl class="man-keys">${rows(true)}</dl>
+      <h4>Keyboard only</h4><dl class="man-keys">${rows(false)}</dl>
+    </section>
+
+    <section id="man-phone"><h3>On a phone</h3>
+      <dl class="man-keys">
+        <dt>Left side</dt><dd>Drag to aim, like a stick: the further you drag, the faster she turns. Sideways rolls.</dd>
+        <dt>Speed</dt><dd>Slide up for faster; it stays where you leave it. The fill is the speed you're doing, the tick the speed you asked for: when the docking computer slows you, the fill falls and the tick stays.</dd>
+        <dt>Fire</dt><dd>Hold to fire the laser.</dd>
+        <dt>Arm</dt><dd>Arm a missile, hold a ship in your sights until it locks, then press again (red) to launch.</dd>
+        <dt>ECM</dt><dd>Destroys every missile nearby, yours included (needs an E.C.M. system).</dd>
+        <dt>The big button</dt><dd>The obvious next thing, by itself: Dock near a station (with a docking computer), Survey near something to survey, Hyper when your destination is in range, otherwise Jump.</dd>
+      </dl>
+      <h4>The drawer: everything else</h4>
+      <p>Tap the <b>‹</b> tab on the right edge of the screen to slide it open, and again to close it.</p>
+      <dl class="man-keys">${drawer}</dl>
+      <p class="meta">Tilt steers by tilting the phone, like a flight stick: tip the top towards you to climb. Invert swaps up and down, for dragging and tilting. Turn the phone on its side for the widest view.</p>
+    </section>
+
+    ${kit.length ? `<section id="man-kit"><h3>Your kit</h3><dl class="man-keys">${kit.map((e) => `<dt>${escapeHtml(e!.name)}</dt><dd>${escapeHtml(e!.blurb)}</dd>`).join('')}</dl></section>` : ''}
+    ${mine && c!.paint?.luxuries?.length ? `<section><h3>Aboard</h3><ul>${c!.paint.luxuries.map((l) => LUXURIES.find((x) => x.id === l)).filter(Boolean).map((l) => `<li><b>${escapeHtml(l!.name)}</b>: ${escapeHtml(l!.blurb)}</li>`).join('')}</ul></section>` : ''}`;
+  $('#manual').hidden = false;
+  $('#manual').scrollTop = 0;
+}
+$('#manual .manual-close').addEventListener('click', () => ($('#manual').hidden = true));
+$('#manual').addEventListener('click', (e) => {
+  const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('.man-toc a');
+  if (!a) return;
+  e.preventDefault();
+  $('#manual').querySelector(a.getAttribute('href')!)?.scrollIntoView({ behavior: 'smooth' });
+});
+
+function renderControlsCard() {
+  const mouse = controlScheme() === 'mouse';
+  $('#keys-hint').textContent = KEYS_HINT[controlScheme()];
+  $('#controls-scheme').textContent = mouse ? 'Mouse + keyboard' : 'Keyboard only (classic)';
+  $('#controls-list').innerHTML = controlRows(mouse)
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
     .join('');
 }
@@ -6366,7 +6467,9 @@ function die() {
   hitFeedback(1.5);
 
   const velocity = player.forward().multiplyScalar(player.speed);
-  const boom = new Explosion(player.def, player.obj, velocity);
+  // It goes up in its own paint.
+  const look = myLook();
+  const boom = new Explosion(look ? { ...player.def, style: { ...player.def.style, lineColor: look.colour } } : player.def, player.obj, velocity);
   space.scene.add(boom.group);
   explosions.push(boom);
   // Whatever was in the hold is now floating free for anyone with fuel scoops.

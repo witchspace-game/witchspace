@@ -1611,6 +1611,27 @@ body.retro .ship-nav-name { font-size: 9px; }
 /* The flight log, full screen: a gallery of the ship's moments. */
 #flight-log-view { position: fixed; inset: 0; z-index: 30; overflow-y: auto; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(0, 6, 4, 0.94); backdrop-filter: blur(6px); }
 #flight-log-view[hidden] { display: none; }
+/* The owner's manual: full screen, like the flight log, and easy to read on a phone. */
+#manual { position: fixed; inset: 0; z-index: 31; overflow-y: auto; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(0, 6, 4, 0.96); backdrop-filter: blur(6px); }
+#manual[hidden] { display: none; }
+#manual .log-head, #manual-body { max-width: 760px; margin-inline: auto; }
+#manual-body section { margin: 0 0 22px; }
+#manual-body h3 { margin: 0 0 8px; }
+#manual-body h4 { margin: 14px 0 6px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
+#manual-body p, #manual-body li { font-size: 15px; line-height: 1.45; }
+#manual-body ol, #manual-body ul { padding-left: 20px; display: grid; gap: 6px; }
+.man-cover { padding: 14px 16px; border: 1px solid var(--hull); border-radius: 10px; box-shadow: 0 0 18px color-mix(in srgb, var(--hull) 25%, transparent); }
+.man-cover h3 { color: var(--hull); }
+.man-toc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 18px; font-size: 14px; }
+.man-toc a { color: var(--accent); }
+.man-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.man-table th, .man-table td { padding: 5px 6px; border-bottom: 1px solid rgba(61, 255, 176, 0.12); text-align: left; }
+.man-table th { color: var(--dim); font-weight: 500; }
+.man-keys { grid-template-columns: minmax(90px, auto) 1fr; gap: 6px 14px; font-size: 14px; }
+.man-keys dt { color: var(--fg); font-weight: 600; }
+.man-keys dd { text-align: left; color: var(--dim); }
+.yard-manual { width: 100%; margin-top: 10px; }
+.manual-open { margin-left: 6px; min-height: 0; padding: 1px 8px; font-size: 11px; }
 .log-head, #flight-log { max-width: 1100px; margin-inline: auto; }
 .log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .log-head h2 { margin: 0; }
