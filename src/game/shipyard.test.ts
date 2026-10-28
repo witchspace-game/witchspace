@@ -145,6 +145,22 @@ describe('editions and gifts', () => {
     expect(c.order!.quoted).toBe(editionQuote(fdl, witch));
   });
 
+  it('prices the Dark Edition at 950,000, with her rear beam and her own luxuries, which nobody else can order', async () => {
+    const dark = EDITIONS.find((e) => e.id === 'dark')!;
+    expect(editionQuote(fdl, dark)).toBe(950_000);
+    const c = newCommander('modern');
+    c.credits = 200_000;
+    expect(placeOrder(c, fdl, defaultSpec(fdl), yard, 0, { edition: { edition: dark, number: 1 } }).ok).toBe(true);
+    expect(c.order).toMatchObject({ rear: 'beam', deposit: 95_000 });
+    expect(c.order!.upgrades).toContain('combat-computer');
+    expect(c.order!.luxuries).toEqual(expect.arrayContaining(['black-light-lights', 'instrument-cabin']));
+    const d = newCommander('modern');
+    d.credits = 200_000;
+    expect(placeOrder(d, fdl, { ...defaultSpec(fdl), luxuries: ['instrument-cabin'] }, yard, 0)).toMatchObject({ ok: false });
+    const { validSpec } = await import('./spec');
+    expect(validSpec({ ...defaultSpec(fdl), luxuries: ['black-light-lights'] })).toBeNull();
+  });
+
   it('gives a voucher holder the plain hull for nothing, not to be cancelled or sold on', () => {
     const c = newCommander('modern');
     expect(placeOrder(c, fdl, defaultSpec(fdl), yard, 0, { gift: true })).toMatchObject({ ok: false }); // no voucher

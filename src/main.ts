@@ -85,7 +85,7 @@ import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } fro
 import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, walletHome, walletKey } from './economy/currencies';
 import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
-import { cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { ORDERABLE_LUXURIES, cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
@@ -1409,12 +1409,12 @@ function renderShipyard() {
         <p class="yard-label">The edition</p>
         <ul class="yard-spec-list">
           <li>${escapeHtml(nameOf(fixed.colour))}${fixed.trim ? `, the fine lines in ${escapeHtml(nameOf(fixed.trim))}` : ''}, ${GLOWS[fixed.glow].name.toLowerCase()}</li>
-          <li>${escapeHtml(PLAYER_LASERS[fixed.laser].name)} · ${fixed.upgrades.map((u) => escapeHtml(UPGRADES.find((e) => e.id === u)?.name ?? u)).join(' · ')}</li>
+          <li>${fixed.rear === fixed.laser ? `${escapeHtml(PLAYER_LASERS[fixed.laser].name)}s front and rear` : `${escapeHtml(PLAYER_LASERS[fixed.laser].name)}${fixed.rear ? `, a ${escapeHtml(PLAYER_LASERS[fixed.rear].name.toLowerCase())} aft` : ''}`} · ${fixed.upgrades.map((u) => escapeHtml(UPGRADES.find((e) => e.id === u)?.name ?? u)).join(' · ')}</li>
           <li>${fixed.luxuries.map((l) => escapeHtml(LUXURIES.find((x) => x.id === l)?.name ?? l)).join(' · ')}</li>
           <li>Its number painted beside its name</li>
         </ul>
         ${nameField}
-        <p class="yard-total"><span>The spec ${quote(def, spec).toLocaleString()} · numbered ${fixed.premium.toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>`
+        <p class="yard-total"><span>The spec ${quote(def, spec).toLocaleString()} · numbered ${(total - quote(def, spec)).toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>`
       : repainting
         ? `<p class="yard-label">Her colour <span>${escapeHtml(nameOf(spec.colour))}</span></p>
           ${swatches('data-colour', spec.colour)}
@@ -1457,7 +1457,7 @@ function renderShipyard() {
       <p class="yard-label">Upgrades <span>fitted to a hull this size: ×${fitScale(def).toFixed(1)}</span></p>
       <div class="yard-kit">${kit}</div>
       <p class="yard-label">Luxuries <span>comfort and showing off, nothing that flies or fights better</span></p>
-      <div class="yard-kit yard-lux">${LUXURIES.map((l) => `<label><input type="checkbox" data-lux="${l.id}" ${spec!.luxuries.includes(l.id) ? 'checked' : ''} /> <span>${escapeHtml(l.name)}<em>${escapeHtml(l.blurb)}</em></span><small>${l.price.toLocaleString()} Cr</small></label>`).join('')}</div>
+      <div class="yard-kit yard-lux">${ORDERABLE_LUXURIES.map((l) => `<label><input type="checkbox" data-lux="${l.id}" ${spec!.luxuries.includes(l.id) ? 'checked' : ''} /> <span>${escapeHtml(l.name)}<em>${escapeHtml(l.blurb)}</em></span><small>${l.price.toLocaleString()} Cr</small></label>`).join('')}</div>
       <p class="yard-total"><span>Hull ${lines.hull.toLocaleString()} · fit-out ${lines.fit.toLocaleString()} · finish ${lines.finish.toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>
       ${action}`}`;
     const keep = () => renderShipyard();
