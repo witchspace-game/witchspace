@@ -10,7 +10,7 @@
 import { chain, type Entry, type Ledger } from '../../src/game/ledger';
 import { priceBounds } from '../../src/economy/market';
 import { systemAt } from '../../src/galaxy/generate';
-import { fairRate } from '../../src/economy/currencies';
+import { currencyOf, fairRate } from '../../src/economy/currencies';
 
 /** What the server remembers between saves: where it got to, and what it has counted. */
 export interface Anchor {
@@ -22,6 +22,8 @@ export interface Anchor {
   sats: number;
   /** System currencies had, by issuing system. */
   fx?: Record<string, number>;
+  /** Credits put into each station's pool, for what comes back out. */
+  lpIn?: Record<string, number>;
   /** "Other" money gained, for the rate check: [time, credits] for the last day. */
   other: [number, number][];
   flags: string[];
@@ -62,7 +64,7 @@ export function firstAnchor(save: Save): Anchor {
 /** Check what's new in the ledger since the anchor. Returns the anchor moved on, with any new flags. */
 export function verify(anchor: Anchor, save: Save): Anchor {
   const l = save.ledger;
-  const out: Anchor = { ...anchor, precious: { ...anchor.precious }, fx: { ...(anchor.fx ?? {}) }, other: [...anchor.other], flags: [...anchor.flags] };
+  const out: Anchor = { ...anchor, precious: { ...anchor.precious }, fx: { ...(anchor.fx ?? {}) }, lpIn: { ...(anchor.lpIn ?? {}) }, other: [...anchor.other], flags: [...anchor.flags] };
   const flag = (why: string) => {
     if (!out.flags.includes(why)) out.flags = [...out.flags, why].slice(-12);
   };
@@ -105,15 +107,22 @@ function check(e: Entry, out: Anchor, flag: (why: string) => void) {
     }
   }
   // System currencies: only what you've had, and never for more than that money was worth.
-  if (e.k === 'fx' && e.g) {
-    const [g, i] = e.g.split(':').map(Number);
+  if ((e.k === 'fx' || e.k === 'lp') && e.g) {
+    const company = e.g.startsWith('co:');
+    const [g, i] = company ? [NaN, NaN] : e.g.split(':').map(Number);
     const home = Number.isInteger(g) && Number.isInteger(i) ? systemAt(g, i) : null;
     out.fx![e.g] = (out.fx![e.g] ?? 0) + q;
     if (out.fx![e.g] < -0.5) {
       flag(`changed ${e.g} money never had`);
       out.fx![e.g] = 0;
     }
-    if (home && q < 0 && e.d > 0 && e.d / -q > (1 / fairRate(home, e.t)) * 1.5 + 0.01) flag(`fx: ${home.name}'s money changed at more than it was ever worth`);
+    if (e.k === 'fx' && q < 0 && e.d > 0) {
+      // A company coin never redeems for more than a credit; a system's money never for more than it was worth
+      // (with room for the money that follows the real Bitcoin price, which the server doesn't replay).
+      const follows = home ? ['reserve', 'scarce', 'basket'].includes(currencyOf(home)?.policy ?? '') : false;
+      const top = company ? 1.001 : home ? (1 / fairRate(home, e.t)) * (follows ? 4 : 1.5) : Infinity;
+      if (e.d / -q > top + 0.01) flag(`fx: ${company ? e.g : home!.name + "'s money"} changed at more than it was ever worth`);
+    }
   }
   if (e.g === 'btc') {
     out.sats += q;
@@ -123,8 +132,17 @@ function check(e: Entry, out: Anchor, flag: (why: string) => void) {
     }
   }
   // Money the server can't recompute: held to a plausible rate.
-  if (e.k === 'other' && e.d > 0) {
-    out.other = [...out.other.filter(([t]) => t > e.t - DAY), [e.t, e.d]];
+  // Liquidity: what comes back beyond what went in is income the server can't recompute (fees, the rate's move).
+  let gain = e.k === 'other' ? e.d : 0;
+  if (e.k === 'lp' && e.g) {
+    if (e.d < 0) out.lpIn![e.g] = (out.lpIn![e.g] ?? 0) - e.d;
+    else {
+      gain = e.d - (out.lpIn![e.g] ?? 0);
+      out.lpIn![e.g] = 0;
+    }
+  }
+  if (gain > 0) {
+    out.other = [...out.other.filter(([t]) => t > e.t - DAY), [e.t, gain]];
     const day = out.other.reduce((n, [, d]) => n + d, 0);
     if (day > OTHER_PER_DAY) flag(`other income: ${Math.round(day).toLocaleString()} Cr in a day, more than play earns`);
   }

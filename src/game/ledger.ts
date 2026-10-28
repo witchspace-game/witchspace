@@ -12,7 +12,7 @@
 
 import type { Commander } from './commander';
 
-export type EntryKind = 'sell' | 'buy' | 'fill' | 'back' | 'scoop' | 'btc' | 'yard' | 'fx' | 'other';
+export type EntryKind = 'sell' | 'buy' | 'fill' | 'back' | 'scoop' | 'btc' | 'yard' | 'fx' | 'lp' | 'other';
 
 export interface Entry {
   /** When (ms). */
