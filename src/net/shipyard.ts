@@ -1,7 +1,7 @@
 import { API, sessionToken } from './account';
 
 // The shipyard's few calls to the server: how many of each special edition are
-// spoken for, claiming your number, and redeeming a gift voucher. Numbers and
+// signed over, the numbers you hold, and redeeming a gift voucher. Numbers and
 // vouchers need you signed in, so they belong to you on every device.
 
 const auth = (): Record<string, string> => {
@@ -21,8 +21,6 @@ export async function editionCounts(): Promise<Record<string, { limit: number; t
   return 'error' in r ? {} : Object.fromEntries(r.editions.map((e) => [e.id, { limit: e.limit, taken: e.taken }]));
 }
 
-export const claimEdition = (edition: string) => call<{ number: number; limit: number }>('POST', '/me/edition', { edition });
-export const releaseEdition = (edition: string) => call<{ ok: true }>('DELETE', '/me/edition', { edition });
 /** The numbered editions this account holds, as the yard's office has them. */
 export const heldEditions = () => call<{ editions: { edition: string; number: number }[] }>('GET', '/me/editions');
 

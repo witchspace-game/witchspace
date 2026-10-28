@@ -469,29 +469,24 @@ export class Accounts extends DurableObject<AccountsEnv> {
       .toArray() as { ship: string; edition: string | null; number: number | null; galaxy: number; system: number }[];
   }
 
-  /** The next number of an edition, one per account; your own back if you already hold one. */
+  /**
+   * Special editions are by invitation (Mark: "If you have to ask... you can't afford
+   * the special editions. For now they are invite only to contributors."): numbers go
+   * out only by our hand, signed over or by voucher (tools/voucher.ts). Asking still
+   * answers with your own number, if you hold one.
+   */
   private async claimEdition(request: Request, account: Account): Promise<Response> {
     const body = (await request.json().catch(() => null)) as { edition?: unknown } | null;
     const edition = typeof body?.edition === 'string' ? editionById(body.edition) : undefined;
     if (!edition) return json({ error: 'No such edition' }, 404);
     const mine = this.sql.exec('SELECT number FROM editions WHERE edition = ? AND account = ?', edition.id, account.id).toArray()[0];
     if (mine) return json({ number: mine.number, limit: edition.limit });
-    // The yard's office checks the money is real: a ledger that doesn't add up, or a hand-edited save, can't take a number.
-    if (this.ledgerFlags(account.id).length) return json({ error: 'The yard’s office couldn’t verify your funds. If you think that’s wrong, get in touch: hello@witchspace.org.uk' }, 403);
-    const used = new Set(this.sql.exec('SELECT number FROM editions WHERE edition = ?', edition.id).toArray().map((r) => r.number as number));
-    let number = 1;
-    while (used.has(number)) number++;
-    if (number > edition.limit) return json({ error: `All ${edition.limit} are spoken for` }, 409);
-    this.sql.exec('INSERT INTO editions (edition, number, account, at) VALUES (?, ?, ?, ?)', edition.id, number, account.id, Date.now());
-    return json({ number, limit: edition.limit });
+    return json({ error: 'Special editions are by invitation: the maker signs them over to Witchspace’s contributors.' }, 403);
   }
 
-  /** Give a number back (an order cancelled): the next pilot can have it. */
-  private async releaseEdition(request: Request, account: Account): Promise<Response> {
-    const body = (await request.json().catch(() => null)) as { edition?: unknown } | null;
-    if (typeof body?.edition !== 'string') return json({ error: 'Which edition?' }, 400);
-    this.sql.exec('DELETE FROM editions WHERE edition = ? AND account = ?', body.edition, account.id);
-    return json({ ok: true });
+  /** Numbers were given, not bought: one goes back only through the yard's office (tools/editions.ts revoke). */
+  private async releaseEdition(_request: Request, _account: Account): Promise<Response> {
+    return json({ error: 'Edition numbers go back only through the yard’s office' }, 403);
   }
 
   private async admin(request: Request, path: string): Promise<Response> {

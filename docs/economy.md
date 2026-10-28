@@ -105,13 +105,14 @@ Balances are kept by issuing system (`"galaxy:index"`) or by company (`"co:hexon
   - goods didn't come from nowhere: it keeps its own count of every good bought, filled or scooped, precious goods (gems, gold, platinum) and goods by the tonne alike, and flags a sale of more than was had;
   - currency swaps only spent money you had, at a rate within bounds. Company coins are never worth more than a credit; reserve, Bitcoin and basket money get a 4× bound, because Bitcoin moves;
   - `other` credits, plus liquidity *gains* (not your stake coming back), stay under 400,000 Cr a day.
-- **A flagged account** can still play, but it can't reserve a numbered edition.
+- **A flagged account** can still play; a maintainer looks before it's trusted with anything rare.
 
 ## 5. Spending: the shipyard
 
 `src/game/shipyard.ts`; the design is [ships and classes](design/ships-and-classes.md).
 
-- **Spec a concept ship and put down a tenth** of the price. It's refundable until she's ready, and the price is held at the quote. Production takes the yard's standard time; numbered editions are finished by hand and take longer (Witch-fire 120 h, Dark Edition 168 h).
+- **Spec a concept ship and put down a tenth** of the price. It's refundable until she's ready, and the price is held at the quote. Production takes the yard's standard time.
+- **Special editions are by invitation** (Mark): not sold. Contributors are given one, signed over at the maker's yard; nobody can reserve one with credits.
 - **The price** is the hull, plus the fit-out (scaled to the hull: ×price ÷ 100,000, at least ×1), plus the finish: special colours, glow (Deep 28,000 Cr, Blazing 65,000 Cr), two-tone trim (16,000 Cr plus the colour) and luxuries.
 - **On collection** you pay the balance, less a trade-in of 60% of your old hull's price and 50% of its kit's. A gifted ship has no trade-in value.
 - **Repainting** at any yard: labour is 10% of the hull's price (at least 2,000 Cr, ×1.5 for Blazing), plus only what changes.
