@@ -13,6 +13,7 @@ stages:
   - The station board: post clips and photos for other commanders | proposed
   - The kill cam - watch how you died from outside, rebuilt from the fight's data (design/kill-cam.md) | built
   - One share sheet, hearts on clips, and an upright cut for Shorts, Reels and TikTok | built
+  - This trip at the dock, to keep, share or delete there and then; the library trip by trip (Mark) | built
   - Clip pages: share a moment as its flight track, and the link replays it for anyone | built
   - The Witchspace channel: commanders' clips on YouTube (posted by hand for now; an approval queue next) | building
 help:
@@ -82,18 +83,18 @@ And you can keep it yourself: a long press on the camera button (or Shift+P) kee
 
 **The death replay.** Under Modern rules, when you're destroyed, the insurers' screen opens on *"Flight recorder recovered"*, playing your last moments, with **Share** and **Keep**. The worst moment of a session becomes the one most worth sharing ("how I died"), and it shows what got you, which teaches.
 
-**The flight log.** Docked, the **Flight log** button beside the galaxy map (**F**) opens it full screen, a gallery of what's been kept: watch, keep, share or delete. It's the first thing you see in a new ship (a new commander, or the insurers' replacement), and it opens by itself whenever you dock with new moments, the button badged *Flight log · 2 new*. *(Mark, 25 October 2026: it had been at the bottom of the station tab, under the equipment, where few would find it. Then a tab of its own; on 26 October Mark moved it out of the tabs, which had run to two rows: the log belongs to the ship, not the station.)* Kept moments and photos are stored on the device (IndexedDB), up to about 20; the oldest unkept go first. With an account, kept moments sync with your commander only when stage 4 arrives, and only what you post.
+**The flight log.** Docked, the **Flight log** button beside the galaxy map (**F**) opens it full screen, a gallery of what's been kept: watch, keep, share or delete. It's the first thing you see in a new ship (a new commander, or the insurers' replacement), and docking with new moments badges the button *Flight log · 2 new* (since 28 October, those moments come up as This trip, below, rather than the whole log opening). *(Mark, 25 October 2026: it had been at the bottom of the station tab, under the equipment, where few would find it. Then a tab of its own; on 26 October Mark moved it out of the tabs, which had run to two rows: the log belongs to the ship, not the station.)* Kept moments and photos are stored on the device (IndexedDB), up to about 20; the oldest unkept go first. With an account, kept moments sync with your commander only when stage 4 arrives, and only what you post.
 
-## This trip, then the library *(Mark, 28 October 2026; proposed)*
+## This trip, then the library *(Mark, 28 October 2026; built)*
 
 Mark: *"For a start when you dock you should only see clips from the last trip. The library should be somewhere else. Then you can triage and do some file husbandry straight away."*
 
-Today the whole log opens by itself whenever you dock with something new, so this trip's two clips sit among last week's twenty. The proposal:
+Before, the whole log opened by itself whenever you docked with something new, so this trip's two clips sat among last week's twenty. Now:
 
 - **On docking: "This trip".** A small sheet from the bottom of the screen (phone first) showing only what the ship kept since you launched: clips, photos, the death replay. It appears only if the trip kept something, and it replaces today's full log opening by itself. **A quiet trip shows nothing**: the recorder keeps only kills, deaths, the Marshals, Legends, discoveries and surveys, a held camera button, and photos (Mark: "If it was uneventful you don't have anything to triage, right?"). There's never an empty "This trip" screen.
 - **Triage in a tap or two.** Each moment has Keep, Share and Delete. At the foot of the sheet are **Keep all** and **Done**. Done leaves anything you didn't touch as it is today (unkept, gone in a week), so skipping costs nothing and it never becomes a chore at every dock. Swipe it away, or press Esc, to do the same.
 - **The library is the Flight log button** beside the map (F): everything, grouped by trip ("Lave → Leesti, 28 Oct"), with the space used and Clear unkept, and your shared clips. It no longer opens by itself. The button is badged only for moments you haven't seen yet.
-- **What a trip is:** launch to dock. After a death, it runs from the last launch to the insurers' replacement, so the death replay leads the sheet.
+- **What a trip is:** launch to dock. Each moment remembers its trip, and the trip's start is kept on the device, so the Home Screen app reopening neither loses this trip's sheet nor shows it twice. After a death, it runs from the last launch to the insurers' replacement, so the death replay leads the sheet.
 
 
 

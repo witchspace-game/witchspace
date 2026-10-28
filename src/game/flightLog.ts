@@ -28,6 +28,24 @@ export interface LoggedMoment {
   saved: boolean;
   /** The kill cam's track (game/track.ts), gzipped: kept with a death, so the fight can be watched from outside. */
   track?: Blob;
+  /** When the trip it was kept on began (the launch), so the log can show it trip by trip. */
+  trip?: number;
+}
+
+export interface Trip {
+  /** The launch (or, for moments from before trips were kept, the day). */
+  start: number;
+  moments: LoggedMoment[];
+}
+
+/** Moments, newest first, grouped by the trip they were kept on; older moments with no trip, by day. */
+export function byTrip(moments: LoggedMoment[]): Trip[] {
+  const trips = new Map<number, LoggedMoment[]>();
+  for (const m of [...moments].sort((a, b) => b.created - a.created)) {
+    const start = m.trip ?? new Date(m.created).setHours(0, 0, 0, 0);
+    trips.set(start, [...(trips.get(start) ?? []), m]);
+  }
+  return [...trips].map(([start, ms]) => ({ start, moments: ms })).sort((a, b) => b.moments[0].created - a.moments[0].created);
 }
 
 export const momentBytes = (m: LoggedMoment) => (m.video?.size ?? 0) + (m.photo?.size ?? 0) + (m.poster?.size ?? 0) + (m.track?.size ?? 0);

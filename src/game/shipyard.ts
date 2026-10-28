@@ -98,7 +98,10 @@ export interface Spec {
 /** The laser a hull leaves the yard with: a pulse laser on a working ship, a beam on a ship of real calibre (Mark: "a pulse laser is silly on a ship of this calibre"). */
 export const standardLaser = (def: ShipDef): ShipOrder['laser'] => (def.stats.price >= 150_000 ? 'beam' : 'pulse');
 
-export const defaultSpec = (def: ShipDef): Spec => ({ ship: def.id, colour: def.style.lineColor, name: '', laser: standardLaser(def), upgrades: [], glow: 'standard', trim: null, luxuries: [] });
+/** The kit a hull leaves the yard with, at no charge: a ship of that calibre docks itself (Mark: "all Fer de Lance ships have the docking computer as standard"). */
+export const standardKit = (def: ShipDef): EquipmentId[] => (def.stats.price >= 150_000 ? ['docking-computer'] : []);
+
+export const defaultSpec = (def: ShipDef): Spec => ({ ship: def.id, colour: def.style.lineColor, name: '', laser: standardLaser(def), upgrades: [...standardKit(def)], glow: 'standard', trim: null, luxuries: [] });
 
 const colourPrice = (colour: string | null) => (colour ? (PALETTE.find((p) => p.colour === colour)?.price ?? 0) : 0);
 
@@ -109,7 +112,8 @@ export const orderable = (spec: Spec) =>
 /** The price, line by line: the hull, its fit-out (scaled to the hull) and its finish. */
 export function priceLines(def: ShipDef, spec: Spec): { hull: number; fit: number; finish: number } {
   const k = fitScale(def);
-  const kit = spec.upgrades.reduce((sum, id) => sum + (UPGRADES.find((e) => e.id === id)?.price ?? 0), 0);
+  const free = standardKit(def);
+  const kit = spec.upgrades.filter((id) => !free.includes(id)).reduce((sum, id) => sum + (UPGRADES.find((e) => e.id === id)?.price ?? 0), 0);
   const fit = Math.round((PLAYER_LASERS[spec.laser].price + (spec.rear ? PLAYER_LASERS[spec.rear].price : 0) + kit) * k);
   const luxuries = spec.luxuries.reduce((sum, id) => sum + (LUXURIES.find((l) => l.id === id)?.price ?? 0), 0);
   const finish = colourPrice(spec.colour) + GLOWS[spec.glow].price + (spec.trim ? TRIM_PRICE + colourPrice(spec.trim) : 0) + luxuries;
@@ -185,10 +189,10 @@ export const editionQuote = (def: ShipDef, e: Edition) => e.price ?? quote(def, 
  * An edition as a gift: its whole look, beam lasers front and rear, and a combat
  * computer (Mark, for Mark Moxon's 001); the rest of the kit is earned.
  */
-export const editionGiftSpec = (e: Edition, name = ''): Spec => ({ ...editionSpec(e, name), laser: 'beam', rear: 'beam', upgrades: ['combat-computer'] });
+export const editionGiftSpec = (e: Edition, name = ''): Spec => ({ ...editionSpec(e, name), laser: 'beam', rear: 'beam', upgrades: ['docking-computer', 'combat-computer'] });
 
 /** A gift is the hull as it leaves the yard: your choice of the included colours and a name, nothing that costs. */
-export const giftable = (def: ShipDef, spec: Spec) => spec.laser === standardLaser(def) && !spec.upgrades.length && priceLines(def, spec).finish === 0;
+export const giftable = (def: ShipDef, spec: Spec) => spec.laser === standardLaser(def) && spec.upgrades.every((id) => standardKit(def).includes(id)) && priceLines(def, spec).finish === 0;
 
 /**
  * Put down the deposit: it goes into production at this yard. Only a concept
@@ -207,6 +211,8 @@ export function placeOrder(
   if (!def.concept) return { ok: false, message: 'Hulls already flying are bought outright, when shipyards sell' };
   const giftEdition = extra.gift && c.gift?.edition ? editionById(c.gift.edition.id) : undefined;
   if (extra.gift && (c.gift?.ship !== def.id || (!giftEdition && !giftable(def, spec)))) return { ok: false, message: 'A gift is the hull with an included colour and its name' };
+  // A ship signed over waits at one yard (the maker's own): you fly there to take her.
+  if (extra.gift && c.gift?.at && (c.gift.at.galaxy !== at.galaxy || c.gift.at.system !== at.system)) return { ok: false, message: 'She’s waiting for you at another yard' };
   if (!extra.edition && !giftEdition && !orderable(spec)) return { ok: false, message: 'Those colours and luxuries belong to an edition' };
   const locked = !giftEdition && !extra.edition ? [spec.laser, spec.rear].map((l) => (l ? laserLocked(c, l) : null)).find(Boolean) : null;
   if (locked) return { ok: false, message: locked };
@@ -221,7 +227,7 @@ export function placeOrder(
   const order: ShipOrder = {
     ...s,
     name: cleanName(s.name),
-    upgrades: [...new Set(s.upgrades)],
+    upgrades: [...new Set([...standardKit(def), ...s.upgrades])],
     quoted,
     deposit,
     placed: now,

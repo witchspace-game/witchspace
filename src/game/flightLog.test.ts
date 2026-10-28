@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BUDGET, EXPIRES, makeRoom, MAX, type LoggedMoment } from './flightLog';
+import { BUDGET, byTrip, EXPIRES, makeRoom, MAX, type LoggedMoment } from './flightLog';
 
 const MB = 1024 * 1024;
 const now = Date.UTC(2026, 9, 25, 12);
@@ -41,5 +41,16 @@ describe('the flight log budget', () => {
   it('refuses when everything left is kept', () => {
     expect(makeRoom([moment(149, 1, true)], 5 * MB, now)).toBeNull();
     expect(makeRoom(Array.from({ length: MAX }, () => moment(0, 1, true)), 0, now)).toBeNull();
+  });
+});
+
+describe('the log, trip by trip', () => {
+  it('groups moments by the trip they were kept on, newest trip first, and older ones by day', () => {
+    const a = { ...moment(1, 1), trip: now - 2 * 3600_000 };
+    const b = { ...moment(1, 0.5), trip: now - 2 * 3600_000 };
+    const c = { ...moment(1, 30), trip: now - 31 * 3600_000 };
+    const old = moment(1, 100); // from before trips were kept
+    const trips = byTrip([old, c, a, b]);
+    expect(trips.map((t) => t.moments.map((m) => m.id))).toEqual([[b.id, a.id], [c.id], [old.id]]);
   });
 });

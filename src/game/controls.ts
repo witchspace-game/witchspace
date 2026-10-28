@@ -71,12 +71,13 @@ export function controlRows(mouse: boolean, o: { gimballed: boolean; modern: boo
 }
 
 /** Docking, step by step, as HTML (the station's roll must be matched within `rollDeg`). */
-export const DOCKING = (rollDeg: number): string[] => [
+/** `fitted`: the hull leaves the yard with a docking computer (shipyard.ts standardKit). */
+export const DOCKING = (rollDeg: number, fitted = false): string[] => [
   `Fly towards the station and slow down. The slot is the lit rectangle on the face that points at the planet.`,
   `Within 3 km a docking aid opens: <b>Slot</b> (how far), <b>Approach</b> (how straight you're coming in) and <b>Roll</b> (how level you are with the slot). Green is good.`,
   `The station turns. Roll until the marker sits in the middle: your wings must be within ${rollDeg}° of the slot. On a phone, drag sideways on the left of the screen, or tilt if you've turned Tilt on.`,
   `Fly straight in, slowly. Too fast, too crooked or too far off level and you scrape the hull: shields first, then the ship.`,
-  `<b>Or let the docking computer do it</b> (C, or the Dock button that appears by itself on a phone when you're close). It's 1,500 Cr at any station, and the best money a new pilot spends.`,
+  `<b>Or let the docking computer do it</b> (C, or the Dock button that appears by itself on a phone when you're close). ${fitted ? 'She has one fitted as standard.' : 'It’s 1,500 Cr at any station, and the best money a new pilot spends.'}`,
 ];
 
 /** The phone's fixed controls, as label and what it does. */

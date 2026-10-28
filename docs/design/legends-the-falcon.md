@@ -36,7 +36,7 @@ It builds on [exploration](exploration.md#stage-4-legends) (Legends, the Ninefol
 
 **Solo & Sons** was a shipyard of five: Iver Solo and his four sons, building fast hulls on contract in the lawless systems. Iver flew with the **Carriers' Mutual** when it was young. He's the reason for the Mutual's empty chair at every meeting: he answered a call nobody else would, and didn't come back. The Mutual still sets his place.
 
-When the *Ninefold* colony failed, Wexley-Yorozu chose recovery under clause 214 over relief: 40,000 Cr against 310,000. Sam Dray's tug *Hold Fast* answered the call he was told not to, and took 41 people off before the recovery crews arrived. **He took them to the Solo yard.** The Science Division's report says Dray should be found. It doesn't know where he went.
+When the *Ninefold* colony failed, Wexley-Yorozu chose recovery under clause 214 over relief: 4,000,000 Cr against 31,000,000. Sam Dray's tug *Hold Fast* answered the call he was told not to, and took 41 people off before the recovery crews arrived. **He took them to the Solo yard.** The Science Division's report says Dray should be found. It doesn't know where he went.
 
 The sons have hidden the forty-one ever since, and fed them, and kept Wexley-Yorozu from finding the yard. They do it with the ships they built for themselves: the Falcons. (A Falcon is *she*, as ships are; her captain is a Solo son.)
 

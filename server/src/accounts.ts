@@ -29,7 +29,7 @@ import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
 import { CHECKS_PER_MINUTE, KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
 import { gitHubReady, openPullRequest, type GitHubEnv } from './github';
 import { CHECKS } from './checks';
-import { EDITIONS, editionById } from '../../src/content/editions';
+import { EDITIONS, editionById, editionNo } from '../../src/content/editions';
 import { normaliseVoucher, voucherCode } from './vouchers';
 import { firstAnchor, verify, type Anchor, type Save as LedgerSave } from './ledger';
 type Save = LedgerSave & { tampered?: boolean };
@@ -135,8 +135,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE TABLE IF NOT EXISTS ledgers (account TEXT PRIMARY KEY, anchor TEXT NOT NULL)');
     // A ship specced on the site, waiting for the next shipyard (docs/design/ship-configurator.md): one an account, the latest wins.
     this.sql.exec('CREATE TABLE IF NOT EXISTS specs (account TEXT PRIMARY KEY, spec TEXT NOT NULL, at INTEGER NOT NULL)');
-    // A voucher can carry an edition number, held for whoever redeems it.
-    for (const col of ['edition TEXT', 'number INTEGER']) {
+    // A voucher can carry an edition number, held for whoever redeems it; or, instead of a code,
+    // be held for an email address and waiting at one yard (a ship signed over: Mark, for Mark Moxon's 001).
+    for (const col of ['edition TEXT', 'number INTEGER', 'email TEXT', 'galaxy INTEGER', 'system INTEGER']) {
       try {
         this.sql.exec(`ALTER TABLE vouchers ADD COLUMN ${col}`);
       } catch {
@@ -183,6 +184,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'POST' && path === '/me/firsts') return this.claimFirsts(request, account);
     if (m === 'GET' && path === '/me/connections') return this.connections(account);
     if (m === 'POST' && path === '/me/voucher') return this.redeemVoucher(request, account);
+    if (m === 'GET' && path === '/me/gifts') return json({ gifts: this.giftsFor(account) });
     if (m === 'POST' && path === '/me/edition') return this.claimEdition(request, account);
     if (m === 'DELETE' && path === '/me/edition') return this.releaseEdition(request, account);
     if (m === 'GET' && path === '/me/spec') return this.getSpec(account);
@@ -449,6 +451,24 @@ export class Accounts extends DurableObject<AccountsEnv> {
     return json({ ship: row.ship, edition: row.edition, number: theirs ? theirs.number : row.number });
   }
 
+  /**
+   * Ships signed over to this account's email address: attached the first time they're asked for
+   * (or when the gift is made, if the account already exists), with the held edition number moved
+   * to the account. Every one this account was given is returned, so any device can pick it up; the
+   * game ignores one it already has.
+   */
+  private giftsFor(account: Account): { ship: string; edition: string | null; number: number | null; galaxy: number; system: number }[] {
+    const waiting = this.sql.exec('SELECT hash, edition FROM vouchers WHERE email = ? AND account IS NULL', account.email.toLowerCase()).toArray();
+    for (const w of waiting) {
+      this.sql.exec('UPDATE vouchers SET account = ?, redeemed = ? WHERE hash = ? AND account IS NULL', account.id, Date.now(), w.hash);
+      if (w.edition && !this.sql.exec('SELECT 1 FROM editions WHERE edition = ? AND account = ?', w.edition, account.id).toArray().length)
+        this.sql.exec('UPDATE editions SET account = ? WHERE edition = ? AND account = ?', account.id, w.edition, `voucher:${w.hash}`);
+    }
+    return this.sql
+      .exec('SELECT ship, edition, number, galaxy, system FROM vouchers WHERE account = ? AND email IS NOT NULL ORDER BY created', account.id)
+      .toArray() as { ship: string; edition: string | null; number: number | null; galaxy: number; system: number }[];
+  }
+
   /** The next number of an edition, one per account; your own back if you already hold one. */
   private async claimEdition(request: Request, account: Account): Promise<Response> {
     const body = (await request.json().catch(() => null)) as { edition?: unknown } | null;
@@ -498,6 +518,49 @@ export class Accounts extends DurableObject<AccountsEnv> {
       this.sql.exec('INSERT INTO vouchers (hash, ship, note, created, edition, number) VALUES (?, ?, ?, ?, ?, ?)', hash, ship, String(body?.note ?? '').slice(0, 200), Date.now(), edition?.id ?? null, number);
       return json({ code, ship, ...(edition ? { edition: edition.id, number } : {}) });
     }
+    // A ship signed over to an email address, waiting at one yard: no code. With `number`, it takes
+    // over the unredeemed voucher holding that edition number (whose code then stops working).
+    if (request.method === 'POST' && path === '/admin/gifts') {
+      const body = (await request.json().catch(() => null)) as { ship?: unknown; email?: unknown; edition?: unknown; number?: unknown; galaxy?: unknown; system?: unknown; note?: unknown } | null;
+      const ship = typeof body?.ship === 'string' && /^[a-z0-9-]{2,40}$/.test(body.ship) ? body.ship : null;
+      const email = typeof body?.email === 'string' && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.email.trim()) ? body.email.trim().toLowerCase() : null;
+      const galaxy = Number(body?.galaxy);
+      const system = Number(body?.system);
+      if (!ship || !email || !Number.isInteger(galaxy) || !Number.isInteger(system) || galaxy < 0 || galaxy > 7 || system < 0 || system > 255) return json({ error: 'Need a ship, an email address and a yard (galaxy, system)' }, 400);
+      const edition = typeof body?.edition === 'string' ? editionById(body.edition) : undefined;
+      if (body?.edition !== undefined && (!edition || edition.ship !== ship)) return json({ error: `No such edition of the ${ship}` }, 400);
+      const hash = await sha256(`gift:${email}:${voucherCode()}`);
+      let number: number | null = null;
+      let note = String(body?.note ?? '').slice(0, 200);
+      if (edition && body?.number !== undefined) {
+        // Take over the voucher that holds this number.
+        const old = this.sql.exec('SELECT hash, note FROM vouchers WHERE edition = ? AND number = ? AND account IS NULL AND email IS NULL', edition.id, Number(body.number)).toArray()[0];
+        if (!old) return json({ error: `No unused voucher holds ${edition.id} ${Number(body.number)}` }, 404);
+        number = Number(body.number);
+        note ||= String(old.note);
+        this.sql.exec('UPDATE editions SET account = ? WHERE edition = ? AND account = ?', `voucher:${hash}`, edition.id, `voucher:${old.hash}`);
+        this.sql.exec('DELETE FROM vouchers WHERE hash = ?', old.hash);
+      } else if (edition) {
+        const used = new Set(this.sql.exec('SELECT number FROM editions WHERE edition = ?', edition.id).toArray().map((r) => r.number as number));
+        number = 1;
+        while (used.has(number)) number++;
+        if (number > edition.limit) return json({ error: `All ${edition.limit} are spoken for` }, 409);
+        this.sql.exec('INSERT INTO editions (edition, number, account, at) VALUES (?, ?, ?, ?)', edition.id, number, `voucher:${hash}`, Date.now());
+      }
+      this.sql.exec(
+        'INSERT INTO vouchers (hash, ship, note, created, edition, number, email, galaxy, system) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        hash, ship, note, Date.now(), edition?.id ?? null, number, email, galaxy, system,
+      );
+      // Already a commander? It's theirs now, and their devices hear about it.
+      const acc = this.sql.exec('SELECT id, email, callsign FROM accounts WHERE email = ?', email).toArray()[0] as unknown as Account | undefined;
+      let told = false;
+      if (acc) {
+        this.giftsFor(acc);
+        const maker = (data.ships as unknown as ShipDef[]).find((d) => d.id === ship);
+        told = await this.notify(acc.id, `${maker?.manufacturer ?? 'The yard'}: a ship signed over to you`, `${edition ? `${edition.name} ${editionNo(number!)}` : `A ${maker?.name ?? ship}`} is waiting for you at our yard. Open Witchspace to see where.`);
+      }
+      return json({ ship, ...(edition ? { edition: edition.id, number } : {}), attached: Boolean(acc), told });
+    }
     // Who holds which numbered edition, and whether their ledger is in good order; and putting a number back.
     if (request.method === 'GET' && path === '/admin/editions') {
       const rows = this.sql
@@ -524,7 +587,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
       return json({ cleared: true });
     }
     if (request.method === 'GET' && path === '/admin/vouchers') {
-      return json({ vouchers: this.sql.exec('SELECT ship, note, created, account IS NOT NULL AS used, redeemed, edition, number FROM vouchers ORDER BY created').toArray() });
+      return json({ vouchers: this.sql.exec('SELECT ship, note, created, account IS NOT NULL AS used, redeemed, edition, number, email IS NOT NULL AS signed, galaxy, system FROM vouchers ORDER BY created').toArray() });
     }
     if (request.method === 'GET' && path === '/admin/names') {
       const releases = this.sql.exec('SELECT name, email, created FROM releases ORDER BY created').toArray();

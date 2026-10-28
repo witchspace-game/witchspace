@@ -1,7 +1,7 @@
 // The flight log, full screen from the button beside the galaxy map, and the replay player (the death replay
 // too): watch, share, keep or delete the clips and photos the ship kept.
 
-import { addMoment, BUDGET, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
+import { addMoment, BUDGET, byTrip, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
 import { uprightCut } from './upright';
@@ -275,9 +275,13 @@ export async function renderFlightLog(opts: {
       <div class="rec-row rec-small"><span>${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} · ${megabytes(used)} of ${megabytes(BUDGET)} on this device</span>${moments.some((m) => !m.saved) ? '<button type="button" class="log-clear">Clear unkept</button>' : ''}</div>
       <p class="rec-note">What you don't Keep clears after a week.</p>` : ''}
     </div>`;
+  // The library, trip by trip (Mark: "the library should be somewhere else"; the dock shows only this trip).
+  const day = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   if (moments.length) {
-    head += `
-      <ul class="log-list">${moments
+    head += byTrip(moments)
+      .map(
+        (t) => `<h3 class="log-trip">${day(t.moments[t.moments.length - 1].created)} · ${[...new Set(t.moments.map((m) => m.system).reverse())].map(escapeHtml).join(' → ')}</h3>
+      <ul class="log-list">${t.moments
         .map(
           (m) => `<li data-id="${m.id}">
           <button type="button" class="log-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${url(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s${m.tags.includes('upright') ? ' · upright' : ''}` : 'Photo'}</span></button>
@@ -285,7 +289,9 @@ export async function renderFlightLog(opts: {
           <span class="log-actions">${m.track && outsideView ? '<button type="button" data-act="outside">From outside</button>' : ''}<button type="button" data-act="share">Share</button><button type="button" data-act="keep" aria-pressed="${m.saved}">${m.saved ? 'Kept' : 'Keep'}</button><button type="button" data-act="delete">Delete</button></span></div>
         </li>`,
         )
-        .join('')}</ul>`;
+        .join('')}</ul>`,
+      )
+      .join('');
   }
   el.innerHTML = `<section class="log-public" hidden aria-live="polite"></section>${head}`;
   void showPublic(el, moments);
@@ -329,3 +335,94 @@ export async function renderFlightLog(opts: {
     };
   }
 }
+
+/**
+ * This trip: on docking, only what the ship kept since you launched, to keep,
+ * share or delete there and then (Mark: "when you dock you should only see
+ * clips from the last trip ... then you can triage and do some file husbandry
+ * straight away"). Done, Esc or a swipe down leaves anything untouched as it
+ * is: unkept, gone in a week. A quiet trip kept nothing, so it never opens.
+ */
+export async function openTrip(since: number, opts: { onClose: () => void; onLibrary: () => void; onChange: () => void }) {
+  const box = $('#trip-sheet');
+  const moments = (await listMoments()).filter((m) => m.created >= since);
+  if (!moments.length) return closeTrip();
+  revoke(tripUrls);
+  const unkept = moments.filter((m) => !m.saved).length;
+  box.innerHTML = `<div class="trip-grip" aria-hidden="true"></div>
+    <header class="trip-head"><h3>This trip</h3><span>${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} kept by the recorder</span><button type="button" class="trip-close" aria-label="Done">✕</button></header>
+    <ul class="trip-list">${moments
+      .map(
+        (m) => `<li data-id="${m.id}">
+        <button type="button" class="trip-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${tripUrl(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s` : 'Photo'}</span></button>
+        <strong>${escapeHtml(m.title.replace(/^CMDR [^:]+: /, ''))}</strong>
+        <span class="trip-actions"><button type="button" data-act="keep" aria-pressed="${m.saved}">${m.saved ? 'Kept' : 'Keep'}</button><button type="button" data-act="share">Share</button><button type="button" data-act="delete" aria-label="Delete">Delete</button></span>
+      </li>`,
+      )
+      .join('')}</ul>
+    <footer class="trip-foot">${unkept ? `<button type="button" class="primary trip-keep-all">Keep ${unkept === moments.length ? 'all' : `the other ${unkept}`}</button>` : ''}<button type="button" class="trip-done">Done</button></footer>
+    <p class="trip-note">What you don't keep clears after a week. Everything is in the <button type="button" class="trip-library">flight log</button>.</p>`;
+  box.hidden = false;
+  const again = () => {
+    opts.onChange();
+    void openTrip(since, opts);
+  };
+  const done = () => {
+    closeTrip();
+    opts.onClose();
+  };
+  box.querySelector<HTMLButtonElement>('.trip-close')!.onclick = done;
+  box.querySelector<HTMLButtonElement>('.trip-done')!.onclick = done;
+  box.querySelector<HTMLButtonElement>('.trip-library')!.onclick = () => {
+    closeTrip();
+    opts.onLibrary();
+  };
+  const all = box.querySelector<HTMLButtonElement>('.trip-keep-all');
+  if (all)
+    all.onclick = async () => {
+      for (const m of moments) if (!m.saved) await setSaved(m.id, true);
+      again();
+    };
+  for (const li of box.querySelectorAll<HTMLLIElement>('li[data-id]')) {
+    const m = moments.find((x) => x.id === li.dataset.id)!;
+    li.querySelector<HTMLButtonElement>('.trip-play')!.onclick = () => openReplay(m, 'This trip', again, m.photo ? 'Taken with your ship camera. It stays on this device unless you share it.' : undefined);
+    li.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = () => shareMoment(m, again);
+    li.querySelector<HTMLButtonElement>('[data-act="keep"]')!.onclick = async () => {
+      await setSaved(m.id, !m.saved);
+      again();
+    };
+    li.querySelector<HTMLButtonElement>('[data-act="delete"]')!.onclick = async (e) => {
+      const b = e.target as HTMLButtonElement;
+      if (!b.dataset.armed) {
+        b.dataset.armed = '1';
+        b.textContent = 'Sure?';
+        return;
+      }
+      await deleteMoment(m.id);
+      again();
+    };
+  }
+  // A swipe down on the sheet's top dismisses it, as a phone's sheets do.
+  let y0: number | null = null;
+  const top = box.querySelector<HTMLElement>('.trip-head')!;
+  for (const el of [top, box.querySelector<HTMLElement>('.trip-grip')!]) {
+    el.ontouchstart = (e) => (y0 = e.touches[0].clientY);
+    el.ontouchend = (e) => {
+      if (y0 !== null && e.changedTouches[0].clientY - y0 > 50) done();
+      y0 = null;
+    };
+  }
+}
+
+const tripUrls: string[] = [];
+const tripUrl = urlIn(tripUrls);
+
+export function closeTrip() {
+  const box = document.querySelector<HTMLElement>('#trip-sheet');
+  if (!box || box.hidden) return;
+  box.hidden = true;
+  box.innerHTML = '';
+  revoke(tripUrls);
+}
+
+export const isTripOpen = () => !document.querySelector<HTMLElement>('#trip-sheet')?.hidden;
