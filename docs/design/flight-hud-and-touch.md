@@ -73,3 +73,8 @@ Things worth keeping go into **Messages** on the Contracts tab, from the company
 
 - `src/game/jobs.ts`: the next step, deadlines and route fit, pure and tested (`jobs.test.ts`).
 - The strip, back on course, route work and the drawer: `src/main.ts`, `play/index.html`, `src/style.css`.
+
+## Fixes from players
+
+- **Roll keys held their bank** *(28 October 2026; reported by myno on Stardot, t=33815)*. In the mouse scheme the flight assist levelled the wings the moment the roll keys were let go, so a keyboard roll fought back ("a bit obstinate"). Any roll you make now holds its bank until you tap to level, as a mouse roll already did.
+- **The Cobra carries four missiles** *(28 October 2026; reported by myno on Stardot, t=33815)*. As in 1984: four rails, starting with three.
