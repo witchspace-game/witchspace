@@ -56,3 +56,9 @@ export function handling(def: ShipDef, cobra: ShipDef): Handling[] {
 }
 
 export const notesFor = (def: ShipDef) => NOTES[def.id] ?? [];
+
+// Earned, not bought: the Solos' Falcon. Police and Marshals' hulls have no price.
+const NOT_IN_YARDS = new Set(['falcon']);
+
+/** The ships the shipyards show and sell (each comes with an owner's manual). */
+export const inYards = (def: ShipDef) => Boolean(def.stats.price) && !NOT_IN_YARDS.has(def.id) && !['missile', 'cargo', 'station', 'debris', 'alien'].includes(def.role);

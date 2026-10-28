@@ -216,6 +216,7 @@ import { cargoTonnage } from '../economy/commodities';
 import type { MarketState } from '../economy/market';
 import type { LaserId } from './weapons';
 import { fnv, reconcile, type Ledger } from './ledger';
+import { SAVE_KEY } from './saveKey';
 import type { ExploreRecord } from './explore';
 import type { ActiveContract, CompanyLog } from './contracts';
 import type { AdriftCase, Message } from './assignments';
@@ -354,7 +355,7 @@ export interface Commander {
   paint?: Paint;
 }
 
-const KEY = 'witchspace.commander.v1';
+const KEY = SAVE_KEY;
 
 /**
  * A new commander's 100 credits. Nothing the law or the insurers take leaves

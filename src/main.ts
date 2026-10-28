@@ -87,7 +87,8 @@ import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
 import { record as ledgerRecord } from './game/ledger';
-import { handling, notesFor } from './game/manual';
+import { handling, inYards, notesFor } from './game/manual';
+import { controlRows as sharedControlRows, DOCKING, drawerHelp, PHONE, SCOOP_SPEED } from './game/controls';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
@@ -1199,8 +1200,6 @@ $('#news-list').addEventListener('click', (e) => {
 /** Stations with a shipyard: the better-built worlds. */
 const SHIPYARD_TECH = 7;
 const hasShipyard = (s: StarSystem) => s.techLevel >= SHIPYARD_TECH;
-// Earned, not bought: the Solos' Falcon. Police and Marshals' hulls have no price.
-const NOT_IN_YARDS = new Set(['falcon']);
 let yardPick: string | null = null;
 /** The ship being specced, while the configurator is open. */
 let spec: Spec | null = null;
@@ -1285,7 +1284,7 @@ function renderShipyard() {
   const now = Date.now();
   const yard = ships
     .map((def, i) => ({ def, i }))
-    .filter(({ def }) => def.stats.price && !NOT_IN_YARDS.has(def.id) && !['missile', 'cargo', 'station', 'debris', 'alien'].includes(def.role))
+    .filter(({ def }) => inYards(def))
     // Concepts first: the reveal, then the yard's line from the dearest.
     .sort((a, b) => Number(Boolean(b.def.concept)) - Number(Boolean(a.def.concept)) || b.def.stats.price - a.def.stats.price);
   // How many of each edition are left: asked of the server now and then, and shown when it answers.
@@ -4878,7 +4877,6 @@ function checkAdrift() {
 // --- Fuel scoops: canisters and sun-skimming ----------------------------------------
 
 const SCOOP_RANGE = 45; // metres from the ship's centre
-const SCOOP_SPEED = 0.4; // fraction of top speed; any faster and the canister bounces off
 const HEAT_RANGE = SUN_RADIUS * 2.5; // above the surface: the cabin starts to warm
 const SKIM_RANGE = SUN_RADIUS * 0.8; // above the surface: close enough to scoop fuel
 const SKIM_RATE = 0.12; // light years per second at full speed
@@ -5471,60 +5469,7 @@ const KEYS_HINT = {
 
 /** Every control, as key and what it does: the controls card and the owner's manual both read this. */
 function controlRows(mouse: boolean): string[][] {
-  return (
-    mouse
-      ? [
-          ['Click', 'Capture the mouse (Esc releases it)'],
-          ['Mouse', 'Aim: the ship turns to follow the ring'],
-          ['Left click / F', gimballed() || (commander && isWorking(cmdr(), 'gimbal-mount')) ? 'Fire: gimballed lasers hit what\'s under the ring' : 'Fire: lasers fire straight ahead at the centre cross'],
-          ['Right click', 'Centre the aim and level the wings'],
-          ['Hold right + mouse', 'Roll, nose held steady; the ship keeps that bank'],
-          ['W / S', 'Throttle up / down'],
-          ['A / D', 'Roll'],
-          ['Q / E', 'Yaw (fine sideways adjustment)'],
-          ['Swipe / scroll', 'Throttle; sideways swipe rolls (Magic Mouse, trackpad)'],
-        ]
-      : [
-          ['W / S', 'Dive / climb (I inverts)'],
-          ['A / D', 'Roll'],
-          ['Space / Shift', 'Throttle up / down'],
-          ['F', 'Fire laser'],
-          ['Swipe / scroll', 'Throttle; sideways swipe rolls'],
-        ]
-  )
-    .concat([
-      ['C', 'Docking computer'],
-      ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
-      ['O', 'Combat computer: it flies, you man the turrets (needs one fitted; any flight control takes over)'],
-      ['9', 'Survey autopilot: flies to whatever is left to survey or find here, and holds you in range (explorers; any flight control takes over)'],
-      ['P', 'Take a photo of the view, without the HUD, into your flight log (share it when docked)'],
-      ['Shift+P', 'Flight recorder: keep the last 30 seconds (or hold the camera button)'],
-      ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
-      ['T', 'Arm a missile: hold a ship in your sights until the tone goes solid (Classic: lock at once). Again to disarm'],
-      ['X', 'Launch the locked missile'],
-      ['Z', 'ECM: destroy every missile nearby, yours included (needs an ECM)'],
-      ['1 2 3 4 / V', 'Look front, rear, left or right (V cycles); fire uses that mount\'s laser'],
-      ['R', 'Scanner range: 4 km for dogfights, 12 km for traffic'],
-      ['B', 'Energy bomb: destroy every ship within 6 km (single use)'],
-      ['Y', 'Galactic hyperdrive: jump to the next galaxy (single use)'],
-      ['U', 'Surrender to the police: the ship stops itself, then 5 seconds (fine, record cleared)'],
-      ...(commander?.difficulty === 'modern' ? [['0', 'Transponder off / on: run dark, unidentified (police will hail you; it switches back on after a jump, or to dock when it\'s safe)']] : []),
-      ...(commander?.difficulty === 'modern'
-        ? [
-            ['L', 'Hail the ship in your sights (or the station, within 5 km; anywhere with a comms array)'],
-            ["'", 'Radio log: open / close'],
-            ['Enter', 'Accept the latest offer on the radio'],
-            ['`', 'Emergency beacon: Mayday, out of fuel, hull failing, request escort (1–4 to send)'],
-          ]
-        : []),
-      ['Scoop', `Fly slowly (under ${Math.round(SCOOP_SPEED * 100)}% speed) straight into a cargo canister, a yellow dot on the scanner (needs Fuel Scoops)`],
-      ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
-      ['K', 'Switch control scheme'],
-      ['I', 'Invert pitch'],
-      ['M', '1984 mode'],
-      ['N', 'Sound: full / effects only / off'],
-      ['F1', 'Show / hide this card'],
-    ]);
+  return sharedControlRows(mouse, { gimballed: gimballed() || Boolean(commander && isWorking(cmdr(), 'gimbal-mount')), modern: commander?.difficulty === 'modern' });
 }
 
 // --- The owner's manual ---------------------------------------------------------
@@ -5533,15 +5478,7 @@ function controlRows(mouse: boolean): string[][] {
 // are read from the game's own lists, so the manual can't drift from the buttons.
 
 /** What a phone button does: from the key it presses (the controls list), or its own title. */
-function touchHelp(b: HTMLElement, rows: string[][]): string {
-  const code = b.dataset.key;
-  if (code) {
-    const k = code === 'Backquote' ? '`' : code.replace(/^Key|^Digit/, '');
-    const row = rows.find((r) => r[0].split(/[\s/]+/).includes(k));
-    if (row) return row[1];
-  }
-  return b.title || b.getAttribute('aria-label') || '';
-}
+const touchHelp = (b: HTMLElement, rows: string[][]) => drawerHelp(b.dataset.key, b.title || b.getAttribute('aria-label') || '', rows);
 
 function openManual(def: ShipDef) {
   const c = commander;
@@ -5574,12 +5511,8 @@ function openManual(def: ShipDef) {
 
     <section id="man-dock"><h3>Docking</h3>
       <ol>
-        <li>Fly towards the station and slow down. The slot is the lit rectangle on the face that points at the planet.</li>
-        <li>Within 3 km a docking aid opens: <b>Slot</b> (how far), <b>Approach</b> (how straight you're coming in) and <b>Roll</b> (how level you are with the slot). Green is good.</li>
-        <li>The station turns. Roll until the marker sits in the middle: your wings must be within ${roll}° of the slot. On a phone, drag sideways on the left of the screen, or tilt if you've turned Tilt on.</li>
-        <li>Fly straight in, slowly. Too fast, too crooked or too far off level and you scrape the hull: shields first, then the ship.</li>
-        <li><b>Or let the docking computer do it</b> (C, or the Dock button that appears by itself on a phone when you're close). It's 1,500 Cr at any station, and the best money a new pilot spends.</li>
-      </ol>
+${DOCKING(roll).map((li) => `        <li>${li}</li>
+`).join('')}      </ol>
       ${def.id !== 'cobra-mk3' ? `<p class="meta">${escapeHtml(def.name)}: ${escapeHtml(handling(def, cobra).find((h) => h.label === 'Span')!.versus)}.</p>` : ''}
     </section>
 
@@ -5591,13 +5524,8 @@ function openManual(def: ShipDef) {
 
     <section id="man-phone"><h3>On a phone</h3>
       <dl class="man-keys">
-        <dt>Left side</dt><dd>Drag to aim, like a stick: the further you drag, the faster she turns. Sideways rolls.</dd>
-        <dt>Speed</dt><dd>Slide up for faster; it stays where you leave it. The fill is the speed you're doing, the tick the speed you asked for: when the docking computer slows you, the fill falls and the tick stays.</dd>
-        <dt>Fire</dt><dd>Hold to fire the laser.</dd>
-        <dt>Arm</dt><dd>Arm a missile, hold a ship in your sights until it locks, then press again (red) to launch.</dd>
-        <dt>ECM</dt><dd>Destroys every missile nearby, yours included (needs an E.C.M. system).</dd>
-        <dt>The big button</dt><dd>The obvious next thing, by itself: Dock near a station (with a docking computer), Survey near something to survey, Hyper when your destination is in range, otherwise Jump.</dd>
-      </dl>
+${PHONE.map(([k, v]) => `        <dt>${k}</dt><dd>${v}</dd>
+`).join('')}      </dl>
       <h4>The drawer: everything else</h4>
       <p>Tap the <b>‹</b> tab on the right edge of the screen to slide it open, and again to close it.</p>
       <dl class="man-keys">${drawer}</dl>
