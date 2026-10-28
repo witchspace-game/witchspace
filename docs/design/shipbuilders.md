@@ -96,22 +96,33 @@ A classic name can't be made recognisable by tracing the 1984 shape. It can by g
 
 - **Each maker's language is written down** (a paragraph and three or four rules) and shown in the ship editor when you choose the maker. The validator's balance notes take the maker's in-play character into account.
 - **It keeps community designs coherent.** Without it, a hundred submissions would be a hundred styles.
+- **Measurable, so the editor can check it:** the rules are proportions and features (width to length, a raised spine or not, a broad stern), so **Check** can say "reads as the heritage yard: wide and flat ✓, broad stern ✓". It's advice, not enforcement, like the docking slot box. Later, a faint overlay of the maker's proportions in the Top view.
+- **The makers are data:** `content/makers.json` (id, name, home, character, language with its rules, line-up, where it sells), read by the game, the site and the validator. The editor's maker field becomes a list of makers plus **Independent (your own yard)**, and picking one shows its language beside the blueprints. *(Website)*
 - **First use: the Cobra, Viper and Sidewinder,** redrawn by their makers' rules, with sketches to Mark first. They're the ships everybody sees, so they come before any new hull.
 
 ## The design office (Build)
 
 Each maker runs a design office, and that's where the community's work goes (Mark):
 
-- **Submitting:** "improve this ship" and "a new build" both go to the maker that would build it, and the reply comes in the maker's voice. The review underneath is unchanged (maintainers, the same checks).
+- **Submitting:** "improve this ship" and "a new build" both go to the maker that would build it (the file's maker, or Independent), and the reply comes in the maker's voice. The review underneath is unchanged (maintainers, the same checks). **The reviewer's notes reach the author word for word:** the maker's voice frames them ("The heritage yard's drawing office has looked at your Python: …") and never replaces them. The review page gets a maker badge and filter. *(Website)*
 - **Tenders:** the design office puts a hull out to tender ("The heritage yard is building a new Python"), with its class, size, hold and the maker's language as the brief. Pilots vote, and the winner rolls off the line into the shipyards with its designer credited.
 - **A job:** a pilot whose designs keep being accepted gets a message from the maker inviting them into the design office. It arrives like a company's special assignment, with Take and Decline. The job brings your name on the yard's ships, staff prices at its shipyards, a commission on every hull sold, and test-flying its concepts first. It's a job in the game; a real-world credit is on the ship's page.
 - **In the game:** a **Design office** board at a maker's shipyards, beside Contracts, showing the open tenders and your submissions' progress.
+
+## On the site: maker pages and a catalogue *(Website)*
+
+Invented names have no search value, so the makers have to be worth browsing:
+
+- **A page per maker** (`/makers/<id>/`, built like the ship pages): its home, its people, its design language and rules, and a line-up strip of blueprints, side by side, so the family resemblance shows at a glance. Its open tenders and credited designers too, with a share card each.
+- **Ship pages** say "Built by <maker>" with a link, and show a strip of sibling hulls.
+- **`/ships/` becomes a catalogue:** filter by maker and class, compare stats side by side, a spec-sheet look per ship. It's the kind of page the community catalogues of Elite are full of, and the thing people will share.
 
 ## What changes
 
 - `docs/lore.md` (The makers) and `docs/design/ships-and-classes.md` (the makers' table): the new makers.
 - `content/ships/*.json` `manufacturer`: the Cobra, Viper, Sidewinder and Mamba.
-- `src/site/shipDraft.ts` `MAKERS`, and the ship editor's hint.
+- `src/site/shipDraft.ts` `MAKERS` (replaced by `content/makers.json`), the ship editor's placeholder and its hint's link, the four share cards that name a maker (`tools/share-cards.json`, re-rendered), and old names in saved editor drafts mapped to the new ones.
+- **One change, timed:** content and docs (Game dev) and the site files (Website) merged back to back, so the site is never half-renamed, and **before the Stardot post**, so no indexed page or shared card carries the old names. The server doesn't check `manufacturer`, so nothing there.
 - `docs/design/ship-moxons-hunter.md`: its maker.
 - Nothing in the original's world is lost: the ship names stay.
 
@@ -126,6 +137,8 @@ Each maker runs a design office, and that's where the community's work goes (Mar
 
 ## Open questions
 
-- The three names, and whether the flashy yard and the law's yard should be one maker with two lines.
-- Does the heritage yard name its founders at all, even with invented names, or stay "the two founders"?
-- Is the Moxon hunter the flashy yard's, or his own independent yard's?
+- **The three names.** Each one checked against real companies and trademarks before it's chosen (Vasari, for one, is a real historical name).
+- **One maker or two for the law and the flash?** Recommended: two. The Sidewinder's hypocrisy is the law's yard's best story, and one maker would blur both languages. *(Website)*
+- **The founders' names?** Recommended: none. "The two founders" is warmer, and safer. *(Website)*
+- **The Moxon hunter:** its own independent yard, credited to him, if he'd like that; otherwise the flashy yard's.
+- **Tenders need voting:** new server routes and a page, specified separately when we get there (Website writes the site half).
