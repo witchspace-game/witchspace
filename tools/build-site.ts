@@ -141,7 +141,11 @@ function render(page: Page): string {
     .replace('{{scripts}}', scripts);
 }
 
+/** Every page search engines may index, for the sitemap: anything marked noindex stays out. */
+const indexable: string[] = ['/play/'];
+
 function write(page: Page) {
+  if (!page.head?.includes('noindex')) indexable.push(page.path);
   const file = join(root, page.path, 'index.html');
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, render(page));
@@ -335,6 +339,13 @@ cards.push({ file: 'play.jpg', ship: 'cobra-mk3', kicker: 'Play now · free', ti
 
 // The cards for tools/share-cards.mjs to photograph (git-ignored: it's made here).
 writeFileSync(join(root, 'tools/share-cards.json'), JSON.stringify(cards, null, 1));
+
+// The sitemap, from the pages just written (public/sitemap.xml is git-ignored: it's made on every build).
+const urls = [...new Set(indexable)].sort((a, b) => (a === '/' ? -1 : b === '/' ? 1 : a.localeCompare(b)));
+writeFileSync(
+  join(root, 'public/sitemap.xml'),
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE}${u}</loc></url>`).join('\n')}\n</urlset>\n`,
+);
 const missing = cards.filter((c) => !existsSync(join(root, 'public/share', c.file)));
 if (missing.length) console.log(`Share cards still to make (npm run cards): ${missing.map((c) => c.file).join(', ')}`);
 console.log(`Built ${generated.length} pages: ${generated.map((f) => relative(root, join(root, f))).join(', ')}`);

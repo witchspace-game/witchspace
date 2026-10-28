@@ -1,0 +1,6 @@
+# Witchspace: everything is open to crawl, except the maintainers' review desk.
+User-agent: *
+Allow: /
+Disallow: /review/
+
+Sitemap: https://witchspace.org.uk/sitemap.xml
