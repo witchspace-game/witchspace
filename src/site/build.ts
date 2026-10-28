@@ -216,10 +216,11 @@ try {
 let shown = '';
 function paint() {
   const s = showing();
-  const key = `${s.colour}|${s.glow}|${s.trim}`;
+  const lights = s.luxuries.includes('black-light-lights');
+  const key = `${s.colour}|${s.glow}|${s.trim}|${lights}`;
   if (key === shown) return;
   shown = key;
-  view?.show(def, { colour: s.colour, glow: GLOWS[s.glow].glow, trim: s.trim });
+  view?.show(def, { colour: s.colour, glow: GLOWS[s.glow].glow, trim: s.trim, ...(lights ? { lights } : {}) });
   document.querySelector<HTMLElement>('.build-page')!.style.setProperty('--hull', s.colour);
   const c = colourOf(s.colour);
   const t = colourOf(s.trim);

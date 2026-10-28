@@ -67,4 +67,18 @@ composer.addPass(bloom);
 composer.addPass(new OutputPass());
 setLineResolution(renderer.getDrawingBufferSize(new THREE.Vector2()));
 composer.render();
-void document.fonts.ready.then(() => document.body.classList.add('ready'));
+// Running lights (a numbered edition's luxury) fade in over a second and pulse: keep drawing until
+// they're in, and take the picture as the pulse peaks. Anything else is ready at once.
+const lit = q.get('paint')?.includes('"lights":true');
+const settle = (start: number) =>
+  new Promise<void>((done) => {
+    const frame = () => {
+      composer.render();
+      const t = performance.now();
+      const peak = Math.abs(((t / 1000 / 2.6) % 1) - 0.25) < 0.03;
+      if (t - start > 1500 && peak) done();
+      else requestAnimationFrame(frame);
+    };
+    frame();
+  });
+void Promise.all([document.fonts.ready, lit ? settle(performance.now()) : null]).then(() => document.body.classList.add('ready'));
