@@ -58,11 +58,29 @@ export function loadDocs(root: string): Doc[] {
     'docs/lore.md',
     'docs/ideas.md',
   ];
-  return files.flatMap((file) => {
+  const docs = files.flatMap((file) => {
     const doc = parseDoc(file, readFileSync(join(root, file), 'utf8'));
     return doc ? [doc] : [];
   });
+  // Records kept without a header (the game dev session's), given one here so the site can show them.
+  for (const [file, header] of Object.entries(RECORDS)) {
+    const text = readFileSync(join(root, file), 'utf8');
+    const doc = parseDoc(file, `---\n${header}\n---\n${text.replace(/^# .*\n/, '')}`);
+    if (doc) docs.push(doc);
+  }
+  return docs;
 }
+
+/** Documents with no header of their own, and the header the site gives them. */
+const RECORDS: Record<string, string> = {
+  'docs/economy.md': [
+    'title: How the economy works',
+    'status: guide',
+    'pillar: trade',
+    'summary: The record of Witchspace\'s money as it is built, with the real numbers: the markets and limit orders, Bitcoin, every system\'s own currency, company stablecoins, liquidity pools, and how the server keeps every credit honest.',
+    'card: falcon',
+  ].join('\n'),
+};
 
 /** The header: `key: value` lines and `  - item | tag` lists between --- lines. Simple on purpose. */
 export function parseDoc(file: string, text: string): Doc | null {
