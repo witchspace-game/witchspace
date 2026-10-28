@@ -19,6 +19,8 @@ export interface Edition {
   luxuries: string[];
   /** On top of the spec's price: what being one of a hundred costs. */
   premium: number;
+  /** Real hours the yard takes to finish one by hand: longer than an ordinary order, because it's special. */
+  finishHours: number;
 }
 
 export const EDITIONS: Edition[] = [
@@ -35,6 +37,7 @@ export const EDITIONS: Edition[] = [
     upgrades: ['docking-computer', 'fuel-scoops', 'escape-pod'],
     luxuries: ['suite', 'gold-name', 'starlight'],
     premium: 75_000,
+    finishHours: 120,
   },
   {
     // Dark by palette, never by dimming (Mark's idea; the glow is the signature):
@@ -51,6 +54,7 @@ export const EDITIONS: Edition[] = [
     upgrades: ['docking-computer', 'ecm', 'distress-jammer', 'escape-pod'],
     luxuries: ['suite', 'voice'],
     premium: 140_000,
+    finishHours: 168,
   },
 ];
 

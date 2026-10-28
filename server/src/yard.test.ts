@@ -11,7 +11,9 @@ describe('the yard tells you', () => {
     expect(readyMessage(o, name, 72 * H)).toMatchObject({ key: 'yard:0', body: expect.stringContaining('Your Fer-de-lance “Halcyon”') });
   });
   it('by edition and number, and never for a gift', () => {
-    expect(readyMessage({ ship: 'fer-de-lance', placed: 0, edition: { id: 'dark', number: 1 } }, name, 100 * H)?.body).toContain('Dark Edition 001');
+    // An edition takes longer: the Dark Edition a week.
+    expect(readyMessage({ ship: 'fer-de-lance', placed: 0, edition: { id: 'dark', number: 1 } }, name, 100 * H)).toBeNull();
+    expect(readyMessage({ ship: 'fer-de-lance', placed: 0, edition: { id: 'dark', number: 1 } }, name, 168 * H)?.body).toContain('Dark Edition 001');
     expect(readyMessage({ ship: 'fer-de-lance', placed: 0, gifted: true }, name, 100 * H)).toBeNull();
   });
 });

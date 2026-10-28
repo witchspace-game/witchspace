@@ -2,7 +2,7 @@ import type { ShipDef } from '../content/types';
 import { editionById, type Edition } from '../content/editions';
 import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
 import { PLAYER_LASERS, type LaserId } from './weapons';
-import { PRODUCTION_HOURS } from './production';
+import { PRODUCTION_HOURS, productionHours } from './production';
 import { combatRating, ratingPoints } from './rating';
 
 // Speccing a ship and putting down a deposit, as you would on a new car
@@ -19,7 +19,7 @@ export function laserLocked(c: Commander, id: LaserId): string | null {
 }
 
 export const DEPOSIT_RATE = 0.1;
-export { PRODUCTION_HOURS };
+export { PRODUCTION_HOURS, productionHours };
 
 /**
  * The yard's palette: five at no charge, and the special glows, which cost.
@@ -203,20 +203,21 @@ export function cancelOrder(c: Commander, now: number): number {
 
 /** Production, stage by stage, as the yard reports it. */
 export const STAGES: { at: number; text: string }[] = [
-  { at: 0, text: 'Keel laid' },
-  { at: 0.2, text: 'Hull plated' },
-  { at: 0.45, text: 'Drives fitted' },
-  { at: 0.65, text: 'Your fit-out going in' },
-  { at: 0.85, text: 'Your name painted, the glow tested' },
-  { at: 1, text: 'Built' },
+  { at: 0, text: 'Your hull comes off the line' },
+  { at: 0.2, text: 'Your fit-out going in' },
+  { at: 0.45, text: 'Your colours applied' },
+  { at: 0.7, text: 'Your name painted' },
+  { at: 0.85, text: 'The glow tested' },
+  { at: 1, text: 'Ready' },
 ];
 
 export function production(o: ShipOrder, now: number): { fraction: number; stage: string; built: boolean; hoursLeft: number } {
   // A gift is waiting when you redeem it: the yard built it for you already (Mark).
   if (o.gifted) return { fraction: 1, stage: 'Built', built: true, hoursLeft: 0 };
-  const fraction = Math.min(1, Math.max(0, (now - o.placed) / (PRODUCTION_HOURS * 3600_000)));
+  const hours = productionHours(o);
+  const fraction = Math.min(1, Math.max(0, (now - o.placed) / (hours * 3600_000)));
   const stage = [...STAGES].reverse().find((s) => fraction >= s.at)!.text;
-  return { fraction, stage, built: fraction >= 1, hoursLeft: Math.ceil((1 - fraction) * PRODUCTION_HOURS) };
+  return { fraction, stage, built: fraction >= 1, hoursLeft: Math.ceil((1 - fraction) * hours) };
 }
 
 // --- Collecting it --------------------------------------------------------------
