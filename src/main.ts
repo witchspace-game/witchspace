@@ -82,7 +82,7 @@ import { SLOT, Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
-import { ADRIFT_HOLD, assignmentFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase, type Message } from './game/assignments';
+import { ADRIFT_HOLD, assignmentFor, offerFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase, type Message } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
 import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
@@ -850,10 +850,30 @@ function renderContracts() {
   const receipt = (m: Message) => /:delivered$/.test(m.id);
   const archive = (m: Message) => `<button type="button" class="message-archive" data-archive="${escapeHtml(m.id)}" aria-label="Archive this message" title="Archive">×</button>`;
   const line = (m: Message) => `<li class="message receipt${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <small>${escapeHtml(m.body.replace(/^Your /, '').replace(/ was handed in: /, ' handed in · ').replace(/: ([\d,]+ Cr) paid\./, ' · $1').replace(/\.$/, ''))}</small></li>`;
-  const full = (m: Message) => `<li class="message${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small></li>`;
+  // A company's offer says what you can do about it: take it here, or where to go, or that it has gone (Mark).
+  const answer = (m: Message) => {
+    const o = offerFor(c, m, here, now);
+    if (!o) return '';
+    if (o.kind === 'taken') return `<br><small class="why">Taken: it's in your contracts</small>`;
+    if (o.kind === 'closed') return `<br><small class="why">This offer has closed</small>`;
+    const decline = `<button data-decline="${escapeHtml(m.id)}">Decline</button>`;
+    if (o.kind === 'here') {
+      const why = cannotTake(c, o.offer, free);
+      return `<br><small>${o.offer.qty} t ${escapeHtml(cargoName(o.offer))} → ${place(destinationOf(o.offer))} · <b class="pay">${o.offer.pay.toLocaleString()} Cr</b> · closes in ${hoursLeft(o.offer.expires)} h</small>
+        <span class="actions"><button data-take="${o.offer.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button>${decline}</span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}`;
+    }
+    const name = escapeHtml(COMPANIES[m.company].name);
+    const s = o.station;
+    const where = s ? `Pick it up at any ${name} station: nearest ${escapeHtml(s.system.name)}, ${s.jumps} jump${s.jumps === 1 ? '' : 's'}` : `Pick it up at any ${name} station (none within reach)`;
+    const course = !s ? '' : c.target === s.system.index ? '<span class="on-course">On course</span>' : `<button data-course="${s.system.index}">Set course</button>`;
+    return `<br><small>${where} · closes in ${hoursLeft(o.offer.expires)} h</small><span class="actions">${course}${decline}</span>`;
+  };
+  const full = (m: Message) => `<li class="message${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small>${answer(m)}</li>`;
   const shown = (c.messages ?? []).filter((m) => !m.archived);
-  const unread = shown.filter((m) => !m.read);
-  const earlier = shown.filter((m) => m.read).slice(0, 10);
+  // An offer you can still take stays in view after you've read it.
+  const live = (m: Message) => ['here', 'elsewhere'].includes(offerFor(c, m, here, now)?.kind ?? '');
+  const unread = shown.filter((m) => !m.read || live(m));
+  const earlier = shown.filter((m) => m.read && !live(m)).slice(0, 10);
   const messages =
     unread.map((m) => (receipt(m) ? line(m) : full(m))).join('') +
     (earlier.length ? `<li class="message-earlier"><button type="button" class="message-archive-all" data-archive="read">Archive all</button><details${earlierOpen ? ' open' : ''}><summary>Earlier messages (${earlier.length})</summary><ul class="contracts">${earlier.map((m) => (receipt(m) ? line(m) : full(m))).join('')}</ul></details></li>` : '');
@@ -1004,7 +1024,13 @@ $('#contracts').addEventListener('click', (e) => {
     renderContracts();
     return;
   }
-  if (b.dataset.take) {
+  if (b.dataset.decline) {
+    const m = c.messages?.find((x) => x.id === b.dataset.decline);
+    if (m) {
+      m.archived = true;
+      contractMessage = `Declined. ${COMPANIES[m.company].name} will be in touch with other work.`;
+    }
+  } else if (b.dataset.take) {
     const now = Date.now();
     const hello = welcomeHere(c, currentSystem(), now);
     const offer = [...(hello ? [hello] : []), ...specialsHere(c, currentSystem(), now), ...board(c, currentSystem(), now)].find((o) => o.id === b.dataset.take);

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
+import { jumpsBetween } from './contracts';
 import { cargoTonnes, newCommander } from './commander';
-import { consequence, contentsOf, ADRIFT_FALL, ADRIFT_HOLD, ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, blackmailPrice, checkMessages, collectHeld, decide, expireCases, PIRATES_FIND, ransomPrice, fileOn, recoverCase, rivalPrice, sellToRival, setAdrift } from './assignments';
+import { consequence, contentsOf, ADRIFT_FALL, ADRIFT_HOLD, ASSIGNMENT_SLOT, assignmentFor, assignmentWaiting, blackmailPrice, checkMessages, companyHere, offerFor, collectHeld, decide, expireCases, PIRATES_FIND, ransomPrice, fileOn, recoverCase, rivalPrice, sellToRival, setAdrift } from './assignments';
 import { deliver, destinationOf, loseContracts, logOf, standing, take } from './contracts';
 import { legalStatus } from './law';
 import { eventsAt, setCausedEvents } from '../economy/events';
@@ -19,6 +20,28 @@ function waitingTime(callsign: string) {
 }
 
 describe('special assignments', () => {
+  it('say what you can do about them: take it here, where to go, or that it has gone (Mark)', () => {
+    const c = newCommander('modern');
+    c.standing = { hexon: 6 };
+    const t = waitingTime(c.name);
+    const m = checkMessages(c, lave, t).find((x) => x.company === 'hexon')!;
+    const galaxy = Array.from({ length: 256 }, (_, i) => systemAt(0, i));
+    const there = galaxy.find((s) => companyHere('hexon', s))!;
+    const away = galaxy.find((s) => !companyHere('hexon', s))!;
+    expect(offerFor(c, m, there, t)?.kind).toBe('here');
+    const elsewhere = offerFor(c, m, away, t);
+    expect(elsewhere?.kind).toBe('elsewhere');
+    if (elsewhere?.kind === 'elsewhere' && elsewhere.station) {
+      expect(companyHere('hexon', elsewhere.station.system)).toBe(true);
+      expect(jumpsBetween(away, elsewhere.station.system, 8)).toBe(elsewhere.station.jumps);
+    }
+    expect(offerFor(c, m, there, t + 10 * ASSIGNMENT_SLOT)?.kind).toBe('closed');
+    const offer = (offerFor(c, m, there, t) as { offer: Parameters<typeof take>[1] }).offer;
+    expect(take(c, offer, 20)).toBeNull();
+    expect(offerFor(c, m, there, t)?.kind).toBe('taken');
+    expect(offerFor(c, { ...m, id: `${m.id}:delivered` }, there, t)).toBeNull(); // a receipt has nothing to answer
+  });
+
   it('only come once a company trusts you', () => {
     const c = newCommander('modern');
     const t = waitingTime(c.name);
