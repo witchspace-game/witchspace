@@ -29,9 +29,11 @@ if (counts.length)
       for (const el of counts) {
         const e = editions.find((x) => x.id === el.dataset.edition);
         if (!e) continue;
-        const left = Math.max(0, e.limit - e.taken);
-        el.innerHTML = left ? `<b>${left} of ${e.limit} left.</b> Numbered 001 to ${String(e.limit).padStart(3, '0')}, each painted beside its name.` : `<b>All ${e.limit} spoken for.</b> Every one numbered, and every one taken.`;
-        el.classList.toggle('gone', !left);
+        // Signed over to contributors, not sold: how many the maker has given (Mark).
+        const given = Math.min(e.taken, e.limit);
+        if (!given) continue;
+        el.innerHTML = given < e.limit ? `<b>${given} of ${e.limit} signed over.</b> Numbered 001 to ${String(e.limit).padStart(3, '0')}, each painted beside its name.` : `<b>All ${e.limit} signed over.</b> Every one numbered, and every one given.`;
+        el.classList.toggle('gone', given >= e.limit);
       }
     } catch {
       // The numbers stay as built: no count, nothing wrong.

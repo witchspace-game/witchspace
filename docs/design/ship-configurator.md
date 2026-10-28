@@ -25,7 +25,7 @@ The yard's configurator is in the game, at a shipyard, so you only meet it once 
 - **One step at a time:** Paint, Glow, Trim, Aboard, Fit-out, then Name and order.
 - **A bar along the bottom:** the price, the deposit and when she'd be ready, worked out by the game's own `priceLines`, `quote`, `depositFor` and `productionHours`, so the site and the yard can never disagree.
 - **The spec is in the link** (`#spec=…`), so "my Fer-de-lance" can be shared and opened by anyone.
-- **The numbered editions** are shown beside the configurator, with how many are left. They're ordered in the game, as now.
+- **The numbered editions** are shown beside the configurator, with how many are left. They're by invitation: for now the maker signs them over, free, to the people who build Witchspace *(Mark, 28 October 2026: "If you have to ask... you can't afford the special editions. For now they are invite only to contributors.")*, so nobody reserves one on the site and no price is shown; the count says how many are signed over. Anyone can open one (`#edition=witch-fire`), give her a name, and share her: the link carries the name (`#edition=witch-fire&name=Nightjar`). Her page's first button goes there, not to reserving or to /play/ *(Mark: "A new user cannot reserve one without paying the deposit which they haven't got. They can however spec out one and share it on social media!")*.
 
 ## Ordering: reserve online, pay at the yard
 

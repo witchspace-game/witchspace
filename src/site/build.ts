@@ -1,6 +1,6 @@
 import { EDITIONS, editionNo, type Edition } from '../content/editions';
 import type { ShipDef } from '../content/types';
-import { checkSpec, cleanName, editionQuote, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, ORDERABLE_LUXURIES, standardKit, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
+import { checkSpec, cleanName, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, ORDERABLE_LUXURIES, standardKit, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
 import { API, refresh, sessionToken, signedIn } from '../net/account';
 import { accountSpec, editionCounts } from '../net/shipyard';
@@ -76,16 +76,20 @@ let spec: Spec = fromLink() ?? local()?.spec ?? defaultSpec(def);
 spec.upgrades = [...new Set([...standardKit(def), ...spec.upgrades])];
 
 // The numbered editions: set by the maker, so they're looked at here, not specced (Mark: "if I choose one of
-// the special editions it doesn't show what it looks like"). They're reserved in the game, where the number comes from.
+// the special editions it doesn't show what it looks like"). The maker signs them over to contributors (Mark: "if you
+// have to ask, you can't afford it"), so here anyone can name one and share her, and nobody reserves one.
 const MINE = EDITIONS.filter((e) => e.ship === def.id);
-const editionFromLink = () => MINE.find((e) => location.hash === `#edition=${e.id}`) ?? null;
+const hashParams = () => new URLSearchParams(location.hash.slice(1));
+const editionFromLink = () => MINE.find((e) => hashParams().get('edition') === e.id) ?? null;
 let edition: Edition | null = editionFromLink();
-/** How many of each are left, from the yard's office when it answers. */
-let left: Record<string, number> = {};
+/** The name you've given the edition on show, carried in the link you share: #edition=witch-fire&name=Nightjar. */
+let editionName = edition ? cleanName(hashParams().get('name') ?? '') : '';
+/** How many of each the maker has signed over to contributors, from the yard's office when it answers. */
+let given: Record<string, number> = {};
 
 /** What's on show: the edition, or your own spec. */
 const showing = (): Spec => (edition ? editionSpec(edition) : spec);
-const link = () => `${location.origin}${location.pathname}${edition ? `#edition=${edition.id}` : `#spec=${toB64(JSON.stringify(spec))}`}`;
+const link = () => `${location.origin}${location.pathname}${edition ? `#edition=${edition.id}${editionName ? `&name=${encodeURIComponent(editionName)}` : ''}` : `#spec=${toB64(JSON.stringify(spec))}`}`;
 
 // --- The steps ------------------------------------------------------------------------------
 
@@ -164,19 +168,27 @@ function orderStep(): string {
     <p class="build-note" id="build-ordered">${note()}</p>`;
 }
 
-/** A numbered edition, on show: what she is, how many are left, her price, and where to reserve one. */
+/** A numbered edition, on show: what she is, how many are left, a name for her and a way to share her. */
 function editionView(e: Edition): string {
-  const total = editionQuote(def, e);
-  const n = left[e.id];
+  const n = given[e.id];
   const days = Math.round(e.finishHours / 24);
   return `<h2 class="build-edition-name" style="--edition:${e.colour}">${escapeHtml(e.name)} <span>${e.limit} built, numbered</span></h2>
     <p>${escapeHtml(e.blurb)}</p>
     ${summary(editionSpec(e))}
-    <p class="build-order-total"><span>Numbered 001 to ${editionNo(e.limit)}</span><b>${n === undefined ? `${e.limit} in all` : n ? `${n} of ${e.limit} left` : 'All spoken for'}</b></p>
-    <p class="build-order-total"><span>Price, the maker’s spec and its number</span><b>${cr(total)}</b></p>
-    <p class="build-order-total"><span>Deposit, a tenth, refundable until she’s ready</span><b>${cr(depositFor(total))}</b></p>
-    <p class="connect-buttons"><a class="button primary" href="/ships/${def.id}/${e.id}/">The ${escapeHtml(e.name)}, in full</a> <button type="button" class="button ghost" data-edition="">Spec your own instead</button></p>
-    <p class="build-note">The maker sets everything but her name, and each one is finished by hand, in about ${days} days. Numbers come from the yard’s office in order, so an edition is reserved in the game: dock at any shipyard, choose the ${escapeHtml(e.name)}, and sign in to hold your number.</p>`;
+    <p class="build-order-total"><span>Numbered 001 to ${editionNo(e.limit)}</span><b>${!n ? `${e.limit} in all` : n < e.limit ? `${n} of ${e.limit} signed over` : `All ${e.limit} signed over`}</b></p>
+    <h2>Her name <span>painted beside her number</span></h2>
+    <input class="build-name" id="edition-name" maxlength="24" placeholder="Nightjar, Quiet Hours, Last Light…" value="${escapeHtml(editionName)}" aria-label="Her name" />
+    <p class="connect-buttons"><button type="button" class="button primary" id="build-share" data-share data-share-title="${escapeHtml(shareTitle(e))}">Share her</button> <a class="button ghost" href="/ships/${def.id}/${e.id}/">The ${escapeHtml(e.name)}, in full</a> <button type="button" class="button ghost" data-edition="">Spec your own instead</button></p>
+    <p class="build-note">The maker sets everything but her name, and each one is finished by hand, in about ${days} days. If you have to ask, you can’t afford one. Special editions are by invitation: for now, the maker signs them over to the people who build Witchspace. <a href="/get-involved/">Get involved</a>.</p>`;
+}
+
+const shareTitle = (e: Edition) => (editionName ? `${editionName}, my ${def.name} ${e.name}` : `The ${def.name} ${e.name}`);
+
+function caption() {
+  const s = showing();
+  const c = colourOf(s.colour);
+  const t = colourOf(s.trim);
+  $('#build-caption').textContent = `${edition ? `${editionName ? `“${editionName}” · ` : ''}${edition.name} · ` : ''}${c?.name ?? 'The maker’s own'}${t ? `, with ${t.name} trim` : ''} · ${GLOWS[s.glow].name}`;
 }
 
 /** Your own spec, or one of the numbered editions: the first choice, as on a car maker's site. */
@@ -222,17 +234,13 @@ function paint() {
   shown = key;
   view?.show(def, { colour: s.colour, glow: GLOWS[s.glow].glow, trim: s.trim, ...(lights ? { lights } : {}) });
   document.querySelector<HTMLElement>('.build-page')!.style.setProperty('--hull', s.colour);
-  const c = colourOf(s.colour);
-  const t = colourOf(s.trim);
-  $('#build-caption').textContent = `${edition ? `${edition.name} · ` : ''}${c?.name ?? 'The maker’s own'}${t ? `, with ${t.name} trim` : ''} · ${GLOWS[s.glow].name}`;
 }
 
 function bar() {
   if (edition) {
-    const total = editionQuote(def, edition);
     $('#build-bar').innerHTML = `<div class="build-bar-in">
-    <div class="build-price"><b>${cr(total)}</b><span>${escapeHtml(edition.name)} · deposit ${cr(depositFor(total))} · reserved in the game</span></div>
-    <button type="button" class="button primary" data-edition="">Spec your own →</button>
+    <div class="build-price"><b>${escapeHtml(edition.name)}</b><span>${edition.limit} built, numbered · by invitation, for contributors</span></div>
+    <span class="build-bar-buttons"><button type="button" class="button ghost" data-edition="">Spec your own</button> <button type="button" class="button primary" data-share data-share-title="${escapeHtml(shareTitle(edition))}">Share her</button></span>
   </div>`;
     return;
   }
@@ -253,10 +261,18 @@ function render() {
   $('#build-options').innerHTML = edition ? editionView(edition) : options();
   $('#account').hidden = Boolean(edition) || step !== 'order';
   paint();
+  caption();
   bar();
   history.replaceState(null, '', link().slice(location.origin.length));
-  const share = document.querySelector<HTMLElement>('#build-share');
-  if (share) share.dataset.shareUrl = link().slice(location.origin.length);
+  shareLinks();
+}
+
+/** Every Share button here shares what's on show, named. */
+function shareLinks() {
+  for (const b of document.querySelectorAll<HTMLElement>('#build-options [data-share], #build-bar [data-share]')) {
+    b.dataset.shareUrl = link().slice(location.origin.length);
+    if (edition) b.dataset.shareTitle = shareTitle(edition);
+  }
 }
 
 function change(f: () => void) {
@@ -298,9 +314,13 @@ document.addEventListener('change', (e) => {
 
 document.addEventListener('input', (e) => {
   const i = e.target as HTMLInputElement;
-  if (i.id !== 'build-name') return;
-  spec.name = cleanName(i.value);
+  if (i.id === 'edition-name' && edition) {
+    editionName = cleanName(i.value);
+    caption();
+  } else if (i.id === 'build-name') spec.name = cleanName(i.value);
+  else return;
   history.replaceState(null, '', link().slice(location.origin.length));
+  shareLinks();
 });
 
 /** Put the spec where the game finds it: this browser, and your account if you're signed in (PUT /me/spec). */
@@ -347,14 +367,14 @@ window.addEventListener('hashchange', () => {
   const s = fromLink();
   const e = editionFromLink();
   if (s) change(() => ((spec = s), (edition = null)));
-  else if (e) change(() => (edition = e));
+  else if (e) change(() => ((edition = e), (editionName = cleanName(hashParams().get('name') ?? ''))));
 });
 
-// How many of each edition are left: the yard's office, when it answers.
+// How many of each edition are signed over: the yard's office, when it answers.
 if (MINE.length)
   void editionCounts()
     .then((counts) => {
-      left = Object.fromEntries(Object.entries(counts).map(([id, c]) => [id, Math.max(0, c.limit - c.taken)]));
+      given = Object.fromEntries(Object.entries(counts).map(([id, c]) => [id, Math.min(c.taken, c.limit)]));
       if (edition) render();
     })
     .catch(() => {

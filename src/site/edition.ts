@@ -4,7 +4,8 @@ import { editionCounts } from '../net/shipyard';
 import { viewer } from './viewer';
 
 // A numbered edition's page (tools/ships.ts editionPage): she turns in her
-// own paint and glow, and the yard's office says how many are left.
+// own paint and glow, and the yard's office says how many the maker has
+// signed over to contributors (they're given, not sold: Mark).
 
 const view = document.querySelector<HTMLElement>('.edition-view')!;
 const def = JSON.parse(document.querySelector('#ship-def')!.textContent!) as ShipDef;
@@ -20,18 +21,16 @@ void editionCounts()
   .then((counts) => {
     for (const el of document.querySelectorAll<HTMLElement>('[data-edition-left]')) {
       const c = counts[el.dataset.editionLeft!];
-      if (!c) continue;
-      const left = Math.max(0, c.limit - c.taken);
-      el.textContent = left ? `${left} of ${c.limit}` : `All ${c.limit}`;
-      el.nextElementSibling!.textContent = left ? 'left, numbered' : 'spoken for';
+      if (!c?.taken) continue;
+      el.textContent = `${Math.min(c.taken, c.limit)} of ${c.limit}`;
+      el.nextElementSibling!.textContent = 'signed over';
     }
     for (const el of document.querySelectorAll<HTMLElement>('[data-edition-count]')) {
       const c = counts[el.dataset.editionCount!];
-      if (!c) continue;
-      const left = Math.max(0, c.limit - c.taken);
-      el.textContent = left ? `${left} of ${c.limit} left` : `All ${c.limit} spoken for`;
+      if (!c?.taken) continue;
+      el.textContent = c.taken < c.limit ? `${c.taken} of ${c.limit} signed over` : `All ${c.limit} signed over`;
     }
   })
   .catch(() => {
-    // The office isn't answering: the page says how many will be built.
+    // The office isn't answering, or none is signed over yet: the page says how many will be built.
   });

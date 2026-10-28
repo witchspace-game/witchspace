@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { ShipDef } from '../src/content/types';
 import { EDITIONS } from '../src/content/editions';
 import { EQUIPMENT } from '../src/game/commander';
-import { depositFor, editionQuote, GLOWS, LUXURIES, PALETTE, standardKit } from '../src/game/shipyard';
+import { GLOWS, LUXURIES, PALETTE, standardKit } from '../src/game/shipyard';
 import { handling, inYards, notesFor } from '../src/game/manual';
 import { MAX_ROLL_ERROR } from '../src/game/station';
 import { PLAYER_LASERS } from '../src/game/weapons';
@@ -35,7 +35,7 @@ export function loadModules(root: string): Map<string, ModuleFile> {
   }));
 }
 
-/** A ship's special editions, in words and at the price the shipyard asks. */
+/** A ship's special editions, in words. No price: they're by invitation, for contributors (Mark). */
 export function editionsFor(s: ShipFile): EditionCard[] {
   const named = (colour: string | null) => (colour ? (PALETTE.find((p) => p.colour === colour) ?? null) : null);
   return EDITIONS.filter((e) => e.ship === s.id).map((e) => {
@@ -46,7 +46,6 @@ export function editionsFor(s: ShipFile): EditionCard[] {
       name: e.name,
       blurb: e.blurb,
       limit: e.limit,
-      price: editionQuote(s as unknown as ShipDef, e),
       colour: e.colour,
       trimColour: e.trim,
       finish: [colour?.name, trim ? `${trim.name} trim` : ''].filter(Boolean).join(', with '),
@@ -57,7 +56,6 @@ export function editionsFor(s: ShipFile): EditionCard[] {
       aboard: e.luxuries.map((id) => LUXURIES.find((l) => l.id === id)).filter((l) => l !== undefined).map((l) => [l.name, l.blurb]),
       glowLevel: GLOWS[e.glow].glow,
       finishDays: Math.round(e.finishHours / 24),
-      deposit: depositFor(editionQuote(s as unknown as ShipDef, e)),
       lights: e.luxuries.includes('black-light-lights'),
     };
   });
