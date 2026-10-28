@@ -282,3 +282,39 @@ export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here
   delete c.order;
   return { ok: true, paid: bill.due };
 }
+
+// --- Repainting --------------------------------------------------------------------
+
+/** The yard's labour for a repaint: a little of what the hull is worth, never less than a day's work. */
+export const repaintLabour = (def: ShipDef) => Math.max(2_000, Math.round(def.stats.price * 0.03));
+
+export interface Finish {
+  colour: string;
+  glow: GlowId;
+  trim: string | null;
+}
+
+/** Colours you may have on this ship: anyone's, and your own edition's. */
+export const paintable = (c: Commander, colour: string | null) => {
+  const edition = colour ? PALETTE.find((p) => p.colour === colour)?.edition : undefined;
+  return !edition || c.paint?.edition?.id === edition;
+};
+
+/** What a repaint costs: the labour, and whatever of the finish changes, priced as in the configurator. What she already has is free. */
+export function repaintQuote(def: ShipDef, f: Finish, now?: Partial<Finish> | null): number {
+  const colour = f.colour === now?.colour ? 0 : colourPrice(f.colour);
+  const glow = f.glow === (now?.glow ?? 'standard') ? 0 : GLOWS[f.glow].price;
+  const trim = !f.trim || f.trim === now?.trim ? 0 : (now?.trim ? 0 : TRIM_PRICE) + colourPrice(f.trim);
+  return repaintLabour(def) + colour + glow + trim;
+}
+
+/** Repaint the ship you fly, at a yard, while you wait. Its name, edition and luxuries stay. */
+export function repaint(c: Commander, def: ShipDef, f: Finish): OrderResult | { ok: true; paid: number } {
+  if (hullOf(c) !== def.id) return { ok: false, message: 'The yard repaints the ship you came in' };
+  if (![f.colour, f.trim].every((x) => paintable(c, x))) return { ok: false, message: 'Those colours belong to an edition' };
+  const cost = repaintQuote(def, f, c.paint);
+  if (c.credits < cost) return { ok: false, message: `A repaint like that is ${cost.toLocaleString()} Cr` };
+  c.credits = Math.round((c.credits - cost) * 10) / 10;
+  c.paint = { name: '', luxuries: [], ...c.paint, colour: f.colour, glow: f.glow, trim: f.trim };
+  return { ok: true, paid: cost };
+}
