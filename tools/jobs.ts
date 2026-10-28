@@ -179,7 +179,7 @@ const RUNGS: Record<string, string> = {
 
 function standingHtml(id: CompanyId) {
   const rungs = [...STANDINGS].reverse();
-  return `<ol class="ladder">${rungs
+  return `<ol class="standing-ladder">${rungs
     .map((r) => `<li${r.name === 'Casual' ? ' class="start"' : ''}><b>${r.name}</b><small>${Number.isFinite(r.at) ? `${r.at > 0 ? '+' : ''}${r.at}` : ''}</small><span>${esc(RUNGS[r.name] ?? '')}</span></li>`)
     .join('')}</ol>
     <p class="muted small">Standing rises with every contract delivered on time: one point, two for a rush job or danger pay, three for a special assignment. Abandoning a contract costs three, losing its cargo with your ship two. Below zero, ${esc(COMPANIES[id].name)} forgets a point a day, or takes compensation.</p>`;
