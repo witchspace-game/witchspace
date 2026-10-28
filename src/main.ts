@@ -29,6 +29,8 @@ import {
   saveCommander,
   type Commander,
   type EquipmentId,
+  hullOf,
+  type ShipOrder,
   type Difficulty,
 } from './game/commander';
 import { DockingComputer } from './game/dockingComputer';
@@ -77,7 +79,7 @@ import { Missile, MISSILE } from './game/missile';
 import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rightOn, type Foe } from './game/rating';
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
-import { cancelOrder, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { cancelOrder, collection, collectOrder, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { SLOT, Station } from './game/station';
@@ -266,6 +268,8 @@ const showroomModels = ships.map(buildShip);
 for (const m of showroomModels) showroom.scene.add(m.root);
 const cobraIndex = Math.max(0, showroomModels.findIndex((m) => m.def.id === 'cobra-mk3'));
 let shipIndex = cobraIndex;
+/** Your own hull's place in the showroom. */
+const ownIndex = () => (commander ? Math.max(0, showroomModels.findIndex((m) => m.def.id === hullOf(commander!))) : cobraIndex);
 let flyIn = 0; // 0 = far away, 1 = arrived
 const spin = { x: 0.25, y: 0, dragging: false, lastX: 0, lastY: 0, idle: 0 };
 let zoom = 1; // showroom zoom: >1 is closer
@@ -564,8 +568,9 @@ function enterDocked(newShip = false) {
   boughtHere = { equipment: new Set(), lasers: {}, missiles: 0 };
   ensureSystemScene();
   inSpace = false;
+  boardShip();
   player.repair();
-  showShip(cobraIndex);
+  showOwnShip();
   forgive(cmdr(), Date.now());
   boardSeenAt = Date.now(); // what's on the board as you dock isn't news; what's posted while you're here is
   payCommissions();
@@ -678,8 +683,7 @@ function setDockTab(tab: DockTab) {
   else if (state === 'docked') {
     // Your own ship back in the berth, and the yard's hulls in their own glow.
     spec = null;
-    ships.forEach((def, i) => recolourShowroom(i, plainLook(def)));
-    if (shipIndex !== cobraIndex) showShip(cobraIndex);
+    showOwnShip();
   }
   $('#tab-contracts').hidden = tab !== 'contracts';
   if (tab === 'news') renderNews();
@@ -1153,6 +1157,30 @@ function recolourShowroom(i: number, look: Look) {
   showroomModels[i] = m;
 }
 const plainLook = (def: ShipDef): Look => ({ colour: def.style.lineColor, glow: def.style.glow ?? 1, trim: null });
+const paintLook = (def: ShipDef, p: { colour: string; glow?: GlowId; trim?: string | null }): Look => ({ colour: p.colour, glow: GLOWS[p.glow ?? 'standard'].glow * (def.style.glow ?? 1), trim: p.trim ?? null });
+
+/** Your hull in the berth, in its paint, and every other hull in its maker's own. */
+function showOwnShip() {
+  const c = commander;
+  ships.forEach((def, i) => recolourShowroom(i, c?.paint && def.id === hullOf(c) ? paintLook(def, c.paint) : plainLook(def)));
+  showShip(ownIndex());
+}
+
+/** Fly the hull your commander owns. */
+function boardShip() {
+  const def = shipById(hullOf(cmdr())) ?? shipById('cobra-mk3')!;
+  if (player.def.id !== def.id) player.fly(def);
+}
+
+/** The way to take delivery: here at the yard that built it, the bill with your trade-in; elsewhere, where to go. */
+function collectButton(o: ShipOrder): string {
+  const here = currentSystem();
+  if (o.galaxy !== here.galaxy || o.system !== here.index) return '';
+  const bill = collection(cmdr(), player.def)!;
+  const pay = bill.due >= 0 ? `pay ${Math.ceil(bill.due).toLocaleString()} Cr` : `receive ${Math.floor(-bill.due).toLocaleString()} Cr`;
+  return `<span>Balance ${bill.balance.toLocaleString()} Cr, less ${bill.tradeIn.toLocaleString()} Cr for your ${escapeHtml(player.def.name)} and its kit</span>
+    <button type="button" class="primary yard-collect" ${cmdr().credits < bill.due ? 'disabled' : ''}>Collect her · ${pay}</button>`;
+}
 
 function renderShipyard() {
   const c = cmdr();
@@ -1168,8 +1196,8 @@ function renderShipyard() {
   yardPick = pick.def.id;
   // The berth shows the glow you're choosing, or the one you ordered.
   const lookOf = (def: ShipDef): Look => {
-    const o = spec && def.id === spec.ship ? spec : c.order?.ship === def.id ? c.order : null;
-    return o ? { colour: o.colour, glow: GLOWS[o.glow ?? 'standard'].glow * (def.style.glow ?? 1), trim: o.trim ?? null } : plainLook(def);
+    const o = spec && def.id === spec.ship ? spec : c.order?.ship === def.id ? c.order : c.paint && hullOf(c) === def.id ? c.paint : null;
+    return o ? paintLook(def, o) : plainLook(def);
   };
   for (const { i, def } of yard) recolourShowroom(i, lookOf(def));
   if (shipIndex !== pick.i) showShip(pick.i);
@@ -1187,10 +1215,10 @@ function renderShipyard() {
     const where = at ? `${stationName(at).name}, ${at.name}` : 'a yard in another galaxy';
     orderCard = `<div class="yard-order" style="--hull:${o.colour}">
       <strong>Your ${escapeHtml(def?.name ?? o.ship)}${o.name ? ` “${escapeHtml(o.name)}”` : ''}</strong>
-      <span>${p.built ? `Built, and waiting for you at ${escapeHtml(where)}. Collection opens with the shipyards.` : `In production at ${escapeHtml(where)}: ${p.stage.toLowerCase()} · about ${p.hoursLeft} h to go`}</span>
+      <span>${p.built ? `Built, and waiting for you at ${escapeHtml(where)}.` : `In production at ${escapeHtml(where)}: ${p.stage.toLowerCase()} · about ${p.hoursLeft} h to go`}</span>
       <div class="rec-meter"><span style="width:${(p.fraction * 100).toFixed(1)}%"></span></div>
       <span>Deposit ${o.deposit.toLocaleString()} Cr paid · ${(o.quoted - o.deposit).toLocaleString()} Cr on collection${p.built ? '' : ''}</span>
-      ${p.built ? '' : `<button type="button" class="yard-cancel">Cancel and refund ${o.deposit.toLocaleString()} Cr</button>`}
+      ${p.built ? collectButton(o) : `<button type="button" class="yard-cancel">Cancel and refund ${o.deposit.toLocaleString()} Cr</button>`}
     </div>`;
   }
 
@@ -1299,7 +1327,7 @@ function renderShipyard() {
       <ul class="yard">${yard
         .map(({ def }) => {
           const st = def.stats;
-          const tag = def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : def.id === 'cobra-mk3' ? '<em>Your ship</em>' : '';
+          const tag = def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : def.id === hullOf(c) ? `<em>Your ship${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</em>` : '';
           return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${def.style.lineColor}">
             <strong>${escapeHtml(def.name)}</strong> ${tag}
             <span>${[def.manufacturer, def.role].filter(Boolean).map((x) => escapeHtml(x!)).join(' · ')}</span>
@@ -1321,6 +1349,26 @@ function renderShipyard() {
       renderShipyard();
     };
   }
+  const take = el.querySelector<HTMLButtonElement>('.yard-collect');
+  if (take && c.order)
+    take.onclick = () => {
+      if (!take.dataset.armed) {
+        take.dataset.armed = '1';
+        take.textContent = `Trade in your ${player.def.name} and take her? Press again`;
+        return;
+      }
+      const next = shipById(c.order!.ship)!;
+      const r = collectOrder(c, player.def, next, { galaxy: here.galaxy, system: here.index }, cargoTonnes(c), Date.now());
+      if (!r.ok) yardMessage = r.message;
+      else {
+        boardShip();
+        saveCommander(c);
+        sfx.beep();
+        yardMessage = `She's yours: your ${next.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}, in the berth and ready to fly.`;
+        yardPick = next.id;
+      }
+      renderShipyard();
+    };
   const cancel = el.querySelector<HTMLButtonElement>('.yard-cancel');
   if (cancel)
     cancel.onclick = () => {
@@ -6203,11 +6251,11 @@ function die() {
       if (lost.length || adrift.length || returned.length) setTimeout(() => flash([...lost, ...(returned.length ? returned : adrift)].join(' · '), 6), 5500);
       const claim = claimInsurance(c);
       if (claim.kind === 'void') {
-        message = 'Insurance void: you were a Fugitive · the Co-operative has issued you a bare Cobra';
+        message = `Insurance void: you were a Fugitive · ${hullOf(c) === 'cobra-mk3' && player.def.id !== 'cobra-mk3' ? `your ${player.def.name} is gone, and ` : ''}the Co-operative has issued you a bare Cobra`;
         if (claim.stake) message += ` and ${claim.stake.toLocaleString()} Cr to start again`;
         message += ' · settle with the law before you launch';
       } else {
-        message = `${claim.pod ? 'Picked up. ' : ''}Insurance paid out · excess ${claim.paid.toLocaleString()} Cr`;
+        message = `${claim.pod ? 'Picked up. ' : ''}Insurance paid out${hullOf(c) !== 'cobra-mk3' ? ` · a new ${shipById(hullOf(c))?.name ?? 'ship'}${c.paint?.name ? ` “${c.paint.name}”` : ''}, as you had her` : ''} · excess ${claim.paid.toLocaleString()} Cr`;
         if (claim.paid < claim.excess) message += ` (the rest written off)`;
       }
     }
@@ -6362,7 +6410,7 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
     return;
   }
   const here = currentSystem();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, 'cobra-mk3', Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken());
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken());
   const back = sharedSpace.takeCorrection();
   if (back) player.obj.position.copy(back);
   sharedSpace.update(dt, {

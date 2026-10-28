@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { shipById } from '../content/ships';
 import { newCommander } from './commander';
-import { cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
+import { collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, PALETTE, placeOrder, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
 
 const fdl = shipById('fer-de-lance')!;
 const cobra = shipById('cobra-mk3')!;
@@ -62,5 +62,40 @@ describe('a deposit', () => {
     expect(cancelOrder(c, H)).toBe(deposit);
     expect(c.credits).toBe(50_000);
     expect(c.order).toBeUndefined();
+  });
+});
+
+describe('collecting it', () => {
+  const built = PRODUCTION_HOURS * H;
+  const ordered = () => {
+    const c = newCommander('modern');
+    c.credits = 400_000;
+    c.equipment = ['docking-computer', 'weapons-licence', 'transponder'];
+    placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#ff4dff', name: 'Brass Neck', laser: 'beam', upgrades: ['fuel-scoops'] }, yard, 0);
+    return c;
+  };
+
+  it('trades in your ship, charges the balance, and you fly out in the new one, in its paint', () => {
+    const c = ordered();
+    const bill = collection(c, cobra)!;
+    expect(bill.tradeIn).toBe(Math.round(cobra.stats.price * TRADE_IN.hull + (1500 + 400) * TRADE_IN.kit));
+    const before = c.credits;
+    expect(collectOrder(c, cobra, fdl, yard, 0, built)).toEqual({ ok: true, paid: bill.due });
+    expect(c.credits).toBe(Math.round((before - bill.due) * 10) / 10);
+    expect(c.ship).toBe('fer-de-lance');
+    expect(c.paint).toMatchObject({ colour: '#ff4dff', name: 'Brass Neck' });
+    expect(c.lasers).toEqual({ front: 'beam' });
+    // The old ship's kit went with it; your papers stayed.
+    expect(c.equipment.sort()).toEqual(['fuel-scoops', 'transponder', 'weapons-licence']);
+    expect(c.order).toBeUndefined();
+  });
+
+  it('waits until it is built, at the yard that built it, with the money and room in the hold', () => {
+    expect(collectOrder(ordered(), cobra, fdl, yard, 0, built / 2)).toMatchObject({ ok: false });
+    expect(collectOrder(ordered(), cobra, fdl, { galaxy: 0, system: 8 }, 0, built)).toMatchObject({ ok: false });
+    expect(collectOrder(ordered(), cobra, fdl, yard, 99, built)).toMatchObject({ ok: false });
+    const poor = ordered();
+    poor.credits = 0;
+    expect(collectOrder(poor, cobra, fdl, yard, 0, built)).toMatchObject({ ok: false });
   });
 });

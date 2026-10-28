@@ -56,7 +56,14 @@ export function buildFittings(def: ShipDef, loadout: Loadout): Fittings {
   const u = b.length / 50; // the Cobra is 50 m long; everything scales from that
   const lift = 0.12 * u; // just proud of the hull, so the fill doesn't hide it
   /** A point on the top (1) or underside (-1) of the hull. */
-  const on = (x: number, z: number, dir: 1 | -1): V => [x, (surface(def, x, z, dir) ?? (dir > 0 ? b.yMax : b.yMin)) + dir * lift, z];
+  const on = (x: number, z: number, dir: 1 | -1): V => {
+    // Laid out for a Cobra's width: on a narrower hull, slide in until the mark lands on it.
+    for (let k = 0; k < 12; k++, x *= 0.85) {
+      const y = surface(def, x, z, dir);
+      if (y !== null && y !== undefined) return [x, y + dir * lift, z];
+    }
+    return [x, (dir > 0 ? b.yMax : b.yMin) + dir * lift, z];
+  };
   /** A line drawn on the hull between two (x, z) points. */
   const seam = (out: number[], x0: number, z0: number, x1: number, z1: number, dir: 1 | -1) => out.push(...on(x0, z0, dir), ...on(x1, z1, dir));
   const panel = (out: number[], x0: number, z0: number, x1: number, z1: number, dir: 1 | -1) => {

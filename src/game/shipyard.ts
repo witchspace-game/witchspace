@@ -1,5 +1,5 @@
 import type { ShipDef } from '../content/types';
-import { EQUIPMENT, type Commander, type EquipmentId, type ShipOrder } from './commander';
+import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
 import { PLAYER_LASERS } from './weapons';
 
 // Speccing a ship and putting down a deposit, as you would on a new car
@@ -134,4 +134,57 @@ export function production(o: ShipOrder, now: number): { fraction: number; stage
   const fraction = Math.min(1, Math.max(0, (now - o.placed) / (PRODUCTION_HOURS * 3600_000)));
   const stage = [...STAGES].reverse().find((s) => fraction >= s.at)!.text;
   return { fraction, stage, built: fraction >= 1, hoursLeft: Math.ceil((1 - fraction) * PRODUCTION_HOURS) };
+}
+
+// --- Collecting it --------------------------------------------------------------
+
+/** What the yard gives for the ship you're flying: most of the hull, half the kit. */
+export const TRADE_IN = { hull: 0.6, kit: 0.5 };
+
+/** The kit that belongs to the ship, valued as new: its upgrades and lasers. */
+function shipKitValue(c: Commander) {
+  const kit = c.equipment.reduce((sum, id) => sum + (UPGRADES.find((e) => e.id === id)?.price ?? 0), 0);
+  const lasers = Object.values(c.lasers).reduce((sum, id) => sum + (id ? PLAYER_LASERS[id].price : 0), 0);
+  return kit + lasers;
+}
+
+export const tradeIn = (c: Commander, current: ShipDef) => Math.round(current.stats.price * TRADE_IN.hull + shipKitValue(c) * TRADE_IN.kit);
+
+/** The bill on collection: the balance, less what the yard gives for your ship (it can come out in your favour). */
+export function collection(c: Commander, current: ShipDef): { balance: number; tradeIn: number; due: number } | null {
+  const o = c.order;
+  if (!o) return null;
+  const balance = o.quoted - o.deposit;
+  const t = tradeIn(c, current);
+  return { balance, tradeIn: t, due: balance - t };
+}
+
+export type CollectResult = { ok: true; paid: number } | { ok: false; message: string };
+
+/**
+ * Take delivery at the yard that built it: your old ship and its kit go in part
+ * exchange, and you fly out in the new one, fitted to your spec, in its paint.
+ * Your own papers stay yours (the weapons licence, the transponder) and so do
+ * prizes nobody sells (the Wisp). The hold has to fit.
+ */
+export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here: { galaxy: number; system: number }, cargoTonnes: number, now: number): CollectResult {
+  const o = c.order;
+  if (!o || o.ship !== next.id) return { ok: false, message: 'Nothing to collect' };
+  if (!production(o, now).built) return { ok: false, message: 'Not built yet' };
+  if (o.galaxy !== here.galaxy || o.system !== here.system) return { ok: false, message: 'Collect it at the yard that built it' };
+  if (hullOf(c) !== current.id) return { ok: false, message: 'That isn’t the ship you’re flying' };
+  const bill = collection(c, current)!;
+  if (c.credits < bill.due) return { ok: false, message: `You need ${Math.ceil(bill.due).toLocaleString()} Cr to collect it` };
+  const room = next.stats.cargo + (o.upgrades.includes('large-cargo-bay') ? LARGE_CARGO_BAY : 0);
+  if (cargoTonnes > room + 1e-9) return { ok: false, message: `Your hold won’t fit: sell ${Math.ceil(cargoTonnes - room)} t first` };
+  c.credits = Math.round((c.credits - bill.due) * 10) / 10;
+  const keep = c.equipment.filter((id) => !UPGRADES.some((e) => e.id === id));
+  c.equipment = [...new Set([...keep, ...o.upgrades])];
+  c.damaged = [];
+  c.lasers = { front: o.laser };
+  c.missiles = Math.min(c.missiles, next.stats.missiles ?? 0);
+  c.ship = next.id;
+  c.paint = { colour: o.colour, glow: o.glow ?? 'standard', trim: o.trim ?? null, name: o.name, luxuries: o.luxuries ?? [] };
+  delete c.order;
+  return { ok: true, paid: bill.due };
 }
