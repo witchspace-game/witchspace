@@ -170,6 +170,16 @@ body.retro #countdown { font-size: 32px; text-shadow: none; }
 /* Every shop action is the same size, whatever its label. */
 #equip li > button, .fuel-row button { flex-shrink: 0; width: 158px; height: 36px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 .fuel-row .buttons { display: flex; flex-direction: column; gap: 4px; }
+#equip li.kit-head { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; padding: 6px 0 2px; border-bottom: 1px solid var(--edge); color: var(--accent); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; }
+#equip li.kit-head:first-child { margin-top: 0; }
+#equip li.kit-head small { color: var(--dim); letter-spacing: 0.08em; font-size: 11px; }
+#equip li.kit-away { display: block; padding: 4px 0; }
+#equip li.kit-away button { width: 100%; height: auto; padding: 6px 0; border: none; background: none; color: var(--dim); font-size: 12px; text-align: left; text-transform: none; letter-spacing: normal; white-space: normal; }
+#equip li.kit-away button::after { content: ' ▾'; }
+#equip li.kit-away button[aria-expanded='true']::after { content: ' ▴'; }
+#equip li.away { opacity: 0.75; }
+#equip .tick { font-style: normal; color: var(--accent); }
+#equip .short, #equip button.short { color: var(--amber); }
 #equip .damaged { font-style: normal; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--danger); margin-left: 6px; }
 
 .controls {
