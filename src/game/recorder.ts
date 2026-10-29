@@ -19,8 +19,10 @@ const CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42e028', 'avc1.42001f'];
 // flight log offers to try HD again.
 export type Quality = 'hd' | 'sd';
 const QUALITY: Record<Quality, { height: number; fps: number; bitrate: number }> = {
-  hd: { height: 720, fps: 30, bitrate: 1_200_000 }, // glowing lines on black: half of what a busy scene needs
-  sd: { height: 480, fps: 24, bitrate: 700_000 },
+  // Mark: "why is it so bad quality?" The lines need little, but the soft glow, the haze and the dark
+  // gradients (with the screen's fine grain) broke into blocks at 1.2 Mbps; 3 keeps them clean.
+  hd: { height: 720, fps: 30, bitrate: 3_000_000 },
+  sd: { height: 480, fps: 24, bitrate: 1_600_000 },
 };
 const SLOW_FPS = 40;
 const STRUGGLE = 4; // seconds
@@ -180,7 +182,8 @@ export class FlightRecorder<M> {
     const frame = new VideoFrame(this.frame!, { timestamp: Math.round(this.mediaTime * 1e6), duration: Math.round(1e6 / FPS) });
     if (this.rested) this.frames = 0; // waking: a keyframe, so the cut to the new scene is clean
     this.rested = false;
-    this.encoder.encode(frame, { keyFrame: this.frames++ % FPS === 0 });
+    // A whole picture every two seconds (a clip starts on one): every second spent too much of the budget on them.
+    this.encoder.encode(frame, { keyFrame: this.frames++ % (FPS * 2) === 0 });
     frame.close();
     void this.finishDue();
   }

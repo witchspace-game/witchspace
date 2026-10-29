@@ -13,6 +13,8 @@
 //   (docs/design/flight-recorder.md, "Clip pages"): the track goes up only
 //   after the player says yes, once, and never the video.
 
+import { signedIn } from '../net/account';
+import { toggleAccountPanel } from './accountPanel';
 import { escapeHtml } from './escape';
 import { copyText, destinations, ICONS } from './shareLinks';
 import { isWide } from './upright';
@@ -105,6 +107,12 @@ export function openShareSheet(m: ShareMedia) {
         }
         <figcaption><strong>${escapeHtml(m.title)}</strong><span>witchspace.org.uk</span></figcaption>
       </figure>
+      ${
+        // A guest shares anonymously; their own callsign is theirs to claim by email, while nobody else has it (Mark).
+        signedIn()
+          ? ''
+          : '<p class="ws-share-who">Shared as <b>A commander</b>. <button type="button" class="ws-share-claim">Claim your callsign</button> to put your name on it: free, with your email, while it’s still free to take.</p>'
+      }
       <button type="button" class="ws-share-main primary">${main === 'share' ? `${ICONS.share}Share ${what}…` : `Save ${what}`}</button>
       <p class="ws-share-hint">${
         main === 'share'
@@ -229,6 +237,12 @@ export function openShareSheet(m: ShareMedia) {
     }
   };
   el.querySelector<HTMLButtonElement>('[data-close]')!.onclick = closeShareSheet;
+  const claim = el.querySelector<HTMLButtonElement>('.ws-share-claim');
+  if (claim)
+    claim.onclick = () => {
+      closeShareSheet();
+      toggleAccountPanel(true);
+    };
   el.addEventListener('pointerdown', (e) => e.target === el && closeShareSheet());
   document.addEventListener('keydown', onKey, true);
   requestAnimationFrame(() => el.classList.add('shown'));

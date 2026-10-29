@@ -68,6 +68,8 @@ Sharing works everywhere a commander can see a photo or a kept moment: the camer
 
 *Revised, 25 October 2026, after Mark's worry about phones filling up and about P in a dogfight: the buffer is a minute, and **a fight is one clip** (each kill within 25 seconds of the last re-cuts it from the fight's start, up to a minute, replacing the earlier cut; a death in the fight folds it in: "Took 2 pirates with me"). The bitrate is halved (1.2 Mbps: glowing lines on black lose nothing, checked frame by frame), so a 26 s clip is about 3 MB. The log has a **150 MB budget** and 60 moments; the oldest unkept moment makes room, unkept moments clear after a week, and the log shows the space used with a Clear unkept button. **Photos go to the log.** The first kept moment is announced in flight, the death replay says what the recorder is, and the log asks once: Keep it on, or Turn it off. Classic rules have no recorder, as this design always said.*
 
+*Revised again, 29 October 2026 (Mark: "Why is it so bad quality?"): 1.2 Mbps kept the lines but broke the soft glow, the haze and the dark gradients into blocks, so it's **3 Mbps at 720p** (1.6 at 480p), with a whole picture every two seconds rather than every second. A 30 s clip is about 11 MB, so the 150 MB log holds about thirteen before unkept ones clear.*
+
 *And it rests (Mark, 25 October 2026): in open space with nothing about, it stops recording, saving battery, and wakes the moment anything is near: a ship or missile within scanner range, the station, a planet, a rift, or a Legend anywhere in the system (the Falcon runs dark, so "near" is what the game knows is there, not what the scanner shows). It carries on 8 seconds after the last thing goes, so clips finish, and the minute in memory is the last minute worth having. `src/game/recorderWatch.ts`.*
 
 **The recorder.** While flying, the view is encoded at 720p, 30 fps (480p, 24 fps on a device that can't keep up), into a rolling buffer of the last minute in memory (a keyframe every second, so any second can start a clip). Nothing is written until something is kept. The encoder is WebCodecs, already used to make the trailer (`tools/trailer.ts`), with MP4 output; it needs Chrome, Edge or Safari 16.4 and later. Where it isn't available, the recorder quietly isn't there and photos still work.
@@ -118,6 +120,10 @@ Mark followed his own clip's link from X and landed on the reconstruction: "That
 - **Served** only while the clip is up, at its own versioned address, in ranges, as iPhones ask for video.
 - **A reconstruction of someone else's fight** can be saved and shared as a video, never put up as a page under your name: only your own fight's reconstruction keeps its track.
 - **Kills in the title:** the game says how many kills the fight had (a missile's, a ramming: Mark's three were titled two), and the server believes it up to the ships the track saw blow up.
+
+### Whose name it carries *(Mark, 29 October 2026)*
+
+Everything shared carries the signed-in account's callsign, and callsigns are unique, so *CMDR Jameson* is only ever Mark. A guest (still the 1984 default, Jameson, in the game) shares as **A commander**, in the post, the video's captions and the replay alike, as the site titles them. Mark: "if they want to share they have the opportunity to share anon or claim their callsign whilst it's still available using their email." So a guest's share sheet says *Shared as A commander*, with **Claim your callsign**, which opens sign-in.
 
 ## Trade moments *(Mark, 29 October 2026; built)*
 

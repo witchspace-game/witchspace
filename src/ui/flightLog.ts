@@ -250,7 +250,7 @@ async function showPublic(el: HTMLElement, moments: LoggedMoment[]) {
   const when = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   const row = (c: MyClip) => `<li data-clip="${c.id}" class="${c.up ? '' : 'down'}">
       <a href="${escapeHtml(c.url)}" target="_blank" rel="noopener">
-        <span class="clip-thumb">${posters.has(c.url) ? `<img src="${posters.get(c.url)}" alt="" />` : ''}</span>
+        <span class="clip-thumb">${posters.has(c.url) ? `<img src="${posters.get(c.url)}" alt="" />` : c.image ? `<img src="${escapeHtml(c.image)}" alt="" loading="lazy" />` : ''}</span>
         <span class="clip-text"><span class="clip-title">${escapeHtml(c.title.replace(/^CMDR [^:]+: /, ''))}</span>
         <span class="clip-meta">${c.up ? `♥ ${c.hearts} · ${when(c.created)}` : 'Taken down · only you can see it'}</span></span>
       </a>

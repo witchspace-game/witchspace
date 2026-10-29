@@ -93,6 +93,8 @@ export interface MyClip {
   card?: boolean;
   /** Whether its video is up yet (putVideo). */
   video?: boolean;
+  /** Its card's picture, for a thumbnail on any device (the moment itself may be on another). */
+  image?: string | null;
 }
 
 const mineHeaders = () => {

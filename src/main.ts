@@ -135,7 +135,7 @@ import { FlightRecorder, type Clip } from './game/recorder';
 import { RecorderWatch } from './game/recorderWatch';
 import { addMoment, attachTrack, deleteMoment, listMoments, type LoggedMoment } from './game/flightLog';
 import { readTrack, TrackRecorder, trackBlob, type Pose } from './game/track';
-import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
+import { momentDescription, momentTags, momentTitle, whoIs, type MomentContext, type MomentEvent } from './game/moments';
 import { closeReplay, closeTrip, isReplayOpen, isTripOpen, openReplay, openTrip, renderFlightLog, setOutsideView, setWatchClip, shareMoment } from './ui/flightLog';
 import { shareVideo as shareVideoPlain, KillCam } from './ui/killCam';
 import { showClipView } from './ui/clipView';
@@ -7064,7 +7064,7 @@ function recordTrack() {
   const here = player.obj.position;
   const poses: Pose[] = [];
   if (state === 'flying') {
-    track.ship({ id: 1, def: player.def.id, role: 'you', label: `CMDR ${cmdr().name}`, ...(myLook() ? { look: myLook()! } : {}) });
+    track.ship({ id: 1, def: player.def.id, role: 'you', label: whoIs({ callsign: shareName() }), ...(myLook() ? { look: myLook()! } : {}) });
     poses.push(poseOf(1, player.obj));
   }
   for (const npc of npcs) {
@@ -8119,11 +8119,18 @@ function watchSurroundings(dt: number) {
 }
 const viewCanvas = () => $<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo');
 
+/**
+ * The name what you share carries: your account's callsign, signed in. A guest shares as "A commander",
+ * as the site already titles them (Mark: "if they are flying as Jameson they are not signed in" — CMDR
+ * Jameson is his); the share sheet offers to claim a callsign by email while it's free.
+ */
+const shareName = (): string | null => (signedIn() && currentAccount()?.callsign) || null;
+
 function momentContext(): MomentContext | null {
   if (!commander) return null;
   const c = cmdr();
   const sys = currentSystem();
-  return { callsign: c.name, system: sys.name, galaxy: sys.galaxy + 1, government: GOVERNMENTS[sys.government], rank: combatRating(c.kills), when: Date.now() };
+  return { callsign: shareName(), system: sys.name, galaxy: sys.galaxy + 1, government: GOVERNMENTS[sys.government], rank: combatRating(c.kills), when: Date.now() };
 }
 
 // --- Trade moments (game/tradeMoments.ts, Mark) --------------------------------
