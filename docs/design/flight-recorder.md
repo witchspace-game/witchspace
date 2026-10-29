@@ -125,6 +125,18 @@ Mark followed his own clip's link from X and landed on the reconstruction: "That
 
 Everything shared carries the signed-in account's callsign, and callsigns are unique, so *CMDR Jameson* is only ever Mark. A guest (still the 1984 default, Jameson, in the game) shares as **A commander**, in the post, the video's captions and the replay alike, as the site titles them. Mark: "if they want to share they have the opportunity to share anon or claim their callsign whilst it's still available using their email." So a guest's share sheet says *Shared as A commander*, with **Claim your callsign**, which opens sign-in.
 
+## Moments: one word, three actions *(Mark, 29 October 2026; built)*
+
+Mark: "I dont like the current flight log/recorder/killcam because its confusing. It needs to be brilliantly elegant and intuitive." Marketing's walkthrough (launch/flight-recorder-review.md) found too many names, four equal buttons on every moment, two kinds of share, and replays with nothing in them. So, from the phone mock-ups Mark approved:
+
+- **One word, moments.** The sheet on docking is *Your moments · This trip*; the library's title is *Your moments* (the button stays *Flight log*).
+- **It catches them, you choose, you share.** The best first and big (`tripWeight`: a fight before a death that took nobody with it; a death with kills still leads), with one **Share** and **More**; the rest as rows with ☆, Share and ⋯.
+- **A star keeps it forever.** Anything unstarred clears after a week, as before. **Swipe one away** to let it go.
+- **More, behind one button:** star it, *Watch it from outside*, the upright cut, save the video, let it go.
+- **Watch from outside only when there's something to watch** (`worthWatching`): kills, a Legend, the Marshals, or shot down by someone (the death event now names the killer). Never a survey, a photo or a crash with nothing in it.
+- **The first time, one line:** "Your ship keeps your best moments. Share one, star it, or let it go."
+- *Not yet:* Share in one tap with the link and an upright video. The upright cut takes several seconds, and an iPhone only opens its share sheet straight from a tap, so Share still opens the share sheet, where the video is one tap.
+
 ## Trade moments *(Mark, 29 October 2026; built)*
 
 Mark: "you could fly, trade, explore, build and then post straight to twitter". Trading had nothing for the recorder to keep, so now it keeps two kinds of trade (`src/game/tradeMoments.ts`):

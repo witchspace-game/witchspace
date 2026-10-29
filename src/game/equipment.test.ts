@@ -57,3 +57,13 @@ describe('the equipment shop', () => {
     expect(modern.damaged).toEqual(['transponder']);
   });
 });
+
+describe('the kit, grouped', () => {
+  it('puts every item in a group', async () => {
+    const { everyItemGrouped, kitGroup } = await import('./kit');
+    expect(everyItemGrouped()).toBe(true);
+    expect(kitGroup('ecm')).toBe('combat');
+    expect(kitGroup('large-cargo-bay')).toBe('trade');
+    expect(kitGroup('survey-autopilot')).toBe('exploration');
+  });
+});

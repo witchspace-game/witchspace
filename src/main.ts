@@ -87,6 +87,7 @@ import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } fro
 import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, mintedToday, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, supplyOf, walletHome, walletKey } from './economy/currencies';
 import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
+import { KIT_GROUPS, KIT_NAMES, kitGroup, type KitGroup } from './game/kit';
 import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, giftTradeIn, tradeIn, deliverShip, deliveriesArrived, deliveryQuote, swapShip, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
@@ -845,6 +846,100 @@ function setDockTab(tab: DockTab) {
     exchange.stop();
   }
   if (tab === 'contracts') $('.panel.docked').classList.add('wide');
+  closeDockSheets();
+  updateDockHead();
+}
+
+// --- The slim header (phones held upright), the places and the wallet -------------
+// Mark: "Having 6 or 8 tabs taking up so much space feels wasteful." On a phone held
+// upright the tabs give way to one header, "Station name · Market ▾", that opens the places
+// laid out like the flight view picker, with a dot when anything inside has news; and a wallet
+// button with your credits replaces the Credits line and the Money tab (Mark: "Maybe we should
+// have a wallet rather than Credits"). docs/design/flight-hud-and-touch.md.
+
+const tabName = (b: HTMLElement) => (b.getAttribute('aria-label') ?? b.textContent ?? '').replace(/^T · /, '').replace(/,.*$/, '').trim();
+
+function updateDockHead() {
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]')];
+  const active = tabs.find((b) => b.dataset.tab === dockTab);
+  $('.dock-where').textContent = commander ? `${stationName(currentSystem()).name}\u00a0·\u00a0` : '';
+  $('.dock-which').textContent = dockTab === 'money' ? 'Money' : active ? tabName(active) : '';
+  const news = tabs.some((b) => !b.hidden && b.dataset.tab !== dockTab && b.querySelector('.tab-badge'));
+  $('.dock-dot').hidden = !news;
+  $('.dock-place').setAttribute('aria-label', `${$('.dock-which').textContent}: choose a place${news ? ', something new' : ''}`);
+  $('#dock-places').innerHTML = tabs
+    .filter((b) => !b.hidden && b.dataset.tab !== 'money')
+    .map((b) => {
+      const badge = b.querySelector('.tab-badge')?.textContent?.trim();
+      return `<button type="button" data-place="${b.dataset.tab}" aria-pressed="${b.dataset.tab === dockTab}">${escapeHtml(tabName(b))}${badge ? ` <b class="tab-badge">${escapeHtml(badge)}</b>` : ''}</button>`;
+    })
+    .join('');
+  if (commander) $('.wallet-button').textContent = `${Math.floor(cmdr().credits).toLocaleString()} Cr`;
+  if (!$('#wallet-sheet').hidden) renderWallet();
+}
+
+function closeDockSheets() {
+  for (const [sheet, button] of [['#dock-places', '.dock-place'], ['#wallet-sheet', '.wallet-button']]) {
+    $(sheet).hidden = true;
+    $(button).setAttribute('aria-expanded', 'false');
+  }
+}
+
+function toggleSheet(sheet: string, button: string) {
+  const open = $(sheet).hidden;
+  closeDockSheets();
+  if (!open) return;
+  if (sheet === '#wallet-sheet') renderWallet();
+  $(sheet).hidden = false;
+  $(button).setAttribute('aria-expanded', 'true');
+}
+$('.dock-place').addEventListener('click', () => toggleSheet('#dock-places', '.dock-place'));
+$('.wallet-button').addEventListener('click', () => toggleSheet('#wallet-sheet', '.wallet-button'));
+$('#dock-places').addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-place]');
+  if (!b) return;
+  sfx.beep();
+  setDockTab(b.dataset.place as DockTab);
+});
+
+/** The wallet: everything you hold, in one place, and the station's money in a line. */
+function renderWallet() {
+  const c = cmdr();
+  const here = currentSystem();
+  const now = Date.now();
+  const btc = btcNow();
+  const fmtN = (n: number, d = n < 10 ? 2 : 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: n < 10 && n > 0 ? Math.min(d, 2) : 0 });
+  const rows: string[] = [`<li><strong>${c.credits.toLocaleString(undefined, { maximumFractionDigits: 1 })} Cr</strong><span>Credits: good at every station</span></li>`];
+  const sats = satsOf(c);
+  if (sats) rows.push(`<li><strong>${formatBtc(sats)}</strong><span>Bitcoin, at the real price · ${btcValue(c) ? `about ${fmtN(btcValue(c), 0)} Cr now` : 'its price comes in with the news'}</span></li>`);
+  const modern = c.difficulty === 'modern';
+  if (modern)
+    for (const [key, units] of Object.entries(walletOf(c)).filter(([, u]) => u > 1e-6)) {
+      if (isCompanyKey(key)) {
+        const co = COMPANIES[key.slice(3) as CompanyId];
+        rows.push(`<li><strong>${fmtN(units)} ${escapeHtml(co?.name.split(' ')[0] ?? key)} coins</strong><span>Bitcoin-backed · about ${fmtN(units * companyValue(btc), 0)} Cr</span></li>`);
+        continue;
+      }
+      const home = walletHome(key);
+      const hc = currencyOf(home)!;
+      rows.push(`<li><strong>${fmtN(units)} ${hc.ticker}</strong><span>${escapeHtml(hc.name)}, ${escapeHtml(home.name)}’s own money · about ${fmtN(valueOf(key, units, now, btc), 0)} Cr</span></li>`);
+    }
+  const cur = modern ? currencyOf(here) : null;
+  let station = '';
+  if (modern && cur) {
+    const fair = fairRate(here, now, btc);
+    const week = fairRate(here, now - 7 * 86_400_000, btc);
+    const change = (week / fair - 1) * 100;
+    station = `<p class="wallet-line">${escapeHtml(here.name)}’s money, the ${escapeHtml(cur.name)}: 1 Cr ≈ ${fmtN(fair, 2)} ${cur.ticker}, ${Math.abs(change) < 1 ? 'steady this week' : `${change > 0 ? 'up' : 'down'} ${Math.abs(change).toFixed(0)}% this week`}.</p>
+      <div class="wallet-actions"><button type="button" class="primary" data-wallet="money">Change money here</button><button type="button" data-wallet="money">More about it</button></div>`;
+  } else if (modern) station = `<p class="wallet-line">No money is issued at ${escapeHtml(here.name)}: credits do.</p><div class="wallet-actions"><button type="button" data-wallet="money">Money, stablecoins and company coins</button></div>`;
+  $('#wallet-sheet').innerHTML = `<p class="wallet-title">Your wallet</p><ul class="wallet-list">${rows.join('')}</ul>${station}${modern && !sats ? '<p class="wallet-line">Bitcoin trades on the Market.</p>' : ''}`;
+  $('#wallet-sheet').querySelectorAll<HTMLButtonElement>('[data-wallet]').forEach((b) =>
+    b.addEventListener('click', () => {
+      sfx.beep();
+      setDockTab('money');
+    }),
+  );
 }
 document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) =>
   b.addEventListener('click', () => {
@@ -998,6 +1093,7 @@ function markInbox(c: Commander) {
   const tab = $('.tabs [data-tab="contracts"]');
   tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}<span class="tab-badge-word"> new</span></b>` : 'Contracts'; // "2 new" where there's room, "2" on a phone
   tab.setAttribute('aria-label', unread ? `Contracts, ${unread} new` : 'Contracts');
+  updateDockHead();
 }
 
 /** Earlier messages stays open while you archive from it. */
@@ -2329,8 +2425,8 @@ function renderMarket(message = '') {
   if (ex) {
     const ctx = tradeContext();
     const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    const sats = satsOf(ctx.commander);
-    $('#dock-funds').innerHTML = `Credits <b>${fmt(ctx.commander.credits)} Cr</b>${sats ? ` · Bitcoin <b>${formatBtc(sats)}</b>` : ''} · Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>`;
+    updateDockHead();
+    $('#dock-funds').innerHTML = `Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>`;
   }
   $('#exchange').hidden = !ex;
   for (const id of ['#market-summary', '#market-table', '#market-message']) $(id).hidden = ex;
@@ -2440,19 +2536,26 @@ function holdList(c: Commander): string {
 function renderDocked() {
   // The saloon is Modern's: Classic stations are as they were in 1984.
   document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
-  document.querySelector<HTMLElement>('.tabs [data-tab="money"]')!.hidden = cmdr().difficulty === 'classic';
+  // The Money tab gave way to the wallet (Mark): its screen opens from there.
+  document.querySelector<HTMLElement>('.tabs [data-tab="money"]')!.hidden = true;
   if (cmdr().difficulty === 'classic' && dockTab === 'money') setDockTab('station');
   const noYard = cmdr().difficulty === 'classic' || !hasShipyard(currentSystem());
   document.querySelector<HTMLElement>('.tabs [data-tab="shipyard"]')!.hidden = noYard;
   if (noYard && dockTab === 'shipyard') setDockTab('station');
   else if (dockTab === 'shipyard') renderShipyard(); // docking put your own ship in the berth
   const c = cmdr();
+  // A ship waiting for you at this yard: a dot on the header, "ready" on the place.
+  const hereNow = currentSystem();
+  const atYard = (at?: { galaxy: number; system: number }) => at && at.galaxy === hereNow.galaxy && at.system === hereNow.index;
+  const ready = (c.order && atYard(c.order) && production(c.order, Date.now()).built) || (c.gift && (!c.gift.at || atYard(c.gift.at)));
+  $('.tabs [data-tab="shipyard"]').innerHTML = ready ? 'Shipyard <b class="tab-badge">ready</b>' : 'Shipyard';
   showFittings(c);
   refreshFlightLog();
   const here = currentSystem();
   const st = stationName(here);
   $('#dock-location').textContent = `${st.name} · ${here.name}`;
   $('#dock-location').title = st.honours ? `Named for ${st.honours}` : '';
+  updateDockHead();
   // Company contracts are Modern work; Classic stays as 1984.
   $('.tabs [data-tab="contracts"]').hidden = c.difficulty !== 'modern';
   if (dockTab === 'contracts') renderContracts();
@@ -2463,8 +2566,6 @@ function renderDocked() {
   const rows: [string, string][] = [
     ['Commander', `${escapeHtml(c.name)} <button type="button" class="rename" title="Change your callsign">Rename</button>`],
     ['Rules', DIFFICULTIES[c.difficulty].name],
-    ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
-    ...(satsOf(c) ? ([['Bitcoin', `${formatBtc(satsOf(c))} · ${btcValue(c).toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr · no hold space`]] as [string, string][]) : []),
     ['Ship', `${escapeHtml(player.def.name)} <button type="button" class="small manual-open">Owner's manual</button> <button type="button" class="small manual-open booth-open">Photograph her</button>`],
     // The Dark Edition's running lights, or the full ghost: just the hull (Mark).
     ...(c.paint?.luxuries.includes('black-light-lights')
@@ -2625,6 +2726,15 @@ function renderDocked() {
 
   const list = $('#equip');
   list.innerHTML = '';
+  // The kit, grouped (Combat · Trade · Exploration · Ship) with what you can buy here first and what
+  // isn't sold here folded to one line, saying why (Mark and Marketing's walkthrough). Repairs first.
+  const kit: { group: KitGroup | 'repair'; kind: 'buy' | 'owned' | 'away'; li: HTMLLIElement; short?: string }[] = [];
+  const add = (group: KitGroup | 'repair', kind: 'buy' | 'owned' | 'away', li: HTMLLIElement, short?: string) => kit.push({ group, kind, li, short });
+  const needMore = (b: HTMLButtonElement, price: number) => {
+    if (c.credits >= price) return;
+    b.textContent = `Need ${Math.ceil(price - c.credits).toLocaleString()} Cr more`;
+    b.classList.add('short');
+  };
   // Equipment held here until a fine is paid.
   if (c.impound) {
     const imp = c.impound;
@@ -2643,7 +2753,7 @@ function renderDocked() {
       renderDocked();
     });
     li.append(pay);
-    list.append(li);
+    add('repair', 'buy', li);
   }
   // Lasers, for each of the four mounts. Whatever was on the mount is taken
   // in part exchange at half its price.
@@ -2703,9 +2813,12 @@ function renderDocked() {
       });
       mounts.append(fit);
     }
-    if (!sold) li.querySelector('small')!.append(` Needs tech level ${laser.minTech}.`);
+    const onIt = VIEWS.filter((m) => c.lasers[m] === laser.id);
+    if (onIt.length) li.querySelector('span')!.insertAdjacentHTML('afterbegin', '<i class="tick" aria-label="Fitted">✓</i> ');
+    const cheapest = Math.min(...VIEWS.map((m) => laser.price - (c.lasers[m] ? Math.round(PLAYER_LASERS[c.lasers[m]!].price / 2) : 0)));
+    if (sold && !onIt.length && c.credits < cheapest) li.querySelector('small')!.insertAdjacentHTML('beforeend', ` <b class="short">Need ${Math.ceil(cheapest - c.credits).toLocaleString()} Cr more</b>`);
     li.append(mounts);
-    list.append(li);
+    add('combat', onIt.length ? 'owned' : sold ? 'buy' : 'away', li, `${laser.name} · tech level ${laser.minTech}`);
   }
 
   for (const item of EQUIPMENT) {
@@ -2720,23 +2833,28 @@ function renderDocked() {
     const banned = Boolean(item.illegal) && scansCargo(here); // illegal here: not sold
     const unranked = Boolean(item.explorer) && exploreOf(c).points < item.explorer!; // explorers only
     const sold = here.techLevel >= item.minTech && !banned && !unranked;
-    li.innerHTML = `<span>${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${forDevice(item.blurb)}</small>`;
+    li.innerHTML = `<span>${owned && !damaged ? '<i class="tick" aria-label="Fitted">✓</i> ' : ''}${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${forDevice(item.blurb)}</small>`;
+    const group = damaged ? 'repair' : kitGroup(item.id);
     const buy = document.createElement('button');
     if (damaged) {
       buy.textContent = `Repair · ${repairCost.toLocaleString()} Cr`;
       buy.disabled = c.credits < repairCost;
+      needMore(buy, repairCost);
     } else if (!owned && !sold) {
       // High-tech gear needs a high-tech world; illegal gear, a lawless one; explorer's gear, an explorer.
       buy.textContent = unranked ? `${explorerRank(item.explorer!)} rank` : banned ? 'Illegal here' : `Needs tech level ${item.minTech}`;
       buy.title = unranked ? `You're ${explorerRank(exploreOf(c).points)}: survey, find signals and follow trails to rise` : banned ? 'Sold only where police don\'t scan: anarchies and feudal worlds' : `${here.name} is tech level ${here.techLevel}`;
       buy.disabled = true;
+      add(group, 'away', li, `${item.name} · ${unranked ? `${explorerRank(item.explorer!)} rank` : banned ? 'illegal here' : `tech level ${item.minTech}`}`);
+      li.append(buy);
+      continue;
     } else if (owned && item.found) {
       buy.textContent = 'Fitted';
       buy.classList.add('fitted');
       buy.disabled = true;
       buy.title = 'Found, not bought: nobody will buy it from you, and you would not want them to';
       li.append(buy);
-      list.append(li);
+      add(group, 'owned', li);
       continue;
     } else if (owned) {
       const undo = boughtHere.equipment.has(item.id);
@@ -2758,11 +2876,12 @@ function renderDocked() {
       if (undo) buy.addEventListener('click', remove);
       else confirmSale(buy, `Sell for ${back.toLocaleString()} Cr?`, remove);
       li.append(buy);
-      list.append(li);
+      add(group, 'owned', li);
       continue;
     } else {
       buy.textContent = `Buy · ${item.price.toLocaleString()} Cr`;
       buy.disabled = c.credits < item.price;
+      needMore(buy, item.price);
     }
     buy.addEventListener('click', () => {
       if (damaged) {
@@ -2778,9 +2897,37 @@ function renderDocked() {
       renderDocked();
     });
     li.append(buy);
-    list.append(li);
+    add(group, 'buy', li);
+  }
+
+  for (const g of ['repair', ...KIT_GROUPS] as const) {
+    const items = kit.filter((k) => k.group === g);
+    if (!items.length) continue;
+    const here = items.filter((k) => k.kind !== 'away');
+    const away = items.filter((k) => k.kind === 'away');
+    const head = document.createElement('li');
+    head.className = 'kit-head';
+    head.innerHTML = g === 'repair' ? 'Repairs' : `${KIT_NAMES[g]} <small>${here.length ? `${here.length} here` : 'none here'}</small>`;
+    list.append(head, ...here.filter((k) => k.kind === 'buy').map((k) => k.li), ...here.filter((k) => k.kind === 'owned').map((k) => k.li));
+    if (!away.length) continue;
+    // Not sold here: one line saying why, opening to the items themselves.
+    const fold = document.createElement('li');
+    fold.className = 'kit-away';
+    const shown = away.slice(0, 2).map((k) => k.short).join(' · ');
+    const open = kitOpen.has(g);
+    fold.innerHTML = `<button type="button" aria-expanded="${open}"><span>Not sold here: ${escapeHtml(shown)}${away.length > 2 ? ` · ${away.length - 2} more` : ''}</span></button>`;
+    fold.querySelector('button')!.addEventListener('click', () => {
+      if (kitOpen.has(g)) kitOpen.delete(g);
+      else kitOpen.add(g);
+      renderDocked();
+    });
+    list.append(fold);
+    if (open) for (const k of away) list.append(Object.assign(k.li, { className: 'away' }));
   }
 }
+
+/** Which groups of kit not sold here are opened out, this session. */
+const kitOpen = new Set<string>();
 
 // --- Space ------------------------------------------------------------------
 
@@ -3783,7 +3930,7 @@ function updateExplore(dt: number): boolean {
       saveCommander(c);
       sfx.beep();
       const grade = done.grade ? ` · ${done.grade === 'Candidate' ? 'terraforming CANDIDATE: Wexley-Yorozu will want this' : done.grade.toLowerCase()}` : '';
-      flash(`Survey complete · ${done.name}${grade} · data worth ${dataValue(exploreOf(c).data.at(-1)!, here)} Cr here, more further away`, 4);
+      flash(`Survey complete · ${done.name}${grade} · data worth ${dataValue(exploreOf(c).data[exploreOf(c).data.length - 1], here)} Cr here, more further away`, 4);
       survey = null;
       if (done.id === 'planet') {
         const hidden = scenePois.filter((p) => !p.revealed);
@@ -7222,8 +7369,9 @@ function trackScene() {
 function die() {
   const c = cmdr();
   // The black box: the last seconds, and the ship going up, for the insurers' screen.
-  const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}` }, 26, 4);
   const killer = lastHitBy && elapsed - lastHitBy.at < 5 ? lastHitBy.npc : null;
+  // Who did it, when someone did: a death worth watching from outside (ui/flightLog.ts worthWatching).
+  const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}`, ...(killer ? { subject: killer.def.name } : {}) }, 26, 4);
   track.event({ t: elapsed, kind: 'boom', id: trackId(player), p: player.obj.position.toArray() });
   track.event({ t: elapsed, kind: 'death', ...(killer ? { by: trackId(killer) } : {}) });
   // The kill cam: the black box keeps the fight's track as every clip does
@@ -8316,7 +8464,7 @@ async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 
     trip: flightFrom,
   };
   if (!(await addMoment(m))) {
-    flash('Flight log full · delete or unkeep something in the flight log', 3);
+    flash('Your moments are full · let one go, or unstar one, in the flight log', 3);
     return null;
   }
   // Every clip keeps its fight's track (the last minute, as numbers), so any
@@ -8377,7 +8525,7 @@ function keepCombat(event: MomentEvent, before: number, after: number): Promise<
 // The first time a moment is kept, say what the flight recorder is; the
 // flight log asks once whether to keep it on.
 const RECORDER_INTRO_KEY = 'witchspace-recorder-intro';
-const RECORDER_INTRO = "Your ship's flight recorder keeps your last moments. Only the view is recorded, and it stays on this device unless you share it. You can turn it off in the flight log.";
+const RECORDER_INTRO = "Your ship keeps your best moments. Share one, star it, or let it go: they're in the flight log.";
 const recorderIntroduced = () => {
   try {
     return localStorage.getItem(RECORDER_INTRO_KEY) === 'done';
@@ -8638,3 +8786,6 @@ void initAccount({
   // Signed in after docking (the account loads in the background): a commission may be waiting.
   if (state === 'docked' && commander) payCommissions();
 });
+
+// Started: the old-browser note (public/old-browser.js) stays away.
+(window as unknown as { __witchspaceStarted: boolean }).__witchspaceStarted = true;

@@ -170,6 +170,16 @@ body.retro #countdown { font-size: 32px; text-shadow: none; }
 /* Every shop action is the same size, whatever its label. */
 #equip li > button, .fuel-row button { flex-shrink: 0; width: 158px; height: 36px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
 .fuel-row .buttons { display: flex; flex-direction: column; gap: 4px; }
+#equip li.kit-head { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; padding: 6px 0 2px; border-bottom: 1px solid var(--edge); color: var(--accent); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; }
+#equip li.kit-head:first-child { margin-top: 0; }
+#equip li.kit-head small { color: var(--dim); letter-spacing: 0.08em; font-size: 11px; }
+#equip li.kit-away { display: block; padding: 4px 0; }
+#equip li.kit-away button { width: 100%; height: auto; padding: 6px 0; border: none; background: none; color: var(--dim); font-size: 12px; text-align: left; text-transform: none; letter-spacing: normal; white-space: normal; }
+#equip li.kit-away button::after { content: ' ▾'; }
+#equip li.kit-away button[aria-expanded='true']::after { content: ' ▴'; }
+#equip li.away { opacity: 0.75; }
+#equip .tick { font-style: normal; color: var(--accent); }
+#equip .short, #equip button.short { color: var(--amber); }
 #equip .damaged { font-style: normal; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--danger); margin-left: 6px; }
 
 .controls {
@@ -1029,6 +1039,40 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
   body[data-state='title'] .tribute { left: var(--column); }
 }
 
+/* --- The docked header, places and wallet (docs/design/flight-hud-and-touch.md) --- */
+.dock-head { display: flex; align-items: center; gap: 10px; }
+.dock-head h2 { flex: 1; min-width: 0; }
+.dock-place { display: none; }
+.wallet-button { flex-shrink: 0; padding: 5px 12px; font-size: 14px; font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0.02em; }
+.wallet-button::before { content: ''; display: inline-block; width: 12px; height: 9px; margin-right: 7px; border: 1.5px solid currentColor; border-radius: 2px; vertical-align: -0.5px; }
+.wallet-button[aria-expanded='true'], .dock-place[aria-expanded='true'] { border-color: var(--accent); color: var(--accent); }
+.dock-places { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 12px; }
+.dock-places button { padding: 12px 4px; font-size: 14px; }
+.dock-places button[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
+.wallet-sheet { margin: 8px 0 12px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 8px; background: rgba(0, 12, 8, 0.6); }
+.wallet-title { margin: 0 0 6px; color: var(--dim); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; }
+.wallet-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.wallet-list li { display: grid; gap: 1px; }
+.wallet-list strong { font-size: 17px; font-variant-numeric: tabular-nums; }
+.wallet-list span, .wallet-line { color: var(--dim); font-size: 13px; }
+.wallet-line { margin: 10px 0 0; }
+.wallet-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.wallet-actions button { text-transform: none; letter-spacing: normal; }
+/* A phone held upright: the header replaces the title, location and two rows of tabs. */
+@media (max-width: 700px) and (orientation: portrait) {
+  .panel.docked { background: rgba(0, 10, 7, 0.9); } /* text over a glowing beam was hard to read */
+  .panel.docked > .dock-head h2, .panel.docked > #dock-location, .panel.docked > .tabs { display: none; }
+  .panel.docked > .dock-head { position: sticky; top: -12px; z-index: 2; margin: -12px -14px 8px; padding: 10px 14px 8px; background: rgba(0, 10, 7, 0.97); border-bottom: 1px solid var(--edge); }
+  .dock-place { display: flex; flex: 1; min-width: 0; align-items: baseline; gap: 0; padding: 7px 10px; font-size: 14px; text-align: left; text-transform: none; letter-spacing: 0.02em; }
+  .dock-where { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
+  .dock-which { flex-shrink: 0; font-weight: 600; }
+  .dock-which::after { content: ' ▾'; color: var(--dim); }
+  .dock-place[aria-expanded='true'] .dock-which::after { content: ' ▴'; }
+  .dock-dot { flex-shrink: 0; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); align-self: center; }
+  .dock-dot[hidden] { display: none; }
+}
+@media (min-width: 701px), (orientation: landscape) { .dock-places { display: none !important; } }
+
 /* --- The market as an exchange (Modern rules, neo-vector mode) ----------- */
 
 /* The exchange takes the whole screen; its own top bar replaces the
@@ -1311,6 +1355,42 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   .ex-head { gap: 12px; }
   .ex-canvas { min-height: 220px; }
   .panel.docked.exchange { top: 8px; }
+}
+
+/* The Market on a phone held upright: the game's own look, the list first, the good you tap
+   opening in place, and the chart, book and trades folded away (docs/design/flight-hud-and-touch.md). */
+.ex-more-toggle { display: none; }
+@media (max-width: 700px) and (orientation: portrait) {
+  .panel.docked.exchange { left: 12px; right: 12px; top: 10px; bottom: calc(var(--controls-h, 48px) + 50px); padding: 12px 14px; background: rgba(0, 10, 7, 0.92); border-color: var(--edge); }
+  .panel.docked.exchange > .tabs, .panel.docked.exchange > .dock-bar { display: none !important; }
+  body[data-state='docked'].exchange-open nav.controls[data-screen='docked'] { display: flex !important; }
+  .ex {
+    --ex-card: transparent;
+    --ex-line: rgba(61, 255, 176, 0.18);
+    --ex-text: var(--fg);
+    --ex-dim: var(--dim);
+    --ex-up: var(--accent);
+    --ex-down: var(--danger);
+    --ex-gold: var(--amber);
+    font-family: var(--font);
+    font-size: 14px;
+    gap: 10px;
+  }
+  .ex > * { border: none; border-radius: 0; }
+  .ex-pairs { padding: 0; }
+  .ex-market select { background: rgba(0, 12, 8, 0.8); color: var(--fg); border-color: var(--edge); }
+  .ex-list-head { color: var(--accent); letter-spacing: 0.15em; }
+  .ex-pair { padding: 10px 4px; border-left: 0; border-top: 1px solid var(--ex-line); font-size: 15px; }
+  .ex-pair.active { background: rgba(61, 255, 176, 0.07); border-left: 0; box-shadow: inset 2px 0 0 var(--accent); }
+  .ex-sym b { font-weight: 600; }
+  .ex-inline { display: flex; flex-direction: column; gap: 10px; padding: 10px 10px 14px; border: 1px solid var(--edge); border-top: 0; border-radius: 0 0 8px 8px; background: rgba(61, 255, 176, 0.04); }
+  .ex-inline .ex-head { padding: 0; gap: 10px 16px; }
+  .ex-inline .ex-form { padding: 0; overflow: visible; }
+  .ex-sides button[data-side='buy'].active { background: var(--accent); color: #00140c; }
+  .ex-chart, .ex-book, .ex-trades { display: none; }
+  .ex.more-open .ex-chart, .ex.more-open .ex-book, .ex.more-open .ex-trades { display: block; }
+  .ex-more-toggle { display: flex; justify-content: space-between; width: 100%; margin-top: 10px; padding: 10px 4px; border: 0; border-top: 1px solid var(--ex-line); background: none; color: var(--dim); font-size: 14px; text-align: left; }
+  .ex-more-toggle span { color: var(--accent); }
 }
 
 /* P: the shutter flash for a photo. */
@@ -1803,6 +1883,31 @@ body.retro #flight-log-view { background: #000; backdrop-filter: none; }
 .trip-note { margin: 8px 0 0; font-size: 12px; color: var(--dim); text-align: center; }
 .trip-library { min-height: 0; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; }
 body.retro #trip-sheet { background: #000; backdrop-filter: none; }
+/* Moments (docs/design/flight-recorder.md): the best first and big, one Share, a star, More behind one button. */
+.trip-list li { transition: transform 0.2s, opacity 0.2s; touch-action: pan-y; }
+.trip-list li.going, .log-list li.going { box-shadow: inset -4px 0 0 var(--danger); }
+.trip-list li.trip-best { grid-template-columns: 1fr auto; grid-template-rows: none; row-gap: 6px; position: relative; }
+.trip-best .trip-play { grid-row: 1; grid-column: 1 / -1; width: 100%; }
+.trip-best .moment-star { position: absolute; top: 8px; left: 8px; }
+.trip-best strong { grid-column: 1 / -1; font-size: 17px; }
+.trip-best small { grid-column: 1 / -1; color: var(--dim); font-size: 13px; }
+.trip-best .trip-actions { grid-column: 1 / -1; display: grid; grid-template-columns: 2fr 1fr; }
+.trip-best .trip-actions button { min-height: 42px; font-size: 15px; }
+.trip-list li:not(.trip-best) { grid-template-columns: 96px 1fr; }
+.trip-list li:not(.trip-best) .trip-play { width: 96px; }
+.moment-star { min-width: 36px; min-height: 34px; padding: 0 8px; font-size: 18px; line-height: 1; background: rgba(0, 10, 7, 0.7); }
+.moment-star[aria-pressed='true'] { color: var(--amber); border-color: var(--amber); }
+.moment-more { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, 0.45); }
+.moment-more-sheet { width: min(480px, 100vw); padding: 12px 16px max(14px, env(safe-area-inset-bottom)); border: 1px solid var(--edge); border-bottom: 0; border-radius: 16px 16px 0 0; background: rgba(0, 10, 7, 0.98); display: grid; gap: 6px; }
+.moment-more-title { margin: 0 0 4px; color: var(--dim); font-size: 13px; }
+.moment-more-sheet button[data-more]:not(.moment-more-close) { display: grid; grid-template-columns: 28px 1fr; grid-template-rows: auto auto; column-gap: 10px; padding: 10px 12px; text-align: left; text-transform: none; letter-spacing: normal; }
+.moment-more-sheet button i { grid-row: 1 / 3; align-self: center; font-style: normal; font-size: 20px; text-align: center; }
+.moment-more-sheet button b { font-size: 15px; }
+.moment-more-sheet button span { color: var(--dim); font-size: 12px; }
+.moment-more-sheet [data-more='star'][aria-pressed='true'] i { color: var(--amber); }
+.moment-let-go b, .moment-let-go i { color: var(--danger); }
+.moment-more-close { margin-top: 4px; }
+
 body.retro #replay { backdrop-filter: none; }
 .replay-card > img { display: block; width: 100%; max-height: 60vh; object-fit: contain; border-radius: 8px; background: #000; }
 /* Your clips on the site: compact rows, the whole row plays it, one quiet action at the end. */

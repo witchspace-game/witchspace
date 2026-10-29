@@ -90,8 +90,15 @@
 
     <!-- Docked at the station -->
     <section class="panel docked" data-screen="docked">
-      <h2>Docked</h2>
+      <!-- On a phone held upright, one slim header: where you are and which screen (tap for the places), and your wallet. -->
+      <header class="dock-head">
+        <h2>Docked</h2>
+        <button type="button" class="dock-place" aria-expanded="false" aria-controls="dock-places"><span class="dock-where"></span><b class="dock-which">Station</b><i class="dock-dot" hidden></i></button>
+        <button type="button" class="wallet-button" aria-expanded="false" aria-controls="wallet-sheet" aria-label="Your wallet"></button>
+      </header>
       <p class="meta" id="dock-location">Coriolis Station · Lave</p>
+      <div class="dock-places" id="dock-places" hidden></div>
+      <div class="wallet-sheet" id="wallet-sheet" hidden></div>
       <div class="tabs" role="tablist">
         <button data-tab="station" role="tab">Station</button>
         <button data-tab="contracts" role="tab">Contracts</button>
@@ -277,11 +284,11 @@
       <div id="manual-body"></div>
     </section>
     <!-- The flight log: your ship's clips and photos, full screen, from the button beside the galaxy map. -->
-    <section id="flight-log-view" hidden aria-label="Flight log">
-      <header class="log-head"><h2>Flight log</h2><button type="button" class="log-close" data-key="KeyF" aria-label="Close the flight log">✕</button></header>
+    <section id="flight-log-view" hidden aria-label="Your moments">
+      <header class="log-head"><h2>Your moments</h2><button type="button" class="log-close" data-key="KeyF" aria-label="Close the flight log">✕</button></header>
       <div id="flight-log"></div>
     </section>
-    <section id="trip-sheet" hidden aria-label="This trip"></section>
+    <section id="trip-sheet" hidden aria-label="Your moments from this trip"></section>
     <!-- The handover: a numbered edition's certificate of build, when she's collected (ui/handover.ts). -->
     <section id="handover" hidden aria-label="Handover"></section>
     <section id="galaxy-map" hidden>
@@ -308,6 +315,7 @@
       <a href="/">witchspace.org.uk</a> · An unofficial tribute to <em>Elite</em> (1984) by David Braben &amp; Ian Bell. Not affiliated with Frontier Developments.
     </footer>
 
+    <script src="/old-browser.js" defer></script>
     <script type="module" src="/src/main.ts"></script>
     <script type="module" src="/src/site/analytics.ts"></script>
   </body>
