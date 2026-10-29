@@ -136,8 +136,9 @@ import { RecorderWatch } from './game/recorderWatch';
 import { addMoment, attachTrack, deleteMoment, listMoments, type LoggedMoment } from './game/flightLog';
 import { readTrack, TrackRecorder, trackBlob, type Pose } from './game/track';
 import { momentDescription, momentTags, momentTitle, type MomentContext, type MomentEvent } from './game/moments';
-import { closeReplay, closeTrip, isReplayOpen, isTripOpen, openReplay, openTrip, renderFlightLog, setOutsideView, setWatchClip } from './ui/flightLog';
-import { KillCam } from './ui/killCam';
+import { closeReplay, closeTrip, isReplayOpen, isTripOpen, openReplay, openTrip, renderFlightLog, setOutsideView, setWatchClip, shareMoment } from './ui/flightLog';
+import { shareVideo as shareVideoPlain, KillCam } from './ui/killCam';
+import { showClipView } from './ui/clipView';
 import { record, regularsAt, slotOf, talk, venue } from './game/saloon';
 import { hasBackRoom } from './economy/blackmarket';
 import { btcQuote, checkBtcOrders, heardQuote } from './net/bitcoin';
@@ -8332,11 +8333,16 @@ function keepByHand() {
 const killCam = new KillCam(camera);
 if (import.meta.env.DEV) Object.assign(window, { __kc: killCam });
 // A saved reconstruction goes into the flight log, like any moment.
+// Of your own fight, it keeps the track, so sharing it can put up a page that plays this very video (Mark: the sharer decides).
+let lastRecon: LoggedMoment | null = null;
 killCam.onVideo = async (v) => {
   const when = Date.now();
-  await addMoment({ id: `${when}-recon`, created: when, title: v.title, description: v.description, tags: ['witchspace', 'reconstruction', 'killcam'], events: [], system: v.system, seconds: v.seconds, video: v.video, poster: v.poster, saved: false });
+  const m: LoggedMoment = { id: `${when}-recon`, created: when, title: v.title, description: v.description, tags: ['witchspace', 'reconstruction', 'killcam'], events: [], system: v.system, seconds: v.seconds, video: v.video, poster: v.poster, saved: false, ...(v.track ? { track: await trackBlob(v.track) } : {}) };
+  lastRecon = (await addMoment(m)) ? m : null;
   if (state === 'docked') refreshFlightLog();
 };
+// Sharing it shares that moment, with its page when it's your own fight.
+killCam.onShare = (v) => (lastRecon && lastRecon.video === v.video ? shareMoment(lastRecon) : shareVideoPlain(v));
 setOutsideView(async (m) => {
   const data = m.track ? await readTrack(m.track).catch(() => null) : null;
   if (!data) return flash("This reconstruction is from an older version of the game and can't be rebuilt", 3);
@@ -8449,16 +8455,22 @@ async function openSharedClip(id: string, fromGame = false) {
   if (!clip || !data) return flash(fromGame ? "That clip isn't on the site any more" : "That clip isn't here any more · but the galaxy is: press Enter to fly", 5);
   if (fromGame) document.querySelector<HTMLVideoElement>('#replay video')?.pause();
   else document.title = `${clip.title} · Witchspace`;
-  killCam.open(data, {
-    seconds: clip.seconds,
-    title: clip.title,
-    shared: { hearts: clip.hearts, mine: clip.mine, heart: (on) => heartClip(id, on), report: () => reportClip(id) },
-    onClose: () => {
-      if (fromGame) return; // back to the flight log, as it was
-      document.title = 'Play · Witchspace';
-      history.replaceState(null, '', '/play/');
-    },
-  });
+  const closed = () => {
+    if (fromGame) return; // back to the flight log, as it was
+    document.title = 'Play · Witchspace';
+    history.replaceState(null, '', '/play/');
+  };
+  const outside = () =>
+    killCam.open(data, {
+      seconds: clip.seconds,
+      title: clip.title,
+      shared: { hearts: clip.hearts, mine: clip.mine, heart: (on) => heartClip(id, on), report: () => reportClip(id) },
+      onClose: closed,
+    });
+  // The video its sharer shared plays first (Mark); the rebuilt fight is a tap away. A clip shared before
+  // videos went up, or whose video hasn't, opens on the rebuilt fight as before.
+  if (clip.video) showClipView({ title: clip.title, video: clip.video, hearts: clip.hearts, mine: clip.mine, heart: (on) => heartClip(id, on), report: () => reportClip(id), outside, closed });
+  else outside();
 }
 frame();
 

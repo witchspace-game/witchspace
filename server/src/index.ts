@@ -55,9 +55,12 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
     // Clip pages (server/src/clips.ts): moments shared as tracks. The card is for link previewers, so open to all.
+    // A shared clip's own video (clips.ts), only while the clip is up; in ranges, as iPhones ask for video.
+    const video = url.pathname.match(/^\/clip-video\/([a-z0-9]{8,12})\.mp4$/);
+    if (video) return clipVideo(request, env, video[1]);
     const card = url.pathname.match(/^\/clip-card\/([a-z0-9]{8,12})(\.jpg)?$/);
     if (card) return card[2] ? clipsOf(env).cardPicture(card[1]) : clipsOf(env).card(card[1]);
-    const clip = url.pathname.match(/^\/clips(?:\/(mine|[a-z0-9]{8,12})(?:\/(heart|report|admin|takedown|putback|card))?)?$/);
+    const clip = url.pathname.match(/^\/clips(?:\/(mine|[a-z0-9]{8,12})(?:\/(heart|report|admin|takedown|putback|card|video))?)?$/);
     if (clip) return clipRoute(request, env, clip[1], clip[2]);
     // The live Bitcoin price, for the exchange (server/src/btc.ts): our pages only.
     if (isBtc(url.pathname)) {
@@ -198,14 +201,19 @@ async function clipRoute(request: Request, env: Env, id: string | undefined, act
     const auth = request.headers.get('Authorization') ?? '';
     const account = auth.startsWith('Bearer ') ? await accountsOf(env).whoIs(auth.slice(7)) : null;
     const seconds = Number(new URL(request.url).searchParams.get('seconds'));
-    const r = await clips.share(await request.arrayBuffer(), seconds, voter, ip, account);
+    const kills = Number(new URL(request.url).searchParams.get('kills') ?? 0);
+    const r = await clips.share(await request.arrayBuffer(), seconds, voter, ip, account, kills);
     return reply(r, r.status);
   }
   // Yours: the list, and taking one down (or back up). By the signed-in account or this browser's voter id.
-  if (id === 'mine' || action === 'takedown' || action === 'putback' || action === 'card') {
+  if (id === 'mine' || action === 'takedown' || action === 'putback' || action === 'card' || action === 'video') {
     const auth = request.headers.get('Authorization') ?? '';
     const account = auth.startsWith('Bearer ') ? await accountsOf(env).whoIs(auth.slice(7)) : null;
     if (id === 'mine' && !action && request.method === 'GET') return reply({ clips: await clips.mine(account?.id ?? null, voter) });
+    if (id && id !== 'mine' && action === 'video' && request.method === 'POST') {
+      const r = await putClipVideo(request, env, id, account?.id ?? null, voter);
+      return reply(r, r.status);
+    }
     if (id && id !== 'mine' && action === 'card' && request.method === 'POST') {
       const r = await clips.setCard(id, await request.arrayBuffer(), account?.id ?? null, voter);
       return reply(r, r.status);
@@ -230,6 +238,47 @@ async function clipRoute(request: Request, env: Env, id: string | undefined, act
     return reply(r, r.status);
   }
   return reply({ error: 'Not found' }, 404);
+}
+
+// --- Shared clips' videos (Mark: a link plays the sharer's own video first) ------------
+// The video the sharer chose to share (their cockpit clip, a reconstruction they filmed, an upright
+// cut) goes up beside the clip into R2. The ClipBoard says whose clip it is and whether it's up; the
+// Worker moves the bytes, so a video never passes through the Durable Object.
+
+const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
+
+async function putClipVideo(request: Request, env: Env, id: string, account: string | null, voter: string | null) {
+  if (!env.CLIP_VIDEOS) return { error: 'Videos are not stored here', status: 503 };
+  const clips = clipsOf(env);
+  if (!(await clips.mayVideo(id, account, voter))) return { error: 'That clip isn’t yours', status: 403 };
+  const length = Number(request.headers.get('Content-Length') ?? 0);
+  if (length > MAX_VIDEO_BYTES) return { error: 'That video is too big', status: 413 };
+  const bytes = await request.arrayBuffer();
+  if (bytes.byteLength > MAX_VIDEO_BYTES) return { error: 'That video is too big', status: 413 };
+  // An MP4 says so in its first box ("ftyp"): anything else isn't kept.
+  const head = new Uint8Array(bytes, 0, Math.min(12, bytes.byteLength));
+  if (String.fromCharCode(...head.slice(4, 8)) !== 'ftyp') return { error: 'That isn’t an MP4 video', status: 400 };
+  await env.CLIP_VIDEOS.put(`clips/${id}.mp4`, bytes, { httpMetadata: { contentType: 'video/mp4' } });
+  const q = new URL(request.url).searchParams;
+  return clips.videoUp(id, q.get('upright') === '1', Number(q.get('kills') ?? 0));
+}
+
+async function clipVideo(request: Request, env: Env, id: string): Promise<Response> {
+  if (!env.CLIP_VIDEOS || !(await clipsOf(env).videoServable(id))) return new Response('Not found', { status: 404 });
+  const obj = await env.CLIP_VIDEOS.get(`clips/${id}.mp4`, { range: request.headers });
+  if (!obj) return new Response('Not found', { status: 404 });
+  const headers = new Headers({ 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': '*' });
+  headers.set('ETag', obj.httpEtag);
+  const range = obj.range as { offset?: number; length?: number } | undefined;
+  if (range && request.headers.has('Range')) {
+    const start = range.offset ?? 0;
+    const end = start + (range.length ?? obj.size - start) - 1;
+    headers.set('Content-Range', `bytes ${start}-${end}/${obj.size}`);
+    headers.set('Content-Length', String(end - start + 1));
+    return new Response(obj.body, { status: 206, headers });
+  }
+  headers.set('Content-Length', String(obj.size));
+  return new Response(obj.body, { headers });
 }
 
 /** What each connection carries through hibernation. */

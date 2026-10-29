@@ -53,6 +53,8 @@ export interface KillCamVideo {
   title: string;
   description: string;
   system: string;
+  /** The fight it was filmed from, when it's your own (not a shared clip of someone else's): so it can have a page. */
+  track?: TrackData;
 }
 
 const BEFORE_DEATH = 14; // seconds of the fight shown before the end, at first
@@ -124,6 +126,8 @@ export class KillCam {
   exporting = false;
   /** Where saved videos go (the game logs them in the flight log). */
   onVideo: ((v: KillCamVideo) => Promise<void>) | null = null;
+  /** Share a saved reconstruction (the game opens it from the flight log, with a page); else the plain share sheet. */
+  onShare: ((v: KillCamVideo) => void) | null = null;
   private lastVideo: KillCamVideo | null = null;
   private icon: ImageBitmap | null = null;
   private readonly el: HTMLElement;
@@ -755,11 +759,12 @@ export class KillCam {
       }, 2500);
       return;
     }
-    this.lastVideo = { video, poster, seconds: frames.total / FPS, title, description: `Reconstructed from the flight recorder at ${d.scene.system}`, system: d.scene.system };
+    this.lastVideo = { video, poster, seconds: frames.total / FPS, title, description: `Reconstructed from the flight recorder at ${d.scene.system}`, system: d.scene.system, ...(this.shared ? {} : { track: d }) };
     await this.onVideo?.(this.lastVideo).catch(() => undefined);
     box.innerHTML = `<button type="button" class="primary" data-act="share-video">Share the video</button><span class="killcam-saving">Saved to your flight log</span>`;
     box.querySelector<HTMLButtonElement>('[data-act="share-video"]')!.onclick = () => {
-      shareVideo(this.lastVideo!);
+      if (this.onShare) this.onShare(this.lastVideo!);
+      else shareVideo(this.lastVideo!);
     };
   }
 

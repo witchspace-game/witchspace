@@ -38,7 +38,7 @@ export const commanderLabel = (callsign: string | null) => (callsign ? `CMDR ${c
  * Check a packed track (not gzipped) and rebuild it with labels written here.
  * `ships` maps each real ship type to its name. Returns the clip, or why not.
  */
-export function checkTrack(bytes: Uint8Array, ships: Map<string, string>, callsign: string | null, wantSeconds: number): CheckedClip | string {
+export function checkTrack(bytes: Uint8Array, ships: Map<string, string>, callsign: string | null, wantSeconds: number, claimedKills = 0): CheckedClip | string {
   if (bytes.length > MAX_PACKED) return 'That track is too big';
   let d: TrackData | null;
   try {
@@ -99,7 +99,7 @@ export function checkTrack(bytes: Uint8Array, ships: Map<string, string>, callsi
   };
 
   const seconds = Math.min(60, Math.max(3, finite(wantSeconds) ? wantSeconds : 20));
-  const { title, focusDef } = describeClip(clean, commanderLabel(callsign), ships, seconds);
+  const { title, focusDef } = describeClip(clean, commanderLabel(callsign), ships, seconds, claimedKills);
   return { packed: packTrack(clean), title, system, focusDef, seconds };
 }
 
@@ -122,7 +122,23 @@ export function killsIn(d: TrackData): TrackData['ships'] {
 }
 
 /** A checked track's title (every word written here) and the ship it's about, for its card. */
-export function describeClip(d: TrackData, who: string, ships: Map<string, string>, seconds: number): { title: string; focusDef: string | null } {
+/** Ships that blew up in a track, however (yours or not; missiles, canisters and the station aside). */
+export function boomsIn(d: TrackData): number {
+  const gone = new Set<number>();
+  for (const e of d.events) {
+    if (e.kind !== 'boom' || e.id === d.scene.you) continue;
+    const ship = d.ships.find((s) => s.id === e.id);
+    if (ship && ship.role !== 'missile' && ship.role !== 'station' && ship.def !== 'cargo-canister') gone.add(e.id);
+  }
+  return gone.size;
+}
+
+/**
+ * A checked track's title (every word written here) and the ship it's about, for its card. The kills
+ * are the ones the track shows were yours; the game may claim more (a missile's kill, a ramming: Mark's
+ * three were titled two), and is believed up to the ships the track saw blow up.
+ */
+export function describeClip(d: TrackData, who: string, ships: Map<string, string>, seconds: number, claimedKills = 0): { title: string; focusDef: string | null } {
   const system = d.scene.system;
   const end = d.samples[d.samples.length - 1].t;
   const death = d.events.some((e) => e.kind === 'death');
@@ -130,13 +146,16 @@ export function describeClip(d: TrackData, who: string, ships: Map<string, strin
   const otherShip = other !== undefined ? d.ships.find((s) => s.id === other) : undefined;
   const name = (def: string) => (def === 'falcon' ? 'the Falcon' : `a ${ships.get(def)}`);
   const them = otherShip ? name(otherShip.def) : null;
-  const kills = killsIn(d);
+  const mine = killsIn(d);
+  const claimed = Number.isFinite(claimedKills) ? Math.floor(claimedKills) : 0;
+  const count = Math.max(mine.length, Math.min(claimed, boomsIn(d)));
+  const kills = { length: count, first: mine[0] ?? d.ships.find((s) => d.events.some((e) => e.kind === 'boom' && e.id === s.id) && s.id !== d.scene.you) };
   const title = death
     ? `${who}: ${them ? `shot down by ${them}` : 'ship destroyed'} at ${system}`
     : kills.length > 1
       ? `${who}: ${kills.length} kills in one fight at ${system}`
       : kills.length === 1
-        ? `${who}: ${ships.get(kills[0].def) ?? 'a ship'} down at ${system}`
+        ? `${who}: ${(kills.first && ships.get(kills.first.def)) ?? 'A ship'} down at ${system}`
         : them
           ? `${who}: fighting ${them} at ${system}`
           : `${who} at ${system}`;

@@ -16,6 +16,8 @@ import data from './mcp-data.json';
 
 export interface ClipsEnv {
   ADMIN_KEY?: string;
+  /** Shared clips' videos (index.ts puts and serves them; this object says whose and whether). */
+  CLIP_VIDEOS?: R2Bucket;
 }
 
 const SHIP_NAMES = new Map((data as { ships: { id: string; name: string }[] }).ships.map((s) => [s.id, s.name]));
@@ -71,7 +73,8 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     // the account if signed in (kept from the start), and the browser that shared it (from 27 October 2026).
     // Each clip's card for link previews (from 29 October 2026): a frame of the flight, drawn by the sharer's game,
     // and its version, which goes in the picture's address so X and the rest fetch a new one fresh.
-    for (const col of ['sharer TEXT', 'withdrawn INTEGER NOT NULL DEFAULT 0', 'card BLOB', 'card_v INTEGER NOT NULL DEFAULT 0']) {
+    // And its video (from 29 October 2026, Mark: the link plays your own video first): its version, and whether it's upright.
+    for (const col of ['sharer TEXT', 'withdrawn INTEGER NOT NULL DEFAULT 0', 'card BLOB', 'card_v INTEGER NOT NULL DEFAULT 0', 'video INTEGER NOT NULL DEFAULT 0', 'upright INTEGER NOT NULL DEFAULT 0']) {
       try {
         this.sql.exec(`ALTER TABLE clips ADD COLUMN ${col}`);
       } catch {
@@ -116,6 +119,38 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     return { ok: true, image: cardImage(id, v), status: 200 };
   }
 
+  /** Whether this account or browser shared the clip, so may put up its video. */
+  mayVideo(id: string, account: string | null, voter: string | null): boolean {
+    if (!idOk(id)) return false;
+    const r = this.sql.exec('SELECT account, sharer FROM clips WHERE id = ?', id).toArray()[0];
+    return Boolean(r && ((account && r.account === account) || (voterOk(voter) && r.sharer === voter)));
+  }
+
+  /**
+   * Its video is up (index.ts has put it): a new version, upright or wide. The game may say how many
+   * kills the fight had, which retitles the clip as share() would (believed up to what the track shows).
+   */
+  async videoUp(id: string, upright: boolean, claimedKills: number) {
+    this.sql.exec('UPDATE clips SET video = video + 1, upright = ? WHERE id = ?', upright ? 1 : 0, id);
+    const r = this.sql.exec('SELECT title, seconds, track, video FROM clips WHERE id = ?', id).toArray()[0];
+    if (!r) return { error: 'No such clip', status: 404 };
+    if (claimedKills > 0) {
+      const packed = await gunzip(r.track as ArrayBuffer);
+      const d = packed ? unpackTrack(packed) : null;
+      const you = d?.ships.find((x) => x.id === d.scene.you);
+      if (d && you) {
+        const { title } = describeClip(d, you.label, SHIP_NAMES, r.seconds as number, claimedKills);
+        if (title !== r.title) this.sql.exec('UPDATE clips SET title = ? WHERE id = ?', title, id);
+      }
+    }
+    return { ok: true, video: r.video as number, status: 200 };
+  }
+
+  /** Whether a clip's video may be served: it has one, and the clip is up. */
+  videoServable(id: string): boolean {
+    return idOk(id) && this.sql.exec('SELECT 1 FROM clips WHERE id = ? AND hidden = 0 AND video > 0', id).toArray().length > 0;
+  }
+
   /** The card's picture: only while its clip is up (taken down or hidden, the card goes with it). */
   cardPicture(id: string): Response {
     const r = idOk(id) ? this.sql.exec('SELECT card FROM clips WHERE id = ? AND hidden = 0', id).toArray()[0] : undefined;
@@ -125,13 +160,13 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
   }
 
   /** Share a track. `callsign` and `account` come from the session, checked by the Worker, never from the body. */
-  async share(body: ArrayBuffer, seconds: number, voter: string | null, ip: string, account: { id: string; callsign: string | null } | null) {
+  async share(body: ArrayBuffer, seconds: number, voter: string | null, ip: string, account: { id: string; callsign: string | null } | null, claimedKills = 0) {
     if (!voterOk(voter)) return { error: 'No voter id', status: 400 };
     const net = await this.net(ip);
     if (this.recent(voter, net, 'share', 3600_000) >= SHARES_PER_HOUR) return { error: 'That’s plenty of clips for one hour: try again later', status: 429 };
     const packed = await gunzip(body);
     if (!packed) return { error: 'That track is too big, or not a track', status: 400 };
-    const c = checkTrack(packed, SHIP_NAMES, account?.callsign ?? null, seconds);
+    const c = checkTrack(packed, SHIP_NAMES, account?.callsign ?? null, seconds, claimedKills);
     if (typeof c === 'string') return { error: c, status: 400 };
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
     this.sql.exec('INSERT INTO clips (id, created, title, system, focus, seconds, track, account, sharer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', id, Date.now(), c.title, c.system, c.focusDef, c.seconds, await gzip(c.packed), account?.id ?? null, voter);
@@ -145,7 +180,8 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     const r = this.sql.exec('SELECT * FROM clips WHERE id = ? AND hidden = 0', id).toArray()[0];
     if (!r) return null;
     const mine = voterOk(voter) && this.sql.exec('SELECT 1 FROM hearts WHERE clip = ? AND voter = ?', id, voter).toArray().length > 0;
-    return { id, title: r.title as string, system: r.system as string, focus: (r.focus as string | null) ?? null, seconds: r.seconds as number, created: r.created as number, hearts: r.hearts as number, mine, track: b64(new Uint8Array(r.track as ArrayBuffer)) };
+    const video = (r.video as number) > 0 ? { url: `${SPACE}/clip-video/${id}.mp4?v=${r.video as number}`, upright: r.upright === 1 } : null;
+    return { id, title: r.title as string, system: r.system as string, focus: (r.focus as string | null) ?? null, seconds: r.seconds as number, created: r.created as number, hearts: r.hearts as number, mine, video, track: b64(new Uint8Array(r.track as ArrayBuffer)) };
   }
 
   /** Give or take back a heart. */
@@ -188,12 +224,12 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
   }
 
   /** The clips you put up, from this browser or your account, newest first: up, or taken down by you. */
-  mine(account: string | null, voter: string | null): { id: string; url: string; title: string; system: string; created: number; hearts: number; up: boolean; card: boolean }[] {
+  mine(account: string | null, voter: string | null): { id: string; url: string; title: string; system: string; created: number; hearts: number; up: boolean; card: boolean; video: boolean }[] {
     if (!account && !voterOk(voter)) return [];
     return this.sql
-      .exec('SELECT id, title, system, created, hearts, hidden, withdrawn, card IS NOT NULL AS card FROM clips WHERE (account = ? OR sharer = ?) AND (hidden = 0 OR withdrawn = 1) ORDER BY created DESC LIMIT 100', account ?? '', voterOk(voter) ? voter : '')
+      .exec('SELECT id, title, system, created, hearts, hidden, withdrawn, card IS NOT NULL AS card, video FROM clips WHERE (account = ? OR sharer = ?) AND (hidden = 0 OR withdrawn = 1) ORDER BY created DESC LIMIT 100', account ?? '', voterOk(voter) ? voter : '')
       .toArray()
-      .map((r) => ({ id: r.id as string, url: `${SITE}/clip/${r.id as string}`, title: r.title as string, system: r.system as string, created: r.created as number, hearts: r.hearts as number, up: r.hidden === 0, card: r.card === 1 }));
+      .map((r) => ({ id: r.id as string, url: `${SITE}/clip/${r.id as string}`, title: r.title as string, system: r.system as string, created: r.created as number, hearts: r.hearts as number, up: r.hidden === 0, card: r.card === 1, video: (r.video as number) > 0 }));
   }
 
   /** Take your own clip down (or put it back up): gone from its page and the feed. Only its sharer, by account or browser. */
