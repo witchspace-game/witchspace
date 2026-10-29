@@ -224,12 +224,12 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
   }
 
   /** The clips you put up, from this browser or your account, newest first: up, or taken down by you. */
-  mine(account: string | null, voter: string | null): { id: string; url: string; title: string; system: string; created: number; hearts: number; up: boolean; card: boolean; video: boolean }[] {
+  mine(account: string | null, voter: string | null): { id: string; url: string; title: string; system: string; created: number; hearts: number; up: boolean; card: boolean; video: boolean; image: string | null }[] {
     if (!account && !voterOk(voter)) return [];
     return this.sql
-      .exec('SELECT id, title, system, created, hearts, hidden, withdrawn, card IS NOT NULL AS card, video FROM clips WHERE (account = ? OR sharer = ?) AND (hidden = 0 OR withdrawn = 1) ORDER BY created DESC LIMIT 100', account ?? '', voterOk(voter) ? voter : '')
+      .exec('SELECT id, title, system, created, hearts, hidden, withdrawn, card IS NOT NULL AS card, card_v, video FROM clips WHERE (account = ? OR sharer = ?) AND (hidden = 0 OR withdrawn = 1) ORDER BY created DESC LIMIT 100', account ?? '', voterOk(voter) ? voter : '')
       .toArray()
-      .map((r) => ({ id: r.id as string, url: `${SITE}/clip/${r.id as string}`, title: r.title as string, system: r.system as string, created: r.created as number, hearts: r.hearts as number, up: r.hidden === 0, card: r.card === 1, video: (r.video as number) > 0 }));
+      .map((r) => ({ id: r.id as string, url: `${SITE}/clip/${r.id as string}`, title: r.title as string, system: r.system as string, created: r.created as number, hearts: r.hearts as number, up: r.hidden === 0, card: r.card === 1, video: (r.video as number) > 0, image: r.card === 1 ? cardImage(r.id as string, r.card_v as number) : null }));
   }
 
   /** Take your own clip down (or put it back up): gone from its page and the feed. Only its sharer, by account or browser. */
