@@ -87,6 +87,7 @@ import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } fro
 import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, mintedToday, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, supplyOf, walletHome, walletKey } from './economy/currencies';
 import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
+import { KIT_GROUPS, KIT_NAMES, kitGroup, type KitGroup } from './game/kit';
 import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, giftTradeIn, tradeIn, deliverShip, deliveriesArrived, deliveryQuote, swapShip, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
@@ -2625,6 +2626,15 @@ function renderDocked() {
 
   const list = $('#equip');
   list.innerHTML = '';
+  // The kit, grouped (Combat · Trade · Exploration · Ship) with what you can buy here first and what
+  // isn't sold here folded to one line, saying why (Mark and Marketing's walkthrough). Repairs first.
+  const kit: { group: KitGroup | 'repair'; kind: 'buy' | 'owned' | 'away'; li: HTMLLIElement; short?: string }[] = [];
+  const add = (group: KitGroup | 'repair', kind: 'buy' | 'owned' | 'away', li: HTMLLIElement, short?: string) => kit.push({ group, kind, li, short });
+  const needMore = (b: HTMLButtonElement, price: number) => {
+    if (c.credits >= price) return;
+    b.textContent = `Need ${Math.ceil(price - c.credits).toLocaleString()} Cr more`;
+    b.classList.add('short');
+  };
   // Equipment held here until a fine is paid.
   if (c.impound) {
     const imp = c.impound;
@@ -2643,7 +2653,7 @@ function renderDocked() {
       renderDocked();
     });
     li.append(pay);
-    list.append(li);
+    add('repair', 'buy', li);
   }
   // Lasers, for each of the four mounts. Whatever was on the mount is taken
   // in part exchange at half its price.
@@ -2703,9 +2713,12 @@ function renderDocked() {
       });
       mounts.append(fit);
     }
-    if (!sold) li.querySelector('small')!.append(` Needs tech level ${laser.minTech}.`);
+    const onIt = VIEWS.filter((m) => c.lasers[m] === laser.id);
+    if (onIt.length) li.querySelector('span')!.insertAdjacentHTML('afterbegin', '<i class="tick" aria-label="Fitted">✓</i> ');
+    const cheapest = Math.min(...VIEWS.map((m) => laser.price - (c.lasers[m] ? Math.round(PLAYER_LASERS[c.lasers[m]!].price / 2) : 0)));
+    if (sold && !onIt.length && c.credits < cheapest) li.querySelector('small')!.insertAdjacentHTML('beforeend', ` <b class="short">Need ${Math.ceil(cheapest - c.credits).toLocaleString()} Cr more</b>`);
     li.append(mounts);
-    list.append(li);
+    add('combat', onIt.length ? 'owned' : sold ? 'buy' : 'away', li, `${laser.name} · tech level ${laser.minTech}`);
   }
 
   for (const item of EQUIPMENT) {
@@ -2720,23 +2733,28 @@ function renderDocked() {
     const banned = Boolean(item.illegal) && scansCargo(here); // illegal here: not sold
     const unranked = Boolean(item.explorer) && exploreOf(c).points < item.explorer!; // explorers only
     const sold = here.techLevel >= item.minTech && !banned && !unranked;
-    li.innerHTML = `<span>${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${forDevice(item.blurb)}</small>`;
+    li.innerHTML = `<span>${owned && !damaged ? '<i class="tick" aria-label="Fitted">✓</i> ' : ''}${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${forDevice(item.blurb)}</small>`;
+    const group = damaged ? 'repair' : kitGroup(item.id);
     const buy = document.createElement('button');
     if (damaged) {
       buy.textContent = `Repair · ${repairCost.toLocaleString()} Cr`;
       buy.disabled = c.credits < repairCost;
+      needMore(buy, repairCost);
     } else if (!owned && !sold) {
       // High-tech gear needs a high-tech world; illegal gear, a lawless one; explorer's gear, an explorer.
       buy.textContent = unranked ? `${explorerRank(item.explorer!)} rank` : banned ? 'Illegal here' : `Needs tech level ${item.minTech}`;
       buy.title = unranked ? `You're ${explorerRank(exploreOf(c).points)}: survey, find signals and follow trails to rise` : banned ? 'Sold only where police don\'t scan: anarchies and feudal worlds' : `${here.name} is tech level ${here.techLevel}`;
       buy.disabled = true;
+      add(group, 'away', li, `${item.name} · ${unranked ? `${explorerRank(item.explorer!)} rank` : banned ? 'illegal here' : `tech level ${item.minTech}`}`);
+      li.append(buy);
+      continue;
     } else if (owned && item.found) {
       buy.textContent = 'Fitted';
       buy.classList.add('fitted');
       buy.disabled = true;
       buy.title = 'Found, not bought: nobody will buy it from you, and you would not want them to';
       li.append(buy);
-      list.append(li);
+      add(group, 'owned', li);
       continue;
     } else if (owned) {
       const undo = boughtHere.equipment.has(item.id);
@@ -2758,11 +2776,12 @@ function renderDocked() {
       if (undo) buy.addEventListener('click', remove);
       else confirmSale(buy, `Sell for ${back.toLocaleString()} Cr?`, remove);
       li.append(buy);
-      list.append(li);
+      add(group, 'owned', li);
       continue;
     } else {
       buy.textContent = `Buy · ${item.price.toLocaleString()} Cr`;
       buy.disabled = c.credits < item.price;
+      needMore(buy, item.price);
     }
     buy.addEventListener('click', () => {
       if (damaged) {
@@ -2778,9 +2797,37 @@ function renderDocked() {
       renderDocked();
     });
     li.append(buy);
-    list.append(li);
+    add(group, 'buy', li);
+  }
+
+  for (const g of ['repair', ...KIT_GROUPS] as const) {
+    const items = kit.filter((k) => k.group === g);
+    if (!items.length) continue;
+    const here = items.filter((k) => k.kind !== 'away');
+    const away = items.filter((k) => k.kind === 'away');
+    const head = document.createElement('li');
+    head.className = 'kit-head';
+    head.innerHTML = g === 'repair' ? 'Repairs' : `${KIT_NAMES[g]} <small>${here.length ? `${here.length} here` : 'none here'}</small>`;
+    list.append(head, ...here.filter((k) => k.kind === 'buy').map((k) => k.li), ...here.filter((k) => k.kind === 'owned').map((k) => k.li));
+    if (!away.length) continue;
+    // Not sold here: one line saying why, opening to the items themselves.
+    const fold = document.createElement('li');
+    fold.className = 'kit-away';
+    const shown = away.slice(0, 2).map((k) => k.short).join(' · ');
+    const open = kitOpen.has(g);
+    fold.innerHTML = `<button type="button" aria-expanded="${open}"><span>Not sold here: ${escapeHtml(shown)}${away.length > 2 ? ` · ${away.length - 2} more` : ''}</span></button>`;
+    fold.querySelector('button')!.addEventListener('click', () => {
+      if (kitOpen.has(g)) kitOpen.delete(g);
+      else kitOpen.add(g);
+      renderDocked();
+    });
+    list.append(fold);
+    if (open) for (const k of away) list.append(Object.assign(k.li, { className: 'away' }));
   }
 }
+
+/** Which groups of kit not sold here are opened out, this session. */
+const kitOpen = new Set<string>();
 
 // --- Space ------------------------------------------------------------------
 
