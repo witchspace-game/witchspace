@@ -253,7 +253,11 @@
         <div class="fire-stack">
           <!-- One button for missiles: Lock, then (red) launch. -->
           <button data-key="KeyZ" class="ecm">ECM</button>
-          <button class="missile" type="button" aria-label="Arm a missile: hold a ship in your sights to lock, then fire">Arm</button>
+          <div class="missile-row">
+            <!-- Let go of a lock (or stop seeking): the wrong ship, a police Viper by mistake (Mark). -->
+            <button class="missile-off" type="button" hidden aria-label="Disarm the missile">✕</button>
+            <button class="missile" type="button" aria-label="Arm a missile: hold a ship in your sights to lock, then fire">Arm</button>
+          </div>
           <button class="fire" aria-label="Fire">Fire</button>
         </div>
       </div>

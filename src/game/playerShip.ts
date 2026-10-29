@@ -2,7 +2,12 @@ import * as THREE from 'three';
 import type { ShipDef } from '../content/types';
 import type { FlightInput } from './input';
 
-const ACCELERATION = 140; // m/s²
+// How quickly the engines answer the throttle (Mark: it wasn't as responsive as he'd like). Every ship
+// reaches full speed in about a second and stops in under one, however fast she is, with at least the
+// old 140 m/s² for the slowest; braking is quicker than speeding up, as reverse thrust and drag both help.
+const TO_FULL = 1.1; // seconds
+const TO_STOP = 0.75;
+const MIN_ACCELERATION = 140; // m/s²
 const CONTROL_RESPONSE = 5; // how quickly turn rates follow the stick
 
 /**
@@ -70,11 +75,13 @@ export class PlayerShip {
     this.obj.rotateX(-this.pitchVel * dt);
     this.obj.rotateZ(this.rollVel * dt);
     this.obj.rotateY(-this.yawVel * dt); // +yaw = nose to starboard
-    this.speed += input.throttle * ACCELERATION * dt + input.speedStep * this.maxSpeed;
+    const up = Math.max(MIN_ACCELERATION, this.maxSpeed / TO_FULL);
+    const down = Math.max(MIN_ACCELERATION, this.maxSpeed / TO_STOP);
+    this.speed += input.throttle * (input.throttle > 0 ? up : down) * dt + input.speedStep * this.maxSpeed;
     if (input.speedTarget !== undefined) {
       // Touch slider: ease towards the speed asked for, as fast as the engines allow.
       const want = input.speedTarget * this.maxSpeed;
-      this.speed += THREE.MathUtils.clamp(want - this.speed, -ACCELERATION * dt, ACCELERATION * dt);
+      this.speed += THREE.MathUtils.clamp(want - this.speed, -down * dt, up * dt);
     }
     this.speed = THREE.MathUtils.clamp(this.speed, 0, this.maxSpeed);
   }

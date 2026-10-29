@@ -4733,6 +4733,14 @@ function sightedNpc(range = 5000, cone = 6): NpcShip | null {
   return best;
 }
 
+/** Let go of the missile: no lock, no seeking. */
+function disarmMissile() {
+  seeker = null;
+  locked = null;
+  lockedCommander = null;
+  flash('Missile disarmed', 1.2);
+}
+
 /** T: lock a missile onto the ship in your sights, or disarm. */
 function toggleLock() {
   const c = cmdr();
@@ -4742,12 +4750,8 @@ function toggleLock() {
   }
   if (c.difficulty === 'modern') {
     // Arm, and the seeker does the rest: hold a ship in your sights and it locks.
-    if (seeker || locked || lockedCommander) {
-      seeker = null;
-      locked = null;
-      lockedCommander = null;
-      flash('Missile disarmed', 1.2);
-    } else {
+    if (seeker || locked || lockedCommander) disarmMissile();
+    else {
       seeker = { on: null, progress: 0, beep: 0 };
       flash('Missile armed · hold a ship in your sights', 1.5);
     }
@@ -4832,7 +4836,10 @@ function updateSeeker(dt: number) {
   sfx.lockTone();
   if (npc) {
     locked = npc;
-    flash(`Missile locked · ${npcIdentified(npc) ? npc.def.name : 'unidentified ship'} · fire`, 1.5);
+    // Locked onto the law by mistake: say so, and how to let go, before the trigger.
+    const law = npcIdentified(npc) && (npc.role === 'police' || npc.role === 'marshal');
+    const off = isTouch ? 'tap ✕ to disarm' : 'T to disarm';
+    flash(law ? `Missile locked · ${npc.def.name} · police · firing is a crime · ${off}` : `Missile locked · ${npcIdentified(npc) ? npc.def.name : 'unidentified ship'} · fire · ${off}`, law ? 3 : 1.8);
   } else {
     lockedCommander = target as Remote;
     flash(`Missile locked · CMDR ${lockedCommander.name} · fire`, 1.5);
@@ -4871,6 +4878,12 @@ onTap(missileButton, () => {
   else toggleLock();
   updateMissileButton();
 });
+const missileOff = $<HTMLButtonElement>('#touch .missile-off');
+onTap(missileOff, () => {
+  missileOff.blur();
+  disarmMissile();
+  updateMissileButton();
+});
 
 /** Its label: how many missiles, and whether one is locked. */
 function updateMissileButton() {
@@ -4881,6 +4894,7 @@ function updateMissileButton() {
   missileButton.classList.toggle('armed', armed);
   missileButton.classList.toggle('seeking', Boolean(seeker) && !armed);
   missileButton.classList.toggle('empty', n <= 0);
+  missileOff.hidden = !(armed || seeker);
   const label =
     n <= 0 ? 'No missiles' : armed ? (modern ? `Fire ×${n}` : `Missile ×${n}`) : seeker ? `Seeking ×${n}` : modern ? `Arm ×${n}` : `Lock ×${n}`;
   if (missileButton.textContent !== label) missileButton.textContent = label;

@@ -1573,6 +1573,10 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 #touch .missile { min-width: 92px; min-height: 44px; padding: 6px 10px; border-radius: 999px; font-size: 13px; letter-spacing: 0.06em; background: rgba(0, 10, 6, 0.55); }
 #touch .missile.armed { border-color: var(--danger); color: #fff; background: rgba(255, 77, 109, 0.55); box-shadow: 0 0 14px var(--danger); }
 #touch .missile.empty { opacity: 0.45; }
+#touch .missile-row { position: relative; }
+/* On the missile button's top-left corner: clear of the speed slider beside it. */
+#touch .missile-off { position: absolute; left: -16px; top: -18px; width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 50%; font-size: 15px; line-height: 1; background: rgba(0, 10, 6, 0.85); z-index: 1; }
+#touch .missile-off[hidden] { display: none; }
 @media (max-height: 500px) { body.touch #touch .missile { min-width: 76px; font-size: 12px; } }
 
 /* Play full screen: the title screen's Home Screen card (main.ts showInstall). */
