@@ -92,7 +92,7 @@ The **halo** is the ship you work towards, or only ever see: some aren't for sal
 A ship's engines have a voice of their own, set in her file (`style.engine`), so she sounds like what she is, to you and to everyone she passes (other ships and commanders in shared space hear it too):
 
 - **drone** (the default): a working ship's gritty hum, the Cobra's.
-- **grand**: Zorgon Petterson's Fer-de-lance and her editions. Mark: "It's a very expensive ship so I wanted it to feel expensive." No buzz: a deep, smooth purr from two pure tones beating slowly, and a clean turbine whine that rises with the throttle, near silent at rest. She's composed in a turn (barely a change of breath, her thrusters hardly hiss), and leaving the station her turbine winds up like a good car starting.
+- **grand**: Zorgon Petterson's Fer-de-lance and her editions. Mark: "It's a very expensive ship so I wanted it to feel expensive." No buzz: a deep, smooth purr from two pure tones beating slowly, and a clean turbine whine that rises with the throttle, near silent at rest. She's composed in a turn (barely a change of breath, her thrusters hardly hiss), and leaving the station her turbine winds up like a good car starting. At a steady throttle she settles to cruise after a few seconds, so a long run isn't a whine. Her weapons match: crystal lasers, a clean bright note with a glassy shimmer and a short ringing tail (a pulse laser snaps, a beam sings, a military laser cracks), and a missile that leaves on a damped rail *thock* and a smooth rising whoosh. Other ships keep the old zap and clunk for now.
 
 ## 3. Upgrades
 

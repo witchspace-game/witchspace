@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { track as countEvent } from '@vercel/analytics';
 import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
 import { cycleSoundMode, danube, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
-import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt, type EngineVoice } from './audio/spatial';
+import { boomAt, crystalShot, EngineSound, precisionLaunch, rocketAt, setListener, ShipVoice, tailWarning, zapAt, type EngineVoice, type LaserSound } from './audio/spatial';
 import { withLineUp } from './content/moduleFiles';
 import { shipById, ships } from './content/ships';
 import type { ShipDef } from './content/types';
@@ -2710,6 +2710,23 @@ const voices = new Map<NpcShip, ShipVoice>();
 const remoteVoices = new Map<string, ShipVoice>();
 /** How a ship's engines sound: her ship file's style.engine (the Fer-de-lance's is a grand tourer's, Mark). */
 const voiceOf = (def: ShipDef | undefined): EngineVoice => def?.style.engine ?? 'drone';
+
+// A grand tourer's weapons sound like her engines (Mark): crystal lasers, each kind its own, and a
+// precision missile launch. Every other ship keeps the old zap and clunk.
+const laserSound = (l: object): LaserSound => {
+  const id = (l as { id?: string }).id;
+  return id === 'beam' || id === 'military' ? id : 'pulse';
+};
+function shotSound(def: ShipDef, kind: LaserSound, at: THREE.Vector3 | null) {
+  if (voiceOf(def) === 'grand') crystalShot(kind, at);
+  else if (at) zapAt(at, 700, 120, 0.15, 0.5);
+  else sfx.laser();
+}
+function launchSound(def: ShipDef, at: THREE.Vector3 | null) {
+  if (voiceOf(def) === 'grand') precisionLaunch(at);
+  else if (at) rocketAt(at, 0.5);
+  else sfx.missileLaunch();
+}
 const VOICE_RANGE = 2000; // hear other ships' engines within this distance
 let tailWarningTimer = 0;
 const beams = new Beams(space.scene);
@@ -4497,7 +4514,7 @@ function firePlayerLaser() {
   const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
   for (const muzzle of muzzles()) beams.fire(muzzle, end, laser.color);
   trackBeam(player, origin, end, laser.color, hit?.target.value.kind === 'npc' ? hit.target.value.npc : null);
-  sfx.laser();
+  shotSound(player.def, laserSound(laser), null);
   if (sharedSpace.connected) sharedSpace.fire(dir, laser.id);
   if (!hit) return;
   const shot = hit.target.value;
@@ -4614,7 +4631,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
         const beamEnd = hit ? hit.point : origin.clone().addScaledVector(aim, npc.laser.range);
         beams.fire(origin, beamEnd, npc.laser.color);
         trackBeam(npc, origin, beamEnd, npc.laser.color, hit?.target.value === 'player' ? player : hit?.target.value instanceof NpcShip ? hit.target.value : null);
-        zapAt(origin, 700, 120, 0.15, 0.5);
+        shotSound(npc.def, laserSound(npc.laser), origin);
         const struck = hit?.target.value;
         if (struck instanceof NpcShip) {
           // A trader calling for help puts everything into its shields, to last until help comes.
@@ -4964,7 +4981,7 @@ function fireMissile() {
     c.missiles -= 1;
     saveCommander(c);
     sharedSpace.launchMissile(lockedCommander.id);
-    sfx.missileLaunch();
+    launchSound(player.def, null);
     flash(`Missile away · CMDR ${lockedCommander.name}`, 1.2);
     lockedCommander = null;
     return;
@@ -4987,8 +5004,7 @@ function launchMissile(from: PlayerShip, target: PlayerShip) {
   const m = new Missile(shipById('missile')!, from, target);
   space.scene.add(m.model.root);
   missiles.push(m);
-  if (from === player) sfx.missileLaunch();
-  else rocketAt(m.position, 0.5);
+  launchSound(from.def, from === player ? null : m.position);
   if (target === player) {
     sfx.incoming();
     incomingTimer = 1;
@@ -7360,6 +7376,8 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
       const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(r.quaternion);
       const origin = r.position.clone().addScaledVector(fwd, 20);
       beams.fire(origin, origin.clone().addScaledVector(fwd, 2000), COMMANDER_COLOUR);
+      // A commander in a Fer-de-lance is heard by her crystal guns (other commanders' lasers stay silent for now).
+      if (voiceOf(shipById(r.ship)) === 'grand') crystalShot('pulse', origin);
     }
   }
 }

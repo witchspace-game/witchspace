@@ -97,6 +97,94 @@ export function rocketAt(at: THREE.Vector3, volume: number) {
   src.onended = () => p.disconnect();
 }
 
+// --- A grand tourer's weapons (Mark: the Fer-de-lance's guns should sound as expensive as her engines) ---
+// Crystal lasers: no rasp, a clean bright note with a glassy shimmer above it, a sharp attack and a
+// short ringing tail. Each laser has its own: a pulse snaps, a beam sings, a military laser cracks.
+// Her missile leaves on a damped rail "thock" and a smooth rising whoosh. Your own play where you
+// are; another ship's come from where she is.
+
+export type LaserSound = 'pulse' | 'beam' | 'military';
+
+const CRYSTAL: Record<LaserSound, { f: number; drop: number; seconds: number; shimmer: number; bite: number; volume: number }> = {
+  pulse: { f: 2350, drop: 0.8, seconds: 0.11, shimmer: 0.35, bite: 0, volume: 0.05 },
+  beam: { f: 2050, drop: 0.92, seconds: 0.24, shimmer: 0.5, bite: 0, volume: 0.042 },
+  military: { f: 1550, drop: 0.72, seconds: 0.17, shimmer: 0.3, bite: 0.05, volume: 0.06 },
+};
+
+/** Where a sound goes: placed in space, or (null) straight to you. */
+function outlet(at: THREE.Vector3 | null): { input: AudioNode; done: () => void } {
+  if (!at) return { input: audioGraph().master, done: () => {} };
+  const p = makeSpatial(at);
+  return { input: p.input, done: () => p.disconnect() };
+}
+
+/** A tone that rings and fades: a sine (or triangle) gliding down by `drop` over `seconds`. */
+function ring(out: AudioNode, type: OscillatorType, f: number, drop: number, seconds: number, volume: number, t: number) {
+  const { ctx } = audioGraph();
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(f, t);
+  o.frequency.exponentialRampToValueAtTime(f * drop, t + seconds);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(volume, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + seconds);
+  o.connect(g).connect(out);
+  o.start(t);
+  o.stop(t + seconds + 0.02);
+  return o;
+}
+
+/** A Fer-de-lance's laser shot, of each kind: yours (`at` null) or another ship's from where she is. */
+export function crystalShot(kind: LaserSound, at: THREE.Vector3 | null, volume = 1) {
+  const { ctx } = audioGraph();
+  const t = ctx.currentTime;
+  const c = CRYSTAL[kind];
+  const out = outlet(at);
+  const v = c.volume * volume * (at ? 6 : 1); // placed sounds fall off with distance: start them louder
+  const body = ring(out.input, 'sine', c.f, c.drop, c.seconds, v, t);
+  ring(out.input, 'triangle', c.f * 1.5, c.drop, c.seconds * 0.8, v * 0.35, t); // the fifth above, for colour
+  ring(out.input, 'sine', c.f * 3.01, c.drop, c.seconds * 0.5, v * c.shimmer, t); // the glassy shimmer, a hair sharp
+  if (c.bite) {
+    // A military laser's crack: a breath of bright noise at the front.
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(ctx, 0.04);
+    const f = ctx.createBiquadFilter();
+    f.type = 'highpass';
+    f.frequency.value = 4500;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(c.bite * volume * (at ? 6 : 1), t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+    src.connect(f).connect(g).connect(out.input);
+    src.start(t);
+  }
+  body.onended = out.done;
+}
+
+/** A Fer-de-lance's missile: a damped rail release, then the motor lighting in a smooth rising whoosh with a clean tone. */
+export function precisionLaunch(at: THREE.Vector3 | null, volume = 1) {
+  const { ctx } = audioGraph();
+  const t = ctx.currentTime;
+  const out = outlet(at);
+  const k = volume * (at ? 3 : 1);
+  ring(out.input, 'sine', 240, 0.4, 0.08, 0.22 * k, t); // the thock of the rail
+  const src = ctx.createBufferSource();
+  src.buffer = noiseBuffer(ctx, 1.1);
+  const f = ctx.createBiquadFilter();
+  f.type = 'bandpass';
+  f.Q.value = 1.4;
+  f.frequency.setValueAtTime(380, t + 0.1);
+  f.frequency.exponentialRampToValueAtTime(2600, t + 0.95);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t + 0.1);
+  g.gain.exponentialRampToValueAtTime(0.13 * k, t + 0.3);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.1);
+  src.connect(f).connect(g).connect(out.input);
+  src.start(t + 0.1);
+  const tone = ring(out.input, 'sine', 320, 2.9, 0.95, 0.03 * k, t + 0.12); // the motor's note, climbing
+  tone.onended = out.done;
+}
+
 /** A burst of filtered noise from a point in space (impacts, explosions). */
 export function boomAt(at: THREE.Vector3, seconds: number, cutoff: number, volume: number) {
   const { ctx } = audioGraph();
