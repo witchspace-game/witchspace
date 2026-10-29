@@ -444,7 +444,7 @@ async function render() {
 }
 
 async function music(seconds: number) {
-  const buf = await (await fetch('/audio/blue-danube.mp3')).arrayBuffer();
+  const buf = await (await fetch('/recordings/blue-danube.mp3')).arrayBuffer(); // the full recording, not the game's trimmed copy
   const ctx = new OfflineAudioContext(2, Math.ceil(seconds * 48000), 48000);
   const src = ctx.createBufferSource();
   src.buffer = await ctx.decodeAudioData(buf);
