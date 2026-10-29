@@ -145,6 +145,7 @@ Earned ships still need upkeep, insurance and the career's goodwill: lose your s
   - **The owner chooses whether to be named**, as with discoveries. By default the line gives the edition, its number and the yard, never the callsign. At the reveal, one tap, *Let the galaxy know she's yours*, adds "…signed over to Commander X".
   - **Moxon's Witch-fire 001 is never named** unless he agrees to publicity (Mark's rule). Mark's Dark 001 is his choice at the tap, like anyone's.
   - The same event feeds the home page's live feed through /feed, under the same naming rule (Website's side).
+  - **Nothing is backfilled, with one exception:** Mark's Dark Edition 001, collected on 29 October before the news existed, is announced once when this is built (Mark: "Announce"). The live test before Moxon's Witch-fire 001. Unnamed unless Mark chooses otherwise.
   - *On file, in case commanders ever trade ships in the shared galaxy:* the yard's price is the floor; an offer says why it's worth more (ready now, kitted out, in the right place, a story), with guard rails: kit never counts for more than it cost, no offer beats building the same ship new at that yard, a place premium of at most about 15% and not for a ship bought in the last week, story value capped (kills count little and on a log scale; firsts, Legends survived, names and an edition's number can't be farmed), and a gifted hull's hull is worth nothing.
 
 ## 6. Concepts
