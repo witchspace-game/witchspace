@@ -77,16 +77,16 @@ Counts only, never names.
 
 ```
 { "kind": "edition", "t": 1761700000000, "editionId": "dark", "edition": "Dark Edition", "shipId": "fer-de-lance",
-  "number": 1, "limit": 100, "yard": "Goddard Ring", "maker": "Zorgon Petterson", "system": "Onrira",
+  "number": 1, "limit": 50, "yard": "Goddard Ring", "maker": "Zorgon Petterson", "system": "Onrira",
   "callsign": "MARK" }   // callsign only if the owner chose, at the handover, to be named; otherwise absent
 ```
 
 - **When:** at collection, not when the maker signs her over (her owner hasn't chosen yet then). Nothing is backfilled: the two signed over on 28 October make the news when they're collected, like any other.
 - **Never a callsign by default.** The server leaves it out unless the owner said yes at the handover; the site never has it to show. Mark Moxon's Witch-fire 001 is never named unless he agrees to publicity.
-- **No prices,** ever: editions are by invitation. "One of 100" is fine.
+- **No prices,** ever: editions are by invitation. "One of N", from the edition's own limit, is fine.
 - Within the last 48 hours, newest first, like the others.
 
-On the home page: a *Shipyard* line, "Dark Edition 001 left Zorgon Petterson's yard" (or, named, "Dark Edition 001 signed over to Commander MARK"), its note "Goddard Ring, Onrira · 2 h ago · One of 100", beside it the edition's public share card (`/share/ships-<ship>-<edition>.jpg`), linked to the edition's public page (`/ships/<ship>/<edition>/`), never to her private certificate. The ticker opens with it while it's the newest commander line.
+On the home page: a *Shipyard* line, "Dark Edition 001 left Zorgon Petterson's yard" (or, named, "Dark Edition 001 signed over to Commander MARK"), its note "Goddard Ring, Onrira · 2 h ago · One of 50" (the number from the edition's own `limit`, never fixed), beside it the edition's public share card (`/share/ships-<ship>-<edition>.jpg`), linked to the edition's public page (`/ships/<ship>/<edition>/`), never to her private certificate. The ticker opens with it while it's the newest commander line.
 
 ### Privacy
 
