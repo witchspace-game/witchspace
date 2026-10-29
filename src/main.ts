@@ -233,7 +233,12 @@ function realign() {
     dispatchEvent(new Event('resize'));
   }, 350);
 }
-document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && realign());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') realign();
+  // Away to another app: finish any clip being recorded with what there is, so the moment is in the
+  // flight log even if the phone closes the page while it's in the background.
+  else recorder.pause();
+});
 addEventListener('pageshow', realign);
 addEventListener('orientationchange', realign);
 visualViewport?.addEventListener('resize', realign);

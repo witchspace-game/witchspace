@@ -51,9 +51,19 @@ let unlocked = false;
 for (const type of ['touchend', 'pointerup', 'click', 'keydown'] as const) {
   addEventListener(type, () => ctx?.state !== 'running' && unlockAudio(), { capture: true, passive: true });
 }
-// Back from the Home Screen or the lock screen: try at once (the next tap does it if not).
+// Away to another app or the lock screen: everything stops, the streamed music too (iOS keeps a page
+// awake while an <audio> plays, which costs battery: Mark). Back again: try at once (the next tap does it if not).
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && ctx && ctx.state !== 'running') void ctx.resume().catch(() => {});
+  const away = document.visibilityState === 'hidden';
+  if (away) {
+    void ctx?.suspend().catch(() => {});
+    playing?.recording?.pause();
+    cueOn?.el.pause();
+    return;
+  }
+  if (ctx && ctx.state !== 'running') void ctx.resume().catch(() => {});
+  void playing?.recording?.play().catch(() => {});
+  void cueOn?.el.play().catch(() => {});
 });
 
 export function cycleSoundMode(): SoundMode {
