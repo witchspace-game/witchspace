@@ -66,7 +66,7 @@ import {
   wantsMouseCapture,
   type FlightInput,
 } from './game/input';
-import { MouseAim } from './game/mouseAim';
+import { MouseAim, SENSITIVITY as AIM_SENSITIVITY } from './game/mouseAim';
 import { allies, NpcShip, type NpcRole } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
 import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
@@ -5521,6 +5521,21 @@ document.addEventListener('pointerdown', (e) => {
   if (!glancing && !$('#view-picker').hidden && !$('#view-picker').contains(t) && !$('#view-button').contains(t)) showViewPicker(false);
 }, true);
 
+/**
+ * Steering in a rear or side view (Mark: dragging did nothing there). The drag turns the view you're
+ * looking through, as it turns the nose ahead: across, the ship yaws (the same in every view, all
+ * turning about her up); up and down, she pitches (the other way, looking back) or rolls (looking aside).
+ */
+function steerInView(input: FlightInput, dt: number) {
+  const k = AIM_SENSITIVITY / Math.max(dt, 1e-3);
+  const across = input.aimDx * k; // how fast the view should swing right, radians a second
+  const up = -input.aimDy * k; // and tip up
+  const rate = (r: number, max: number) => THREE.MathUtils.clamp(r / max, -1, 1);
+  input.yaw = rate(across, player.yawRate);
+  if (view === 'rear') input.pitch = rate(-up, player.def.stats.pitchRate ?? 1.5);
+  else input.roll = rate(view === 'left' ? up : -up, player.def.stats.rollRate ?? 2);
+}
+
 /** Which way the current view looks, in the world. */
 function viewDirection(): THREE.Vector3 {
   switch (view) {
@@ -5611,6 +5626,9 @@ function updateSpace(dt: number) {
       const s = aim.steer(player);
       input.pitch = s.pitch;
       input.yaw = s.yaw;
+    } else if (view !== 'front' && controlScheme() === 'mouse' && (isMouseCaptured() || isTouch) && !autopilot && !surveyPilot && !keysTurning) {
+      aim.reset(player);
+      steerInView(input, dt);
     } else {
       aim.reset(player);
     }
