@@ -102,6 +102,12 @@ export function render(scene: THREE.Scene) {
   }
 }
 
+/**
+ * On a phone the glow is worked out at half the screen's resolution (Mark: the battery). It's five
+ * blurs, so the lines glow as brightly and look the same; the lines themselves stay sharp.
+ */
+const LIGHT_GLOW = matchMedia('(pointer: coarse)').matches;
+
 function resize() {
   const r = retroSize();
   camera.aspect = retro ? r.w / r.h : innerWidth / innerHeight;
@@ -110,7 +116,9 @@ function resize() {
   fitRetroCanvas(retroCanvas);
   neoRenderer.setSize(innerWidth, innerHeight, false);
   composer.setSize(innerWidth, innerHeight);
-  setLineResolution(neoRenderer.getDrawingBufferSize(new THREE.Vector2()));
+  const buffer = neoRenderer.getDrawingBufferSize(new THREE.Vector2());
+  if (LIGHT_GLOW) bloom.setSize(Math.round(buffer.x * 0.75), Math.round(buffer.y * 0.75));
+  setLineResolution(buffer);
 }
 addEventListener('resize', resize);
 resize();

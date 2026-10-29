@@ -123,6 +123,17 @@ When you **sell or hand in data at a station while signed in** with a callsign, 
 - First come, first named: whoever reaches a station with the data first. Not signed in? The game works as before, and nobody's name goes down.
 - It costs one small record per body on the server (a table in the accounts object), read a galaxy at a time and cached. The client says what it surveyed; the server checks every claim against the galaxy's seed (that moon, signal, trail step or courier really is in that system: `isRealFind` in explore.ts, which the Worker shares), takes at most a hold's worth at once, and lets one account win at most 60 firsts an hour and 300 a day. Anything over stays unclaimed for the next commander. It can't prove you flew there, so an admin tool (`npx tsx tools/firsts.ts list | wipe "<callsign>"`) shows who's claiming fastest and wipes a cheat's claims.
 
+## Discoveries make the news *(idea, Mark, 29 October 2026)*
+
+Mark: "add news to station news feeds where CMDRs discover stuff... if a CMDR docks and posts surveys then this becomes news!" Commanders' firsts already reach the home page's live feed ([live-feed.md](live-feed.md): *CMDR JAMESON charted Lave first: the planet, a moon and a derelict*). This brings them into the game's own station news boards.
+
+- **Only when you publish.** It's news only if the explorer chooses to publish (the Mutual's newsletter, above), never automatically. That gives publishing its reward: your callsign on news boards across the region. Selling quietly to a company keeps the find secret and pays better.
+- **At the speed of news.** The find is news where it was filed first, and reaches nearby systems over the following days, like every other story ([information that travels](economy-and-exchanges.md#2-information-that-travels)).
+- **One line per explorer.** Several firsts are grouped into one line, as the feed does, so one busy explorer can't flood a board.
+- **Callsigns are public**, so the same moderation as the feed and clip pages applies.
+- **Single-player** shows your own finds; the shared galaxy shows everyone's.
+- *Parked for later:* big finds draw the companies and move prices, feeding Mark's parked money and factions idea.
+
 ## Stage 2: worlds you can watch change
 
 **Finds that change the world:** precious deposits, found by explorers and sold to a company, that become developments every career supplies, guards or raids. Designed in [from discovery to development](discovery-to-development.md).

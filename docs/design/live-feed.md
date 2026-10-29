@@ -90,3 +90,4 @@ Nothing that isn't already public elsewhere: callsigns and firsts are on the gal
 
 - **Milestones**: a clip passing 10 hearts, a commander's 100th first. Needs hearts with times (above).
 - **Other real events** as they're built: a station finished, a commander's new rank, a legend sighted. Each would be a new `kind`; the website should ignore kinds it doesn't know, so they can be added without breaking it.
+- **Into the game's news boards** *(idea, Mark, 29 October 2026)*: a published first becomes station news where it was filed and spreads at the speed of news, one line per explorer, only when they publish ([exploration.md](exploration.md#discoveries-make-the-news-idea-mark-29-october-2026)).
