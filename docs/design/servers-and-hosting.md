@@ -38,6 +38,7 @@ Related designs: [economy and exchanges](economy-and-exchanges.md) (the server-h
 | **Your browser** | Drawing the game, sound, flight physics with prediction (so your ship responds instantly), the galaxy and planets generated from seeds, your HUD and the station screens | Fast, free and fine to trust: if you change how it looks, nobody else is affected |
 | **System servers** | Live simulation of busy systems: where every ship is, NPC traffic and police, laser hits, missiles, docking clearance | Everyone in a system must see the same fight, and nobody can be trusted to referee their own |
 | **The central server** | Accounts, commanders, credits and the ledger, cargo, equipment, ratings, legal records and warrants, shared markets, missions | One set of books that can't be edited or forked |
+| **Cloudflare R2** (`witchspace-clips`) | Shared clips' videos, beside each clip page (Mark, 29 October 2026): a few MB each, served only while the clip is up | Files are what it's for: 10 GB free, no fees to download, and a video never passes through a Durable Object |
 
 To begin with, the system servers and the central server are **one program on one machine**. They're kept separate in the code so they can be split later.
 

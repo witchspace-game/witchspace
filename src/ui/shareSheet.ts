@@ -29,11 +29,16 @@ export interface ShareMedia {
   name: string;
   /** For a wide clip: make its upright cut (for Shorts and Reels), resolving with it to share instead. */
   upright?: (onProgress: (f: number) => void) => Promise<ShareMedia | null>;
-  /** For a clip with a track: put its replay up as a page, resolving with the page's link. `shared` if it already is. */
-  replay?: { shared: string | null; put: () => Promise<{ url: string; title: string } | { error: string }> };
+  /**
+   * For a clip with a track: put it up as a page, with this video (the one being shared: the sharer
+   * decides, Mark), resolving with the page's link. `shared` if it already is; `attach` puts this
+   * version's video on a page already up.
+   */
+  replay?: { shared: string | null; put: () => Promise<{ url: string; title: string } | { error: string }>; attach?: (url: string) => void };
 }
 
-const CONSENT_KEY = 'witchspace.replay-consent';
+// Asked again from 29 October 2026: the video now goes up with the page, where before it stayed on the device.
+const CONSENT_KEY = 'witchspace.replay-consent-video';
 const consented = () => {
   try {
     return localStorage.getItem(CONSENT_KEY) === 'yes';
@@ -110,9 +115,9 @@ export function openShareSheet(m: ShareMedia) {
       }</p>
       <button type="button" class="ws-share-upright" hidden>Make an upright version <span>for Shorts, Reels and TikTok</span></button>
       <div class="ws-share-replay" hidden>
-        <button type="button" class="ws-share-put">${ICONS.link}Share a link that replays it</button>
+        <button type="button" class="ws-share-put">${ICONS.link}Share a link that plays it</button>
         <div class="ws-share-consent" hidden>
-          <p>Put this replay on witchspace.org.uk? Anyone with the link can watch it, rebuilt from your flight track. The video stays on this device.</p>
+          <p>Put this ${video ? 'video' : 'moment'} on witchspace.org.uk? Anyone with the link can watch it, and watch the fight rebuilt from outside from your flight track. You can take it down from your flight log.</p>
           <p class="ws-share-consent-actions"><button type="button" class="primary" data-consent="yes">Put it up</button><button type="button" data-consent="no">Not now</button></p>
         </div>
       </div>
@@ -148,13 +153,16 @@ export function openShareSheet(m: ShareMedia) {
   };
   const toPage = (url: string, title: string) => {
     linkUrl = url;
-    linkText = `${title} · watch it from outside on Witchspace`;
+    linkText = `${title} · on Witchspace`;
     el.querySelector('.ws-share-replay')!.setAttribute('hidden', '');
-    el.querySelector('.ws-share-or')!.textContent = 'Share the replay: the link plays it';
+    el.querySelector('.ws-share-or')!.textContent = 'Share the link: it plays this video';
     drawLinks();
   };
   drawLinks();
-  if (m.replay?.shared) toPage(m.replay.shared, m.title);
+  if (m.replay?.shared) {
+    toPage(m.replay.shared, m.title);
+    m.replay.attach?.(m.replay.shared); // this version is the one the page plays now
+  }
   else if (m.replay) {
     const box = el.querySelector<HTMLElement>('.ws-share-replay')!;
     const consent = box.querySelector<HTMLElement>('.ws-share-consent')!;
@@ -168,7 +176,7 @@ export function openShareSheet(m: ShareMedia) {
       if ('url' in r) toPage(r.url, r.title || m.title);
       else {
         put.disabled = false;
-        put.innerHTML = `${ICONS.link}Share a link that replays it`;
+        put.innerHTML = `${ICONS.link}Share a link that plays it`;
         msg.textContent = r.error;
       }
     };

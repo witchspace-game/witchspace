@@ -26,6 +26,8 @@ export interface SharedClip {
   seconds: number;
   hearts: number;
   mine: boolean;
+  /** The video the sharer shared (their cockpit clip, an upright cut or a reconstruction), if it went up. */
+  video: { url: string; upright: boolean } | null;
   /** The track, gzipped (ready for readTrack). */
   track: Blob;
 }
@@ -42,9 +44,9 @@ const sharedLinks = (): Record<string, string> => {
 export const sharedLink = (moment: string): string | null => sharedLinks()[moment] ?? null;
 
 /** Share a moment's track. Resolves with the clip's link and title, or the reason it couldn't. */
-export async function shareTrack(moment: string, track: Blob, seconds: number): Promise<{ url: string; title: string } | { error: string }> {
+export async function shareTrack(moment: string, track: Blob, seconds: number, kills = 0): Promise<{ url: string; title: string } | { error: string }> {
   const session = sessionToken();
-  const res = await fetch(`${API}/clips?seconds=${Math.round(seconds)}`, {
+  const res = await fetch(`${API}/clips?seconds=${Math.round(seconds)}&kills=${kills}`, {
     method: 'POST',
     headers: headers({ 'Content-Type': 'application/octet-stream', ...(session ? { Authorization: `Bearer ${session}` } : {}) }),
     body: track,
@@ -89,6 +91,8 @@ export interface MyClip {
   up: boolean;
   /** Whether it has its own card for link previews yet (putCard). */
   card?: boolean;
+  /** Whether its video is up yet (putVideo). */
+  video?: boolean;
 }
 
 const mineHeaders = () => {
@@ -113,6 +117,12 @@ export async function takeDownClip(id: string, down = true): Promise<{ ok: true 
 /** Put up a clip's card for link previews (ui/clipCard.ts): yours only, by account or this browser. */
 export async function putCard(id: string, jpeg: Blob): Promise<boolean> {
   const res = await fetch(`${API}/clips/${id}/card`, { method: 'POST', headers: { ...mineHeaders(), 'Content-Type': 'image/jpeg' }, body: jpeg }).catch(() => null);
+  return Boolean(res?.ok);
+}
+
+/** Put up the video the sharer is sharing, beside the clip (theirs only); `kills` is the game's count, for its title. */
+export async function putVideo(id: string, video: Blob, upright: boolean, kills: number): Promise<boolean> {
+  const res = await fetch(`${API}/clips/${id}/video?upright=${upright ? 1 : 0}&kills=${kills}`, { method: 'POST', headers: { ...mineHeaders(), 'Content-Type': 'video/mp4' }, body: video }).catch(() => null);
   return Boolean(res?.ok);
 }
 

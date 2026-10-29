@@ -27,6 +27,11 @@ class_name = "Accounts"
 name = "CLIPS"
 class_name = "ClipBoard"
 
+# Shared clips' videos (Mark: a link plays your own video first), kept beside each clip.
+[[r2_buckets]]
+binding = "CLIP_VIDEOS"
+bucket_name = "witchspace-clips"
+
 # SQLite-backed Durable Objects, which the free Workers plan supports.
 [[migrations]]
 tag = "v1"

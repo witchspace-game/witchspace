@@ -110,6 +110,15 @@ The game knows what happened, so the recorder's metadata (who fired first, who d
 
 **Explorers.** The photo taken on a first survey goes on the chart with the world, under your name.
 
+### Video first *(Mark, 29 October 2026)*
+
+Mark followed his own clip's link from X and landed on the reconstruction: "That was weird." Now the page plays **the video its sharer shared**, first: "It's the user that decides what view they want to create or save." That's the cockpit clip, its upright cut, or a reconstruction they filmed of their own fight (with its camera: Target, You or Orbit). Under it, *Watch it from outside* opens the rebuilt fight, with Play Witchspace free, hearts and Report (`src/ui/clipView.ts`).
+
+- **What goes up:** the exact video in the share sheet, beside the clip, into Cloudflare R2 (`witchspace-clips`; 40 MB at most, an MP4 or nothing). Sharing asks first, in words that say the video goes up (it used to say the video stayed on the device, so everyone is asked again), and taking a clip down takes its video with it. Clips shared before this get their video when their sharer's flight log next lists them, while the moment is still on that device.
+- **Served** only while the clip is up, at its own versioned address, in ranges, as iPhones ask for video.
+- **A reconstruction of someone else's fight** can be saved and shared as a video, never put up as a page under your name: only your own fight's reconstruction keeps its track.
+- **Kills in the title:** the game says how many kills the fight had (a missile's, a ramming: Mark's three were titled two), and the server believes it up to the ships the track saw blow up.
+
 ## Trade moments *(Mark, 29 October 2026; built)*
 
 Mark: "you could fly, trade, explore, build and then post straight to twitter". Trading had nothing for the recorder to keep, so now it keeps two kinds of trade (`src/game/tradeMoments.ts`):

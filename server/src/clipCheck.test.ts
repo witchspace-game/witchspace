@@ -110,6 +110,16 @@ describe('a fight with kills is called that, as the flight log calls it', () => 
     expect(c.title).toBe('CMDR Kestrel: Mamba down at Lave');
   });
 
+  it("believes the game's count of kills (a missile's, a ramming), but only up to the ships the track saw blow up", () => {
+    const claim = (d: TrackData, n: number) => checkTrack(packTrack(d), SHIPS, 'Kestrel', 20, n);
+    const three = claim(kills(1, 2), 3);
+    if (typeof three === 'string') throw new Error(three);
+    expect(three.title).toBe('CMDR Kestrel: 3 kills in one fight at Lave');
+    const greedy = claim(kills(1), 5);
+    if (typeof greedy === 'string') throw new Error(greedy);
+    expect(greedy.title).toBe('CMDR Kestrel: Mamba down at Lave'); // one ship went up: one kill, whatever's claimed
+  });
+
   it("doesn't count a ship someone else finished off", () => {
     const c = check(kills(1, 2));
     if (typeof c === 'string') throw new Error(c);

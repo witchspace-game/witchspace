@@ -4,8 +4,8 @@
 import { addMoment, BUDGET, byTrip, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
-import { uprightCut } from './upright';
-import { clipIdOf, myClips, putCard, sharedLink, shareTrack, takeDownClip, type MyClip } from '../net/clips';
+import { isWide, uprightCut } from './upright';
+import { clipIdOf, myClips, putCard, putVideo, sharedLink, shareTrack, takeDownClip, type MyClip } from '../net/clips';
 import { drawClipCard } from './clipCard';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
@@ -53,16 +53,7 @@ export function shareMoment(m: LoggedMoment, onChange?: () => void) {
     title: m.title,
     name: fileName(m),
     // A clip with a track can have a page that replays it (net/clips.ts).
-    replay: m.track
-      ? {
-          shared: sharedLink(m.id),
-          put: async () => {
-            const r = await shareTrack(m.id, m.track!, m.seconds);
-            if ('url' in r) void sendCard(r.url, r.title, m);
-            return r;
-          },
-        }
-      : undefined,
+    replay: pageFor(m, m.video),
     upright:
       m.video && !recon
         ? async (onProgress) => {
@@ -72,7 +63,7 @@ export function shareMoment(m: LoggedMoment, onChange?: () => void) {
             const made: LoggedMoment = { ...m, id: `${when}-upright`, created: when, tags: [...m.tags, 'upright'], video: cut.video, poster: cut.poster, seconds: cut.seconds, photo: undefined, track: undefined, saved: false };
             await addMoment(made).catch(() => false);
             onChange?.();
-            return { blob: cut.video, poster: cut.poster ?? undefined, title: m.title, name: fileName(made).replace(/\.mp4$/, '-upright.mp4') };
+            return { blob: cut.video, poster: cut.poster ?? undefined, title: m.title, name: fileName(made).replace(/\.mp4$/, '-upright.mp4'), replay: pageFor(m, cut.video) };
           }
         : undefined,
   });
@@ -179,6 +170,53 @@ export function closeReplay() {
  */
 let allClips = false;
 
+/** The game's count of kills in a moment, which the server believes up to what the track shows (the clip's title). */
+const killsOf = (m: LoggedMoment) => m.events.filter((e) => e.kind === 'kill').length;
+
+/**
+ * A moment's page, playing the video being shared (Mark: the sharer decides what view goes up: the
+ * cockpit clip, its upright cut, or a reconstruction they filmed). Only a moment with its own flight track.
+ */
+function pageFor(m: LoggedMoment, video: Blob | undefined) {
+  if (!m.track) return undefined;
+  return {
+    shared: sharedLink(m.id),
+    put: async () => {
+      const r = await shareTrack(m.id, m.track!, m.seconds, killsOf(m));
+      if ('url' in r) {
+        void sendCard(r.url, r.title, m);
+        if (video) void sendVideo(r.url, video, m);
+      }
+      return r;
+    },
+    attach: video ? (url: string) => void sendVideo(url, video, m) : undefined,
+  };
+}
+
+/** Which version's video each clip has up, kept on this device so the same one isn't sent twice. */
+const VIDEOS_KEY = 'witchspace.clip-videos';
+const videosUp = (): Record<string, number> => {
+  try {
+    return JSON.parse(localStorage.getItem(VIDEOS_KEY) ?? '{}');
+  } catch {
+    return {};
+  }
+};
+
+/** Put a clip's video up (the one being shared, wide or upright), unless that very one is already there. */
+async function sendVideo(url: string, video: Blob, m: LoggedMoment) {
+  const id = clipIdOf(url);
+  if (!id) return;
+  const up = videosUp();
+  if (up[id] === video.size) return;
+  if (!(await putVideo(id, video, !(await isWide(video)), killsOf(m)))) return;
+  try {
+    localStorage.setItem(VIDEOS_KEY, JSON.stringify({ ...videosUp(), [id]: video.size }));
+  } catch {
+    /* sent again next time, which is harmless */
+  }
+}
+
 /** Clips whose card this session has drawn (or tried to), so the log doesn't draw one twice. */
 const carded = new Set<string>();
 
@@ -206,6 +244,8 @@ async function showPublic(el: HTMLElement, moments: LoggedMoment[]) {
     // A clip shared before clips had cards of their own gets one now, from its moment, while that's still here.
     const c = link ? upAt.get(link) : undefined;
     if (c && c.card === false) void sendCard(c.url, c.title, m);
+    // And its video, for clips shared before pages played them (Mark's first), while the moment's still here.
+    if (c && c.video === false && m.video) void sendVideo(c.url, m.video, m);
   }
   const when = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   const row = (c: MyClip) => `<li data-clip="${c.id}" class="${c.up ? '' : 'down'}">

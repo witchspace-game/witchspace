@@ -1584,6 +1584,18 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 #touch .missile { min-width: 92px; min-height: 44px; padding: 6px 10px; border-radius: 999px; font-size: 13px; letter-spacing: 0.06em; background: rgba(0, 10, 6, 0.55); }
 #touch .missile.armed { border-color: var(--danger); color: #fff; background: rgba(255, 77, 109, 0.55); box-shadow: 0 0 14px var(--danger); }
 #touch .missile.empty { opacity: 0.45; }
+/* A shared clip's page, video first (ui/clipView.ts). */
+#clip-view { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; gap: 10px; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); background: #000; color: var(--fg); }
+#clip-view .cv-head { display: flex; align-items: center; gap: 12px; }
+#clip-view .cv-title { flex: 1; margin: 0; font-size: 15px; letter-spacing: 0.03em; }
+#clip-view .cv-close { width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%; font-size: 18px; }
+#clip-view .cv-video { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; border-radius: 8px; }
+#clip-view .cv-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+#clip-view .cv-actions button { min-height: 44px; }
+#clip-view .cv-heart { display: inline-flex; align-items: center; gap: 6px; }
+#clip-view .cv-heart svg { width: 20px; height: 20px; fill: none; stroke: #ff6b8b; stroke-width: 1.8; }
+#clip-view .cv-heart[aria-pressed='true'] svg { fill: #ff6b8b; }
+#clip-view .cv-report { color: var(--dim); }
 .rcard-left + .rcard-dismiss { margin-left: 0; }
 .rcard-left { align-self: center; margin-left: auto; padding: 0 6px; color: var(--danger); font-size: 1.1em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Hold to fire: the trigger charges across the button, and the missile goes when it's full. */
