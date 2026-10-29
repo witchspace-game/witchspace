@@ -109,9 +109,9 @@ export const DASHBOARD: string[][] = [
 
 /** The flight recorder, for the manual (as it is today; Marketing's copy). */
 export const RECORDER = [
-  'Your ship remembers the last minute of flight and keeps the moments worth keeping: a fight, a Legend, the Marshals, a discovery, a big trade, your last moments.',
-  'When you dock, <b>This trip</b> shows what it kept: share one, keep it, or let it go. Anything you don\'t keep clears after a week; everything you keep is in the <b>Flight log</b>.',
-  'If you\'re destroyed, the insurers recover your recorder and play your last moments. <b>Watch it from outside</b> rebuilds the fight, so you can see what got you.',
+  'Your ship keeps your best moments: a fight, a Legend, the Marshals, a discovery, a big trade, your last moments.',
+  'When you dock, <b>Your moments</b> shows what this trip kept, the best first. <b>Share</b> one, <b>☆ star</b> it to keep it forever, or swipe it away to let it go. Anything you don\'t star clears after a week; they\'re all in the <b>Flight log</b>.',
+  '<b>More</b> has the rest: an upright version for Reels and Shorts, saving the video, and <b>Watch it from outside</b> when there\'s a fight to watch, rebuilt so you can see what got you.',
   'Sharing gives a moment its own page, with its own card, that plays for anyone you send it to.',
 ];
 

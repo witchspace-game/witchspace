@@ -5,7 +5,7 @@ import { addMoment, BUDGET, byTrip, clearUnkept, deleteMoment, listMoments, mome
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
 import { isWide, uprightCut } from './upright';
-import { momentWeight } from '../game/moments';
+import { tripWeight } from '../game/moments';
 import { clipIdOf, myClips, putCard, putVideo, sharedLink, shareTrack, takeDownClip, type MyClip } from '../net/clips';
 import { drawClipCard } from './clipCard';
 
@@ -47,7 +47,6 @@ export const setOutsideView = (fn: (m: LoggedMoment) => void) => (outsideView = 
 export function shareMoment(m: LoggedMoment, onChange?: () => void) {
   // One video at a time: an iPhone can be short of decoders, and the share sheet has its own preview.
   document.querySelector<HTMLVideoElement>('#replay video')?.pause();
-  const recon = m.tags.includes('reconstruction') || m.tags.includes('upright');
   openShareSheet({
     blob: media(m),
     poster: m.poster ?? undefined,
@@ -55,18 +54,130 @@ export function shareMoment(m: LoggedMoment, onChange?: () => void) {
     name: fileName(m),
     // A clip with a track can have a page that replays it (net/clips.ts).
     replay: pageFor(m, m.video),
-    upright:
-      m.video && !recon
-        ? async (onProgress) => {
-            const cut = await uprightCut(m.video!, m.title, onProgress);
-            if (!cut) return null;
-            const when = Date.now();
-            const made: LoggedMoment = { ...m, id: `${when}-upright`, created: when, tags: [...m.tags, 'upright'], video: cut.video, poster: cut.poster, seconds: cut.seconds, photo: undefined, track: undefined, saved: false };
-            await addMoment(made).catch(() => false);
-            onChange?.();
-            return { blob: cut.video, poster: cut.poster ?? undefined, title: m.title, name: fileName(made).replace(/\.mp4$/, '-upright.mp4'), replay: pageFor(m, cut.video) };
-          }
-        : undefined,
+    upright: canUpright(m) ? (onProgress) => makeUpright(m, onProgress, onChange) : undefined,
+  });
+}
+
+const canUpright = (m: LoggedMoment) => Boolean(m.video) && !m.tags.includes('reconstruction') && !m.tags.includes('upright');
+
+/** Cut a cockpit clip upright for Shorts and Reels (ui/upright.ts); the cut joins your moments beside it. */
+async function makeUpright(m: LoggedMoment, onProgress: (f: number) => void, onChange?: () => void) {
+  const cut = await uprightCut(m.video!, m.title, onProgress);
+  if (!cut) return null;
+  const when = Date.now();
+  const made: LoggedMoment = { ...m, id: `${when}-upright`, created: when, tags: [...m.tags, 'upright'], video: cut.video, poster: cut.poster, seconds: cut.seconds, photo: undefined, track: undefined, saved: false };
+  await addMoment(made).catch(() => false);
+  onChange?.();
+  return { blob: cut.video, poster: cut.poster ?? undefined, title: m.title, name: fileName(made).replace(/\.mp4$/, '-upright.mp4'), replay: pageFor(m, cut.video) };
+}
+
+/**
+ * Watch it from outside only where there's something to watch (Mark and Marketing's walkthrough):
+ * a fight, the Falcon or another Legend, the Marshals, or being shot down by someone. Never a survey, a photo
+ * or a crash into a planet with nothing in it.
+ */
+export const worthWatching = (m: LoggedMoment) =>
+  Boolean(m.track) && (m.events.some((e) => e.kind === 'kill' || e.kind === 'legend' || e.kind === 'marshals') || m.events.some((e) => e.kind === 'death' && Boolean(e.subject)));
+
+const tidy = (title: string) => title.replace(/^(CMDR [^:]+|A commander): /, '');
+const length = (m: LoggedMoment) => (m.video ? `${Math.round(m.seconds)} s${m.tags.includes('upright') ? ' · upright' : ''}` : 'Photo');
+
+/**
+ * More, behind one button (docs/design/flight-recorder.md, "Moments"): star it, watch it from
+ * outside, the upright cut, save the video, or let it go. A sheet of its own over the moments.
+ */
+export function openMore(m: LoggedMoment, onChange: () => void) {
+  document.querySelector('.moment-more')?.remove();
+  const el = document.createElement('div');
+  el.className = 'moment-more';
+  const what = m.video ? 'video' : 'photo';
+  el.innerHTML = `<div class="moment-more-sheet" role="dialog" aria-modal="true" aria-label="More">
+      <p class="moment-more-title">${escapeHtml(tidy(m.title))}</p>
+      <button type="button" data-more="star" aria-pressed="${m.saved}"><i>${m.saved ? '★' : '☆'}</i><b>${m.saved ? 'Starred' : 'Star it'}</b><span>${m.saved ? 'Kept forever · tap to unstar' : 'Keep it forever'}</span></button>
+      ${worthWatching(m) && outsideView ? '<button type="button" data-more="outside"><i>◎</i><b>Watch it from outside</b><span>The fight rebuilt, from any angle</span></button>' : ''}
+      ${canUpright(m) ? '<button type="button" data-more="upright"><i>▯</i><b>Upright</b><span>For Reels, Shorts and TikTok</span></button>' : ''}
+      <button type="button" data-more="save"><i>↓</i><b>Save the ${what}</b><span>${what === 'video' ? 'To Photos or Files' : 'To Photos or Files'}</span></button>
+      <button type="button" data-more="delete" class="moment-let-go"><i>✕</i><b>Let it go</b><span>Deleted from this device</span></button>
+      <button type="button" data-more="close" class="moment-more-close">Close</button>
+    </div>`;
+  document.body.append(el);
+  const close = () => el.remove();
+  el.addEventListener('pointerdown', (e) => e.target === el && close());
+  el.querySelectorAll<HTMLButtonElement>('[data-more]').forEach((b) => {
+    b.onclick = async () => {
+      const act = b.dataset.more;
+      if (act === 'close') return close();
+      if (act === 'star') {
+        await setSaved(m.id, !m.saved);
+        close();
+        return onChange();
+      }
+      if (act === 'outside') {
+        close();
+        return outsideView?.(m);
+      }
+      if (act === 'save') {
+        const a = document.createElement('a');
+        a.href = url(media(m));
+        a.download = fileName(m);
+        a.click();
+        b.querySelector('span')!.textContent = `Saved · ${fileName(m)}`;
+        return;
+      }
+      if (act === 'upright') {
+        b.disabled = true;
+        const result = await makeUpright(m, (f) => (b.querySelector('span')!.textContent = `Making it · ${Math.round(f * 100)}%`), onChange).catch(() => null);
+        close();
+        if (result) openShareSheet(result);
+        return;
+      }
+      if (act === 'delete') {
+        if (!b.dataset.armed) {
+          b.dataset.armed = '1';
+          b.querySelector('b')!.textContent = 'Let it go? Tap again';
+          return;
+        }
+        await deleteMoment(m.id);
+        close();
+        onChange();
+      }
+    };
+  });
+}
+
+/** A swipe to the left lets a moment go (Mark: "Swipe one away to let it go"): it slides off, then it's deleted. */
+function swipeAway(li: HTMLElement, m: LoggedMoment, onGone: () => void) {
+  let x0: number | null = null;
+  let y0 = 0;
+  let dx = 0;
+  li.addEventListener('touchstart', (e) => {
+    x0 = e.touches[0].clientX;
+    y0 = e.touches[0].clientY;
+    dx = 0;
+  }, { passive: true });
+  li.addEventListener('touchmove', (e) => {
+    if (x0 === null) return;
+    dx = e.touches[0].clientX - x0;
+    if (Math.abs(e.touches[0].clientY - y0) > Math.abs(dx)) {
+      x0 = null; // a scroll, not a swipe
+      li.style.transform = '';
+      return;
+    }
+    if (dx < 0) li.style.transform = `translateX(${dx}px)`;
+    li.classList.toggle('going', dx < -90);
+  }, { passive: true });
+  li.addEventListener('touchend', async () => {
+    if (x0 === null) return;
+    x0 = null;
+    if (dx < -90) {
+      li.style.transform = 'translateX(-110%)';
+      li.style.opacity = '0';
+      await deleteMoment(m.id);
+      setTimeout(onGone, 200);
+    } else {
+      li.style.transform = '';
+      li.classList.remove('going');
+    }
   });
 }
 
@@ -113,15 +224,15 @@ async function mountVideo(holder: HTMLElement, clip: Blob, poster: Blob | null, 
 export function openReplay(m: LoggedMoment, heading: string, onChange?: () => void, note = 'Only the view is recorded. It stays on this device unless you share it.') {
   const box = $('#replay');
   revoke(replayUrls);
-  const kept = () => (m.saved ? 'Kept' : 'Keep');
+  const kept = () => (m.saved ? '★ Starred' : '☆ Star it');
   box.innerHTML = `<div class="replay-card" role="dialog" aria-modal="true" aria-label="${escapeHtml(heading)}">
     <p class="replay-heading">${escapeHtml(heading)}</p>
     ${m.video ? `<div class="replay-video">${m.poster ? `<img src="${replayUrl(m.poster)}" alt="" />` : ''}<p class="replay-loading">Loading the clip&hellip;</p></div>` : `<img src="${replayUrl(media(m))}" alt="${escapeHtml(m.title)}" />`}
     <h3>${escapeHtml(m.title)}</h3>
     <p class="replay-meta">${m.events.map((e) => escapeHtml(e.text)).join(' · ')}</p>
     <div class="replay-actions">
-      ${m.track && outsideView ? '<button type="button" class="primary" data-act="outside">Watch it from outside</button>' : ''}
-      <button type="button"${m.track ? '' : ' class="primary"'} data-act="share">Share</button>
+      <button type="button" class="primary" data-act="share">Share</button>
+      ${worthWatching(m) && outsideView ? '<button type="button" data-act="outside">Watch it from outside</button>' : ''}
       <button type="button" data-act="keep" aria-pressed="${m.saved}">${kept()}</button>
       <button type="button" data-act="close">Close</button>
     </div>
@@ -325,11 +436,12 @@ export async function renderFlightLog(opts: {
       ? '<span class="log-quality">HD 720p</span>'
       : `<span class="log-quality">480p: HD was slowing the game${q.canRetry ? ' <button type="button" class="log-hd">Try HD</button>' : ''}</span>`
     : '';
-  const how = 'Your ship keeps the last minute of flight in memory and saves only the moments worth keeping: a fight, a Legend, the Marshals, a discovery and your last moments. Shift+P (or holding the camera button) keeps the last 30 seconds yourself; P takes a photo.';
+  // One line, not a paragraph of rules (Mark: "brilliantly elegant and intuitive").
+  const how = 'Your ship keeps your best moments. Share one, star it, or let it go.';
   let head: string;
   if (!opts.available) head = `<p class="meta">${escapeHtml(opts.unavailable)} Photos (P) still come here.</p>`;
   else if (opts.intro)
-    head = `<div class="log-intro"><p><strong>Your flight recorder</strong> ${how} Everything stays on this device (up to ${megabytes(BUDGET)}) unless you share it, and what you don't Keep clears after a week.</p>
+    head = `<div class="log-intro"><p><strong>${how}</strong></p><p class="small">Everything stays on this device unless you share it. What you don't star clears after a week.</p>
       <p class="log-intro-actions"><button type="button" class="primary" data-intro="on">Keep it on</button><button type="button" data-intro="off">Turn it off</button></p></div>`;
   else if (!moments.length) head = `<p class="meta">${opts.enabled ? how : 'The flight recorder is off. Photos (P) still come here.'}</p>`;
   else head = '';
@@ -339,8 +451,8 @@ export async function renderFlightLog(opts: {
     head += `<div class="log-recorder">
       <div class="rec-row"><strong>Flight recorder</strong>${quality}${toggle}</div>
       ${moments.length ? `<div class="rec-meter" role="meter" aria-valuemin="0" aria-valuemax="${BUDGET}" aria-valuenow="${used}" aria-label="Space used on this device"><span style="width:${Math.min(100, (used / BUDGET) * 100).toFixed(1)}%"></span></div>
-      <div class="rec-row rec-small"><span>${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} · ${megabytes(used)} of ${megabytes(BUDGET)} on this device</span>${moments.some((m) => !m.saved) ? '<button type="button" class="log-clear">Clear unkept</button>' : ''}</div>
-      <p class="rec-note">What you don't Keep clears after a week.</p>` : ''}
+      <div class="rec-row rec-small"><span>${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} · ${megabytes(used)} of ${megabytes(BUDGET)} on this device</span>${moments.some((m) => !m.saved) ? '<button type="button" class="log-clear">Clear unstarred</button>' : ''}</div>
+      <p class="rec-note">What you don't star clears after a week. Swipe one away to let it go.</p>` : ''}
     </div>`;
   // The library, trip by trip (Mark: "the library should be somewhere else"; the dock shows only this trip).
   const day = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -352,8 +464,8 @@ export async function renderFlightLog(opts: {
         .map(
           (m) => `<li data-id="${m.id}">
           <button type="button" class="log-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${url(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s${m.tags.includes('upright') ? ' · upright' : ''}` : 'Photo'}</span></button>
-          <div><strong>${escapeHtml(m.title.replace(/^CMDR [^:]+: /, ''))}</strong><small>${escapeHtml(m.events.map((e) => e.text).join(' · '))}</small>
-          <span class="log-actions">${m.track && outsideView ? '<button type="button" data-act="outside">From outside</button>' : ''}<button type="button" data-act="share">Share</button><button type="button" data-act="keep" aria-pressed="${m.saved}">${m.saved ? 'Kept' : 'Keep'}</button><button type="button" data-act="delete">Delete</button></span></div>
+          <div><strong>${escapeHtml(tidy(m.title))}</strong><small>${escapeHtml(m.events.map((e) => e.text).join(' · '))}</small>
+          <span class="log-actions"><button type="button" class="moment-star" data-act="keep" aria-pressed="${m.saved}" aria-label="${m.saved ? 'Starred: kept forever' : 'Star it to keep it forever'}">${m.saved ? '★' : '☆'}</button><button type="button" class="primary" data-act="share">Share</button><button type="button" data-act="more">More</button></span></div>
         </li>`,
         )
         .join('')}</ul>`,
@@ -373,7 +485,7 @@ export async function renderFlightLog(opts: {
     clear.onclick = async () => {
       if (!clear.dataset.armed) {
         clear.dataset.armed = '1';
-        clear.textContent = 'Clear every unkept moment?';
+        clear.textContent = 'Clear every unstarred moment?';
         return;
       }
       await clearUnkept();
@@ -382,24 +494,14 @@ export async function renderFlightLog(opts: {
   for (const li of el.querySelectorAll<HTMLLIElement>('li[data-id]')) {
     const m = moments.find((x) => x.id === li.dataset.id)!;
     const refresh = () => void renderFlightLog(opts);
-    li.querySelector<HTMLButtonElement>('.log-play')!.onclick = () => openReplay(m, 'From the flight log', refresh, m.photo ? 'Taken with your ship camera. It stays on this device unless you share it.' : undefined);
-    const outside = li.querySelector<HTMLButtonElement>('[data-act="outside"]');
-    if (outside) outside.onclick = () => outsideView?.(m);
+    li.querySelector<HTMLButtonElement>('.log-play')!.onclick = () => openReplay(m, 'Your moments', refresh, m.photo ? 'Taken with your ship camera. It stays on this device unless you share it.' : undefined);
     li.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = () => shareMoment(m, refresh);
     li.querySelector<HTMLButtonElement>('[data-act="keep"]')!.onclick = async () => {
       await setSaved(m.id, !m.saved);
       refresh();
     };
-    li.querySelector<HTMLButtonElement>('[data-act="delete"]')!.onclick = async (e) => {
-      const b = e.target as HTMLButtonElement;
-      if (b.dataset.armed) {
-        await deleteMoment(m.id);
-        refresh();
-      } else {
-        b.dataset.armed = '1';
-        b.textContent = 'Delete?';
-      }
-    };
+    li.querySelector<HTMLButtonElement>('[data-act="more"]')!.onclick = () => openMore(m, refresh);
+    swipeAway(li, m, refresh);
   }
 }
 
@@ -412,24 +514,34 @@ export async function renderFlightLog(opts: {
  */
 export async function openTrip(since: number, opts: { onClose: () => void; onLibrary: () => void; onChange: () => void }) {
   const box = $('#trip-sheet');
-  // The best first (Mark: the three kills came last, after the death).
-  const moments = (await listMoments()).filter((m) => m.created >= since).sort((a, b) => momentWeight(b.events) - momentWeight(a.events) || b.created - a.created);
+  // The best first, and big (Mark: the three kills came last, after the death).
+  const moments = (await listMoments()).filter((m) => m.created >= since).sort((a, b) => tripWeight(b.events) - tripWeight(a.events) || b.created - a.created);
   if (!moments.length) return closeTrip();
   revoke(tripUrls);
-  const unkept = moments.filter((m) => !m.saved).length;
+  const [best, ...rest] = moments;
+  const star = (m: LoggedMoment) => `<button type="button" class="moment-star" data-act="keep" aria-pressed="${m.saved}" aria-label="${m.saved ? 'Starred: kept forever' : 'Star it to keep it forever'}">${m.saved ? '★' : '☆'}</button>`;
   box.innerHTML = `<div class="trip-grip" aria-hidden="true"></div>
-    <header class="trip-head"><h3>This trip</h3><span>${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} kept by the recorder</span><button type="button" class="trip-close" aria-label="Done">✕</button></header>
-    <ul class="trip-list">${moments
-      .map(
-        (m) => `<li data-id="${m.id}">
-        <button type="button" class="trip-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${tripUrl(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s` : 'Photo'}</span></button>
-        <strong>${escapeHtml(m.title.replace(/^CMDR [^:]+: /, ''))}</strong>
-        <span class="trip-actions"><button type="button" data-act="keep" aria-pressed="${m.saved}">${m.saved ? 'Kept' : 'Keep'}</button><button type="button" data-act="share">Share</button><button type="button" data-act="delete" aria-label="Delete">Delete</button></span>
+    <header class="trip-head"><h3>Your moments</h3><span>This trip · ${moments.length}</span><button type="button" class="trip-close" aria-label="Done">✕</button></header>
+    <ul class="trip-list">
+      <li data-id="${best.id}" class="trip-best">
+        <button type="button" class="trip-play" aria-label="${best.video ? 'Watch' : 'View'} ${escapeHtml(best.title)}"><img src="${tripUrl(best.poster ?? media(best))}" alt="" /><span>${length(best)}</span></button>
+        ${star(best)}
+        <strong>${escapeHtml(tidy(best.title))}</strong>
+        <small>${escapeHtml(best.events.map((e) => e.text).join(' · '))}</small>
+        <span class="trip-actions"><button type="button" class="primary" data-act="share">Share</button><button type="button" data-act="more">More</button></span>
+      </li>
+      ${rest
+        .map(
+          (m) => `<li data-id="${m.id}">
+        <button type="button" class="trip-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${tripUrl(m.poster ?? media(m))}" alt="" /><span>${length(m)}</span></button>
+        <strong>${escapeHtml(tidy(m.title))}</strong>
+        <span class="trip-actions">${star(m)}<button type="button" data-act="share">Share</button><button type="button" data-act="more" aria-label="More">⋯</button></span>
       </li>`,
-      )
-      .join('')}</ul>
-    <footer class="trip-foot">${unkept ? `<button type="button" class="primary trip-keep-all">Keep ${unkept === moments.length ? 'all' : `the other ${unkept}`}</button>` : ''}<button type="button" class="trip-done">Done</button></footer>
-    <p class="trip-note">What you don't keep clears after a week. Everything is in the <button type="button" class="trip-library">flight log</button>.</p>`;
+        )
+        .join('')}
+    </ul>
+    <p class="trip-note">Swipe one away to let it go · ☆ keeps it forever</p>
+    <footer class="trip-foot"><button type="button" class="trip-library">All your moments</button><button type="button" class="primary trip-done">Done</button></footer>`;
   box.hidden = false;
   const again = () => {
     opts.onChange();
@@ -445,12 +557,6 @@ export async function openTrip(since: number, opts: { onClose: () => void; onLib
     closeTrip();
     opts.onLibrary();
   };
-  const all = box.querySelector<HTMLButtonElement>('.trip-keep-all');
-  if (all)
-    all.onclick = async () => {
-      for (const m of moments) if (!m.saved) await setSaved(m.id, true);
-      again();
-    };
   for (const li of box.querySelectorAll<HTMLLIElement>('li[data-id]')) {
     const m = moments.find((x) => x.id === li.dataset.id)!;
     li.querySelector<HTMLButtonElement>('.trip-play')!.onclick = () => openReplay(m, 'This trip', again, m.photo ? 'Taken with your ship camera. It stays on this device unless you share it.' : undefined);
@@ -459,16 +565,8 @@ export async function openTrip(since: number, opts: { onClose: () => void; onLib
       await setSaved(m.id, !m.saved);
       again();
     };
-    li.querySelector<HTMLButtonElement>('[data-act="delete"]')!.onclick = async (e) => {
-      const b = e.target as HTMLButtonElement;
-      if (!b.dataset.armed) {
-        b.dataset.armed = '1';
-        b.textContent = 'Sure?';
-        return;
-      }
-      await deleteMoment(m.id);
-      again();
-    };
+    li.querySelector<HTMLButtonElement>('[data-act="more"]')!.onclick = () => openMore(m, again);
+    swipeAway(li, m, again);
   }
   // A swipe down on the sheet's top dismisses it, as a phone's sheets do.
   let y0: number | null = null;

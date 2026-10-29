@@ -33,6 +33,13 @@ const WEIGHT: Record<MomentKind, number> = { death: 6, marshals: 5, legend: 4, d
 /** How remarkable a moment is (its lead event's weight): This trip shows the best first. */
 export const momentWeight = (events: MomentEvent[]) => (events.length ? WEIGHT[leadEvent(events).kind] : 0);
 
+/**
+ * The order of your moments from a trip, the best first and big (Mark: "The best moment (3 kills)
+ * was last; the death was first"). A death that took pirates with it still leads; a death alone,
+ * a crash or being shot down with nothing to show, comes after a fight.
+ */
+export const tripWeight = (events: MomentEvent[]) => (events.length && leadEvent(events).kind === 'death' && !events.some((e) => e.kind === 'kill') ? 1.5 : momentWeight(events));
+
 export function leadEvent(events: MomentEvent[]): MomentEvent {
   return [...events].sort((a, b) => WEIGHT[b.kind] - WEIGHT[a.kind])[0];
 }

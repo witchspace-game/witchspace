@@ -986,7 +986,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     renderTrades(ctx);
   }
 
-  // A phone held upright (docs/design/docked-on-a-phone.md, "The Market on a phone"): the list
+  // A phone held upright (docs/design/flight-hud-and-touch.md, "The Market on a phone"): the list
   // first, and the good you tap opens in place beneath it with its news and the trade form; the
   // chart, order book and trades fold away under one line. A computer keeps the full exchange.
   const phone = window.matchMedia('(max-width: 700px) and (orientation: portrait)');

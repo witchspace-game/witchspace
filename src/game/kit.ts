@@ -1,4 +1,4 @@
-// The station's kit, grouped for the Station tab (docs/design/docked-on-a-phone.md, "Kit, grouped"):
+// The station's kit, grouped for the Station tab (docs/design/flight-hud-and-touch.md, "Kit, grouped"):
 // what it's for, so twenty items read as four short lists rather than one long one.
 
 import { EQUIPMENT, type EquipmentId } from './commander';

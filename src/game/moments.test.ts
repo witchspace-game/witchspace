@@ -36,3 +36,13 @@ describe('moments', () => {
     expect(momentTags([photo], ctx)).toContain('screenshot');
   });
 });
+
+describe('your moments from a trip', () => {
+  it('puts a fight before a death that took nobody with it, and a death with kills first', async () => {
+    const { tripWeight } = await import('./moments');
+    const kills = [kill('Sidewinder'), kill('Sidewinder'), kill('Sidewinder')];
+    const death = [{ kind: 'death' as const, text: 'Ship destroyed' }];
+    expect(tripWeight(kills)).toBeGreaterThan(tripWeight(death));
+    expect(tripWeight([...death, kill('Mamba')])).toBeGreaterThan(tripWeight(kills));
+  });
+});
