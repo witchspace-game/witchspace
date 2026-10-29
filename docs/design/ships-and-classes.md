@@ -135,6 +135,12 @@ Earned ships still need upkeep, insurance and the career's goodwill: lose your s
   - **A maiden voyage from the maker.** At the handover the yard (Zorgon Petterson for the Fer-de-lance) offers a first job there and then, suited to her: a shakedown run to a named system and back, a fast high-value delivery, or showing her off at Lave. It pays, and it gets you flying.
   - **Her first moment kept:** the launch from the yard is recorded as a moment, *Her maiden voyage*, ready to share.
   - **Never a blank screen:** the handover ends with one clear next step, flying her with the maker's offer, not just the berth.
+- **A wow moment when she's handed over** *(Mark, 29 October 2026; idea, to mock up first)*. Mark: "You should also make sure theres a 'wow' moment". For every new ship, the editions most of all:
+  - **The reveal before the paperwork.** The berth lights go down and she lights up section by section in her own glow (the Witch-fire's magenta and cyan, the Dark Edition's black-light lines). Never dimmed: this is where the Neo glow shines brightest.
+  - **A slow orbit around her**, as in the trailer's cold open, with the music swelling (the Blue Danube, already in the game). Her name, and an edition's number, appear on the hull.
+  - **Then the certificate, then flying her** with the maiden voyage offer.
+  - **Kept as a moment, *Her reveal***, ready to share, so every handover can become a post.
+  - **Short and smooth on a phone:** about 6 to 8 seconds, with a tap to skip.
   - *On file, in case commanders ever trade ships in the shared galaxy:* the yard's price is the floor; an offer says why it's worth more (ready now, kitted out, in the right place, a story), with guard rails: kit never counts for more than it cost, no offer beats building the same ship new at that yard, a place premium of at most about 15% and not for a ship bought in the last week, story value capped (kills count little and on a log scale; firsts, Legends survived, names and an edition's number can't be farmed), and a gifted hull's hull is worth nothing.
 
 ## 6. Concepts
