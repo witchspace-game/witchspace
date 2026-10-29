@@ -3930,7 +3930,7 @@ function updateExplore(dt: number): boolean {
       saveCommander(c);
       sfx.beep();
       const grade = done.grade ? ` · ${done.grade === 'Candidate' ? 'terraforming CANDIDATE: Wexley-Yorozu will want this' : done.grade.toLowerCase()}` : '';
-      flash(`Survey complete · ${done.name}${grade} · data worth ${dataValue(exploreOf(c).data.at(-1)!, here)} Cr here, more further away`, 4);
+      flash(`Survey complete · ${done.name}${grade} · data worth ${dataValue(exploreOf(c).data[exploreOf(c).data.length - 1], here)} Cr here, more further away`, 4);
       survey = null;
       if (done.id === 'planet') {
         const hidden = scenePois.filter((p) => !p.revealed);
@@ -8786,3 +8786,6 @@ void initAccount({
   // Signed in after docking (the account loads in the background): a commission may be waiting.
   if (state === 'docked' && commander) payCommissions();
 });
+
+// Started: the old-browser note (public/old-browser.js) stays away.
+(window as unknown as { __witchspaceStarted: boolean }).__witchspaceStarted = true;
