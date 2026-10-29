@@ -1452,7 +1452,7 @@ async function checkSignedOver() {
     const def = shipById(g.ship);
     const id = `gift:${g.ship}:${g.edition ?? ''}:${g.number ?? ''}`;
     const same = (e?: { id: string; number: number }) => Boolean(g.edition && e && e.id === g.edition && e.number === g.number);
-    if (!def || c.messages?.some((m) => m.id === id) || same(c.gift?.edition) || same(c.order?.edition) || same(c.paint?.edition) || (c.gift && !g.edition)) continue;
+    if (!def || c.messages?.some((m) => m.id === id) || same(c.gift?.edition) || same(c.order?.edition) || same(c.paint?.edition) || c.fleet?.some((f) => same(f.paint?.edition)) || (c.gift && !g.edition)) continue;
     const at = systemAt(g.galaxy, g.system);
     const edition = g.edition ? editionById(g.edition) : undefined;
     const what = edition && g.number ? `${edition.name} ${editionNo(g.number)}` : `A ${def.name}`;
@@ -1463,7 +1463,7 @@ async function checkSignedOver() {
         company: 'hexon' as const, // shown as from the maker, not a company
         from: def.manufacturer ?? 'The yard',
         subject: `${what} is yours`,
-        body: `Commander ${c.name}, ${what} has been signed over to you, built and paid for. She's waiting at our own yard, ${stationName(at).name}, ${at.name}. Bring your ship: we'll take it in part, and hand you the keys.`,
+        body: `Commander ${c.name}, ${what} has been signed over to you, built and paid for. She's waiting at our own yard, ${stationName(at).name}, ${at.name}. Bring your ship: keep her in your hangar or let us take her, and we'll hand you the keys.`,
         at: Date.now(),
       },
       ...(c.messages ?? []),
@@ -1577,6 +1577,13 @@ function collectButton(o: ShipOrder): string {
   return `${o.gifted ? '' : oldShipChoice(false)}${keepOld ? '' : `<span>Balance ${bill.balance.toLocaleString()} Cr, less ${bill.tradeIn.toLocaleString()} Cr for your ${escapeHtml(player.def.name)} and its kit</span>`}
     ${o.gifted ? oldShipChoice(true) : ''}
     <button type="button" class="primary yard-collect" ${cmdr().credits < bill.due ? 'disabled' : ''}>Collect her${bill.due ? ` · ${pay}` : ''}</button>`;
+}
+
+/** The hull you fly, in the yard's list: yours, not one to spec (Mark: "its asking me to spec my Fdl but i have the Dark Edition!"). */
+function ownCard(c: Commander, def: ShipDef): string {
+  const ed = c.paint?.edition && editionById(c.paint.edition.id);
+  const what = ed ? `${escapeHtml(ed.name)} ${editionNo(c.paint!.edition!.number)}` : `your ${escapeHtml(def.name)}`;
+  return `<div class="yard-order" style="--hull:${c.paint?.colour ?? def.style.lineColor}"><strong>She’s yours: ${what}${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</strong><span>In the berth and ready to fly.</span></div>`;
 }
 
 /** Your fleet: the ships waiting in hangars, where each is, and swapping or sending for her (Mark). */
@@ -1905,7 +1912,7 @@ function renderShipyard() {
       ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span>${giftWaiting ? `<span>Waiting for you at the maker’s own yard: ${escapeHtml(stationName(giftWaiting).name)}, ${escapeHtml(giftWaiting.name)}${giftWaiting.galaxy === here.galaxy ? `, ${jumpsBetween(here, giftWaiting, 12)} jumps from here` : ''}.</span>${giftWaiting.galaxy === here.galaxy ? `<button type="button" class="primary yard-gift-course">${c.target === giftWaiting.index ? 'On course' : 'Set course'}</button>` : ''}` : '<button type="button" class="primary yard-open-gift">Spec your gift</button>'}</div>` : ''}
       ${pick.def.id === hullOf(c) && !edition ? `<button type="button" class="yard-manual yard-repaint-open">Repaint your ${escapeHtml(pick.def.name)}</button>` : ''}
       <button type="button" class="yard-manual">The ${escapeHtml(edition ? (shipById(edition.ship)?.name ?? '') : pick.def.name)} owner's manual</button>
-      ${edition ? INVITATION : `<button type="button" class="primary yard-spec">Spec your ${escapeHtml(pick.def.name)}</button>`}`;
+      ${edition ? INVITATION : pick.def.id === hullOf(c) ? `${ownCard(c, pick.def)}<button type="button" class="yard-manual yard-spec">Spec another ${escapeHtml(pick.def.name)}</button>` : `<button type="button" class="primary yard-spec">Spec your ${escapeHtml(pick.def.name)}</button>`}`;
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-yard]'))
       b.onclick = () => {
         yardPick = b.dataset.yard!;
