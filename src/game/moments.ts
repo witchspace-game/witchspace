@@ -17,7 +17,8 @@ export interface MomentEvent {
 }
 
 export interface MomentContext {
-  callsign: string;
+  /** The signed-in account's callsign; null for a guest, who shares as "A commander" (Mark: CMDR Jameson is his). */
+  callsign: string | null;
   system: string;
   galaxy: number; // 1..8
   /** "Anarchy", "Corporate State"... */
@@ -34,6 +35,9 @@ export function leadEvent(events: MomentEvent[]): MomentEvent {
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/** Who it's by: CMDR and the account's callsign, or, for a guest, "A commander", as the site says too. */
+export const whoIs = (ctx: Pick<MomentContext, 'callsign'>) => (ctx.callsign ? `CMDR ${ctx.callsign}` : 'A commander');
 
 /** A short title, under 100 characters (YouTube's limit). */
 export function momentTitle(events: MomentEvent[], ctx: MomentContext): string {
@@ -67,7 +71,7 @@ export function momentTitle(events: MomentEvent[], ctx: MomentContext): string {
     default:
       title = `From my flight recorder${at}`;
   }
-  return `CMDR ${ctx.callsign}: ${title}`.slice(0, 100);
+  return `${whoIs(ctx)}: ${title}`.slice(0, 100);
 }
 
 const lead = (events: MomentEvent[]) => leadEvent(events).kind;
@@ -77,7 +81,7 @@ export function momentDescription(events: MomentEvent[], ctx: MomentContext): st
   const lines = events.map((e) => `· ${e.text}`);
   const when = new Date(ctx.when).toISOString().slice(0, 16).replace('T', ' ');
   return [
-    `${lead(events) === 'photo' ? 'Taken by' : 'Recovered from'} CMDR ${ctx.callsign}'s ${lead(events) === 'photo' ? 'ship camera' : 'flight recorder'}, ${ctx.system} (galaxy ${ctx.galaxy}, ${ctx.government}), ${when} UTC.`,
+    `${lead(events) === 'photo' ? 'Taken by' : 'Recovered from'} ${ctx.callsign ? `CMDR ${ctx.callsign}'s` : 'a commander’s'} ${lead(events) === 'photo' ? 'ship camera' : 'flight recorder'}, ${ctx.system} (galaxy ${ctx.galaxy}, ${ctx.government}), ${when} UTC.`,
     '',
     ...lines,
     '',

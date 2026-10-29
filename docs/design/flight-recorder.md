@@ -121,6 +121,10 @@ Mark followed his own clip's link from X and landed on the reconstruction: "That
 - **A reconstruction of someone else's fight** can be saved and shared as a video, never put up as a page under your name: only your own fight's reconstruction keeps its track.
 - **Kills in the title:** the game says how many kills the fight had (a missile's, a ramming: Mark's three were titled two), and the server believes it up to the ships the track saw blow up.
 
+### Whose name it carries *(Mark, 29 October 2026)*
+
+Everything shared carries the signed-in account's callsign, and callsigns are unique, so *CMDR Jameson* is only ever Mark. A guest (still the 1984 default, Jameson, in the game) shares as **A commander**, in the post, the video's captions and the replay alike, as the site titles them. Mark: "if they want to share they have the opportunity to share anon or claim their callsign whilst it's still available using their email." So a guest's share sheet says *Shared as A commander*, with **Claim your callsign**, which opens sign-in.
+
 ## Trade moments *(Mark, 29 October 2026; built)*
 
 Mark: "you could fly, trade, explore, build and then post straight to twitter". Trading had nothing for the recorder to keep, so now it keeps two kinds of trade (`src/game/tradeMoments.ts`):
