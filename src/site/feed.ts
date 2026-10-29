@@ -107,7 +107,7 @@ export function chartedWhat(c: Charted): string {
     has('courier') ? 'the lost courier' : '',
     c.bodies.some((b) => b.startsWith('trail:')) ? 'a step on a trail' : '',
   ].filter(Boolean);
-  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : (parts[0] ?? 'a first');
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : (parts[0] ?? 'a first');
 }
 
 /** "1 commander flying now · 3 players today", leaving out what's nought; empty when both are. */

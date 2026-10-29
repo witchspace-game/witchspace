@@ -22,17 +22,20 @@ interface Idea {
 
 const STATUS_LABEL: Record<Status, string> = { open: '', planned: 'Planned', building: 'Being built', built: 'Built', declined: 'Not for now' };
 
+/** 32 random hex digits (not crypto.randomUUID: Safari before 15.4 hasn't it). */
+const randomId = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+
 /** This browser's voter id: random, kept locally, never linked to anything else. */
 function voterId(): string {
   try {
     let id = localStorage.getItem('witchspace.voter');
     if (!id) {
-      id = crypto.randomUUID();
+      id = randomId();
       localStorage.setItem('witchspace.voter', id);
     }
     return id;
   } catch {
-    return crypto.randomUUID(); // storage blocked: a fresh id each visit
+    return randomId(); // storage blocked: a fresh id each visit
   }
 }
 

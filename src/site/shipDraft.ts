@@ -71,9 +71,9 @@ export function fromShip(ship: ShipDef, as: 'new' | 'improve'): Draft {
     manufacturer: ship.manufacturer ?? '',
     role: ship.role,
     description: as === 'improve' ? ship.description : '',
-    stats: structuredClone(ship.stats),
+    stats: JSON.parse(JSON.stringify(ship.stats)) as typeof ship.stats, // not structuredClone: Safari before 15.4 hasn't it
     style: { ...ship.style },
-    details: ship.geometry.details ? structuredClone(ship.geometry.details) : undefined,
+    details: ship.geometry.details ? (JSON.parse(JSON.stringify(ship.geometry.details)) as typeof ship.geometry.details) : undefined,
     improves: as === 'improve' ? ship.id : undefined,
     // A new ship has to fit the slot, or say it never docks, on purpose.
     docks: as === 'improve' && ship.docks === false ? false : undefined,
