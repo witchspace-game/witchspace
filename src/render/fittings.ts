@@ -51,6 +51,21 @@ function bounds(def: ShipDef) {
   return { x, yMin, yMax, zMin, zMax, length: zMax - zMin };
 }
 
+/**
+ * The stern face: the rearmost z that several vertices share, not the rearmost point (the
+ * Fer-de-lance's barbs reach further back than her engines, and the rear laser drew in mid-air
+ * behind her: Mark's hangar screenshot). Its half-width and height span.
+ */
+function sternFace(def: ShipDef) {
+  const vs = def.geometry.vertices;
+  const len = Math.max(...vs.map((v) => v[2])) - Math.min(...vs.map((v) => v[2]));
+  const near = (a: number, b: number) => Math.abs(a - b) < len * 0.02;
+  const zs = [...new Set(vs.map((v) => v[2]))].sort((a, b) => a - b);
+  const z = zs.find((zz) => vs.filter((v) => near(v[2], zz)).length >= 3) ?? zs[0];
+  const at = vs.filter((v) => near(v[2], z));
+  return { z, half: Math.max(...at.map((v) => Math.abs(v[0]))), yMin: Math.min(...at.map((v) => v[1])), yMax: Math.max(...at.map((v) => v[1])) };
+}
+
 export function buildFittings(def: ShipDef, loadout: Loadout): Fittings {
   const b = bounds(def);
   const u = b.length / 50; // the Cobra is 50 m long; everything scales from that
@@ -72,7 +87,8 @@ export function buildFittings(def: ShipDef, loadout: Loadout): Fittings {
     seam(out, x1, z1, x0, z1, dir);
     seam(out, x0, z1, x0, z0, dir);
   };
-  const stern = b.zMin - lift;
+  const face = sternFace(def);
+  const stern = face.z - lift;
 
   const group = new THREE.Group();
   group.name = 'fittings';
@@ -101,10 +117,13 @@ export function buildFittings(def: ShipDef, loadout: Loadout): Fittings {
         // Under the nose, either side of the centreline.
         for (const side of [-1, 1]) seam(pts, side * 4 * u, 14 * u - d, side * 7 * u, 14 * u - d, -1);
       } else if (mount === 'rear') {
-        // Vertical slits on the stern, outboard of the engines.
+        // Vertical slits on the stern face, outboard of the engines (on a Cobra, 17 m out).
+        const gap = Math.min(step, (face.half * 0.4) / slits);
+        const mid = (face.yMin + face.yMax) / 2;
+        const tall = Math.min(1.6 * u, (face.yMax - face.yMin) * 0.3);
         for (const side of [-1, 1]) {
-          const x = side * (17 * u + d);
-          pts.push(x, -1.6 * u, stern, x, 1.6 * u, stern);
+          const x = side * Math.min(face.half * 0.5 + i * gap, face.half * 0.92);
+          pts.push(x, mid - tall, stern, x, mid + tall, stern);
         }
       } else {
         // Under the wing, near the tip; +x is the ship's left.

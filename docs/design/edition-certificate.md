@@ -22,6 +22,10 @@ A page for every numbered ship, at `/ships/<ship>/<edition>/<no>/` with the numb
 
 Underneath: *One of N. The number is painted beside her name, and no other ship will carry it.* and the maker's signature. **Save as image** makes a portrait picture of it on the phone or computer (on a phone, the share sheet, where Save Image is); **Share** shares her owner's link.
 
+## What next, after the handover *(Mark, 29 October 2026; idea)*
+
+"Immediately after picking her up there needs to be a mission or something because its deflating to not know what next?" The handover should end with the maker's offer of a maiden voyage, and her first launch kept as a moment. Designed in ships-and-classes.md, §5 ("What next, the moment she's yours").
+
 ## Private to her owner
 
 The facts come from the yard's office, and only with the token in her owner's link:
