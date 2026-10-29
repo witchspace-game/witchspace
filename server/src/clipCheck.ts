@@ -98,13 +98,62 @@ export function checkTrack(bytes: Uint8Array, ships: Map<string, string>, callsi
     events,
   };
 
-  const end = clean.samples[clean.samples.length - 1].t;
   const seconds = Math.min(60, Math.max(3, finite(wantSeconds) ? wantSeconds : 20));
-  const death = clean.events.some((e) => e.kind === 'death');
-  const other = death ? killerOf(clean) : focusOf(clean, Math.max(0, end - seconds), end);
-  const otherShip = other !== undefined ? clean.ships.find((s) => s.id === other) : undefined;
-  const who = commanderLabel(callsign);
-  const them = otherShip ? (otherShip.def === 'falcon' ? 'the Falcon' : `a ${ships.get(otherShip.def)}`) : null;
-  const title = death ? `${who}: ${them ? `shot down by ${them}` : 'ship destroyed'} at ${system}` : them ? `${who}: fighting ${them} at ${system}` : `${who} at ${system}`;
-  return { packed: packTrack(clean), title, system, focusDef: otherShip?.def ?? null, seconds };
+  const { title, focusDef } = describeClip(clean, commanderLabel(callsign), ships, seconds);
+  return { packed: packTrack(clean), title, system, focusDef, seconds };
+}
+
+/**
+ * The ships you destroyed in a track: each that went up with your shot the last to hit it (missiles and
+ * canisters aside). A fight with three kills is called that, as the flight log calls it (game/moments.ts).
+ */
+export function killsIn(d: TrackData): TrackData['ships'] {
+  const you = d.scene.you;
+  const out: TrackData['ships'] = [];
+  for (const e of d.events) {
+    if (e.kind !== 'boom' || e.id === you) continue;
+    const ship = d.ships.find((s) => s.id === e.id);
+    if (!ship || ship.role === 'missile' || ship.role === 'station' || ship.def === 'cargo-canister') continue;
+    const hits = d.events.filter((h) => h.kind === 'beam' && h.hit === e.id && h.t <= e.t);
+    const last = hits[hits.length - 1];
+    if (last && last.kind === 'beam' && last.from === you && !out.includes(ship)) out.push(ship);
+  }
+  return out;
+}
+
+/** A checked track's title (every word written here) and the ship it's about, for its card. */
+export function describeClip(d: TrackData, who: string, ships: Map<string, string>, seconds: number): { title: string; focusDef: string | null } {
+  const system = d.scene.system;
+  const end = d.samples[d.samples.length - 1].t;
+  const death = d.events.some((e) => e.kind === 'death');
+  const other = death ? killerOf(d) : focusOf(d, Math.max(0, end - seconds), end);
+  const otherShip = other !== undefined ? d.ships.find((s) => s.id === other) : undefined;
+  const name = (def: string) => (def === 'falcon' ? 'the Falcon' : `a ${ships.get(def)}`);
+  const them = otherShip ? name(otherShip.def) : null;
+  const kills = killsIn(d);
+  const title = death
+    ? `${who}: ${them ? `shot down by ${them}` : 'ship destroyed'} at ${system}`
+    : kills.length > 1
+      ? `${who}: ${kills.length} kills in one fight at ${system}`
+      : kills.length === 1
+        ? `${who}: ${ships.get(kills[0].def) ?? 'a ship'} down at ${system}`
+        : them
+          ? `${who}: fighting ${them} at ${system}`
+          : `${who} at ${system}`;
+  return { title, focusDef: otherShip?.def ?? null };
+}
+
+/** A baseline or progressive JPEG's width and height, from its frame header; null if it isn't one. */
+export function jpegSize(b: Uint8Array): { w: number; h: number } | null {
+  if (b.length < 4 || b[0] !== 0xff || b[1] !== 0xd8) return null;
+  let i = 2;
+  while (i + 9 < b.length) {
+    if (b[i] !== 0xff) return null;
+    const marker = b[i + 1];
+    const len = (b[i + 2] << 8) | b[i + 3];
+    // SOF0 to SOF15, apart from DHT (C4), JPG (C8) and DAC (CC).
+    if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) return { h: (b[i + 5] << 8) | b[i + 6], w: (b[i + 7] << 8) | b[i + 8] };
+    i += 2 + len;
+  }
+  return null;
 }

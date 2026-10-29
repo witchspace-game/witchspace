@@ -87,6 +87,8 @@ export interface MyClip {
   hearts: number;
   /** On the site; false once you've taken it down. */
   up: boolean;
+  /** Whether it has its own card for link previews yet (putCard). */
+  card?: boolean;
 }
 
 const mineHeaders = () => {
@@ -107,3 +109,12 @@ export async function takeDownClip(id: string, down = true): Promise<{ ok: true 
   const out = (await res?.json().catch(() => null)) as { error?: string } | null;
   return res?.ok ? { ok: true } : { error: out?.error ?? "Couldn't reach witchspace.org.uk" };
 }
+
+/** Put up a clip's card for link previews (ui/clipCard.ts): yours only, by account or this browser. */
+export async function putCard(id: string, jpeg: Blob): Promise<boolean> {
+  const res = await fetch(`${API}/clips/${id}/card`, { method: 'POST', headers: { ...mineHeaders(), 'Content-Type': 'image/jpeg' }, body: jpeg }).catch(() => null);
+  return Boolean(res?.ok);
+}
+
+/** A clip's id, from its link. */
+export const clipIdOf = (url: string) => url.match(/\/clip\/([a-z0-9]{8,12})/)?.[1] ?? null;
