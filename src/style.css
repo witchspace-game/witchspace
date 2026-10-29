@@ -1605,9 +1605,6 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard-order .rec-meter span { background: var(--hull); box-shadow: 0 0 8px var(--hull); }
 .yard-edition-no { color: var(--hull) !important; font-weight: 600; letter-spacing: 0.04em; }
 .yard-spec-list { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
-.yard-voucher { display: grid; grid-template-columns: 1fr auto; gap: 6px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--edge); }
-.yard-voucher label { grid-column: 1 / -1; font-size: 13px; color: var(--dim); }
-.yard-voucher input { min-width: 0; padding: 6px 10px; border: 1px solid var(--edge); border-radius: 6px; background: rgba(0, 0, 0, 0.35); color: var(--fg); font: 600 15px var(--font); letter-spacing: 0.08em; text-transform: uppercase; }
 .yard-colours button:disabled { opacity: 0.35; }
 .yard-notify { justify-self: start; min-height: 30px; padding: 2px 10px; font-size: 12px; border-color: var(--hull); }
 .yard-cancel { justify-self: start; min-height: 30px; padding: 2px 10px; font-size: 12px; }

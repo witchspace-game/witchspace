@@ -198,7 +198,7 @@ export const giftable = (def: ShipDef, spec: Spec) => spec.laser === standardLas
 /**
  * Put down the deposit: it goes into production at this yard. Only a concept
  * takes deposits; one order at a time. An edition carries its number (from the
- * server) and its premium; a gift (a redeemed voucher) costs nothing.
+ * server) and its premium; a gift (signed over to you) costs nothing.
  */
 export function placeOrder(
   c: Commander,

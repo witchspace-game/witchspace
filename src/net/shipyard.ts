@@ -1,8 +1,8 @@
 import { API, sessionToken } from './account';
 
 // The shipyard's few calls to the server: how many of each special edition are
-// signed over, the numbers you hold, and redeeming a gift voucher. Numbers and
-// vouchers need you signed in, so they belong to you on every device.
+// signed over and the numbers you hold. Both need you signed in, so they belong
+// to you on every device.
 
 const auth = (): Record<string, string> => {
   const s = sessionToken();
@@ -24,7 +24,6 @@ export async function editionCounts(): Promise<Record<string, { limit: number; t
 /** The numbered editions this account holds, as the yard's office has them, each with its certificate's private link. */
 export const heldEditions = () => call<{ editions: { edition: string; number: number; token?: string; link?: string | null }[] }>('GET', '/me/editions');
 
-export const redeemVoucher = (code: string) => call<{ ship: string; edition?: string; number?: number }>('POST', '/me/voucher', { code });
 
 /** A ship specced on the site, saved to your account so it reaches every device (docs/design/ship-configurator.md). */
 export const accountSpec = () => call<{ spec: unknown; at: number | null }>('GET', '/me/spec');
