@@ -855,7 +855,7 @@ function setDockTab(tab: DockTab) {
 // upright the tabs give way to one header, "Station name · Market ▾", that opens the places
 // laid out like the flight view picker, with a dot when anything inside has news; and a wallet
 // button with your credits replaces the Credits line and the Money tab (Mark: "Maybe we should
-// have a wallet rather than Credits"). docs/design/docked-on-a-phone.md.
+// have a wallet rather than Credits"). docs/design/flight-hud-and-touch.md.
 
 const tabName = (b: HTMLElement) => (b.getAttribute('aria-label') ?? b.textContent ?? '').replace(/^T · /, '').replace(/,.*$/, '').trim();
 
@@ -7369,8 +7369,9 @@ function trackScene() {
 function die() {
   const c = cmdr();
   // The black box: the last seconds, and the ship going up, for the insurers' screen.
-  const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}` }, 26, 4);
   const killer = lastHitBy && elapsed - lastHitBy.at < 5 ? lastHitBy.npc : null;
+  // Who did it, when someone did: a death worth watching from outside (ui/flightLog.ts worthWatching).
+  const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}`, ...(killer ? { subject: killer.def.name } : {}) }, 26, 4);
   track.event({ t: elapsed, kind: 'boom', id: trackId(player), p: player.obj.position.toArray() });
   track.event({ t: elapsed, kind: 'death', ...(killer ? { by: trackId(killer) } : {}) });
   // The kill cam: the black box keeps the fight's track as every clip does
@@ -8463,7 +8464,7 @@ async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 
     trip: flightFrom,
   };
   if (!(await addMoment(m))) {
-    flash('Flight log full · delete or unkeep something in the flight log', 3);
+    flash('Your moments are full · let one go, or unstar one, in the flight log', 3);
     return null;
   }
   // Every clip keeps its fight's track (the last minute, as numbers), so any
@@ -8524,7 +8525,7 @@ function keepCombat(event: MomentEvent, before: number, after: number): Promise<
 // The first time a moment is kept, say what the flight recorder is; the
 // flight log asks once whether to keep it on.
 const RECORDER_INTRO_KEY = 'witchspace-recorder-intro';
-const RECORDER_INTRO = "Your ship's flight recorder keeps your last moments. Only the view is recorded, and it stays on this device unless you share it. You can turn it off in the flight log.";
+const RECORDER_INTRO = "Your ship keeps your best moments. Share one, star it, or let it go: they're in the flight log.";
 const recorderIntroduced = () => {
   try {
     return localStorage.getItem(RECORDER_INTRO_KEY) === 'done';
