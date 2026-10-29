@@ -4887,7 +4887,11 @@ let holdTimer = 0;
 let fired = false;
 missileButton.addEventListener('pointerdown', (e) => {
   e.preventDefault();
-  missileButton.setPointerCapture?.(e.pointerId);
+  try {
+    missileButton.setPointerCapture(e.pointerId); // keep the press if the thumb slides off
+  } catch {
+    /* no such pointer (a synthetic event): carry on without */
+  }
   fired = false;
   if (!locked && !lockedCommander) return;
   missileButton.classList.add('holding');
@@ -5447,18 +5451,18 @@ const VIEW_TURN: Record<Mount, number> = { front: 0, rear: Math.PI, left: Math.P
 const TURRET_CONE = THREE.MathUtils.degToRad(20);
 let view: Mount = 'front';
 
-function setView(next: Mount) {
+function setView(next: Mount, glance = false) {
   view = next;
   // The touch view button points where you're looking; its picker marks the view and closes.
   const turn: Record<Mount, number> = { front: 0, right: 90, rear: 180, left: -90 };
   $('#view-button svg').style.transform = `rotate(${turn[view]}deg)`;
   $('#view-button').classList.toggle('away', view !== 'front');
   for (const b of document.querySelectorAll<HTMLButtonElement>('#view-picker [data-view]')) b.classList.toggle('on', b.dataset.view === view);
-  showViewPicker(false);
+  if (!glance) showViewPicker(false);
   const label = $('#view-label');
   label.hidden = view === 'front';
   label.textContent = `${view} view`;
-  if (view !== 'front') {
+  if (view !== 'front' && !glance) {
     const laser = cmdr().lasers[view];
     flash(laser ? `${view} view · ${PLAYER_LASERS[laser].name}` : `${view} view · no ${view} laser fitted`, 1.4);
   }
@@ -5469,10 +5473,43 @@ function showViewPicker(show: boolean) {
   $('#view-picker').hidden = !show;
   $('#view-button').setAttribute('aria-expanded', String(show));
 }
-onTap($('#view-button'), () => {
-  $('#view-button').blur();
-  showViewPicker($('#view-picker').hidden === true);
+// Tap: the four open, to choose a view that stays. Press and hold: they open under your thumb, the
+// view follows it onto a direction, and letting go looks ahead again: a glance (Mark).
+const GLANCE_HOLD = 220; // ms
+let glanceTimer = 0;
+let glancing: Mount | null = null; // the view to go back to
+const viewButton = $<HTMLButtonElement>('#view-button');
+viewButton.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  try {
+    viewButton.setPointerCapture(e.pointerId); // keep the press if the thumb slides off
+  } catch {
+    /* no such pointer (a synthetic event): carry on without */
+  }
+  glanceTimer = window.setTimeout(() => {
+    glancing = view;
+    showViewPicker(true);
+  }, GLANCE_HOLD);
 });
+viewButton.addEventListener('pointermove', (e) => {
+  if (!glancing) return;
+  const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('#view-picker [data-view]');
+  const next = (over?.dataset.view as Mount | undefined) ?? glancing;
+  if (next !== view) setView(next, true);
+});
+const endGlance = (tap: boolean) => {
+  clearTimeout(glanceTimer);
+  viewButton.blur();
+  if (glancing) {
+    const back = glancing;
+    glancing = null;
+    setView(back); // let go: eyes front again (or wherever you were)
+    return;
+  }
+  if (tap) showViewPicker($('#view-picker').hidden === true);
+};
+viewButton.addEventListener('pointerup', () => endGlance(true));
+viewButton.addEventListener('pointercancel', () => endGlance(false));
 for (const b of document.querySelectorAll<HTMLButtonElement>('#view-picker [data-view]'))
   onTap(b, () => {
     b.blur();
@@ -5481,7 +5518,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('#view-picker [data
 // A tap anywhere else closes it.
 document.addEventListener('pointerdown', (e) => {
   const t = e.target as Node;
-  if (!$('#view-picker').hidden && !$('#view-picker').contains(t) && !$('#view-button').contains(t)) showViewPicker(false);
+  if (!glancing && !$('#view-picker').hidden && !$('#view-picker').contains(t) && !$('#view-button').contains(t)) showViewPicker(false);
 }, true);
 
 /** Which way the current view looks, in the world. */
