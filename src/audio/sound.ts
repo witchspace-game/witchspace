@@ -346,11 +346,13 @@ let playing: { bus: GainNode; timer: number; recording?: HTMLAudioElement } | nu
 
 // --- The orchestral recording (neo-vector mode) -----------------------------
 // A real performance, streamed. See public/audio/CREDITS.md for its source and
-// licence. 1984 mode keeps the chiptune arrangement above.
+// licence. 1984 mode keeps the chiptune arrangement above. The game's copy is the
+// waltz proper only, cut at a pause so its loop comes round cleanly, and small for
+// phones (Mark: 13 MB down to 1.7); the full recordings are in recordings/.
 
-const RECORDING_URL = '/audio/blue-danube.mp3';
-/** Seconds into the recording where the waltz proper begins, after the slow introduction. */
-const RECORDING_START = 66;
+const RECORDING_URL = '/audio/blue-danube-v2.m4a';
+/** Seconds into the recording where the waltz begins: its start, since the slow introduction is cut. */
+const RECORDING_START = 0;
 
 let recording: { el: HTMLAudioElement; node: MediaElementAudioSourceNode } | null = null;
 
@@ -430,8 +432,8 @@ export const danube = {
 
 export type Cue = 'marshals' | 'falcon';
 const CUES: Record<Cue, { url: string; gain: number }> = {
-  marshals: { url: '/audio/semper-fidelis.mp3', gain: 0.7 },
-  falcon: { url: '/audio/witches-sabbath.mp3', gain: 1 },
+  marshals: { url: '/audio/semper-fidelis-v2.m4a', gain: 0.7 },
+  falcon: { url: '/audio/witches-sabbath-v2.m4a', gain: 1 },
 };
 const cueSources = new Map<Cue, { el: HTMLAudioElement; node: MediaElementAudioSourceNode }>();
 let cueOn: { name: Cue; el: HTMLAudioElement; bus: GainNode } | null = null;
