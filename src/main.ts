@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { track as countEvent } from '@vercel/analytics';
 import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
 import { cycleSoundMode, danube, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
-import { boomAt, crystalShot, EngineSound, precisionLaunch, rocketAt, setListener, ShipVoice, tailWarning, zapAt, type EngineVoice, type LaserSound } from './audio/spatial';
+import { boomAt, EngineSound, grandShot, precisionLaunch, rocketAt, setListener, ShipVoice, tailWarning, zapAt, type EngineVoice, type LaserSound } from './audio/spatial';
 import { withLineUp } from './content/moduleFiles';
 import { shipById, ships } from './content/ships';
 import type { ShipDef } from './content/types';
@@ -2711,14 +2711,14 @@ const remoteVoices = new Map<string, ShipVoice>();
 /** How a ship's engines sound: her ship file's style.engine (the Fer-de-lance's is a grand tourer's, Mark). */
 const voiceOf = (def: ShipDef | undefined): EngineVoice => def?.style.engine ?? 'drone';
 
-// A grand tourer's weapons sound like her engines (Mark): crystal lasers, each kind its own, and a
+// A grand tourer's weapons sound like her engines (Mark): heavy lasers with an echo, each kind its own, and a
 // precision missile launch. Every other ship keeps the old zap and clunk.
 const laserSound = (l: object): LaserSound => {
   const id = (l as { id?: string }).id;
   return id === 'beam' || id === 'military' ? id : 'pulse';
 };
 function shotSound(def: ShipDef, kind: LaserSound, at: THREE.Vector3 | null) {
-  if (voiceOf(def) === 'grand') crystalShot(kind, at);
+  if (voiceOf(def) === 'grand') grandShot(kind, at);
   else if (at) zapAt(at, 700, 120, 0.15, 0.5);
   else sfx.laser();
 }
@@ -7376,8 +7376,8 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
       const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(r.quaternion);
       const origin = r.position.clone().addScaledVector(fwd, 20);
       beams.fire(origin, origin.clone().addScaledVector(fwd, 2000), COMMANDER_COLOUR);
-      // A commander in a Fer-de-lance is heard by her crystal guns (other commanders' lasers stay silent for now).
-      if (voiceOf(shipById(r.ship)) === 'grand') crystalShot('pulse', origin);
+      // A commander in a Fer-de-lance is heard by her guns (other commanders' lasers stay silent for now).
+      if (voiceOf(shipById(r.ship)) === 'grand') grandShot('pulse', origin);
     }
   }
 }

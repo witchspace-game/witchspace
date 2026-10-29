@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { sfx, unlockAudio } from '../src/audio/sound';
-import { crystalShot, EngineSound, precisionLaunch, setLaserStyle, setListener, ShipVoice, type EngineVoice, type LaserSound, type LaserStyle } from '../src/audio/spatial';
+import { EngineSound, grandShot, precisionLaunch, setListener, ShipVoice, type EngineVoice, type LaserSound } from '../src/audio/spatial';
 
 const engine = new EngineSound();
 const $ = <T extends HTMLElement>(q: string) => document.querySelector<T>(q)!;
@@ -42,16 +42,10 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('[data-pass]'))
     pass = { voice: new ShipVoice(new THREE.Vector3(-900, 0, -120), b.dataset.pass as EngineVoice), t: 0 };
   };
 
-for (const b of document.querySelectorAll<HTMLButtonElement>('[data-style]'))
-  b.onclick = () => {
-    setLaserStyle(b.dataset.style as LaserStyle);
-    for (const o of document.querySelectorAll('[data-style]')) o.classList.toggle('on', o === b);
-  };
-
 // Lasers: a tap fires once; held, they fire at the laser's own rate (pulse 4 a second, beam and military 10).
 for (const b of document.querySelectorAll<HTMLButtonElement>('[data-shot]')) {
   const kind = b.dataset.shot!;
-  const once = () => (kind === 'drone' ? sfx.laser() : crystalShot(kind as LaserSound, null));
+  const once = () => (kind === 'drone' ? sfx.laser() : grandShot(kind as LaserSound, null));
   let timer = 0;
   b.addEventListener('pointerdown', () => {
     unlockAudio();
