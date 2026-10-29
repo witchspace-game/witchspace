@@ -232,6 +232,10 @@
           "type": "number",
           "minimum": 0,
           "maximum": 2
+        },
+        "engine": {
+          "description": "How her engines sound: \"drone\" (the default: a working ship's gritty hum) or \"grand\" (a grand tourer's: a deep, smooth purr and a clean turbine whine that rises with the throttle).",
+          "enum": ["drone", "grand"]
         }
       }
     },

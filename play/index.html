@@ -234,7 +234,6 @@
         <button data-key="KeyG">Map</button>
         <button data-key="KeyU">Surrender</button>
         <button data-key="KeyB">Bomb</button>
-        <button data-key="KeyV">View</button>
         <button data-key="KeyL" class="radio-button" title="Hail the ship in your sights, or the station">Hail</button>
         <button data-key="Backquote" class="beacon-button radio-button" title="Emergency beacon: Mayday, out of fuel, hull failing, escort">Beacon</button>
         <button data-key="Digit9" class="survey-button" hidden title="Survey autopilot (9)">Survey</button>
@@ -246,6 +245,14 @@
       </div>
       <!-- P: a photo of the view, without the HUD, straight to the share sheet. Always to hand, for the moment it happens. -->
       <button type="button" id="photo-button" class="photo-button" title="Tap for a photo of the view (P) · hold to keep the last 30 seconds (Shift+P)" aria-label="Take a photo of the view; hold to keep the last 30 seconds"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg></button>
+      <!-- Look front, rear, left or right without the drawer (Mark): tap for the four, tap one. The arrow is where you're looking. -->
+      <button type="button" id="view-button" class="view-button" title="Change view: front, rear, left or right (V)" aria-label="Change view" aria-expanded="false" aria-controls="view-picker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 5 13h4v7h6v-7h4z"/></svg></button>
+      <div id="view-picker" class="view-picker" role="group" aria-label="View" hidden>
+        <button type="button" data-view="front">Front</button>
+        <button type="button" data-view="left">Left</button>
+        <button type="button" data-view="right">Right</button>
+        <button type="button" data-view="rear">Rear</button>
+      </div>
       <!-- The obvious next step, out of the drawer by itself: Dock, Survey, Hyper or Jump. -->
       <div class="touch-context"><button data-key="KeyJ" class="context-button">Jump</button></div>
       <div class="touch-fly">
@@ -253,7 +260,8 @@
         <div class="fire-stack">
           <!-- One button for missiles: Lock, then (red) launch. -->
           <button data-key="KeyZ" class="ecm">ECM</button>
-          <button class="missile" type="button" aria-label="Arm a missile: hold a ship in your sights to lock, then fire">Arm</button>
+          <!-- Tap: arm, or disarm (seeking or locked). Hold: launch, once locked (Mark: no fat-fingered missiles). -->
+          <button class="missile" type="button" aria-label="Missile: tap to arm or disarm; once locked, press and hold to fire">Arm</button>
           <button class="fire" aria-label="Fire">Fire</button>
         </div>
       </div>

@@ -5,7 +5,7 @@ import type { PlayerShip } from './playerShip';
 // to put its nose on it, then stops. It's the easiest way to point a ship
 // precisely, which is what combat needs.
 
-const SENSITIVITY = 0.0025; // radians of aim per pixel of mouse movement
+export const SENSITIVITY = 0.0025; // radians of aim per pixel of mouse movement
 const MAX_LEAD = THREE.MathUtils.degToRad(30); // how far the aim may lead the nose
 const GAIN = 4; // turn command per radian of error; saturates beyond ~14°
 

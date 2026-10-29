@@ -124,6 +124,7 @@
   },
   "style": {
     "lineColor": "#c9a8ff",
-    "glow": 1
+    "glow": 1,
+    "engine": "grand"
   }
 }

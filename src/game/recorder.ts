@@ -70,6 +70,8 @@ export class FlightRecorder<M> {
   private sinceFrame = 1;
   private frames = 0;
   private broken = false;
+  /** Encoder failures this session: iOS can take the encoder away while the app is in the background, so a few are tried again. */
+  private failures = 0;
   /** Resting (nothing about): the next frame recorded starts afresh with a keyframe. */
   private rested = false;
   private codec: string | null = null;
@@ -169,7 +171,8 @@ export class FlightRecorder<M> {
     this.sinceFrame = 0;
     const height = Math.min(HEIGHT, canvas.height) & ~1;
     const width = Math.round((height * canvas.width) / canvas.height) & ~1;
-    if (!this.encoder || this.config?.width !== width || this.config?.height !== height) this.start(width, height);
+    // A fresh encoder when the size changes, or when the phone closed the last one while the app was away.
+    if (!this.encoder || this.encoder.state === 'closed' || this.config?.width !== width || this.config?.height !== height) this.start(width, height);
     if (!this.encoder || this.encoder.state !== 'configured') return;
     if (this.encoder.encodeQueueSize > 4) return; // falling behind: drop a frame rather than lag the game
     const g = this.frame!.getContext('2d')!;
@@ -197,7 +200,9 @@ export class FlightRecorder<M> {
           this.trim();
         },
         error: (e) => {
-          this.broken = true; // the encoder gave up: the game carries on without a recorder
+          // The encoder gave up (on a phone, often the app went to the background): start a fresh one on the
+          // next frame, and only after a few failures carry on without a recorder.
+          this.broken = ++this.failures >= 3;
           this.why = `the video encoder stopped (${e?.message || 'error'})`;
           this.encoder = null;
         },

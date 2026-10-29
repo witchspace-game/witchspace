@@ -25,6 +25,8 @@ export interface RadioAction {
   run: () => { from: string; text: string; colour?: string; kind: RadioKind } | null;
   /** After this (ms since epoch) the offer has gone. */
   until?: number;
+  /** Show the seconds left on the card (a police hail's deadline). */
+  clock?: boolean;
 }
 
 export interface RadioLine {
@@ -72,13 +74,33 @@ const time = (t: number) => {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
+/**
+ * Every call is heard as a transmission, in step with what you see (Mark: the tail came at odd
+ * moments): the squawk as the card or line slides in, then the squelch tail as it settles (style.css
+ * rcard-in, 0.35 s; a pirate's flicker ends at 0.52 s). A call that cuts in takes over from the last
+ * one's tail. Plain messages are softer than calls to answer; your own replies are silent.
+ */
+const SETTLED: Partial<Record<RadioKind, number>> = { pirate: 520 };
+let lastKey = 0;
+let tail = 0;
+function transmission(e: Entry) {
+  if (e.from === 'You') return;
+  const now = performance.now();
+  if (now - lastKey < 300) return; // a burst of lines doesn't chatter
+  lastKey = now;
+  clearTimeout(tail);
+  const quiet = !e.answers;
+  sfx.squawk(e.kind, quiet);
+  tail = window.setTimeout(() => sfx.squelch(e.kind, quiet), SETTLED[e.kind] ?? 380);
+}
+
 /** Something said to you: into the log, and on screen for a while. */
 export function say(line: RadioLine) {
   const { action, answers, ...rest } = line;
   const all = answers ?? (action ? [action] : undefined);
   const e: Entry = { ...rest, answers: all?.length ? all : undefined, id: ++serial, at: Date.now() };
   entries.push(e);
-  if (e.answers) sfx.squawk(e.kind);
+  transmission(e);
   if (entries.length > KEEP) entries.shift();
   if (!open) unread++;
   render();
@@ -210,14 +232,20 @@ function renderCards(now: number) {
       card.setAttribute('role', 'group');
       card.setAttribute('aria-label', `${e.from}: ${e.text}`);
       card.innerHTML = `<p class="rcard-text"><b>${escapeHtml(e.from)}</b> ${escapeHtml(e.text)}</p>
-        <div class="rcard-answers">${e.answers!.map((a, i) => `<button type="button" data-radio="${e.id}" data-answer="${i}"${i ? '' : ' class="primary"'}>${escapeHtml(a.label)}${isTouch || i ? '' : ' <kbd>Enter</kbd>'}</button>`).join('')}<button type="button" class="rcard-dismiss" data-dismiss="${e.id}" aria-label="Don't answer">✕</button></div>`;
+        <div class="rcard-answers">${e.answers!.map((a, i) => `<button type="button" data-radio="${e.id}" data-answer="${i}"${i ? '' : ' class="primary"'}>${escapeHtml(a.label)}${isTouch || i ? '' : ' <kbd>Enter</kbd>'}</button>`).join('')}${e.answers![0].clock ? '<span class="rcard-left"></span>' : ''}<button type="button" class="rcard-dismiss" data-dismiss="${e.id}" aria-label="Don't answer">✕</button></div>`;
       box.append(card);
     }
   }
+  // A deadline counts down on its card.
+  for (const e of open) {
+    const left = e.answers![0].clock && box.querySelector<HTMLElement>(`[data-card="${e.id}"] .rcard-left`);
+    if (left) left.textContent = `${Math.ceil((until(e) - now) / 1000)} s`;
+  }
   box.hidden = !open.length;
   clearTimeout(cardTimer);
-  // Wake again when the soonest card lapses, so it goes on time.
-  if (open.length) cardTimer = window.setTimeout(render, Math.max(250, Math.min(...open.map(until)) - now + 50));
+  // Wake again when the soonest card lapses, so it goes on time (and each second, for a countdown).
+  const clocks = open.some((e) => e.answers![0].clock);
+  if (open.length) cardTimer = window.setTimeout(render, clocks ? 1000 - (now % 1000) + 20 : Math.max(250, Math.min(...open.map(until)) - now + 50));
 }
 let cardTimer = 0;
 

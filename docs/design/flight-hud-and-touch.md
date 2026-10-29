@@ -64,7 +64,9 @@ Things worth keeping go into **Messages** on the Contracts tab, from the company
 ## 4. The touch drawer
 
 - **Always on screen:** the aim pad, speed, Fire, the missile button and **ECM**, beside Fire.
-- **The drawer:** everything else (Jump, Hyper, Dock, Pilot, Map, Surrender, Bomb, View, Survey, Dark, Sound, Tilt) slides in from the right edge. A small tab opens it (tap, or swipe in); it slides away after you press anything in it, or when you tap the tab again.
+- **The view button** *(Mark, 29 October 2026)*: beside the camera, an arrow pointing where you're looking (amber when it isn't ahead). Tap it and Front, Rear, Left and Right open round it: tap one and the view stays. Press and hold, and the four open under your thumb: slide onto one to look that way while you hold, and let go to look ahead again (a glance). It replaced the drawer's View, which stepped through the four one at a time.
+- **The missile button** *(Mark, 29 October 2026)*: a master arm and a guarded trigger. A tap arms (or, armed or locked, disarms); once locked it reads *Hold to fire* and launches only after half a second held, the button charging as you hold, so a thumb by FIRE can't send a missile at the wrong ship.
+- **The drawer:** everything else (Jump, Hyper, Dock, Pilot, Map, Surrender, Bomb, Survey, Dark, Sound, Tilt) slides in from the right edge. A small tab opens it (tap, or swipe in); it slides away after you press anything in it, or when you tap the tab again.
 - **The next button out by itself:** one contextual button sits outside the drawer, the obvious next step: **Dock** within clearance range (docking computer fitted), **Survey** near something to survey (survey autopilot fitted), **Hyper** when a course is set and the tank reaches it, otherwise **Jump**.
 - **Nothing moves on its own in a fight.** The drawer only opens and closes when you touch it.
 - **The job strip** on a phone is a small pill at the top left, clear of the dashboard ("▸ Diso · 2 jumps · +1"). Tap it for the full line, the next step and a **Set course** button; it folds away by itself when a fight starts.

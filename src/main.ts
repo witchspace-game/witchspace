@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { track as countEvent } from '@vercel/analytics';
 import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
 import { cycleSoundMode, danube, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
-import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
+import { boomAt, EngineSound, grandShot, precisionLaunch, rocketAt, setListener, ShipVoice, tailWarning, zapAt, type EngineVoice, type LaserSound } from './audio/spatial';
 import { withLineUp } from './content/moduleFiles';
 import { shipById, ships } from './content/ships';
 import type { ShipDef } from './content/types';
@@ -66,7 +66,7 @@ import {
   wantsMouseCapture,
   type FlightInput,
 } from './game/input';
-import { MouseAim } from './game/mouseAim';
+import { MouseAim, SENSITIVITY as AIM_SENSITIVITY } from './game/mouseAim';
 import { allies, NpcShip, type NpcRole } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
 import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
@@ -183,12 +183,14 @@ function setState(next: State) {
   bankHeld = false;
   if (next === 'flying') {
     showControlsCardOnce();
-    engineSound.start();
+    engineSound.start(voiceOf(player.def));
   } else {
     engineSound.stop();
     clearIndicators();
     for (const v of voices.values()) v.dispose();
     voices.clear();
+    for (const v of remoteVoices.values()) v.dispose();
+    remoteVoices.clear();
   }
 }
 
@@ -234,7 +236,12 @@ function realign() {
     dispatchEvent(new Event('resize'));
   }, 350);
 }
-document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && realign());
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') realign();
+  // Away to another app: finish any clip being recorded with what there is, so the moment is in the
+  // flight log even if the phone closes the page while it's in the background.
+  else recorder.pause();
+});
 addEventListener('pageshow', realign);
 addEventListener('orientationchange', realign);
 visualViewport?.addEventListener('resize', realign);
@@ -2703,6 +2710,27 @@ const npcs: NpcShip[] = [];
 const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role);
 const engineSound = new EngineSound();
 const voices = new Map<NpcShip, ShipVoice>();
+/** Other commanders' engines in shared space, by their id, each with her own voice. */
+const remoteVoices = new Map<string, ShipVoice>();
+/** How a ship's engines sound: her ship file's style.engine (the Fer-de-lance's is a grand tourer's, Mark). */
+const voiceOf = (def: ShipDef | undefined): EngineVoice => def?.style.engine ?? 'drone';
+
+// A grand tourer's weapons sound like her engines (Mark): heavy lasers with an echo, each kind its own, and a
+// precision missile launch. Every other ship keeps the old zap and clunk.
+const laserSound = (l: object): LaserSound => {
+  const id = (l as { id?: string }).id;
+  return id === 'beam' || id === 'military' ? id : 'pulse';
+};
+function shotSound(def: ShipDef, kind: LaserSound, at: THREE.Vector3 | null) {
+  if (voiceOf(def) === 'grand') grandShot(kind, at);
+  else if (at) zapAt(at, 700, 120, 0.15, 0.5);
+  else sfx.laser();
+}
+function launchSound(def: ShipDef, at: THREE.Vector3 | null) {
+  if (voiceOf(def) === 'grand') precisionLaunch(at);
+  else if (at) rocketAt(at, 0.5);
+  else sfx.missileLaunch();
+}
 const VOICE_RANGE = 2000; // hear other ships' engines within this distance
 let tailWarningTimer = 0;
 const beams = new Beams(space.scene);
@@ -4332,7 +4360,9 @@ function updateHail() {
     if (!by) return;
     hail = { by, until: elapsed + HAIL_TIME };
     sfx.beep();
-    radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, answers: answerPolice() });
+    // One hail (Mark got two): in Modern the radio card is it, with the seconds left on it; Classic keeps the banner.
+    const deadline = Date.now() + HAIL_TIME * 1000;
+    radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, answers: transponderBroken() && !transponderOff ? answerPolice() : answerPolice().map((a) => ({ ...a, until: deadline, clock: true })) });
   }
   // The Viper that hailed you comes to look.
   hail.by.patrol.centre.copy(player.obj.position);
@@ -4356,7 +4386,8 @@ function updateHail() {
     radio('police', `${currentSystem().name} police`, 'No answer · police are treating you as hostile', { flash: 3, urgent: true, line: 'No answer · police are treating you as hostile' });
     return;
   }
-  box.hidden = false;
+  // In Modern the card carries the hail; the banner stays for a broken transponder, whose clock waits while you hold still.
+  box.hidden = modern() && !broken;
   const left = Math.ceil(hail.until - elapsed);
   const text = broken
     ? `Police hail · transponder damaged: cut your speed and let the Viper read your hull · ${left} s`
@@ -4487,7 +4518,7 @@ function firePlayerLaser() {
   const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
   for (const muzzle of muzzles()) beams.fire(muzzle, end, laser.color);
   trackBeam(player, origin, end, laser.color, hit?.target.value.kind === 'npc' ? hit.target.value.npc : null);
-  sfx.laser();
+  shotSound(player.def, laserSound(laser), null);
   if (sharedSpace.connected) sharedSpace.fire(dir, laser.id);
   if (!hit) return;
   const shot = hit.target.value;
@@ -4604,7 +4635,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
         const beamEnd = hit ? hit.point : origin.clone().addScaledVector(aim, npc.laser.range);
         beams.fire(origin, beamEnd, npc.laser.color);
         trackBeam(npc, origin, beamEnd, npc.laser.color, hit?.target.value === 'player' ? player : hit?.target.value instanceof NpcShip ? hit.target.value : null);
-        zapAt(origin, 700, 120, 0.15, 0.5);
+        shotSound(npc.def, laserSound(npc.laser), origin);
         const struck = hit?.target.value;
         if (struck instanceof NpcShip) {
           // A trader calling for help puts everything into its shields, to last until help comes.
@@ -4651,12 +4682,31 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   for (const npc of npcs) {
     const near = alive && npc.obj.position.distanceTo(player.obj.position) < VOICE_RANGE;
     let voice = voices.get(npc);
-    if (near && !voice) voices.set(npc, (voice = new ShipVoice(npc.obj.position)));
+    if (near && !voice) voices.set(npc, (voice = new ShipVoice(npc.obj.position, voiceOf(npc.def))));
     if (!near && voice) {
       voice.dispose();
       voices.delete(npc);
     }
     voice?.update(npc.obj.position, npc.ship.speed / npc.ship.maxSpeed);
+  }
+  // And other commanders', each sounding like her ship; her speed from her last two positions.
+  for (const r of sharedSpace.remotes.values()) {
+    const near = alive && r.position.distanceTo(player.obj.position) < VOICE_RANGE;
+    let voice = remoteVoices.get(r.id);
+    if (near && !voice) remoteVoices.set(r.id, (voice = new ShipVoice(r.position, voiceOf(shipById(r.ship)))));
+    if (!near && voice) {
+      voice.dispose();
+      remoteVoices.delete(r.id);
+    }
+    if (!voice) continue;
+    const [a, b] = r.history.slice(-2);
+    const max = shipById(r.ship)?.stats.maxSpeed ?? 300;
+    voice.update(r.position, a && b && b.t > a.t ? Math.min(1, a.p.distanceTo(b.p) / (b.t - a.t) / max) : 0.5);
+  }
+  for (const [id, v] of remoteVoices) {
+    if (sharedSpace.remotes.has(id)) continue;
+    v.dispose();
+    remoteVoices.delete(id);
   }
 
   // Police in lawful-ish systems scan ships that loiter near them.
@@ -4737,6 +4787,14 @@ function sightedNpc(range = 5000, cone = 6): NpcShip | null {
   return best;
 }
 
+/** Let go of the missile: no lock, no seeking. */
+function disarmMissile() {
+  seeker = null;
+  locked = null;
+  lockedCommander = null;
+  flash('Missile disarmed', 1.2);
+}
+
 /** T: lock a missile onto the ship in your sights, or disarm. */
 function toggleLock() {
   const c = cmdr();
@@ -4746,12 +4804,8 @@ function toggleLock() {
   }
   if (c.difficulty === 'modern') {
     // Arm, and the seeker does the rest: hold a ship in your sights and it locks.
-    if (seeker || locked || lockedCommander) {
-      seeker = null;
-      locked = null;
-      lockedCommander = null;
-      flash('Missile disarmed', 1.2);
-    } else {
+    if (seeker || locked || lockedCommander) disarmMissile();
+    else {
       seeker = { on: null, progress: 0, beep: 0 };
       flash('Missile armed · hold a ship in your sights', 1.5);
     }
@@ -4836,10 +4890,13 @@ function updateSeeker(dt: number) {
   sfx.lockTone();
   if (npc) {
     locked = npc;
-    flash(`Missile locked · ${npcIdentified(npc) ? npc.def.name : 'unidentified ship'} · fire`, 1.5);
+    // Locked onto the law by mistake: say so, and how to let go, before the trigger.
+    const law = npcIdentified(npc) && (npc.role === 'police' || npc.role === 'marshal');
+    const off = isTouch ? 'hold to fire, tap to disarm' : 'X to fire, T to disarm';
+    flash(law ? `Missile locked · ${npc.def.name} · police · firing is a crime · ${off}` : `Missile locked · ${npcIdentified(npc) ? npc.def.name : 'unidentified ship'} · ${off}`, law ? 3 : 1.8);
   } else {
     lockedCommander = target as Remote;
-    flash(`Missile locked · CMDR ${lockedCommander.name} · fire`, 1.5);
+    flash(`Missile locked · CMDR ${lockedCommander.name} · ${isTouch ? 'hold to fire, tap to disarm' : 'X to fire, T to disarm'}`, 1.8);
   }
 }
 
@@ -4867,14 +4924,43 @@ function updateSeekerBox() {
   seekerBox.classList.toggle('tracking', !lockedAt && Boolean(tracking));
 }
 
-// On a touch screen, one missile button by FIRE: Arm (Lock in Classic), then (red) launch.
+// On a touch screen, one missile button by FIRE, worked like a master arm and a guarded trigger
+// (Mark: a thumb by FIRE mustn't launch at the wrong ship). A tap arms (locks, in Classic) or, armed
+// or locked, disarms; only a press held for HOLD_TO_FIRE launches, the button charging as you hold.
 const missileButton = $<HTMLButtonElement>('#touch .missile');
-onTap(missileButton, () => {
-  missileButton.blur();
-  if (locked || lockedCommander) fireMissile();
-  else toggleLock();
-  updateMissileButton();
+const HOLD_TO_FIRE = 500; // ms
+let holdTimer = 0;
+let fired = false;
+missileButton.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  try {
+    missileButton.setPointerCapture(e.pointerId); // keep the press if the thumb slides off
+  } catch {
+    /* no such pointer (a synthetic event): carry on without */
+  }
+  fired = false;
+  if (!locked && !lockedCommander) return;
+  missileButton.classList.add('holding');
+  holdTimer = window.setTimeout(() => {
+    fired = true;
+    missileButton.classList.remove('holding');
+    fireMissile();
+    updateMissileButton();
+  }, HOLD_TO_FIRE);
 });
+const releaseMissile = (tap: boolean) => {
+  clearTimeout(holdTimer);
+  missileButton.classList.remove('holding');
+  if (tap && !fired) {
+    if (locked || lockedCommander) disarmMissile();
+    else toggleLock();
+  }
+  fired = false;
+  missileButton.blur();
+  updateMissileButton();
+};
+missileButton.addEventListener('pointerup', () => releaseMissile(true));
+missileButton.addEventListener('pointercancel', () => releaseMissile(false));
 
 /** Its label: how many missiles, and whether one is locked. */
 function updateMissileButton() {
@@ -4886,7 +4972,7 @@ function updateMissileButton() {
   missileButton.classList.toggle('seeking', Boolean(seeker) && !armed);
   missileButton.classList.toggle('empty', n <= 0);
   const label =
-    n <= 0 ? 'No missiles' : armed ? (modern ? `Fire ×${n}` : `Missile ×${n}`) : seeker ? `Seeking ×${n}` : modern ? `Arm ×${n}` : `Lock ×${n}`;
+    n <= 0 ? 'No missiles' : armed ? (isTouch ? `Hold to fire ×${n}` : `Fire ×${n}`) : seeker ? `Seeking ×${n}` : modern ? `Arm ×${n}` : `Lock ×${n}`;
   if (missileButton.textContent !== label) missileButton.textContent = label;
 }
 
@@ -4899,7 +4985,7 @@ function fireMissile() {
     c.missiles -= 1;
     saveCommander(c);
     sharedSpace.launchMissile(lockedCommander.id);
-    sfx.missileLaunch();
+    launchSound(player.def, null);
     flash(`Missile away · CMDR ${lockedCommander.name}`, 1.2);
     lockedCommander = null;
     return;
@@ -4922,8 +5008,7 @@ function launchMissile(from: PlayerShip, target: PlayerShip) {
   const m = new Missile(shipById('missile')!, from, target);
   space.scene.add(m.model.root);
   missiles.push(m);
-  if (from === player) sfx.missileLaunch();
-  else rocketAt(m.position, 0.5);
+  launchSound(from.def, from === player ? null : m.position);
   if (target === player) {
     sfx.incoming();
     incomingTimer = 1;
@@ -5411,15 +5496,89 @@ const VIEW_TURN: Record<Mount, number> = { front: 0, rear: Math.PI, left: Math.P
 const TURRET_CONE = THREE.MathUtils.degToRad(20);
 let view: Mount = 'front';
 
-function setView(next: Mount) {
+function setView(next: Mount, glance = false) {
   view = next;
+  // The touch view button points where you're looking; its picker marks the view and closes.
+  const turn: Record<Mount, number> = { front: 0, right: 90, rear: 180, left: -90 };
+  $('#view-button svg').style.transform = `rotate(${turn[view]}deg)`;
+  $('#view-button').classList.toggle('away', view !== 'front');
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#view-picker [data-view]')) b.classList.toggle('on', b.dataset.view === view);
+  if (!glance) showViewPicker(false);
   const label = $('#view-label');
   label.hidden = view === 'front';
   label.textContent = `${view} view`;
-  if (view !== 'front') {
+  if (view !== 'front' && !glance) {
     const laser = cmdr().lasers[view];
     flash(laser ? `${view} view · ${PLAYER_LASERS[laser].name}` : `${view} view · no ${view} laser fitted`, 1.4);
   }
+}
+
+/** The touch view picker: four directions round the view button, one tap each (Mark). */
+function showViewPicker(show: boolean) {
+  $('#view-picker').hidden = !show;
+  $('#view-button').setAttribute('aria-expanded', String(show));
+}
+// Tap: the four open, to choose a view that stays. Press and hold: they open under your thumb, the
+// view follows it onto a direction, and letting go looks ahead again: a glance (Mark).
+const GLANCE_HOLD = 220; // ms
+let glanceTimer = 0;
+let glancing: Mount | null = null; // the view to go back to
+const viewButton = $<HTMLButtonElement>('#view-button');
+viewButton.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  try {
+    viewButton.setPointerCapture(e.pointerId); // keep the press if the thumb slides off
+  } catch {
+    /* no such pointer (a synthetic event): carry on without */
+  }
+  glanceTimer = window.setTimeout(() => {
+    glancing = view;
+    showViewPicker(true);
+  }, GLANCE_HOLD);
+});
+viewButton.addEventListener('pointermove', (e) => {
+  if (!glancing) return;
+  const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('#view-picker [data-view]');
+  const next = (over?.dataset.view as Mount | undefined) ?? glancing;
+  if (next !== view) setView(next, true);
+});
+const endGlance = (tap: boolean) => {
+  clearTimeout(glanceTimer);
+  viewButton.blur();
+  if (glancing) {
+    const back = glancing;
+    glancing = null;
+    setView(back); // let go: eyes front again (or wherever you were)
+    return;
+  }
+  if (tap) showViewPicker($('#view-picker').hidden === true);
+};
+viewButton.addEventListener('pointerup', () => endGlance(true));
+viewButton.addEventListener('pointercancel', () => endGlance(false));
+for (const b of document.querySelectorAll<HTMLButtonElement>('#view-picker [data-view]'))
+  onTap(b, () => {
+    b.blur();
+    setView(b.dataset.view as Mount);
+  });
+// A tap anywhere else closes it.
+document.addEventListener('pointerdown', (e) => {
+  const t = e.target as Node;
+  if (!glancing && !$('#view-picker').hidden && !$('#view-picker').contains(t) && !$('#view-button').contains(t)) showViewPicker(false);
+}, true);
+
+/**
+ * Steering in a rear or side view (Mark: dragging did nothing there). The drag turns the view you're
+ * looking through, as it turns the nose ahead: across, the ship yaws (the same in every view, all
+ * turning about her up); up and down, she pitches (the other way, looking back) or rolls (looking aside).
+ */
+function steerInView(input: FlightInput, dt: number) {
+  const k = AIM_SENSITIVITY / Math.max(dt, 1e-3);
+  const across = input.aimDx * k; // how fast the view should swing right, radians a second
+  const up = -input.aimDy * k; // and tip up
+  const rate = (r: number, max: number) => THREE.MathUtils.clamp(r / max, -1, 1);
+  input.yaw = rate(across, player.yawRate);
+  if (view === 'rear') input.pitch = rate(-up, player.def.stats.pitchRate ?? 1.5);
+  else input.roll = rate(view === 'left' ? up : -up, player.def.stats.rollRate ?? 2);
 }
 
 /** Which way the current view looks, in the world. */
@@ -5512,6 +5671,9 @@ function updateSpace(dt: number) {
       const s = aim.steer(player);
       input.pitch = s.pitch;
       input.yaw = s.yaw;
+    } else if (view !== 'front' && controlScheme() === 'mouse' && (isMouseCaptured() || isTouch) && !autopilot && !surveyPilot && !keysTurning) {
+      aim.reset(player);
+      steerInView(input, dt);
     } else {
       aim.reset(player);
     }
@@ -6044,6 +6206,7 @@ async function launch() {
   setView('front');
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
+  engineSound.spool(); // a grand tourer winds up as she leaves (Mark); a drone just runs
   // The station that launched you knows exactly who you are: a broken
   // transponder is logged, not hailed, for the rest of this visit.
   if (repaired !== null) {
@@ -7217,6 +7380,8 @@ function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
       const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(r.quaternion);
       const origin = r.position.clone().addScaledVector(fwd, 20);
       beams.fire(origin, origin.clone().addScaledVector(fwd, 2000), COMMANDER_COLOUR);
+      // A commander in a Fer-de-lance is heard by her guns (other commanders' lasers stay silent for now).
+      if (voiceOf(shipById(r.ship)) === 'grand') grandShot('pulse', origin);
     }
   }
 }

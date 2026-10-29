@@ -44,7 +44,7 @@ export interface ShipDef {
     ratingValue: number;
     bounty?: number;
   };
-  style: { lineColor: string; glow?: number };
+  style: { lineColor: string; glow?: number; engine?: 'drone' | 'grand' };
   /** A mark on the hull in its own colour (a captain's sign), glowing like the details. */
   insignia?: { color: string; vertices: Vec3[]; lines: [number, number][] };
   /** Built from modules (content/modules), fore to aft: the geometry is their assembly. */

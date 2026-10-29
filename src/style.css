@@ -804,6 +804,17 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
 @keyframes drawer-in { from { transform: translateX(36px); opacity: 0; } }
 /* The camera: left of the drawer tab, out of the way of the thumbs. */
 #touch .photo-button { position: absolute; right: 52px; top: max(8px, env(safe-area-inset-top)); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
+#touch .view-button { touch-action: none; -webkit-user-select: none; user-select: none; position: absolute; right: 104px; top: max(8px, env(safe-area-inset-top)); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
+#touch .view-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; transition: transform 0.2s ease-out; }
+#touch .view-button.away { border-color: var(--amber); color: var(--amber); }
+#touch .view-picker { position: absolute; right: 60px; top: calc(max(8px, env(safe-area-inset-top)) + 52px); display: grid; grid-template-columns: repeat(3, 66px); grid-template-rows: repeat(3, 42px); gap: 6px; padding: 8px; border: 1px solid var(--edge); border-radius: 12px; background: rgba(2, 10, 8, 0.92); z-index: 6; }
+#touch .view-picker[hidden] { display: none; }
+#touch .view-picker button { min-height: 0; padding: 0; font-size: 13px; letter-spacing: 0.06em; }
+#touch .view-picker [data-view='front'] { grid-area: 1 / 2; }
+#touch .view-picker [data-view='left'] { grid-area: 2 / 1; }
+#touch .view-picker [data-view='right'] { grid-area: 2 / 3; }
+#touch .view-picker [data-view='rear'] { grid-area: 3 / 2; }
+#touch .view-picker button.on { border-color: var(--accent); color: var(--accent); }
 #touch .photo-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
 #touch .touch-drawer.open ~ .photo-button, #touch .touch-drawer.open ~ .touch-context { display: none; }
 /* The next step, out of the drawer by itself. */
@@ -1573,6 +1584,12 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 #touch .missile { min-width: 92px; min-height: 44px; padding: 6px 10px; border-radius: 999px; font-size: 13px; letter-spacing: 0.06em; background: rgba(0, 10, 6, 0.55); }
 #touch .missile.armed { border-color: var(--danger); color: #fff; background: rgba(255, 77, 109, 0.55); box-shadow: 0 0 14px var(--danger); }
 #touch .missile.empty { opacity: 0.45; }
+.rcard-left + .rcard-dismiss { margin-left: 0; }
+.rcard-left { align-self: center; margin-left: auto; padding: 0 6px; color: var(--danger); font-size: 1.1em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* Hold to fire: the trigger charges across the button, and the missile goes when it's full. */
+#touch .missile { position: relative; overflow: hidden; isolation: isolate; touch-action: none; -webkit-user-select: none; user-select: none; }
+#touch .missile::before { content: ''; position: absolute; inset: 0; width: 0; background: rgba(255, 255, 255, 0.35); z-index: -1; }
+#touch .missile.holding::before { width: 100%; transition: width 0.5s linear; }
 @media (max-height: 500px) { body.touch #touch .missile { min-width: 76px; font-size: 12px; } }
 
 /* Play full screen: the title screen's Home Screen card (main.ts showInstall). */
