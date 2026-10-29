@@ -106,9 +106,9 @@ export function rocketAt(at: THREE.Vector3, volume: number) {
 // another ship's come from where she is.
 
 export type LaserSound = 'pulse' | 'beam' | 'military';
-export type LaserStyle = 'silk' | 'heavy' | 'plasma';
-/** The style the game uses, until one is chosen (the listening page tries all three). */
-export let laserStyle: LaserStyle = 'silk';
+export type LaserStyle = 'silk' | 'heavy' | 'plasma' | 'heavy-echo';
+/** The style the game uses: heavy with plasma's echo (Mark's pick, to try). The listening page tries them all. */
+export let laserStyle: LaserStyle = 'heavy-echo';
 export const setLaserStyle = (s: LaserStyle) => (laserStyle = s);
 
 const KINDS: Record<LaserSound, { pitch: number; seconds: number; volume: number }> = {
@@ -146,6 +146,27 @@ function ring(out: AudioNode, type: OscillatorType, f: number, ratio: number, se
   return o;
 }
 
+/**
+ * A short echo after a shot, for a feeling of space: what goes into the bus is heard, then again,
+ * fainter. Its feedback loop is taken apart after `seconds`, so a beam's ten shots a second don't pile up.
+ */
+function echoBus(out: AudioNode, seconds: number): GainNode {
+  const { ctx } = audioGraph();
+  const echo = ctx.createDelay(0.3);
+  echo.delayTime.value = 0.085;
+  const back = ctx.createGain();
+  back.gain.value = 0.32;
+  const wet = ctx.createGain();
+  wet.gain.value = 0.45;
+  echo.connect(back).connect(echo);
+  echo.connect(wet).connect(out);
+  const bus = ctx.createGain();
+  bus.connect(out);
+  bus.connect(echo);
+  setTimeout(() => [bus, echo, back, wet].forEach((n) => n.disconnect()), seconds * 1000);
+  return bus;
+}
+
 /** A Fer-de-lance's laser shot, of each kind: yours (`at` null) or another ship's from where she is. */
 export function crystalShot(kind: LaserSound, at: THREE.Vector3 | null, volume = 1, style: LaserStyle = laserStyle) {
   const { ctx } = audioGraph();
@@ -176,8 +197,10 @@ export function crystalShot(kind: LaserSound, at: THREE.Vector3 | null, volume =
       o.stop(t + T + 0.05);
     }
     last = car;
-  } else if (style === 'heavy') {
-    // Two saws a little apart, swept down through a filter closing fast, over a deep thump.
+  } else if (style === 'heavy' || style === 'heavy-echo') {
+    // Two saws a little apart, swept down through a filter closing fast, over a deep thump (and, as
+    // Mark chose, plasma's echo after it).
+    const dest = style === 'heavy-echo' ? echoBus(out.input, T + 0.6) : out.input;
     const f = 900 * k.pitch;
     const lp = ctx.createBiquadFilter();
     lp.type = 'lowpass';
@@ -186,7 +209,7 @@ export function crystalShot(kind: LaserSound, at: THREE.Vector3 | null, volume =
     lp.frequency.exponentialRampToValueAtTime(350, t + T);
     const g = ctx.createGain();
     envelope(g, 0.05 * v, t, 0.002, T + 0.04);
-    lp.connect(g).connect(out.input);
+    lp.connect(g).connect(dest);
     const saws = [1, 1.012].map((d) => {
       const o = ctx.createOscillator();
       o.type = 'sawtooth';
@@ -197,22 +220,16 @@ export function crystalShot(kind: LaserSound, at: THREE.Vector3 | null, volume =
       o.stop(t + T + 0.06);
       return o;
     });
-    ring(out.input, 'sine', 140 * k.pitch, 0.45, T * 0.9, 0.12 * v, t); // the thump
+    ring(dest, 'sine', 140 * k.pitch, 0.45, T * 0.9, 0.12 * v, t); // the thump
+    if (style === 'heavy-echo') {
+      setTimeout(() => out.done(), (T + 0.6) * 1000); // after the echo has died
+      return;
+    }
     last = saws[0];
   } else {
     // A hot burst: bright noise swept down through a resonant band with a falling tone in it, and a short echo.
     const f = 2200 * k.pitch;
-    const echo = ctx.createDelay(0.3);
-    echo.delayTime.value = 0.085;
-    const back = ctx.createGain();
-    back.gain.value = 0.32;
-    const wet = ctx.createGain();
-    wet.gain.value = 0.45;
-    echo.connect(back).connect(echo);
-    echo.connect(wet).connect(out.input);
-    const bus = ctx.createGain();
-    bus.connect(out.input);
-    bus.connect(echo);
+    const bus = echoBus(out.input, T + 0.6);
     const src = ctx.createBufferSource();
     src.buffer = noiseBuffer(ctx, T + 0.05);
     const bp = ctx.createBiquadFilter();
