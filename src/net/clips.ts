@@ -5,16 +5,19 @@
 import { API, sessionToken } from './account';
 
 /** This browser's own id for hearts, the same one the ideas board uses: random, kept locally. */
+/** 32 hex characters: crypto.randomUUID is Safari 15.4+, and an older one broke hearts and sharing. */
+const freshId = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+
 function voterId(): string {
   try {
     let id = localStorage.getItem('witchspace.voter');
     if (!id) {
-      id = crypto.randomUUID();
+      id = freshId();
       localStorage.setItem('witchspace.voter', id);
     }
     return id;
   } catch {
-    return crypto.randomUUID();
+    return freshId();
   }
 }
 const headers = (extra: Record<string, string> = {}) => ({ 'X-Voter': voterId(), ...extra });
