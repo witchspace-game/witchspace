@@ -134,11 +134,13 @@ interface VoiceShape {
   hiss: number;
   /** The turbine: Hz at rest, more at full speed, its level at full speed (none for a drone). */
   turbine?: [number, number, number];
+  /** At a steady throttle, how far she settles (0..1 of her level) after a few seconds: a grand tourer at cruise. */
+  cruise?: number;
 }
 
 const VOICES: Record<EngineVoice, VoiceShape> = {
   drone: { hum: ['sawtooth', 38, 46], hum2: ['triangle', 76.6, 92], tone: [160, 900], level: [0.008, 0.01], load: [0.07, 0.1, 650, 0.012], hiss: 0.035 },
-  grand: { hum: ['sine', 31, 24], hum2: ['sine', 62.35, 48.6], tone: [150, 420], level: [0.014, 0.012], load: [0.03, 0.04, 300, 0.006], hiss: 0.012, turbine: [360, 820, 0.011] },
+  grand: { hum: ['sine', 31, 24], hum2: ['sine', 62.35, 48.6], tone: [150, 420], level: [0.014, 0.012], load: [0.03, 0.04, 300, 0.006], hiss: 0.012, turbine: [360, 820, 0.011], cruise: 0.6 },
 };
 
 /** Your own ship: engine hum that tracks speed and strains in a turn, thruster hiss on a hard one. */
@@ -235,6 +237,8 @@ export class EngineSound {
   private load = 0;
   /** Until when (audio clock) the launch spool-up has the engine. */
   private spooling = 0;
+  /** Seconds at a steady throttle: a grand tourer settles at cruise (Mark: not annoying on a long run). */
+  private steady = 0;
 
   /** speed and turn are 0..1; dt in seconds. */
   update(speed: number, turn: number, dt: number) {
@@ -247,6 +251,9 @@ export class EngineSound {
     const change = Math.abs(speed - this.lastSpeed) / Math.max(dt, 1e-3);
     this.lastSpeed = speed;
     this.swell = Math.max(this.swell * Math.exp(-dt * 1.5), Math.min(1, change * 2));
+    this.steady = change > 0.02 ? 0 : this.steady + dt;
+    // Held steady for a few seconds, she eases back over about six, to cruise; any change of throttle brings her back.
+    const settle = v.cruise ? 1 - v.cruise * Math.min(1, Math.max(0, this.steady - 3) / 6) : 1;
     // The load follows the stick quickly as you pull and eases off more slowly as you level out.
     const want = Math.min(1, turn);
     this.load += (want - this.load) * (1 - Math.exp(-dt * (want > this.load ? 5 : 1.8)));
@@ -261,11 +268,11 @@ export class EngineSound {
     setParam(n.hum.frequency, (v.hum[1] + speed * v.hum[2]) * (1 + lift * this.load), t, 0.12);
     setParam(n.hum2.frequency, (v.hum2[1] + speed * v.hum2[2]) * (1 + lift2 * this.load), t, 0.12);
     setParam(n.tone.frequency, v.tone[0] + speed * v.tone[1] + this.swell * 500 + this.load * bright, t, 0.12);
-    setParam(n.humGain.gain, drone * (v.level[0] + speed * v.level[1] + this.swell * 0.05 + this.load * louder), t, 0.15);
+    setParam(n.humGain.gain, drone * (v.level[0] + speed * v.level[1] * (0.6 + 0.4 * settle) + this.swell * 0.05 + this.load * louder), t, 0.15);
     if (n.turbine && n.turbineGain && v.turbine) {
       // The turbine sings with the throttle: near silent at rest, a clean rising whine opened up, swelling as you open her.
       setParam(n.turbine.frequency, v.turbine[0] + speed * v.turbine[1] + this.load * 30, t, 0.25);
-      setParam(n.turbineGain.gain, drone * v.turbine[2] * (0.08 + 0.92 * speed * speed + this.swell * 0.6), t, 0.25);
+      setParam(n.turbineGain.gain, drone * v.turbine[2] * ((0.08 + 0.92 * speed * speed) * settle + this.swell * 0.6), t, 0.6);
     }
   }
 
