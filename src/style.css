@@ -1361,8 +1361,17 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
    opening in place, and the chart, book and trades folded away (docs/design/flight-hud-and-touch.md). */
 .ex-more-toggle { display: none; }
 @media (max-width: 700px) and (orientation: portrait) {
-  .panel.docked.exchange { left: 12px; right: 12px; top: 10px; bottom: calc(var(--controls-h, 48px) + 50px); padding: 12px 14px; background: rgba(0, 10, 7, 0.92); border-color: var(--edge); }
-  .panel.docked.exchange > .tabs, .panel.docked.exchange > .dock-bar { display: none !important; }
+  .panel.docked.exchange { left: 12px; right: 12px; top: 10px; bottom: calc(var(--controls-h, 48px) + 50px); padding: 12px 14px; }
+  .panel.docked.exchange > .tabs { display: none !important; }
+}
+/* On its side too (Marketing): the tabs stay, but the same look, and the bottom bar is the way out. */
+@media (max-height: 500px) {
+  .panel.docked.exchange { left: 12px; right: 12px; top: 8px; bottom: calc(var(--controls-h, 40px) + 34px); padding: 10px 14px; }
+  .panel.docked.exchange > .tabs { display: flex; flex-wrap: wrap; }
+}
+@media (max-width: 700px) and (orientation: portrait), (max-height: 500px) {
+  .panel.docked.exchange { background: rgba(0, 10, 7, 0.92); border-color: var(--edge); }
+  .panel.docked.exchange > .dock-bar { display: none !important; }
   body[data-state='docked'].exchange-open nav.controls[data-screen='docked'] { display: flex !important; }
   .ex {
     --ex-card: transparent;
@@ -1815,11 +1824,11 @@ body.photo-booth .panel, body.photo-booth nav.controls, body.photo-booth #look, 
 .ho-note { margin: 16px 0 6px; font-size: 13px; font-style: italic; color: #95a3b8; }
 .ho-sign { margin: 0; font-size: 13px; color: #95a3b8; }
 .ho-sign b { color: #eaf0f6; font-weight: 600; }
-.ho-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 6px; }
-.ho-actions > * { flex: 1 1 140px; text-align: center; }
-.ho-actions .primary { background: var(--ed); border-color: var(--ed); color: #05070d; }
-.ho-share { border-color: var(--ed-trim); color: var(--ed-trim); }
-.ho-papers { display: inline-block; padding: 10px 14px; border: 1px solid var(--ed-trim); border-radius: 6px; color: var(--ed-trim); text-decoration: none; font: inherit; }
+#handover .ho-fly { display: block; width: 100%; margin: 18px 0 12px; padding: 14px; font-size: 16px; font-weight: 600; background: var(--ed); border-color: var(--ed); color: #05070d; text-transform: none; letter-spacing: 0.02em; }
+.ho-actions { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; margin: 0 0 6px; font-size: 13px; color: #95a3b8; }
+.ho-actions span { flex: 1 1 100%; }
+.ho-papers, .ho-share { padding: 0; border: 0; background: none; color: var(--ed-trim); font: inherit; font-size: 14px; text-decoration: underline; text-transform: none; letter-spacing: normal; min-height: 0; }
+.ho-share:disabled, .ho-papers[aria-disabled='true'] { opacity: 0.5; }
 .ho-papers[aria-disabled='true'] { opacity: 0.4; pointer-events: none; }
 .ho-msg { min-height: 1.2em; font-size: 13px; color: #95a3b8; }
 #manual { position: fixed; inset: 0; z-index: 31; overflow-y: auto; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: rgba(0, 6, 4, 0.96); backdrop-filter: blur(6px); }
@@ -1907,6 +1916,15 @@ body.retro #trip-sheet { background: #000; backdrop-filter: none; }
 .moment-more-sheet [data-more='star'][aria-pressed='true'] i { color: var(--amber); }
 .moment-let-go b, .moment-let-go i { color: var(--danger); }
 .moment-more-close { margin-top: 4px; }
+/* On its side, the best moment's video beside its title and buttons, so Share is in view (Marketing). */
+@media (max-height: 500px) and (orientation: landscape) {
+  .trip-list li.trip-best { grid-template-columns: minmax(0, 34%) 1fr; grid-template-rows: auto auto 1fr; column-gap: 14px; }
+  .trip-best strong { font-size: 15px; }
+  .trip-best .trip-actions button { min-height: 36px; }
+  .trip-best .trip-play { grid-column: 1; grid-row: 1 / 4; }
+  .trip-best strong, .trip-best small, .trip-best .trip-actions { grid-column: 2; }
+  .trip-best .trip-actions { align-self: end; }
+}
 
 body.retro #replay { backdrop-filter: none; }
 .replay-card > img { display: block; width: 100%; max-height: 60vh; object-fit: contain; border-radius: 8px; background: #000; }

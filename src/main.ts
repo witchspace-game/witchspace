@@ -637,6 +637,10 @@ function showNewGame() {
 
 function startCommander(difficulty: Difficulty) {
   commander = newCommander(difficulty);
+  // A new commander hasn't flown: the last commander's trip isn't theirs (Marketing saw "How I died at Lave").
+  flightFrom = Date.now();
+  tripSeen = true;
+  keepTrip();
   clearRadio();
   countNewCommander(difficulty, isRetro() ? '1984' : 'neo');
   setCausedEvents([]);
@@ -857,7 +861,14 @@ function setDockTab(tab: DockTab) {
 // button with your credits replaces the Credits line and the Money tab (Mark: "Maybe we should
 // have a wallet rather than Credits"). docs/design/flight-hud-and-touch.md.
 
-const tabName = (b: HTMLElement) => (b.getAttribute('aria-label') ?? b.textContent ?? '').replace(/^T · /, '').replace(/,.*$/, '').trim();
+/** A tab's name without its key or its badge ("Shipyard", not "Shipyard ready": Mark's screenshot). */
+const tabName = (b: HTMLElement) => {
+  const label = b.getAttribute('aria-label');
+  if (label) return label.replace(/,.*$/, '').trim();
+  const copy = b.cloneNode(true) as HTMLElement;
+  copy.querySelectorAll('.tab-badge, .key').forEach((n) => n.remove());
+  return (copy.textContent ?? '').trim();
+};
 
 function updateDockHead() {
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]')];
