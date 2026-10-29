@@ -157,7 +157,7 @@ export function limitsLine(l: Limits): string {
  * sets the credits and designer either way.
  */
 export function fromModule(m: Record<string, unknown>, as: 'improve' | 'new'): Record<string, unknown> {
-  const copy = structuredClone(m);
+  const copy = JSON.parse(JSON.stringify(m)) as Record<string, unknown>; // not structuredClone: Safari before 15.4 hasn't it
   delete copy.$schema;
   delete copy.inService;
   delete copy.revisions;

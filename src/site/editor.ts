@@ -245,7 +245,7 @@ $('#part-add').addEventListener('click', () =>
 $('#part-copy').addEventListener('click', () =>
   change(() => {
     const p = part()!;
-    draft.parts.push({ ...structuredClone(p), name: `${p.name || 'Part'} copy` });
+    draft.parts.push({ ...(JSON.parse(JSON.stringify(p)) as typeof p), name: `${p.name || 'Part'} copy` });
     sel = { part: draft.parts.length - 1, point: null };
   }),
 );
