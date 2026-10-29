@@ -8356,7 +8356,32 @@ setOutsideView(async (m) => {
 const timer = new THREE.Timer();
 timer.connect(document);
 
+// The battery (Mark: his phone went flat much quicker): never more than 60 frames a second, even on
+// a 120 Hz screen, and docked behind a screen that covers the hangar, a few a second.
+const MIN_FRAME = 1000 / 61;
+const RESTING_FRAME = 1000 / 6;
+let lastDrawn = -Infinity;
+let coveredAt = 0;
+let covered = false;
+/** Docked, with the station's screens (or the flight log) over the whole hangar: nothing to see moving. */
+function hangarCovered(t: number): boolean {
+  if (t - coveredAt < 500) return covered;
+  coveredAt = t;
+  // Whatever's on top at a few points across the screen: if none of them is the 3D view, it's hidden.
+  const neo = document.querySelector('#neo');
+  const points = [[0.5, 0.5], [0.15, 0.2], [0.85, 0.2], [0.15, 0.8], [0.85, 0.8], [0.7, 0.5]];
+  covered = points.every(([x, y]) => document.elementFromPoint(innerWidth * x, innerHeight * y) !== neo);
+  return covered;
+}
+
 function frame(now?: number) {
+  const t = now ?? performance.now();
+  const resting = !inSpace && state === 'docked' && !booth && !killCam.active && hangarCovered(t);
+  if (t - lastDrawn < (resting ? RESTING_FRAME : MIN_FRAME) - 1) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  lastDrawn = t;
   timer.update(now);
   const dt = Math.min(timer.getDelta(), 0.1);
   if (killCam.active) {
