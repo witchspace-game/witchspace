@@ -141,6 +141,10 @@ Earned ships still need upkeep, insurance and the career's goodwill: lose your s
   - **Then the certificate, then flying her** with the maiden voyage offer.
   - **Kept as a moment, *Her reveal***, ready to share, so every handover can become a post.
   - **Short and smooth on a phone:** about 6 to 8 seconds, with a tap to skip.
+- **It makes the news** *(Mark, 29 October 2026; idea, to mock up first)*. Mark: "does it make the news...?" A numbered edition leaving the maker's yard is station news, travelling at the speed of news like everything else: *Zorgon Petterson hands over Witch-fire Edition 004 at Goddard Ring*. Onrira hears first, the neighbours over the following days. Ordinary ships aren't news; editions are.
+  - **The owner chooses whether to be named**, as with discoveries. By default the line gives the edition, its number and the yard, never the callsign. At the reveal, one tap, *Let the galaxy know she's yours*, adds "…signed over to Commander X".
+  - **Moxon's Witch-fire 001 is never named** unless he agrees to publicity (Mark's rule). Mark's Dark 001 is his choice at the tap, like anyone's.
+  - The same event feeds the home page's live feed through /feed, under the same naming rule (Website's side).
   - *On file, in case commanders ever trade ships in the shared galaxy:* the yard's price is the floor; an offer says why it's worth more (ready now, kitted out, in the right place, a story), with guard rails: kit never counts for more than it cost, no offer beats building the same ship new at that yard, a place premium of at most about 15% and not for a ship bought in the last week, story value capped (kills count little and on a log scale; firsts, Legends survived, names and an edition's number can't be farmed), and a gifted hull's hull is worth nothing.
 
 ## 6. Concepts
