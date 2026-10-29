@@ -75,20 +75,23 @@ const time = (t: number) => {
 };
 
 /**
- * Every call is heard as a transmission: the squawk as the key goes down (softer for a plain
- * message than for a call to answer), then the squelch tail as it's let go, about as long after as
- * the line takes to read. Your own replies are silent, and a burst of lines doesn't chatter.
+ * Every call is heard as a transmission, in step with what you see (Mark: the tail came at odd
+ * moments): the squawk as the card or line slides in, then the squelch tail as it settles (style.css
+ * rcard-in, 0.35 s; a pirate's flicker ends at 0.52 s). A call that cuts in takes over from the last
+ * one's tail. Plain messages are softer than calls to answer; your own replies are silent.
  */
+const SETTLED: Partial<Record<RadioKind, number>> = { pirate: 520 };
 let lastKey = 0;
+let tail = 0;
 function transmission(e: Entry) {
   if (e.from === 'You') return;
   const now = performance.now();
-  if (now - lastKey < 450) return;
+  if (now - lastKey < 300) return; // a burst of lines doesn't chatter
   lastKey = now;
+  clearTimeout(tail);
   const quiet = !e.answers;
   sfx.squawk(e.kind, quiet);
-  const reading = Math.min(2200, 500 + e.text.length * 22);
-  setTimeout(() => sfx.squelch(e.kind, quiet), reading);
+  tail = window.setTimeout(() => sfx.squelch(e.kind, quiet), SETTLED[e.kind] ?? 380);
 }
 
 /** Something said to you: into the log, and on screen for a while. */
