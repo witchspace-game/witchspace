@@ -15,7 +15,7 @@ import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 import { escapeHtml } from '../ui/escape';
 import { boardAt, LAVE } from './board';
-import { chartedWhat, commanderLines, EMPTY, flyingLine, parseFeed, type CommanderLine, type Feed } from './feed';
+import { chartedWhat, clipTitle, commanderLines, EMPTY, featuredClip, flyingLine, parseFeed, type CommanderLine, type Feed } from './feed';
 
 // The home page's live galaxy: the news around Lave, the nearest shipyard, a
 // market in crisis, the ticker under the hero, and the Falcon turning. All
@@ -30,7 +30,11 @@ const lave = galaxy(0)[7];
 const RANGE = 25; // light years: as far as news travels to Lave
 const ly = (s: StarSystem) => `${distanceLy(lave, s).toFixed(1)} LY from Lave`;
 
-const FEED = `${import.meta.env.VITE_SPACE_HTTP ?? (import.meta.env.DEV ? 'http://127.0.0.1:8787' : 'https://space.witchspace.org.uk')}/feed`;
+const SPACE = import.meta.env.VITE_SPACE_HTTP ?? (import.meta.env.DEV ? 'http://127.0.0.1:8787' : 'https://space.witchspace.org.uk');
+const FEED = `${SPACE}/feed`;
+/** A shared clip's own card (1200×630), made when it was shared; the Witch-fire's if it has none. */
+const clipCard = (id: string) => `${SPACE}/clip-card/${id}.jpg`;
+const FALLBACK_CARD = '/share/clip.jpg';
 /** "6 min ago", "13 h ago", "2 days ago": a feed needn't be exact to the minute. */
 const ago = (now: number, t: number) => {
   const m = Math.max(1, Math.round((now - t) / 60000));
@@ -50,13 +54,15 @@ interface Line {
   title: string;
   note: string;
   href?: string;
+  /** A clip's card, shown small beside its line. */
+  pic?: string;
   cmdr?: boolean;
   over?: boolean;
 }
 
 function commanderLine(c: CommanderLine, now: number): Line {
   if (c.kind === 'clip')
-    return { key: `clip:${c.id}`, t: c.t, tag: 'Commander', cmdr: true, title: c.title, note: `Clip shared ${ago(now, c.t)}${c.hearts ? ` · ♥ ${c.hearts}` : ''}`, href: `/clip/${c.id}` };
+    return { key: `clip:${c.id}`, t: c.t, tag: 'Commander', cmdr: true, title: c.title, note: `Clip shared ${ago(now, c.t)}${c.hearts ? ` · ♥ ${c.hearts}` : ''}`, href: `/clip/${c.id}`, pic: clipCard(c.id) };
   return { key: `first:${c.t}:${c.callsign}:${c.where.galaxy}:${c.where.index}`, t: c.t, tag: 'Commander', cmdr: true, title: `CMDR ${c.callsign} charted ${c.where.name} first`, note: `${chartedWhat(c)} · ${where(c.where)} · ${ago(now, c.t)}` };
 }
 
@@ -112,13 +118,29 @@ function render() {
     .map((l) => {
       const title = escapeHtml(l.title);
       const cls = `headline${l.over ? ' over' : ''}${l.cmdr ? ' cmdr' : ''}${seen && !seen.has(l.key) ? ' new' : ''}`;
-      return `<div class="${cls}"><span class="feed-src">${l.tag}</span><b>${l.href ? `<a href="${l.href}">${title}</a>` : title}</b><small>${escapeHtml(l.note)}</small></div>`;
+      const pic = l.pic ? `<a class="feed-pic" href="${l.href}" tabindex="-1" aria-hidden="true"><img src="${l.pic}" width="120" height="63" loading="lazy" decoding="async" alt=""></a>` : '';
+      return `<div class="${cls}">${pic}<span class="feed-src">${l.tag}</span><b>${l.href ? `<a href="${l.href}">${title}</a>` : title}</b><small>${escapeHtml(l.note)}</small></div>`;
     })
     .join('');
   seen = new Set(lines.map((l) => l.key));
   const flying = flyingLine(feed.flying);
   $('now-flying')!.textContent = flying;
   $('now-flying')!.hidden = !flying;
+
+  // Latest flight: the most hearted clip of the two days, or the newest, with its own card.
+  const clip = featuredClip(feed);
+  if (clip) {
+    const { who, what } = clipTitle(clip.title);
+    const img = $('now-clip-img') as HTMLImageElement;
+    if (img.dataset.id !== clip.id) {
+      img.dataset.id = clip.id;
+      img.src = clipCard(clip.id);
+    }
+    $('now-clip-what')!.textContent = what;
+    $('now-clip-line')!.textContent = [who ? `${who}${clip.system ? ` at ${clip.system}` : ''}` : clip.system, ago(now, clip.t), clip.hearts ? `♥ ${clip.hearts}` : ''].filter(Boolean).join(' · ');
+    $('now-clip-cta')!.textContent = 'Watch it →';
+    for (const a of [$('now-clip-cta'), $('now-clip-pic')] as HTMLAnchorElement[]) a.href = `/clip/${clip.id}`;
+  }
 
   // First to get there: the latest commander to chart somewhere first, if anyone has in two days.
   const charted = cmdrs.find((c) => c.kind === 'charted');
@@ -178,6 +200,12 @@ async function load() {
   }
   render();
 }
+
+// A clip shared without a card of its own shows the Witch-fire's.
+document.addEventListener('error', (e) => {
+  const img = e.target as HTMLImageElement;
+  if (img.tagName === 'IMG' && img.src.includes('/clip-card/')) img.src = FALLBACK_CARD;
+}, true);
 
 render();
 void load();

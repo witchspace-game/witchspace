@@ -1162,7 +1162,16 @@ body.menu-open { overflow: hidden; }
 .now-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px; }
 .now-card { display: flex; flex-direction: column; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
 .now-card h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 12.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-.now-card.news { grid-row: span 2; }
+.now-card.news { grid-row: span 3; }
+/* Latest flight: a shared clip's own card beside its words, across two columns. */
+.now-card.flight { grid-column: span 2; flex-direction: row; gap: 20px; align-items: center; }
+.now-card .flight-pic { flex: 0 0 55%; display: block; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: #04060b; }
+.now-card .flight-pic img { display: block; width: 100%; height: auto; }
+.now-card .flight-text { align-self: stretch; }
+.now-card .flight-text { display: flex; flex-direction: column; min-width: 0; }
+.headline .feed-pic { float: right; margin: 2px 0 4px 12px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+.headline .feed-pic img { display: block; width: 96px; height: auto; }
+.headline::after { content: ''; display: block; clear: both; }
 .now-card .card-cta { margin-top: auto; padding-top: 14px; }
 .headline { padding: 12px 0; border-top: 1px solid var(--border); }
 .headline:first-child { border-top: 0; padding-top: 0; }
@@ -1234,6 +1243,8 @@ body.menu-open { overflow: hidden; }
 @media (max-width: 900px) {
   .now-grid, .fly, .together { grid-template-columns: 1fr; }
   .now-card.news { grid-row: auto; }
+  .now-card.flight { grid-column: auto; flex-direction: column; gap: 0; }
+  .now-card .flight-pic { flex: none; margin: -20px -20px 16px; border: 0; border-radius: 16px 16px 0 0; }
   .ladders { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 560px) { .ladders { grid-template-columns: 1fr; } }

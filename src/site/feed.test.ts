@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy } from '../galaxy/generate';
 import { poisOf } from '../game/explore';
-import { chartedWhat, commanderLines, flyingLine, parseFeed, type Charted } from './feed';
+import { chartedWhat, clipTitle, commanderLines, EMPTY, featuredClip, flyingLine, parseFeed, type Charted } from './feed';
 
 const t = 1_793_045_139_740;
 
@@ -52,5 +52,21 @@ describe('how many are flying', () => {
     expect(flyingLine({ now: 0, today: 0 })).toBe('');
     expect(flyingLine({ now: 0, today: 1 })).toBe('1 player today');
     expect(flyingLine({ now: 2, today: 5 })).toBe('2 signed-in commanders flying now · 5 players today');
+  });
+});
+
+describe('the clip on the home page', () => {
+  const clip = (t: number, hearts: number) => ({ kind: 'clip' as const, t, id: `c${t}`, title: 'CMDR Jameson: 2 kills', system: 'Lave', hearts });
+  it('is the most hearted, and the newest of equals', () => {
+    expect(featuredClip({ ...EMPTY, events: [clip(3, 0), clip(2, 4), clip(1, 4)] })?.t).toBe(2);
+    expect(featuredClip({ ...EMPTY, events: [clip(1, 0), clip(3, 0), clip(2, 0)] })?.t).toBe(3);
+  });
+  it('is nothing when nobody has shared one', () => {
+    expect(featuredClip(EMPTY)).toBeNull();
+  });
+  it('sets the commander apart from what they did', () => {
+    expect(clipTitle('CMDR Jameson: 3 kills in one fight at Xeaqu')).toEqual({ who: 'CMDR Jameson', what: '3 kills in one fight at Xeaqu' });
+    expect(clipTitle('A commander: a run worth boasting of')).toEqual({ who: 'A commander', what: 'a run worth boasting of' });
+    expect(clipTitle('Something else')).toEqual({ who: '', what: 'Something else' });
   });
 });
