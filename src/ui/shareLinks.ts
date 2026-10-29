@@ -18,13 +18,22 @@ export const ICONS = {
   close: icon('<path d="M6 6l12 12M18 6 6 18"/>', false),
 };
 
+/** Our account on X: every post shared to X ends "via @witchspace_game", so we see it and can thank them (Mark). */
+export const X_HANDLE = 'witchspace_game';
+/**
+ * What X counts: the text, a space, the link (always 23, as t.co) and " via @witchspace_game". The text
+ * is cut to fit 280, with an ellipsis, so the post can always be sent as it opens.
+ */
+export const X_TEXT_MAX = 280 - 1 - 23 - ` via @${X_HANDLE}`.length;
+export const forX = (text: string) => ([...text].length <= X_TEXT_MAX ? text : `${[...text].slice(0, X_TEXT_MAX - 1).join('').trimEnd()}…`);
+
 /** Where a link can be shared: each a web address that opens a ready-made post. */
 export function destinations(url: string, text: string) {
   const u = encodeURIComponent(url);
   const t = encodeURIComponent(text);
   return [
     ['whatsapp', 'WhatsApp', `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`],
-    ['x', 'X', `https://twitter.com/intent/tweet?text=${t}&url=${u}`],
+    ['x', 'X', `https://twitter.com/intent/tweet?text=${encodeURIComponent(forX(text))}&url=${u}&via=${X_HANDLE}`],
     ['bluesky', 'Bluesky', `https://bsky.app/intent/compose?text=${encodeURIComponent(`${text} ${url}`)}`],
     ['reddit', 'Reddit', `https://www.reddit.com/submit?url=${u}&title=${t}`],
     ['facebook', 'Facebook', `https://www.facebook.com/sharer/sharer.php?u=${u}`],
