@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en-GB">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Engine voices (dev only)</title>
+    <!-- Dev only: hear each ship's engine voice without flying her (src/audio/spatial.ts). Not built or deployed. -->
+    <style>
+      html, body { margin: 0; background: #05070d; color: #e8fff6; font: 16px/1.4 system-ui, sans-serif; }
+      main { max-width: 560px; margin: 0 auto; padding: 20px 16px 40px; }
+      h1 { font-size: 20px; letter-spacing: 0.08em; margin: 0 0 4px; }
+      p { color: #9fb3c8; margin: 0 0 16px; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; }
+      button { flex: 1 1 140px; min-height: 52px; font: inherit; color: inherit; background: rgba(61, 255, 176, 0.06); border: 1px solid #2d5a4a; border-radius: 10px; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+      button.on { border-color: #3dffb0; color: #3dffb0; box-shadow: 0 0 10px rgba(61, 255, 176, 0.35); }
+      button.fdl.on { border-color: #c9a8ff; color: #c9a8ff; box-shadow: 0 0 10px rgba(201, 168, 255, 0.4); }
+      label { display: block; margin: 18px 0 6px; color: #9fb3c8; }
+      input[type='range'] { width: 100%; height: 36px; }
+      #pull:active, #pull.held { background: rgba(255, 77, 109, 0.25); border-color: #ff4d6d; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>ENGINE VOICES</h1>
+      <p>Your own ship's engine, then a ship flying past you. Headphones help.</p>
+      <div class="row">
+        <button type="button" data-voice="drone">Cobra · drone</button>
+        <button type="button" data-voice="grand" class="fdl">Fer-de-lance · grand</button>
+      </div>
+      <div class="row">
+        <button type="button" id="spool">Launch (spool-up)</button>
+        <button type="button" id="stop">Stop</button>
+      </div>
+      <label for="speed">Throttle</label>
+      <input id="speed" type="range" min="0" max="1" step="0.01" value="0.3" />
+      <div class="row"><button type="button" id="pull">Hold: pull a hard turn</button></div>
+      <label>A ship flying past (left to right)</label>
+      <div class="row">
+        <button type="button" data-pass="drone">Cobra passes</button>
+        <button type="button" data-pass="grand" class="fdl">Fer-de-lance passes</button>
+      </div>
+    </main>
+    <script type="module" src="./engine.ts"></script>
+  </body>
+</html>
