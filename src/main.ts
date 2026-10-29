@@ -4838,11 +4838,11 @@ function updateSeeker(dt: number) {
     locked = npc;
     // Locked onto the law by mistake: say so, and how to let go, before the trigger.
     const law = npcIdentified(npc) && (npc.role === 'police' || npc.role === 'marshal');
-    const off = isTouch ? 'tap ✕ to disarm' : 'T to disarm';
-    flash(law ? `Missile locked · ${npc.def.name} · police · firing is a crime · ${off}` : `Missile locked · ${npcIdentified(npc) ? npc.def.name : 'unidentified ship'} · fire · ${off}`, law ? 3 : 1.8);
+    const off = isTouch ? 'hold to fire, tap to disarm' : 'X to fire, T to disarm';
+    flash(law ? `Missile locked · ${npc.def.name} · police · firing is a crime · ${off}` : `Missile locked · ${npcIdentified(npc) ? npc.def.name : 'unidentified ship'} · ${off}`, law ? 3 : 1.8);
   } else {
     lockedCommander = target as Remote;
-    flash(`Missile locked · CMDR ${lockedCommander.name} · fire`, 1.5);
+    flash(`Missile locked · CMDR ${lockedCommander.name} · ${isTouch ? 'hold to fire, tap to disarm' : 'X to fire, T to disarm'}`, 1.8);
   }
 }
 
@@ -4870,20 +4870,39 @@ function updateSeekerBox() {
   seekerBox.classList.toggle('tracking', !lockedAt && Boolean(tracking));
 }
 
-// On a touch screen, one missile button by FIRE: Arm (Lock in Classic), then (red) launch.
+// On a touch screen, one missile button by FIRE, worked like a master arm and a guarded trigger
+// (Mark: a thumb by FIRE mustn't launch at the wrong ship). A tap arms (locks, in Classic) or, armed
+// or locked, disarms; only a press held for HOLD_TO_FIRE launches, the button charging as you hold.
 const missileButton = $<HTMLButtonElement>('#touch .missile');
-onTap(missileButton, () => {
+const HOLD_TO_FIRE = 500; // ms
+let holdTimer = 0;
+let fired = false;
+missileButton.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  missileButton.setPointerCapture?.(e.pointerId);
+  fired = false;
+  if (!locked && !lockedCommander) return;
+  missileButton.classList.add('holding');
+  holdTimer = window.setTimeout(() => {
+    fired = true;
+    missileButton.classList.remove('holding');
+    fireMissile();
+    updateMissileButton();
+  }, HOLD_TO_FIRE);
+});
+const releaseMissile = (tap: boolean) => {
+  clearTimeout(holdTimer);
+  missileButton.classList.remove('holding');
+  if (tap && !fired) {
+    if (locked || lockedCommander) disarmMissile();
+    else toggleLock();
+  }
+  fired = false;
   missileButton.blur();
-  if (locked || lockedCommander) fireMissile();
-  else toggleLock();
   updateMissileButton();
-});
-const missileOff = $<HTMLButtonElement>('#touch .missile-off');
-onTap(missileOff, () => {
-  missileOff.blur();
-  disarmMissile();
-  updateMissileButton();
-});
+};
+missileButton.addEventListener('pointerup', () => releaseMissile(true));
+missileButton.addEventListener('pointercancel', () => releaseMissile(false));
 
 /** Its label: how many missiles, and whether one is locked. */
 function updateMissileButton() {
@@ -4894,9 +4913,8 @@ function updateMissileButton() {
   missileButton.classList.toggle('armed', armed);
   missileButton.classList.toggle('seeking', Boolean(seeker) && !armed);
   missileButton.classList.toggle('empty', n <= 0);
-  missileOff.hidden = !(armed || seeker);
   const label =
-    n <= 0 ? 'No missiles' : armed ? (modern ? `Fire ×${n}` : `Missile ×${n}`) : seeker ? `Seeking ×${n}` : modern ? `Arm ×${n}` : `Lock ×${n}`;
+    n <= 0 ? 'No missiles' : armed ? (isTouch ? `Hold to fire ×${n}` : `Fire ×${n}`) : seeker ? `Seeking ×${n}` : modern ? `Arm ×${n}` : `Lock ×${n}`;
   if (missileButton.textContent !== label) missileButton.textContent = label;
 }
 
