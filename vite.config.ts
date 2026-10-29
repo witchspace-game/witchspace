@@ -21,7 +21,9 @@ const input: Record<string, string> = {};
 for (const dir of PAGE_DIRS) findPages(dir, input);
 
 export default defineConfig({
-  build: { rollupOptions: { input } },
+  // Older browsers too (a player on an old Mac couldn't buy food): syntax is brought down to these;
+  // newer runtime calls (structuredClone, Array.at, Object.hasOwn) are kept out of the game's code.
+  build: { target: ['es2020', 'safari14', 'chrome87', 'firefox78', 'edge88'], rollupOptions: { input } },
   // A numbered ship's papers, /ships/<ship>/<edition>/<no>/, are one page per edition: as vercel.json serves them.
   plugins: [
     {

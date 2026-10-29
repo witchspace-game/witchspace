@@ -148,13 +148,13 @@ export function checkSpec(spec: unknown, find: (id: string) => ShipDef | undefin
   const def = typeof o.ship === 'string' ? find(o.ship) : undefined;
   if (!def || !inYards(def)) return null;
   const colour = (c: unknown) => typeof c === 'string' && (c === def.style.lineColor || ORDERABLE.some((p) => p.colour === c));
-  const laser = (l: unknown): l is LaserId => typeof l === 'string' && Object.hasOwn(PLAYER_LASERS, l);
+  const laser = (l: unknown): l is LaserId => typeof l === 'string' && Object.prototype.hasOwnProperty.call(PLAYER_LASERS, l);
   const list = (v: unknown) => (Array.isArray(v) && v.every((x) => typeof x === 'string') ? [...new Set(v as string[])] : null);
   const upgrades = list(o.upgrades ?? []);
   const luxuries = list(o.luxuries ?? []);
   const glow = o.glow ?? 'standard';
   if (!colour(o.colour) || (o.trim != null && !colour(o.trim)) || !laser(o.laser) || (o.rear != null && !laser(o.rear))) return null;
-  if (typeof glow !== 'string' || !Object.hasOwn(GLOWS, glow) || !upgrades || !luxuries) return null;
+  if (typeof glow !== 'string' || !Object.prototype.hasOwnProperty.call(GLOWS, glow) || !upgrades || !luxuries) return null;
   if (!upgrades.every((id) => UPGRADES.some((e) => e.id === id)) || !luxuries.every((id) => ORDERABLE_LUXURIES.some((l) => l.id === id))) return null;
   return {
     ship: def.id,

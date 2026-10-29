@@ -729,7 +729,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     let total = 0;
     if (n > 0) {
       // A dry run on a copy of the commander shows exactly what the trade would cost.
-      const copy = structuredClone(ctx.commander);
+      const copy = JSON.parse(JSON.stringify(ctx.commander)) as typeof ctx.commander; // not structuredClone: Safari before 15.4 hasn't it (a player at Lave couldn't buy food)
       const trial = { ...ctx, commander: copy };
       const before = copy.credits;
       const r = side === 'buy' ? buy(trial, selected, n) : sell(trial, selected, n);
