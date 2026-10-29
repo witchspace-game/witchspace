@@ -5,6 +5,7 @@
 Play it: https://witchspace.org.uk/play/
 Money and markets: https://witchspace.org.uk/economy/ (markets, limit orders, real-time Bitcoin, a currency per system, company stablecoins, liquidity pools; full record at https://witchspace.org.uk/design/economy/)
 Multiplayer: https://witchspace.org.uk/shared-space/ (shared space, in beta: other commanders in the same star system, live, refereed by a server per system)
+Shared flights: a commander's shared clip has its own page, https://witchspace.org.uk/clip/<id>, playing the video they chose, with the fight rebuilt a tap away
 Website and design documents: https://witchspace.org.uk/design/
 
 Code is GPL-3.0. Content is CC BY-SA 4.0. Witchspace is not affiliated with Frontier Developments.

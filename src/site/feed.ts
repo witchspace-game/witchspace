@@ -114,3 +114,16 @@ export function chartedWhat(c: Charted): string {
 export function flyingLine(f: Feed['flying']): string {
   return [f.now ? `${f.now} signed-in commander${f.now === 1 ? '' : 's'} flying now` : '', f.today ? `${f.today} player${f.today === 1 ? '' : 's'} today` : ''].filter(Boolean).join(' · ');
 }
+
+/** The clip to show off: the most hearts in the feed's two days, the newest if it's a tie (so, while nobody's hearted any, the newest). */
+export function featuredClip(feed: Feed): ClipEvent | null {
+  let best: ClipEvent | null = null;
+  for (const e of feed.events) if (e.kind === 'clip' && (!best || e.hearts > best.hearts || (e.hearts === best.hearts && e.t > best.t))) best = e;
+  return best;
+}
+
+/** "CMDR Jameson: 3 kills in one fight at Xeaqu" as who and what, so a card can set them apart; a title of another shape is all "what". */
+export function clipTitle(title: string): { who: string; what: string } {
+  const m = /^(CMDR [^:]+|A commander): (.+)$/.exec(title);
+  return m ? { who: m[1], what: m[2] } : { who: '', what: title };
+}

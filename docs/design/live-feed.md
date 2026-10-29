@@ -7,6 +7,8 @@ card: coriolis
 stages:
   - GET /feed - firsts, clips and how many are flying, public and cached | built
   - The home page feed and ticker, mixing it with the galaxy's events | built
+  - Latest flight - the most hearted clip of the two days (the newest of equals) on its own card, and each clip line with its card small beside it (Mark) | built
+  - Best flights this week - a page ranked by hearts, for Latest flight to link to (needs a list from the server) | idea
   - Milestones - "a clip passed 10 hearts" (needs hearts with timestamps) | idea
 ---
 
