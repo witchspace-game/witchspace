@@ -228,12 +228,24 @@ export const sfx = {
    * filtered static, the voice's own flavour, quiet. Police chirp clean,
    * pirates crackle rough, a Mayday comes twice.
    */
-  squawk: (kind: string) => {
+  squawk: (kind: string, quiet = false) => {
     const rough = kind === 'pirate';
-    zap(rough ? 900 : 2400, rough ? 500 : 1800, 0.025, 0.05, 'square'); // the key going down
-    noise(rough ? 0.14 : 0.09, 'bandpass', rough ? 1400 : 2600, rough ? 700 : 1500, rough ? 0.16 : 0.1);
+    const v = quiet ? 0.5 : 1; // a plain message, nothing to answer: softer
+    zap(rough ? 900 : 2400, rough ? 500 : 1800, 0.025, 0.05 * v, 'square'); // the key going down
+    noise(rough ? 0.14 : 0.09, 'bandpass', rough ? 1400 : 2600, rough ? 700 : 1500, (rough ? 0.16 : 0.1) * v);
     if (kind === 'police') setTimeout(() => zap(1500, 1700, 0.05, 0.035, 'sine'), 90);
     if (kind === 'mayday') setTimeout(() => noise(0.08, 'bandpass', 2200, 1400, 0.1), 160);
+  },
+  /**
+   * The squelch tail (Mark): the speaker lets go of the key, and the receiver's squelch opens for a
+   * moment on bare static before it shuts: a short "ksshh" with a click at its end. Rough for pirates.
+   */
+  squelch: (kind: string, quiet = false) => {
+    const rough = kind === 'pirate';
+    const v = quiet ? 0.5 : 1;
+    noise(rough ? 0.24 : 0.17, 'bandpass', rough ? 1800 : 3200, rough ? 900 : 1600, (rough ? 0.14 : 0.09) * v);
+    noise(0.1, 'highpass', 5000, 3000, 0.04 * v); // the hiss on top
+    setTimeout(() => zap(rough ? 600 : 1200, rough ? 400 : 900, 0.018, 0.035 * v, 'square'), rough ? 220 : 160); // the squelch shutting
   },
   beep: () => {
     const { ctx, master } = audio();

@@ -4328,7 +4328,9 @@ function updateHail() {
     if (!by) return;
     hail = { by, until: elapsed + HAIL_TIME };
     sfx.beep();
-    radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, answers: answerPolice() });
+    // One hail (Mark got two): in Modern the radio card is it, with the seconds left on it; Classic keeps the banner.
+    const deadline = Date.now() + HAIL_TIME * 1000;
+    radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, answers: transponderBroken() && !transponderOff ? answerPolice() : answerPolice().map((a) => ({ ...a, until: deadline, clock: true })) });
   }
   // The Viper that hailed you comes to look.
   hail.by.patrol.centre.copy(player.obj.position);
@@ -4352,7 +4354,8 @@ function updateHail() {
     radio('police', `${currentSystem().name} police`, 'No answer · police are treating you as hostile', { flash: 3, urgent: true, line: 'No answer · police are treating you as hostile' });
     return;
   }
-  box.hidden = false;
+  // In Modern the card carries the hail; the banner stays for a broken transponder, whose clock waits while you hold still.
+  box.hidden = modern() && !broken;
   const left = Math.ceil(hail.until - elapsed);
   const text = broken
     ? `Police hail · transponder damaged: cut your speed and let the Viper read your hull · ${left} s`

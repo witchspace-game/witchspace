@@ -1573,6 +1573,8 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 #touch .missile { min-width: 92px; min-height: 44px; padding: 6px 10px; border-radius: 999px; font-size: 13px; letter-spacing: 0.06em; background: rgba(0, 10, 6, 0.55); }
 #touch .missile.armed { border-color: var(--danger); color: #fff; background: rgba(255, 77, 109, 0.55); box-shadow: 0 0 14px var(--danger); }
 #touch .missile.empty { opacity: 0.45; }
+.rcard-left + .rcard-dismiss { margin-left: 0; }
+.rcard-left { align-self: center; margin-left: auto; padding: 0 6px; color: var(--danger); font-size: 1.1em; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Hold to fire: the trigger charges across the button, and the missile goes when it's full. */
 #touch .missile { position: relative; overflow: hidden; isolation: isolate; touch-action: none; -webkit-user-select: none; user-select: none; }
 #touch .missile::before { content: ''; position: absolute; inset: 0; width: 0; background: rgba(255, 255, 255, 0.35); z-index: -1; }
