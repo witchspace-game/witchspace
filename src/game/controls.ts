@@ -82,13 +82,54 @@ export const DOCKING = (rollDeg: number, fitted = false): string[] => [
 
 /** The phone's fixed controls, as label and what it does. */
 export const PHONE: string[][] = [
-  ['Left side', 'Drag to aim, like a stick: the further you drag, the faster she turns. Sideways rolls.'],
+  ['Left side', 'Drag to aim, like a stick: the further you drag, the faster she turns. Sideways rolls. In a rear or side view, dragging turns that view.'],
   ['Speed', 'Slide up for faster; it stays where you leave it. The fill is the speed you\'re doing, the tick the speed you asked for: when the docking computer slows you, the fill falls and the tick stays.'],
   ['Fire', 'Hold to fire the laser.'],
-  ['Arm', 'Arm a missile, hold a ship in your sights until it locks, then press again (red) to launch.'],
+  ['Missile', 'Tap to arm a missile, and hold a ship in your sights until it locks. Then press and hold to launch; a tap lets go of the lock.'],
   ['ECM', 'Destroys every missile nearby, yours included (needs an E.C.M. system).'],
   ['The big button', 'The obvious next thing, by itself: Dock near a station (with a docking computer), Survey near something to survey, Hyper when your destination is in range, otherwise Jump.'],
+  ['The arrow', 'Tap for front, rear, left or right: the arrow points where you\'re looking, and your lasers fire that way if one is fitted there. To glance, hold it and slide onto a direction: you look that way while you hold, and ahead again when you let go.'],
+  ['The camera', 'Tap for a photo of the view; hold to keep the last 30 seconds in your flight log.'],
+  ['The scanner', 'Tap it to switch range: 4 km for a fight, 12 km for the traffic around you.'],
+  ['The radio', 'Calls arrive as cards: tap an answer, or let them go. Tap the Radio pill to read what was said.'],
 ];
+
+/** The dashboard, label by label (Marketing's copy, 29 October 2026). */
+export const DASHBOARD: string[][] = [
+  ['The scanner', 'The ellipse in the middle: you sit at its centre, facing up. Each contact is a blip on a stalk; a stalk rising means it\'s above you, falling means below.'],
+  ['SH · HL', 'Shields and hull.'],
+  ['SP · FU', 'Speed and fuel.'],
+  ['LT', 'Laser temperature: let it cool, or the laser cuts out.'],
+  ['CT', 'Cabin temperature: it climbs too close to a sun.'],
+  ['RL · DC', 'Roll, and dive or climb: how you\'re turning.'],
+  ['The compass', 'Points to the station: centred and solid, it\'s ahead; hollow, it\'s behind you.'],
+  ['AUTO · DARK', 'AUTO lights while the docking computer flies; DARK while your transponder is off.'],
+  ['The pips', 'Your missiles.'],
+];
+
+/** The flight recorder, for the manual (as it is today; Marketing's copy). */
+export const RECORDER = [
+  'Your ship remembers the last minute of flight and keeps the moments worth keeping: a fight, a Legend, the Marshals, a discovery, a big trade, your last moments.',
+  'When you dock, <b>This trip</b> shows what it kept: share one, keep it, or let it go. Anything you don\'t keep clears after a week; everything you keep is in the <b>Flight log</b>.',
+  'If you\'re destroyed, the insurers recover your recorder and play your last moments. <b>Watch it from outside</b> rebuilds the fight, so you can see what got you.',
+  'Sharing gives a moment its own page, with its own card, that plays for anyone you send it to.',
+];
+
+/** What each drawer button does, said for a phone: no keys (they're the keyboard's). By the key it presses. */
+export const PHONE_DRAWER: Record<string, string> = {
+  KeyJ: 'In-system jump: leap about 10 km ahead (not near ships, the station or the planet).',
+  KeyH: 'Hyperspace to your destination: a 10-second countdown; tap again to cancel.',
+  KeyC: 'Docking computer: it flies you into the slot.',
+  KeyO: 'Combat computer: it flies the fight while you man the turrets. Needs one fitted; touching the flight controls takes over.',
+  KeyG: 'Galaxy map: see where you can go, and choose your destination.',
+  KeyU: 'Surrender to the police: the ship stops itself, then 5 seconds (a fine, and your record is cleared).',
+  KeyB: 'Energy bomb: destroys every ship within 6 km, whoever they are. Single use.',
+  KeyL: 'Hail the ship in your sights, or the station within 5 km.',
+  Backquote: 'Emergency beacon: a Mayday, out of fuel, hull failing, or a call for an escort.',
+  Digit9: 'Survey autopilot: flies to whatever is left to survey or find here, and holds you in range.',
+  Digit0: 'Transponder off or on: run dark, unidentified. Police will hail you; it switches back on after a jump.',
+  KeyN: 'Sound: full, effects only, or off.',
+};
 
 /**
  * What a drawer button does (the drawer is in play/index.html): from the key it

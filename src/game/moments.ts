@@ -30,6 +30,9 @@ export interface MomentContext {
 /** The order a moment is named by when several happen in one clip: the most remarkable first. */
 const WEIGHT: Record<MomentKind, number> = { death: 6, marshals: 5, legend: 4, discovery: 3, trade: 2.5, kill: 2, kept: 1, photo: 0 };
 
+/** How remarkable a moment is (its lead event's weight): This trip shows the best first. */
+export const momentWeight = (events: MomentEvent[]) => (events.length ? WEIGHT[leadEvent(events).kind] : 0);
+
 export function leadEvent(events: MomentEvent[]): MomentEvent {
   return [...events].sort((a, b) => WEIGHT[b.kind] - WEIGHT[a.kind])[0];
 }

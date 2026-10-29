@@ -596,7 +596,10 @@ export class KillCam {
         </div>
         <div class="killcam-row">
           <div class="killcam-seg killcam-views" role="group" aria-label="Camera">
-            <button type="button" data-view="killer" title="${this.death ? 'The ship that got you, and you' : 'Behind the ship you fought'}"${this.killer === undefined ? ' disabled' : ''}>${this.death ? 'Killer' : 'Target'}</button>
+            ${
+              // No ship to follow (a crash into a planet or the station): no button for one, rather than a dead one (Mark).
+              this.killer === undefined ? '' : `<button type="button" data-view="killer" title="${this.death ? 'The ship that got you, and you' : 'Behind the ship you fought'}">${this.death ? 'Killer' : 'Target'}</button>`
+            }
             <button type="button" data-view="you" title="Behind your ship">You</button>
             <button type="button" data-view="orbit" title="Around the fight: drag to turn, scroll to zoom">Orbit</button>
           </div>

@@ -94,7 +94,8 @@ import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
 import { ledgerOf, record as ledgerRecord } from './game/ledger';
 import { filledLine, isRun, newSince, profitOf, runLine, runOf, seenNow } from './game/tradeMoments';
 import { handling, inYards, notesFor } from './game/manual';
-import { controlRows as sharedControlRows, DOCKING, drawerHelp, PHONE, SCHEMES, SCOOP_SPEED, TILT } from './game/controls';
+import { controlRows as sharedControlRows, DASHBOARD, DOCKING, drawerHelp, PHONE, PHONE_DRAWER, RECORDER, SCHEMES, SCOOP_SPEED, TILT } from './game/controls';
+import { forDevice } from './ui/deviceWords';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
@@ -2368,7 +2369,7 @@ function renderDocked() {
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
     ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
     ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
-    ['Destination', c.target === null ? 'None (press G)' : systemAt(here.galaxy, c.target).name],
+    ['Destination', c.target === null ? (isTouch ? 'None (choose on the Galaxy map)' : 'None (press G)') : systemAt(here.galaxy, c.target).name],
     ['Rating', c.difficulty === 'classic' ? combatRating(c.kills) : ratingProgress(c.kills)],
     ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited${myFirsts(here.galaxy) ? ` · ${myFirsts(here.galaxy)} first${myFirsts(here.galaxy) === 1 ? '' : 's'} on the chart` : ''}`],
     ...trailsUnderWay(c, here.galaxy).map((t): [string, string] => ['Trail', `${escapeHtml(t.title)} · ${t.found} of ${t.of} found · the clue points to ${escapeHtml(t.next)}`]),
@@ -2615,14 +2616,14 @@ function renderDocked() {
     const banned = Boolean(item.illegal) && scansCargo(here); // illegal here: not sold
     const unranked = Boolean(item.explorer) && exploreOf(c).points < item.explorer!; // explorers only
     const sold = here.techLevel >= item.minTech && !banned && !unranked;
-    li.innerHTML = `<span>${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${item.blurb}</small>`;
+    li.innerHTML = `<span>${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${forDevice(item.blurb)}</small>`;
     const buy = document.createElement('button');
     if (damaged) {
       buy.textContent = `Repair · ${repairCost.toLocaleString()} Cr`;
       buy.disabled = c.credits < repairCost;
     } else if (!owned && !sold) {
       // High-tech gear needs a high-tech world; illegal gear, a lawless one; explorer's gear, an explorer.
-      buy.textContent = unranked ? `Needs explorer rank ${explorerRank(item.explorer!)}` : banned ? 'Illegal here' : `Needs tech level ${item.minTech}`;
+      buy.textContent = unranked ? `${explorerRank(item.explorer!)} rank` : banned ? 'Illegal here' : `Needs tech level ${item.minTech}`;
       buy.title = unranked ? `You're ${explorerRank(exploreOf(c).points)}: survey, find signals and follow trails to rise` : banned ? 'Sold only where police don\'t scan: anarchies and feudal worlds' : `${here.name} is tech level ${here.techLevel}`;
       buy.disabled = true;
     } else if (owned && item.found) {
@@ -5514,6 +5515,9 @@ function setView(next: Mount, glance = false) {
   }
 }
 
+// Tap the scanner to switch its range (R on a keyboard; a phone had no way: Mark).
+onTap($('#scanner'), () => flash(`Scanner range ${toggleScannerRange() / 1000} km`, 1.2));
+
 /** The touch view picker: four directions round the view button, one tap each (Mark). */
 function showViewPicker(show: boolean) {
   $('#view-picker').hidden = !show;
@@ -6007,8 +6011,9 @@ function openManual(def: ShipDef) {
   const rows = (m: boolean) => controlRows(m).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   const all = [...controlRows(true), ...controlRows(false)];
   const label = (b: HTMLElement) => escapeHtml(b.textContent?.trim() || b.getAttribute('aria-label') || '');
+  // Said for a phone: each button's own words, or the keyboard list's with its keys taken out.
   const drawer = [...document.querySelectorAll<HTMLElement>('#touch .touch-actions button')]
-    .map((b) => `<dt>${label(b)}</dt><dd>${escapeHtml(touchHelp(b, all))}</dd>`)
+    .map((b) => `<dt>${label(b)}</dt><dd>${escapeHtml(PHONE_DRAWER[b.dataset.key ?? ''] ?? touchHelp(b, all).replace(/\s*\((?:[A-Z0-9]|[A-Z0-9] again[^)]*)\)/g, ''))}</dd>`)
     .join('');
   const notes = notesFor(def);
   const kit = mine ? c!.equipment.map((id) => EQUIPMENT.find((e) => e.id === id)).filter(Boolean) : [];
@@ -6036,15 +6041,25 @@ ${papers.aboard.map((a) => `        <dt>${escapeHtml(a.name)}</dt><dd>${escapeHt
       <p class="man-papers meta">One of ${papers.limit}, built at ${escapeHtml(papers.yard)}, ${escapeHtml(papers.system)}.</p>
     </section>`
     : '';
+  // On a phone its own controls come first, and the keyboard's fold away (Mark).
+  const desk = `<section id="man-desk"><h3>On a computer</h3>
+      <p>${SCHEMES}</p>
+      <h4>Mouse and keyboard</h4><dl class="man-keys">${rows(true)}</dl>
+      <h4>Keyboard only</h4><dl class="man-keys">${rows(false)}</dl>
+    </section>`;
   $('#manual-body').innerHTML = `
     ${cover}
-    <nav class="man-toc">${papers ? '<a href="#man-edition">Your edition</a>' : ''}<a href="#man-ship">How she flies</a><a href="#man-dock">Docking</a><a href="#man-desk">On a computer</a><a href="#man-phone">On a phone</a>${kit.length ? '<a href="#man-kit">Your kit</a>' : ''}</nav>
+    <nav class="man-toc">${papers ? '<a href="#man-edition">Your edition</a>' : ''}<a href="#man-ship">How she flies</a><a href="#man-dash">The dashboard</a><a href="#man-dock">Docking</a>${isTouch ? '<a href="#man-phone">On your phone</a>' : '<a href="#man-desk">On a computer</a><a href="#man-phone">On a phone</a>'}<a href="#man-rec">The flight recorder</a>${kit.length ? '<a href="#man-kit">Your kit</a>' : ''}</nav>
     ${yours}
 
     <section id="man-ship"><h3>How she flies</h3>
       ${notes.length ? `<ul>${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
-      <table class="man-table"><tr><th></th><th>${escapeHtml(def.name)}</th><th>against a Cobra</th></tr>
-      ${handling(def, cobra).map((h) => `<tr><td>${h.label}</td><td>${h.value}</td><td>${def.id === 'cobra-mk3' ? '' : h.versus}</td></tr>`).join('')}</table>
+      <table class="man-table"><tr><th></th><th>${escapeHtml(def.name)}</th>${def.id === 'cobra-mk3' ? '' : '<th>against a Cobra</th>'}</tr>
+      ${handling(def, cobra).map((h) => `<tr><td>${h.label}</td><td>${h.value}</td>${def.id === 'cobra-mk3' ? '' : `<td>${h.versus}</td>`}</tr>`).join('')}</table>
+    </section>
+
+    <section id="man-dash"><h3>The dashboard</h3>
+      <dl class="man-keys">${DASHBOARD.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
     </section>
 
     <section id="man-dock"><h3>Docking</h3>
@@ -6054,13 +6069,9 @@ ${DOCKING(roll, standardKit(def).includes('docking-computer')).map((li) => `    
       ${def.id !== 'cobra-mk3' ? `<p class="meta">${escapeHtml(def.name)}: ${escapeHtml(handling(def, cobra).find((h) => h.label === 'Span')!.versus)}.</p>` : ''}
     </section>
 
-    <section id="man-desk"><h3>On a computer</h3>
-      <p>${SCHEMES}</p>
-      <h4>Mouse and keyboard</h4><dl class="man-keys">${rows(true)}</dl>
-      <h4>Keyboard only</h4><dl class="man-keys">${rows(false)}</dl>
-    </section>
+    ${isTouch ? '' : desk}
 
-    <section id="man-phone"><h3>On a phone</h3>
+    <section id="man-phone"><h3>${isTouch ? 'On your phone' : 'On a phone'}</h3>
       <dl class="man-keys">
 ${PHONE.map(([k, v]) => `        <dt>${k}</dt><dd>${v}</dd>
 `).join('')}      </dl>
@@ -6069,8 +6080,11 @@ ${PHONE.map(([k, v]) => `        <dt>${k}</dt><dd>${v}</dd>
       <dl class="man-keys">${drawer}</dl>
       <p class="meta">${TILT}</p>
     </section>
+    ${isTouch ? `<details class="man-more"><summary>On a computer, with a keyboard</summary>${desk}</details>` : ''}
 
-    ${kit.length ? `<section id="man-kit"><h3>Your kit</h3><dl class="man-keys">${kit.map((e) => `<dt>${escapeHtml(e!.name)}</dt><dd>${escapeHtml(e!.blurb)}</dd>`).join('')}</dl></section>` : ''}
+    <section id="man-rec"><h3>The flight recorder</h3>${RECORDER.map((p) => `<p>${p}</p>`).join('')}</section>
+
+    ${kit.length ? `<section id="man-kit"><h3>Your kit</h3><dl class="man-keys">${kit.map((e) => `<dt>${escapeHtml(e!.name)}</dt><dd>${escapeHtml(forDevice(e!.blurb))}</dd>`).join('')}</dl></section>` : ''}
     ${mine && c!.paint?.luxuries?.length ? `<section><h3>Aboard</h3><ul>${c!.paint.luxuries.map((l) => LUXURIES.find((x) => x.id === l)).filter(Boolean).map((l) => `<li><b>${escapeHtml(l!.name)}</b>: ${escapeHtml(l!.blurb)}</li>`).join('')}</ul></section>` : ''}`;
   if (papers)
     void papersLinkFor(papers.editionId, papers.number).then((link) => {
@@ -8354,7 +8368,8 @@ setOutsideView(async (m) => {
   const data = m.track ? await readTrack(m.track).catch(() => null) : null;
   if (!data) return flash("This reconstruction is from an older version of the game and can't be rebuilt", 3);
   document.querySelector<HTMLVideoElement>('#replay video')?.pause();
-  killCam.open(data, { seconds: m.seconds, title: m.title });
+  // Its ✕ means done: back to the game, not to the replay underneath (Mark: "closing it didn't close it").
+  killCam.open(data, { seconds: m.seconds, title: m.title, onClose: () => closeReplay() });
 });
 
 // --- Main loop --------------------------------------------------------------
