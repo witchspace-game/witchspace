@@ -116,6 +116,31 @@ export function boomAt(at: THREE.Vector3, seconds: number, cutoff: number, volum
   src.onended = () => p.disconnect();
 }
 
+/**
+ * How a ship's engines sound (her ship file's style.engine). "drone": a working ship's gritty hum, the
+ * Cobra's. "grand" (Mark: the Fer-de-lance is an expensive ship and should feel it): no buzz, a deep
+ * smooth purr from two pure tones beating slowly, a clean turbine whine that rises with the throttle,
+ * and composure: she strains less in a turn and her thrusters barely hiss.
+ */
+export type EngineVoice = 'drone' | 'grand';
+
+interface VoiceShape {
+  hum: [OscillatorType, number, number]; // wave, Hz at rest, Hz more at full speed
+  hum2: [OscillatorType, number, number];
+  tone: [number, number]; // lowpass: Hz at rest, more at full speed
+  level: [number, number]; // gain at rest, more at full speed
+  /** How much a turn strains her: pitch lift of each tone, brightness, level. */
+  load: [number, number, number, number];
+  hiss: number;
+  /** The turbine: Hz at rest, more at full speed, its level at full speed (none for a drone). */
+  turbine?: [number, number, number];
+}
+
+const VOICES: Record<EngineVoice, VoiceShape> = {
+  drone: { hum: ['sawtooth', 38, 46], hum2: ['triangle', 76.6, 92], tone: [160, 900], level: [0.008, 0.01], load: [0.07, 0.1, 650, 0.012], hiss: 0.035 },
+  grand: { hum: ['sine', 31, 24], hum2: ['sine', 62.35, 48.6], tone: [150, 420], level: [0.014, 0.012], load: [0.03, 0.04, 300, 0.006], hiss: 0.012, turbine: [360, 820, 0.011] },
+};
+
 /** Your own ship: engine hum that tracks speed and strains in a turn, thruster hiss on a hard one. */
 export class EngineSound {
   private nodes: {
@@ -126,21 +151,27 @@ export class EngineSound {
     hiss: AudioBufferSourceNode;
     hissFilter: BiquadFilterNode;
     hissGain: GainNode;
+    turbine?: OscillatorNode;
+    turbineGain?: GainNode;
   } | null = null;
+  private voice: EngineVoice = 'drone';
 
-  start() {
-    if (this.nodes) return;
+  start(voice: EngineVoice = 'drone') {
+    if (this.nodes && this.voice === voice) return;
+    if (this.nodes) this.stop();
+    this.voice = voice;
+    const v = VOICES[voice];
     const { ctx, master } = audioGraph();
     const t = ctx.currentTime;
     const hum = ctx.createOscillator();
-    hum.type = 'sawtooth';
-    hum.frequency.value = 40;
+    hum.type = v.hum[0];
+    hum.frequency.value = v.hum[1];
     const hum2 = ctx.createOscillator();
-    hum2.type = 'triangle';
-    hum2.frequency.value = 80.6; // slightly detuned for a richer drone
+    hum2.type = v.hum2[0];
+    hum2.frequency.value = v.hum2[1]; // slightly detuned from the octave: a richer drone, or a slow purr
     const tone = ctx.createBiquadFilter();
     tone.type = 'lowpass';
-    tone.frequency.value = 160;
+    tone.frequency.value = v.tone[0];
     const humGain = ctx.createGain();
     humGain.gain.setValueAtTime(0, t);
     hum.connect(tone);
@@ -162,13 +193,48 @@ export class EngineSound {
     hum2.start(t);
     hiss.start(t);
     this.nodes = { hum, hum2, tone, humGain, hiss, hissFilter, hissGain };
+    if (v.turbine) {
+      const turbine = ctx.createOscillator();
+      turbine.type = 'sine';
+      turbine.frequency.value = v.turbine[0];
+      const turbineGain = ctx.createGain();
+      turbineGain.gain.value = 0;
+      turbine.connect(turbineGain).connect(master);
+      turbine.start(t);
+      Object.assign(this.nodes, { turbine, turbineGain });
+    }
   }
 
-  /** speed and turn are 0..1. */
+  /**
+   * Leaving the station in a grand tourer: the turbine winds up from a low note to its own over a
+   * couple of seconds, and the purr swells with it, like a good car starting. A drone just runs.
+   */
+  spool() {
+    const n = this.nodes;
+    const v = VOICES[this.voice];
+    if (!n?.turbine || !n.turbineGain || !v.turbine || getSoundMode() !== 'full') return;
+    const { ctx } = audioGraph();
+    const t = ctx.currentTime;
+    this.spooling = t + 2.4;
+    n.turbine.frequency.cancelScheduledValues(t);
+    n.turbine.frequency.setValueAtTime(110, t);
+    n.turbine.frequency.exponentialRampToValueAtTime(v.turbine[0] + v.turbine[1] * this.lastSpeed, t + 2.2);
+    n.turbineGain.gain.cancelScheduledValues(t);
+    n.turbineGain.gain.setValueAtTime(0, t);
+    n.turbineGain.gain.linearRampToValueAtTime(v.turbine[2] * 1.6, t + 1.4);
+    n.turbineGain.gain.linearRampToValueAtTime(v.turbine[2] * 0.6, t + 2.4);
+    n.humGain.gain.cancelScheduledValues(t);
+    n.humGain.gain.setValueAtTime(0, t);
+    n.humGain.gain.linearRampToValueAtTime((v.level[0] + v.level[1]) * 1.5, t + 1.6);
+    n.humGain.gain.linearRampToValueAtTime(v.level[0] + v.level[1] * this.lastSpeed, t + 2.4);
+  }
+
   private lastSpeed = 0;
   private swell = 0;
   /** How hard the ship is being worked (0..1): the drone strains under it (Mark: in a dogfight the speed barely changes, so the note sat flat). */
   private load = 0;
+  /** Until when (audio clock) the launch spool-up has the engine. */
+  private spooling = 0;
 
   /** speed and turn are 0..1; dt in seconds. */
   update(speed: number, turn: number, dt: number) {
@@ -176,6 +242,7 @@ export class EngineSound {
     const { ctx } = audioGraph();
     const t = ctx.currentTime;
     const n = this.nodes;
+    const v = VOICES[this.voice];
     // Changing speed swells the engine; it settles back within a second or so.
     const change = Math.abs(speed - this.lastSpeed) / Math.max(dt, 1e-3);
     this.lastSpeed = speed;
@@ -184,16 +251,22 @@ export class EngineSound {
     const want = Math.min(1, turn);
     this.load += (want - this.load) * (1 - Math.exp(-dt * (want > this.load ? 5 : 1.8)));
     const drone = getSoundMode() === 'full' ? 1 : 0;
-    // Under load the note lifts a little, brightens and grows, and its two voices pull apart into a
-    // growl: subtle, so small corrections are heard without a dogfight sounding like a siren.
-    setParam(n.hum.frequency, (38 + speed * 46) * (1 + 0.07 * this.load), t, 0.12);
-    setParam(n.hum2.frequency, (76.6 + speed * 92) * (1 + 0.1 * this.load), t, 0.12);
-    setParam(n.tone.frequency, 160 + speed * 900 + this.swell * 500 + this.load * 650, t, 0.12);
-    setParam(n.humGain.gain, drone * (0.008 + speed * 0.01 + this.swell * 0.05 + this.load * 0.012), t, 0.15);
-    // Ignore small corrections; hiss only on a real turn.
-    const hiss = Math.max(0, Math.min(1, turn) - 0.2) / 0.8;
-    setParam(n.hissGain.gain, hiss * 0.035, t, 0.08);
+    const [lift, lift2, bright, louder] = v.load;
+    const hiss = Math.max(0, Math.min(1, turn) - 0.2) / 0.8; // ignore small corrections; hiss only on a real turn
+    setParam(n.hissGain.gain, hiss * v.hiss, t, 0.08);
     setParam(n.hissFilter.frequency, 700 + turn * 700, t, 0.08);
+    if (t < this.spooling) return; // the spool-up has the tones for now
+    // Under load the note lifts a little, brightens and grows, and its two voices pull apart: a growl
+    // in a drone, barely a change of breath in a grand tourer.
+    setParam(n.hum.frequency, (v.hum[1] + speed * v.hum[2]) * (1 + lift * this.load), t, 0.12);
+    setParam(n.hum2.frequency, (v.hum2[1] + speed * v.hum2[2]) * (1 + lift2 * this.load), t, 0.12);
+    setParam(n.tone.frequency, v.tone[0] + speed * v.tone[1] + this.swell * 500 + this.load * bright, t, 0.12);
+    setParam(n.humGain.gain, drone * (v.level[0] + speed * v.level[1] + this.swell * 0.05 + this.load * louder), t, 0.15);
+    if (n.turbine && n.turbineGain && v.turbine) {
+      // The turbine sings with the throttle: near silent at rest, a clean rising whine opened up, swelling as you open her.
+      setParam(n.turbine.frequency, v.turbine[0] + speed * v.turbine[1] + this.load * 30, t, 0.25);
+      setParam(n.turbineGain.gain, drone * v.turbine[2] * (0.08 + 0.92 * speed * speed + this.swell * 0.6), t, 0.25);
+    }
   }
 
   stop() {
@@ -203,8 +276,10 @@ export class EngineSound {
     const n = this.nodes;
     setParam(n.humGain.gain, 0, t, 0.15);
     setParam(n.hissGain.gain, 0, t, 0.05);
-    for (const s of [n.hum, n.hum2, n.hiss]) s.stop(t + 1);
+    if (n.turbineGain) setParam(n.turbineGain.gain, 0, t, 0.15);
+    for (const s of [n.hum, n.hum2, n.hiss, ...(n.turbine ? [n.turbine] : [])]) s.stop(t + 1);
     this.nodes = null;
+    this.spooling = 0;
   }
 }
 
@@ -213,27 +288,44 @@ export class ShipVoice {
   private readonly osc: OscillatorNode;
   private readonly gain: GainNode;
   private readonly spatial: Spatial;
+  /** A grand tourer's turbine, heard as she passes. */
+  private readonly turbine: { osc: OscillatorNode; gain: GainNode } | null = null;
 
-  constructor(at: THREE.Vector3) {
+  constructor(at: THREE.Vector3, private readonly voice: EngineVoice = 'drone') {
     const { ctx } = audioGraph();
+    const grand = voice === 'grand';
     this.osc = ctx.createOscillator();
-    this.osc.type = 'triangle';
-    this.osc.frequency.value = 62 + Math.random() * 10;
+    this.osc.type = grand ? 'sine' : 'triangle';
+    this.osc.frequency.value = (grand ? 46 : 62) + Math.random() * 10;
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 420;
+    filter.frequency.value = grand ? 320 : 420;
     this.gain = ctx.createGain();
     this.gain.gain.value = 0;
     this.spatial = makeSpatial(at);
     this.osc.connect(filter).connect(this.gain).connect(this.spatial.input);
     this.osc.start();
+    if (grand) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      osc.connect(gain).connect(this.spatial.input);
+      osc.start();
+      this.turbine = { osc, gain };
+    }
   }
 
   update(at: THREE.Vector3, speed: number) {
     const t = this.gain.context.currentTime;
+    const on = getSoundMode() === 'full' ? 1 : 0;
     this.spatial.place(at);
-    setParam(this.osc.frequency, 60 + speed * 50, t, 0.2);
-    setParam(this.gain.gain, getSoundMode() === 'full' ? 0.12 : 0, t, 0.3);
+    setParam(this.osc.frequency, this.voice === 'grand' ? 44 + speed * 30 : 60 + speed * 50, t, 0.2);
+    setParam(this.gain.gain, on * (this.voice === 'grand' ? 0.14 : 0.12), t, 0.3);
+    if (this.turbine) {
+      setParam(this.turbine.osc.frequency, 380 + speed * 800, t, 0.3);
+      setParam(this.turbine.gain.gain, on * 0.035 * (0.15 + 0.85 * speed), t, 0.3);
+    }
   }
 
   dispose() {
@@ -241,6 +333,10 @@ export class ShipVoice {
     setParam(this.gain.gain, 0, t, 0.1);
     this.osc.stop(t + 0.5);
     this.osc.onended = () => this.spatial.disconnect();
+    if (this.turbine) {
+      setParam(this.turbine.gain.gain, 0, t, 0.1);
+      this.turbine.osc.stop(t + 0.5);
+    }
   }
 }
 

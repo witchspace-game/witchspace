@@ -87,6 +87,13 @@ Each maker has a character, and a line-up in the Porsche way: a way in, the icon
 
 The **halo** is the ship you work towards, or only ever see: some aren't for sale at all.
 
+### How she sounds *(Mark, 29 October 2026)*
+
+A ship's engines have a voice of their own, set in her file (`style.engine`), so she sounds like what she is, to you and to everyone she passes (other ships and commanders in shared space hear it too):
+
+- **drone** (the default): a working ship's gritty hum, the Cobra's.
+- **grand**: Zorgon Petterson's Fer-de-lance and her editions. Mark: "It's a very expensive ship so I wanted it to feel expensive." No buzz: a deep, smooth purr from two pure tones beating slowly, and a clean turbine whine that rises with the throttle, near silent at rest. She's composed in a turn (barely a change of breath, her thrusters hardly hiss), and leaving the station her turbine winds up like a good car starting.
+
 ## 3. Upgrades
 
 - **Upgrades are how you make a ship yours:** the equipment that exists now (fuel scoops, the large cargo bay, ECM, gimbals, the comms array, survey kit...), each limited by class: no large cargo bay on a light fighter, no military lasers on a yacht. No separate trims of the same hull: that would complicate it for little gain *(Mark)*.

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { track as countEvent } from '@vercel/analytics';
 import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
 import { cycleSoundMode, danube, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
-import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt } from './audio/spatial';
+import { boomAt, EngineSound, rocketAt, setListener, ShipVoice, tailWarning, zapAt, type EngineVoice } from './audio/spatial';
 import { withLineUp } from './content/moduleFiles';
 import { shipById, ships } from './content/ships';
 import type { ShipDef } from './content/types';
@@ -182,12 +182,14 @@ function setState(next: State) {
   bankHeld = false;
   if (next === 'flying') {
     showControlsCardOnce();
-    engineSound.start();
+    engineSound.start(voiceOf(player.def));
   } else {
     engineSound.stop();
     clearIndicators();
     for (const v of voices.values()) v.dispose();
     voices.clear();
+    for (const v of remoteVoices.values()) v.dispose();
+    remoteVoices.clear();
   }
 }
 
@@ -2704,6 +2706,10 @@ const npcs: NpcShip[] = [];
 const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role);
 const engineSound = new EngineSound();
 const voices = new Map<NpcShip, ShipVoice>();
+/** Other commanders' engines in shared space, by their id, each with her own voice. */
+const remoteVoices = new Map<string, ShipVoice>();
+/** How a ship's engines sound: her ship file's style.engine (the Fer-de-lance's is a grand tourer's, Mark). */
+const voiceOf = (def: ShipDef | undefined): EngineVoice => def?.style.engine ?? 'drone';
 const VOICE_RANGE = 2000; // hear other ships' engines within this distance
 let tailWarningTimer = 0;
 const beams = new Beams(space.scene);
@@ -4655,12 +4661,31 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   for (const npc of npcs) {
     const near = alive && npc.obj.position.distanceTo(player.obj.position) < VOICE_RANGE;
     let voice = voices.get(npc);
-    if (near && !voice) voices.set(npc, (voice = new ShipVoice(npc.obj.position)));
+    if (near && !voice) voices.set(npc, (voice = new ShipVoice(npc.obj.position, voiceOf(npc.def))));
     if (!near && voice) {
       voice.dispose();
       voices.delete(npc);
     }
     voice?.update(npc.obj.position, npc.ship.speed / npc.ship.maxSpeed);
+  }
+  // And other commanders', each sounding like her ship; her speed from her last two positions.
+  for (const r of sharedSpace.remotes.values()) {
+    const near = alive && r.position.distanceTo(player.obj.position) < VOICE_RANGE;
+    let voice = remoteVoices.get(r.id);
+    if (near && !voice) remoteVoices.set(r.id, (voice = new ShipVoice(r.position, voiceOf(shipById(r.ship)))));
+    if (!near && voice) {
+      voice.dispose();
+      remoteVoices.delete(r.id);
+    }
+    if (!voice) continue;
+    const [a, b] = r.history.slice(-2);
+    const max = shipById(r.ship)?.stats.maxSpeed ?? 300;
+    voice.update(r.position, a && b && b.t > a.t ? Math.min(1, a.p.distanceTo(b.p) / (b.t - a.t) / max) : 0.5);
+  }
+  for (const [id, v] of remoteVoices) {
+    if (sharedSpace.remotes.has(id)) continue;
+    v.dispose();
+    remoteVoices.delete(id);
   }
 
   // Police in lawful-ish systems scan ships that loiter near them.
@@ -6161,6 +6186,7 @@ async function launch() {
   setView('front');
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');
+  engineSound.spool(); // a grand tourer winds up as she leaves (Mark); a drone just runs
   // The station that launched you knows exactly who you are: a broken
   // transponder is logged, not hailed, for the rest of this visit.
   if (repaired !== null) {
