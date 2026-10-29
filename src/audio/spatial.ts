@@ -116,7 +116,7 @@ export function boomAt(at: THREE.Vector3, seconds: number, cutoff: number, volum
   src.onended = () => p.disconnect();
 }
 
-/** Your own ship: engine hum that tracks speed, thruster hiss that tracks turning. */
+/** Your own ship: engine hum that tracks speed and strains in a turn, thruster hiss on a hard one. */
 export class EngineSound {
   private nodes: {
     hum: OscillatorNode;
@@ -167,6 +167,8 @@ export class EngineSound {
   /** speed and turn are 0..1. */
   private lastSpeed = 0;
   private swell = 0;
+  /** How hard the ship is being worked (0..1): the drone strains under it (Mark: in a dogfight the speed barely changes, so the note sat flat). */
+  private load = 0;
 
   /** speed and turn are 0..1; dt in seconds. */
   update(speed: number, turn: number, dt: number) {
@@ -178,11 +180,16 @@ export class EngineSound {
     const change = Math.abs(speed - this.lastSpeed) / Math.max(dt, 1e-3);
     this.lastSpeed = speed;
     this.swell = Math.max(this.swell * Math.exp(-dt * 1.5), Math.min(1, change * 2));
+    // The load follows the stick quickly as you pull and eases off more slowly as you level out.
+    const want = Math.min(1, turn);
+    this.load += (want - this.load) * (1 - Math.exp(-dt * (want > this.load ? 5 : 1.8)));
     const drone = getSoundMode() === 'full' ? 1 : 0;
-    setParam(n.hum.frequency, 38 + speed * 46, t, 0.15);
-    setParam(n.hum2.frequency, 76.6 + speed * 92, t, 0.15);
-    setParam(n.tone.frequency, 160 + speed * 900 + this.swell * 500, t, 0.15);
-    setParam(n.humGain.gain, drone * (0.008 + speed * 0.01 + this.swell * 0.05), t, 0.2);
+    // Under load the note lifts a little, brightens and grows, and its two voices pull apart into a
+    // growl: subtle, so small corrections are heard without a dogfight sounding like a siren.
+    setParam(n.hum.frequency, (38 + speed * 46) * (1 + 0.07 * this.load), t, 0.12);
+    setParam(n.hum2.frequency, (76.6 + speed * 92) * (1 + 0.1 * this.load), t, 0.12);
+    setParam(n.tone.frequency, 160 + speed * 900 + this.swell * 500 + this.load * 650, t, 0.12);
+    setParam(n.humGain.gain, drone * (0.008 + speed * 0.01 + this.swell * 0.05 + this.load * 0.012), t, 0.15);
     // Ignore small corrections; hiss only on a real turn.
     const hiss = Math.max(0, Math.min(1, turn) - 0.2) / 0.8;
     setParam(n.hissGain.gain, hiss * 0.035, t, 0.08);
