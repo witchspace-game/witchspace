@@ -15,6 +15,7 @@ stages:
   - One share sheet, hearts on clips, and an upright cut for Shorts, Reels and TikTok | built
   - This trip at the dock, to keep, share or delete there and then; the library trip by trip (Mark) | built
   - Clip pages: share a moment as its flight track, and the link replays it for anyone | built
+  - Trade moments: a run worth boasting of, and an order filled while you were away (Mark) | built
   - The Witchspace channel: commanders' clips on YouTube (posted by hand for now; an approval queue next) | building
 help:
   - Write the newsroom's voice: what it says when it buys your footage of the Falcon | writing
@@ -108,6 +109,15 @@ The game knows what happened, so the recorder's metadata (who fired first, who d
 **News.** The newsroom buys footage as the survey office buys data ([exploration](exploration.md)): the rarer, the better it pays. A Falcon sighting, the Bastion coming through, a station's frame rising, a famine market. The news item it makes credits your callsign, and travels at the speed of ships like any other.
 
 **Explorers.** The photo taken on a first survey goes on the chart with the world, under your name.
+
+## Trade moments *(Mark, 29 October 2026; built)*
+
+Mark: "you could fly, trade, explore, build and then post straight to twitter". Trading had nothing for the recorder to keep, so now it keeps two kinds of trade (`src/game/tradeMoments.ts`):
+
+- **A run.** A sale at the station that made at least 1,000 Cr and 30% over what the goods cost, worked out from the ledger (the latest buys of that good, matched to what was sold), and only the trip's best: *Ran medicine into the plague at Xeaqu: +4,200 Cr* when an event there wants the good, else *A good run of computers at Lave*. Its clip is the docking at that station, which the recorder still holds when you sell; without one, a photo of where you are. Goods the ledger never saw bought (scooped, or from before it) aren't boasted of.
+- **An order filled while you were away.** A sell order left at a station that filled, learned when the news reached you: *Order filled at Lave while I was at Diso: +900 Cr*, with a photo of where you heard. The ship's log tells you on your phone too (`goodsItems` in `server/src/shipsLog.ts`), at the same moment the game would know, at the speed of ships, in its one quiet message a day.
+
+Both sit in This trip with the share button, like a kill. They have no flight track, so they share as a video or photo with the title rather than as a clip page. Never real money or Bitcoin as the boast.
 
 ## The claim: submit your recorder *(Mark, 25 October 2026)*
 

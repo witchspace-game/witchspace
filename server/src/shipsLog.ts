@@ -6,6 +6,12 @@
 
 import { fillBtcOrders, type BtcOrder, type PriceSpan } from '../../src/economy/bitcoin';
 import { spansSince, type CandleFetch } from '../../src/economy/btcSpans';
+import { commodityById, UNITS_PER_TONNE } from '../../src/economy/commodities';
+import { recover } from '../../src/economy/market';
+import { checkOrders, type OrderState } from '../../src/economy/orders';
+import { checkSentOrders } from '../../src/economy/routes';
+import { systemAt } from '../../src/galaxy/generate';
+import type { Commander } from '../../src/game/commander';
 
 export interface LogKinds {
   /** Bitcoin limit orders filling. */
@@ -44,6 +50,36 @@ export async function btcItems(orders: BtcOrder[], now: number, fetch: CandleFet
     if (!fill) continue;
     const at = Math.round(fill.trade.price);
     out.push({ key: `btc:${o.id}`, text: `your Bitcoin ${o.side} filled at ${at.toLocaleString('en-GB')}` });
+  }
+  return out;
+}
+
+/**
+ * Sell orders for goods that have filled while they were away (Mark), judged as the game judges
+ * them (economy/orders.ts) on a copy of the save, and only once the news of it would have reached
+ * where they are: at the speed of ships (routes.ts knownAt). The game fills the save itself when it
+ * opens, and keeps the fill as a moment to share (game/tradeMoments.ts).
+ */
+export function goodsItems(save: Commander, now: number): LogItem[] {
+  const c = structuredClone(save);
+  if (!c.markets || !c.location) return [];
+  const here = systemAt(c.location.galaxy, c.location.system);
+  const fills = checkSentOrders(c, here, now);
+  // And at the station they're at, which hears at once.
+  const local = c.markets[`${here.galaxy}:${here.index}`] as OrderState | undefined;
+  if (local?.orders?.length) {
+    local.stock = recover(here, local, now).stock;
+    local.updated = now;
+    for (const fill of checkOrders(c, here, local, now)) fills.push({ system: here, fill });
+  }
+  const out: LogItem[] = [];
+  for (const { system, fill } of fills) {
+    const o = fill.order;
+    if (o.side !== 'sell') continue;
+    const good = commodityById(o.id);
+    const unit = good?.unit === 't' || !good ? ' t' : ` ${good.unit}`;
+    const total = Math.round(o.limit * o.qty);
+    out.push({ key: `goods:${system.galaxy}:${system.index}:${o.oid}:${fill.t}`, text: `your order filled at ${system.name}: ${o.qty}${unit} of ${(good?.name ?? o.id).toLowerCase()} sold for ${total.toLocaleString('en-GB')} Cr` });
   }
   return out;
 }

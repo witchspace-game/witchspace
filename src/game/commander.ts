@@ -342,6 +342,8 @@ export interface Commander {
   btcTrades?: BtcTrade[];
   /** Bitcoin limit orders waiting for the price, with what they hold. */
   btcOrders?: BtcOrder[];
+  /** The last ledger entry looked at for trade moments (game/tradeMoments.ts), by its hash. */
+  tradeSeen?: string;
   /** The saloon: drinks bought this visit, and the tips you've heard (game/saloon.ts). */
   saloon?: { drinks: string[]; heard: Heard[] };
   /** System currencies held, by issuing system ("galaxy:index"); no hold space, and they survive the ship. */

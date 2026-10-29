@@ -91,7 +91,8 @@ import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder,
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
-import { record as ledgerRecord } from './game/ledger';
+import { ledgerOf, record as ledgerRecord } from './game/ledger';
+import { filledLine, isRun, newSince, profitOf, runLine, runOf, seenNow } from './game/tradeMoments';
 import { handling, inYards, notesFor } from './game/manual';
 import { controlRows as sharedControlRows, DOCKING, drawerHelp, PHONE, SCHEMES, SCOOP_SPEED, TILT } from './game/controls';
 import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
@@ -685,6 +686,8 @@ function enterDocked(newShip = false) {
   renderDocked();
   setState('docked');
   void showNewMoments(newShip);
+  // Orders left elsewhere that filled while you were away are learned on docking (as the news arrives).
+  if (noticeTrades()) saveCommander(cmdr());
 }
 
 /** Fill the tank as far as the credits go; what to say, or null if it was already full or there was nothing to pay with. */
@@ -2187,6 +2190,7 @@ const exchange = mountExchange($('#exchange'), {
   },
   traded(result) {
     if (result.ok) {
+      noticeTrades();
       saveCommander(cmdr());
       sfx.beep();
     }
@@ -7956,6 +7960,56 @@ function momentContext(): MomentContext | null {
   return { callsign: c.name, system: sys.name, galaxy: sys.galaxy + 1, government: GOVERNMENTS[sys.government], rank: combatRating(c.kills), when: Date.now() };
 }
 
+// --- Trade moments (game/tradeMoments.ts, Mark) --------------------------------
+// A run worth boasting of, and an order that filled while you were away, kept in
+// the flight log like a kill, with a share button. A run's clip is the docking
+// at the station you sold at (the recorder still holds the approach); without
+// one, or for an order filled elsewhere, a photo of where you are.
+
+/** The trip's best run so far: only a better one is kept. */
+let tripBest = { trip: 0, profit: 0 };
+
+/** Look through the ledger's new sales for moments worth keeping. Returns whether anything was looked at (save it). */
+function noticeTrades(): boolean {
+  const c = cmdr();
+  if (classicRules() || state !== 'docked') return false;
+  const l = ledgerOf(c);
+  const from = newSince(l.entries, c.tradeSeen);
+  const last = seenNow(l.entries);
+  if (last === c.tradeSeen) return false;
+  c.tradeSeen = last;
+  const here = currentSystem();
+  for (let i = from; i < l.entries.length; i++) {
+    const r = runOf(l.entries, i);
+    const profit = r && profitOf(r);
+    if (!r || profit === null || profit <= 0) continue;
+    const at = systemAt(r.at[0], r.at[1]);
+    if (at.galaxy !== here.galaxy || at.index !== here.index) {
+      void keepTrade(filledLine(at.name, here.name), profit, false);
+      continue;
+    }
+    if (!isRun(r) || (tripBest.trip === flightFrom && profit <= tripBest.profit)) continue;
+    tripBest = { trip: flightFrom, profit };
+    const ev = activeEvent(here, Date.now());
+    const wanted = ev && (EVENT_KINDS[ev.type].effects[r.good as keyof (typeof EVENT_KINDS)[typeof ev.type]['effects']] ?? 0) < 0;
+    void keepTrade(runLine(commodityById(r.good)?.name ?? r.good, wanted ? EVENT_KINDS[ev.type].name : null), profit, true);
+  }
+  return true;
+}
+
+async function keepTrade(subject: string, credits: number, docking: boolean) {
+  const event: MomentEvent = { kind: 'trade', text: `${subject}: +${Math.round(credits).toLocaleString('en-GB')} Cr`, subject, credits };
+  let m = docking ? await keepMoment(event, 14, 0) : null;
+  const ctx = momentContext();
+  if (!m && ctx) {
+    const photo = await takePhoto($<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo'), isRetro());
+    if (photo) m = await logMoment({ events: [event], ctx }, { photo, poster: null, seconds: 0 });
+  }
+  if (!m) return;
+  flash(`${event.text} · in your flight log`, 3.5);
+  if (state === 'docked') refreshFlightLog();
+}
+
 /** Write a clip or photo into the flight log. Resolves with the logged moment, or null if there was no room. */
 async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 'video' | 'photo' | 'poster' | 'seconds'>): Promise<LoggedMoment | null> {
   const m: LoggedMoment = {
@@ -7976,7 +8030,8 @@ async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 
   }
   // Every clip keeps its fight's track (the last minute, as numbers), so any
   // moment can be watched from outside and filmed upright, not only a death.
-  const data = media.video && !classicRules() ? track.snapshot(trackScene()) : null;
+  // A trade moment's clip is a docking, not a fight: no track (its page would title it as a fight).
+  const data = media.video && !classicRules() && !events.every((e) => e.kind === 'trade') ? track.snapshot(trackScene()) : null;
   if (data) {
     m.track = await trackBlob(data);
     await attachTrack(m.id, m.track).catch(() => undefined);

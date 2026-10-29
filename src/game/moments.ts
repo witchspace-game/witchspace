@@ -4,14 +4,16 @@
 // pictures, so its title, description and tags are true. The flight log, the
 // death replay and (later) the channel agent all write from here.
 
-export type MomentKind = 'death' | 'marshals' | 'legend' | 'discovery' | 'kill' | 'kept' | 'photo';
+export type MomentKind = 'death' | 'marshals' | 'legend' | 'discovery' | 'trade' | 'kill' | 'kept' | 'photo';
 
 export interface MomentEvent {
   kind: MomentKind;
   /** One line about it: "Mamba destroyed · bounty 80 Cr". */
   text: string;
-  /** For kills: the ship destroyed. For legends: which one. */
+  /** For kills: the ship destroyed. For legends: which one. For trade: the run ("Ran medicine into the plague"). */
   subject?: string;
+  /** For trade: what it made, in credits. */
+  credits?: number;
 }
 
 export interface MomentContext {
@@ -25,7 +27,7 @@ export interface MomentContext {
 }
 
 /** The order a moment is named by when several happen in one clip: the most remarkable first. */
-const WEIGHT: Record<MomentKind, number> = { death: 6, marshals: 5, legend: 4, discovery: 3, kill: 2, kept: 1, photo: 0 };
+const WEIGHT: Record<MomentKind, number> = { death: 6, marshals: 5, legend: 4, discovery: 3, trade: 2.5, kill: 2, kept: 1, photo: 0 };
 
 export function leadEvent(events: MomentEvent[]): MomentEvent {
   return [...events].sort((a, b) => WEIGHT[b.kind] - WEIGHT[a.kind])[0];
@@ -54,6 +56,10 @@ export function momentTitle(events: MomentEvent[], ctx: MomentContext): string {
       break;
     case 'kill':
       title = kills.length > 1 ? `${plural(kills.length, 'kill')} in one fight${at}` : `${lead.subject ?? 'Pirate'} down${at}`;
+      break;
+    case 'trade':
+      // "Ran medicine into the plague at Xeaqu: +4,200 Cr" (game/tradeMoments.ts).
+      title = `${lead.subject ?? 'A good run'}${lead.subject?.includes(' at ') ? '' : at}${lead.credits ? `: +${Math.round(lead.credits).toLocaleString('en-GB')} Cr` : ''}`;
       break;
     case 'photo':
       title = `A photo from ${ctx.system}`;
@@ -89,7 +95,8 @@ export function momentTags(events: MomentEvent[], ctx: MomentContext): string[] 
   if (kinds.has('marshals')) ['co-operative marshals', 'capital ship'].forEach((t) => tags.add(t));
   if (kinds.has('legend')) ['legend', 'space pirate'].forEach((t) => tags.add(t));
   if (kinds.has('discovery')) ['exploration', 'first discovery'].forEach((t) => tags.add(t));
-  for (const e of events) if (e.subject) tags.add(e.subject.toLowerCase());
+  if (kinds.has('trade')) ['space trading', 'trade run'].forEach((t) => tags.add(t));
+  for (const e of events) if (e.subject && e.kind !== 'trade') tags.add(e.subject.toLowerCase());
   tags.add(ctx.system.toLowerCase());
   return [...tags];
 }
