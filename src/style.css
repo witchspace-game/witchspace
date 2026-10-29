@@ -1039,6 +1039,40 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
   body[data-state='title'] .tribute { left: var(--column); }
 }
 
+/* --- The docked header, places and wallet (docs/design/docked-on-a-phone.md) --- */
+.dock-head { display: flex; align-items: center; gap: 10px; }
+.dock-head h2 { flex: 1; min-width: 0; }
+.dock-place { display: none; }
+.wallet-button { flex-shrink: 0; padding: 5px 12px; font-size: 14px; font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0.02em; }
+.wallet-button::before { content: ''; display: inline-block; width: 12px; height: 9px; margin-right: 7px; border: 1.5px solid currentColor; border-radius: 2px; vertical-align: -0.5px; }
+.wallet-button[aria-expanded='true'], .dock-place[aria-expanded='true'] { border-color: var(--accent); color: var(--accent); }
+.dock-places { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 12px; }
+.dock-places button { padding: 12px 4px; font-size: 14px; }
+.dock-places button[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
+.wallet-sheet { margin: 8px 0 12px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 8px; background: rgba(0, 12, 8, 0.6); }
+.wallet-title { margin: 0 0 6px; color: var(--dim); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; }
+.wallet-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.wallet-list li { display: grid; gap: 1px; }
+.wallet-list strong { font-size: 17px; font-variant-numeric: tabular-nums; }
+.wallet-list span, .wallet-line { color: var(--dim); font-size: 13px; }
+.wallet-line { margin: 10px 0 0; }
+.wallet-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.wallet-actions button { text-transform: none; letter-spacing: normal; }
+/* A phone held upright: the header replaces the title, location and two rows of tabs. */
+@media (max-width: 700px) and (orientation: portrait) {
+  .panel.docked { background: rgba(0, 10, 7, 0.9); } /* text over a glowing beam was hard to read */
+  .panel.docked > .dock-head h2, .panel.docked > #dock-location, .panel.docked > .tabs { display: none; }
+  .panel.docked > .dock-head { position: sticky; top: -12px; z-index: 2; margin: -12px -14px 8px; padding: 10px 14px 8px; background: rgba(0, 10, 7, 0.97); border-bottom: 1px solid var(--edge); }
+  .dock-place { display: flex; flex: 1; min-width: 0; align-items: baseline; gap: 0; padding: 7px 10px; font-size: 14px; text-align: left; text-transform: none; letter-spacing: 0.02em; }
+  .dock-where { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
+  .dock-which { flex-shrink: 0; font-weight: 600; }
+  .dock-which::after { content: ' ▾'; color: var(--dim); }
+  .dock-place[aria-expanded='true'] .dock-which::after { content: ' ▴'; }
+  .dock-dot { flex-shrink: 0; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); align-self: center; }
+  .dock-dot[hidden] { display: none; }
+}
+@media (min-width: 701px), (orientation: landscape) { .dock-places { display: none !important; } }
+
 /* --- The market as an exchange (Modern rules, neo-vector mode) ----------- */
 
 /* The exchange takes the whole screen; its own top bar replaces the
@@ -1321,6 +1355,42 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   .ex-head { gap: 12px; }
   .ex-canvas { min-height: 220px; }
   .panel.docked.exchange { top: 8px; }
+}
+
+/* The Market on a phone held upright: the game's own look, the list first, the good you tap
+   opening in place, and the chart, book and trades folded away (docs/design/docked-on-a-phone.md). */
+.ex-more-toggle { display: none; }
+@media (max-width: 700px) and (orientation: portrait) {
+  .panel.docked.exchange { left: 12px; right: 12px; top: 10px; bottom: calc(var(--controls-h, 48px) + 50px); padding: 12px 14px; background: rgba(0, 10, 7, 0.92); border-color: var(--edge); }
+  .panel.docked.exchange > .tabs, .panel.docked.exchange > .dock-bar { display: none !important; }
+  body[data-state='docked'].exchange-open nav.controls[data-screen='docked'] { display: flex !important; }
+  .ex {
+    --ex-card: transparent;
+    --ex-line: rgba(61, 255, 176, 0.18);
+    --ex-text: var(--fg);
+    --ex-dim: var(--dim);
+    --ex-up: var(--accent);
+    --ex-down: var(--danger);
+    --ex-gold: var(--amber);
+    font-family: var(--font);
+    font-size: 14px;
+    gap: 10px;
+  }
+  .ex > * { border: none; border-radius: 0; }
+  .ex-pairs { padding: 0; }
+  .ex-market select { background: rgba(0, 12, 8, 0.8); color: var(--fg); border-color: var(--edge); }
+  .ex-list-head { color: var(--accent); letter-spacing: 0.15em; }
+  .ex-pair { padding: 10px 4px; border-left: 0; border-top: 1px solid var(--ex-line); font-size: 15px; }
+  .ex-pair.active { background: rgba(61, 255, 176, 0.07); border-left: 0; box-shadow: inset 2px 0 0 var(--accent); }
+  .ex-sym b { font-weight: 600; }
+  .ex-inline { display: flex; flex-direction: column; gap: 10px; padding: 10px 10px 14px; border: 1px solid var(--edge); border-top: 0; border-radius: 0 0 8px 8px; background: rgba(61, 255, 176, 0.04); }
+  .ex-inline .ex-head { padding: 0; gap: 10px 16px; }
+  .ex-inline .ex-form { padding: 0; overflow: visible; }
+  .ex-sides button[data-side='buy'].active { background: var(--accent); color: #00140c; }
+  .ex-chart, .ex-book, .ex-trades { display: none; }
+  .ex.more-open .ex-chart, .ex.more-open .ex-book, .ex.more-open .ex-trades { display: block; }
+  .ex-more-toggle { display: flex; justify-content: space-between; width: 100%; margin-top: 10px; padding: 10px 4px; border: 0; border-top: 1px solid var(--ex-line); background: none; color: var(--dim); font-size: 14px; text-align: left; }
+  .ex-more-toggle span { color: var(--accent); }
 }
 
 /* P: the shutter flash for a photo. */

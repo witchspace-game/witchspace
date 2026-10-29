@@ -90,8 +90,15 @@
 
     <!-- Docked at the station -->
     <section class="panel docked" data-screen="docked">
-      <h2>Docked</h2>
+      <!-- On a phone held upright, one slim header: where you are and which screen (tap for the places), and your wallet. -->
+      <header class="dock-head">
+        <h2>Docked</h2>
+        <button type="button" class="dock-place" aria-expanded="false" aria-controls="dock-places"><span class="dock-where"></span><b class="dock-which">Station</b><i class="dock-dot" hidden></i></button>
+        <button type="button" class="wallet-button" aria-expanded="false" aria-controls="wallet-sheet" aria-label="Your wallet"></button>
+      </header>
       <p class="meta" id="dock-location">Coriolis Station · Lave</p>
+      <div class="dock-places" id="dock-places" hidden></div>
+      <div class="wallet-sheet" id="wallet-sheet" hidden></div>
       <div class="tabs" role="tablist">
         <button data-tab="station" role="tab">Station</button>
         <button data-tab="contracts" role="tab">Contracts</button>
