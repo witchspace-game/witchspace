@@ -1596,3 +1596,6 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
   .papers-rows { margin-left: 4px; margin-right: 4px; }
   .papers-rows div { grid-template-columns: 1fr; gap: 2px; }
 }
+.manual .man-more > summary { cursor: pointer; color: var(--muted); font-weight: 600; }
+.manual .man-more[open] > summary { margin-bottom: 12px; }
+.manual .man-more > .card { padding: 0; border: 0; background: none; }
