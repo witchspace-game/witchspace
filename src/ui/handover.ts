@@ -1,8 +1,9 @@
 // The handover (the edition delivery pack, Mark): when a numbered edition given
 // to a contributor is collected, the maker hands over the keys with her build
 // certificate full screen, her name now written in. Every fact is from her
-// papers (game/papers.ts). "Fly her" closes it to the berth; "Share her" and
-// "Keep her papers" use her certificate's private link, the owner's to give.
+// papers (game/papers.ts). One button closes it to the berth; her papers are a
+// quiet line below it (Mark: three equal buttons read as a choice of one), using
+// her certificate's private link, the owner's to give.
 
 import type { Papers } from '../game/papers';
 import { escapeHtml } from './escape';
@@ -48,11 +49,10 @@ export function showHandover(el: HTMLElement, h: Handover, closed: () => void) {
       <p class="ho-note">One of ${p.limit}. The number is painted beside her name, and no other ship will carry it.</p>
       <p class="ho-sign">Signed for the yard: <b>${escapeHtml(h.maker)}, ${escapeHtml(p.yard)}</b></p>
     </div>
-    <div class="ho-actions">
-      <button type="button" class="primary ho-fly">Fly her</button>
-      <button type="button" class="ho-share" disabled>Share her</button>
-      <a class="ho-papers" target="_blank" rel="noopener" aria-disabled="true">Keep her papers</a>
-    </div>
+    <button type="button" class="primary ho-fly">To the berth: she’s ready to fly</button>
+    <p class="ho-actions"><span>Her papers are private: only those you give the link to can see them.</span>
+      <a class="ho-papers" target="_blank" rel="noopener" aria-disabled="true">Open them</a>
+      <button type="button" class="ho-share" disabled>Send the link</button></p>
     <p class="ho-msg" aria-live="polite"></p>
   </div>`;
   el.hidden = false;
