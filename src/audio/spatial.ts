@@ -98,17 +98,23 @@ export function rocketAt(at: THREE.Vector3, volume: number) {
 }
 
 // --- A grand tourer's weapons (Mark: the Fer-de-lance's guns should sound as expensive as her engines) ---
-// Crystal lasers: no rasp, a clean bright note with a glassy shimmer above it, a sharp attack and a
-// short ringing tail. Each laser has its own: a pulse snaps, a beam sings, a military laser cracks.
-// Her missile leaves on a damped rail "thock" and a smooth rising whoosh. Your own play where you
-// are; another ship's come from where she is.
+// Her lasers have a voice of their own, in one of three styles being chosen between (Mark found pure
+// ringing tones sounded like tapping a milk bottle): silk, a smooth FM "pew" with no buzz; heavy, two
+// saws sweeping down through a closing filter over a deep thump; plasma, a hot swept burst with a short
+// echo. Each laser has its own: a pulse is short, a beam longer, a military laser lower and harder.
+// Her missile leaves on a damped rail "thock" and a smooth rising whoosh. Your own play where you are;
+// another ship's come from where she is.
 
 export type LaserSound = 'pulse' | 'beam' | 'military';
+export type LaserStyle = 'silk' | 'heavy' | 'plasma';
+/** The style the game uses, until one is chosen (the listening page tries all three). */
+export let laserStyle: LaserStyle = 'silk';
+export const setLaserStyle = (s: LaserStyle) => (laserStyle = s);
 
-const CRYSTAL: Record<LaserSound, { f: number; drop: number; seconds: number; shimmer: number; bite: number; volume: number }> = {
-  pulse: { f: 2350, drop: 0.8, seconds: 0.11, shimmer: 0.35, bite: 0, volume: 0.05 },
-  beam: { f: 2050, drop: 0.92, seconds: 0.24, shimmer: 0.5, bite: 0, volume: 0.042 },
-  military: { f: 1550, drop: 0.72, seconds: 0.17, shimmer: 0.3, bite: 0.05, volume: 0.06 },
+const KINDS: Record<LaserSound, { pitch: number; seconds: number; volume: number }> = {
+  pulse: { pitch: 1, seconds: 0.13, volume: 1 },
+  beam: { pitch: 1.12, seconds: 0.2, volume: 0.8 },
+  military: { pitch: 0.72, seconds: 0.18, volume: 1.15 },
 };
 
 /** Where a sound goes: placed in space, or (null) straight to you. */
@@ -118,17 +124,22 @@ function outlet(at: THREE.Vector3 | null): { input: AudioNode; done: () => void 
   return { input: p.input, done: () => p.disconnect() };
 }
 
-/** A tone that rings and fades: a sine (or triangle) gliding down by `drop` over `seconds`. */
-function ring(out: AudioNode, type: OscillatorType, f: number, drop: number, seconds: number, volume: number, t: number) {
+/** An envelope: up in `attack`, down to nothing by `seconds`. */
+function envelope(g: GainNode, volume: number, t: number, attack: number, seconds: number) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(volume, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + seconds);
+}
+
+/** A tone gliding from f by `ratio` over `seconds`, at `volume` (a thump, a motor's note). */
+function ring(out: AudioNode, type: OscillatorType, f: number, ratio: number, seconds: number, volume: number, t: number) {
   const { ctx } = audioGraph();
   const o = ctx.createOscillator();
   const g = ctx.createGain();
   o.type = type;
   o.frequency.setValueAtTime(f, t);
-  o.frequency.exponentialRampToValueAtTime(f * drop, t + seconds);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(volume, t + 0.004);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + seconds);
+  o.frequency.exponentialRampToValueAtTime(f * ratio, t + seconds);
+  envelope(g, volume, t, 0.004, seconds);
   o.connect(g).connect(out);
   o.start(t);
   o.stop(t + seconds + 0.02);
@@ -136,29 +147,89 @@ function ring(out: AudioNode, type: OscillatorType, f: number, drop: number, sec
 }
 
 /** A Fer-de-lance's laser shot, of each kind: yours (`at` null) or another ship's from where she is. */
-export function crystalShot(kind: LaserSound, at: THREE.Vector3 | null, volume = 1) {
+export function crystalShot(kind: LaserSound, at: THREE.Vector3 | null, volume = 1, style: LaserStyle = laserStyle) {
   const { ctx } = audioGraph();
   const t = ctx.currentTime;
-  const c = CRYSTAL[kind];
+  const k = KINDS[kind];
   const out = outlet(at);
-  const v = c.volume * volume * (at ? 6 : 1); // placed sounds fall off with distance: start them louder
-  const body = ring(out.input, 'sine', c.f, c.drop, c.seconds, v, t);
-  ring(out.input, 'triangle', c.f * 1.5, c.drop, c.seconds * 0.8, v * 0.35, t); // the fifth above, for colour
-  ring(out.input, 'sine', c.f * 3.01, c.drop, c.seconds * 0.5, v * c.shimmer, t); // the glassy shimmer, a hair sharp
-  if (c.bite) {
-    // A military laser's crack: a breath of bright noise at the front.
-    const src = ctx.createBufferSource();
-    src.buffer = noiseBuffer(ctx, 0.04);
-    const f = ctx.createBiquadFilter();
-    f.type = 'highpass';
-    f.frequency.value = 4500;
+  const v = volume * k.volume * (at ? 6 : 1); // placed sounds fall off with distance: start them louder
+  const T = k.seconds;
+  let last: AudioScheduledSourceNode;
+  if (style === 'silk') {
+    // FM: a sine carrier swept down, its brightness from a modulator whose depth dies away. Rich, never buzzy.
+    const car = ctx.createOscillator();
+    const mod = ctx.createOscillator();
+    const depth = ctx.createGain();
     const g = ctx.createGain();
-    g.gain.setValueAtTime(c.bite * volume * (at ? 6 : 1), t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
-    src.connect(f).connect(g).connect(out.input);
+    const f = 1500 * k.pitch;
+    car.frequency.setValueAtTime(f, t);
+    car.frequency.exponentialRampToValueAtTime(f * 0.32, t + T);
+    mod.frequency.setValueAtTime(f * 1.41, t);
+    mod.frequency.exponentialRampToValueAtTime(f * 0.45, t + T);
+    depth.gain.setValueAtTime(f * 2.2, t);
+    depth.gain.exponentialRampToValueAtTime(f * 0.05, t + T);
+    mod.connect(depth).connect(car.frequency);
+    envelope(g, 0.075 * v, t, 0.003, T + 0.03);
+    car.connect(g).connect(out.input);
+    for (const o of [car, mod]) {
+      o.start(t);
+      o.stop(t + T + 0.05);
+    }
+    last = car;
+  } else if (style === 'heavy') {
+    // Two saws a little apart, swept down through a filter closing fast, over a deep thump.
+    const f = 900 * k.pitch;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.Q.value = 6;
+    lp.frequency.setValueAtTime(6500, t);
+    lp.frequency.exponentialRampToValueAtTime(350, t + T);
+    const g = ctx.createGain();
+    envelope(g, 0.05 * v, t, 0.002, T + 0.04);
+    lp.connect(g).connect(out.input);
+    const saws = [1, 1.012].map((d) => {
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(f * d, t);
+      o.frequency.exponentialRampToValueAtTime(f * d * 0.25, t + T);
+      o.connect(lp);
+      o.start(t);
+      o.stop(t + T + 0.06);
+      return o;
+    });
+    ring(out.input, 'sine', 140 * k.pitch, 0.45, T * 0.9, 0.12 * v, t); // the thump
+    last = saws[0];
+  } else {
+    // A hot burst: bright noise swept down through a resonant band with a falling tone in it, and a short echo.
+    const f = 2200 * k.pitch;
+    const echo = ctx.createDelay(0.3);
+    echo.delayTime.value = 0.085;
+    const back = ctx.createGain();
+    back.gain.value = 0.32;
+    const wet = ctx.createGain();
+    wet.gain.value = 0.45;
+    echo.connect(back).connect(echo);
+    echo.connect(wet).connect(out.input);
+    const bus = ctx.createGain();
+    bus.connect(out.input);
+    bus.connect(echo);
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(ctx, T + 0.05);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 7;
+    bp.frequency.setValueAtTime(f, t);
+    bp.frequency.exponentialRampToValueAtTime(f * 0.18, t + T);
+    const g = ctx.createGain();
+    envelope(g, 0.22 * v, t, 0.002, T);
+    src.connect(bp).connect(g).connect(bus);
     src.start(t);
+    ring(bus, 'triangle', f * 0.6, 0.2, T, 0.05 * v, t);
+    last = src;
+    setTimeout(() => out.done(), (T + 0.6) * 1000); // after the echo has died
+    return;
   }
-  body.onended = out.done;
+  last.onended = out.done;
 }
 
 /** A Fer-de-lance's missile: a damped rail release, then the motor lighting in a smooth rising whoosh with a clean tone. */
