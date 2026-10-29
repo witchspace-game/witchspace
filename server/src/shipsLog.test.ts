@@ -34,3 +34,38 @@ describe("the ship's log", () => {
     expect(many.body).toBe('Thing 1 · thing 2 · thing 3 · and 2 more');
   });
 });
+
+describe("goods orders filled while you were away", () => {
+  // A sell order at Diso so cheap it fills at once; the commander docked at Lave.
+  const setup = async () => {
+    const { newCommander } = await import('../../src/game/commander');
+    const { freshMarket } = await import('../../src/economy/market');
+    const { newsDelay } = await import('../../src/economy/events');
+    const { galaxy } = await import('../../src/galaxy/generate');
+    const all = galaxy(0);
+    const lave = all[7];
+    const diso = all.find((s) => s.name === 'Diso')!;
+    const t0 = Date.UTC(2026, 9, 29, 12);
+    const c = newCommander('modern');
+    c.location = { galaxy: 0, system: 7 };
+    c.markets = { [`0:${diso.index}`]: { ...freshMarket(diso, t0), orders: [{ oid: 1, id: 'food', side: 'sell', qty: 5, limit: 0.5, placed: t0, market: 4 }], ordersChecked: t0 } } as never;
+    return { c, t0, delay: newsDelay(diso, lave) };
+  };
+
+  it('is told once the news would have reached them, not before', async () => {
+    const { goodsItems } = await import('./shipsLog');
+    const { c, t0, delay } = await setup();
+    expect(goodsItems(c, t0 + delay / 2)).toEqual([]);
+    const items = goodsItems(c, t0 + delay + 600_000);
+    expect(items).toHaveLength(1);
+    expect(items[0].text).toMatch(/^your order filled at Diso: 5 t of food sold for/);
+  });
+
+  it("leaves the save alone: the game fills it when it opens", async () => {
+    const { goodsItems } = await import('./shipsLog');
+    const { c, t0, delay } = await setup();
+    const before = JSON.stringify(c);
+    goodsItems(c, t0 + delay + 600_000);
+    expect(JSON.stringify(c)).toBe(before);
+  });
+});

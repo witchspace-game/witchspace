@@ -24,7 +24,8 @@ import { readyMessage, type SavedOrder } from './yard';
 import data from './mcp-data.json';
 import { checkSpec } from '../../src/game/shipyard';
 import type { ShipDef } from '../../src/content/types';
-import { awake, btcItems, heartItems, LOG_EVERY, logMessage, type LogItem, type LogKinds } from './shipsLog';
+import { awake, btcItems, goodsItems, heartItems, LOG_EVERY, logMessage, type LogItem, type LogKinds } from './shipsLog';
+import type { Commander } from '../../src/game/commander';
 import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
 import { CHECKS_PER_MINUTE, KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
 import { gitHubReady, openPullRequest, type GitHubEnv } from './github';
@@ -996,8 +997,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const items: LogItem[] = [];
     if (kinds.exchange) {
       const save = this.sql.exec('SELECT data FROM saves WHERE account = ?', row.account).toArray()[0];
-      const orders = save ? ((JSON.parse(save.data as string) as { btcOrders?: BtcOrder[] }).btcOrders ?? []) : [];
+      const data = save ? (JSON.parse(save.data as string) as { btcOrders?: BtcOrder[] } & Commander) : null;
+      const orders = data?.btcOrders ?? [];
       if (orders.length) items.push(...(await btcItems(orders, now, relayCandles, await relayPrice())));
+      // Goods orders left at stations, filled while they were away (heard at the speed of ships).
+      if (data) {
+        try {
+          items.push(...goodsItems(data, now));
+        } catch {
+          /* a save the economy can't read: the game sorts it out when it opens */
+        }
+      }
     }
     if (kinds.hearts && this.env.CLIPS) items.push(...heartItems(await this.env.CLIPS.get(this.env.CLIPS.idFromName('clips')).heartsFor(row.account)));
     const fresh = items.filter((i) => !seen.has(i.key));
