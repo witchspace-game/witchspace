@@ -246,6 +246,14 @@
       </div>
       <!-- P: a photo of the view, without the HUD, straight to the share sheet. Always to hand, for the moment it happens. -->
       <button type="button" id="photo-button" class="photo-button" title="Tap for a photo of the view (P) · hold to keep the last 30 seconds (Shift+P)" aria-label="Take a photo of the view; hold to keep the last 30 seconds"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.6"/></svg></button>
+      <!-- Look front, rear, left or right without the drawer (Mark): tap for the four, tap one. The arrow is where you're looking. -->
+      <button type="button" id="view-button" class="view-button" title="Change view: front, rear, left or right (V)" aria-label="Change view" aria-expanded="false" aria-controls="view-picker"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 5 13h4v7h6v-7h4z"/></svg></button>
+      <div id="view-picker" class="view-picker" role="group" aria-label="View" hidden>
+        <button type="button" data-view="front">Front</button>
+        <button type="button" data-view="left">Left</button>
+        <button type="button" data-view="right">Right</button>
+        <button type="button" data-view="rear">Rear</button>
+      </div>
       <!-- The obvious next step, out of the drawer by itself: Dock, Survey, Hyper or Jump. -->
       <div class="touch-context"><button data-key="KeyJ" class="context-button">Jump</button></div>
       <div class="touch-fly">

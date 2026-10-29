@@ -5449,6 +5449,12 @@ let view: Mount = 'front';
 
 function setView(next: Mount) {
   view = next;
+  // The touch view button points where you're looking; its picker marks the view and closes.
+  const turn: Record<Mount, number> = { front: 0, right: 90, rear: 180, left: -90 };
+  $('#view-button svg').style.transform = `rotate(${turn[view]}deg)`;
+  $('#view-button').classList.toggle('away', view !== 'front');
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#view-picker [data-view]')) b.classList.toggle('on', b.dataset.view === view);
+  showViewPicker(false);
   const label = $('#view-label');
   label.hidden = view === 'front';
   label.textContent = `${view} view`;
@@ -5457,6 +5463,26 @@ function setView(next: Mount) {
     flash(laser ? `${view} view · ${PLAYER_LASERS[laser].name}` : `${view} view · no ${view} laser fitted`, 1.4);
   }
 }
+
+/** The touch view picker: four directions round the view button, one tap each (Mark). */
+function showViewPicker(show: boolean) {
+  $('#view-picker').hidden = !show;
+  $('#view-button').setAttribute('aria-expanded', String(show));
+}
+onTap($('#view-button'), () => {
+  $('#view-button').blur();
+  showViewPicker($('#view-picker').hidden === true);
+});
+for (const b of document.querySelectorAll<HTMLButtonElement>('#view-picker [data-view]'))
+  onTap(b, () => {
+    b.blur();
+    setView(b.dataset.view as Mount);
+  });
+// A tap anywhere else closes it.
+document.addEventListener('pointerdown', (e) => {
+  const t = e.target as Node;
+  if (!$('#view-picker').hidden && !$('#view-picker').contains(t) && !$('#view-button').contains(t)) showViewPicker(false);
+}, true);
 
 /** Which way the current view looks, in the world. */
 function viewDirection(): THREE.Vector3 {
