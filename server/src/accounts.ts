@@ -20,7 +20,8 @@ import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES, type Compa
 import { companyEmail, editionEmail, signInEmail } from './emails';
 import { isPushEndpoint, sendPush } from './push';
 import type { ClipBoard } from './clips';
-import { readyMessage, type SavedOrder } from './yard';
+import { arrivedMessages, readyMessage, type SavedOrder } from './yard';
+import type { StoredShip } from '../../src/game/commander';
 import data from './mcp-data.json';
 import { checkSpec } from '../../src/game/shipyard';
 import type { ShipDef } from '../../src/content/types';
@@ -1016,15 +1017,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (await this.notify(row.account, title, body)) this.sql.exec('UPDATE contact SET logged = ?, seen = ? WHERE account = ?', now, JSON.stringify([...seen, ...fresh.map((i) => i.key)].slice(-300)), row.account);
   }
 
-  /** Your ship is finished: the yard says so, once, on any device you've switched on, outside quiet hours. */
+  /** Your ship is finished, or has been delivered: the yard says so, once, on any device you've switched on, outside quiet hours. */
   private async yardReady(row: ContactRow, now: number) {
     if (!this.devicesOf(row.account).length || !awake(now, row.tz ?? 0)) return;
     const save = this.sql.exec('SELECT data FROM saves WHERE account = ?', row.account).toArray()[0];
-    const order = save ? (JSON.parse(save.data as string) as { order?: SavedOrder }).order : undefined;
-    const msg = readyMessage(order, (id) => SHIP_NAME.get(id) ?? 'ship', now);
+    const data = save ? (JSON.parse(save.data as string) as { order?: SavedOrder; fleet?: StoredShip[] }) : undefined;
+    const name = (id: string) => SHIP_NAME.get(id) ?? 'ship';
     const seen = new Set(JSON.parse(row.seen ?? '[]') as string[]);
-    if (!msg || seen.has(msg.key)) return;
-    if (await this.notify(row.account, msg.title, msg.body)) this.sql.exec('UPDATE contact SET seen = ? WHERE account = ?', JSON.stringify([...seen, msg.key].slice(-300)), row.account);
+    // A finished order, and ships the Carriers' Mutual have brought to you.
+    const msgs = [readyMessage(data?.order, name, now), ...arrivedMessages(data?.fleet, name, now)].filter((m) => m && !seen.has(m.key));
+    for (const msg of msgs) if (msg && (await this.notify(row.account, msg.title, msg.body))) seen.add(msg.key);
+    if (msgs.length) this.sql.exec('UPDATE contact SET seen = ? WHERE account = ?', JSON.stringify([...seen].slice(-300)), row.account);
   }
 
   private async contactEmail(row: ContactRow, company: CompanyId, name: string, subject: string): Promise<boolean> {

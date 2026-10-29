@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { shipById } from '../content/ships';
 import { newCommander } from './commander';
 import { EDITIONS } from '../content/editions';
-import { editionGiftSpec, editionQuote, collection, collectOrder, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, ORDERABLE, PALETTE, placeOrder, standardKit, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
+import { deliverShip, deliveriesArrived, deliveryQuote, editionGiftSpec, editionQuote, collection, collectOrder, swapShip, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, ORDERABLE, PALETTE, placeOrder, standardKit, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
 
 const fdl = shipById('fer-de-lance')!;
 const cobra = shipById('cobra-mk3')!;
@@ -183,11 +183,14 @@ describe('editions and gifts', () => {
     expect(c.gift).toBeUndefined();
     expect(c.order).toMatchObject({ quoted: 0, deposit: 0, gifted: true });
     expect(cancelOrder(c, 0)).toBe(0);
-    // Ready on redeem, and the yard keeps the old Cobra: nothing paid either way.
-    expect(collection(c, cobra)).toEqual({ balance: 0, tradeIn: 0, due: 0 });
+    // Ready on redeem. Let the yard take the starter Cobra and it pays for her kit at the dock's price
+    // (her pulse laser, half of 400 Cr) and nothing for the hull the Co-operative gave (Mark).
+    expect(collection(c, cobra)).toEqual({ balance: 0, tradeIn: 200, due: -200 });
+    expect(collection(c, cobra, true)).toEqual({ balance: 0, tradeIn: 0, due: 0 }); // kept in the hangar: nothing traded
     const before = c.credits;
-    expect(collectOrder(c, cobra, fdl, yard, 0, 0)).toEqual({ ok: true, paid: 0 });
-    expect(c.credits).toBe(before);
+    expect(collectOrder(c, cobra, fdl, yard, 0, 0)).toEqual({ ok: true, paid: -200 });
+    expect(c.credits).toBe(before + 200);
+    expect(c.fleet ?? []).toEqual([]);
     expect(c.paint?.gifted).toBe(true);
     // Traded in, a gifted hull fetches nothing but its kit.
     c.equipment = [];
@@ -253,5 +256,64 @@ describe('a spec from the site', () => {
     expect(validSpec({ ...good, glow: 'nuclear' })).toBeNull();
     expect(validSpec({ ...good, upgrades: ['wisp'] })).toBeNull();
     expect(validSpec({ ...good, luxuries: ['moon'] })).toBeNull();
+  });
+});
+
+describe('your fleet (Mark: "a hangar where you can store your fleet")', () => {
+  const gifted = () => {
+    const c = newCommander('modern');
+    c.equipment = [...c.equipment, 'fuel-scoops', 'ecm'];
+    c.gift = { ship: 'fer-de-lance' };
+    placeOrder(c, fdl, { ...defaultSpec(fdl), colour: '#9fe8ff' }, yard, 0, { gift: true });
+    return c;
+  };
+
+  it('keeps the ship you came in, kit and all, in the hangar where you collected', () => {
+    const c = gifted();
+    expect(collectOrder(c, cobra, fdl, yard, 0, 0, true)).toEqual({ ok: true, paid: 0 });
+    expect(c.ship).toBe('fer-de-lance');
+    expect(c.fleet).toHaveLength(1);
+    expect(c.fleet![0]).toMatchObject({ ship: 'cobra-mk3', at: yard, lasers: { front: 'pulse' } });
+    expect(c.fleet![0].equipment).toEqual(expect.arrayContaining(['fuel-scoops', 'ecm']));
+    expect(c.fleet![0].bought).toBeUndefined(); // the starter was a gift too
+    expect(c.equipment).not.toContain('fuel-scoops'); // her kit stayed with her
+  });
+
+  it('lets the yard take her, paying for her kit as the dock would', () => {
+    const c = gifted();
+    const kit = Math.round((400 + UPGRADES.find((e) => e.id === 'fuel-scoops')!.price + UPGRADES.find((e) => e.id === 'ecm')!.price) / 2);
+    expect(collection(c, cobra)!.tradeIn).toBe(kit);
+  });
+
+  it('swaps ships in the hangar where she waits, the hold going with you if it fits', () => {
+    const c = gifted();
+    collectOrder(c, cobra, fdl, yard, 0, 0, true);
+    const id = c.fleet![0].id;
+    expect(swapShip(c, fdl, cobra, id, { galaxy: 0, system: 8 }, 0, 1)).toMatchObject({ ok: false }); // not here
+    expect(swapShip(c, fdl, cobra, id, yard, 25, 1)).toMatchObject({ ok: false }); // 25 t won't fit a Cobra
+    expect(swapShip(c, fdl, cobra, id, yard, 10, 1)).toEqual({ ok: true });
+    expect(c.ship).toBe('cobra-mk3');
+    expect(c.equipment).toEqual(expect.arrayContaining(['fuel-scoops', 'ecm']));
+    expect(c.fleet!.map((s) => s.ship)).toEqual(['fer-de-lance']);
+    expect(c.fleet![0].paint?.gifted).toBe(true);
+  });
+
+  it("delivers a ship at the Carriers' Mutual's rate, by her size and the distance, as fast as news", () => {
+    // A Cobra 15 LY: about 1,200 Cr, more than the fuel to fly back (60 Cr), a fraction of her value.
+    const q = deliveryQuote(cobra, 15);
+    expect(q.cost).toBe(1200);
+    expect(q.cost / cobra.stats.price).toBeLessThan(0.02);
+    expect(deliveryQuote(fdl, 15).cost).toBeGreaterThan(q.cost * 2);
+    expect(q.ms).toBe(10 * 60_000 + 15 * 12 * 60_000);
+    const c = gifted();
+    collectOrder(c, cobra, fdl, yard, 0, 0, true);
+    c.credits = 5000;
+    const here = { galaxy: 0, index: 8 } as Parameters<typeof deliverShip>[3];
+    const sent = deliverShip(c, cobra, c.fleet![0].id, here, 15, 1000);
+    expect(sent).toMatchObject({ ok: true });
+    expect(c.credits).toBe(3800);
+    expect(deliveriesArrived(c, 1000 + q.ms - 1)).toEqual([]);
+    expect(deliveriesArrived(c, 1000 + q.ms)).toHaveLength(1);
+    expect(c.fleet![0].at).toEqual({ galaxy: 0, system: 8 });
   });
 });
