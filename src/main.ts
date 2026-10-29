@@ -637,6 +637,10 @@ function showNewGame() {
 
 function startCommander(difficulty: Difficulty) {
   commander = newCommander(difficulty);
+  // A new commander hasn't flown: the last commander's trip isn't theirs (Marketing saw "How I died at Lave").
+  flightFrom = Date.now();
+  tripSeen = true;
+  keepTrip();
   clearRadio();
   countNewCommander(difficulty, isRetro() ? '1984' : 'neo');
   setCausedEvents([]);

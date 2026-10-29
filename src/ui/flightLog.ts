@@ -227,8 +227,8 @@ export function openReplay(m: LoggedMoment, heading: string, onChange?: () => vo
   const kept = () => (m.saved ? '★ Starred' : '☆ Star it');
   box.innerHTML = `<div class="replay-card" role="dialog" aria-modal="true" aria-label="${escapeHtml(heading)}">
     <p class="replay-heading">${escapeHtml(heading)}</p>
-    ${m.video ? `<div class="replay-video">${m.poster ? `<img src="${replayUrl(m.poster)}" alt="" />` : ''}<p class="replay-loading">Loading the clip&hellip;</p></div>` : `<img src="${replayUrl(media(m))}" alt="${escapeHtml(m.title)}" />`}
-    <h3>${escapeHtml(m.title)}</h3>
+    ${m.video ? `<div class="replay-video">${m.poster ? `<img src="${replayUrl(m.poster)}" alt="" />` : ''}<p class="replay-loading">Loading the clip&hellip;</p></div>` : `<img src="${replayUrl(media(m))}" alt="${escapeHtml(tidy(m.title))}" />`}
+    <h3>${escapeHtml(tidy(m.title))}</h3>
     <p class="replay-meta">${m.events.map((e) => escapeHtml(e.text)).join(' · ')}</p>
     <div class="replay-actions">
       <button type="button" class="primary" data-act="share">Share</button>
@@ -463,7 +463,7 @@ export async function renderFlightLog(opts: {
       <ul class="log-list">${t.moments
         .map(
           (m) => `<li data-id="${m.id}">
-          <button type="button" class="log-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${url(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s${m.tags.includes('upright') ? ' · upright' : ''}` : 'Photo'}</span></button>
+          <button type="button" class="log-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(tidy(m.title))}"><img src="${url(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s${m.tags.includes('upright') ? ' · upright' : ''}` : 'Photo'}</span></button>
           <div><strong>${escapeHtml(tidy(m.title))}</strong><small>${escapeHtml(m.events.map((e) => e.text).join(' · '))}</small>
           <span class="log-actions"><button type="button" class="moment-star" data-act="keep" aria-pressed="${m.saved}" aria-label="${m.saved ? 'Starred: kept forever' : 'Star it to keep it forever'}">${m.saved ? '★' : '☆'}</button><button type="button" class="primary" data-act="share">Share</button><button type="button" data-act="more">More</button></span></div>
         </li>`,
@@ -524,7 +524,7 @@ export async function openTrip(since: number, opts: { onClose: () => void; onLib
     <header class="trip-head"><h3>Your moments</h3><span>This trip · ${moments.length}</span><button type="button" class="trip-close" aria-label="Done">✕</button></header>
     <ul class="trip-list">
       <li data-id="${best.id}" class="trip-best">
-        <button type="button" class="trip-play" aria-label="${best.video ? 'Watch' : 'View'} ${escapeHtml(best.title)}"><img src="${tripUrl(best.poster ?? media(best))}" alt="" /><span>${length(best)}</span></button>
+        <button type="button" class="trip-play" aria-label="${best.video ? 'Watch' : 'View'} ${escapeHtml(tidy(best.title))}"><img src="${tripUrl(best.poster ?? media(best))}" alt="" /><span>${length(best)}</span></button>
         ${star(best)}
         <strong>${escapeHtml(tidy(best.title))}</strong>
         <small>${escapeHtml(best.events.map((e) => e.text).join(' · '))}</small>
@@ -533,7 +533,7 @@ export async function openTrip(since: number, opts: { onClose: () => void; onLib
       ${rest
         .map(
           (m) => `<li data-id="${m.id}">
-        <button type="button" class="trip-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(m.title)}"><img src="${tripUrl(m.poster ?? media(m))}" alt="" /><span>${length(m)}</span></button>
+        <button type="button" class="trip-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(tidy(m.title))}"><img src="${tripUrl(m.poster ?? media(m))}" alt="" /><span>${length(m)}</span></button>
         <strong>${escapeHtml(tidy(m.title))}</strong>
         <span class="trip-actions">${star(m)}<button type="button" data-act="share">Share</button><button type="button" data-act="more" aria-label="More">⋯</button></span>
       </li>`,
