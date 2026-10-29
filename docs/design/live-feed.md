@@ -81,7 +81,7 @@ Counts only, never names.
   "callsign": "MARK" }   // callsign only if the owner chose, at the handover, to be named; otherwise absent
 ```
 
-- **When:** at collection, not when the maker signs her over (her owner hasn't chosen yet then). Nothing is backfilled: the two signed over on 28 October make the news when they're collected, like any other.
+- **When:** at collection, not when the maker signs her over (her owner hasn't chosen yet then). Nothing is backfilled, with one exception: Mark collected Dark Edition 001 on 28 October, before this existed, and it's announced once when edition news is built, dated then, unnamed unless he asks (Mark; ships-and-classes.md §5). Witch-fire 001 makes the news when it's collected.
 - **Never a callsign by default.** The server leaves it out unless the owner said yes at the handover; the site never has it to show. Mark Moxon's Witch-fire 001 is never named unless he agrees to publicity.
 - **No prices,** ever: editions are by invitation. "One of N", from the edition's own limit, is fine.
 - Within the last 48 hours, newest first, like the others.
