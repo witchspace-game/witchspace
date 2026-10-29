@@ -5,7 +5,8 @@ import { addMoment, BUDGET, byTrip, clearUnkept, deleteMoment, listMoments, mome
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
 import { uprightCut } from './upright';
-import { myClips, sharedLink, shareTrack, takeDownClip, type MyClip } from '../net/clips';
+import { clipIdOf, myClips, putCard, sharedLink, shareTrack, takeDownClip, type MyClip } from '../net/clips';
+import { drawClipCard } from './clipCard';
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 // Object URLs for the flight log's list, and separately for the replay player:
@@ -52,7 +53,16 @@ export function shareMoment(m: LoggedMoment, onChange?: () => void) {
     title: m.title,
     name: fileName(m),
     // A clip with a track can have a page that replays it (net/clips.ts).
-    replay: m.track ? { shared: sharedLink(m.id), put: () => shareTrack(m.id, m.track!, m.seconds) } : undefined,
+    replay: m.track
+      ? {
+          shared: sharedLink(m.id),
+          put: async () => {
+            const r = await shareTrack(m.id, m.track!, m.seconds);
+            if ('url' in r) void sendCard(r.url, r.title, m);
+            return r;
+          },
+        }
+      : undefined,
     upright:
       m.video && !recon
         ? async (onProgress) => {
@@ -169,6 +179,18 @@ export function closeReplay() {
  */
 let allClips = false;
 
+/** Clips whose card this session has drawn (or tried to), so the log doesn't draw one twice. */
+const carded = new Set<string>();
+
+/** Draw a shared clip's card from its moment and put it up beside the clip (ui/clipCard.ts). */
+async function sendCard(url: string, title: string, m: LoggedMoment) {
+  const id = clipIdOf(url);
+  if (!id || carded.has(id)) return;
+  carded.add(id);
+  const jpeg = await drawClipCard(m, title);
+  if (jpeg) await putCard(id, jpeg);
+}
+
 async function showPublic(el: HTMLElement, moments: LoggedMoment[]) {
   const box = el.querySelector<HTMLElement>('.log-public');
   if (!box) return;
@@ -177,9 +199,13 @@ async function showPublic(el: HTMLElement, moments: LoggedMoment[]) {
   const up = clips.filter((c) => c.up);
   // Each clip's picture, from the moment it was shared from, when that's still on this device.
   const posters = new Map<string, string>();
+  const upAt = new Map(clips.filter((c) => c.up).map((c) => [c.url, c]));
   for (const m of moments) {
     const link = sharedLink(m.id);
     if (link) posters.set(link, url(m.poster ?? media(m)));
+    // A clip shared before clips had cards of their own gets one now, from its moment, while that's still here.
+    const c = link ? upAt.get(link) : undefined;
+    if (c && c.card === false) void sendCard(c.url, c.title, m);
   }
   const when = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   const row = (c: MyClip) => `<li data-clip="${c.id}" class="${c.up ? '' : 'down'}">

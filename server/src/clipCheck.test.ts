@@ -84,3 +84,35 @@ describe('a shared clip is checked, and its words written by the server', () => 
     expect(checkTrack(new TextEncoder().encode('not a track at all'), SHIPS, null, 20)).toBe("That isn't a track");
   });
 });
+
+describe('a fight with kills is called that, as the flight log calls it', () => {
+  /** The fight, with more Mambas, each hit by you (or by someone else) and going up. */
+  function kills(byYou: number, byOthers = 0): TrackData {
+    const d = fight();
+    for (let k = 0; k < byYou + byOthers; k++) {
+      const id = 10 + k;
+      d.ships.push({ id, def: k === 0 ? 'mamba' : 'falcon', role: 'pirate', label: 'x' });
+      d.events.push({ t: 7 + k * 0.1, kind: 'beam', from: k < byYou ? 1 : 2, a: [0, 0, 0], b: [500, 30, 0], color: '#3dffb0', hit: id });
+      d.events.push({ t: 7.05 + k * 0.1, kind: 'boom', id, p: [500, 30, 0] });
+    }
+    return d;
+  }
+
+  it('counts three kills in one fight', () => {
+    const c = check(kills(3));
+    if (typeof c === 'string') throw new Error(c);
+    expect(c.title).toBe('CMDR Kestrel: 3 kills in one fight at Lave');
+  });
+
+  it('names a single kill', () => {
+    const c = check(kills(1));
+    if (typeof c === 'string') throw new Error(c);
+    expect(c.title).toBe('CMDR Kestrel: Mamba down at Lave');
+  });
+
+  it("doesn't count a ship someone else finished off", () => {
+    const c = check(kills(1, 2));
+    if (typeof c === 'string') throw new Error(c);
+    expect(c.title).toBe('CMDR Kestrel: Mamba down at Lave');
+  });
+});

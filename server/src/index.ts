@@ -55,9 +55,9 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
     // Clip pages (server/src/clips.ts): moments shared as tracks. The card is for link previewers, so open to all.
-    const card = url.pathname.match(/^\/clip-card\/([a-z0-9]{8,12})$/);
-    if (card) return clipsOf(env).card(card[1]);
-    const clip = url.pathname.match(/^\/clips(?:\/(mine|[a-z0-9]{8,12})(?:\/(heart|report|admin|takedown|putback))?)?$/);
+    const card = url.pathname.match(/^\/clip-card\/([a-z0-9]{8,12})(\.jpg)?$/);
+    if (card) return card[2] ? clipsOf(env).cardPicture(card[1]) : clipsOf(env).card(card[1]);
+    const clip = url.pathname.match(/^\/clips(?:\/(mine|[a-z0-9]{8,12})(?:\/(heart|report|admin|takedown|putback|card))?)?$/);
     if (clip) return clipRoute(request, env, clip[1], clip[2]);
     // The live Bitcoin price, for the exchange (server/src/btc.ts): our pages only.
     if (isBtc(url.pathname)) {
@@ -202,10 +202,14 @@ async function clipRoute(request: Request, env: Env, id: string | undefined, act
     return reply(r, r.status);
   }
   // Yours: the list, and taking one down (or back up). By the signed-in account or this browser's voter id.
-  if (id === 'mine' || action === 'takedown' || action === 'putback') {
+  if (id === 'mine' || action === 'takedown' || action === 'putback' || action === 'card') {
     const auth = request.headers.get('Authorization') ?? '';
     const account = auth.startsWith('Bearer ') ? await accountsOf(env).whoIs(auth.slice(7)) : null;
     if (id === 'mine' && !action && request.method === 'GET') return reply({ clips: await clips.mine(account?.id ?? null, voter) });
+    if (id && id !== 'mine' && action === 'card' && request.method === 'POST') {
+      const r = await clips.setCard(id, await request.arrayBuffer(), account?.id ?? null, voter);
+      return reply(r, r.status);
+    }
     if (id && id !== 'mine' && request.method === 'POST') {
       const r = await clips.takeDown(id, account?.id ?? null, voter, action === 'takedown');
       return reply(r, r.status);
