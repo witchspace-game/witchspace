@@ -846,6 +846,100 @@ function setDockTab(tab: DockTab) {
     exchange.stop();
   }
   if (tab === 'contracts') $('.panel.docked').classList.add('wide');
+  closeDockSheets();
+  updateDockHead();
+}
+
+// --- The slim header (phones held upright), the places and the wallet -------------
+// Mark: "Having 6 or 8 tabs taking up so much space feels wasteful." On a phone held
+// upright the tabs give way to one header, "Station name · Market ▾", that opens the places
+// laid out like the flight view picker, with a dot when anything inside has news; and a wallet
+// button with your credits replaces the Credits line and the Money tab (Mark: "Maybe we should
+// have a wallet rather than Credits"). docs/design/docked-on-a-phone.md.
+
+const tabName = (b: HTMLElement) => (b.getAttribute('aria-label') ?? b.textContent ?? '').replace(/^T · /, '').replace(/,.*$/, '').trim();
+
+function updateDockHead() {
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]')];
+  const active = tabs.find((b) => b.dataset.tab === dockTab);
+  $('.dock-where').textContent = commander ? `${stationName(currentSystem()).name}\u00a0·\u00a0` : '';
+  $('.dock-which').textContent = dockTab === 'money' ? 'Money' : active ? tabName(active) : '';
+  const news = tabs.some((b) => !b.hidden && b.dataset.tab !== dockTab && b.querySelector('.tab-badge'));
+  $('.dock-dot').hidden = !news;
+  $('.dock-place').setAttribute('aria-label', `${$('.dock-which').textContent}: choose a place${news ? ', something new' : ''}`);
+  $('#dock-places').innerHTML = tabs
+    .filter((b) => !b.hidden && b.dataset.tab !== 'money')
+    .map((b) => {
+      const badge = b.querySelector('.tab-badge')?.textContent?.trim();
+      return `<button type="button" data-place="${b.dataset.tab}" aria-pressed="${b.dataset.tab === dockTab}">${escapeHtml(tabName(b))}${badge ? ` <b class="tab-badge">${escapeHtml(badge)}</b>` : ''}</button>`;
+    })
+    .join('');
+  if (commander) $('.wallet-button').textContent = `${Math.floor(cmdr().credits).toLocaleString()} Cr`;
+  if (!$('#wallet-sheet').hidden) renderWallet();
+}
+
+function closeDockSheets() {
+  for (const [sheet, button] of [['#dock-places', '.dock-place'], ['#wallet-sheet', '.wallet-button']]) {
+    $(sheet).hidden = true;
+    $(button).setAttribute('aria-expanded', 'false');
+  }
+}
+
+function toggleSheet(sheet: string, button: string) {
+  const open = $(sheet).hidden;
+  closeDockSheets();
+  if (!open) return;
+  if (sheet === '#wallet-sheet') renderWallet();
+  $(sheet).hidden = false;
+  $(button).setAttribute('aria-expanded', 'true');
+}
+$('.dock-place').addEventListener('click', () => toggleSheet('#dock-places', '.dock-place'));
+$('.wallet-button').addEventListener('click', () => toggleSheet('#wallet-sheet', '.wallet-button'));
+$('#dock-places').addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-place]');
+  if (!b) return;
+  sfx.beep();
+  setDockTab(b.dataset.place as DockTab);
+});
+
+/** The wallet: everything you hold, in one place, and the station's money in a line. */
+function renderWallet() {
+  const c = cmdr();
+  const here = currentSystem();
+  const now = Date.now();
+  const btc = btcNow();
+  const fmtN = (n: number, d = n < 10 ? 2 : 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: n < 10 && n > 0 ? Math.min(d, 2) : 0 });
+  const rows: string[] = [`<li><strong>${c.credits.toLocaleString(undefined, { maximumFractionDigits: 1 })} Cr</strong><span>Credits: good at every station</span></li>`];
+  const sats = satsOf(c);
+  if (sats) rows.push(`<li><strong>${formatBtc(sats)}</strong><span>Bitcoin, at the real price · ${btcValue(c) ? `about ${fmtN(btcValue(c), 0)} Cr now` : 'its price comes in with the news'}</span></li>`);
+  const modern = c.difficulty === 'modern';
+  if (modern)
+    for (const [key, units] of Object.entries(walletOf(c)).filter(([, u]) => u > 1e-6)) {
+      if (isCompanyKey(key)) {
+        const co = COMPANIES[key.slice(3) as CompanyId];
+        rows.push(`<li><strong>${fmtN(units)} ${escapeHtml(co?.name.split(' ')[0] ?? key)} coins</strong><span>Bitcoin-backed · about ${fmtN(units * companyValue(btc), 0)} Cr</span></li>`);
+        continue;
+      }
+      const home = walletHome(key);
+      const hc = currencyOf(home)!;
+      rows.push(`<li><strong>${fmtN(units)} ${hc.ticker}</strong><span>${escapeHtml(hc.name)}, ${escapeHtml(home.name)}’s own money · about ${fmtN(valueOf(key, units, now, btc), 0)} Cr</span></li>`);
+    }
+  const cur = modern ? currencyOf(here) : null;
+  let station = '';
+  if (modern && cur) {
+    const fair = fairRate(here, now, btc);
+    const week = fairRate(here, now - 7 * 86_400_000, btc);
+    const change = (week / fair - 1) * 100;
+    station = `<p class="wallet-line">${escapeHtml(here.name)}’s money, the ${escapeHtml(cur.name)}: 1 Cr ≈ ${fmtN(fair, 2)} ${cur.ticker}, ${Math.abs(change) < 1 ? 'steady this week' : `${change > 0 ? 'up' : 'down'} ${Math.abs(change).toFixed(0)}% this week`}.</p>
+      <div class="wallet-actions"><button type="button" class="primary" data-wallet="money">Change money here</button><button type="button" data-wallet="money">More about it</button></div>`;
+  } else if (modern) station = `<p class="wallet-line">No money is issued at ${escapeHtml(here.name)}: credits do.</p><div class="wallet-actions"><button type="button" data-wallet="money">Money, stablecoins and company coins</button></div>`;
+  $('#wallet-sheet').innerHTML = `<p class="wallet-title">Your wallet</p><ul class="wallet-list">${rows.join('')}</ul>${station}${modern && !sats ? '<p class="wallet-line">Bitcoin trades on the Market.</p>' : ''}`;
+  $('#wallet-sheet').querySelectorAll<HTMLButtonElement>('[data-wallet]').forEach((b) =>
+    b.addEventListener('click', () => {
+      sfx.beep();
+      setDockTab('money');
+    }),
+  );
 }
 document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) =>
   b.addEventListener('click', () => {
@@ -999,6 +1093,7 @@ function markInbox(c: Commander) {
   const tab = $('.tabs [data-tab="contracts"]');
   tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}<span class="tab-badge-word"> new</span></b>` : 'Contracts'; // "2 new" where there's room, "2" on a phone
   tab.setAttribute('aria-label', unread ? `Contracts, ${unread} new` : 'Contracts');
+  updateDockHead();
 }
 
 /** Earlier messages stays open while you archive from it. */
@@ -2330,8 +2425,8 @@ function renderMarket(message = '') {
   if (ex) {
     const ctx = tradeContext();
     const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    const sats = satsOf(ctx.commander);
-    $('#dock-funds').innerHTML = `Credits <b>${fmt(ctx.commander.credits)} Cr</b>${sats ? ` · Bitcoin <b>${formatBtc(sats)}</b>` : ''} · Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>`;
+    updateDockHead();
+    $('#dock-funds').innerHTML = `Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>`;
   }
   $('#exchange').hidden = !ex;
   for (const id of ['#market-summary', '#market-table', '#market-message']) $(id).hidden = ex;
@@ -2441,19 +2536,26 @@ function holdList(c: Commander): string {
 function renderDocked() {
   // The saloon is Modern's: Classic stations are as they were in 1984.
   document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
-  document.querySelector<HTMLElement>('.tabs [data-tab="money"]')!.hidden = cmdr().difficulty === 'classic';
+  // The Money tab gave way to the wallet (Mark): its screen opens from there.
+  document.querySelector<HTMLElement>('.tabs [data-tab="money"]')!.hidden = true;
   if (cmdr().difficulty === 'classic' && dockTab === 'money') setDockTab('station');
   const noYard = cmdr().difficulty === 'classic' || !hasShipyard(currentSystem());
   document.querySelector<HTMLElement>('.tabs [data-tab="shipyard"]')!.hidden = noYard;
   if (noYard && dockTab === 'shipyard') setDockTab('station');
   else if (dockTab === 'shipyard') renderShipyard(); // docking put your own ship in the berth
   const c = cmdr();
+  // A ship waiting for you at this yard: a dot on the header, "ready" on the place.
+  const hereNow = currentSystem();
+  const atYard = (at?: { galaxy: number; system: number }) => at && at.galaxy === hereNow.galaxy && at.system === hereNow.index;
+  const ready = (c.order && atYard(c.order) && production(c.order, Date.now()).built) || (c.gift && (!c.gift.at || atYard(c.gift.at)));
+  $('.tabs [data-tab="shipyard"]').innerHTML = ready ? 'Shipyard <b class="tab-badge">ready</b>' : 'Shipyard';
   showFittings(c);
   refreshFlightLog();
   const here = currentSystem();
   const st = stationName(here);
   $('#dock-location').textContent = `${st.name} · ${here.name}`;
   $('#dock-location').title = st.honours ? `Named for ${st.honours}` : '';
+  updateDockHead();
   // Company contracts are Modern work; Classic stays as 1984.
   $('.tabs [data-tab="contracts"]').hidden = c.difficulty !== 'modern';
   if (dockTab === 'contracts') renderContracts();
@@ -2464,8 +2566,6 @@ function renderDocked() {
   const rows: [string, string][] = [
     ['Commander', `${escapeHtml(c.name)} <button type="button" class="rename" title="Change your callsign">Rename</button>`],
     ['Rules', DIFFICULTIES[c.difficulty].name],
-    ['Credits', `${c.credits.toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr`],
-    ...(satsOf(c) ? ([['Bitcoin', `${formatBtc(satsOf(c))} · ${btcValue(c).toLocaleString(undefined, { minimumFractionDigits: 1 })} Cr · no hold space`]] as [string, string][]) : []),
     ['Ship', `${escapeHtml(player.def.name)} <button type="button" class="small manual-open">Owner's manual</button> <button type="button" class="small manual-open booth-open">Photograph her</button>`],
     // The Dark Edition's running lights, or the full ghost: just the hull (Mark).
     ...(c.paint?.luxuries.includes('black-light-lights')

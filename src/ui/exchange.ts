@@ -106,6 +106,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <button class="ex-routes-toggle" title="Every market within a tank of fuel, as you know it, and the best runs from here">Trade computer ›</button>
         <button class="ex-backroom-toggle" hidden>Back room ›</button>
         <div class="ex-pairs-list"></div>
+        <button class="ex-more-toggle" aria-expanded="false">Chart, order book and trades <span>Show ▾</span></button>
       </aside>
       <header class="ex-head"></header>
       <section class="ex-chart">
@@ -964,7 +965,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     if (isBtc() && remote()) selected = 'food'; // one price everywhere: Bitcoin is traded where you are
     renderBackRoom(ctx);
     renderRoutes(ctx);
+    inline.remove(); // the list is drawn afresh: keep the trade form out of its way
     renderPairs(ctx);
+    placeForPhone();
     root.querySelector('.ex')!.classList.toggle('btc', isBtc());
     $('.ex-feed').hidden = isBtc();
     if (isBtc()) {
@@ -982,6 +985,28 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     renderFeed(ctx);
     renderTrades(ctx);
   }
+
+  // A phone held upright (docs/design/docked-on-a-phone.md, "The Market on a phone"): the list
+  // first, and the good you tap opens in place beneath it with its news and the trade form; the
+  // chart, order book and trades fold away under one line. A computer keeps the full exchange.
+  const phone = window.matchMedia('(max-width: 700px) and (orientation: portrait)');
+  const inline = document.createElement('div');
+  inline.className = 'ex-inline';
+  const head = $('.ex-head');
+  const form = $('.ex-form');
+  function placeForPhone() {
+    const ex = root.querySelector('.ex')!;
+    if (phone.matches) {
+      inline.append(head, form);
+      const active = root.querySelector('.ex-pairs-list .ex-pair.active');
+      if (active) active.after(inline);
+      else $('.ex-pairs-list').append(inline); // the good on screen is folded away in "All other goods"
+    } else if (inline.firstChild) {
+      ex.append(...inline.childNodes);
+      inline.remove();
+    }
+  }
+  phone.addEventListener('change', placeForPhone);
 
   /** The price and candles, asked again as they age (each is kept a while, so this is cheap). */
   let refreshing = false;
@@ -1049,6 +1074,15 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       return;
     } else if (el.classList.contains('ex-rest-toggle')) {
       restOpen = !restOpen;
+    } else if (el.classList.contains('ex-more-toggle')) {
+      const open = root.querySelector('.ex')!.classList.toggle('more-open');
+      el.setAttribute('aria-expanded', String(open));
+      el.querySelector('span')!.textContent = open ? 'Hide ▴' : 'Show ▾';
+      if (open) {
+        chartKey = ''; // drawn while folded away, it had no width: fit it now it has
+        render();
+      }
+      return;
     } else if (el.dataset.id) {
       selected = el.dataset.id;
       if (isBtc()) refreshBtc();
