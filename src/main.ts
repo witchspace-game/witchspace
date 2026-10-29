@@ -82,7 +82,7 @@ import { buildFittings, disposeFittings, type Fittings, type Loadout } from './r
 import { EDITIONS, editionById, editionNo, type Edition } from './content/editions';
 import { papersFor } from './game/papers';
 import { showHandover } from './ui/handover';
-import { accountSpec, editionCounts, forgetAccountSpec, heldEditions, redeemVoucher, signedOver } from './net/shipyard';
+import { accountSpec, editionCounts, forgetAccountSpec, heldEditions, signedOver } from './net/shipyard';
 import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } from './game/spec';
 import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, mintedToday, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, supplyOf, walletHome, walletKey } from './economy/currencies';
 import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
@@ -1382,7 +1382,7 @@ const hasShipyard = (s: StarSystem) => s.techLevel >= SHIPYARD_TECH;
 let yardPick: string | null = null;
 /** The ship being specced, while the configurator is open. */
 let spec: Spec | null = null;
-/** What the configurator is doing: your own spec, naming a numbered edition, or a gift from a voucher. */
+/** What the configurator is doing: your own spec, naming a numbered edition, or a gift signed over to you. */
 let yardMode: 'spec' | 'edition' | 'gift' | 'repaint' = 'spec';
 /** The special edition you're looking at in the yard, if any. */
 let editionSel: string | null = null;
@@ -1905,8 +1905,7 @@ function renderShipyard() {
       ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span>${giftWaiting ? `<span>Waiting for you at the maker’s own yard: ${escapeHtml(stationName(giftWaiting).name)}, ${escapeHtml(giftWaiting.name)}${giftWaiting.galaxy === here.galaxy ? `, ${jumpsBetween(here, giftWaiting, 12)} jumps from here` : ''}.</span>${giftWaiting.galaxy === here.galaxy ? `<button type="button" class="primary yard-gift-course">${c.target === giftWaiting.index ? 'On course' : 'Set course'}</button>` : ''}` : '<button type="button" class="primary yard-open-gift">Spec your gift</button>'}</div>` : ''}
       ${pick.def.id === hullOf(c) && !edition ? `<button type="button" class="yard-manual yard-repaint-open">Repaint your ${escapeHtml(pick.def.name)}</button>` : ''}
       <button type="button" class="yard-manual">The ${escapeHtml(edition ? (shipById(edition.ship)?.name ?? '') : pick.def.name)} owner's manual</button>
-      ${edition ? INVITATION : `<button type="button" class="primary yard-spec">Spec your ${escapeHtml(pick.def.name)}</button>`}
-      <form class="yard-voucher"><label for="voucher">Have a gift voucher?</label><input id="voucher" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false" /><button type="submit">Redeem</button></form>`;
+      ${edition ? INVITATION : `<button type="button" class="primary yard-spec">Spec your ${escapeHtml(pick.def.name)}</button>`}`;
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-yard]'))
       b.onclick = () => {
         yardPick = b.dataset.yard!;
@@ -1964,26 +1963,8 @@ function renderShipyard() {
       resetShowroomView();
       renderShipyard();
     });
-    const form = el.querySelector<HTMLFormElement>('.yard-voucher')!;
-    form.onsubmit = async (e) => {
-      e.preventDefault();
-      if (!signedIn()) {
-        yardMessage = 'Sign in (from the menu) to redeem a voucher: the gift is held for your account.';
-        renderShipyard();
-        return;
-      }
-      const r = await redeemVoucher(form.querySelector<HTMLInputElement>('#voucher')!.value);
-      if ('error' in r) yardMessage = r.error;
-      else if (!shipById(r.ship)) yardMessage = 'That voucher is for a ship this version of the game doesn’t know: reload and try again.';
-      else {
-        c.gift = { ship: r.ship, ...(r.edition && r.number ? { edition: { id: r.edition, number: r.number } } : {}) };
-        saveCommander(c);
-        sfx.beep();
-        openGift();
-        return;
-      }
-      renderShipyard();
-    };
+    // No voucher box (Mark: "nobody gets a gift voucher for a 500K ship!"): an edition is signed
+    // over to a contributor's account (tools/voucher.ts gift) and is waiting when they sign in.
   }
   const tell = el.querySelector<HTMLButtonElement>('.yard-notify');
   if (tell)

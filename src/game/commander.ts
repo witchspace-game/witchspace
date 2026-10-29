@@ -376,7 +376,7 @@ export interface Commander {
   ledger?: Ledger;
   /** Set when the save didn't match its checksum: hand-edited. Numbered editions are closed to it. */
   tampered?: true;
-  /** A gift voucher redeemed, waiting to be specced at a shipyard. */
+  /** A ship signed over to you (tools/voucher.ts gift), waiting to be specced at a shipyard. */
   gift?: { ship: string; edition?: { id: string; number: number }; /** Where she's waiting, if she was signed over at one yard. */ at?: { galaxy: number; system: number } };
   /** A ship you've specced and put a deposit on, in production at a yard (src/game/shipyard.ts). */
   order?: ShipOrder;
