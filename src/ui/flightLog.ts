@@ -5,6 +5,7 @@ import { addMoment, BUDGET, byTrip, clearUnkept, deleteMoment, listMoments, mome
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
 import { isWide, uprightCut } from './upright';
+import { momentWeight } from '../game/moments';
 import { clipIdOf, myClips, putCard, putVideo, sharedLink, shareTrack, takeDownClip, type MyClip } from '../net/clips';
 import { drawClipCard } from './clipCard';
 
@@ -411,7 +412,8 @@ export async function renderFlightLog(opts: {
  */
 export async function openTrip(since: number, opts: { onClose: () => void; onLibrary: () => void; onChange: () => void }) {
   const box = $('#trip-sheet');
-  const moments = (await listMoments()).filter((m) => m.created >= since);
+  // The best first (Mark: the three kills came last, after the death).
+  const moments = (await listMoments()).filter((m) => m.created >= since).sort((a, b) => momentWeight(b.events) - momentWeight(a.events) || b.created - a.created);
   if (!moments.length) return closeTrip();
   revoke(tripUrls);
   const unkept = moments.filter((m) => !m.saved).length;

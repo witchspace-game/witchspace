@@ -157,6 +157,17 @@ In systems where the law is weak or for sale (anarchies, feudal worlds, dictator
 - **Smugglers:** NPC smugglers run contraband from where it's legal to where it isn't, and you compete with them.
 - **The best prices are the most dangerous.** Contraband fetches most where it's banned and the police are strongest. A lawful world's black market pays several times the anarchy price **(to tune)**, if you can get it there.
 
+### Faces in the back room *(idea, Mark, 29 October 2026)*
+
+Mark: "we should have characters that are representing shady deals etc. You build standing with these characters and they build trust where they offer you better paid or even politically motivated jobs!!!" This answers the open question below: the back room is reached through contacts, and contacts are earned.
+
+- **A few faces per back room, each with a trade:** the fence (already in the lore), a smuggler, a fixer with the jobs nobody posts, and, in the right systems, someone whose politics you can't read (the Bureau of Continuity; Mutual radicals against Hexon).
+- **Trust is earned, never bought:** deliver on time, keep quiet, don't get caught. Each step brings better pay, then jobs with names attached.
+- **Trust breaks.** Get caught, or co-operate with the police, and doors close across the region: they talk to one another. And now and then a contact is police (the lore already says some buyers are).
+- **They remember you,** like the saloon regulars ([trading.md](trading.md)), and later with voices of their own.
+- *Later:* political jobs are where Mark's parked factions idea recruits players.
+- **Ties to the scan on the way out** ([law-and-travel.md](law-and-travel.md#scanned-on-the-way-out-idea-mark-29-october-2026)): a trusted contact can get you out quietly, or tip you off before the station's scan.
+
 ### The risks
 
 - **Police scans** on approach find contraband, as they do now: fines, confiscation and an Offender record.
@@ -235,6 +246,6 @@ The terminal for your own commander's docked station, warehouses, and contracts 
 - **Rates:** production, consumption and order sizes, tuned so trade routes are worth flying without any one route being a money machine.
 - ~~**New goods:**~~ settled: Water, Hydrogen fuel cells, Electronics and Medicine join the list (Modern rules only).
 - **Event frequency:** how often a world should be in crisis for the galaxy to feel alive without feeling chaotic.
-- **Black-market access:** is the back room open to everyone in corrupt systems, or reached through contacts and reputation?
+- **Black-market access:** is the back room open to everyone in corrupt systems, or reached through contacts and reputation? *(Mark's answer, 29 October 2026: through faces you earn trust with, above.)*
 - **Merchants:** does a pure Merchant need a commander and a ship at all, or can an account just rent warehouses? Warehouse fees, bond sizes, and how long a contract waits before NPC haulers take it.
 - ~~**Slaves:**~~ settled: kept as in the original, with abolitionist buyers and a liberation mission line.

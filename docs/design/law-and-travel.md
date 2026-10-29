@@ -81,6 +81,13 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
 - **Surrender is not a free escape from a losing fight:** you're exposed until the police arrive.
 - **Firing after surrendering** pushes your record to its most serious level, and that system won't accept another surrender from you for a while.
 
+### Scanned on the way out *(idea, Mark, 29 October 2026)*
+
+Mark: "the station scans you on the way out and on the way in. So if you buy some dodgy stuff from the backroom and launch you immediately get flagged by the police don't you?" Not yet, and that's a loophole: the police's proximity scan happens once per visit to a system (`scanned` in main.ts, reset only when the system's scene is built), lawful stations inspect the hold on docking, and nothing checks on launch. So a commander can arrive clean, be scanned clean, buy contraband in the back room and fly out unseen.
+
+- **A departure scan** where cargo is scanned (governments of 2 and up), as you launch, by the same rules as the inspection on docking.
+- **Counterplay**, so the back room stays worth the risk: the hidden compartment (built); a trusted contact who gets you out quietly or tips you off ([faces in the back room](markets-and-trade.md#faces-in-the-back-room-idea-mark-29-october-2026)); running dark, with its own risk; a bribe in corrupt systems.
+
 ## 4. Getting caught: what you lose
 
 **Handing yourself in is treated more leniently than being caught.**

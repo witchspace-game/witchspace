@@ -258,6 +258,7 @@ function draw() {
   // Systems.
   ctx.font = font;
   ctx.textBaseline = 'middle';
+  const labels: { s: StarSystem; x: number; y: number; size: number; reachable: boolean }[] = [];
   for (const s of galaxy(cur.galaxy)) {
     const [x, y] = toScreen(s);
     if (x < area.left - 4 || y < area.top - 4 || x > area.right + 4 || y > area.bottom + 4) continue;
@@ -278,10 +279,7 @@ function draw() {
       ctx.arc(x, y, size + 2.5, 0, Math.PI * 2);
       ctx.stroke();
     }
-    if (mode === 'local') {
-      ctx.fillStyle = reachable ? colours.text : colours.dim;
-      ctx.fillText(s.name, x + size + 6, y);
-    }
+    if (mode === 'local') labels.push({ s, x, y, size, reachable });
   }
 
   // Current system, chosen destination and the cursor.
@@ -316,6 +314,7 @@ function draw() {
     for (const s of galaxy(cur.galaxy)) {
       if (!opts.news(s)) continue;
       const [x, y] = toScreen(s);
+      if (x < area.left || y < area.top || x > area.right || y > area.bottom) continue; // not over the info panel
       ctx.beginPath();
       ctx.moveTo(x + 7, y - 9);
       ctx.lineTo(x + 10, y - 6);
@@ -338,6 +337,30 @@ function draw() {
   mark(cur, colours.current, 7, false);
   if (opts.target) mark(opts.target, colours.target, 9, false);
   if (cursor) mark(cursor, colours.cursor, 12, true);
+
+  // Names, placed so none is cut off at the edge, hidden by a marker or drawn over another (Mark: "ove"
+  // for Lave). The ones that matter go first and always show: where the cursor is, your destination,
+  // where you are, contracts; then the rest, each where there's room (right, else left), or not at all.
+  if (labels.length) {
+    const ringed = new Set<StarSystem>([cur, ...(opts.target ? [opts.target] : []), ...(cursor ? [cursor] : []), ...(opts.contracts ?? []).map((k) => k.to)]);
+    const rank = (s: StarSystem) => (s === cursor ? 0 : s === opts!.target ? 1 : s === cur ? 2 : ringed.has(s) ? 3 : 4);
+    labels.sort((a, b) => rank(a.s) - rank(b.s));
+    const placed: { l: number; r: number; t: number; b: number }[] = [];
+    const clear = (box: { l: number; r: number; t: number; b: number }) => box.l >= area.left && box.r <= area.right && !placed.some((p) => box.l < p.r && box.r > p.l && box.t < p.b && box.b > p.t);
+    const lineH = retro ? 12 : 16;
+    ctx.textAlign = 'left';
+    for (const { s, x, y, size, reachable } of labels) {
+      const gap = (ringed.has(s) ? (s === cursor ? 20 : 17) : size + 6);
+      const w = ctx.measureText(s.name).width;
+      const right = { l: x + gap, r: x + gap + w, t: y - lineH / 2, b: y + lineH / 2 };
+      const left = { l: x - gap - w, r: x - gap, t: right.t, b: right.b };
+      const box = clear(right) ? right : clear(left) ? left : rank(s) < 4 ? (right.r <= area.right ? right : left) : null;
+      if (!box) continue;
+      placed.push(box);
+      ctx.fillStyle = reachable || ringed.has(s) ? colours.text : colours.dim;
+      ctx.fillText(s.name, box.l, y);
+    }
+  }
 
   title.textContent = mode === 'galactic' ? `Galactic chart · Galaxy ${cur.galaxy + 1}` : `Local chart · ${cur.name}`;
   modeButton.textContent = mode === 'galactic' ? 'Local chart' : 'Whole galaxy';

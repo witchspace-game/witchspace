@@ -544,7 +544,18 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       const touches = (kind.effects[selected] ?? 0) !== 0 || (kind.effects.imports !== undefined && tradeBalance(n.where, selected) < -0.2);
       if (touches) events.push({ time: at(n.heard), position: 'belowBar', shape: 'circle', color: '#7fb2ff', text: `${kind.name} news · ${n.where.name}` });
     }
-    markers.setMarkers([...mine, ...events].sort((a, b) => (a.time as number) - (b.time as number)));
+    // Words only where there's room (Mark: "Police crackdown ends", "Famine news · Riredi" and "Drought news ·
+    // Zaalela" sat on one another): a marker within a sixth of the chart of the last worded one, above or
+    // below alike, keeps its mark and drops its words.
+    const all = [...mine, ...events].sort((a, b) => (a.time as number) - (b.time as number));
+    const room = Math.max(1, Math.ceil(cs.length / 6)) * (ms / 1000);
+    const lastWords: Record<string, number> = {};
+    for (const m of all) {
+      const t = m.time as number;
+      if (m.text && t - (lastWords[m.position] ?? -Infinity) < room) m.text = '';
+      else if (m.text) lastWords[m.position] = t;
+    }
+    markers.setMarkers(all);
     legend(undefined);
   }
 
@@ -831,11 +842,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         const good = commodityById(q.id)!;
         const u = unitLabel(good);
         const held = c.cargo[q.id] ?? 0;
-        return `<tr><td><b>${good.name}</b><small>${ticker(q.id)}</small></td><td class="num">${fmt(q.ask)}</td><td class="num">${fmt(q.bid)}</td>
-          <td class="num">${q.stock.toLocaleString()} ${u}</td><td class="num">${held.toLocaleString()} ${u}</td>
+        // Buy only what they have and you can pay for (Mark's 100 Cr could "buy" Narcotics at 255: it checked their stock alone).
+        const can = (n: number) => q.stock >= n && c.credits >= q.ask * n;
+        return `<tr><td><b>${good.name}</b><small>${ticker(q.id)}</small></td><td class="num" data-l="They sell">${fmt(q.ask)}</td><td class="num" data-l="They buy">${fmt(q.bid)}</td>
+          <td class="num" data-l="Stock">${q.stock.toLocaleString()} ${u}</td><td class="num" data-l="Your hold">${held.toLocaleString()} ${u}</td>
           <td class="ex-back-actions">
-            <button data-back="buy" data-good="${q.id}" data-n="1" ${q.stock >= 1 ? '' : 'disabled'}>Buy 1</button>
-            <button data-back="buy" data-good="${q.id}" data-n="5" ${q.stock >= 5 ? '' : 'disabled'}>Buy 5</button>
+            <button data-back="buy" data-good="${q.id}" data-n="1" ${can(1) ? '' : 'disabled'}>Buy 1</button>
+            <button data-back="buy" data-good="${q.id}" data-n="5" ${can(5) ? '' : 'disabled'}>Buy 5</button>
             <button data-back="sell" data-good="${q.id}" data-n="1" ${held >= 1 ? '' : 'disabled'}>Sell 1</button>
             <button data-back="sell" data-good="${q.id}" data-n="${held}" ${held >= 1 ? '' : 'disabled'}>Sell all</button>
           </td></tr>`;
