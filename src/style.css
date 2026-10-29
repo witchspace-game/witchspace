@@ -1502,6 +1502,17 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard-order strong { color: var(--hull); }
 .yard-order span { font-size: 13px; color: var(--dim); }
 .yard-order .rec-meter { margin: 4px 0; }
+.yard-old { display: grid; gap: 6px; margin: 10px 0; }
+.yard-old-head { margin: 0; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+.yard-old button { display: grid; gap: 2px; padding: 9px 12px; text-align: left; text-transform: none; letter-spacing: normal; font-size: 14px; }
+.yard-old button span { font-size: 12px; color: var(--dim); line-height: 1.35; }
+.yard-old button[aria-checked='true'] { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 25%, transparent); }
+.yard-fleet { margin: 0 0 12px; }
+.yard-fleet ul { display: grid; gap: 8px; margin: 6px 0 0; padding: 0; list-style: none; }
+.yard-fleet li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--hull); border-radius: 8px; }
+.yard-fleet li strong { color: var(--hull); }
+.yard-fleet li span { font-size: 13px; color: var(--dim); }
+.yard-fleet li button { justify-self: start; text-transform: none; letter-spacing: normal; }
 .yard-order .rec-meter span { background: var(--hull); box-shadow: 0 0 8px var(--hull); }
 .yard-edition-no { color: var(--hull) !important; font-weight: 600; letter-spacing: 0.04em; }
 .yard-spec-list { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }

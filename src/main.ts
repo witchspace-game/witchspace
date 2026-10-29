@@ -87,7 +87,7 @@ import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } fro
 import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, mintedToday, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, supplyOf, walletHome, walletKey } from './economy/currencies';
 import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
 import { enablePush, needsHomeScreen } from './net/notify';
-import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, giftTradeIn, tradeIn, deliverShip, deliveriesArrived, deliveryQuote, swapShip, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
@@ -685,6 +685,13 @@ function enterDocked(newShip = false) {
       if (state === 'docked') renderDocked();
       setTimeout(() => flash(fills.join(' · '), 6), newShip ? 7000 : 1200);
     });
+  // Ships the Carriers' Mutual were bringing here may have arrived.
+  const arrived = deliveriesArrived(cmdr(), Date.now());
+  if (arrived.length) {
+    saveCommander(cmdr());
+    const words = arrived.map((s) => `Your ${shipById(s.ship)?.name ?? 'ship'} has arrived at ${systemAt(s.at.galaxy, s.at.system).name}`);
+    setTimeout(() => flash(words.join(' · '), 5), newShip ? 8000 : 1500);
+  }
   // The companies may have been in touch while you were away.
   if (checkMessages(cmdr(), currentSystem(), Date.now()).length) saveCommander(cmdr());
   // Modern: the station fills your tank as you dock, as far as your credits go (Mark: forgetting
@@ -1432,14 +1439,67 @@ function notifyPrompt(): string {
     : '<button type="button" class="yard-notify">Tell me when she’s ready: turn on notifications</button>';
 }
 
+/**
+ * Collecting a ship: what happens to the one you came in (Mark). Keep her in your hangar, as she is,
+ * free; or let the yard take her (a gift's yard pays for her kit at the dock's price; an order's, its
+ * trade-in). Kept unless you choose otherwise.
+ */
+let keepOld = true;
+function oldShipChoice(gift: boolean): string {
+  const c = cmdr();
+  const name = `${player.def.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}`;
+  const kit = c.equipment.filter((id) => UPGRADES.some((e) => e.id === id)).map((id) => EQUIPMENT.find((e) => e.id === id)?.name ?? id);
+  const lasers = Object.values(c.lasers).filter(Boolean).map((l) => PLAYER_LASERS[l!].name);
+  const aboard = [...lasers, ...kit];
+  const taken = gift ? giftTradeIn(c, player.def) : tradeIn(c, player.def);
+  const pays = taken ? `${taken.toLocaleString()} Cr` : 'nothing';
+  const here = stationName(currentSystem()).name;
+  return `<div class="yard-old" role="radiogroup" aria-label="Your ${escapeHtml(player.def.name)}">
+      <p class="yard-old-head">Your ${escapeHtml(name)}</p>
+      <button type="button" role="radio" data-old="keep" aria-checked="${keepOld}"><b>Keep her in your hangar</b><span>As she is, for later${aboard.length ? `: ${escapeHtml(aboard.join(', '))}` : ''}. Free. She waits here at ${escapeHtml(here)}.</span></button>
+      <button type="button" role="radio" data-old="sell" aria-checked="${!keepOld}"><b>Let the yard take her</b><span>${gift ? `The yard pays ${pays} for her kit, what the dock pays for each item.${c.paint?.gifted ? ' Her hull was a gift, so it pays nothing.' : c.ship === undefined ? ' She came with your licence, so her hull pays nothing.' : ''}` : `The yard gives ${pays} for her and her kit.`}</span></button>
+    </div>`;
+}
+
 /** The way to take delivery: here at the yard that built it, the bill with your trade-in; elsewhere, where to go. */
 function collectButton(o: ShipOrder): string {
   const here = currentSystem();
   if (o.galaxy !== here.galaxy || o.system !== here.index) return '';
-  const bill = collection(cmdr(), player.def)!;
+  const bill = collection(cmdr(), player.def, keepOld)!;
   const pay = bill.due >= 0 ? `pay ${Math.ceil(bill.due).toLocaleString()} Cr` : `receive ${Math.floor(-bill.due).toLocaleString()} Cr`;
-  return `<span>Balance ${bill.balance.toLocaleString()} Cr, less ${bill.tradeIn.toLocaleString()} Cr for your ${escapeHtml(player.def.name)} and its kit</span>
-    <button type="button" class="primary yard-collect" ${cmdr().credits < bill.due ? 'disabled' : ''}>Collect her · ${pay}</button>`;
+  return `${o.gifted ? '' : oldShipChoice(false)}${keepOld ? '' : `<span>Balance ${bill.balance.toLocaleString()} Cr, less ${bill.tradeIn.toLocaleString()} Cr for your ${escapeHtml(player.def.name)} and its kit</span>`}
+    ${o.gifted ? oldShipChoice(true) : ''}
+    <button type="button" class="primary yard-collect" ${cmdr().credits < bill.due ? 'disabled' : ''}>Collect her${bill.due ? ` · ${pay}` : ''}</button>`;
+}
+
+/** Your fleet: the ships waiting in hangars, where each is, and swapping or sending for her (Mark). */
+function fleetCard(): string {
+  const c = cmdr();
+  if (!c.fleet?.length) return '';
+  const here = currentSystem();
+  const now = Date.now();
+  const rows = c.fleet.map((s) => {
+    const def = shipById(s.ship);
+    const name = `${def?.name ?? s.ship}${s.paint?.name ? ` “${escapeHtml(s.paint.name)}”` : ''}${s.paint?.edition ? ` · ${escapeHtml(editionById(s.paint.edition.id)?.name ?? '')} ${editionNo(s.paint.edition.number)}` : ''}`;
+    const where = s.at.galaxy === here.galaxy ? systemAt(s.at.galaxy, s.at.system) : null;
+    let line: string;
+    let act = '';
+    if (s.delivery) {
+      const to = systemAt(s.delivery.to.galaxy, s.delivery.to.system);
+      const h = Math.max(0.1, (s.delivery.arrives - now) / 3600_000);
+      line = `On her way to ${escapeHtml(stationName(to).name)}, ${escapeHtml(to.name)} · about ${h < 1 ? `${Math.ceil(h * 60)} min` : `${h.toFixed(1)} h`}`;
+    } else if (where && s.at.system === here.index) {
+      line = 'In the hangar here';
+      act = `<button type="button" class="primary" data-fly="${s.id}">Fly her</button>`;
+    } else if (where && def) {
+      const ly = distanceLy(here, where);
+      const q = deliveryQuote(def, ly);
+      line = `In the hangar at ${escapeHtml(stationName(where).name)}, ${escapeHtml(where.name)} · ${ly.toFixed(1)} LY`;
+      act = `<button type="button" data-deliver="${s.id}" ${c.credits < q.cost ? 'disabled' : ''}>Have her delivered here · ${q.cost.toLocaleString()} Cr · about ${(q.ms / 3600_000).toFixed(1)} h</button>`;
+    } else line = `In a hangar in galaxy ${s.at.galaxy + 1}`;
+    return `<li style="--hull:${s.paint?.colour ?? def?.style.lineColor ?? 'var(--accent)'}"><strong>${name}</strong><span>${line}</span>${act}</li>`;
+  });
+  return `<div class="yard-fleet"><p class="yard-old-head">Your fleet · ${c.fleet.length + 1} ships</p><ul>${rows.join('')}</ul>${c.fleet.some((s) => !s.delivery && !(s.at.galaxy === here.galaxy && s.at.system === here.index)) ? '<p class="yard-note">The Carriers’ Mutual carry her, at their haulage rate. Or fly there to swap.</p>' : ''}</div>`;
 }
 
 function renderShipyard() {
@@ -1529,8 +1589,8 @@ function renderShipyard() {
       : gift
         ? c.order
           ? '<p class="meta">One ship in production at a time: collect that one first.</p>'
-          : `<button type="button" class="primary yard-gift">Take her now · a gift</button>
-            <p class="yard-note">${giftEdition ? 'In the edition’s colours' : 'The hull as it leaves the yard, in your colour'}, with your name on her: built and waiting. The yard keeps your ${escapeHtml(player.def.name)} as part of the gift. Upgrades are yours to earn, and the yard won't buy her back.</p>`
+          : `${oldShipChoice(true)}<button type="button" class="primary yard-gift">Take her now · a gift</button>
+            <p class="yard-note">${giftEdition ? 'In the edition’s colours' : 'The hull as it leaves the yard, in your colour'}, with your name on her: built and waiting. Upgrades are yours to earn.</p>`
         : def.concept
       ? c.order
         ? '<p class="meta">One ship in production at a time.</p>'
@@ -1689,7 +1749,7 @@ function renderShipyard() {
         const at = { galaxy: here.galaxy, system: here.index };
         const r = placeOrder(c, def, spec!, at, Date.now(), { gift: true });
         // Built and waiting: you fly out in her now.
-        const got = r.ok ? collectOrder(c, player.def, def, at, cargoTonnes(c), Date.now()) : null;
+        const got = r.ok ? collectOrder(c, player.def, def, at, cargoTonnes(c), Date.now(), keepOld) : null;
         if (!r.ok) yardMessage = r.message;
         else if (got && !got.ok) yardMessage = `Built and waiting for you here: ${got.message}.`;
         else {
@@ -1708,7 +1768,7 @@ function renderShipyard() {
         renderShipyard();
       };
   } else {
-    el.innerHTML = `${msg}${orderCard}<p class="meta">Shipyards open soon: you'll buy, sell and trade in here. Spec your perfect ship now, and put a deposit on a concept to have it built for you.</p>
+    el.innerHTML = `${msg}${orderCard}${fleetCard()}<p class="meta">Shipyards open soon: you'll buy, sell and trade in here. Spec your perfect ship now, and put a deposit on a concept to have it built for you.</p>
       <ul class="yard">${yard
         .map(({ def }) => {
           const st = def.stats;
@@ -1831,12 +1891,56 @@ function renderShipyard() {
       notifyAsked = true;
       renderShipyard();
     };
+  el.querySelectorAll<HTMLButtonElement>('[data-old]').forEach((b) => {
+    b.onclick = () => {
+      keepOld = b.dataset.old === 'keep';
+      renderShipyard();
+    };
+  });
+  el.querySelectorAll<HTMLButtonElement>('[data-fly]').forEach((b) => {
+    b.onclick = () => {
+      const s = c.fleet?.find((x) => x.id === b.dataset.fly);
+      const next = s && shipById(s.ship);
+      if (!next) return;
+      const r = swapShip(c, player.def, next, s.id, { galaxy: here.galaxy, system: here.index }, cargoTonnes(c), Date.now());
+      if (!r.ok) yardMessage = r.message;
+      else {
+        boardShip();
+        showOwnShip();
+        saveCommander(c);
+        sfx.beep();
+        yardMessage = `You're in your ${next.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}. Your old ship waits in the hangar here.`;
+        yardPick = next.id;
+      }
+      renderShipyard();
+    };
+  });
+  el.querySelectorAll<HTMLButtonElement>('[data-deliver]').forEach((b) => {
+    b.onclick = () => {
+      const s = c.fleet?.find((x) => x.id === b.dataset.deliver);
+      const def = s && shipById(s.ship);
+      if (!def) return;
+      if (!b.dataset.armed) {
+        b.dataset.armed = '1';
+        b.textContent = `Send for her? Press again`;
+        return;
+      }
+      const r = deliverShip(c, def, s.id, here, distanceLy(systemAt(s.at.galaxy, s.at.system), here), Date.now());
+      if (!r.ok) yardMessage = r.message;
+      else {
+        saveCommander(c);
+        sfx.beep();
+        yardMessage = `The Carriers’ Mutual have her: your ${def.name} arrives here in about ${((r.arrives - Date.now()) / 3600_000).toFixed(1)} h.`;
+      }
+      renderShipyard();
+    };
+  });
   const take = el.querySelector<HTMLButtonElement>('.yard-collect');
   if (take && c.order)
     take.onclick = async () => {
       if (!take.dataset.armed) {
         take.dataset.armed = '1';
-        take.textContent = `Trade in your ${player.def.name} and take her? Press again`;
+        take.textContent = keepOld ? `Keep your ${player.def.name} in the hangar and take her? Press again` : `Trade in your ${player.def.name} and take her? Press again`;
         return;
       }
       const next = shipById(c.order!.ship)!;
@@ -1851,7 +1955,7 @@ function renderShipyard() {
           return;
         }
       }
-      const r = collectOrder(c, player.def, next, { galaxy: here.galaxy, system: here.index }, cargoTonnes(c), Date.now());
+      const r = collectOrder(c, player.def, next, { galaxy: here.galaxy, system: here.index }, cargoTonnes(c), Date.now(), keepOld);
       if (!r.ok) yardMessage = r.message;
       else {
         boardShip();

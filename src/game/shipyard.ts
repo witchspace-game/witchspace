@@ -1,6 +1,7 @@
 import type { ShipDef } from '../content/types';
 import { editionById, type Edition } from '../content/editions';
-import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder } from './commander';
+import { EQUIPMENT, hullOf, LARGE_CARGO_BAY, type Commander, type EquipmentId, type ShipOrder, type StoredShip } from './commander';
+import type { StarSystem } from '../galaxy/generate';
 import { PLAYER_LASERS, type LaserId } from './weapons';
 import { PRODUCTION_HOURS, productionHours } from './production';
 import { record } from './ledger';
@@ -285,14 +286,125 @@ function shipKitValue(c: Commander) {
 /** A gifted hull isn't for selling on: the yard takes it in part exchange for its kit only. */
 export const tradeIn = (c: Commander, current: ShipDef) => Math.round((c.paint?.gifted ? 0 : current.stats.price * TRADE_IN.hull) + shipKitValue(c) * TRADE_IN.kit);
 
-/** The bill on collection: the balance, less what the yard gives for your ship (it can come out in your favour). */
-export function collection(c: Commander, current: ShipDef): { balance: number; tradeIn: number; due: number } | null {
+/** A hull the commander paid for: not the starter the Co-operative gave, nor a gift. */
+const hullBought = (c: Commander) => c.ship !== undefined && !c.paint?.gifted;
+
+/**
+ * What the yard pays for your ship when you let it take her on collecting a gift (Mark: "it makes sense
+ * to sell all the extras in the dock before I go and pick up my new ship"): her kit at what the dock pays
+ * for each (half), so nothing's lost for not selling first, and her hull's trade-in only if you bought
+ * her. A free or gifted hull pays nothing ("not too much, too early").
+ */
+export const giftTradeIn = (c: Commander, current: ShipDef) => Math.round((hullBought(c) ? current.stats.price * TRADE_IN.hull : 0) + shipKitValue(c) * 0.5);
+
+/**
+ * The bill on collection: the balance, less what the yard gives for your ship (it can come out in your
+ * favour). Kept in your hangar (`keep`), she isn't traded in at all.
+ */
+export function collection(c: Commander, current: ShipDef, keep = false): { balance: number; tradeIn: number; due: number } | null {
   const o = c.order;
   if (!o) return null;
   const balance = o.quoted - o.deposit;
-  // With a gift, the yard keeps your old ship as part of it: no windfall for a new pilot (Mark: not too much, too early).
-  const t = o.gifted ? 0 : tradeIn(c, current);
+  const t = keep ? 0 : o.gifted ? giftTradeIn(c, current) : tradeIn(c, current);
   return { balance, tradeIn: t, due: balance - t };
+}
+
+// --- Your fleet (Mark, 29 October 2026) -----------------------------------------------
+// Ships you own and aren't flying wait in the hangar where you left them, free and for as long as
+// you like. Swap when you're there, or have one delivered: the Carriers' Mutual carry her, at their
+// own haulage rate, and she travels at the speed of news.
+
+/** The kit that's the ship's (her upgrades), not yours (a licence, the transponder, a prize nobody sells). */
+const shipKit = (c: Commander) => c.equipment.filter((id) => UPGRADES.some((e) => e.id === id));
+
+/** Your ship as she is, to put in the hangar here. */
+export function stowShip(c: Commander, current: ShipDef, at: { galaxy: number; system: number }, now: number): StoredShip {
+  return {
+    id: `${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    ship: current.id,
+    ...(c.paint ? { paint: { ...c.paint } } : {}),
+    equipment: shipKit(c),
+    lasers: { ...c.lasers },
+    missiles: c.missiles,
+    damaged: c.damaged.filter((id) => UPGRADES.some((e) => e.id === id)),
+    ...(hullBought(c) ? { bought: true } : {}),
+    at,
+  };
+}
+
+/** Fly a ship from the hangar: her hull, paint and kit become yours; your papers stay yours. */
+function board(c: Commander, s: StoredShip) {
+  const keep = c.equipment.filter((id) => !UPGRADES.some((e) => e.id === id));
+  c.equipment = [...new Set([...keep, ...s.equipment])];
+  c.damaged = [...s.damaged];
+  c.lasers = { ...s.lasers };
+  c.missiles = s.missiles;
+  c.ship = s.ship;
+  if (s.paint) c.paint = { ...s.paint };
+  else delete c.paint;
+}
+
+const sameStation = (a: { galaxy: number; system: number }, b: { galaxy: number; system: number }) => a.galaxy === b.galaxy && a.system === b.system;
+
+/** Ships in transit get there in time: call on loading and docking. Returns those that arrived. */
+export function deliveriesArrived(c: Commander, now: number): StoredShip[] {
+  const arrived: StoredShip[] = [];
+  for (const s of c.fleet ?? []) {
+    if (!s.delivery || s.delivery.arrives > now) continue;
+    s.at = s.delivery.to;
+    delete s.delivery;
+    arrived.push(s);
+  }
+  return arrived;
+}
+
+/**
+ * Swap: the ship you're flying goes into the hangar here, and you fly out in one that's waiting here.
+ * The hold goes with you, so it has to fit.
+ */
+export function swapShip(c: Commander, current: ShipDef, next: ShipDef, id: string, here: { galaxy: number; system: number }, cargoTonnes: number, now: number): { ok: true } | { ok: false; message: string } {
+  const s = c.fleet?.find((x) => x.id === id);
+  if (!s || s.ship !== next.id) return { ok: false, message: 'No such ship in your fleet' };
+  if (s.delivery || !sameStation(s.at, here)) return { ok: false, message: 'She isn’t in the hangar here' };
+  const room = next.stats.cargo + (s.equipment.includes('large-cargo-bay') ? LARGE_CARGO_BAY : 0);
+  if (cargoTonnes > room + 1e-9) return { ok: false, message: `Her hold won’t fit your cargo: sell ${Math.ceil(cargoTonnes - room)} t first` };
+  const stowed = stowShip(c, current, here, now);
+  c.fleet = [...c.fleet!.filter((x) => x.id !== id), stowed];
+  board(c, s);
+  return { ok: true };
+}
+
+/**
+ * Having a ship delivered: the Carriers' Mutual's haulage rate (contracts.ts: 3 Cr a tonne, and 0.6 a tonne
+ * for every light year), by her carriage weight (two tonnes a metre of hull: a Cobra 100 t, a Fer-de-lance
+ * 236 t). A Cobra 15 LY costs about 1,200 Cr: well above the fuel to fly back yourself (60 Cr), and never
+ * more than a few per cent of her value. She travels as news does: ten minutes, and twelve a light year.
+ */
+export const DELIVERY = { tonnesPerMetre: 2, perTonne: 3, perTonneLy: 0.6, baseMs: 10 * 60_000, perLyMs: 12 * 60_000 } as const;
+
+const lengthOf = (def: ShipDef) => {
+  const zs = def.geometry.vertices.map((v) => v[2]);
+  return Math.max(...zs) - Math.min(...zs);
+};
+
+export function deliveryQuote(def: ShipDef, ly: number): { cost: number; ms: number } {
+  const tonnes = Math.max(20, Math.round(lengthOf(def) * DELIVERY.tonnesPerMetre));
+  return { cost: Math.round(tonnes * (DELIVERY.perTonne + DELIVERY.perTonneLy * ly)), ms: Math.round(DELIVERY.baseMs + DELIVERY.perLyMs * ly) };
+}
+
+/** Send for a ship in the hangar elsewhere (in this galaxy), to wait in the hangar here. */
+export function deliverShip(c: Commander, def: ShipDef, id: string, here: StarSystem, ly: number, now: number): { ok: true; arrives: number } | { ok: false; message: string } {
+  const s = c.fleet?.find((x) => x.id === id);
+  if (!s || s.ship !== def.id) return { ok: false, message: 'No such ship in your fleet' };
+  if (s.delivery) return { ok: false, message: 'She’s already on her way' };
+  if (s.at.galaxy !== here.galaxy) return { ok: false, message: 'The Mutual don’t carry ships between galaxies' };
+  if (sameStation(s.at, { galaxy: here.galaxy, system: here.index })) return { ok: false, message: 'She’s already here' };
+  const q = deliveryQuote(def, ly);
+  if (c.credits < q.cost) return { ok: false, message: `You need ${q.cost.toLocaleString()} Cr to have her delivered` };
+  c.credits = Math.round((c.credits - q.cost) * 10) / 10;
+  record(c, { t: now, k: 'yard', d: -q.cost });
+  s.delivery = { to: { galaxy: here.galaxy, system: here.index }, arrives: now + q.ms };
+  return { ok: true, arrives: s.delivery.arrives };
 }
 
 export type CollectResult = { ok: true; paid: number } | { ok: false; message: string };
@@ -303,20 +415,22 @@ export type CollectResult = { ok: true; paid: number } | { ok: false; message: s
  * Your own papers stay yours (the weapons licence, the transponder) and so do
  * prizes nobody sells (the Wisp). The hold has to fit.
  */
-export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here: { galaxy: number; system: number }, cargoTonnes: number, now: number): CollectResult {
+export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here: { galaxy: number; system: number }, cargoTonnes: number, now: number, keep = false): CollectResult {
   const o = c.order;
   if (!o || o.ship !== next.id) return { ok: false, message: 'Nothing to collect' };
   if (!production(o, now).built) return { ok: false, message: 'Not built yet' };
   if (o.galaxy !== here.galaxy || o.system !== here.system) return { ok: false, message: 'Collect it at the yard that built it' };
   if (hullOf(c) !== current.id) return { ok: false, message: 'That isn’t the ship you’re flying' };
-  const bill = collection(c, current)!;
+  const bill = collection(c, current, keep)!;
   if (c.credits < bill.due) return { ok: false, message: `You need ${Math.ceil(bill.due).toLocaleString()} Cr to collect it` };
   const room = next.stats.cargo + (o.upgrades.includes('large-cargo-bay') ? LARGE_CARGO_BAY : 0);
   if (cargoTonnes > room + 1e-9) return { ok: false, message: `Your hold won’t fit: sell ${Math.ceil(cargoTonnes - room)} t first` };
   c.credits = Math.round((c.credits - bill.due) * 10) / 10;
   if (bill.due) record(c, { t: now, k: 'yard', d: -bill.due });
-  const keep = c.equipment.filter((id) => !UPGRADES.some((e) => e.id === id));
-  c.equipment = [...new Set([...keep, ...o.upgrades])];
+  // Kept, she goes into the hangar here as she is (Mark); otherwise the yard has taken her.
+  if (keep) c.fleet = [...(c.fleet ?? []), stowShip(c, current, here, now)];
+  const papers = c.equipment.filter((id) => !UPGRADES.some((e) => e.id === id));
+  c.equipment = [...new Set([...papers, ...o.upgrades])];
   c.damaged = [];
   c.lasers = { front: o.laser, ...(o.rear ? { rear: o.rear } : {}) };
   c.missiles = Math.min(c.missiles, next.stats.missiles ?? 0);

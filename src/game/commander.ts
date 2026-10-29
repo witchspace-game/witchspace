@@ -227,6 +227,28 @@ import type { BtcOrder, BtcTrade } from '../economy/bitcoin';
 import type { Heard } from './saloon';
 
 /** A ship's finish from the yard. */
+/**
+ * A ship in your hangar (Mark: "a hangar where you can 'store' your fleet"): her hull, paint and the kit
+ * that belongs to her, waiting at the station where you left her, free and for as long as you like,
+ * or carried to another by the Carriers' Mutual (game/shipyard.ts deliverShip).
+ */
+export interface StoredShip {
+  id: string;
+  ship: string;
+  paint?: Paint;
+  /** Her upgrades (the kit that's the ship's, not yours: game/shipyard.ts shipKit). */
+  equipment: EquipmentId[];
+  lasers: Partial<Record<Mount, LaserId>>;
+  missiles: number;
+  damaged: EquipmentId[];
+  /** A hull you bought (the starter and a gift weren't). */
+  bought?: boolean;
+  /** Where she waits: galaxy and system index. */
+  at: { galaxy: number; system: number };
+  /** On her way to another hangar: where, and when she gets there. */
+  delivery?: { to: { galaxy: number; system: number }; arrives: number };
+}
+
 export interface Paint {
   colour: string;
   glow: 'standard' | 'deep' | 'blazing';
@@ -362,6 +384,8 @@ export interface Commander {
   ship?: string;
   /** Its finish, from the yard: colour, glow, trim and the name painted on. */
   paint?: Paint;
+  /** Your fleet (Mark): the ships you own but aren't flying, each in the hangar where you left her, or on her way to another. */
+  fleet?: StoredShip[];
 }
 
 const KEY = SAVE_KEY;
