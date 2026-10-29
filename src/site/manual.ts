@@ -1,7 +1,10 @@
-import { editionNo } from '../content/editions';
-import { controlRows, DOCKING, drawerHelp, PHONE, SCHEMES, TILT } from '../game/controls';
+import { editionById, editionNo } from '../content/editions';
+import { controlRows, DASHBOARD, DOCKING, drawerHelp, PHONE, PHONE_DRAWER, RECORDER, SCHEMES, TILT } from '../game/controls';
+import { papersFor } from '../game/papers';
 import { SAVE_KEY } from '../game/saveKey';
 import { fetchSave, refresh, signedIn } from '../net/account';
+import { heldEditions } from '../net/shipyard';
+import { forDevice } from '../ui/deviceWords';
 import { escapeHtml } from '../ui/escape';
 import type { ManualData } from '../../tools/ships';
 import { signInBox } from './signin';
@@ -51,9 +54,11 @@ function show(c: Owner) {
   const ed = p?.edition && m.editions[p.edition.id];
   $('#man-title').innerHTML = `${escapeHtml(m.name)}${p?.name ? ` <span>“${escapeHtml(p.name)}”</span>` : ''}${ed ? ` <small>${escapeHtml(ed)} ${editionNo(p!.edition!.number)}</small>` : ''}`;
   if (p) document.querySelector<HTMLElement>('.manual-page')!.style.setProperty('--hull', p.colour);
-  const kit = (c.equipment ?? []).map((id) => m.kit[id]).filter(Boolean);
+  const kit = (c.equipment ?? []).map((id) => m.kit[id]).filter(Boolean).map(([name, blurb]) => [name, forDevice(blurb)]);
   const aboard = (p?.luxuries ?? []).map((id) => m.luxuries[id]).filter(Boolean);
   const list = (rows: string[][]) => `<dl class="man-keys">${rows.map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`).join('')}</dl>`;
+  // The game's own lists carry a little markup (<b>), as the game shows them.
+  const html = (rows: string[][]) => `<dl class="man-keys">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>`;
   // As the game does: gimballed lasers when the mount is fitted and working; Modern unless you chose Classic.
   const o = { gimballed: Boolean(c.equipment?.includes('gimbal-mount') && !c.damaged?.includes('gimbal-mount')), modern: c.difficulty !== 'classic' };
   const mouse = controlRows(true, o);
@@ -61,39 +66,59 @@ function show(c: Owner) {
   const all = [...mouse, ...keys];
   // Most keys work the same either way: list those once.
   const both = new Set(mouse.map((r) => r.join()).filter((r) => keys.some((k) => k.join() === r)));
-  const drawer = m.drawer.map((b) => [b.label, drawerHelp(b.key, b.title, all)]);
-  const man = $('#manual');
-  man.innerHTML = `
-    <nav class="man-toc"><a href="#man-ship">How she flies</a><a href="#man-dock">Docking</a><a href="#man-desk">On a computer</a><a href="#man-phone">On a phone</a>${kit.length ? '<a href="#man-kit">Your kit</a>' : ''}${aboard.length ? '<a href="#man-aboard">Aboard</a>' : ''}</nav>
-    <section class="card" id="man-ship"><h3>How she flies</h3>
-      ${m.notes.length ? `<ul>${m.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
-      <table class="man-table"><thead><tr><th></th><th>${escapeHtml(m.name)}</th><th>${m.span ? 'against a Cobra' : ''}</th></tr></thead>
-      <tbody>${m.handling.map(([label, value, versus]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td><td>${escapeHtml(versus)}</td></tr>`).join('')}</tbody></table>
-    </section>
-    <section class="card" id="man-dock"><h3>Docking</h3>
-      <ol>${DOCKING(m.roll, m.dockingFitted).map((step) => `<li>${step}</li>`).join('')}</ol>
-      ${m.span ? `<p class="muted">${escapeHtml(m.name)}: ${escapeHtml(m.span)}.</p>` : ''}
-    </section>
-    <section class="card" id="man-desk"><h3>On a computer</h3>
+  // Said for a phone, as the game says it: each button's own words, or the keyboard list's with its keys taken out.
+  const drawer = m.drawer.map((b) => [b.label, PHONE_DRAWER[b.key ?? ''] ?? drawerHelp(b.key, b.title, all).replace(/\s*\((?:[A-Z0-9]|[A-Z0-9] again[^)]*)\)/g, '')]);
+  // An edition's owner gets her edition's page, from the game's own papers (src/game/papers.ts).
+  const edition = p?.edition && editionById(p.edition.id);
+  const papers = edition ? papersFor(edition, p!.edition!.number, m.name) : null;
+  // On a phone its own controls come first, and the keyboard's fold away (Mark), as in the game.
+  const touch = matchMedia('(pointer: coarse)').matches;
+  const desk = `<section class="card" id="man-desk"><h3>On a computer</h3>
       <p>${SCHEMES}</p>
       <h4>Mouse and keyboard</h4>${list(mouse.filter((r) => !both.has(r.join())))}
       <h4>Keyboard only</h4>${list(keys.filter((r) => !both.has(r.join())))}
       <h4>Both ways</h4>${list(mouse.filter((r) => both.has(r.join())))}
+    </section>`;
+  const man = $('#manual');
+  man.innerHTML = `
+    <nav class="man-toc">${papers ? '<a href="#man-edition">Your edition</a>' : ''}<a href="#man-ship">How she flies</a><a href="#man-dash">The dashboard</a><a href="#man-dock">Docking</a>${touch ? '<a href="#man-phone">On your phone</a>' : '<a href="#man-desk">On a computer</a><a href="#man-phone">On a phone</a>'}<a href="#man-rec">The flight recorder</a>${kit.length ? '<a href="#man-kit">Your kit</a>' : ''}${aboard.length ? '<a href="#man-aboard">Aboard</a>' : ''}</nav>
+    ${
+      papers
+        ? `<section class="card" id="man-edition"><h3>Your edition</h3>
+      ${list([['Finish', papers.finish], ['Glow', papers.glow], ...papers.aboard.map((a) => [a.name, a.blurb])])}
+      <p class="muted man-papers">One of ${papers.limit}, built at ${escapeHtml(papers.yard)}, ${escapeHtml(papers.system)}.</p>
+    </section>`
+        : ''
+    }
+    <section class="card" id="man-ship"><h3>How she flies</h3>
+      ${m.notes.length ? `<ul>${m.notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
+      <table class="man-table"><thead><tr><th></th><th>${escapeHtml(m.name)}</th>${m.span ? '<th>against a Cobra</th>' : ''}</tr></thead>
+      <tbody>${m.handling.map(([label, value, versus]) => `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value)}</td>${m.span ? `<td>${escapeHtml(versus)}</td>` : ''}</tr>`).join('')}</tbody></table>
     </section>
-    <section class="card" id="man-phone"><h3>On a phone</h3>
-      ${list(PHONE)}
+    <section class="card" id="man-dash"><h3>The dashboard</h3>${html(DASHBOARD)}</section>
+    <section class="card" id="man-dock"><h3>Docking</h3>
+      <ol>${DOCKING(m.roll, m.dockingFitted).map((step) => `<li>${step}</li>`).join('')}</ol>
+      ${m.span ? `<p class="muted">${escapeHtml(m.name)}: ${escapeHtml(m.span)}.</p>` : ''}
+    </section>
+    ${touch ? '' : desk}
+    <section class="card" id="man-phone"><h3>${touch ? 'On your phone' : 'On a phone'}</h3>
+      ${html(PHONE)}
       <h4>The drawer: everything else</h4>
       <p>Tap the <b>‹</b> tab on the right edge of the screen to slide it open, and again to close it.</p>
       ${list(drawer)}
       <p class="muted">${TILT}</p>
     </section>
+    ${touch ? `<details class="card man-more"><summary>On a computer, with a keyboard</summary>${desk}</details>` : ''}
+    <section class="card" id="man-rec"><h3>The flight recorder</h3>${RECORDER.map((r) => `<p>${r}</p>`).join('')}</section>
     ${kit.length ? `<section class="card" id="man-kit"><h3>Your kit</h3>${list(kit)}</section>` : ''}
     ${aboard.length ? `<section class="card" id="man-aboard"><h3>Aboard</h3>${list(aboard)}</section>` : ''}`;
-  // On a phone, the phone's controls come first.
-  if (matchMedia('(pointer: coarse)').matches) {
-    $('#man-desk').before($('#man-phone'));
-    man.querySelector('.man-toc a[href="#man-desk"]')!.before(man.querySelector('.man-toc a[href="#man-phone"]')!);
-  }
+  // Her certificate of build, for her owner when signed in: a private link, from the yard's office.
+  if (papers && signedIn())
+    void heldEditions().then((r) => {
+      const link = 'error' in r ? null : r.editions.find((e) => e.edition === papers.editionId && e.number === papers.number)?.link;
+      const line = man.querySelector('.man-papers');
+      if (link && line) line.insertAdjacentHTML('beforeend', ` <a href="${escapeHtml(link)}">Her certificate of build</a> (a private link: share it only if you want to).`);
+    });
   man.hidden = false;
   $('#manual-gate').hidden = true;
 }
