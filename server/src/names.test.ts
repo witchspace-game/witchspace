@@ -22,6 +22,16 @@ describe('reserved callsigns', () => {
     expect(rule('Baron')).toBe('free');
   });
 
+  it('holds back the famous aces, exact only', () => {
+    for (const n of ['Biggles', 'Snoopy', 'Iceman', 'Goose']) expect(rule(n), n).toBe('protected');
+    for (const n of ['Ace', 'Red', 'Hawk', 'Eagle']) expect(rule(n), n).toBe('free');
+  });
+
+  it('lets nobody fly as a real public figure, but leaves common surnames and longer words free', () => {
+    for (const n of ['Trump', 'CMDR Trump', 'Pedro Sanchez', 'Pedro Sánchez', 'Erdogan', 'Erdoğan', 'Kim Jong-Un', 'King Charles']) expect(rule(n), n).toBe('never');
+    for (const n of ['Trumpet', 'Obamacare Pilot', 'Johnson', 'Harris', 'Sanchez', 'Sánchez', 'Charles', 'William', 'Kim']) expect(rule(n), n).toBe('free');
+  });
+
   it('leaves ordinary names alone', () => {
     for (const n of ['Lead Balloon', 'Campbell', 'Elite Trader', 'Satellite', 'Belle', 'Modesty', 'Jamie', 'Scunthorpe']) expect(rule(n), n).toBe('free');
   });
