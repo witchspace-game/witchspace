@@ -58,6 +58,8 @@ export const flight = {
   yardScene: null as YardScene | null,
   /** The player's missile lock. */
   locked: null as NpcShip | null,
+  /** How hard the camera shakes (a hit, a tremor); it dies away. */
+  shake: 0,
   /** A Viper detailed to fly with you, and until when. */
   escort: null as { npc: NpcShip; until: number } | null,
 };

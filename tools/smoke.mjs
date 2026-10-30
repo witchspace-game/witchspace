@@ -217,6 +217,22 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   await s.page.context().close();
 }
 
+// --- Modern: a warrant brings the Marshals' Bastion through its rift -----------------------
+{
+  const s = await newCommander('modern');
+  await launch(s);
+  await s.w(() => { const w = window.witchspace; w.becomeFugitive(); w.commander.warrant = true; w.summonCarrier(); });
+  check('Modern: a rift opens for the Marshals', await s.w(() => Boolean(window.witchspace.carrier?.rift)));
+  let phase = '';
+  for (let i = 0; i < 90 && !['deployed', 'leaving'].includes(phase); i++) {
+    await wait(1000);
+    phase = await s.w(() => { const w = window.witchspace; w.player.repair(); return w.carrier?.phase ?? 'gone'; }); // the station's police shoot a wanted ship
+  }
+  check('Modern: the Bastion comes through', phase === 'deployed', phase);
+  check('Modern: the Marshals raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
+  await s.page.context().close();
+}
+
 // --- Modern: docking with the computer ----------------------------------------------------
 {
   const s = await newCommander('modern');
