@@ -3,13 +3,27 @@
 // Kept apart from the page so they can be tested.
 
 export const ROLES = [
-  { id: 'pirate', name: 'Pirate', ship: 'mamba', shipName: 'Mamba', colour: '#e8d84a' },
-  { id: 'trader', name: 'Trader', ship: 'cobra-mk3', shipName: 'Cobra', colour: '#3dffb0' },
-  { id: 'explorer', name: 'Explorer', ship: 'falcon', shipName: 'Falcon', colour: '#ff3d6e' },
-  { id: 'hero', name: 'Hero', ship: 'viper', shipName: 'Viper', colour: '#4aa8ff' },
-  { id: 'legend', name: 'Legend', ship: 'fer-de-lance', shipName: 'Fer-de-lance', colour: '#c9a8ff' },
+  { id: 'pirate', name: 'Pirate', ship: 'mamba', shipName: 'Mamba', colour: '#e8d84a', scene: 'crossfire' },
+  { id: 'trader', name: 'Trader', ship: 'cobra-mk3', shipName: 'Cobra', colour: '#3dffb0', scene: 'coriolis' },
+  { id: 'explorer', name: 'Explorer', ship: 'falcon', shipName: 'Falcon', colour: '#ff3d6e', scene: 'low-over-diso' },
+  { id: 'hero', name: 'Hero', ship: 'viper', shipName: 'Viper', colour: '#4aa8ff', scene: 'police' },
+  { id: 'legend', name: 'Legend', ship: 'fer-de-lance', shipName: 'Fer-de-lance', colour: '#c9a8ff', scene: 'debris' },
 ] as const;
 export type Role = (typeof ROLES)[number];
+
+/** The scenes behind the card: moments from the press library (public/screens), cropped clear of the
+ *  dashboard into public/callsign/<id>.jpg (and <id>-s.jpg, small, for the picker). Each role starts on its own. */
+export const SCENES = [
+  { id: 'crossfire', name: 'Crossfire' },
+  { id: 'coriolis', name: 'A Coriolis station' },
+  { id: 'low-over-diso', name: 'Low over Diso' },
+  { id: 'police', name: 'The police join in' },
+  { id: 'debris', name: 'Debris across a ringed world' },
+  { id: 'beacon', name: 'A beacon and its world' },
+  { id: 'station-rising', name: 'A station rising' },
+  { id: 'pack-closing', name: 'A pack closing' },
+] as const;
+export const sceneUrl = (id: string, small = false) => `/callsign/${id}${small ? '-s' : ''}.jpg`;
 /** "61, 255, 176" for rgba(): the page lights itself in the role's colour. */
 export const rgbOf = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ');
 export const roleById = (id: string | undefined): Role => ROLES.find((r) => r.id === id) ?? ROLES[1];

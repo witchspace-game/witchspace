@@ -1,9 +1,10 @@
 import * as acct from '../net/account';
 import { cardShip, CARD_H, CARD_W, type CardShip } from './callsignCard';
-import { claimLine, cleanCallsign, parseCheck, rgbOf, roleById, roleLine, ROLES, variants, verdictWords, type Check, type Role } from './callsignWords';
+import { claimLine, cleanCallsign, parseCheck, rgbOf, roleById, roleLine, ROLES, SCENES, sceneUrl, variants, verdictWords, type Check, type Role } from './callsignWords';
 
 // Claim your callsign (/callsign/, Mark, 30 October 2026): type a name and see at once whether it's free,
-// pick a role for your card, then make it yours by signing in with the code from the email, typed here,
+// build your card (a role, which brings its ship and colour; a scene from the library behind her; and her
+// angle, dragged round), then make it yours by signing in with the code from the email, typed here,
 // so it works the same in Safari, in the Home Screen app and on a computer. The check is the server's
 // (GET /callsign/check), and claiming (POST /me/callsign) judges the same way, so they can't disagree.
 // /callsign/<role>/ is the same page with that role chosen, for its own share card.
@@ -21,6 +22,9 @@ const steps = ['cs-email-step', 'cs-code-step', 'cs-change-step', 'cs-claim-step
 type Step = (typeof steps)[number] | null;
 
 let role: Role = roleById(/^\/callsign\/([a-z]+)\/?$/.exec(location.pathname)?.[1]);
+/** The scene behind her: the role's own until you choose one. */
+let scene: string = role.scene;
+let sceneChosen = false;
 let name = '';
 let check: Check | null = null;
 let email = '';
@@ -33,7 +37,12 @@ let ship: CardShip | null = null;
 try {
   ship = cardShip($<HTMLCanvasElement>('cs-ship'));
 } catch {
-  // No WebGL: the card keeps its words over the dark, and the picture is words only.
+  // No WebGL: the card keeps its words over its scene, and so does the picture.
+}
+if (ship) {
+  const hint = $('cs-hint');
+  hint.hidden = false;
+  $('cs-ship').addEventListener('pointerdown', () => (hint.hidden = true), { once: true });
 }
 const card = $('cs-card');
 // The card's words are sized from a hundredth of its width, so the preview is the picture in small.
@@ -60,9 +69,36 @@ roles.addEventListener('click', (e) => {
   role = roleById(b.dataset.role);
   for (const c of roles.querySelectorAll<HTMLElement>('[data-role]')) c.setAttribute('aria-pressed', String(c === b));
   ship?.show(role.ship);
+  if (!sceneChosen) setScene(role.scene);
   drawCard();
 });
 ship?.show(role.ship);
+
+const sceneImg = $<HTMLImageElement>('cs-scene');
+const scenes = $('cs-scenes');
+scenes.innerHTML = SCENES.map((sc) => `<button type="button" class="cs-scene-pick" data-scene="${sc.id}" aria-pressed="false" aria-label="${sc.name}" title="${sc.name}"><img src="${sceneUrl(sc.id, true)}" width="240" height="126" alt="" loading="lazy" /></button>`).join('');
+/** Show a scene behind her, fading across once the new one has loaded. */
+function setScene(id: string) {
+  scene = id;
+  for (const b of scenes.querySelectorAll<HTMLElement>('[data-scene]')) b.setAttribute('aria-pressed', String(b.dataset.scene === id));
+  const next = new Image();
+  next.src = sceneUrl(id);
+  sceneImg.classList.add('swap');
+  const done = () => {
+    if (scene !== id) return;
+    sceneImg.src = next.src;
+    sceneImg.classList.remove('swap');
+  };
+  if (next.complete) done();
+  else next.onload = next.onerror = done;
+}
+scenes.addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLElement>('[data-scene]');
+  if (!b) return;
+  sceneChosen = true;
+  setScene(b.dataset.scene!);
+});
+setScene(scene);
 $('cs-claim').textContent = claimLine(Date.now());
 
 // --- Is it free? ---------------------------------------------------------------------------------------
@@ -281,9 +317,26 @@ async function picture(): Promise<File | null> {
   c.width = CARD_W;
   c.height = CARD_H;
   const g = c.getContext('2d')!;
-  g.fillStyle = '#05070d';
+  g.fillStyle = '#000';
   g.fillRect(0, 0, CARD_W, CARD_H);
-  if (ship) g.drawImage(ship.picture(), 0, 0);
+  // The scene, dimmed as on the page, then her glow screened over it.
+  const bg = await new Promise<HTMLImageElement | null>((done) => {
+    const im = new Image();
+    im.onload = () => done(im);
+    im.onerror = () => done(null);
+    im.src = sceneUrl(scene);
+  });
+  if (bg) {
+    g.drawImage(bg, 0, 0, CARD_W, CARD_H);
+    // Dimmed by hand rather than with a canvas filter, which older Safari hasn't got.
+    g.fillStyle = 'rgba(0,0,0,0.38)';
+    g.fillRect(0, 0, CARD_W, CARD_H);
+  }
+  if (ship) {
+    g.globalCompositeOperation = 'screen';
+    g.drawImage(ship.picture(), 0, 0);
+    g.globalCompositeOperation = 'source-over';
+  }
   // The role's light behind her, and the fade behind the words, as on the page.
   const rgb = rgbOf(role.colour);
   const glow = (x: number, y: number, rx: number, ry: number, colour: string) => {
@@ -298,13 +351,12 @@ async function picture(): Promise<File | null> {
     g.restore();
   };
   g.globalCompositeOperation = 'lighter';
-  glow(CARD_W * 0.72, CARD_H * 0.5, CARD_W * 0.45 * 0.7, CARD_H * 0.6 * 0.7, `rgba(${rgb},0.13)`);
-  glow(CARD_W, 0, CARD_W * 0.35 * 0.7, CARD_H * 0.45 * 0.7, 'rgba(74,215,255,0.1)');
+  glow(CARD_W * 0.72, CARD_H * 0.5, CARD_W * 0.45 * 0.7, CARD_H * 0.6 * 0.7, `rgba(${rgb},0.1)`);
   g.globalCompositeOperation = 'source-over';
   const fade = g.createLinearGradient(0, 0, CARD_W, 0);
-  fade.addColorStop(0, 'rgba(5,7,13,0.92)');
-  fade.addColorStop(0.46, 'rgba(5,7,13,0.55)');
-  fade.addColorStop(0.7, 'rgba(5,7,13,0)');
+  fade.addColorStop(0, 'rgba(3,5,10,0.92)');
+  fade.addColorStop(0.42, 'rgba(3,5,10,0.62)');
+  fade.addColorStop(0.68, 'rgba(3,5,10,0)');
   g.fillStyle = fade;
   g.fillRect(0, 0, CARD_W, CARD_H);
 

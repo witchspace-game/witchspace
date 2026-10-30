@@ -20,6 +20,11 @@
         <div class="chips" id="cs-roles"></div>
       </fieldset>
 
+      <fieldset class="cs-scenes">
+        <legend>Behind her</legend>
+        <div class="cs-scene-list" id="cs-scenes"></div>
+      </fieldset>
+
       <div class="cs-step" id="cs-email-step" hidden>
         <h2>Make it yours</h2>
         <form id="cs-email-form" class="cs-row">
@@ -62,7 +67,8 @@
 
     <div class="cs-stage">
     <figure class="cs-card" id="cs-card" aria-label="Your callsign card">
-      <canvas class="cs-ship" id="cs-ship"></canvas>
+      <img class="cs-scene" id="cs-scene" src="/callsign/coriolis.jpg" width="1200" height="630" alt="" />
+      <canvas class="cs-ship" id="cs-ship" aria-label="Your ship: drag to turn her"></canvas>
       <div class="cs-card-glow" aria-hidden="true"></div>
       <figcaption class="cs-card-copy">
         <span class="cs-card-brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 18 L12 9 L20 9 L28 18 L18 23 L14 23 Z M12 9 L14 23 M20 9 L18 23" /></svg>WITCHSPACE</span>
@@ -73,6 +79,7 @@
         <span class="cs-card-foot"><b>witchspace.org.uk/callsign</b></span>
       </figcaption>
     </figure>
+    <p class="cs-hint" id="cs-hint" hidden>Drag her round to the angle you like.</p>
     </div>
   </div>
 </section>

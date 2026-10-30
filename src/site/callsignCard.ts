@@ -7,9 +7,12 @@ import { shipById } from '../content/ships';
 import { buildPainted, disposeShip, type ShipModel } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 
-// The callsign card's ship: the role's ship in neo-vector over stars, on the right of the card and clear of
-// the words, as on the site's share cards (tools/share-card.ts). It turns slowly on the page; picture() draws
-// her afresh at 1200×630 for the card you share. Throws without WebGL, so the page can carry on without her.
+// The callsign card's ship: the role's ship in neo-vector, on the right of the card and clear of the words,
+// as on the site's share cards (tools/share-card.ts). She's drawn on black and laid over the card's scene with
+// a screen blend, so the black drops away and only her glow shows (a see-through canvas would pool the bloom
+// into a wash). She turns slowly until you take hold of her: drag to turn her to the angle you want, and she
+// stays there. picture() draws her afresh at 1200×630, as she's turned, for the card you share. Throws
+// without WebGL, so the page can carry on without her.
 
 export const CARD_W = 1200;
 export const CARD_H = 630;
@@ -19,7 +22,7 @@ const RADIUS = 215 / CARD_H;
 
 export interface CardShip {
   show(shipId: string): void;
-  /** The ship and the stars at the card's full size, for the picture. */
+  /** The ship on black at the card's full size, for the picture: lay it over the scene with a screen blend. */
   picture(): HTMLCanvasElement;
 }
 
@@ -29,7 +32,7 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
   // As sharp as the screen: a phone is 3×, and thin glowing lines show it.
   renderer.setPixelRatio(Math.min(devicePixelRatio, 3));
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x05070d);
+  scene.background = new THREE.Color(0x000000);
   const camera = new THREE.PerspectiveCamera(30, CARD_W / CARD_H, 1, 100000);
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
@@ -38,29 +41,8 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
-  // Stars, the same sky as the share cards.
-  {
-    const pos: number[] = [];
-    const col: number[] = [];
-    const c = new THREE.Color();
-    let seed = 7;
-    const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 1400; i++) {
-      const v = new THREE.Vector3(rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1).normalize().multiplyScalar(40000);
-      pos.push(v.x, v.y, v.z);
-      c.setHSL(0.55 + rnd() * 0.15, 0.35, 0.1 + rnd() ** 3 * 0.5);
-      col.push(c.r, c.g, c.b);
-    }
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-    scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.3, sizeAttenuation: false, vertexColors: true })));
-  }
-
   let model: ShipModel | null = null;
-  let yaw = -0.75;
-  let w = 0;
-  let h = 0;
+  const spin = { x: 0.35, y: -0.75, held: false, dragging: false, lx: 0, ly: 0 };
 
   /** Sizes everything for a w×h picture and aims the camera so the ship sits where the card wants her. */
   const frameFor = (width: number, height: number) => {
@@ -71,8 +53,8 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
     camera.updateProjectionMatrix();
   };
   const resize = () => {
-    w = canvas.clientWidth;
-    h = canvas.clientHeight;
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
@@ -81,9 +63,26 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
   };
   new ResizeObserver(resize).observe(canvas);
 
+  // Drag to turn her, as on the ship pages. On a phone a sideways drag turns her and an upward one still
+  // scrolls the page (touch-action: pan-y in the CSS); with a mouse, up and down tilt her too.
+  canvas.addEventListener('pointerdown', (e) => {
+    Object.assign(spin, { dragging: true, held: true, lx: e.clientX, ly: e.clientY });
+    canvas.setPointerCapture(e.pointerId);
+    canvas.classList.add('held');
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!spin.dragging) return;
+    spin.y += (e.clientX - spin.lx) * 0.012;
+    if (e.pointerType === 'mouse') spin.x = THREE.MathUtils.clamp(spin.x + (e.clientY - spin.ly) * 0.01, -1.2, 1.2);
+    Object.assign(spin, { lx: e.clientX, ly: e.clientY });
+  });
+  const release = () => (spin.dragging = false);
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release);
+
   const draw = () => {
     if (!model) return;
-    model.root.rotation.set(0.35, yaw, 0);
+    model.root.rotation.set(spin.x, spin.y, 0);
     composer.render();
   };
   let visible = true;
@@ -94,7 +93,8 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
     if (!visible || document.hidden || !model) return;
-    if (!reducedMotion) yaw += dt * 0.2;
+    // She turns by herself only until you've chosen her angle.
+    if (!spin.held && !reducedMotion) spin.y += dt * 0.2;
     draw();
   };
   requestAnimationFrame(frame);
