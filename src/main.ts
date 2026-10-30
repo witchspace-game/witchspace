@@ -588,6 +588,11 @@ function showTitle() {
   showFittings(null);
   showShip(cobraIndex);
   const saved = loadCommander();
+  if (saved && testStartAt && !testStartDone) {
+    testStartDone = true;
+    startAtForTesting(saved);
+    saveCommander(saved);
+  }
   const load = $<HTMLButtonElement>('#load-button');
   load.hidden = !saved;
   if (saved) load.innerHTML = `<span class="key">Y · Load </span><span class="touch-word">Play as CMDR </span>${escapeHtml(saved.name)} <small>(${DIFFICULTIES[saved.difficulty].name})</small>`;
@@ -638,6 +643,17 @@ function showNewGame() {
   setState('newgame');
 }
 
+/**
+ * Testing on a phone against the Mac's copy: /play/?at=Zaalela puts your commander (saved or new)
+ * docked there. Only on a local or private-network address, never on the live site.
+ */
+const testStartAt = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname) ? new URL(location.href).searchParams.get('at')?.toLowerCase() : undefined;
+function startAtForTesting(c: Commander) {
+  const at = testStartAt ? galaxy(c.location.galaxy).find((s) => s.name.toLowerCase() === testStartAt) : undefined;
+  if (at) c.location = { galaxy: at.galaxy, system: at.index };
+}
+let testStartDone = false;
+
 function startCommander(difficulty: Difficulty) {
   commander = newCommander(difficulty);
   // A new commander hasn't flown: the last commander's trip isn't theirs (Marketing saw "How I died at Lave").
@@ -647,6 +663,7 @@ function startCommander(difficulty: Difficulty) {
   clearRadio();
   countNewCommander(difficulty, isRetro() ? '1984' : 'neo');
   setCausedEvents([]);
+  startAtForTesting(commander);
   // Your callsign: what other commanders see. Blank keeps your account's, or the original's Jameson.
   const typed = $<HTMLInputElement>('#callsign').value.trim();
   commander.name = cleanName(typed || currentAccount()?.callsign || commander.name);
@@ -3183,8 +3200,10 @@ let trafficDone = new Set<string>(); // voyages flown, docked or lost, this visi
 let trafficList: Voyage[] = [];
 let trafficListAt = -Infinity;
 let trafficCheck = 0;
+const lanePaths = new Map<string, THREE.QuadraticBezierCurve3>(); // worked out once a visit
 
 function resetTraffic() {
+  lanePaths.clear();
   trafficShips = new Map();
   trafficDone = new Set();
   trafficListAt = -Infinity;
@@ -3237,8 +3256,9 @@ function syncTraffic(dt: number) {
   for (const v of trafficList) {
     if (trafficShips.size >= MAX_VOYAGES) break;
     if (trafficShips.has(v.id) || trafficDone.has(v.id)) continue;
-    const path = lanePath(v);
+    const path = lanePaths.get(v.id) ?? lanePath(v); // none yet for the Titan until her yard is in the scene
     if (!path) continue;
+    lanePaths.set(v.id, path);
     const length = path.getLength();
     const flight = (length / cruiseOf(v.hull)) * 1000;
     const start = v.leg === 'in' ? v.at - flight : v.at;
