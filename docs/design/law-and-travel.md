@@ -67,6 +67,10 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
   - *Corrupt* (dictatorships, feudal worlds): bribes possible; the authorities may "lose" some of your cargo.
   - *Anarchies:* nobody checks transponders or records, and nobody protects you either.
 
+### Friendly fire *(Mark, 30 October 2026; built)*
+
+Mark: "when you are in combat and a police viper flies in front of you and it catches a laser shot you immediately become a fugutive!" Under Modern rules, in a fight (pirates about, or anyone after you), the first stray hit on a police or company security ship is forgiven: it radios "Check your fire, Commander!", and a burst that clips it counts once. Hit it again within 30 seconds, hit one with no fight on, or hit a ship you've locked a missile on, and it's a crime as before. Destroying one always counts. Classic keeps 1984's rule.
+
 ## 3. Ways out when you're wanted
 
 | Option | How | Cost |

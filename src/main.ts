@@ -104,6 +104,7 @@ import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, S
 import { ADRIFT_HOLD, assignmentFor, offerFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase, type Message } from './game/assignments';
 import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
+import { laneDirection, voyageHail, voyages, type Voyage } from './game/traffic';
 import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, salvageCargo, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
 import { SpaceDust } from './render/dust';
 import { buildYard, type YardScene } from './render/yard';
@@ -587,6 +588,11 @@ function showTitle() {
   showFittings(null);
   showShip(cobraIndex);
   const saved = loadCommander();
+  if (saved && testStartAt && !testStartDone) {
+    testStartDone = true;
+    startAtForTesting(saved);
+    saveCommander(saved);
+  }
   const load = $<HTMLButtonElement>('#load-button');
   load.hidden = !saved;
   if (saved) load.innerHTML = `<span class="key">Y · Load </span><span class="touch-word">Play as CMDR </span>${escapeHtml(saved.name)} <small>(${DIFFICULTIES[saved.difficulty].name})</small>`;
@@ -637,6 +643,17 @@ function showNewGame() {
   setState('newgame');
 }
 
+/**
+ * Testing on a phone against the Mac's copy: /play/?at=Zaalela puts your commander (saved or new)
+ * docked there. Only on a local or private-network address, never on the live site.
+ */
+const testStartAt = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(location.hostname) ? new URL(location.href).searchParams.get('at')?.toLowerCase() : undefined;
+function startAtForTesting(c: Commander) {
+  const at = testStartAt ? galaxy(c.location.galaxy).find((s) => s.name.toLowerCase() === testStartAt) : undefined;
+  if (at) c.location = { galaxy: at.galaxy, system: at.index };
+}
+let testStartDone = false;
+
 function startCommander(difficulty: Difficulty) {
   commander = newCommander(difficulty);
   // A new commander hasn't flown: the last commander's trip isn't theirs (Marketing saw "How I died at Lave").
@@ -646,6 +663,7 @@ function startCommander(difficulty: Difficulty) {
   clearRadio();
   countNewCommander(difficulty, isRetro() ? '1984' : 'neo');
   setCausedEvents([]);
+  startAtForTesting(commander);
   // Your callsign: what other commanders see. Blank keeps your account's, or the original's Jameson.
   const typed = $<HTMLInputElement>('#callsign').value.trim();
   commander.name = cleanName(typed || currentAccount()?.callsign || commander.name);
@@ -2961,7 +2979,7 @@ let autopilot = false;
 
 /** Every computer-controlled ship in the system: police, traders and pirates. */
 const npcs: NpcShip[] = [];
-const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role);
+const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role && !n.guard); // company security isn't the police
 const engineSound = new EngineSound();
 const voices = new Map<NpcShip, ShipVoice>();
 /** Other commanders' engines in shared space, by their id, each with her own voice. */
@@ -3076,7 +3094,7 @@ const TRADE_GOODS = ['food', 'textiles', 'computers', 'machinery', 'liquor', 'lu
 let encounterTimer = 0;
 let traderTimer = 0;
 
-type Leg = 'inbound' | 'docking' | 'outbound';
+type Leg = 'inbound' | 'docking' | 'outbound' | 'titan';
 const legs = new WeakMap<NpcShip, Leg>();
 
 // Inbound traders carry the market's real upcoming deliveries (Modern rules):
@@ -3163,6 +3181,179 @@ function spawnTrader(arriving: boolean, distance = 14000 + Math.random() * 8000)
     legs.set(npc, 'outbound');
     npc.cargo = randomCargo();
   }
+}
+
+// --- Traffic from the market's timetable (Modern; game/traffic.ts, docs/design/the-world.md) ---
+//
+// Every voyage is worked out from the seed and the clock, so each ship is where
+// it would be for anyone: far from you it rides its lane by the clock, and once
+// you're close, or it's in trouble, it flies itself like any other trader.
+
+type Rails = { path: THREE.QuadraticBezierCurve3; start: number; end: number; length: number };
+const railsOf = new WeakMap<NpcShip, Rails>();
+const voyageOf = new WeakMap<NpcShip, Voyage>();
+const LANE_OUT = 30_000; // metres from the station where a lane begins or ends
+const RAILS_NEAR = 2500; // closer to you than this, a ship flies itself
+const MAX_VOYAGES = 5; // ships on their lanes at once, at most
+let trafficShips = new Map<string, NpcShip>(); // voyage id → its ship, this visit
+let trafficDone = new Set<string>(); // voyages flown, docked or lost, this visit
+let trafficList: Voyage[] = [];
+let trafficListAt = -Infinity;
+let trafficCheck = 0;
+const lanePaths = new Map<string, THREE.QuadraticBezierCurve3>(); // worked out once a visit
+
+// Company security (Mark): Vipers in company colours. Guards patrol a yard's Titan;
+// escorts fly alongside a freighter. They fight pirates and whoever attacks the
+// company's ships, and answer to the company, not the law.
+const yardGuards = new Set<NpcShip>();
+const escortOf = new Map<NpcShip, NpcShip>(); // escort → the freighter it's with
+const YARD_GUARDS = [3, 3, 2, 2, 2, 2, 2, 2]; // by government: more in lawless space
+const GUARD_RELIEF = 180_000; // ms before a lost guard is replaced from the Titan's hold
+let guardDueAt = 0;
+
+function securityViper(company: CompanyId, centre: THREE.Vector3, radius: number, i: number): NpcShip {
+  const npc = new NpcShip(shipById('viper')!, 'police', POLICE_LASER, {
+    centre: centre.clone(),
+    radius,
+    height: [150, -200, 40][i % 3],
+    rate: (i % 2 ? -1 : 1) * 0.16,
+    angle: i * 2.1,
+  });
+  npc.guard = true;
+  npc.company = company;
+  applyCompanyBand(npc.model, COMPANIES[company].colour);
+  const p = npc.patrol;
+  npc.obj.position.set(Math.cos(p.angle) * p.radius, p.height, Math.sin(p.angle) * p.radius).add(p.centre);
+  space.scene.add(npc.obj);
+  npcs.push(npc);
+  return npc;
+}
+
+/** Keep the yard guarded, and send away escorts whose freighter has docked or gone, once they're out of sight. */
+function keepSecurity(now: number) {
+  if (yardScene && yardScene.yard.stage !== 'finished') {
+    const want = YARD_GUARDS[currentSystem().government];
+    if (yardGuards.size < want && now >= guardDueAt) {
+      yardGuards.add(securityViper('wy', yardScene.centre, yardScene.radius + 900 + yardGuards.size * 500, yardGuards.size));
+      if (yardGuards.size >= want) guardDueAt = 0;
+    }
+  }
+  for (const [escort, freighter] of escortOf) {
+    if (npcs.includes(freighter)) continue;
+    if (escort.obj.position.distanceTo(player.obj.position) > 5000 && !escort.hostile) removeNpc(escort);
+  }
+}
+
+/** Someone fired on a company ship: its security nearby goes after them. */
+function alertSecurity(victim: NpcShip, by: PlayerShip) {
+  if (!victim.company) return;
+  for (const g of npcs) {
+    if (!g.guard || g.company !== victim.company || g.obj.position.distanceTo(victim.obj.position) > 8000) continue;
+    g.attacker = by;
+    g.attackedAgo = 0;
+  }
+}
+
+function resetTraffic() {
+  yardGuards.clear();
+  escortOf.clear();
+  guardDueAt = 0;
+  lanePaths.clear();
+  trafficShips = new Map();
+  trafficDone = new Set();
+  trafficListAt = -Infinity;
+  trafficCheck = 0;
+}
+
+/** A voyage's path through the system: from its lane's end, round the planet and moons, to the slot or the Titan (or back out). */
+function lanePath(v: Voyage): THREE.QuadraticBezierCurve3 | null {
+  const d = new THREE.Vector3(...laneDirection(currentSystem(), v.other));
+  const toPlanet = planetPos.clone().sub(station.root.position).normalize();
+  if (d.dot(toPlanet) > -0.2) d.addScaledVector(toPlanet, -(d.dot(toPlanet) + 0.6)).normalize();
+  const far = station.root.position.clone().addScaledVector(d, LANE_OUT);
+  let near: THREE.Vector3;
+  if (v.to === 'titan') {
+    if (!yardScene) return null;
+    near = yardScene.centre.clone().add(far.clone().sub(yardScene.centre).setLength(yardScene.radius * 1.2));
+  } else near = onSlotAxis(v.leg === 'in' ? 900 : 300);
+  const [a, b] = v.leg === 'in' ? [far, near] : [near, far];
+  const path = new THREE.QuadraticBezierCurve3(a, a.clone().add(b).multiplyScalar(0.5), b);
+  // Bend round anything in the way: push the middle of the curve out from it until it's clear.
+  const bodies = [{ centre: planetPos, radius: planetRadius * 1.15 }, ...sceneBodies.filter((b) => b.body.id.startsWith('moon')).map((b) => ({ centre: b.centre, radius: b.radius * 1.3 }))];
+  for (let tries = 0; tries < 6; tries++) {
+    let worst: { centre: THREE.Vector3; by: number; at: THREE.Vector3 } | null = null;
+    for (let i = 1; i < 20; i++) {
+      const p = path.getPoint(i / 20);
+      for (const body of bodies) {
+        const by = body.radius - p.distanceTo(body.centre);
+        if (by > 0 && (!worst || by > worst.by)) worst = { centre: body.centre, by, at: p };
+      }
+    }
+    if (!worst) break;
+    path.v1.add(worst.at.clone().sub(worst.centre).setLength(worst.by * 2.2 + 500));
+  }
+  return path;
+}
+
+const cruiseOf = (hull: string) => shipById(hull)!.stats.maxSpeed * 0.5;
+
+/** Ships on their lanes right now that aren't in the scene yet: put them there. */
+function syncTraffic(dt: number) {
+  if (!modern() || !commander) return;
+  trafficCheck -= dt;
+  if (trafficCheck > 0) return;
+  trafficCheck = 1;
+  const now = Date.now();
+  keepSecurity(now);
+  if (now - trafficListAt > 60_000) {
+    trafficList = voyages(currentSystem(), now - 10 * 60_000, now + 10 * 60_000, marketState(tradeContext()).lost ?? []);
+    trafficListAt = now;
+  }
+  for (const v of trafficList) {
+    if (trafficShips.size >= MAX_VOYAGES) break;
+    if (trafficShips.has(v.id) || trafficDone.has(v.id)) continue;
+    const path = lanePaths.get(v.id) ?? lanePath(v); // none yet for the Titan until her yard is in the scene
+    if (!path) continue;
+    lanePaths.set(v.id, path);
+    const length = path.getLength();
+    const flight = (length / cruiseOf(v.hull)) * 1000;
+    const start = v.leg === 'in' ? v.at - flight : v.at;
+    if (now < start || now >= start + flight) continue;
+    const npc = addNpc(v.hull, 'trader', path.getPointAt((now - start) / flight));
+    if (v.company) {
+      npc.company = v.company;
+      applyCompanyBand(npc.model, COMPANIES[v.company].colour);
+    }
+    npc.cargo = {};
+    for (const c of v.cargo) npc.cargo[c.id] = (npc.cargo[c.id] ?? 0) + c.qty;
+    if (v.leg === 'in' && v.to === 'station') {
+      deliveries.set(npc, v.cargo);
+      for (const c of v.cargo) carried.add(`${c.id}:${c.t}`);
+    }
+    npc.destination = path.getPoint(1);
+    legs.set(npc, v.to === 'titan' ? 'titan' : v.leg === 'in' ? 'inbound' : 'outbound');
+    railsOf.set(npc, { path, start, end: start + flight, length });
+    voyageOf.set(npc, v);
+    trafficShips.set(v.id, npc);
+    ride(npc, now);
+    for (let i = 0; i < v.escorts && v.company; i++) escortOf.set(securityViper(v.company, npc.obj.position, 550 + i * 250, i), npc);
+  }
+}
+
+/** Move the ships riding their lanes to where the clock says; let go of any that are near you or in trouble. */
+function ride(npc: NpcShip, now: number) {
+  const r = railsOf.get(npc);
+  if (!r) return;
+  const u = (now - r.start) / (r.end - r.start);
+  const near = state === 'flying' && npc.obj.position.distanceTo(player.obj.position) < RAILS_NEAR;
+  if (u >= 1 || near || npc.hostile || npc.attackedAgo < 60) {
+    railsOf.delete(npc);
+    return;
+  }
+  const at = r.path.getPointAt(Math.max(0, u));
+  npc.obj.position.copy(at);
+  npc.obj.lookAt(at.clone().add(r.path.getTangentAt(Math.max(0, u))));
+  npc.ship.speed = r.length / ((r.end - r.start) / 1000);
 }
 
 /** A pirate band of one to three, somewhere ahead of the player and away from the station. */
@@ -3369,6 +3560,8 @@ function updateTraffic(dt: number) {
     } else if (leg === 'docking' && station.toLocal(npc.obj.position).z < SLOT.z) {
       reportedBy(npc);
       removeNpc(npc); // safely inside
+    } else if (leg === 'titan' && npc.obj.position.distanceTo(npc.destination!) < 400) {
+      removeNpc(npc); // unloading into the Titan's hold
     } else if (leg === 'outbound' && npc.obj.position.distanceTo(npc.destination!) < 600) {
       reportedBy(npc);
       removeNpc(npc); // gone to witchspace
@@ -3377,8 +3570,9 @@ function updateTraffic(dt: number) {
   traderTimer -= dt;
   if (traderTimer <= 0) {
     traderTimer = 25 + Math.random() * 35;
-    if (ofRole('trader').length < TRADERS_BY_GOVERNMENT[sys.government]) spawnTrader(Math.random() < 0.6 || reserved);
+    if (!modern() && ofRole('trader').length < TRADERS_BY_GOVERNMENT[sys.government]) spawnTrader(Math.random() < 0.6 || reserved);
   }
+  syncTraffic(dt);
   // Pacing (Modern): one fight at a time, and a breather after each, longer
   // in safer systems, so trouble comes in beats you can follow. (Classic
   // keeps 1984's: a roll every so often, whatever else is going on.)
@@ -3396,6 +3590,13 @@ function updateTraffic(dt: number) {
 }
 
 function removeNpc(npc: NpcShip, dispose = true) {
+  if (yardGuards.delete(npc) && !guardDueAt) guardDueAt = Date.now() + GUARD_RELIEF;
+  escortOf.delete(npc);
+  const voyage = voyageOf.get(npc);
+  if (voyage && trafficShips.get(voyage.id) === npc) {
+    trafficShips.delete(voyage.id);
+    trafficDone.add(voyage.id);
+  }
   voices.get(npc)?.dispose();
   voices.delete(npc);
   npcs.splice(npcs.indexOf(npc), 1);
@@ -3771,7 +3972,9 @@ function buildSystemScene(sys: StarSystem) {
   reinforceTimer = repopulateTimer = 0;
   carried = new Set();
   // Some traffic already about, and maybe trouble soon after arrival.
-  for (let i = 0; i < TRADERS_BY_GOVERNMENT[sys.government] - 1; i++) spawnTrader(true, 5000 + Math.random() * 10000);
+  // Classic: a few traders at random. Modern: the timetable's (syncTraffic).
+  resetTraffic();
+  if (!modern()) for (let i = 0; i < TRADERS_BY_GOVERNMENT[sys.government] - 1; i++) spawnTrader(true, 5000 + Math.random() * 10000);
   traderTimer = 15;
   encounterTimer = modern() ? 25 + Math.random() * 15 : 12 + Math.random() * 10; // Modern: after the arrival news has been read
   lastFightAt = -Infinity;
@@ -4366,10 +4569,36 @@ const SAFE_ZONE = 5000; // metres
 const inSafeZone = (at: THREE.Vector3) => commander !== null && at.distanceTo(station.root.position) < SAFE_ZONE;
 
 /** The player shot or rammed a ship. Pirates are fair game; anyone else is a crime. */
+// Friendly fire (Mark: a police Viper flies across you in a fight, catches one shot, and you're a
+// fugitive). Under Modern rules, in a fight, the first stray hit on a police or security ship is
+// forgiven with a warning; a burst that clips it counts once. Again within half a minute, or with
+// no fight on, or a ship you've locked a missile on, and it's no accident. Destroying one still counts.
+const STRAY_BURST = 1.5; // seconds: hits this close together are one accident
+const STRAY_MEMORY = 30; // seconds before another accident would be forgiven
+const strays = new WeakMap<NpcShip, { from: number; at: number }>();
+function strayShot(npc: NpcShip): boolean {
+  if (!modern() || npc.role === 'marshal' || !(npc.guard || npc.role === 'police') || !fightOn() || locked === npc) return false;
+  const s = strays.get(npc);
+  if (s && elapsed - s.from <= STRAY_BURST) return (s.at = elapsed), true;
+  if (s && elapsed - s.at < STRAY_MEMORY) return false;
+  strays.set(npc, { from: elapsed, at: elapsed });
+  const sp = speakerOf(npc);
+  radio(sp.kind, sp.from, 'Check your fire, Commander!', { colour: sp.colour, flash: 2 });
+  return true;
+}
+
 function playerHitNpc(npc: NpcShip, damage: number) {
   // Paid off, then shot at: the deal's off.
   if (npc.paid) Object.assign(npc, { paid: false, fights: true });
-  if (npc.role === 'police' || npc.role === 'marshal') becomeFugitive();
+  // A stray shot in a fight: it hurts, but it's no crime and no grudge (a kill still counts).
+  if (strayShot(npc)) {
+    if (npc.hit(damage)) destroyNpc(npc, player.obj);
+    return;
+  }
+  alertSecurity(npc, player);
+  if (npc.guard) {
+    if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on company security · you are an OFFENDER');
+  } else if (npc.role === 'police' || npc.role === 'marshal') becomeFugitive();
   else if (npc.role === 'trader') {
     if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on a trader · you are an OFFENDER');
     else {
@@ -4895,6 +5124,9 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   for (const npc of [...npcs]) {
     if (!npcs.includes(npc)) continue; // destroyed earlier this frame
     const shot = npc.update(dt);
+    ride(npc, Date.now());
+    const escorting = escortOf.get(npc);
+    if (escorting && npcs.includes(escorting)) npc.patrol.centre.copy(escorting.obj.position);
     if (shot && npc.target === player) npc.firedOnPlayer = true;
     if (shot && npc.role === 'pirate') pirateFired(npc);
     // Keep ships from flying through the station, except traders docking down the slot.
@@ -6230,7 +6462,7 @@ function updateCombatHud() {
   } else if (best) {
     // The transponder: type, role, condition and standing.
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
-    const standing = best.role === 'pirate' ? 'WANTED' : best.role === 'police' ? 'POLICE' : best.role === 'marshal' ? 'MARSHALS' : 'CLEAN';
+    const standing = best.role === 'pirate' ? 'WANTED' : best.guard ? 'SECURITY' : best.role === 'police' ? 'POLICE' : best.role === 'marshal' ? 'MARSHALS' : 'CLEAN';
     const owner = best.company ? COMPANIES[best.company].name.toUpperCase() : best.role.toUpperCase();
     targetInfo.textContent = `${best.def.name} · ${owner} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === locked ? ' · LOCKED' : ''}`;
     // Close enough, the scanner reads the hold.
@@ -6814,13 +7046,14 @@ const hailsOf = new WeakMap<NpcShip, number>();
 function speakerOf(npc: NpcShip): { who: Speaker; kind: RadioKind; from: string; colour?: string } {
   if (!npcIdentified(npc)) return { who: npc.def.id === 'falcon' ? 'falcon' : npc.role === 'trader' ? 'trader' : 'pirate', kind: 'ship', from: `Unidentified ${npc.def.name}`, colour: UNIDENTIFIED_HEX };
   if (npc.def.id === 'falcon') return { who: 'falcon', kind: 'pirate', from: 'Falcon' };
+  if (npc.guard && npc.company) return { who: 'security', kind: 'police', from: `${COMPANIES[npc.company].name} ${escortOf.has(npc) ? 'escort' : 'yard security'}`, colour: COMPANIES[npc.company].colour };
   switch (npc.role) {
     case 'police':
       return { who: 'police', kind: 'police', from: `${currentSystem().name} police` };
     case 'marshal':
       return { who: 'marshal', kind: 'police', from: 'Co-operative Marshals', colour: '#ffd98a' };
     case 'trader':
-      return { who: 'trader', kind: 'ship', from: npc.company ? `${COMPANIES[npc.company].name} ${npc.def.name}` : npc.def.name, colour: npc.company ? COMPANIES[npc.company].colour : '#9ef0c0' };
+      return { who: 'trader', kind: 'ship', from: traderName(npc), colour: traderColour(npc) };
     default:
       return { who: 'pirate', kind: 'pirate', from: npc.def.name };
   }
@@ -6836,6 +7069,7 @@ function hailContext(k: number, npc?: NpcShip): HailContext {
     scared: npc ? npc.attackedAgo < 12 : false,
     wronged: npc ? npc.attacker === player && npc.attackedAgo < 120 : false,
     company: npc?.company ? COMPANIES[npc.company].name : undefined,
+    escort: npc ? escortOf.has(npc) : undefined,
     lawless: !checksClearance(sys),
   };
 }
@@ -6861,6 +7095,9 @@ function hailTarget() {
     hailsOf.set(npc, asked);
     const ctx = hailContext(serialOf(npc) * 1000 + asked, npc);
     if (npc.paid) return radio('pirate', sp.from, "We had a deal. Don't push it.");
+    const voyage = voyageOf.get(npc);
+    if (voyage && asked === 1 && npcIdentified(npc) && !ctx.scared && !ctx.wronged)
+      return radio(sp.kind, sp.from, voyageHail(voyage, galaxy(currentSystem().galaxy)[voyage.other].name), { colour: sp.colour });
     if (sp.who === 'pirate' && npcIdentified(npc)) {
       const r = pirateAnswer(ctx, playerHoldValue(), cmdr().credits);
       return radio('pirate', sp.from, r.text, { colour: sp.colour, answers: r.toll ? [payOff(npc, r.toll), noDeal(npc)] : undefined, flash: r.toll ? 4 : undefined, urgent: Boolean(r.toll) });
@@ -7064,7 +7301,7 @@ let distressTimer = 90;
 /** Damage a trader under attack takes while it calls for help: about a minute and a half against one pirate. */
 const DISTRESS_SHIELDING = 0.4;
 
-const traderName = (t: NpcShip) => (t.company ? `${COMPANIES[t.company].name} ${t.def.name}` : t.def.name);
+const traderName = (t: NpcShip) => `${t.company ? `${COMPANIES[t.company].name} ` : ''}${t.def.name}${voyageOf.get(t) ? ` ${voyageOf.get(t)!.name}` : ''}`;
 const traderColour = (t: NpcShip) => (t.company ? COMPANIES[t.company].colour : '#9ef0c0');
 
 function distressCall(trader: NpcShip, pirate: NpcShip) {
@@ -8789,6 +9026,9 @@ if (import.meta.env.DEV) {
       get autopilot() { return autopilot; },
       get explore() { return { bodies: sceneBodies, pois: scenePois, planetPos, survey }; },
       get yard() { return yardScene; },
+      /** The timetable's ships here now: who, which leg, riding their lane or flying themselves, and where. */
+      traffic: () => npcs.filter((n) => voyageOf.has(n)).map((n) => ({ id: voyageOf.get(n)!.id, name: traderName(n), leg: legs.get(n), riding: railsOf.has(n), at: n.obj.position.toArray().map(Math.round), km: +(n.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1) })),
+      security: () => npcs.filter((n) => n.guard).map((n) => ({ who: speakerOf(n).from, mode: n.mode, km: +(n.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1), with: escortOf.get(n) ? traderName(escortOf.get(n)!) : null })),
       /** Encounter pacing: the next roll, the last fight, and how wary the pirates are here. */
       get pacing() { return { encounterTimer, sinceFight: elapsed - lastFightAt, fightOn: fightOn(), wary: wariness() }; },
       /** Yards at work in this galaxy now. */

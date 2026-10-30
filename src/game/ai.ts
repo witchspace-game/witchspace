@@ -110,6 +110,7 @@ export function think(npc: NpcShip, world: World) {
   switch (npc.role) {
     case 'police':
     case 'marshal': {
+      if (npc.guard && recentAttacker) return attack(recentAttacker);
       if (world.playerWanted && world.playerPresent) return attack(player);
       const pirate = nearest(at, others.filter((n) => n.role === 'pirate').map((n) => n.ship), POLICE_RANGE);
       return pirate ? attack(pirate) : cruise();
