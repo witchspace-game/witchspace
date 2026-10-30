@@ -77,6 +77,8 @@ export const NAMES: NameRule[] = [
   { name: 'Gamora', rule: 'protected', within: true, why: 'Marvel character, held by the founder' },
   { name: 'Shuri', rule: 'protected', why: 'Marvel character, held by the founder' },
 
+  { name: 'Red Baron', rule: 'protected', within: true, why: 'Brand name (the pizza), and the WWI ace: held back' },
+
   // Sounding official
   { name: 'Admin', rule: 'never', why: 'Sounds official' },
   { name: 'Administrator', rule: 'never', why: 'Sounds official' },

@@ -17,6 +17,11 @@ describe('reserved callsigns', () => {
     for (const n of ['Thor', 'Loki', 'Storm', 'Vision', 'Falcon', 'Phoenix', 'Iron Duke', 'Hulking Freighter', 'Groote Eylandt']) expect(rule(n), n).toBe('free');
   });
 
+  it('holds back the Red Baron, but not a plain Baron', () => {
+    for (const n of ['Red Baron', 'RedBaron', 'CMDR Red Baron']) expect(rule(n), n).toBe('protected');
+    expect(rule('Baron')).toBe('free');
+  });
+
   it('leaves ordinary names alone', () => {
     for (const n of ['Lead Balloon', 'Campbell', 'Elite Trader', 'Satellite', 'Belle', 'Modesty', 'Jamie', 'Scunthorpe']) expect(rule(n), n).toBe('free');
   });
