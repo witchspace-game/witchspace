@@ -322,6 +322,11 @@ export interface Commander {
   fuel: number;
   /** Ships destroyed, for the combat rating. */
   kills: number;
+  /**
+   * The callsign card's invitation (ui/cardInvite.ts): the career of the first moment worth it,
+   * waiting to be offered at the next docking, then 'asked' for good, whatever the answer.
+   */
+  cardInvite?: 'trade' | 'fight' | 'explore' | 'asked';
   /** When you last drove off the Falcon (epoch ms): she keeps away from you for a day after. */
   falconDrivenOff?: number;
   /** Co-operative Marshals carriers destroyed: each one brings the next sooner. */

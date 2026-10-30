@@ -71,6 +71,7 @@ import { allies, NpcShip, type NpcRole } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
 import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
 import { sessionToken, signedIn, currentAccount } from './net/account';
+import { hideCardInvite, showCardInvite } from './ui/cardInvite';
 import { claimCallsign, commanderSaved, initAccount, isAccountPanelOpen, titleShown, toggleAccountPanel } from './ui/accountPanel';
 import { cleanName } from '../server/src/protocol';
 import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
@@ -158,6 +159,7 @@ function setState(next: State) {
   if (next !== 'title' && isAccountPanelOpen()) toggleAccountPanel(false);
   if (next !== 'docked' && logOpen) setFlightLog(false);
   if (next !== 'docked') closeTrip();
+  if (next !== 'docked') hideCardInvite();
   if (next !== 'flying') music.stop(); // the moment's over: docked, jumped or dead
   if (next !== 'flying') {
     countdown = null; // leaving flight cancels a hyperspace countdown
@@ -3924,6 +3926,7 @@ function updateExplore(dt: number): boolean {
       const done = survey.target.body;
       const before = exploreOf(c).points;
       recordSurvey(c, here, done);
+      noteCardMoment('explore');
       void keepMoment({ kind: 'discovery', text: `Survey complete · ${done.name}`, subject: done.name }, 20, 3);
       noteExplorerRank(before);
       saveCommander(c);
@@ -4330,6 +4333,7 @@ function rateKill(npc: NpcShip | 'crime'): string {
   const classic = c.difficulty === 'classic';
   const r = classic ? { points: combatComputer ? 0.5 : 1 } : npc === 'crime' ? { points: 0, none: 'crime' as const } : killPoints(foeOf(npc), c.kills, Boolean(combatComputer));
   c.kills = Math.round((c.kills + r.points) * 100) / 100;
+  if (r.points > 0) noteCardMoment('fight');
   if (rightOn(before, c.kills)) setTimeout(() => flash('Right On Commander!', 3), 1200);
   if (combatRating(c.kills) !== combatRating(before)) setTimeout(() => flash(`Combat rating: ${combatRating(c.kills)}`, 3), 2600);
   return classic ? '' : pointsNote(r);
@@ -6540,6 +6544,28 @@ function fitTransponderForLaunch(): number | null {
   return cost;
 }
 
+/** A moment worth a callsign card (the first kill or survey), kept for the next docking. */
+function noteCardMoment(career: 'fight' | 'explore') {
+  const c = cmdr();
+  if (!c.cardInvite && !signedIn()) c.cardInvite = career;
+}
+
+/** Docked: invite a signed-out commander to make their callsign card, once ever, after the dock's own news. */
+function offerCard() {
+  const c = cmdr();
+  if (signedIn() || c.cardInvite === 'asked') return;
+  const career = c.cardInvite ?? 'trade';
+  c.cardInvite = 'asked';
+  saveCommander(c);
+  // After the dock's own news, and never over another sheet (your moments, the flight log): wait for them.
+  const offer = () => {
+    if (state !== 'docked' || signedIn()) return;
+    if (logOpen || isTripOpen() || !$('#handover').hidden) return void setTimeout(offer, 1500);
+    showCardInvite(c.name, career);
+  };
+  setTimeout(offer, 3000);
+}
+
 async function dock() {
   setAutopilot(false);
   surrenderTimer = null;
@@ -6579,6 +6605,7 @@ async function dock() {
   // The yard's word on a spec from the site, unless the dock had more pressing news.
   void checkSiteSpec(!settlement && !delivered.length && !collected.length && !gone.length && !news.length);
   void checkSignedOver();
+  offerCard();
 }
 
 function settlementMessage(s: Settlement, lead: string) {

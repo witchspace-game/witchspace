@@ -2076,3 +2076,10 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
   .ws-share-sheet { width: 100%; border-radius: 14px 14px 0 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); transform: translateY(40px); }
 }
 
+
+/* The callsign card's invitation: once, docked, after the dock's own news (ui/cardInvite.ts). */
+#card-invite { z-index: 40; left: 50%; right: auto; top: 50%; bottom: auto; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 32px)); }
+#card-invite h2 { margin: 0 0 6px; font-size: 20px; text-wrap: balance; }
+#card-invite .meta { text-transform: none; letter-spacing: normal; font-size: 15px; color: var(--fg); line-height: 1.45; }
+.card-invite-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 0; }
+.card-invite-actions .button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--accent); color: var(--accent); text-decoration: none; letter-spacing: 0.08em; }
