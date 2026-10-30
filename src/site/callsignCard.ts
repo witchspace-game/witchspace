@@ -2,17 +2,19 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { shipById } from '../content/ships';
 import { buildPainted, disposeShip, type ShipModel } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 
 // The callsign card's ship: the role's ship in neo-vector, on the right of the card and clear of the words,
-// as on the site's share cards (tools/share-card.ts). She's drawn on black and laid over the card's scene with
-// a screen blend, so the black drops away and only her glow shows (a see-through canvas would pool the bloom
-// into a wash). She turns slowly until you take hold of her: drag to turn her to the angle you want, and she
-// stays there. picture() draws her afresh at 1200×630, as she's turned, for the card you share. Throws
-// without WebGL, so the page can carry on without her.
+// as on the site's share cards (tools/share-card.ts), in front of the card's scene. She's drawn with her glow on
+// black, and the last pass lays that over the scene: screened, so her glow adds to it, and with the scene cut
+// away wherever her hull is (a silhouette drawn first), so she's solid and nothing shows through her. (The
+// scene isn't in the 3D view itself, or the bloom would glow it a second time.) She turns slowly until you take
+// hold of her: drag to turn her to the angle you want, and she stays there. picture() draws the card's
+// picture at 1200×630, as she's turned. Throws without WebGL, so the page can carry on without her.
 
 export const CARD_W = 1200;
 export const CARD_H = 630;
@@ -22,9 +24,27 @@ const RADIUS = 215 / CARD_H;
 
 export interface CardShip {
   show(shipId: string): void;
-  /** The ship on black at the card's full size, for the picture: lay it over the scene with a screen blend. */
+  /** The scene behind her (an image the card's size); resolves once it's loaded and showing. */
+  scene(url: string): Promise<void>;
+  /** The scene and the ship at the card's full size, for the picture. */
   picture(): HTMLCanvasElement;
 }
+
+/** How bright the scene shows behind her: dimmed, so she and the words come first. */
+const SCENE_LEVEL = 0.62;
+
+/** The last pass: the scene, cut away where her hull is, with her glow screened over it. */
+const BLEND = {
+  uniforms: { tDiffuse: { value: null }, tScene: { value: null }, tMask: { value: null }, level: { value: SCENE_LEVEL } },
+  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform sampler2D tScene; uniform sampler2D tMask; uniform float level; varying vec2 vUv;
+    void main() {
+      vec3 ship = texture2D(tDiffuse, vUv).rgb;
+      vec3 back = texture2D(tScene, vUv).rgb * level * (1.0 - texture2D(tMask, vUv).r);
+      gl_FragColor = vec4(1.0 - (1.0 - back) * (1.0 - ship), 1.0);
+    }`,
+};
 
 export function cardShip(canvas: HTMLCanvasElement): CardShip {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -40,6 +60,39 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
   bloom.compositeMaterial.uniforms['bloomFactors'].value = [1, 0.75, 0.45, 0.18, 0.04];
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
+  const blend = new ShaderPass(BLEND);
+  composer.addPass(blend);
+  // Black until a scene has loaded.
+  const none = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1);
+  none.needsUpdate = true;
+  blend.uniforms.tScene.value = none;
+  // Her hull's silhouette, drawn white on black into a picture of its own, the same size as the card's.
+  const mask = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
+  blend.uniforms.tMask.value = mask.texture;
+  const white = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+  const black = new THREE.Color(0x000000);
+  const drawMask = () => {
+    if (!model) return;
+    const hidden: THREE.Object3D[] = [];
+    const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
+    model.root.traverse((o) => {
+      const line = (o as { isLineSegments2?: boolean }).isLineSegments2 || (o as THREE.Line).isLine || (o as THREE.LineSegments).isLineSegments;
+      if (line && o.visible) {
+        o.visible = false;
+        hidden.push(o);
+      } else if ((o as THREE.Mesh).isMesh) {
+        swapped.push([o as THREE.Mesh, (o as THREE.Mesh).material]);
+        (o as THREE.Mesh).material = white;
+      }
+    });
+    renderer.setRenderTarget(mask);
+    renderer.setClearColor(black, 1);
+    renderer.clear();
+    renderer.render(scene, camera);
+    renderer.setRenderTarget(null);
+    for (const o of hidden) o.visible = true;
+    for (const [m, mat] of swapped) m.material = mat;
+  };
 
   let model: ShipModel | null = null;
   const spin = { x: 0.35, y: -0.75, held: false, dragging: false, lx: 0, ly: 0 };
@@ -58,7 +111,9 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
-    setLineResolution(renderer.getDrawingBufferSize(new THREE.Vector2()));
+    const px = renderer.getDrawingBufferSize(new THREE.Vector2());
+    mask.setSize(px.x, px.y);
+    setLineResolution(px);
     frameFor(w, h);
   };
   new ResizeObserver(resize).observe(canvas);
@@ -83,6 +138,7 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
   const draw = () => {
     if (!model) return;
     model.root.rotation.set(spin.x, spin.y, 0);
+    drawMask();
     composer.render();
   };
   let visible = true;
@@ -111,12 +167,31 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
       resize();
       draw();
     },
+    scene(url) {
+      return new Promise((done) => {
+        new THREE.TextureLoader().load(
+          url,
+          (t) => {
+            // Read as it's stored: the blend comes after the output pass, in the screen's own colours.
+            t.colorSpace = THREE.NoColorSpace;
+            const was = blend.uniforms.tScene.value as THREE.Texture;
+            blend.uniforms.tScene.value = t;
+            if (was !== none) was.dispose();
+            draw();
+            done();
+          },
+          undefined,
+          () => done(),
+        );
+      });
+    },
     picture() {
       // Drawn at full size and copied out at once: the drawing buffer is cleared once the browser shows a frame.
       const ratio = renderer.getPixelRatio();
       renderer.setPixelRatio(1);
       renderer.setSize(CARD_W, CARD_H, false);
       composer.setSize(CARD_W, CARD_H);
+      mask.setSize(CARD_W, CARD_H);
       setLineResolution(new THREE.Vector2(CARD_W, CARD_H));
       frameFor(CARD_W, CARD_H);
       draw();

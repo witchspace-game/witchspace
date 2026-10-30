@@ -1668,8 +1668,8 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .cs-stage:hover .cs-card { transform: rotateY(-2deg) rotateX(1deg); }
 .cs-scene { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(0.62); transition: opacity 0.35s; }
 .cs-scene.swap { opacity: 0; }
-/* The ship on black, screened over the scene: the black drops away and her glow adds to it. */
-.cs-ship { position: absolute; inset: 0; width: 100%; height: 100%; display: block; mix-blend-mode: screen; cursor: grab; touch-action: pan-y; }
+/* The ship in front of her scene, both drawn by src/site/callsignCard.ts; the image is for a browser without WebGL. */
+.cs-ship { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: pan-y; }
 .cs-ship.held:active { cursor: grabbing; }
 .cs-hint { position: absolute; left: 0; right: 0; bottom: 6px; margin: 0; text-align: center; color: var(--muted); font-size: 12.5px; letter-spacing: 0.03em; }
 .cs-scenes { margin: 0; padding: 0; border: 0; min-width: 0; }

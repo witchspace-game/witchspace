@@ -40,6 +40,7 @@ try {
   // No WebGL: the card keeps its words over its scene, and so does the picture.
 }
 if (ship) {
+  $('cs-scene').hidden = true;
   const hint = $('cs-hint');
   hint.hidden = false;
   $('cs-ship').addEventListener('pointerdown', () => (hint.hidden = true), { once: true });
@@ -81,6 +82,8 @@ scenes.innerHTML = SCENES.map((sc) => `<button type="button" class="cs-scene-pic
 function setScene(id: string) {
   scene = id;
   for (const b of scenes.querySelectorAll<HTMLElement>('[data-scene]')) b.setAttribute('aria-pressed', String(b.dataset.scene === id));
+  // With WebGL the scene is drawn with her, so her hull hides it; without, it's the picture under the words.
+  if (ship) return void ship.scene(sceneUrl(id));
   const next = new Image();
   next.src = sceneUrl(id);
   sceneImg.classList.add('swap');
@@ -319,8 +322,8 @@ async function picture(): Promise<File | null> {
   const g = c.getContext('2d')!;
   g.fillStyle = '#000';
   g.fillRect(0, 0, CARD_W, CARD_H);
-  // The scene, dimmed as on the page, then her glow screened over it.
-  const bg = await new Promise<HTMLImageElement | null>((done) => {
+  // The scene and her together, as the card shows them; without WebGL, the scene alone, dimmed as on the page.
+  const bg = ship ? null : await new Promise<HTMLImageElement | null>((done) => {
     const im = new Image();
     im.onload = () => done(im);
     im.onerror = () => done(null);
@@ -333,9 +336,8 @@ async function picture(): Promise<File | null> {
     g.fillRect(0, 0, CARD_W, CARD_H);
   }
   if (ship) {
-    g.globalCompositeOperation = 'screen';
+    await ship.scene(sceneUrl(scene));
     g.drawImage(ship.picture(), 0, 0);
-    g.globalCompositeOperation = 'source-over';
   }
   // The role's light behind her, and the fade behind the words, as on the page.
   const rgb = rgbOf(role.colour);
