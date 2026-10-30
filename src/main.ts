@@ -4569,9 +4569,32 @@ const SAFE_ZONE = 5000; // metres
 const inSafeZone = (at: THREE.Vector3) => commander !== null && at.distanceTo(station.root.position) < SAFE_ZONE;
 
 /** The player shot or rammed a ship. Pirates are fair game; anyone else is a crime. */
+// Friendly fire (Mark: a police Viper flies across you in a fight, catches one shot, and you're a
+// fugitive). Under Modern rules, in a fight, the first stray hit on a police or security ship is
+// forgiven with a warning; a burst that clips it counts once. Again within half a minute, or with
+// no fight on, or a ship you've locked a missile on, and it's no accident. Destroying one still counts.
+const STRAY_BURST = 1.5; // seconds: hits this close together are one accident
+const STRAY_MEMORY = 30; // seconds before another accident would be forgiven
+const strays = new WeakMap<NpcShip, { from: number; at: number }>();
+function strayShot(npc: NpcShip): boolean {
+  if (!modern() || npc.role === 'marshal' || !(npc.guard || npc.role === 'police') || !fightOn() || locked === npc) return false;
+  const s = strays.get(npc);
+  if (s && elapsed - s.from <= STRAY_BURST) return (s.at = elapsed), true;
+  if (s && elapsed - s.at < STRAY_MEMORY) return false;
+  strays.set(npc, { from: elapsed, at: elapsed });
+  const sp = speakerOf(npc);
+  radio(sp.kind, sp.from, 'Check your fire, Commander!', { colour: sp.colour, flash: 2 });
+  return true;
+}
+
 function playerHitNpc(npc: NpcShip, damage: number) {
   // Paid off, then shot at: the deal's off.
   if (npc.paid) Object.assign(npc, { paid: false, fights: true });
+  // A stray shot in a fight: it hurts, but it's no crime and no grudge (a kill still counts).
+  if (strayShot(npc)) {
+    if (npc.hit(damage)) destroyNpc(npc, player.obj);
+    return;
+  }
   alertSecurity(npc, player);
   if (npc.guard) {
     if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on company security · you are an OFFENDER');
