@@ -6,7 +6,10 @@ import * as THREE from 'three';
 import type { ShipVoice } from './audio/spatial';
 import { shipById } from './content/ships';
 import { DockingComputer } from './game/dockingComputer';
-import type { Body } from './game/explore';
+import type { CombatPilot } from './game/combatPilot';
+import type { Body, Poi } from './game/explore';
+import { MouseAim } from './game/mouseAim';
+import type { SurveyPilot } from './game/surveyPilot';
 import type { Missile } from './game/missile';
 import { Beams } from './game/weapons';
 import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
@@ -17,6 +20,7 @@ import { Station } from './game/station';
 import { ATMOSPHERE_SCALE, buildSun } from './render/bodies';
 import { SpaceDust } from './render/dust';
 import { makeSpace } from './render/renderer';
+import type { ShipModel } from './render/shipModel';
 import type { YardScene } from './render/yard';
 
 export const space = makeSpace();
@@ -34,6 +38,10 @@ space.scene.add(dust.group);
 export const player = new PlayerShip(shipById('cobra-mk3')!);
 space.scene.add(player.obj);
 export const dockingComputer = new DockingComputer();
+/** Mouse (or thumb) aim: where the sights point, ahead of the nose. */
+export const aim = new MouseAim();
+/** Where the gimballed laser's ring points, in the ship's own frame. */
+export const gimbalHold = new THREE.Vector3(0, 0, 1);
 /** Every computer-controlled ship in the system: police, traders and pirates. */
 export const npcs: NpcShip[] = [];
 export const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role && !n.guard); // company security isn't the police
@@ -61,6 +69,15 @@ export interface SceneBody {
   range: number;
 }
 
+export interface ScenePoi {
+  poi: Poi;
+  position: THREE.Vector3;
+  /** Shown on the HUD: after surveying the planet, or on flying near. */
+  revealed: boolean;
+  models: ShipModel[];
+  beacon: THREE.Group | null;
+}
+
 /** How the flight in this system stands: shared by the parts of the game that fly it. */
 export const flight = {
   /** Seconds since the game started (the main loop's clock). */
@@ -73,6 +90,7 @@ export const flight = {
   /** The planet's pull on debris; see updateDrifters. */
   planetGM: 0.05 * 14000 ** 2,
   sceneBodies: [] as SceneBody[],
+  scenePois: [] as ScenePoi[],
   /** A Wexley-Yorozu yard by one of the moons (Modern), if there's one here now. */
   yardScene: null as YardScene | null,
   /** The player's missile lock. */
@@ -106,6 +124,16 @@ export const flight = {
   /** 0..100, the original's "LT" gauge. */
   laserHeat: 0,
   overheated: false,
+  /** Waiting for the coast to clear before switching on to dock. */
+  switchOnWhenClear: false,
+  /** The combat computer flying the ship (Modern), if it's on. */
+  combatComputer: null as CombatPilot | null,
+  /** The survey autopilot, if it's on. */
+  surveyPilot: null as SurveyPilot | null,
+  /** When the route autopilot jumps next. */
+  routeJumpAt: null as number | null,
+  /** The hyperspace countdown, in seconds, while it runs. */
+  countdown: null as number | null,
   /** A Viper detailed to fly with you, and until when. */
   escort: null as { npc: NpcShip; until: number } | null,
 };

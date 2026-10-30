@@ -59,7 +59,7 @@ import {
   wantsMouseCapture,
   type FlightInput,
 } from './game/input';
-import { MouseAim, SENSITIVITY as AIM_SENSITIVITY } from './game/mouseAim';
+import { SENSITIVITY as AIM_SENSITIVITY } from './game/mouseAim';
 import { allies, NpcShip } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
 import { signedIn, currentAccount } from './net/account';
@@ -85,7 +85,7 @@ import { stageLabel, yardAt, yardsOf } from './game/yards';
 import { lineUpFor } from './game/commissions';
 import { Explosion } from './render/explosion';
 import { camera, isRetro, lens, render, setRetro } from './render/renderer';
-import { buildShip, disposeShip, heatShip, UNIDENTIFIED_HEX, type ShipModel } from './render/shipModel';
+import { buildShip, disposeShip, heatShip, UNIDENTIFIED_HEX } from './render/shipModel';
 import { stationName } from './galaxy/stationNames';
 import { savePhoto, takePhoto } from './ui/photo';
 import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
@@ -115,7 +115,7 @@ import { showClipView } from './ui/clipView';
 import { checkBtcOrders } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
 import { $, cmdr, currentSystem, game, modern, type State } from './core';
-import { beams, dockingComputer, dust, explosions, HULL_READ, flight, missiles, sharedSpace, npcs, ofRole, voices, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS, type SceneBody } from './scene';
+import { aim, beams, dockingComputer, gimbalHold, dust, explosions, HULL_READ, flight, missiles, sharedSpace, npcs, ofRole, voices, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS, type SceneBody, type ScenePoi } from './scene';
 import './style.css';
 import { initManual, renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
 import { newsLine } from './game/newsLines';
@@ -156,10 +156,10 @@ function setState(next: State) {
   if (next !== 'docked') hideCardInvite();
   if (next !== 'flying') music.stop(); // the moment's over: docked, jumped or dead
   if (next !== 'flying') {
-    countdown = null; // leaving flight cancels a hyperspace countdown
-    combatComputer = null;
-    surveyPilot = null;
-    routeJumpAt = null;
+    flight.countdown = null; // leaving flight cancels a hyperspace countdown
+    flight.combatComputer = null;
+    flight.surveyPilot = null;
+    flight.routeJumpAt = null;
     sharedSpace.leave(); // back in when flying again, wherever that is
     flight.lockedCommander = null;
     for (const n of netMissiles.values()) n.missile.dispose();
@@ -639,15 +639,6 @@ function ensureSystemScene() {
 // Rings and moons are drawn for everyone; surveys and signals pay, so they're
 // Modern only, like the rest of what we've added to 1984.
 
-interface ScenePoi {
-  poi: Poi;
-  position: THREE.Vector3;
-  /** Shown on the HUD: after surveying the planet, or on flying near. */
-  revealed: boolean;
-  models: ShipModel[];
-  beacon: THREE.Group | null;
-}
-let scenePois: ScenePoi[] = [];
 let worldParts: THREE.Group[] = [];
 let survey: { target: SceneBody; progress: number } | null = null;
 const YARD_COLOUR = COMPANIES.wy.colour;
@@ -659,12 +650,12 @@ const exploring = () => cmdr().difficulty === 'modern';
 
 function disposeExploreScene() {
   for (const g of worldParts) disposeWorldPart(g);
-  for (const p of scenePois) {
+  for (const p of flight.scenePois) {
     for (const m of p.models) disposeShip(m);
     if (p.beacon) disposeWorldPart(p.beacon);
   }
   worldParts = [];
-  scenePois = [];
+  flight.scenePois = [];
   flight.sceneBodies = [];
   survey = null;
   flight.yardScene?.dispose();
@@ -735,7 +726,7 @@ function buildExploreScene(sys: StarSystem) {
         sp.models.push(model);
       }
     }
-    scenePois.push(sp);
+    flight.scenePois.push(sp);
   }
 }
 
@@ -744,7 +735,7 @@ function updateExplore(dt: number): boolean {
   const pos = player.obj.position;
   for (const b of flight.sceneBodies) if (b.body.kind === 'moon' && pos.distanceTo(b.centre) < b.radius) return true;
   flight.yardScene?.update(dt, Date.now());
-  for (const p of scenePois) {
+  for (const p of flight.scenePois) {
     for (const m of p.models) m.root.rotateOnAxis(TUMBLE_AXIS, dt * 0.03);
     if (p.beacon) blinkBeacon(p.beacon, flight.elapsed);
   }
@@ -771,7 +762,7 @@ function updateExplore(dt: number): boolean {
       flash(`Survey complete · ${done.name}${grade} · data worth ${dataValue(exploreOf(c).data[exploreOf(c).data.length - 1], here)} Cr here, more further away`, 4);
       survey = null;
       if (done.id === 'planet') {
-        const hidden = scenePois.filter((p) => !p.revealed);
+        const hidden = flight.scenePois.filter((p) => !p.revealed);
         for (const p of hidden) p.revealed = true;
         if (hidden.length) setTimeout(() => game.state === 'flying' && flash(hidden.length === 1 ? 'The survey picked up an unidentified signal' : `The survey picked up ${hidden.length} unidentified signals`, 3), 3800);
       }
@@ -785,7 +776,7 @@ function updateExplore(dt: number): boolean {
   }
 
   // Signals: noticed close up, and found by flying to them.
-  for (const p of scenePois) {
+  for (const p of flight.scenePois) {
     if (isFound(c, here, p.poi.id)) continue;
     const d = pos.distanceTo(p.position);
     if (!p.revealed && d < SIGNAL_DETECT * (deep ? 4 : 1)) {
@@ -803,7 +794,7 @@ const TUMBLE_AXIS = new THREE.Vector3(0.3, 1, 0.2).normalize();
 const BEACON_RADIUS = 22;
 function coverTargets<T>(value: T): Target<T>[] {
   const out: Target<T>[] = [];
-  for (const p of scenePois) {
+  for (const p of flight.scenePois) {
     for (const m of p.models) out.push({ value, position: m.root.position, radius: m.radius * 0.8 });
     if (p.beacon) out.push({ value, position: p.beacon.position, radius: BEACON_RADIUS });
   }
@@ -820,7 +811,7 @@ const SHOT_GIVES_AWAY = 3; // seconds after firing that everyone can see you
 let wasInClutter = false;
 
 function inClutter(pos: THREE.Vector3) {
-  return scenePois.some((p) => p.poi.kind === 'wrecks' && p.position.distanceTo(pos) < CLUTTER_RADIUS);
+  return flight.scenePois.some((p) => p.poi.kind === 'wrecks' && p.position.distanceTo(pos) < CLUTTER_RADIUS);
 }
 /** Whether a ship at this distance can pick the player out. */
 function playerVisibleAt(distance: number) {
@@ -830,7 +821,7 @@ function playerVisibleAt(distance: number) {
 
 /** The wreck or beacon the ship has run into, pushing it back out; null if none. */
 function bumpCover(pos: THREE.Vector3, shipRadius: number): string | null {
-  for (const p of scenePois) {
+  for (const p of flight.scenePois) {
     const solids = [...p.models.map((m) => ({ at: m.root.position, r: m.radius * 0.8 })), ...(p.beacon ? [{ at: p.beacon.position, r: BEACON_RADIUS }] : [])];
     for (const { at, r } of solids) {
       const away = pos.clone().sub(at);
@@ -971,7 +962,7 @@ function exploreMarkers(km: (p: THREE.Vector3) => string): Marker[] {
     out.push({ position: b.centre, color: surveyed ? '#9aa3ad' : SIGNAL_COLOUR, radius: b.radius, label: near ? `${b.body.name}${tick} ${km(b.centre)}` : undefined });
   }
   if (!exploring()) return out;
-  for (const p of scenePois) {
+  for (const p of flight.scenePois) {
     if (!p.revealed) continue;
     const found = isFound(cmdr(), currentSystem(), p.poi.id);
     out.push({ position: p.position, color: SIGNAL_COLOUR, radius: 30, label: found ? `${p.poi.name} ${km(p.position)}` : `Signal ${km(p.position)}` });
@@ -1153,7 +1144,7 @@ function rateKill(npc: NpcShip | 'crime'): string {
   const c = cmdr();
   const before = c.kills;
   const classic = c.difficulty === 'classic';
-  const r = classic ? { points: combatComputer ? 0.5 : 1 } : npc === 'crime' ? { points: 0, none: 'crime' as const } : killPoints(foeOf(npc), c.kills, Boolean(combatComputer));
+  const r = classic ? { points: flight.combatComputer ? 0.5 : 1 } : npc === 'crime' ? { points: 0, none: 'crime' as const } : killPoints(foeOf(npc), c.kills, Boolean(flight.combatComputer));
   c.kills = Math.round((c.kills + r.points) * 100) / 100;
   if (r.points > 0) noteCardMoment('fight');
   if (rightOn(before, c.kills)) setTimeout(() => flash('Right On Commander!', 3), 1200);
@@ -1353,8 +1344,6 @@ function suspectFor(): number {
   return unpinned ? Math.max(0, SUSPECT_TIME - (flight.elapsed - unpinned.at)) : 0;
 }
 
-/** Waiting for the coast to clear before switching on to dock. */
-let switchOnWhenClear = false;
 
 const clock = (secs: number) => {
   const t = Math.ceil(secs);
@@ -1366,11 +1355,11 @@ function transponderOnToDock(): boolean {
   if (!flight.transponderOff) return true;
   const wait = suspectFor();
   if (wait > 0) {
-    switchOnWhenClear = wait !== Infinity;
+    flight.switchOnWhenClear = wait !== Infinity;
     flash(`Transponder left dark: switching on here would make you the suspect · ${wait === Infinity ? 'you ignored a police hail' : clock(wait)} · or jump out`, 4);
     return false;
   }
-  switchOnWhenClear = false;
+  flight.switchOnWhenClear = false;
   flight.transponderOff = false;
   showTransponder();
   flash('Transponder on for docking', 2);
@@ -1382,7 +1371,7 @@ function toggleTransponder() {
   if (cmdr().difficulty !== 'modern') return flash('Classic rules: the transponder stays on', 1.5);
   if (transponderBroken()) return flash('Transponder damaged · repair it at a station', 2);
   flight.transponderOff = !flight.transponderOff;
-  switchOnWhenClear = false;
+  flight.switchOnWhenClear = false;
   showTransponder();
   if (flight.transponderOff) return flash(hasLaw(currentSystem()) ? 'Transponder off · running dark' : 'Transponder off · nobody here cares', 2);
   // Back on where the law can see, soon after a crime nobody pinned on you: you're the suspect.
@@ -1415,11 +1404,11 @@ function showTransponder() {
   const survey = $('#touch .survey-button');
   const fitted = hasEquipment(cmdr(), 'survey-autopilot');
   if (survey.hidden === fitted) survey.hidden = !fitted;
-  survey.classList.toggle('armed', Boolean(surveyPilot));
+  survey.classList.toggle('armed', Boolean(flight.surveyPilot));
   if (button.textContent !== `Dark${timer}`) button.textContent = `Dark${timer}`;
   // Waiting to dock and the coast is now clear: on it goes.
-  if (switchOnWhenClear && flight.transponderOff && wait === 0 && player.obj.position.distanceTo(station.root.position) < CLEARANCE_RANGE) {
-    switchOnWhenClear = false;
+  if (flight.switchOnWhenClear && flight.transponderOff && wait === 0 && player.obj.position.distanceTo(station.root.position) < CLEARANCE_RANGE) {
+    flight.switchOnWhenClear = false;
     flight.transponderOff = false;
     flash('Coast clear · transponder on for docking', 2.5);
   }
@@ -1505,14 +1494,13 @@ function gimballed() {
  * gimbal swings onto the computer's target, or the nearest hostile, whenever one is within its
  * reach, and back to the nose when none is: the computer flies, the gimbal tracks, you fire.
  */
-const gimbalHold = new THREE.Vector3(0, 0, 1); // the ring, in the ship's own frame
 const GIMBAL_SLEW = THREE.MathUtils.degToRad(150); // degrees a second it can swing
 function gimbalRide(dt: number) {
   aim.dir.copy(gimbalHold).applyQuaternion(player.obj.quaternion);
   if (!gimballed() || view !== 'front') return;
   const fwd = player.forward();
   const at = player.obj.position;
-  const candidates = [combatComputer?.target, ...npcs.filter((n) => n.hostile)].filter((n): n is NpcShip => Boolean(n) && npcs.includes(n!));
+  const candidates = [flight.combatComputer?.target, ...npcs.filter((n) => n.hostile)].filter((n): n is NpcShip => Boolean(n) && npcs.includes(n!));
   const lead = (n: NpcShip) => n.obj.position.clone().addScaledVector(n.ship.forward(), n.ship.speed * 0.12).sub(at);
   const target = candidates.find((n) => n.obj.position.distanceTo(at) < playerLaser().range && fwd.angleTo(lead(n)) < GIMBAL_REACH);
   // Nothing within reach: the ring drifts home to the nose, ready for the next pass.
@@ -2003,7 +1991,7 @@ function rollAssistApplies() {
 function setAutopilot(on: boolean, message?: string) {
   flight.autopilot = on;
   if (on) {
-    surveyPilot = null;
+    flight.surveyPilot = null;
     dockingComputer.reset();
     danube.start(!isRetro());
   } else {
@@ -2037,24 +2025,24 @@ function updateSpace(dt: number) {
     const prev = station.toLocal(player.obj.position);
     input = flightInput();
     if (flight.autopilot && input.active) setAutopilot(false, 'Docking computer off');
-    if (surveyPilot && input.active) stopSurveyPilot('Survey autopilot off · you have control');
+    if (flight.surveyPilot && input.active) stopSurveyPilot('Survey autopilot off · you have control');
     checkCombatComputer(input);
 
     // Mouse aim: steer the nose towards the reticle. Turning with keys or
     // while the computer flies puts the reticle back on the nose.
     const keysTurning = input.pitch !== 0 || input.yaw !== 0;
     if (input.recentre) aim.reset(player);
-    if (combatComputer) {
+    if (flight.combatComputer) {
       // The computer flies; the mouse (or aim pad) only aims the guns, relative to the nose.
       aim.move(player, input.aimDx, input.aimDy);
       aim.clamp(player);
       gimbalHold.copy(aim.dir).applyQuaternion(player.obj.quaternion.clone().invert());
-    } else if (controlScheme() === 'mouse' && isMouseCaptured() && !flight.autopilot && !surveyPilot && !keysTurning && view === 'front') {
+    } else if (controlScheme() === 'mouse' && isMouseCaptured() && !flight.autopilot && !flight.surveyPilot && !keysTurning && view === 'front') {
       aim.move(player, input.aimDx, input.aimDy);
       const s = aim.steer(player);
       input.pitch = s.pitch;
       input.yaw = s.yaw;
-    } else if (view !== 'front' && controlScheme() === 'mouse' && (isMouseCaptured() || isTouch) && !flight.autopilot && !surveyPilot && !keysTurning) {
+    } else if (view !== 'front' && controlScheme() === 'mouse' && (isMouseCaptured() || isTouch) && !flight.autopilot && !flight.surveyPilot && !keysTurning) {
       aim.reset(player);
       steerInView(input, dt);
     } else {
@@ -2065,10 +2053,10 @@ function updateSpace(dt: number) {
     // assist mustn't undo it the moment you let go (a Stardot pilot found the keys "obstinate").
     if (input.mouseRoll || input.roll !== 0) bankHeld = true;
     if (input.level) bankHeld = false;
-    rollAssist = !flight.autopilot && !surveyPilot && !combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
+    rollAssist = !flight.autopilot && !flight.surveyPilot && !flight.combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
     if (rollAssist) {
       input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
-    } else if (!flight.autopilot && !surveyPilot && !combatComputer && controlScheme() === 'mouse' && input.roll === 0 && !bankHeld) {
+    } else if (!flight.autopilot && !flight.surveyPilot && !flight.combatComputer && controlScheme() === 'mouse' && input.roll === 0 && !bankHeld) {
       // Flight assist: with no roll input, level the wings with the star
       // system's "up" so there's always a horizon. Weaker when pointing
       // steeply up or down, where "level" stops meaning much.
@@ -2076,21 +2064,21 @@ function updateSpace(dt: number) {
       input.roll = THREE.MathUtils.clamp(AUTO_LEVEL_GAIN * player.right().y * (1 - steep), -1, 1);
     }
     if (flight.autopilot) dockingComputer.update(dt, player, station);
-    else if (combatComputer) {
+    else if (flight.combatComputer) {
       const hit = lastHitBy && npcs.includes(lastHitBy.npc) ? lastHitBy : null;
       const status = { heat: Math.min(1, flight.laserHeat / 100), hitBy: hit?.npc ?? null, hitAgo: hit ? flight.elapsed - hit.at : Infinity };
-      if (!combatComputer.fly(dt, player, npcs, flight.locked, { centre: planetPos, radius: flight.planetRadius }, status)) stopCombatComputer('No hostiles · combat computer standing down · you have control');
-      else if (combatComputer.announce) {
-        flash(`Combat computer · ${combatComputer.announce}`, 1.8);
-        combatComputer.announce = null;
+      if (!flight.combatComputer.fly(dt, player, npcs, flight.locked, { centre: planetPos, radius: flight.planetRadius }, status)) stopCombatComputer('No hostiles · combat computer standing down · you have control');
+      else if (flight.combatComputer.announce) {
+        flash(`Combat computer · ${flight.combatComputer.announce}`, 1.8);
+        flight.combatComputer.announce = null;
       }
-    } else if (surveyPilot) flySurvey(dt, surveyPilot);
+    } else if (flight.surveyPilot) flySurvey(dt, flight.surveyPilot);
     else {
       holdForSurrender(input);
       player.steer(dt, input);
     }
     player.move(dt);
-    if (combatComputer) gimbalRide(dt);
+    if (flight.combatComputer) gimbalRide(dt);
     player.recharge(dt, isWorking(cmdr(), 'extra-energy') ? 2 : 1);
 
     if (updateSun(dt)) {
@@ -2236,7 +2224,7 @@ function updateSpace(dt: number) {
   setInterference(noise);
   updateSeekerBox();
   if (game.state === 'flying') {
-    updateHud(player, station, blips, flight.autopilot || Boolean(combatComputer), rollAssist);
+    updateHud(player, station, blips, flight.autopilot || Boolean(flight.combatComputer), rollAssist);
     updateTouch(dt, player.speed / player.maxSpeed);
     updateAimDisplay();
     updateCombatHud();
@@ -2345,7 +2333,6 @@ function updateCombatHud() {
 
 // --- Mouse aim display and controls help -------------------------------------
 
-const aim = new MouseAim();
 const reticle = $('#reticle');
 const mousePrompt = $('#mouse-prompt');
 let wasCaptured = false;
@@ -2693,8 +2680,8 @@ function updateContextButton() {
     exploring() && flight.sceneBodies.some((b) => b.body.kind !== 'star' && pos.distanceTo(b.centre) - b.radius < b.range * 2 && !isSurveyed(c, here, b.body.id));
   let next: [string, string] = ['KeyJ', 'Jump'];
   if (pos.distanceTo(station.root.position) < CLEARANCE_RANGE && hasEquipment(c, 'docking-computer')) next = ['KeyC', flight.autopilot ? 'Dock: on' : 'Dock'];
-  else if (surveyNear && hasEquipment(c, 'survey-autopilot')) next = ['Digit9', surveyPilot ? 'Survey: on' : 'Survey'];
-  else if (countdown !== null) next = ['KeyH', 'Cancel jump'];
+  else if (surveyNear && hasEquipment(c, 'survey-autopilot')) next = ['Digit9', flight.surveyPilot ? 'Survey: on' : 'Survey'];
+  else if (flight.countdown !== null) next = ['KeyH', 'Cancel jump'];
   else if (hop && distanceLy(here, hop) <= c.fuel + 1e-9) next = ['KeyH', `Hyper · ${hop.name}`];
   if (contextButton.dataset.key !== next[0]) contextButton.dataset.key = next[0];
   if (contextButton.textContent !== next[1]) contextButton.textContent = next[1];
@@ -2720,7 +2707,7 @@ function toggleSurrender() {
     return;
   }
   setAutopilot(false);
-  countdown = null;
+  flight.countdown = null;
   flight.surrenderTimer = SURRENDER_TIME;
   if (isTouch) setTouchSpeed(0); // the slider drops to all stop with you
   flash('Surrender signalled · all stop, weapons cold', 2.5);
@@ -2763,7 +2750,7 @@ async function surrender() {
   // They know exactly who you are now: whatever you did dark here is settled too.
   defiedPolice = hullChecked = false;
   unpinned = hail = null;
-  flight.transponderOff = switchOnWhenClear = false;
+  flight.transponderOff = flight.switchOnWhenClear = false;
   for (const n of ofRole('police')) if (n.target === player) n.target = null;
   enterDocked();
   flash(settlementMessage(settlement, 'You surrendered · record cleared'), 5);
@@ -2940,26 +2927,24 @@ function die() {
 // you man a turret or the gimballed front laser. Touch any flight control
 // and you have the ship back.
 
-let combatComputer: CombatPilot | null = null;
 const COMBAT_COMPUTER_MIN_HULL = 0.25; // fraction of full hull: below this, you fly
 
 const hasTurret = () => (['rear', 'left', 'right'] as const).some((m) => Boolean(cmdr().lasers[m]));
 
 // --- The explorer's autopilots (docs/design/exploration.md, stage 1b) ------------
 
-let surveyPilot: SurveyPilot | null = null;
 const SURVEY_PILOT_HOSTILES = 5000; // metres: a hostile this close hands control back
 
 function toggleSurveyPilot() {
   const c = cmdr();
-  if (surveyPilot) return stopSurveyPilot('Survey autopilot off · you have control');
+  if (flight.surveyPilot) return stopSurveyPilot('Survey autopilot off · you have control');
   if (!hasEquipment(c, 'survey-autopilot')) return flash(c.difficulty === 'modern' ? 'Survey autopilot not fitted · sold to Pathfinders' : 'No survey autopilot under Classic rules', 2);
   if (!isWorking(c, 'survey-autopilot')) return flash('Survey autopilot damaged · repair at a station', 2);
   const next = surveyGoal();
   if (!next) return flash('Nothing left to survey or find here · the star is yours, if you want it', 3);
   if (flight.autopilot) setAutopilot(false);
   stopCombatComputer();
-  surveyPilot = new SurveyPilot();
+  flight.surveyPilot = new SurveyPilot();
   surveyGoalName = next.name;
   sfx.lock();
   flash(`Survey autopilot · ${next.name}`, 2.5);
@@ -2967,8 +2952,8 @@ function toggleSurveyPilot() {
 
 /** Hand back control. Letting go on its own (not for your hands on the stick), it stops the ship first: never left coasting into a moon. */
 function stopSurveyPilot(message?: string, allStop = false) {
-  if (!surveyPilot) return;
-  surveyPilot = null;
+  if (!flight.surveyPilot) return;
+  flight.surveyPilot = null;
   if (allStop) player.speed = 0;
   aim.reset(player);
   if (message) flash(message, 2.5);
@@ -2986,7 +2971,7 @@ function surveyGoal(): { goal: SurveyGoal; name: string } | null {
     const point = b.centre.clone().add(pos.clone().sub(b.centre).setLength(b.radius + b.range * 0.5));
     options.push({ goal: { point, within: b.range * 0.3 }, name: b.body.name, d: pos.distanceTo(point) });
   }
-  for (const p of scenePois) {
+  for (const p of flight.scenePois) {
     if (!p.revealed || isFound(c, here, p.poi.id)) continue;
     options.push({ goal: { point: p.position, within: SIGNAL_REACH * 0.6 }, name: p.poi.name, d: pos.distanceTo(p.position) });
   }
@@ -3009,42 +2994,41 @@ function flySurvey(dt: number, pilot: SurveyPilot) {
   if (lined && left > J_DISTANCE + 3000) inSystemJump(true);
 }
 
-let routeJumpAt: number | null = null;
 const ROUTE_PAUSE = 12; // seconds after arriving (and after the arrival news) before the route autopilot jumps on
 const ROUTE_HOSTILES = 6000; // metres: hostiles this close hold the jump
 
 function updateRouteAutopilot() {
-  if (routeJumpAt === null || flight.elapsed < routeJumpAt || countdown !== null) return;
+  if (flight.routeJumpAt === null || flight.elapsed < flight.routeJumpAt || flight.countdown !== null) return;
   const c = cmdr();
   const dest = destination();
   if (!dest || !isWorking(c, 'route-autopilot')) {
-    routeJumpAt = null;
+    flight.routeJumpAt = null;
     return;
   }
   const d = distanceLy(currentSystem(), dest);
   if (d > c.fuel) {
-    routeJumpAt = null;
+    flight.routeJumpAt = null;
     return flash(`Route autopilot · not enough fuel for ${dest.name} (${d.toFixed(1)} LY) · refuel at the station`, 3.5);
   }
   if (npcs.some((n) => n.hostile && n.obj.position.distanceTo(player.obj.position) < ROUTE_HOSTILES)) {
-    routeJumpAt = flight.elapsed + 5;
+    flight.routeJumpAt = flight.elapsed + 5;
     return flash('Route autopilot holding · hostiles near', 2);
   }
-  routeJumpAt = null;
+  flight.routeJumpAt = null;
   toggleHyperspace();
 }
 
 function toggleCombatComputer() {
   const c = cmdr();
-  if (combatComputer) return stopCombatComputer('Combat computer off · you have control');
+  if (flight.combatComputer) return stopCombatComputer('Combat computer off · you have control');
   if (!hasEquipment(c, 'combat-computer')) return flash(c.difficulty === 'modern' ? 'Combat computer not fitted' : 'No combat computers under Classic rules', 2);
   if (!isWorking(c, 'combat-computer')) return flash('Combat computer damaged · repair at a station', 2);
   if (!hasTurret()) return flash('Fit a rear or side laser to use the combat computer: it flies, you man the turret', 3);
   const target = chooseTarget(player.obj.position, npcs, flight.locked);
   if (!target) return flash('No hostiles in range', 1.5);
   if (flight.autopilot) setAutopilot(false);
-  surveyPilot = null;
-  combatComputer = new CombatPilot();
+  flight.surveyPilot = null;
+  flight.combatComputer = new CombatPilot();
   aim.reset(player);
   gimbalHold.set(0, 0, 1);
   sfx.lock();
@@ -3052,15 +3036,15 @@ function toggleCombatComputer() {
 }
 
 function stopCombatComputer(message?: string) {
-  if (!combatComputer) return;
-  combatComputer = null;
+  if (!flight.combatComputer) return;
+  flight.combatComputer = null;
   aim.reset(player);
   if (message) flash(message, 2.5);
 }
 
 /** Hand the ship back when the pilot takes the controls, or things get bad. */
 function checkCombatComputer(input: FlightInput) {
-  if (!combatComputer) return;
+  if (!flight.combatComputer) return;
   if (input.pitch || input.roll || input.yaw || input.throttle || input.speedStep) stopCombatComputer('Combat computer off · you have control');
   else if (player.hull < player.def.stats.hull * COMBAT_COMPUTER_MIN_HULL) stopCombatComputer('Hull critical · combat computer off · you have control');
   else if (!isWorking(cmdr(), 'combat-computer')) stopCombatComputer('Combat computer damaged · you have control');
@@ -3123,7 +3107,6 @@ const J_LOCK_SUN = 6000; // above the surface: jumps stop short of the heat
 const J_LOCK_MOON = 2000; // above the surface
 const J_LOCK_YARD = 3000; // beyond the constructor's length
 
-let countdown: number | null = null;
 let lastTick = 0;
 let jumpCooldown = 0;
 
@@ -3137,8 +3120,8 @@ let galacticJump = false;
 
 /** Y, or the button on the galaxy chart: jump to the next galaxy. */
 function toggleGalacticJump() {
-  if (countdown !== null) {
-    countdown = null;
+  if (flight.countdown !== null) {
+    flight.countdown = null;
     galacticJump = false;
     flash('Galactic jump cancelled', 1.5);
     return;
@@ -3153,14 +3136,14 @@ function toggleGalacticJump() {
   }
   if (isMapOpen()) toggleGalaxyMap();
   galacticJump = true;
-  countdown = HYPERSPACE_COUNTDOWN;
-  lastTick = Math.ceil(countdown);
+  flight.countdown = HYPERSPACE_COUNTDOWN;
+  lastTick = Math.ceil(flight.countdown);
   flash(`Galactic hyperdrive · to Galaxy ${((currentSystem().galaxy + 1) % 8) + 1}`, 2.5);
 }
 
 function toggleHyperspace() {
-  if (countdown !== null) {
-    countdown = null;
+  if (flight.countdown !== null) {
+    flight.countdown = null;
     galacticJump = false;
     flash('Hyperspace cancelled', 1.5);
     return;
@@ -3181,8 +3164,8 @@ function toggleHyperspace() {
     flash('Mass locked · hostile ships too close', 2);
     return;
   }
-  countdown = HYPERSPACE_COUNTDOWN;
-  lastTick = Math.ceil(countdown);
+  flight.countdown = HYPERSPACE_COUNTDOWN;
+  lastTick = Math.ceil(flight.countdown);
   flash(`Hyperspace to ${dest.name} · ${d.toFixed(1)} LY`, 2);
 }
 
@@ -3190,20 +3173,20 @@ function updateTravel(dt: number) {
   jumpCooldown = Math.max(0, jumpCooldown - dt);
   $('#g-fuel').style.setProperty('--v', String(cmdr().fuel / fuelCapacity(cmdr())));
   const el = $('#countdown');
-  if (countdown === null) {
+  if (flight.countdown === null) {
     el.hidden = true;
     return;
   }
-  countdown -= dt;
-  const shown = Math.max(0, Math.ceil(countdown));
+  flight.countdown -= dt;
+  const shown = Math.max(0, Math.ceil(flight.countdown));
   el.hidden = false;
   el.textContent = String(shown);
   if (shown < lastTick) {
     lastTick = shown;
     sfx.tick();
   }
-  if (countdown <= 0) {
-    countdown = null;
+  if (flight.countdown <= 0) {
+    flight.countdown = null;
     el.hidden = true;
     void hyperspace();
   }
@@ -3245,12 +3228,12 @@ async function hyperspace() {
   // A new system, a cold trail: the computer switches the transponder back on.
   if (flight.transponderOff) {
     flight.transponderOff = false;
-    switchOnWhenClear = false;
+    flight.switchOnWhenClear = false;
     setTimeout(() => game.state === 'flying' && flash('Transponder on · new system (0 to run dark again)', 3), 6500);
   }
   // The Route Autopilot takes the next jump by itself, after a moment to look around.
   if (routeNote && isWorking(c, 'route-autopilot') && c.target !== null && distanceLy(dest, systemAt(dest.galaxy, c.target)) <= c.fuel) {
-    routeJumpAt = flight.elapsed + ROUTE_PAUSE;
+    flight.routeJumpAt = flight.elapsed + ROUTE_PAUSE;
     routeNote += ' · route autopilot jumps shortly (H to stop)';
   }
   const seen = messageIds();
@@ -3948,7 +3931,7 @@ if (import.meta.env.DEV) {
       get commander() { return game.commander; },
       get state() { return game.state; },
       get autopilot() { return flight.autopilot; },
-      get explore() { return { bodies: flight.sceneBodies, pois: scenePois, planetPos, survey }; },
+      get explore() { return { bodies: flight.sceneBodies, pois: flight.scenePois, planetPos, survey }; },
       get yard() { return flight.yardScene; },
       /** The timetable's ships here now: who, which leg, riding their lane or flying themselves, and where. */
       traffic: () => npcs.filter((n) => voyageOf.has(n)).map((n) => ({ id: voyageOf.get(n)!.id, name: traderName(n), leg: legs.get(n), riding: railsOf.has(n), at: n.obj.position.toArray().map(Math.round), km: +(n.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1) })),
