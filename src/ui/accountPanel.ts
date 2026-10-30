@@ -186,6 +186,8 @@ function render() {
         <form class="account-form"><input type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email" value="${escapeHtml(lastEmail())}" />
         <div class="turnstile"></div><button type="submit" class="primary">Email me a link</button></form>`;
     }
+    // The callsign page (the site's front door to shared space): same tab, so a Home Screen game keeps its sign-in.
+    if (view !== 'sent') html += `<p class="meta">New here? <a href="/callsign/">Claim a callsign first</a></p>`;
     html += `<p class="small"><a href="/privacy/" target="_blank" rel="noopener">How we use your email</a></p>`;
   } else {
     html += `<dl><dt>Signed in</dt><dd>${escapeHtml(a.email)}</dd><dt>Callsign</dt><dd>${a.callsign ? `CMDR ${escapeHtml(a.callsign)}` : '<i>not claimed yet</i>'}</dd><dt>Cloud save</dt><dd>${acct.syncedAt() ? 'On: your commander saves to your account' : 'Waiting for your first save'}</dd></dl>`;
