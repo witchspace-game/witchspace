@@ -36,8 +36,12 @@ declare const turnstile: { render: (el: HTMLElement, opts: Record<string, unknow
 
 export const isAccountPanelOpen = () => !panel.hidden;
 
-export function toggleAccountPanel(show = panel.hidden) {
+/** Why the panel was opened for you, said at its top (shared space asking for a callsign). */
+let note = '';
+
+export function toggleAccountPanel(show = panel.hidden, why = '') {
   panel.hidden = !show;
+  note = show ? why : '';
   if (show) {
     view = choice ? 'choose' : view === 'sent' ? 'sent' : 'main';
     render();
@@ -163,6 +167,7 @@ async function choose(keep: 'local' | 'cloud') {
 function render() {
   const a = acct.currentAccount();
   let html = '<h2>Account</h2>';
+  if (note && !acct.currentAccount()?.callsign) html += `<p class="account-note">${escapeHtml(note)}</p>`;
   if (view === 'choose' && choice) {
     html += `<p class="meta">This device and your account have different commanders. Which do you want to keep? The other will be replaced.</p>
       <div class="account-choice">

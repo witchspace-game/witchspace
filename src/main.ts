@@ -7500,13 +7500,13 @@ function die() {
 
 // --- Shared space (stage 1) ------------------------------------------------
 // Opt-in, Modern rules: other commanders in your system, from its server
-// (see net/space.ts and server/). Stage 1 is look and fly together: their
-// lasers are drawn but don't hit anyone yet, and nothing is saved.
+// (see net/space.ts and server/). The server judges the fighting; nothing is
+// saved there yet. Signed-in commanders with a callsign only (Mark: no guests).
 
 const COMMANDER_COLOUR = '#dfe9ff'; // their tags and scanner marks; ships keep their own colours
 
 /** Another commander's tag: rank insignia, callsign and range, e.g. "◆◆ CMDR Moxon · 0.8 km". */
-const callsignTag = (r: Remote, range: string) => (remoteUnidentified(r) ? `Unidentified ship · ${range}` : `${rankInsignia(r.rank)} CMDR ${r.name}${r.verified ? '' : ' (guest)'} · ${range}`.trim());
+const callsignTag = (r: Remote, range: string) => (remoteUnidentified(r) ? `Unidentified ship · ${range}` : `${rankInsignia(r.rank)} CMDR ${r.name} · ${range}`.trim());
 /** A commander running dark, too far off for a hull read: we can see them, not say who they are. */
 const remoteUnidentified = (r: Remote) => r.dark && r.position.distanceTo(player.obj.position) > HULL_READ;
 const commanderColour = (r: Remote) => (sharedSpace.isHostile(r) ? '#ff4d6d' : remoteUnidentified(r) ? UNIDENTIFIED_HEX : COMMANDER_COLOUR);
@@ -7522,8 +7522,13 @@ function sharedSpaceWanted(): boolean {
   }
 }
 
+/** Shared space is for commanders with a callsign (Mark): signed in, with one claimed. */
+const canShare = () => signedIn() && Boolean(currentAccount()?.callsign);
+const SIGN_IN_TO_SHARE = 'Shared space is for commanders with a callsign. Claim yours: it takes a minute.';
+
 function toggleSharedSpace() {
   const on = !sharedSpaceWanted();
+  if (on && !canShare()) toggleAccountPanel(true, SIGN_IN_TO_SHARE);
   try {
     localStorage.setItem('witchspace.shared', on ? '1' : '0');
   } catch {
@@ -7531,7 +7536,8 @@ function toggleSharedSpace() {
   }
   updateSharedButton();
   if (on) sharedSpace.resume();
-  flash(on ? 'Shared space (beta) on: fly with other commanders · Modern rules only' : 'Shared space off: single-player', 2.5);
+  // Signed out, the account panel says why it opened; no banner over it.
+  if (!on || canShare()) flash(on ? 'Shared space (beta) on: fly with other commanders · Modern rules only' : 'Shared space off: single-player', 2.5);
 }
 
 function updateSharedButton() {
@@ -7557,6 +7563,9 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     case 'lost':
       if (state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
+      break;
+    case 'signin':
+      flash(e.need === 'callsign' ? 'Shared space · claim a callsign first (A on the title screen) · flying solo for now' : 'Shared space is for commanders with a callsign · sign in on the title screen (A) · flying solo for now', 4.5);
       break;
     case 'replaced':
       flash('Shared space · you joined from another window or device, so this one has left · launch again to fly here', 4.5);
@@ -7636,7 +7645,7 @@ function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
 }
 
 function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
-  const share = state === 'flying' && Boolean(commander) && cmdr().difficulty === 'modern' && sharedSpaceWanted();
+  const share = state === 'flying' && Boolean(commander) && cmdr().difficulty === 'modern' && sharedSpaceWanted() && canShare();
   if (!share) {
     if (sharedSpace.connected) sharedSpace.leave();
     return;
