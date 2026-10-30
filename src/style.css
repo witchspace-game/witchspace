@@ -811,6 +811,7 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
 }
 #touch .touch-drawer.open { z-index: 2; } /* over the fire buttons while it is open */
 #touch .touch-drawer.open .touch-actions { display: grid; animation: drawer-in 0.16s ease-out; }
+#touch .touch-drawer.settling .touch-actions { pointer-events: none; }
 @keyframes drawer-in { from { transform: translateX(36px); opacity: 0; } }
 /* The camera: left of the drawer tab, out of the way of the thumbs. */
 #touch .photo-button { position: absolute; right: 52px; top: max(8px, env(safe-area-inset-top)); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }

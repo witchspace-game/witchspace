@@ -141,7 +141,15 @@ export function initTouch() {
   // button in it, another tap on the tab, or a tap anywhere outside it.
   const drawer = root.querySelector<HTMLElement>('.touch-drawer')!;
   const tab = drawer.querySelector<HTMLElement>('.drawer-tab')!;
+  let settle = 0;
   const setOpen = (open: boolean) => {
+    // The drawer opens as the finger lands, and its buttons appear under that finger: for a moment
+    // they ignore taps, or the same tap's click lands on Combat (Mark).
+    if (open && !drawer.classList.contains('open')) {
+      drawer.classList.add('settling');
+      clearTimeout(settle);
+      settle = window.setTimeout(() => drawer.classList.remove('settling'), 400);
+    }
     drawer.classList.toggle('open', open);
     tab.setAttribute('aria-expanded', String(open));
     tab.textContent = open ? '›' : '‹';
