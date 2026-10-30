@@ -87,6 +87,20 @@ const DESIGN: Record<string, { href: string; label: string }> = {
   bastion: { href: '/design/law-and-travel/#9-power-and-protection', label: 'The Co-operative Marshals' },
 };
 
+/** What a ship does out in the galaxy, beyond her file: the traffic (docs/design/the-world.md). */
+const AT_WORK: Record<string, { heading: string; html: string }> = {
+  titanoboa: {
+    heading: 'Everyone calls her the Titan',
+    html: `<p>Titanoboa is her name on Wexley-Yorozu's papers and in the module standard. Out in the galaxy, the news and the radio call her the Titan.</p>
+      <p>She doesn't build alone. While a yard works, a Wexley-Yorozu Bullsnake comes in every eight minutes or so from a real neighbouring system, with what the stage needs: machinery and food while she refines, alloys and minerals for the station’s frame and plating, computers to spin it up. Company Vipers guard her yard, a lost guard replaced from her hold, and most runs to her fly with an escort. Hail a freighter on the way in and she'll say so: <q>Dry Dock, in from Atriso with alloys for the Titan.</q></p>
+      <p>It's all the same on every phone: the freighter you pass is the one every commander there sees. <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
+  },
+  bullsnake: {
+    heading: 'The Titan’s supply line',
+    html: `<p>Bullsnakes run ore from a moon into the Titan's maw, and fly in from neighbouring systems with what each stage of her build needs, in Wexley-Yorozu colours and usually under escort. Every commander sees the same ones, at the same moment. <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
+  },
+};
+
 const ROLE: Record<string, string> = {
   multirole: 'Multirole', pirate: 'Pirate', police: 'Police', marshal: 'Co-operative Marshals', miner: 'Ore hauler', freighter: 'Constructor', station: 'Station',
 };
@@ -297,6 +311,7 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
   </div>
   <script type="application/json" id="ship-def">${def}</script>
   ${modulesCard(s, modules)}
+  ${!preview && AT_WORK[s.id] ? `<div class="card ship-at-work"><h3>${AT_WORK[s.id].heading}</h3>${AT_WORK[s.id].html}</div>` : ''}
   ${editionsCard(editions, s.id)}
 
   ${preview ? previewCard(s) : `<div class="ship-columns">
