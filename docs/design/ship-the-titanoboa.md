@@ -24,6 +24,10 @@ help:
 
 *Design, 25 October 2026, from Mark's idea: the Titan is a factory in space, built from sections that can be removed and replaced, so it can be as large as it needs to be. Stage 1 is built: the modular Titanoboa is the one in the game. Modern only, as yards are.*
 
+**Her name (Mark, 30 October 2026):** "Maybe Titanoboa was her name but we all call her Titan." Titanoboa is her class and her name on the company's papers: Wexley-Yorozu's letters, the catalogue and the module standard keep it. Everyone else, from the news to the freighter crews on the radio, calls her **the Titan**.
+
+**Who supplies her** ([the world](the-world.md#7-worked-example-the-titanoboas-supply-line)): Wexley-Yorozu freighters bring what each stage needs (alloys, machinery, computers, food) from the nearest worlds, on a timetable worked out from the seed and the clock, and fly straight to her.
+
 ## Why
 
 The Titanoboa is Wexley-Yorozu's constructor: it arrives at a moon, eats it a little at a time, and leaves a station behind ([the trading companies](../companies.md#the-fleet-the-titanoboa-and-the-yards)). The current hull is a box spine covered in blocks, chimneys and windows, 264 lines that glow into one yellow smear at any distance. That breaks the rule we hold every ship to: **elegance over detail** ([ships and classes](ships-and-classes.md), [CONTRIBUTING](../../CONTRIBUTING.md)).

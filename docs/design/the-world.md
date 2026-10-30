@@ -6,9 +6,10 @@ summary: How the galaxy comes alive without a server running it - every convoy, 
 card: bullsnake
 stages:
   - The world from the seed and the clock - markets, events, companies, Saloon regulars, the yards' Bullsnakes | built
-  - Routes and timetables - a convoy as a formula, a route index per system | proposed
-  - Traffic from the economy - company fleets, event convoys, work that isn't fighting | proposed
-  - Up close, a real ship - the hand-over from formula to NPC and back | proposed
+  - Routes and timetables - the market's own timetable made visible, a lane per neighbouring system | built
+  - Traffic from the economy - company fleets, relief for famines and plagues, the Titan's freighters | built
+  - More kinds of traffic - refugee liners, miners, salvage crews, work that isn't fighting | proposed
+  - Up close, a real ship - the hand-over from formula to NPC | built
   - Exceptions - what players change, kept by the server | proposed
   - Characters - named people with a plan, a ship and a memory, starting with CMDR Bond | proposed
   - Characters in shared space - flown by the system's server, the same for everyone | proposed
@@ -19,7 +20,7 @@ help:
 
 # Design: the world
 
-*Proposed, 30 October 2026, with Mark. Plan only: nothing here is built until Mark says yes. Change by pull request.*
+*Proposed, 30 October 2026, with Mark. The traffic (section 9, steps 1 to 4) was built the same day for Show HN, at Mark's word: "This is the missing piece, lets get it done before HN." The rest waits. Change by pull request.*
 
 Mark asked how the galaxy should feel, and how it should work underneath:
 
@@ -39,6 +40,19 @@ This document answers all three. It builds on [markets and trade](markets-and-tr
 - **Evoke, never copy** ([CONTRIBUTING](../../CONTRIBUTING.md#legends-and-homages)): a nod is welcome, a borrowed character or story isn't.
 
 ---
+
+## As built (30 October 2026)
+
+How the first steps work in the game (Modern rules; Classic keeps 1984's traffic):
+
+- **The market's timetable is the traffic** (`game/traffic.ts`). The market already works out every NPC delivery and purchase from the seed and the clock (`npcTrades`); those are gathered into voyages, one ship per few minutes of trade (`WINDOW_MS`, 9 minutes in an anarchy down to 4 in a corporate state). So the deliveries an inbound ship carries are the ones the market is waiting for: destroy her and they never arrive, as before.
+- **Each voyage comes from or goes to a real system a jump away,** flies for a company working this system (or is independent), and has a hull and a name, all from the seed.
+- **Its lane points the way the other system lies on the galaxy chart:** ships from Diso come in from Diso's side of the sky. The path is a curve from 30 km out to the slot (or back out), bent round the planet and moons.
+- **Far from you, a ship rides its lane by the clock.** Within 2.5 km, or once anyone shoots at it, it flies itself like any trader. Two phones at the same moment see the same ships within a metre of each other (tested).
+- **The Titan's freighters:** while a yard builds, a Wexley-Yorozu Bullsnake comes about every 8 minutes with what the stage needs, and flies to the Titan.
+- **Relief:** while an event leaves a world short (famine, drought, plague), ships bring what's missing about every 7 minutes, half of them the Carriers' Mutual.
+- **Hail one and it says who it is:** "Dry Dock, in from Atriso with alloys for the Titan."
+- **Not yet:** losses don't slow the yard (step 5's exceptions), and in shared space each phone flies its own copy once a ship is close.
 
 ## 1. Where we are
 

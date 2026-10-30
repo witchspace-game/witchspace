@@ -29,12 +29,12 @@ export type YardStage = 'refining' | 'spine' | 'frame' | 'plating' | 'spin-up' |
  * and its modules are towed to the next site.
  */
 export const STAGES: { stage: YardStage; name: string; days: number; news: string }[] = [
-  { stage: 'refining', name: 'not begun', days: 1, news: 'the Titanoboa has been assembled by the moon and lit its furnaces' },
+  { stage: 'refining', name: 'not begun', days: 1, news: 'the Titan has been assembled by the moon and lit its furnaces' },
   { stage: 'spine', name: 'bare spine', days: 2, news: 'the spine of a new station is going up' },
   { stage: 'frame', name: 'frame', days: 3, news: 'the frame of a new station is rising by the moon' },
   { stage: 'plating', name: 'half-plated', days: 4, news: 'a new station is being plated, section by section' },
   { stage: 'spin-up', name: 'spinning up', days: 2, news: 'a new station is spinning up' },
-  { stage: 'finished', name: 'finished', days: 1, news: 'a new station is finished; the Titanoboa is coming apart' },
+  { stage: 'finished', name: 'finished', days: 1, news: 'a new station is finished; the Titan is coming apart' },
 ];
 
 /** How long a build takes, and the constructor's passage to the next site. */
