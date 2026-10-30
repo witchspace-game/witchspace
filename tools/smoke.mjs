@@ -336,6 +336,18 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     return `${open ? 'open' : 'closed'}, ${w.escort ? 'escorted' : 'no escort'}`;
   });
   check('Modern: the beacon calls an escort', beacon === 'open, escorted', beacon);
+  const views = await s.w(async () => {
+    const w = window.witchspace;
+    const seen = [];
+    for (let i = 0; i < 4; i++) {
+      dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyV' }));
+      dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyV' }));
+      await new Promise((r) => setTimeout(r, 150));
+      seen.push(w.view);
+    }
+    return seen.join(' ');
+  });
+  check('Modern: V looks round all four views', views === 'rear left right front', views);
   await s.w(() => { const w = window.witchspace; w.player.speed = 0; w.setAutopilot(true); });
   let docked = false;
   for (let i = 0; i < 120 && !docked; i++) {
