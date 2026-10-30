@@ -141,13 +141,13 @@ What the room needs to know, kept by the server, not claimed:
 
 ### Step 8. Bounties on commanders
 
-- **Marshals' warrants become everyone's business:** a Wanted commander's tag says so, and whoever brings them in collects the bounty, paid by the Marshals, so nobody can farm it with a friend (no payout to wingmates or the same account).
+- **Marshals' warrants become everyone's business:** a Wanted commander's tag says so, and whoever brings them in collects the bounty, paid by the Marshals, so nobody can farm it with a friend (no payout to wingmates, the same account, or an account that has shared the killer's network lately: section 3).
 - **Player-posted bounties** come later, with credits held in escrow, which needs the server ledger.
 
 ### Step 9. Giving and trading
 
 - **First, cargo:** jettison canisters that other commanders can scoop. The server keeps track of each canister, so it exists once for everyone.
-- **Then credits and goods by agreement**, once credits live on the server (roadmap phase 4). Haulage contracts between commanders ([economy and exchanges, section 5](economy-and-exchanges.md#5-contracts-and-futures-multiplayer)) come after that.
+- **Then credits and goods by agreement**, once credits live on the server (roadmap phase 4), never between accounts that share a network while either is new (section 3). Haulage contracts between commanders ([economy and exchanges, section 5](economy-and-exchanges.md#5-contracts-and-futures-multiplayer)) come after that.
 
 ### Step 10. Commanders in the news and the feed
 
@@ -171,11 +171,19 @@ What the room needs to know, kept by the server, not claimed:
 |---|---|---|
 | **Spawn camping** at a station | The 5 km safe zone with the station's guns run by the server; a commander killed near a station relaunches with a short protection window (no damage, can't fire) | 5 |
 | **Ganking newcomers** | Protected starter systems; no points two ranks down; repeat kills count less; a warrant and the Marshals for killing a clean commander in lawful space | 5 |
-| **Alts** (second accounts to feed kills or bounties) | Verified email per account; no payout for killing a commander who shares your sign-in network often (a soft signal to the admin, not an automatic ban); repeat-kill halving; new accounts can't post bounties or broadcast | 4–8 |
+| **Alts** (second accounts to feed kills, bounties or gifts) | One inbox, one account: name+tag@ and Gmail's dots sign in to the account that inbox already has (#326; maintainers excepted). The sign-in network as a reason to refuse anything that pays, never to block an account (below). Repeat-kill halving; new accounts can't post bounties or broadcast | built / 4–9 |
 | **Cheating clients** | The server already referees moves, lasers, missiles and collisions. Step 4 takes rank, legal status and the ship off the browser. Turn rates are the next movement check | 3–4 |
 | **Spam and abuse on the radio** | Off by default, mute, block, report, the filter, rate limits, people review reports | 6 |
 | **A full system** | 32 flying; the next flies solo and retries. Batch updates into one message per commander per tick when it matters | built / later |
 | **Leaving mid-fight** to deny a kill | A ship that disconnects in a fight stays in space for 15 s (it already does, until it goes silent) and can be destroyed; the kill counts | 5 |
+
+**Second accounts and the network (Mark, 30 Oct 2026).** Mark: "If a user was determined they would use the same IP wouldnt they?" Often, but an address can't lock anyone out: mobile networks put thousands of phones behind one address, a household shares one, and a VPN changes it in seconds. So it's a signal, kept as the scrambled network fingerprint the rate limits already use, never the address itself:
+- **No bounty payout** when the killer and the victim have shared a sign-in network lately (step 8).
+- **No gifts or trades** between accounts that share a network while either is new (step 9).
+- **A flag for the maintainer** when several accounts come from one network and only ever deal with each other. People decide; nothing is banned automatically.
+- **Not two-factor or phone numbers:** two-factor protects an account from theft but doesn't stop a second account, and a text-message check costs money per text, asks for something personal and is beaten by throwaway numbers. The email code already proves the inbox.
+
+A cheat on one network gets nothing; a family on one Wi-Fi still flies together, they just can't farm each other.
 
 **What Modern rules should allow:** fighting anyone, anywhere, as in 1984, with the law as the answer, not a switch that turns player fights off. Anarchies are where commanders hunt commanders. Lawful space is safe enough to learn in, because the police, the station guns and the Marshals make murder expensive. No separate "PvP off" mode, so the galaxy stays one place; if newcomers suffer anyway, the protected starter systems get stronger, not a mode.
 
