@@ -813,7 +813,7 @@ function toggleGalaxyMap() {
     current: here,
     range: c.fuel,
     target: c.courseTo != null ? systemAt(here.galaxy, c.courseTo) : c.target === null ? null : systemAt(here.galaxy, c.target),
-    news: newsLine,
+    news: (s) => newsLine(s, currentSystem()),
     // Contracts in hand, so you can see where they're going once you've launched.
     contracts: (c.contracts ?? []).map((a) => {
       const to = destinationOf(a);

@@ -3,7 +3,7 @@
 
 import { distanceLy, systemAt, type StarSystem } from '../galaxy/generate';
 import { EVENT_KINDS, newsArrives, newsOf } from '../economy/events';
-import { cmdr, currentSystem } from '../core';
+import type { Commander } from './commander';
 
 export const ago = (ms: number) => {
   const m = Math.max(0, Math.round(ms / 60000));
@@ -11,8 +11,8 @@ export const ago = (ms: number) => {
 };
 
 /** A line for the galaxy map: the latest news of a system that has reached here. */
-export function newsLine(s: StarSystem): string | null {
-  const n = newsOf(s, currentSystem(), Date.now());
+export function newsLine(s: StarSystem, here: StarSystem): string | null {
+  const n = newsOf(s, here, Date.now());
   if (!n) return null;
   const over = Date.now() > n.event.end;
   return `${EVENT_KINDS[n.event.type].name}${over ? ' (may be over)' : ''} · heard ${ago(Date.now() - n.heard)} ago`;
@@ -22,9 +22,9 @@ export function newsLine(s: StarSystem): string | null {
  * News of traders being picked off: three or more deliveries lost near one
  * system within two hours. It spreads like any other news.
  */
-export function attackNews(here: StarSystem, now: number) {
+export function attackNews(c: Commander, here: StarSystem, now: number) {
   const out: { where: StarSystem; distance: number; heard: number; lost: number }[] = [];
-  for (const [key, market] of Object.entries(cmdr().markets)) {
+  for (const [key, market] of Object.entries(c.markets)) {
     const recent = (market.lost ?? []).filter((l) => l.t <= now && l.t > now - 2 * 3600_000);
     if (recent.length < 3) continue;
     const [g, i] = key.split(':').map(Number);
