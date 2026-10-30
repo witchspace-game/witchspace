@@ -4670,6 +4670,31 @@ function gimballed() {
   return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(commander) && isWorking(cmdr(), 'gimbal-mount');
 }
 
+/**
+ * While the combat computer flies (Mark: "my targeting system was all over the place"), the ring
+ * rides with the nose instead of staying put in space as the ship throws itself about, and the
+ * gimbal swings onto the computer's target, or the nearest hostile, whenever one is within its
+ * reach, and back to the nose when none is: the computer flies, the gimbal tracks, you fire.
+ */
+const gimbalHold = new THREE.Vector3(0, 0, 1); // the ring, in the ship's own frame
+const GIMBAL_SLEW = THREE.MathUtils.degToRad(150); // degrees a second it can swing
+function gimbalRide(dt: number) {
+  aim.dir.copy(gimbalHold).applyQuaternion(player.obj.quaternion);
+  if (!gimballed() || view !== 'front') return;
+  const fwd = player.forward();
+  const at = player.obj.position;
+  const candidates = [combatComputer?.target, ...npcs.filter((n) => n.hostile)].filter((n): n is NpcShip => Boolean(n) && npcs.includes(n!));
+  const lead = (n: NpcShip) => n.obj.position.clone().addScaledVector(n.ship.forward(), n.ship.speed * 0.12).sub(at);
+  const target = candidates.find((n) => n.obj.position.distanceTo(at) < playerLaser().range && fwd.angleTo(lead(n)) < GIMBAL_REACH);
+  // Nothing within reach: the ring drifts home to the nose, ready for the next pass.
+  const want = target ? lead(target).normalize() : fwd;
+  const angle = aim.dir.angleTo(want);
+  if (angle > 1e-4) aim.dir.lerp(want, Math.min(1, (GIMBAL_SLEW * dt) / angle)).normalize();
+  aim.clamp(player);
+  gimbalHold.copy(aim.dir).applyQuaternion(player.obj.quaternion.clone().invert());
+}
+const GIMBAL_REACH = THREE.MathUtils.degToRad(30); // as far as the ring may lead the nose
+
 /** The laser on the mount you're looking along, if any. */
 const mountLaser = () => {
   const id = cmdr().lasers[view];
@@ -5918,9 +5943,10 @@ function updateSpace(dt: number) {
     const keysTurning = input.pitch !== 0 || input.yaw !== 0;
     if (input.recentre) aim.reset(player);
     if (combatComputer) {
-      // The computer flies; the mouse (or aim pad) only aims the guns.
+      // The computer flies; the mouse (or aim pad) only aims the guns, relative to the nose.
       aim.move(player, input.aimDx, input.aimDy);
       aim.clamp(player);
+      gimbalHold.copy(aim.dir).applyQuaternion(player.obj.quaternion.clone().invert());
     } else if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !surveyPilot && !keysTurning && view === 'front') {
       aim.move(player, input.aimDx, input.aimDy);
       const s = aim.steer(player);
@@ -5956,6 +5982,7 @@ function updateSpace(dt: number) {
       player.steer(dt, input);
     }
     player.move(dt);
+    if (combatComputer) gimbalRide(dt);
     player.recharge(dt, isWorking(cmdr(), 'extra-energy') ? 2 : 1);
 
     if (updateSun(dt)) {
@@ -7813,6 +7840,8 @@ function toggleCombatComputer() {
   if (autopilot) setAutopilot(false);
   surveyPilot = null;
   combatComputer = new CombatPilot();
+  aim.reset(player);
+  gimbalHold.set(0, 0, 1);
   sfx.lock();
   flash(`Strap in, Commander · combat computer engaged · ${target.def.name} · you have the guns`, 3);
 }
