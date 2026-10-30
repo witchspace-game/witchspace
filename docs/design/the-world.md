@@ -265,7 +265,7 @@ Steps 1 to 4 need no server, so they can start straight after Show HN.
 
 ## 10. Open questions for Mark
 
-1. **The order:** traffic and the Titanoboa first (the galaxy feels busier for everyone), or Bond first (a story to talk about)?
+1. ~~**The order:**~~ **Traffic and the Titan first** (Mark, 30 Oct 2026: "Traffic and Titan ( which i prefer rather than Titanoboa ) and traffic"), then Bond. Mark prefers the name **Titan** to Titanoboa; renaming her across the game, site and docs is its own change.
 2. **Solo changes:** stay in your own world (recommended), or count for everyone when you're signed in?
 3. **How busy:** how many convoys in a quiet system, and in a busy one? Too many and the lanes feel like a motorway; too few and nobody meets one.
 4. **Bond's world:** which agricultural system does he retire to?
