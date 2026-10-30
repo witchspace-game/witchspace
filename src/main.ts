@@ -88,8 +88,8 @@ import { ADRIFT_HOLD, caseLost, checkMessages, collectHeld, STATION_CREW_RANGE, 
 import { COMPANIES, pickCompany, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
 import { laneDirection, voyageHail, voyages, type Voyage } from './game/traffic';
-import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, salvageCargo, SURVEY, trailPoisOf, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
-import { buildYard, type YardScene } from './render/yard';
+import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, salvageCargo, SURVEY, trailPoisOf, worldOf, type Poi, type SurveyData } from './game/explore';
+import { buildYard } from './render/yard';
 import { stageLabel, yardAt, yardsOf } from './game/yards';
 import { lineUpFor } from './game/commissions';
 import { Explosion } from './render/explosion';
@@ -127,7 +127,7 @@ import { showClipView } from './ui/clipView';
 import { checkBtcOrders } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
 import { $, cmdr, currentSystem, game, modern, type State } from './core';
-import { dockingComputer, dust, npcs, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS } from './scene';
+import { dockingComputer, dust, flight, npcs, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS, type SceneBody } from './scene';
 import './style.css';
 import { initManual, renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
 import { newsLine } from './game/newsLines';
@@ -511,13 +511,10 @@ function setFlightLog(open: boolean) {
 
 // The station sits at the origin with its slot facing the planet, as in the
 // original. Everything else about the system is rebuilt on arrival.
-let planetRadius = 5000;
-let atmosphere = planetRadius * ATMOSPHERE_SCALE;
+let atmosphere = flight.planetRadius * ATMOSPHERE_SCALE;
 let planetGM = 0.05 * 14000 ** 2; // debris pull; see updateDrifters
 let planet: THREE.Group | null = null;
 
-
-let autopilot = false;
 
 // --- Police and combat ------------------------------------------------------
 
@@ -773,10 +770,10 @@ function securityViper(company: CompanyId, centre: THREE.Vector3, radius: number
 
 /** Keep the yard guarded, and send away escorts whose freighter has docked or gone, once they're out of sight. */
 function keepSecurity(now: number) {
-  if (yardScene && yardScene.yard.stage !== 'finished') {
+  if (flight.yardScene && flight.yardScene.yard.stage !== 'finished') {
     const want = YARD_GUARDS[currentSystem().government];
     if (yardGuards.size < want && now >= guardDueAt) {
-      yardGuards.add(securityViper('wy', yardScene.centre, yardScene.radius + 900 + yardGuards.size * 500, yardGuards.size));
+      yardGuards.add(securityViper('wy', flight.yardScene.centre, flight.yardScene.radius + 900 + yardGuards.size * 500, yardGuards.size));
       if (yardGuards.size >= want) guardDueAt = 0;
     }
   }
@@ -815,13 +812,13 @@ function lanePath(v: Voyage): THREE.QuadraticBezierCurve3 | null {
   const far = station.root.position.clone().addScaledVector(d, LANE_OUT);
   let near: THREE.Vector3;
   if (v.to === 'titan') {
-    if (!yardScene) return null;
-    near = yardScene.centre.clone().add(far.clone().sub(yardScene.centre).setLength(yardScene.radius * 1.2));
+    if (!flight.yardScene) return null;
+    near = flight.yardScene.centre.clone().add(far.clone().sub(flight.yardScene.centre).setLength(flight.yardScene.radius * 1.2));
   } else near = onSlotAxis(v.leg === 'in' ? 900 : 300);
   const [a, b] = v.leg === 'in' ? [far, near] : [near, far];
   const path = new THREE.QuadraticBezierCurve3(a, a.clone().add(b).multiplyScalar(0.5), b);
   // Bend round anything in the way: push the middle of the curve out from it until it's clear.
-  const bodies = [{ centre: planetPos, radius: planetRadius * 1.15 }, ...sceneBodies.filter((b) => b.body.id.startsWith('moon')).map((b) => ({ centre: b.centre, radius: b.radius * 1.3 }))];
+  const bodies = [{ centre: planetPos, radius: flight.planetRadius * 1.15 }, ...flight.sceneBodies.filter((b) => b.body.id.startsWith('moon')).map((b) => ({ centre: b.centre, radius: b.radius * 1.3 }))];
   for (let tries = 0; tries < 6; tries++) {
     let worst: { centre: THREE.Vector3; by: number; at: THREE.Vector3 } | null = null;
     for (let i = 1; i < 20; i++) {
@@ -902,7 +899,7 @@ function ride(npc: NpcShip, now: number) {
 function spawnPirates(near: THREE.Vector3): false | 'pirates' | 'falcon' {
   const dir = player.forward().add(new THREE.Vector3().randomDirection().multiplyScalar(0.8)).normalize();
   const centre = near.clone().addScaledVector(dir, 5000 + Math.random() * 2500);
-  if (centre.distanceTo(station.root.position) < 5000 || centre.distanceTo(planetPos) < planetRadius * 1.3) return false;
+  if (centre.distanceTo(station.root.position) < 5000 || centre.distanceTo(planetPos) < flight.planetRadius * 1.3) return false;
   // Now and then, the Falcon: alone, running dark, and worth a fortune (Modern only).
   if (cmdr().difficulty === 'modern' && !falconAvoiding() && !npcs.some((n) => n.def.id === 'falcon') && Math.random() < FALCON_CHANCE[currentSystem().government]) {
     spawnFalcon(centre, near);
@@ -1077,7 +1074,7 @@ let launchedAt = -Infinity;
 const slotReserved = () =>
   game.state === 'flying' &&
   player.obj.position.distanceTo(station.root.position) < SLOT_CLEAR &&
-  (autopilot || rollAssistApplies() || elapsed - launchedAt < LAUNCH_CLEAR);
+  (flight.autopilot || rollAssistApplies() || flight.elapsed - launchedAt < LAUNCH_CLEAR);
 const holding = new WeakSet<NpcShip>();
 const holdPoint = () => station.toWorld(new THREE.Vector3(1500, 0, SLOT.z + 2500));
 
@@ -1118,9 +1115,9 @@ function updateTraffic(dt: number) {
   // Pacing (Modern): one fight at a time, and a breather after each, longer
   // in safer systems, so trouble comes in beats you can follow. (Classic
   // keeps 1984's: a roll every so often, whatever else is going on.)
-  if (fightOn()) lastFightAt = elapsed;
+  if (fightOn()) lastFightAt = flight.elapsed;
   const wary = modern() ? wariness() : 0;
-  const calm = !modern() || (!fightOn() && elapsed - lastFightAt > CALM_BETWEEN_FIGHTS + sys.government * 10 + wary * WARY_CALM);
+  const calm = !modern() || (!fightOn() && flight.elapsed - lastFightAt > CALM_BETWEEN_FIGHTS + sys.government * 10 + wary * WARY_CALM);
   encounterTimer -= dt;
   if (encounterTimer <= 0 && game.state === 'flying' && calm) {
     encounterTimer = ENCOUNTER_INTERVAL * (0.6 + Math.random() * 0.8);
@@ -1146,7 +1143,7 @@ function removeNpc(npc: NpcShip, dispose = true) {
     if (n.target === npc.ship) n.target = null;
     if (n.attacker === npc.ship) n.attacker = null;
   }
-  if (locked === npc) locked = null;
+  if (flight.locked === npc) flight.locked = null;
   if (dispose) npc.dispose();
 }
 
@@ -1208,7 +1205,7 @@ function summonCarrier() {
   for (let i = 0; i < 12; i++) {
     const dir = player.forward().add(new THREE.Vector3().randomDirection().multiplyScalar(0.6)).normalize();
     at = from.clone().addScaledVector(dir, RIFT_DISTANCE);
-    if (at.distanceTo(planetPos) > planetRadius + RIFT_RADIUS * 3 && at.distanceTo(station.root.position) > RIFT_RADIUS * 3) break;
+    if (at.distanceTo(planetPos) > flight.planetRadius + RIFT_RADIUS * 3 && at.distanceTo(station.root.position) > RIFT_RADIUS * 3) break;
   }
   // The rift faces well off the commander's line of sight, so they watch the
   // whole length of the carrier slide out.
@@ -1318,8 +1315,8 @@ function riftPull(c: Carrier, dt: number) {
     flash('Gravitational shear · the rift is pulling you in', 3);
   }
   if (d < r.radius * r.open) {
-    if (elapsed - c.tornAt > 4) {
-      c.tornAt = elapsed;
+    if (flight.elapsed - c.tornAt > 4) {
+      c.tornAt = flight.elapsed;
       flash('Hull stress · the rift is tearing at the ship', 2.5);
     }
     if (damagePlayer(RIFT_TEAR * dt)) die();
@@ -1340,8 +1337,8 @@ function updateMarshals(dt: number) {
   c.t += dt;
   c.rift?.update(dt);
   riftPull(c, dt);
-  if (locked && riftInterference() > 0.7) {
-    locked = null;
+  if (flight.locked && riftInterference() > 0.7) {
+    flight.locked = null;
     flash('Missile lock lost · rift interference', 1.5);
   }
   const fwd = c.npc.ship.forward();
@@ -1480,11 +1477,11 @@ function buildSystemScene(sys: StarSystem) {
   builtSystem = sys;
   track.clear(); // a new system: the old fight is over
   if (planet) disposePlanet(planet);
-  planetRadius = sys.radius * 1.2;
-  atmosphere = planetRadius * ATMOSPHERE_SCALE;
-  planetPos.set(0, 0, planetRadius + 9000);
+  flight.planetRadius = sys.radius * 1.2;
+  atmosphere = flight.planetRadius * ATMOSPHERE_SCALE;
+  planetPos.set(0, 0, flight.planetRadius + 9000);
   planetGM = 0.05 * planetPos.z ** 2;
-  planet = buildPlanet(planetRadius, planetColour(sys));
+  planet = buildPlanet(flight.planetRadius, planetColour(sys));
   planet.position.copy(planetPos);
   planet.rotation.set(((sys.extraSeed[0] / 255) - 0.5) * 0.8, sys.extraSeed[1] / 40, ((sys.extraSeed[2] / 255) - 0.5) * 0.8);
   space.scene.add(planet);
@@ -1504,7 +1501,7 @@ function buildSystemScene(sys: StarSystem) {
   npcs.length = 0;
   for (const m of missiles) m.dispose();
   missiles.length = 0;
-  locked = null;
+  flight.locked = null;
   seeker = null;
   for (const d of drifters) disposeShip(d.model);
   drifters.length = 0;
@@ -1538,13 +1535,6 @@ function ensureSystemScene() {
 // Rings and moons are drawn for everyone; surveys and signals pay, so they're
 // Modern only, like the rest of what we've added to 1984.
 
-interface SceneBody {
-  body: Body;
-  centre: THREE.Vector3;
-  radius: number;
-  /** How low you need to be over its surface to survey it, in metres. */
-  range: number;
-}
 interface ScenePoi {
   poi: Poi;
   position: THREE.Vector3;
@@ -1553,12 +1543,9 @@ interface ScenePoi {
   models: ShipModel[];
   beacon: THREE.Group | null;
 }
-let sceneBodies: SceneBody[] = [];
 let scenePois: ScenePoi[] = [];
 let worldParts: THREE.Group[] = [];
 let survey: { target: SceneBody; progress: number } | null = null;
-/** A Wexley-Yorozu yard by one of the moons (Modern), if there's one here now. */
-let yardScene: YardScene | null = null;
 const YARD_COLOUR = COMPANIES.wy.colour;
 const SIGNAL_DETECT = 6000; // metres: close enough to notice a signal without a survey
 const SIGNAL_REACH = 900; // metres: close enough to find out what it is
@@ -1574,10 +1561,10 @@ function disposeExploreScene() {
   }
   worldParts = [];
   scenePois = [];
-  sceneBodies = [];
+  flight.sceneBodies = [];
   survey = null;
-  yardScene?.dispose();
-  yardScene = null;
+  flight.yardScene?.dispose();
+  flight.yardScene = null;
   $('#survey').hidden = true;
 }
 
@@ -1586,42 +1573,42 @@ function buildExploreScene(sys: StarSystem) {
   const w = worldOf(sys);
   const c = game.commander;
   if (w.rings) {
-    const rings = buildRings(planetRadius, w.rings, planetColour(sys));
+    const rings = buildRings(flight.planetRadius, w.rings, planetColour(sys));
     rings.position.copy(planetPos);
     space.scene.add(rings);
     worldParts.push(rings);
   }
   const bodies = bodiesOf(sys);
-  sceneBodies.push({ body: bodies[0], centre: planetPos, radius: planetRadius, range: planetRadius * SURVEY.planet.altitude });
-  sceneBodies.push({ body: bodies[1], centre: SUN_POS, radius: SUN_RADIUS, range: SUN_RADIUS * SURVEY.star.altitude });
+  flight.sceneBodies.push({ body: bodies[0], centre: planetPos, radius: flight.planetRadius, range: flight.planetRadius * SURVEY.planet.altitude });
+  flight.sceneBodies.push({ body: bodies[1], centre: SUN_POS, radius: SUN_RADIUS, range: SUN_RADIUS * SURVEY.star.altitude });
   w.moons.forEach((m, i) => {
-    const radius = m.size * planetRadius;
+    const radius = m.size * flight.planetRadius;
     let angle = m.angle;
-    const at = () => new THREE.Vector3(Math.cos(angle) * Math.cos(m.tilt), Math.sin(m.tilt), Math.sin(angle) * Math.cos(m.tilt)).multiplyScalar(m.orbit * planetRadius).add(planetPos);
+    const at = () => new THREE.Vector3(Math.cos(angle) * Math.cos(m.tilt), Math.sin(m.tilt), Math.sin(angle) * Math.cos(m.tilt)).multiplyScalar(m.orbit * flight.planetRadius).add(planetPos);
     // Keep the station's approach clear.
-    if (at().distanceTo(station.root.position) < planetRadius + radius) angle += Math.PI;
+    if (at().distanceTo(station.root.position) < flight.planetRadius + radius) angle += Math.PI;
     const moon = buildMoon(radius);
     moon.position.copy(at());
     space.scene.add(moon);
     worldParts.push(moon);
-    sceneBodies.push({ body: bodies[2 + i], centre: moon.position, radius, range: radius * SURVEY.moon.altitude });
+    flight.sceneBodies.push({ body: bodies[2 + i], centre: moon.position, radius, range: radius * SURVEY.moon.altitude });
   });
   if (!c || c.difficulty !== 'modern') return;
   // The yard first, so signals can keep clear of it.
   const yard = yardAt(sys, Date.now());
-  const quarry = yard && sceneBodies.find((b) => b.body.id === `moon${yard.moon}`);
+  const quarry = yard && flight.sceneBodies.find((b) => b.body.id === `moon${yard.moon}`);
   if (yard && quarry) {
     const defs = { titan: withLineUp(shipById('titanoboa')!, lineUpFor(yard)), hauler: shipById('bullsnake')!, station: shipById('coriolis')! };
-    yardScene = buildYard(space.scene, yard, defs, { centre: quarry.centre, radius: quarry.radius }, station.root.position);
+    flight.yardScene = buildYard(space.scene, yard, defs, { centre: quarry.centre, radius: quarry.radius }, station.root.position);
   }
   const planetDone = isSurveyed(c, sys, 'planet');
   const courier = courierPoiOf(c, sys);
   for (const poi of [...poisOf(sys), ...trailPoisOf(c, sys), ...(courier ? [courier] : [])]) {
     const dir = new THREE.Vector3(...poi.direction);
     // Near enough that salvage isn't lost to space, and clear of the moons.
-    const position = dir.clone().multiplyScalar(Math.min(poi.distance * planetRadius, 30000)).add(planetPos);
-    for (const b of sceneBodies) if (b.body.kind === 'moon' && position.distanceTo(b.centre) < b.radius * 3) position.addScaledVector(dir, b.radius * 4);
-    if (yardScene && position.distanceTo(yardScene.centre) < yardScene.radius * 2) position.addScaledVector(dir, yardScene.radius * 3);
+    const position = dir.clone().multiplyScalar(Math.min(poi.distance * flight.planetRadius, 30000)).add(planetPos);
+    for (const b of flight.sceneBodies) if (b.body.kind === 'moon' && position.distanceTo(b.centre) < b.radius * 3) position.addScaledVector(dir, b.radius * 4);
+    if (flight.yardScene && position.distanceTo(flight.yardScene.centre) < flight.yardScene.radius * 2) position.addScaledVector(dir, flight.yardScene.radius * 3);
     const found = isFound(c, sys, poi.id);
     // A beacon you've found has powered down and drifted off: gone from your sky. (Each commander finds their own.)
     if (found && poi.kind === 'beacon') continue;
@@ -1651,11 +1638,11 @@ function buildExploreScene(sys: StarSystem) {
 /** Surveys under way, signals found, and the moons' surfaces. Returns true if you hit a moon. */
 function updateExplore(dt: number): boolean {
   const pos = player.obj.position;
-  for (const b of sceneBodies) if (b.body.kind === 'moon' && pos.distanceTo(b.centre) < b.radius) return true;
-  yardScene?.update(dt, Date.now());
+  for (const b of flight.sceneBodies) if (b.body.kind === 'moon' && pos.distanceTo(b.centre) < b.radius) return true;
+  flight.yardScene?.update(dt, Date.now());
   for (const p of scenePois) {
     for (const m of p.models) m.root.rotateOnAxis(TUMBLE_AXIS, dt * 0.03);
-    if (p.beacon) blinkBeacon(p.beacon, elapsed);
+    if (p.beacon) blinkBeacon(p.beacon, flight.elapsed);
   }
   if (!exploring()) return false;
   const c = cmdr();
@@ -1663,7 +1650,7 @@ function updateExplore(dt: number): boolean {
 
   // Surveying: hold close to something you haven't surveyed yet.
   const deep = isWorking(c, 'survey-scanner'); // twice the range, half the time
-  const near = sceneBodies.find((b) => pos.distanceTo(b.centre) - b.radius < b.range * (deep ? 2 : 1) && !isSurveyed(c, here, b.body.id));
+  const near = flight.sceneBodies.find((b) => pos.distanceTo(b.centre) - b.radius < b.range * (deep ? 2 : 1) && !isSurveyed(c, here, b.body.id));
   if (near && survey?.target !== near) survey = { target: near, progress: 0 };
   if (survey) {
     survey.progress = THREE.MathUtils.clamp(survey.progress + (near === survey.target ? dt * (deep ? 2 : 1) : -dt * 0.5), 0, survey.target.body.time);
@@ -1734,7 +1721,7 @@ function inClutter(pos: THREE.Vector3) {
 }
 /** Whether a ship at this distance can pick the player out. */
 function playerVisibleAt(distance: number) {
-  if (!exploring() || !inClutter(player.obj.position) || elapsed - lastShotAt < SHOT_GIVES_AWAY) return true;
+  if (!exploring() || !inClutter(player.obj.position) || flight.elapsed - lastShotAt < SHOT_GIVES_AWAY) return true;
   return distance < (dark() ? HIDDEN_BEYOND_DARK : HIDDEN_BEYOND);
 }
 
@@ -1873,7 +1860,7 @@ function exploreMarkers(km: (p: THREE.Vector3) => string): Marker[] {
   // Moons, and (Modern) the planet: bright in the explorer's colour until
   // surveyed, then the plain grey of somewhere done, with a tick for anyone
   // who can't tell the colours apart. Named within 30 km of the surface.
-  for (const b of sceneBodies) {
+  for (const b of flight.sceneBodies) {
     if (b.body.kind === 'star' || (b.body.kind === 'planet' && !exploring())) continue;
     const near = player.obj.position.distanceTo(b.centre) - b.radius < 30000;
     const surveyed = !exploring() || isSurveyed(cmdr(), currentSystem(), b.body.id);
@@ -1887,7 +1874,7 @@ function exploreMarkers(km: (p: THREE.Vector3) => string): Marker[] {
     out.push({ position: p.position, color: SIGNAL_COLOUR, radius: 30, label: found ? `${p.poi.name} ${km(p.position)}` : `Signal ${km(p.position)}` });
   }
   // A yard is hard to miss, so it's always named.
-  if (yardScene) out.push({ position: yardScene.centre, color: YARD_COLOUR, radius: yardScene.radius, label: `Wexley-Yorozu yard · ${stageLabel(yardScene.yard)} · ${km(yardScene.centre)}` });
+  if (flight.yardScene) out.push({ position: flight.yardScene.centre, color: YARD_COLOUR, radius: flight.yardScene.radius, label: `Wexley-Yorozu yard · ${stageLabel(flight.yardScene.yard)} · ${km(flight.yardScene.centre)}` });
   return out;
 }
 
@@ -1918,16 +1905,16 @@ const EVADE_MISSILE_RANGE = 400; // metres: where it decides whether a missile i
 const WISP_COLD = 10; // seconds since you last fired
 let lastPlayerShot = -Infinity;
 const evadeChecked = new WeakSet<object>();
-const evading = () => game.commander?.difficulty === 'modern' && isWorking(game.commander, 'wisp') && elapsed - lastPlayerShot > WISP_COLD;
+const evading = () => game.commander?.difficulty === 'modern' && isWorking(game.commander, 'wisp') && flight.elapsed - lastPlayerShot > WISP_COLD;
 
 /**
  * Damage the player's ship. Shields soak hits first; once a hit reaches the
  * hull it may take out fitted equipment. Returns true if the ship is destroyed.
  */
 function damagePlayer(amount: number, from?: NpcShip): boolean {
-  if (from) lastHitBy = { npc: from, at: elapsed };
+  if (from) lastHitBy = { npc: from, at: flight.elapsed };
   // Under fire on the docking computer, you get the stick back: never a sitting duck on autopilot (Mark). Modern only.
-  if (from && autopilot && modern()) setAutopilot(false, 'Under fire · docking computer off · you have control');
+  if (from && flight.autopilot && modern()) setAutopilot(false, 'Under fire · docking computer off · you have control');
   const hullBefore = player.hull;
   let destroyed = player.damage(amount);
   // A Falcon fights to disable: at a third of your hull she stops, and takes her price.
@@ -1953,7 +1940,7 @@ function damagePlayer(amount: number, from?: NpcShip): boolean {
       equipmentHitCooldown = EQUIPMENT_HIT_GAP;
       sfx.scrape();
       flash(cmdr().difficulty === 'classic' ? `${hit.name} destroyed!` : hit.id === 'comms-array' ? `${hit.name} damaged · plain radio until it's repaired at a station` : `${hit.name} damaged · repair at a station`, 2.5);
-      if (hit.id === 'docking-computer' && autopilot) setAutopilot(false);
+      if (hit.id === 'docking-computer' && flight.autopilot) setAutopilot(false);
     }
   }
   return destroyed;
@@ -2119,11 +2106,11 @@ const STRAY_BURST = 1.5; // seconds: hits this close together are one accident
 const STRAY_MEMORY = 30; // seconds before another accident would be forgiven
 const strays = new WeakMap<NpcShip, { from: number; at: number }>();
 function strayShot(npc: NpcShip): boolean {
-  if (!modern() || npc.role === 'marshal' || !(npc.guard || npc.role === 'police') || !fightOn() || locked === npc) return false;
+  if (!modern() || npc.role === 'marshal' || !(npc.guard || npc.role === 'police') || !fightOn() || flight.locked === npc) return false;
   const s = strays.get(npc);
-  if (s && elapsed - s.from <= STRAY_BURST) return (s.at = elapsed), true;
-  if (s && elapsed - s.at < STRAY_MEMORY) return false;
-  strays.set(npc, { from: elapsed, at: elapsed });
+  if (s && flight.elapsed - s.from <= STRAY_BURST) return (s.at = flight.elapsed), true;
+  if (s && flight.elapsed - s.at < STRAY_MEMORY) return false;
+  strays.set(npc, { from: flight.elapsed, at: flight.elapsed });
   const sp = speakerOf(npc);
   radio(sp.kind, sp.from, 'Check your fire, Commander!', { colour: sp.colour, flash: 2 });
   return true;
@@ -2188,14 +2175,14 @@ function mayday(npc: NpcShip) {
   if (isWorking(cmdr(), 'distress-jammer')) return flash(`Distress call jammed · the ${npc.def.name} can't reach the police`, 2.5);
   const where = npc.obj.position.clone();
   const delay = Math.max(10, 10 + (where.distanceTo(station.root.position) - STATION_SPACE) / 200);
-  responses.push({ at: elapsed + delay, where });
+  responses.push({ at: flight.elapsed + delay, where });
   const line = `Mayday from the ${npc.company ? COMPANIES[npc.company].name : ''} ${npc.def.name}`.replace('  ', ' ') + ` · police about ${Math.round(delay)} s away`;
   radio('mayday', traderName(npc), `Mayday! We're under attack · police about ${Math.round(delay)} s away`, { colour: traderColour(npc), flash: 3, urgent: true, line });
 }
 
 function updateResponses() {
   for (let i = responses.length - 1; i >= 0; i--) {
-    if (elapsed < responses[i].at) continue;
+    if (flight.elapsed < responses[i].at) continue;
     const { where } = responses.splice(i, 1)[0];
     // Two Vipers come out and patrol where the call came from: witnesses now, if anything's still going on.
     // The wait was their flight out: they arrive now, from the station's side.
@@ -2226,9 +2213,9 @@ let policeScrambledAt = -Infinity;
 
 function pirateFired(npc: NpcShip) {
   if (!modern() || !hasLaw(currentSystem()) || !inSafeZone(npc.obj.position)) return;
-  pirateFiredAt.set(npc, elapsed);
-  if (elapsed - policeScrambledAt < 30) return; // one scramble at a time
-  policeScrambledAt = elapsed;
+  pirateFiredAt.set(npc, flight.elapsed);
+  if (flight.elapsed - policeScrambledAt < 30) return; // one scramble at a time
+  policeScrambledAt = flight.elapsed;
   for (let k = 0; k < 2 && ofRole('police').length < MAX_POLICE; k++) spawnViper(true);
   radio('police', `${currentSystem().name} police`, 'Pirate fire on the approach · police launching', { flash: 2 });
 }
@@ -2236,7 +2223,7 @@ function pirateFired(npc: NpcShip) {
 function updateStationDefence(dt: number) {
   stationGunCooldown -= dt;
   if (stationGunCooldown > 0 || !modern() || !hasLaw(currentSystem())) return;
-  const target = npcs.find((n) => n.role === 'pirate' && elapsed - (pirateFiredAt.get(n) ?? -Infinity) < FIRED_RECENTLY && n.obj.position.distanceTo(station.root.position) < STATION_GUNS);
+  const target = npcs.find((n) => n.role === 'pirate' && flight.elapsed - (pirateFiredAt.get(n) ?? -Infinity) < FIRED_RECENTLY && n.obj.position.distanceTo(station.root.position) < STATION_GUNS);
   if (!target) return;
   stationGunCooldown = STATION_GUN_INTERVAL;
   const from = station.root.position.clone().add(target.obj.position.clone().sub(station.root.position).setLength(95));
@@ -2285,7 +2272,7 @@ function identified(): boolean {
 }
 
 function unpinnedCrime(status: 'offender' | 'fugitive', serious: boolean) {
-  unpinned = { status: unpinned?.status === 'fugitive' ? 'fugitive' : status, serious: serious || Boolean(unpinned?.serious), at: elapsed };
+  unpinned = { status: unpinned?.status === 'fugitive' ? 'fugitive' : status, serious: serious || Boolean(unpinned?.serious), at: flight.elapsed };
   flash(`Seen, but not identified · an unidentified ${player.def.name}`, 2.5);
 }
 
@@ -2297,7 +2284,7 @@ function unpinnedCrime(status: 'offender' | 'fugitive', serious: boolean) {
 /** Seconds until switching on here is safe; 0 if it is now (Infinity: you defied the police here). */
 function suspectFor(): number {
   if (defiedPolice) return Infinity;
-  return unpinned ? Math.max(0, SUSPECT_TIME - (elapsed - unpinned.at)) : 0;
+  return unpinned ? Math.max(0, SUSPECT_TIME - (flight.elapsed - unpinned.at)) : 0;
 }
 
 /** Waiting for the coast to clear before switching on to dock. */
@@ -2336,7 +2323,7 @@ function toggleTransponder() {
   const watched =
     player.obj.position.distanceTo(station.root.position) < STATION_SPACE ||
     ofRole('police').some((p) => p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
-  const crime = unpinned && elapsed - unpinned.at < SUSPECT_TIME ? unpinned : null;
+  const crime = unpinned && flight.elapsed - unpinned.at < SUSPECT_TIME ? unpinned : null;
   unpinned = null; // switched on quietly, or too late: the trail goes cold
   if (watched && (crime || defiedPolice)) {
     defiedPolice = false;
@@ -2385,7 +2372,7 @@ function updateHail() {
   if (!hail) {
     const by = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
     if (!by) return;
-    hail = { by, until: elapsed + HAIL_TIME };
+    hail = { by, until: flight.elapsed + HAIL_TIME };
     sfx.beep();
     // One hail (Mark got two): in Modern the radio card is it, with the seconds left on it; Classic keeps the banner.
     const deadline = Date.now() + HAIL_TIME * 1000;
@@ -2396,7 +2383,7 @@ function updateHail() {
   hail.by.patrol.radius = 400;
   const broken = transponderBroken() && !transponderOff;
   if (broken && player.speed <= player.maxSpeed * HAIL_SLOW) {
-    hail.until = Math.max(hail.until, elapsed + 5); // holding still for them: the clock waits
+    hail.until = Math.max(hail.until, flight.elapsed + 5); // holding still for them: the clock waits
     if (hail.by.obj.position.distanceTo(player.obj.position) < HULL_READ) {
       hail = null;
       hullChecked = true;
@@ -2405,7 +2392,7 @@ function updateHail() {
       return;
     }
   }
-  if (elapsed > hail.until) {
+  if (flight.elapsed > hail.until) {
     hail = null;
     defiedPolice = true;
     box.hidden = true;
@@ -2415,7 +2402,7 @@ function updateHail() {
   }
   // In Modern the card carries the hail; the banner stays for a broken transponder, whose clock waits while you hold still.
   box.hidden = modern() && !broken;
-  const left = Math.ceil(hail.until - elapsed);
+  const left = Math.ceil(hail.until - flight.elapsed);
   const text = broken
     ? `Police hail · transponder damaged: cut your speed and let the Viper read your hull · ${left} s`
     : `Police hail · switch on your transponder${document.body.classList.contains('touch') ? '' : ' (0)'} · ${left} s`;
@@ -2526,20 +2513,20 @@ let lastSafetyFlash = -Infinity;
 let stationWarnedAt = -Infinity;
 
 function safetyFlash(text: string) {
-  if (elapsed - lastSafetyFlash < 2) return;
-  lastSafetyFlash = elapsed;
+  if (flight.elapsed - lastSafetyFlash < 2) return;
+  lastSafetyFlash = flight.elapsed;
   flash(text, 1.6);
 }
 
 function firePlayerLaser() {
-  lastPlayerShot = elapsed; // the Wisp goes quiet while you're shooting
+  lastPlayerShot = flight.elapsed; // the Wisp goes quiet while you're shooting
   const laser = mountLaser();
   if (!laser) {
     laserCooldown = 0.6;
     flash(`No ${view} laser fitted`, 1.2);
     return;
   }
-  if (autopilot) {
+  if (flight.autopilot) {
     laserCooldown = 0.3;
     safetyFlash('Lasers locked · docking computer flying');
     return;
@@ -2562,7 +2549,7 @@ function firePlayerLaser() {
   }
   if (surrenderTimer !== null) breakSurrender();
   laserCooldown = laser.interval;
-  lastShotAt = elapsed;
+  lastShotAt = flight.elapsed;
   laserHeat += laser.heat;
   if (laserHeat >= 100) {
     overheated = true;
@@ -2599,9 +2586,9 @@ function firePlayerLaser() {
  */
 function playerHitStation() {
   if (!hasLaw(currentSystem())) return;
-  const sinceWarning = elapsed - stationWarnedAt;
+  const sinceWarning = flight.elapsed - stationWarnedAt;
   if (!isFugitive() && sinceWarning > STATION_WARNING_MEMORY) {
-    stationWarnedAt = elapsed;
+    stationWarnedAt = flight.elapsed;
     recordCrime(cmdr(), 'offender');
     flash('Cease fire, Commander · this is your only warning · you are an OFFENDER', 3);
     return;
@@ -2813,7 +2800,6 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
 // --- Missiles and ECM ---------------------------------------------------------------
 
 const missiles: Missile[] = [];
-let locked: NpcShip | null = null; // the player's missile lock
 let lockedCommander: Remote | null = null; // or a lock on another commander (shared space)
 let ecmCooldown = 0;
 let incomingTimer = 0;
@@ -2846,7 +2832,7 @@ function sightedNpc(range = 5000, cone = 6): NpcShip | null {
 /** Let go of the missile: no lock, no seeking. */
 function disarmMissile() {
   seeker = null;
-  locked = null;
+  flight.locked = null;
   lockedCommander = null;
   flash('Missile disarmed', 1.2);
 }
@@ -2860,7 +2846,7 @@ function toggleLock() {
   }
   if (c.difficulty === 'modern') {
     // Arm, and the seeker does the rest: hold a ship in your sights and it locks.
-    if (seeker || locked || lockedCommander) disarmMissile();
+    if (seeker || flight.locked || lockedCommander) disarmMissile();
     else {
       seeker = { on: null, progress: 0, beep: 0 };
       flash('Missile armed · hold a ship in your sights', 1.5);
@@ -2874,15 +2860,15 @@ function toggleLock() {
   const target = sightedNpc(LOCK_RANGE, LOCK_CONE);
   const commanderTarget = target ? null : sightedCommander(LOCK_RANGE, LOCK_CONE);
   if (commanderTarget) {
-    locked = null;
+    flight.locked = null;
     lockedCommander = commanderTarget;
     sfx.lock();
     flash(`Missile locked · CMDR ${commanderTarget.name}`, 1.5);
     return;
   }
   if (!target) {
-    if (locked || lockedCommander) {
-      locked = null;
+    if (flight.locked || lockedCommander) {
+      flight.locked = null;
       lockedCommander = null;
       flash('Missile disarmed', 1.2);
     } else {
@@ -2890,7 +2876,7 @@ function toggleLock() {
     }
     return;
   }
-  locked = target;
+  flight.locked = target;
   lockedCommander = null;
   sfx.lock();
   flash(`Missile locked · ${target.def.name}`, 1.5);
@@ -2945,7 +2931,7 @@ function updateSeeker(dt: number) {
   seeker = null;
   sfx.lockTone();
   if (npc) {
-    locked = npc;
+    flight.locked = npc;
     // Locked onto the law by mistake: say so, and how to let go, before the trigger.
     const law = npcIdentified(npc) && (npc.role === 'police' || npc.role === 'marshal');
     const off = isTouch ? 'hold to fire, tap to disarm' : 'X to fire, T to disarm';
@@ -2959,7 +2945,7 @@ function updateSeeker(dt: number) {
 /** The seeker's box: wide and dashed while it searches, closing on a ship, red when locked. */
 const seekerBox = $('#seeker');
 function updateSeekerBox() {
-  const lockedAt = locked?.obj.position ?? lockedCommander?.position ?? null;
+  const lockedAt = flight.locked?.obj.position ?? lockedCommander?.position ?? null;
   const tracking = seeker?.on ? seekPosition(seeker.on) : null;
   if ((!seeker && !lockedAt) || game.state !== 'flying') {
     seekerBox.hidden = true;
@@ -2995,7 +2981,7 @@ missileButton.addEventListener('pointerdown', (e) => {
     /* no such pointer (a synthetic event): carry on without */
   }
   fired = false;
-  if (!locked && !lockedCommander) return;
+  if (!flight.locked && !lockedCommander) return;
   missileButton.classList.add('holding');
   holdTimer = window.setTimeout(() => {
     fired = true;
@@ -3008,7 +2994,7 @@ const releaseMissile = (tap: boolean) => {
   clearTimeout(holdTimer);
   missileButton.classList.remove('holding');
   if (tap && !fired) {
-    if (locked || lockedCommander) disarmMissile();
+    if (flight.locked || lockedCommander) disarmMissile();
     else toggleLock();
   }
   fired = false;
@@ -3022,7 +3008,7 @@ missileButton.addEventListener('pointercancel', () => releaseMissile(false));
 function updateMissileButton() {
   if (!game.commander) return;
   const n = cmdr().missiles;
-  const armed = Boolean(locked || lockedCommander);
+  const armed = Boolean(flight.locked || lockedCommander);
   const modern = cmdr().difficulty === 'modern';
   missileButton.classList.toggle('armed', armed);
   missileButton.classList.toggle('seeking', Boolean(seeker) && !armed);
@@ -3046,7 +3032,7 @@ function fireMissile() {
     lockedCommander = null;
     return;
   }
-  if (!locked) {
+  if (!flight.locked) {
     const hint = c.difficulty !== 'modern' ? 'Lock a target first (T)' : seeker ? 'No lock yet · hold the ship in your sights' : 'Arm a missile first (T)';
     flash(c.missiles > 0 ? hint : 'No missiles', 1.5);
     return;
@@ -3054,10 +3040,10 @@ function fireMissile() {
   if (surrenderTimer !== null) breakSurrender();
   c.missiles -= 1;
   saveCommander(c);
-  launchMissile(player, locked.ship);
-  lastShotAt = elapsed; // a launch gives you away too
-  flash(`Missile away · ${locked.def.name}`, 1.2);
-  locked = null;
+  launchMissile(player, flight.locked.ship);
+  lastShotAt = flight.elapsed; // a launch gives you away too
+  flash(`Missile away · ${flight.locked.def.name}`, 1.2);
+  flight.locked = null;
 }
 
 function launchMissile(from: PlayerShip, target: PlayerShip) {
@@ -3081,11 +3067,11 @@ function maybeFireNpcMissile(npc: NpcShip) {
   if (npc.target === player && game.state !== 'flying') return;
   // Modern: no salvos. One missile homing on you at a time, and a pause between
   // a ship's missiles, so each one is a fight you can win (break, or ECM).
-  if (modern() && npc.target === player && (missiles.some((m) => m.target === player) || elapsed - (npcMissileAt.get(npc) ?? -Infinity) < NPC_MISSILE_GAP)) return;
+  if (modern() && npc.target === player && (missiles.some((m) => m.target === player) || flight.elapsed - (npcMissileAt.get(npc) ?? -Infinity) < NPC_MISSILE_GAP)) return;
   const d = npc.obj.position.distanceTo(npc.target.obj.position);
   if (d < NPC_MISSILE_RANGE[0] || d > NPC_MISSILE_RANGE[1] || Math.random() > NPC_MISSILE_CHANCE) return;
   npc.missiles -= 1;
-  npcMissileAt.set(npc, elapsed);
+  npcMissileAt.set(npc, flight.elapsed);
   launchMissile(npc.ship, npc.target);
 }
 
@@ -3151,8 +3137,8 @@ function updateMissiles(dt: number) {
     if (alive && game.commander && cmdr().difficulty === 'modern' && cmdr().missiles > 0) seeker = { on: null, progress: 0, beep: 0 };
     if (alive) flash(seeker ? 'Missile lock lost · seeking' : 'Missile lock lost', 1.2);
   };
-  if (locked && (!npcs.includes(locked) || locked.obj.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
-    locked = null;
+  if (flight.locked && (!npcs.includes(flight.locked) || flight.locked.obj.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
+    flight.locked = null;
     lockLost();
   }
   if (lockedCommander && (![...sharedSpace.remotes.values()].includes(lockedCommander) || lockedCommander.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
@@ -3387,15 +3373,15 @@ function recoverCaseNear(d: Drifter): boolean {
   const a = c.contracts?.find((x) => x.id === d.special!.contract);
   if (!a) return false;
   if (player.speed > player.maxSpeed * SCOOP_SPEED) {
-    if (elapsed - lastScoopWarning > 3) {
-      lastScoopWarning = elapsed;
+    if (flight.elapsed - lastScoopWarning > 3) {
+      lastScoopWarning = flight.elapsed;
       flash(`${a.label ?? 'Case'} · slow to under ${Math.round(SCOOP_SPEED * 100)}% speed to take it aboard`, 2);
     }
     return false;
   }
   if (freeTonnes(tradeContext()) < a.qty - 1e-9) {
-    if (elapsed - lastHoldFullWarning > 3) {
-      lastHoldFullWarning = elapsed;
+    if (flight.elapsed - lastHoldFullWarning > 3) {
+      lastHoldFullWarning = flight.elapsed;
       flash(`No room for the ${a.label ?? 'case'}: ${a.qty} t needed`, 2);
     }
     return false;
@@ -3413,8 +3399,8 @@ function tryScoop(d: Drifter): boolean {
   if (!isWorking(c, 'fuel-scoops') || player.speed > player.maxSpeed * SCOOP_SPEED) {
     // Too fast, or no scoops: it bounces off, and we say why.
     d.velocity.copy(d.model.root.position).sub(player.obj.position).setLength(25).addScaledVector(player.forward(), player.speed);
-    if (elapsed - lastScoopWarning > 3) {
-      lastScoopWarning = elapsed;
+    if (flight.elapsed - lastScoopWarning > 3) {
+      lastScoopWarning = flight.elapsed;
       sfx.scrape();
       if (!hasEquipment(c, 'fuel-scoops')) flash('Canister bounced off · no fuel scoops fitted', 2);
       else if (!isWorking(c, 'fuel-scoops')) flash('Canister bounced off · fuel scoops damaged', 2);
@@ -3427,8 +3413,8 @@ function tryScoop(d: Drifter): boolean {
   const commodity = commodityById(contents.id);
   const tonnes = contents.qty / UNITS_PER_TONNE[commodity?.unit ?? 't'];
   if (freeTonnes(tradeContext()) < tonnes - 1e-9) {
-    if (elapsed - lastHoldFullWarning > 3) {
-      lastHoldFullWarning = elapsed;
+    if (flight.elapsed - lastHoldFullWarning > 3) {
+      lastHoldFullWarning = flight.elapsed;
       flash('Cargo hold full', 1.5);
     }
     return false;
@@ -3456,8 +3442,8 @@ function updateSun(dt: number): boolean {
   const gauge = $('#g-temp');
   gauge.style.setProperty('--v', String(Math.min(1, cabinTemp / 100)));
   gauge.classList.toggle('hot', cabinTemp > 75);
-  if (cabinTemp > 80 && elapsed - lastHeatWarning > 4) {
-    lastHeatWarning = elapsed;
+  if (cabinTemp > 80 && flight.elapsed - lastHeatWarning > 4) {
+    lastHeatWarning = flight.elapsed;
     sfx.beep();
     flash(cabinTemp > 100 ? 'Cabin temperature critical · hull burning' : 'Cabin temperature high', 1.5);
   }
@@ -3522,12 +3508,12 @@ function updateDrifters(dt: number) {
       continue;
     }
 
-    if (d.burn >= BURN_TIME || r < planetRadius) {
+    if (d.burn >= BURN_TIME || r < flight.planetRadius) {
       const flare = new Explosion(d.model.def, root, d.velocity);
       space.scene.add(flare.group);
       explosions.push(flare);
     }
-    if (d.burn >= BURN_TIME || r < planetRadius || (r > LOST_IN_SPACE && !d.special)) {
+    if (d.burn >= BURN_TIME || r < flight.planetRadius || (r > LOST_IN_SPACE && !d.special)) {
       if (d.special && game.commander) {
         flash(caseLost(cmdr(), d.special.contract), 4);
         saveCommander(cmdr());
@@ -3652,7 +3638,6 @@ function viewDirection(): THREE.Vector3 {
       return player.forward();
   }
 }
-let elapsed = 0;
 let shake = 0;
 let lastAltitudeWarning = -Infinity;
 const deathCam = { centre: new THREE.Vector3(), offset: new THREE.Vector3(), axis: new THREE.Vector3(0, 1, 0), t: 0 };
@@ -3677,7 +3662,7 @@ function rollAssistApplies() {
 }
 
 function setAutopilot(on: boolean, message?: string) {
-  autopilot = on;
+  flight.autopilot = on;
   if (on) {
     surveyPilot = null;
     dockingComputer.reset();
@@ -3697,7 +3682,7 @@ function hitFeedback(strength: number) {
 }
 
 function updateSpace(dt: number) {
-  elapsed += dt;
+  flight.elapsed += dt;
   station.update(dt);
   updateDrifters(dt);
   updateCaseRaid(dt);
@@ -3712,7 +3697,7 @@ function updateSpace(dt: number) {
   if (game.state === 'flying') {
     const prev = station.toLocal(player.obj.position);
     input = flightInput();
-    if (autopilot && input.active) setAutopilot(false, 'Docking computer off');
+    if (flight.autopilot && input.active) setAutopilot(false, 'Docking computer off');
     if (surveyPilot && input.active) stopSurveyPilot('Survey autopilot off · you have control');
     checkCombatComputer(input);
 
@@ -3725,12 +3710,12 @@ function updateSpace(dt: number) {
       aim.move(player, input.aimDx, input.aimDy);
       aim.clamp(player);
       gimbalHold.copy(aim.dir).applyQuaternion(player.obj.quaternion.clone().invert());
-    } else if (controlScheme() === 'mouse' && isMouseCaptured() && !autopilot && !surveyPilot && !keysTurning && view === 'front') {
+    } else if (controlScheme() === 'mouse' && isMouseCaptured() && !flight.autopilot && !surveyPilot && !keysTurning && view === 'front') {
       aim.move(player, input.aimDx, input.aimDy);
       const s = aim.steer(player);
       input.pitch = s.pitch;
       input.yaw = s.yaw;
-    } else if (view !== 'front' && controlScheme() === 'mouse' && (isMouseCaptured() || isTouch) && !autopilot && !surveyPilot && !keysTurning) {
+    } else if (view !== 'front' && controlScheme() === 'mouse' && (isMouseCaptured() || isTouch) && !flight.autopilot && !surveyPilot && !keysTurning) {
       aim.reset(player);
       steerInView(input, dt);
     } else {
@@ -3741,21 +3726,21 @@ function updateSpace(dt: number) {
     // assist mustn't undo it the moment you let go (a Stardot pilot found the keys "obstinate").
     if (input.mouseRoll || input.roll !== 0) bankHeld = true;
     if (input.level) bankHeld = false;
-    rollAssist = !autopilot && !surveyPilot && !combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
+    rollAssist = !flight.autopilot && !surveyPilot && !combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
     if (rollAssist) {
       input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
-    } else if (!autopilot && !surveyPilot && !combatComputer && controlScheme() === 'mouse' && input.roll === 0 && !bankHeld) {
+    } else if (!flight.autopilot && !surveyPilot && !combatComputer && controlScheme() === 'mouse' && input.roll === 0 && !bankHeld) {
       // Flight assist: with no roll input, level the wings with the star
       // system's "up" so there's always a horizon. Weaker when pointing
       // steeply up or down, where "level" stops meaning much.
       const steep = Math.abs(player.forward().y);
       input.roll = THREE.MathUtils.clamp(AUTO_LEVEL_GAIN * player.right().y * (1 - steep), -1, 1);
     }
-    if (autopilot) dockingComputer.update(dt, player, station);
+    if (flight.autopilot) dockingComputer.update(dt, player, station);
     else if (combatComputer) {
       const hit = lastHitBy && npcs.includes(lastHitBy.npc) ? lastHitBy : null;
-      const status = { heat: Math.min(1, laserHeat / 100), hitBy: hit?.npc ?? null, hitAgo: hit ? elapsed - hit.at : Infinity };
-      if (!combatComputer.fly(dt, player, npcs, locked, { centre: planetPos, radius: planetRadius }, status)) stopCombatComputer('No hostiles · combat computer standing down · you have control');
+      const status = { heat: Math.min(1, laserHeat / 100), hitBy: hit?.npc ?? null, hitAgo: hit ? flight.elapsed - hit.at : Infinity };
+      if (!combatComputer.fly(dt, player, npcs, flight.locked, { centre: planetPos, radius: flight.planetRadius }, status)) stopCombatComputer('No hostiles · combat computer standing down · you have control');
       else if (combatComputer.announce) {
         flash(`Combat computer · ${combatComputer.announce}`, 1.8);
         combatComputer.announce = null;
@@ -3774,14 +3759,14 @@ function updateSpace(dt: number) {
       die();
       return;
     }
-    const altitude = player.obj.position.distanceTo(planetPos) - planetRadius;
+    const altitude = player.obj.position.distanceTo(planetPos) - flight.planetRadius;
     if (altitude < 0 || updateExplore(dt)) {
       sfx.thud();
       die();
       return;
     }
-    if (altitude < planetRadius * 0.12 && elapsed - lastAltitudeWarning > 4) {
-      lastAltitudeWarning = elapsed;
+    if (altitude < flight.planetRadius * 0.12 && flight.elapsed - lastAltitudeWarning > 4) {
+      lastAltitudeWarning = flight.elapsed;
       sfx.beep();
       flash('Altitude warning', 1.5);
     }
@@ -3800,7 +3785,7 @@ function updateSpace(dt: number) {
     }
 
     // The yard: the constructor is as solid as a moon, the rest bounces you off.
-    const bumped = yardScene?.contact(player.obj.position, player.speed);
+    const bumped = flight.yardScene?.contact(player.obj.position, player.speed);
     if (bumped?.kind === 'crash') {
       sfx.thud();
       hitFeedback(1);
@@ -3895,14 +3880,14 @@ function updateSpace(dt: number) {
     { position: station.root.position, color: '#ffb347', kind: 'station' },
     ...npcs
       .filter((p) => !cluttered || p.obj.position.distanceTo(player.obj.position) < HIDDEN_BEYOND)
-      .map((p): Blip => ({ position: p.obj.position, color: npcColour(p), kind: 'ship', sighted: p === sighted, locked: p === locked })),
+      .map((p): Blip => ({ position: p.obj.position, color: npcColour(p), kind: 'ship', sighted: p === sighted, locked: p === flight.locked })),
     ...drifters.map((d): Blip => ({ position: d.model.root.position, color: '#ffd166', kind: 'cargo' })),
     ...missiles.map((m): Blip => ({ position: m.position, color: '#ff6b6b', kind: 'missile' })),
   ];
   if (carrier?.rift) blips.push({ position: carrier.rift.group.position, color: '#cfe0ff', kind: 'station' });
-  if (yardScene) {
-    blips.push({ position: yardScene.centre, color: YARD_COLOUR, kind: 'station' });
-    for (const h of yardScene.haulers) blips.push({ position: h.root.position, color: YARD_COLOUR, kind: 'ship' });
+  if (flight.yardScene) {
+    blips.push({ position: flight.yardScene.centre, color: YARD_COLOUR, kind: 'station' });
+    for (const h of flight.yardScene.haulers) blips.push({ position: h.root.position, color: YARD_COLOUR, kind: 'ship' });
   }
   for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: commanderColour(r), kind: 'commander', locked: r === lockedCommander });
   for (const n of netMissiles.values()) blips.push({ position: n.missile.position, color: '#ff6b6b', kind: 'missile' });
@@ -3912,7 +3897,7 @@ function updateSpace(dt: number) {
   setInterference(noise);
   updateSeekerBox();
   if (game.state === 'flying') {
-    updateHud(player, station, blips, autopilot || Boolean(combatComputer), rollAssist);
+    updateHud(player, station, blips, flight.autopilot || Boolean(combatComputer), rollAssist);
     updateTouch(dt, player.speed / player.maxSpeed);
     updateAimDisplay();
     updateCombatHud();
@@ -3948,7 +3933,7 @@ function updateMarkers() {
   const calling = new Set(distresses.filter((d) => d.heard).map((d) => d.trader));
   const markers: Marker[] = npcs.map((npc) => ({
     position: npc.obj.position,
-    color: npc === locked ? '#ff4d6d' : npcColour(npc),
+    color: npc === flight.locked ? '#ff4d6d' : npcColour(npc),
     radius: npc.radius,
     // A trader's distress call gives its position away, wherever it is.
     label: calling.has(npc) ? `MAYDAY ${km(npc.obj.position)}` : npc.hostile || npc.obj.position.distanceTo(player.obj.position) < 1500 ? km(npc.obj.position) : undefined,
@@ -3982,7 +3967,7 @@ function updateCombatHud() {
   const rails = player.def.stats.missiles ?? 0;
   if (missilePips.childElementCount !== rails) missilePips.innerHTML = '<i></i>'.repeat(rails);
   missilePips.querySelectorAll('i').forEach((pip, i) => pip.classList.toggle('armed', i < cmdr().missiles));
-  missilePips.classList.toggle('locked', Boolean(locked));
+  missilePips.classList.toggle('locked', Boolean(flight.locked));
   laserGauge.style.setProperty('--v', String(laserHeat / 100));
   laserGauge.classList.toggle('hot', overheated || laserHeat > 75);
   // Name whatever is closest to where the guns point, if it's near enough.
@@ -3999,14 +3984,14 @@ function updateCombatHud() {
   if (best && !npcIdentified(best)) {
     // No transponder, and too far for a hull read: a ship, and nothing more.
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
-    targetInfo.textContent = `Unidentified ship · no transponder · ${km} km${best.firedOnPlayer ? ' · HOSTILE' : ''}${best === locked ? ' · LOCKED' : ''}`;
+    targetInfo.textContent = `Unidentified ship · no transponder · ${km} km${best.firedOnPlayer ? ' · HOSTILE' : ''}${best === flight.locked ? ' · LOCKED' : ''}`;
     targetInfo.classList.toggle('hostile', Boolean(best.firedOnPlayer));
   } else if (best) {
     // The transponder: type, role, condition and standing.
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
     const standing = best.role === 'pirate' ? 'WANTED' : best.guard ? 'SECURITY' : best.role === 'police' ? 'POLICE' : best.role === 'marshal' ? 'MARSHALS' : 'CLEAN';
     const owner = best.company ? COMPANIES[best.company].name.toUpperCase() : best.role.toUpperCase();
-    targetInfo.textContent = `${best.def.name} · ${owner} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === locked ? ' · LOCKED' : ''}`;
+    targetInfo.textContent = `${best.def.name} · ${owner} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === flight.locked ? ' · LOCKED' : ''}`;
     // Close enough, the scanner reads the hold.
     if (best.obj.position.distanceTo(player.obj.position) < CARGO_SCAN_RANGE && best.role !== 'police' && best.role !== 'marshal') {
       const hold = Object.entries(best.cargo)
@@ -4123,14 +4108,14 @@ async function launch() {
   sharedSpace.resume(); // launching here means flying here, even if another window had the ship
   player.repair();
   station.placeForLaunch(player);
-  launchedAt = elapsed;
+  launchedAt = flight.elapsed;
   flightFrom = Date.now();
   tripSeen = false;
   keepTrip();
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
-  locked = null;
+  flight.locked = null;
   seeker = null;
   scheduleMarshals(); // still wanted? they'll be back
   raidClock = 0;
@@ -4152,7 +4137,7 @@ async function launch() {
   wakeRadio();
   arrayTimer = 6;
   distresses.length = 0;
-  escort = null;
+  flight.escort = null;
   announceEvent(currentSystem(), 2800);
 }
 
@@ -4480,7 +4465,7 @@ function playerHoldValue(): number {
 function hailTarget() {
   if (!modern()) return flash('Classic rules: only the station talks to you', 1.5);
   const pos = player.obj.position;
-  const npc = (locked && npcs.includes(locked) ? locked : null) ?? sightedNpc(RADIO_RANGE, isTouch ? 14 : 8);
+  const npc = (flight.locked && npcs.includes(flight.locked) ? flight.locked : null) ?? sightedNpc(RADIO_RANGE, isTouch ? 14 : 8);
   sfx.beep();
   if (npc) {
     const sp = speakerOf(npc);
@@ -4597,8 +4582,8 @@ function pirateThreats() {
   for (const p of ofRole('pirate')) {
     if (!p.hostile || threatened.has(p)) continue;
     threatened.add(p);
-    if (elapsed - lastThreat < 20 || !npcIdentified(p) || p.obj.position.distanceTo(player.obj.position) > RADIO_RANGE) continue;
-    lastThreat = elapsed;
+    if (flight.elapsed - lastThreat < 20 || !npcIdentified(p) || p.obj.position.distanceTo(player.obj.position) > RADIO_RANGE) continue;
+    lastThreat = flight.elapsed;
     radio('pirate', p.def.name, pirateThreat(hailContext(serialOf(p) * 1000 + (minute() % 1000), p)), { answers: answerPirate(p) });
   }
   // Paid-off pirates, gone over the horizon.
@@ -4709,7 +4694,7 @@ function distressCall(trader: NpcShip, pirate: NpcShip) {
   }
   const d = trader.obj.position.distanceTo(player.obj.position);
   const heard = game.state === 'flying' && (d < RADIO_RANGE || hasArray());
-  distresses.push({ trader, pirates: new Set([pirate]), heard, arrived: false, until: elapsed + DISTRESS_TIME });
+  distresses.push({ trader, pirates: new Set([pirate]), heard, arrived: false, until: flight.elapsed + DISTRESS_TIME });
   if (!heard) return;
   sfx.beep();
   radio('mayday', traderName(trader), `Mayday! Pirates on us, ${(d / 1000).toFixed(1)} km from you. Anyone?`, { colour: traderColour(trader), flash: 3.5, urgent: true, answers: [onMyWay(trader)] });
@@ -4720,7 +4705,7 @@ function updateDistress() {
   for (let i = distresses.length - 1; i >= 0; i--) {
     const d = distresses[i];
     const t = d.trader;
-    if (!npcs.includes(t) || elapsed > d.until) {
+    if (!npcs.includes(t) || flight.elapsed > d.until) {
       distresses.splice(i, 1);
       continue;
     }
@@ -4764,7 +4749,7 @@ function spawnDistress(): boolean {
   if (room < 1) return false;
   for (let tries = 0; tries < 8; tries++) {
     const at = player.obj.position.clone().addScaledVector(new THREE.Vector3().randomDirection(), 13000 + Math.random() * 7000);
-    if (at.distanceTo(station.root.position) < 7000 || at.distanceTo(planetPos) < planetRadius * 1.4) continue;
+    if (at.distanceTo(station.root.position) < 7000 || at.distanceTo(planetPos) < flight.planetRadius * 1.4) continue;
     const trader = addNpc('cobra-mk3', 'trader', at);
     flyForCompany(trader);
     trader.cargo = randomCargo();
@@ -4791,8 +4776,6 @@ function spawnDistress(): boolean {
 const beaconState = newBeacon();
 let beaconOpen = false;
 let beaconTimer = 0;
-/** A Viper detailed to fly with you, and until when. */
-let escort: { npc: NpcShip; until: number } | null = null;
 
 function toggleBeacon(show = !beaconOpen) {
   if (show && !modern()) return flash('Classic rules: no emergency beacon', 1.5);
@@ -4818,7 +4801,7 @@ function sendBeacon(call: BeaconCall) {
   const nearest = galaxy(here.galaxy)
     .filter((s) => s !== here)
     .reduce((a, b) => (distanceLy(here, a) <= distanceLy(here, b) ? a : b));
-  const out = beacon(beaconState, call, elapsed, {
+  const out = beacon(beaconState, call, flight.elapsed, {
     lawful: hasLaw(here),
     hostilesNear: npcs.some((n) => n.hostile && n.obj.position.distanceTo(pos) < FIGHT_RANGE) || [...sharedSpace.remotes.values()].some((r) => sharedSpace.isHostile(r) && r.position.distanceTo(pos) < FIGHT_RANGE),
     hull: player.hull / player.def.stats.hull,
@@ -4834,7 +4817,7 @@ function sendBeacon(call: BeaconCall) {
     case 'police': {
       if (isFugitive() && identified()) return radio('police', police, 'We know who you are, Commander. Surrender (U).', { flash: 3, urgent: true, answers: [answerSurrender()] });
       const delay = Math.round(Math.max(10, 10 + (pos.distanceTo(station.root.position) - STATION_SPACE) / 200));
-      responses.push({ at: elapsed + delay, where: pos.clone() });
+      responses.push({ at: flight.elapsed + delay, where: pos.clone() });
       // Any Viper already out comes too.
       const near = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(pos) < 15000);
       if (near) near.patrol.centre.copy(pos);
@@ -4854,7 +4837,7 @@ function sendBeacon(call: BeaconCall) {
         spawnViper(true);
         npc = npcs[npcs.length - 1];
       }
-      if (npc) escort = { npc, until: elapsed + 150 };
+      if (npc) flight.escort = { npc, until: flight.elapsed + 150 };
       return radio('police', police, call === 'hull' ? 'Emergency berth ready, Commander. A Viper will see you in.' : 'Escort on its way. Head for the station.', { flash: 3, urgent: true });
     }
     case 'fuel-ok':
@@ -4878,11 +4861,11 @@ function updateRadio(dt: number) {
   if (!modern()) return;
   pirateThreats();
   updateDistress();
-  if (escort) {
-    const { npc, until } = escort;
-    if (!npcs.includes(npc) || npc.hostile || elapsed > until) {
+  if (flight.escort) {
+    const { npc, until } = flight.escort;
+    if (!npcs.includes(npc) || npc.hostile || flight.elapsed > until) {
       if (npcs.includes(npc)) Object.assign(npc.patrol, { radius: 900 }).centre.copy(station.root.position);
-      escort = null;
+      flight.escort = null;
     } else {
       npc.patrol.centre.copy(player.obj.position);
       npc.patrol.radius = 350;
@@ -4912,9 +4895,9 @@ function updateContextButton() {
   const pos = player.obj.position;
   const hop = c.target !== null && c.target !== here.index ? systemAt(here.galaxy, c.target) : null;
   const surveyNear =
-    exploring() && sceneBodies.some((b) => b.body.kind !== 'star' && pos.distanceTo(b.centre) - b.radius < b.range * 2 && !isSurveyed(c, here, b.body.id));
+    exploring() && flight.sceneBodies.some((b) => b.body.kind !== 'star' && pos.distanceTo(b.centre) - b.radius < b.range * 2 && !isSurveyed(c, here, b.body.id));
   let next: [string, string] = ['KeyJ', 'Jump'];
-  if (pos.distanceTo(station.root.position) < CLEARANCE_RANGE && hasEquipment(c, 'docking-computer')) next = ['KeyC', autopilot ? 'Dock: on' : 'Dock'];
+  if (pos.distanceTo(station.root.position) < CLEARANCE_RANGE && hasEquipment(c, 'docking-computer')) next = ['KeyC', flight.autopilot ? 'Dock: on' : 'Dock'];
   else if (surveyNear && hasEquipment(c, 'survey-autopilot')) next = ['Digit9', surveyPilot ? 'Survey: on' : 'Survey'];
   else if (countdown !== null) next = ['KeyH', 'Cancel jump'];
   else if (hop && distanceLy(here, hop) <= c.fuel + 1e-9) next = ['KeyH', `Hyper · ${hop.name}`];
@@ -5017,7 +5000,7 @@ function trackId(o: object): number {
 const poseOf = (id: number, obj: THREE.Object3D, unknown = false): Pose => ({ id, p: obj.position.toArray(), q: obj.quaternion.toArray() as Pose['q'], ...(unknown ? { unknown } : {}) });
 
 function recordTrack() {
-  if (classicRules() || !track.due(elapsed)) return;
+  if (classicRules() || !track.due(flight.elapsed)) return;
   const here = player.obj.position;
   const poses: Pose[] = [];
   if (game.state === 'flying') {
@@ -5041,31 +5024,31 @@ function recordTrack() {
     track.ship({ id, def: 'coriolis', role: 'station', label: `${currentSystem().name} station` });
     poses.push(poseOf(id, station.root));
   }
-  track.sample(elapsed, poses);
+  track.sample(flight.elapsed, poses);
 }
 
 function trackBeam(from: object, a: THREE.Vector3, b: THREE.Vector3, color: string, hit: object | null) {
   if (classicRules()) return;
-  track.event({ t: elapsed, kind: 'beam', from: trackId(from), a: a.toArray(), b: b.toArray(), color, ...(hit ? { hit: trackId(hit) } : {}) });
+  track.event({ t: flight.elapsed, kind: 'beam', from: trackId(from), a: a.toArray(), b: b.toArray(), color, ...(hit ? { hit: trackId(hit) } : {}) });
 }
 
 function trackBoom(npc: NpcShip) {
-  if (!classicRules()) track.event({ t: elapsed, kind: 'boom', id: trackId(npc), p: npc.obj.position.toArray() });
+  if (!classicRules()) track.event({ t: flight.elapsed, kind: 'boom', id: trackId(npc), p: npc.obj.position.toArray() });
 }
 
 function trackScene() {
   const sys = currentSystem();
-  return { system: sys.name, when: Date.now(), you: 1, planet: { p: planetPos.toArray(), r: planetRadius, color: planetColour(sys) }, sun: SUN_POS.toArray() };
+  return { system: sys.name, when: Date.now(), you: 1, planet: { p: planetPos.toArray(), r: flight.planetRadius, color: planetColour(sys) }, sun: SUN_POS.toArray() };
 }
 
 function die() {
   const c = cmdr();
   // The black box: the last seconds, and the ship going up, for the insurers' screen.
-  const killer = lastHitBy && elapsed - lastHitBy.at < 5 ? lastHitBy.npc : null;
+  const killer = lastHitBy && flight.elapsed - lastHitBy.at < 5 ? lastHitBy.npc : null;
   // Who did it, when someone did: a death worth watching from outside (ui/flightLog.ts worthWatching).
   const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}`, ...(killer ? { subject: killer.def.name } : {}) }, 26, 4);
-  track.event({ t: elapsed, kind: 'boom', id: trackId(player), p: player.obj.position.toArray() });
-  track.event({ t: elapsed, kind: 'death', ...(killer ? { by: trackId(killer) } : {}) });
+  track.event({ t: flight.elapsed, kind: 'boom', id: trackId(player), p: player.obj.position.toArray() });
+  track.event({ t: flight.elapsed, kind: 'death', ...(killer ? { by: trackId(killer) } : {}) });
   // The kill cam: the black box keeps the fight's track as every clip does
   // (logMoment); once it's kept, the old fight is over.
   void blackBox.then(() => track.clear());
@@ -5104,7 +5087,7 @@ function die() {
   deathCam.centre.copy(player.obj.position).addScaledVector(velocity, 0.6);
   // Watch from the side away from the nearest big body, so it never blocks the view.
   const fromStation = deathCam.centre.distanceTo(station.root.position);
-  const fromPlanet = deathCam.centre.distanceTo(planetPos) - planetRadius;
+  const fromPlanet = deathCam.centre.distanceTo(planetPos) - flight.planetRadius;
   const away = deathCam.centre.clone().sub(fromPlanet < fromStation ? planetPos : station.root.position);
   if (away.lengthSq() < 1) away.copy(player.up());
   away.normalize();
@@ -5427,7 +5410,7 @@ function toggleSurveyPilot() {
   if (!isWorking(c, 'survey-autopilot')) return flash('Survey autopilot damaged · repair at a station', 2);
   const next = surveyGoal();
   if (!next) return flash('Nothing left to survey or find here · the star is yours, if you want it', 3);
-  if (autopilot) setAutopilot(false);
+  if (flight.autopilot) setAutopilot(false);
   stopCombatComputer();
   surveyPilot = new SurveyPilot();
   surveyGoalName = next.name;
@@ -5450,7 +5433,7 @@ function surveyGoal(): { goal: SurveyGoal; name: string } | null {
   const here = currentSystem();
   const pos = player.obj.position;
   const options: { goal: SurveyGoal; name: string; d: number }[] = [];
-  for (const b of sceneBodies) {
+  for (const b of flight.sceneBodies) {
     if (b.body.kind === 'star' || isSurveyed(c, here, b.body.id)) continue;
     // Hold halfway into survey range, on the near side.
     const point = b.centre.clone().add(pos.clone().sub(b.centre).setLength(b.radius + b.range * 0.5));
@@ -5474,7 +5457,7 @@ function flySurvey(dt: number, pilot: SurveyPilot) {
     if (surveyGoalName) flash(`Survey autopilot · next: ${next.name}`, 2.5);
     surveyGoalName = next.name;
   }
-  const { left, lined } = pilot.update(dt, player, next.goal, { centre: planetPos, radius: planetRadius });
+  const { left, lined } = pilot.update(dt, player, next.goal, { centre: planetPos, radius: flight.planetRadius });
   // A long straight run: jump most of it.
   if (lined && left > J_DISTANCE + 3000) inSystemJump(true);
 }
@@ -5484,7 +5467,7 @@ const ROUTE_PAUSE = 12; // seconds after arriving (and after the arrival news) b
 const ROUTE_HOSTILES = 6000; // metres: hostiles this close hold the jump
 
 function updateRouteAutopilot() {
-  if (routeJumpAt === null || elapsed < routeJumpAt || countdown !== null) return;
+  if (routeJumpAt === null || flight.elapsed < routeJumpAt || countdown !== null) return;
   const c = cmdr();
   const dest = destination();
   if (!dest || !isWorking(c, 'route-autopilot')) {
@@ -5497,7 +5480,7 @@ function updateRouteAutopilot() {
     return flash(`Route autopilot · not enough fuel for ${dest.name} (${d.toFixed(1)} LY) · refuel at the station`, 3.5);
   }
   if (npcs.some((n) => n.hostile && n.obj.position.distanceTo(player.obj.position) < ROUTE_HOSTILES)) {
-    routeJumpAt = elapsed + 5;
+    routeJumpAt = flight.elapsed + 5;
     return flash('Route autopilot holding · hostiles near', 2);
   }
   routeJumpAt = null;
@@ -5510,9 +5493,9 @@ function toggleCombatComputer() {
   if (!hasEquipment(c, 'combat-computer')) return flash(c.difficulty === 'modern' ? 'Combat computer not fitted' : 'No combat computers under Classic rules', 2);
   if (!isWorking(c, 'combat-computer')) return flash('Combat computer damaged · repair at a station', 2);
   if (!hasTurret()) return flash('Fit a rear or side laser to use the combat computer: it flies, you man the turret', 3);
-  const target = chooseTarget(player.obj.position, npcs, locked);
+  const target = chooseTarget(player.obj.position, npcs, flight.locked);
   if (!target) return flash('No hostiles in range', 1.5);
-  if (autopilot) setAutopilot(false);
+  if (flight.autopilot) setAutopilot(false);
   surveyPilot = null;
   combatComputer = new CombatPilot();
   aim.reset(player);
@@ -5720,7 +5703,7 @@ async function hyperspace() {
   }
   // The Route Autopilot takes the next jump by itself, after a moment to look around.
   if (routeNote && isWorking(c, 'route-autopilot') && c.target !== null && distanceLy(dest, systemAt(dest.galaxy, c.target)) <= c.fuel) {
-    routeJumpAt = elapsed + ROUTE_PAUSE;
+    routeJumpAt = flight.elapsed + ROUTE_PAUSE;
     routeNote += ' · route autopilot jumps shortly (H to stop)';
   }
   const seen = messageIds();
@@ -5731,7 +5714,7 @@ async function hyperspace() {
   if (contractNotes.length || routeNote) setTimeout(() => game.state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
   setTimeout(() => game.state === 'flying' && radioMessages(seen), 9000);
   distresses.length = 0;
-  escort = null;
+  flight.escort = null;
   arrayTimer = 12; // the array picks up the new system's boards once you're settled
   distressTimer = 60 + Math.random() * 90;
   surrenderTimer = null;
@@ -5781,11 +5764,11 @@ function inSystemJump(quiet = false): boolean {
   const pos = player.obj.position;
   const shipsNear = npcs.some((p) => p.obj.position.distanceTo(pos) < J_LOCK_SHIPS);
   const stationNear = pos.distanceTo(station.root.position) < J_LOCK_STATION;
-  const planetNear = pos.distanceTo(planetPos) - planetRadius < J_LOCK_PLANET;
+  const planetNear = pos.distanceTo(planetPos) - flight.planetRadius < J_LOCK_PLANET;
   const sunNear = pos.distanceTo(SUN_POS) - SUN_RADIUS < J_LOCK_SUN;
-  const moons = sceneBodies.filter((b) => b.body.kind === 'moon');
+  const moons = flight.sceneBodies.filter((b) => b.body.kind === 'moon');
   const moonNear = moons.some((m) => pos.distanceTo(m.centre) - m.radius < J_LOCK_MOON);
-  const yardNear = yardScene !== null && pos.distanceTo(yardScene.centre) - yardScene.radius < J_LOCK_YARD;
+  const yardNear = flight.yardScene !== null && pos.distanceTo(flight.yardScene.centre) - flight.yardScene.radius < J_LOCK_YARD;
   if (shipsNear || stationNear || planetNear || sunNear || moonNear || yardNear) {
     if (!quiet) flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : sunNear ? 'sun' : moonNear ? 'moon' : 'yard'} too close`, 1.5);
     return false;
@@ -5801,10 +5784,10 @@ function inSystemJump(quiet = false): boolean {
     if (miss < keepOut) dist = Math.min(dist, Math.max(0, along - Math.sqrt(keepOut * keepOut - miss * miss)));
   };
   limit(station.root.position, J_LOCK_STATION - 200);
-  limit(planetPos, planetRadius + J_LOCK_PLANET - 200);
+  limit(planetPos, flight.planetRadius + J_LOCK_PLANET - 200);
   limit(SUN_POS, SUN_RADIUS + J_LOCK_SUN - 200);
   for (const m of moons) limit(m.centre, m.radius + J_LOCK_MOON - 200);
-  if (yardScene) limit(yardScene.centre, yardScene.radius + J_LOCK_YARD - 200);
+  if (flight.yardScene) limit(flight.yardScene.centre, flight.yardScene.radius + J_LOCK_YARD - 200);
   if (dist < 500) {
     if (!quiet) flash('Mass locked · too close ahead', 1.5);
     return false;
@@ -6001,7 +5984,7 @@ function handleKey(code: string) {
         toggleSurveyPilot();
       } else if (code === 'KeyC') {
         stopCombatComputer();
-        if (autopilot) setAutopilot(false, 'Docking computer off');
+        if (flight.autopilot) setAutopilot(false, 'Docking computer off');
         else if (!hasEquipment(cmdr(), 'docking-computer')) flash('Docking computer not fitted', 2);
         else if (!isWorking(cmdr(), 'docking-computer')) flash('Docking computer damaged · repair at a station', 2);
         else if (player.obj.position.distanceTo(station.root.position) > 10000) flash('Too far from the station', 2);
@@ -6067,7 +6050,7 @@ function watchSurroundings(dt: number) {
     ...npcs.map((n) => n.obj.position),
     ...missiles.map((m) => m.position),
     ...[...sharedSpace.remotes.values()].map((r) => r.position),
-    ...(yardScene ? [yardScene.centre] : []),
+    ...(flight.yardScene ? [flight.yardScene.centre] : []),
   ];
   recorderWatch.update(
     {
@@ -6075,7 +6058,7 @@ function watchSurroundings(dt: number) {
       ships,
       legends: npcs.filter((n) => LEGENDS.has(n.def.id)).length,
       station: station.root.position,
-      planet: planet ? { position: planetPos, radius: planetRadius } : null,
+      planet: planet ? { position: planetPos, radius: flight.planetRadius } : null,
       rift: Boolean(carrier?.rift),
     },
     dt,
@@ -6414,14 +6397,14 @@ if (import.meta.env.DEV) {
       get carrier() { return carrier; },
       get commander() { return game.commander; },
       get state() { return game.state; },
-      get autopilot() { return autopilot; },
-      get explore() { return { bodies: sceneBodies, pois: scenePois, planetPos, survey }; },
-      get yard() { return yardScene; },
+      get autopilot() { return flight.autopilot; },
+      get explore() { return { bodies: flight.sceneBodies, pois: scenePois, planetPos, survey }; },
+      get yard() { return flight.yardScene; },
       /** The timetable's ships here now: who, which leg, riding their lane or flying themselves, and where. */
       traffic: () => npcs.filter((n) => voyageOf.has(n)).map((n) => ({ id: voyageOf.get(n)!.id, name: traderName(n), leg: legs.get(n), riding: railsOf.has(n), at: n.obj.position.toArray().map(Math.round), km: +(n.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1) })),
       security: () => npcs.filter((n) => n.guard).map((n) => ({ who: speakerOf(n).from, mode: n.mode, km: +(n.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1), with: escortOf.get(n) ? traderName(escortOf.get(n)!) : null })),
       /** Encounter pacing: the next roll, the last fight, and how wary the pirates are here. */
-      get pacing() { return { encounterTimer, sinceFight: elapsed - lastFightAt, fightOn: fightOn(), wary: wariness() }; },
+      get pacing() { return { encounterTimer, sinceFight: flight.elapsed - lastFightAt, fightOn: fightOn(), wary: wariness() }; },
       /** Yards at work in this galaxy now. */
       yards: () => yardsOf(currentSystem().galaxy, Date.now()),
       /** Hyperspace straight to a system in this galaxy, fuel or not. */
