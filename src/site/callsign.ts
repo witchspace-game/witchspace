@@ -1,6 +1,6 @@
 import * as acct from '../net/account';
 import { cardShip, CARD_H, CARD_W, type CardShip } from './callsignCard';
-import { claimLine, cleanCallsign, parseCheck, roleById, roleLine, ROLES, variants, verdictWords, type Check, type Role } from './callsignWords';
+import { claimLine, cleanCallsign, parseCheck, rgbOf, roleById, roleLine, ROLES, variants, verdictWords, type Check, type Role } from './callsignWords';
 
 // Claim your callsign (/callsign/, Mark, 30 October 2026): type a name and see at once whether it's free,
 // pick a role for your card, then make it yours by signing in with the code from the email, typed here,
@@ -43,14 +43,17 @@ const shown = () => name || 'Your callsign';
 function drawCard() {
   $('cs-card-kicker').textContent = roleLine(role).replace(/\.$/, '');
   const n = $('cs-card-name');
-  n.textContent = `CMDR ${shown()}`;
+  n.textContent = shown();
   n.classList.toggle('long', shown().length > 14);
   $('cs-card-sub').textContent = `${role.name} · flies a ${role.shipName}`;
   $('cs-line').textContent = roleLine(role);
+  const stage = document.querySelector<HTMLElement>('.callsign-hero')!;
+  stage.style.setProperty('--role', role.colour);
+  stage.style.setProperty('--role-rgb', rgbOf(role.colour));
 }
 
 const roles = $('cs-roles');
-roles.innerHTML = ROLES.map((r) => `<button type="button" class="chip" data-role="${r.id}" aria-pressed="${r.id === role.id}">${r.name}</button>`).join('');
+roles.innerHTML = ROLES.map((r) => `<button type="button" class="chip" data-role="${r.id}" style="--c:${r.colour}" aria-pressed="${r.id === role.id}">${r.name}</button>`).join('');
 roles.addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest<HTMLElement>('[data-role]');
   if (!b) return;
@@ -281,7 +284,23 @@ async function picture(): Promise<File | null> {
   g.fillStyle = '#05070d';
   g.fillRect(0, 0, CARD_W, CARD_H);
   if (ship) g.drawImage(ship.picture(), 0, 0);
-  // The fade behind the words, as on the page.
+  // The role's light behind her, and the fade behind the words, as on the page.
+  const rgb = rgbOf(role.colour);
+  const glow = (x: number, y: number, rx: number, ry: number, colour: string) => {
+    g.save();
+    g.translate(x, y);
+    g.scale(1, ry / rx);
+    const r = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+    r.addColorStop(0, colour);
+    r.addColorStop(1, 'rgba(5,7,13,0)');
+    g.fillStyle = r;
+    g.fillRect(-rx, -rx, rx * 2, rx * 2);
+    g.restore();
+  };
+  g.globalCompositeOperation = 'lighter';
+  glow(CARD_W * 0.72, CARD_H * 0.5, CARD_W * 0.45 * 0.7, CARD_H * 0.6 * 0.7, `rgba(${rgb},0.13)`);
+  glow(CARD_W, 0, CARD_W * 0.35 * 0.7, CARD_H * 0.45 * 0.7, 'rgba(74,215,255,0.1)');
+  g.globalCompositeOperation = 'source-over';
   const fade = g.createLinearGradient(0, 0, CARD_W, 0);
   fade.addColorStop(0, 'rgba(5,7,13,0.92)');
   fade.addColorStop(0.46, 'rgba(5,7,13,0.55)');
@@ -320,16 +339,25 @@ async function picture(): Promise<File | null> {
   g.fillStyle = '#b9c6d8';
   g.font = `400 26px ${body}`;
   g.fillText(`${role.name} · flies a ${role.shipName}`, x, CARD_H - 120);
-  let size = name.length > 14 ? 54 : 68;
+  let size = name.length > 14 ? 53 : 70;
   g.font = `700 ${size}px ${head}`;
-  const full = `CMDR ${shown()}`;
+  const full = shown();
   while (g.measureText(full).width > max && size > 30) g.font = `700 ${(size -= 2)}px ${head}`;
+  g.save();
+  g.shadowColor = `rgba(${rgb},0.3)`;
+  g.shadowBlur = 36;
   g.fillStyle = '#eef3fa';
   g.fillText(full, x, CARD_H - 170);
-  g.fillStyle = accent;
-  g.font = `600 20px ${body}`;
-  g.letterSpacing = '3.6px';
-  g.fillText(roleLine(role).replace(/\.$/, '').toUpperCase(), x, CARD_H - 170 - size - 14);
+  g.restore();
+  const top = CARD_H - 170 - size * 0.95;
+  g.fillStyle = '#95a3b8';
+  g.font = `600 18px ${body}`;
+  g.letterSpacing = '5.4px';
+  g.fillText('COMMANDER', x, top - 6);
+  g.fillStyle = role.colour;
+  g.font = `600 19px ${body}`;
+  g.letterSpacing = '3.8px';
+  g.fillText(roleLine(role).replace(/\.$/, '').toUpperCase(), x, top - 44);
   g.letterSpacing = '0px';
 
   const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/jpeg', 0.9));

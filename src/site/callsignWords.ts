@@ -1,15 +1,17 @@
-// The words and rules for /callsign/ (Mark, 30 October 2026): the roles on the cards, a name tidied the
+// The words and rules for /callsign/ (each role in its ship's own paint, content/ships/<ship>.json lineColor) (Mark, 30 October 2026): the roles on the cards, a name tidied the
 // way the server tidies it, what the server's answer means, and the variant tried when a name is taken.
 // Kept apart from the page so they can be tested.
 
 export const ROLES = [
-  { id: 'pirate', name: 'Pirate', ship: 'mamba', shipName: 'Mamba' },
-  { id: 'trader', name: 'Trader', ship: 'cobra-mk3', shipName: 'Cobra' },
-  { id: 'explorer', name: 'Explorer', ship: 'falcon', shipName: 'Falcon' },
-  { id: 'hero', name: 'Hero', ship: 'viper', shipName: 'Viper' },
-  { id: 'legend', name: 'Legend', ship: 'fer-de-lance', shipName: 'Fer-de-lance' },
+  { id: 'pirate', name: 'Pirate', ship: 'mamba', shipName: 'Mamba', colour: '#e8d84a' },
+  { id: 'trader', name: 'Trader', ship: 'cobra-mk3', shipName: 'Cobra', colour: '#3dffb0' },
+  { id: 'explorer', name: 'Explorer', ship: 'falcon', shipName: 'Falcon', colour: '#ff3d6e' },
+  { id: 'hero', name: 'Hero', ship: 'viper', shipName: 'Viper', colour: '#4aa8ff' },
+  { id: 'legend', name: 'Legend', ship: 'fer-de-lance', shipName: 'Fer-de-lance', colour: '#c9a8ff' },
 ] as const;
 export type Role = (typeof ROLES)[number];
+/** "61, 255, 176" for rgba(): the page lights itself in the role's colour. */
+export const rgbOf = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ');
 export const roleById = (id: string | undefined): Role => ROLES.find((r) => r.id === id) ?? ROLES[1];
 
 /** "Every pirate needs a callsign." */

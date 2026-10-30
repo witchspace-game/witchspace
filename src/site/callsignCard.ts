@@ -26,7 +26,8 @@ export interface CardShip {
 export function cardShip(canvas: HTMLCanvasElement): CardShip {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  // As sharp as the screen: a phone is 3×, and thin glowing lines show it.
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 3));
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x05070d);
   const camera = new THREE.PerspectiveCamera(30, CARD_W / CARD_H, 1, 100000);
