@@ -712,6 +712,7 @@ body.viewing { overflow: hidden; }
 .share-link input { flex: 1; min-width: 0; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border-strong); background: rgba(0, 0, 0, 0.3); color: var(--muted); font: 14px var(--font); }
 .share-link .button { gap: 6px; white-space: nowrap; }
 .share-save { width: 100%; justify-content: center; margin-top: 8px; }
+.share-save-main { width: 100%; justify-content: center; margin-bottom: 12px; }
 .share-note { margin: 0; color: var(--amber); font-size: 13.5px; line-height: 1.45; }
 .share-link svg { width: 16px; height: 16px; }
 

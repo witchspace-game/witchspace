@@ -66,6 +66,9 @@ export function openShare(target: ShareTarget) {
   const picture = target.file ? URL.createObjectURL(target.file) : null;
   const image = picture ?? target.image ?? document.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.content;
   const text = target.title;
+  // The device's own share sheet, first and largest, but only on a phone or tablet: on a computer it's a menu of
+  // AirDrop and Notes, not where anyone posts. There, a picture to post is saved first, so that leads instead.
+  const native = typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
 
   const sheet = document.createElement('div');
   sheet.className = 'share-backdrop';
@@ -78,12 +81,12 @@ export function openShare(target: ShareTarget) {
           : ''
       }
       ${target.note ? '<p class="share-note"></p>' : ''}
-      ${typeof navigator.share === 'function' ? `<button type="button" class="button primary share-native">${ICONS.share}Share…</button>` : ''}
+      ${native ? `<button type="button" class="button primary share-native">${ICONS.share}Share…</button>` : picture ? `<button type="button" class="button primary share-save-main" data-save-picture>Save picture</button>` : ''}
       <div class="share-grid">
         ${destinations(url, text).map(([key, label, href]) => `<a href="${href}" target="_blank" rel="noopener">${ICONS[key]}<span>${label}</span></a>`).join('')}
       </div>
       <div class="share-link"><input type="text" readonly value="${url}" aria-label="Link" /><button type="button" class="button small" data-copy-link>${ICONS.link}Copy link</button></div>
-      ${picture ? `<button type="button" class="button ghost small share-save" data-save-picture>Save picture</button>` : ''}
+      ${picture && native ? `<button type="button" class="button ghost small share-save" data-save-picture>Save picture</button>` : ''}
     </div>`;
   if (picture) sheet.addEventListener('share:closed', () => setTimeout(() => URL.revokeObjectURL(picture), 1000), { once: true });
   sheet.querySelector('.share-preview strong')?.append(text);
