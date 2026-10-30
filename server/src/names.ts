@@ -45,6 +45,11 @@ export const NAMES: NameRule[] = [
   { name: 'Iceman', rule: 'protected', why: 'Film nod (Top Gun), held by the founder' },
   { name: 'Goose', rule: 'protected', why: 'Film nod (Top Gun), held by the founder' },
 
+  // CMDR Bond, member 007: one of the game's own characters (Mark, 30 Oct 2026), so nobody else flies as him.
+  { name: 'Bond', rule: 'protected', why: 'A character of the game’s own (member 007), held by the founder' },
+  { name: 'James Bond', rule: 'protected', within: true, why: 'A character of the game’s own (member 007), held by the founder' },
+  { name: '007', rule: 'protected', why: 'A character of the game’s own (member 007), held by the founder' },
+
   // Famous aces, held by the founder like the film nods. Exact only: Ace, Red, Hawk stay free.
   { name: 'Biggles', rule: 'protected', why: 'Fictional ace (W.E. Johns), held by the founder' },
   { name: 'Snoopy', rule: 'protected', why: 'The Red Baron’s famous foe, held by the founder' },

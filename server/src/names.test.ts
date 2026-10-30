@@ -72,3 +72,12 @@ describe('judging a callsign, for the claim and the check alike', () => {
     expect(judge('Nova Quill')).toEqual({ verdict: 'free' });
   });
 });
+
+describe('CMDR Bond', () => {
+  it('is held for the character, member 007', () => {
+    expect(nameRule('Bond')?.rule).toBe('protected');
+    expect(nameRule('JamesBond')?.rule).toBe('protected');
+    expect(nameRule('007')?.rule).toBe('protected');
+    expect(nameRule('Bondi')).toBeNull();
+  });
+});
