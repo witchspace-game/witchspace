@@ -506,6 +506,8 @@ const SHEENS: Record<Finish, [string, string]> = {
 };
 
 async function picture(): Promise<File | null> {
+  // The callsign in the game's own type: make sure it's loaded before it's drawn.
+  await document.fonts.load("600 64px 'Rajdhani'").catch(() => []);
   await document.fonts.ready;
   const c = document.createElement('canvas');
   c.width = CARD_W;
@@ -586,12 +588,15 @@ async function picture(): Promise<File | null> {
   g.font = `400 20px ${body}`;
   g.fillText(`${career.noun} · ${onCard().label}`, x, y);
   y -= 34;
-  let size = name.length > 14 ? 50 : 64;
-  g.font = `600 ${size}px ${head}`;
-  const full = shown();
-  while (g.measureText(full).width > 660 && size > 30) g.font = `600 ${(size -= 2)}px ${head}`;
+  const callsignFont = getComputedStyle($('cs-card-name')).fontFamily;
+  let size = name.length > 14 ? 53 : 67;
+  g.font = `600 ${size}px ${callsignFont}`;
+  g.letterSpacing = `${Math.round(size * 0.06)}px`;
+  const full = shown().toUpperCase();
+  while (g.measureText(full).width > 660 && size > 30) g.font = `600 ${(size -= 2)}px ${callsignFont}`;
   g.fillStyle = '#eef3fa';
   g.fillText(full, x, y);
+  g.letterSpacing = '0px';
   g.fillStyle = 'rgba(185,198,216,0.75)';
   g.font = `600 15px ${body}`;
   g.letterSpacing = '4.8px';

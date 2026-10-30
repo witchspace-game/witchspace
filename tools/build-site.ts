@@ -184,7 +184,7 @@ for (const name of readdirSync(join(root, 'site/pages'))) {
         path: `/callsign/${c.id}/`,
         title: `${careerLine(c).replace(/\.$/, '')} · Witchspace`,
         content,
-        head: '    <meta name="robots" content="noindex" />\n',
+        head: `${meta.head ?? ''}    <meta name="robots" content="noindex" />\n`,
         card: { ship: CAREER_SHIPS[c.id], kicker: `${c.name} · Claim your callsign`, title: careerLine(c), sub: 'One name, yours alone, and the card that carries it. Free, in your browser.' },
       });
 }
