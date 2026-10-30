@@ -217,6 +217,54 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   await s.page.context().close();
 }
 
+// --- Modern: a missile, locked on and fired ------------------------------------------------
+{
+  const s = await newCommander('modern');
+  await launch(s);
+  const before = await s.w(() => window.witchspace.commander.missiles);
+  // A pirate held 2 km dead ahead, well clear of the station and the planet. (Under Modern a stray
+  // trader is taken off: only the timetable's fly.)
+  await s.w(async () => {
+    const w = window.witchspace;
+    const V = w.player.obj.position.constructor;
+    w.player.obj.position.add(new V(0, 15000, 0)); // up and clear: the station faces the planet
+    w.player.speed = 0;
+    w.spawnPirates(w.player.obj.position);
+    w.aim.reset(w.player);
+  });
+  const hold = () => s.w(() => {
+    const w = window.witchspace;
+    const p = w.npcs.find((n) => n.role === 'pirate');
+    if (!p) return false;
+    p.obj.position.copy(w.player.obj.position).addScaledVector(w.player.forward(), 2000);
+    p.speed = 0;
+    w.player.repair();
+    return true;
+  });
+  check('Modern: a pirate to fire at', await hold());
+  await s.key('KeyT'); // arm: the seeker closes on what's in the sights
+  let locked = false;
+  for (let i = 0; i < 12 && !locked; i++) {
+    await wait(250);
+    await hold();
+    locked = await s.w(() => Boolean(window.witchspace.locked));
+  }
+  check('Modern: the seeker locks on', locked);
+  await s.key('KeyX');
+  await wait(300);
+  const flying = await s.w(() => window.witchspace.missiles.length);
+  const after = await s.w(() => window.witchspace.commander.missiles);
+  check('Modern: a missile flies', flying > 0 && after === before - 1, `${flying} in flight, ${before} → ${after} aboard`);
+  let gone = false;
+  for (let i = 0; i < 20 && !gone; i++) {
+    await wait(500);
+    gone = await s.w(() => window.witchspace.missiles.length === 0);
+  }
+  check('Modern: the missile reaches its target', gone);
+  check('Modern: missiles raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
+  await s.page.context().close();
+}
+
 // --- Modern: a warrant brings the Marshals' Bastion through its rift -----------------------
 {
   const s = await newCommander('modern');
