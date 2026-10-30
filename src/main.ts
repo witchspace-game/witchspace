@@ -2979,7 +2979,7 @@ let autopilot = false;
 
 /** Every computer-controlled ship in the system: police, traders and pirates. */
 const npcs: NpcShip[] = [];
-const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role);
+const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role && !n.guard); // company security isn't the police
 const engineSound = new EngineSound();
 const voices = new Map<NpcShip, ShipVoice>();
 /** Other commanders' engines in shared space, by their id, each with her own voice. */
@@ -3202,7 +3202,62 @@ let trafficListAt = -Infinity;
 let trafficCheck = 0;
 const lanePaths = new Map<string, THREE.QuadraticBezierCurve3>(); // worked out once a visit
 
+// Company security (Mark): Vipers in company colours. Guards patrol a yard's Titan;
+// escorts fly alongside a freighter. They fight pirates and whoever attacks the
+// company's ships, and answer to the company, not the law.
+const yardGuards = new Set<NpcShip>();
+const escortOf = new Map<NpcShip, NpcShip>(); // escort → the freighter it's with
+const YARD_GUARDS = [3, 3, 2, 2, 2, 2, 2, 2]; // by government: more in lawless space
+const GUARD_RELIEF = 180_000; // ms before a lost guard is replaced from the Titan's hold
+let guardDueAt = 0;
+
+function securityViper(company: CompanyId, centre: THREE.Vector3, radius: number, i: number): NpcShip {
+  const npc = new NpcShip(shipById('viper')!, 'police', POLICE_LASER, {
+    centre: centre.clone(),
+    radius,
+    height: [150, -200, 40][i % 3],
+    rate: (i % 2 ? -1 : 1) * 0.16,
+    angle: i * 2.1,
+  });
+  npc.guard = true;
+  npc.company = company;
+  applyCompanyBand(npc.model, COMPANIES[company].colour);
+  const p = npc.patrol;
+  npc.obj.position.set(Math.cos(p.angle) * p.radius, p.height, Math.sin(p.angle) * p.radius).add(p.centre);
+  space.scene.add(npc.obj);
+  npcs.push(npc);
+  return npc;
+}
+
+/** Keep the yard guarded, and send away escorts whose freighter has docked or gone, once they're out of sight. */
+function keepSecurity(now: number) {
+  if (yardScene && yardScene.yard.stage !== 'finished') {
+    const want = YARD_GUARDS[currentSystem().government];
+    if (yardGuards.size < want && now >= guardDueAt) {
+      yardGuards.add(securityViper('wy', yardScene.centre, yardScene.radius + 900 + yardGuards.size * 500, yardGuards.size));
+      if (yardGuards.size >= want) guardDueAt = 0;
+    }
+  }
+  for (const [escort, freighter] of escortOf) {
+    if (npcs.includes(freighter)) continue;
+    if (escort.obj.position.distanceTo(player.obj.position) > 5000 && !escort.hostile) removeNpc(escort);
+  }
+}
+
+/** Someone fired on a company ship: its security nearby goes after them. */
+function alertSecurity(victim: NpcShip, by: PlayerShip) {
+  if (!victim.company) return;
+  for (const g of npcs) {
+    if (!g.guard || g.company !== victim.company || g.obj.position.distanceTo(victim.obj.position) > 8000) continue;
+    g.attacker = by;
+    g.attackedAgo = 0;
+  }
+}
+
 function resetTraffic() {
+  yardGuards.clear();
+  escortOf.clear();
+  guardDueAt = 0;
   lanePaths.clear();
   trafficShips = new Map();
   trafficDone = new Set();
@@ -3249,6 +3304,7 @@ function syncTraffic(dt: number) {
   if (trafficCheck > 0) return;
   trafficCheck = 1;
   const now = Date.now();
+  keepSecurity(now);
   if (now - trafficListAt > 60_000) {
     trafficList = voyages(currentSystem(), now - 10 * 60_000, now + 10 * 60_000, marketState(tradeContext()).lost ?? []);
     trafficListAt = now;
@@ -3280,6 +3336,7 @@ function syncTraffic(dt: number) {
     voyageOf.set(npc, v);
     trafficShips.set(v.id, npc);
     ride(npc, now);
+    for (let i = 0; i < v.escorts && v.company; i++) escortOf.set(securityViper(v.company, npc.obj.position, 550 + i * 250, i), npc);
   }
 }
 
@@ -3533,6 +3590,8 @@ function updateTraffic(dt: number) {
 }
 
 function removeNpc(npc: NpcShip, dispose = true) {
+  if (yardGuards.delete(npc) && !guardDueAt) guardDueAt = Date.now() + GUARD_RELIEF;
+  escortOf.delete(npc);
   const voyage = voyageOf.get(npc);
   if (voyage && trafficShips.get(voyage.id) === npc) {
     trafficShips.delete(voyage.id);
@@ -4513,7 +4572,10 @@ const inSafeZone = (at: THREE.Vector3) => commander !== null && at.distanceTo(st
 function playerHitNpc(npc: NpcShip, damage: number) {
   // Paid off, then shot at: the deal's off.
   if (npc.paid) Object.assign(npc, { paid: false, fights: true });
-  if (npc.role === 'police' || npc.role === 'marshal') becomeFugitive();
+  alertSecurity(npc, player);
+  if (npc.guard) {
+    if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on company security · you are an OFFENDER');
+  } else if (npc.role === 'police' || npc.role === 'marshal') becomeFugitive();
   else if (npc.role === 'trader') {
     if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on a trader · you are an OFFENDER');
     else {
@@ -5040,6 +5102,8 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     if (!npcs.includes(npc)) continue; // destroyed earlier this frame
     const shot = npc.update(dt);
     ride(npc, Date.now());
+    const escorting = escortOf.get(npc);
+    if (escorting && npcs.includes(escorting)) npc.patrol.centre.copy(escorting.obj.position);
     if (shot && npc.target === player) npc.firedOnPlayer = true;
     if (shot && npc.role === 'pirate') pirateFired(npc);
     // Keep ships from flying through the station, except traders docking down the slot.
@@ -6375,7 +6439,7 @@ function updateCombatHud() {
   } else if (best) {
     // The transponder: type, role, condition and standing.
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
-    const standing = best.role === 'pirate' ? 'WANTED' : best.role === 'police' ? 'POLICE' : best.role === 'marshal' ? 'MARSHALS' : 'CLEAN';
+    const standing = best.role === 'pirate' ? 'WANTED' : best.guard ? 'SECURITY' : best.role === 'police' ? 'POLICE' : best.role === 'marshal' ? 'MARSHALS' : 'CLEAN';
     const owner = best.company ? COMPANIES[best.company].name.toUpperCase() : best.role.toUpperCase();
     targetInfo.textContent = `${best.def.name} · ${owner} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === locked ? ' · LOCKED' : ''}`;
     // Close enough, the scanner reads the hold.
@@ -6959,6 +7023,7 @@ const hailsOf = new WeakMap<NpcShip, number>();
 function speakerOf(npc: NpcShip): { who: Speaker; kind: RadioKind; from: string; colour?: string } {
   if (!npcIdentified(npc)) return { who: npc.def.id === 'falcon' ? 'falcon' : npc.role === 'trader' ? 'trader' : 'pirate', kind: 'ship', from: `Unidentified ${npc.def.name}`, colour: UNIDENTIFIED_HEX };
   if (npc.def.id === 'falcon') return { who: 'falcon', kind: 'pirate', from: 'Falcon' };
+  if (npc.guard && npc.company) return { who: 'security', kind: 'police', from: `${COMPANIES[npc.company].name} ${escortOf.has(npc) ? 'escort' : 'yard security'}`, colour: COMPANIES[npc.company].colour };
   switch (npc.role) {
     case 'police':
       return { who: 'police', kind: 'police', from: `${currentSystem().name} police` };
@@ -6981,6 +7046,7 @@ function hailContext(k: number, npc?: NpcShip): HailContext {
     scared: npc ? npc.attackedAgo < 12 : false,
     wronged: npc ? npc.attacker === player && npc.attackedAgo < 120 : false,
     company: npc?.company ? COMPANIES[npc.company].name : undefined,
+    escort: npc ? escortOf.has(npc) : undefined,
     lawless: !checksClearance(sys),
   };
 }
@@ -8939,6 +9005,7 @@ if (import.meta.env.DEV) {
       get yard() { return yardScene; },
       /** The timetable's ships here now: who, which leg, riding their lane or flying themselves, and where. */
       traffic: () => npcs.filter((n) => voyageOf.has(n)).map((n) => ({ id: voyageOf.get(n)!.id, name: traderName(n), leg: legs.get(n), riding: railsOf.has(n), at: n.obj.position.toArray().map(Math.round), km: +(n.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1) })),
+      security: () => npcs.filter((n) => n.guard).map((n) => ({ who: speakerOf(n).from, mode: n.mode, km: +(n.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1), with: escortOf.get(n) ? traderName(escortOf.get(n)!) : null })),
       /** Encounter pacing: the next roll, the last fight, and how wary the pirates are here. */
       get pacing() { return { encounterTimer, sinceFight: elapsed - lastFightAt, fightOn: fightOn(), wary: wariness() }; },
       /** Yards at work in this galaxy now. */

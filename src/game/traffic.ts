@@ -44,12 +44,18 @@ export interface Voyage {
   name: string;
   /** The system it comes from (in) or is bound for (out), by index in this galaxy. */
   other: number;
+  /** Company security flying alongside: the Titan's runs, more in dangerous systems, and valuable cargo. */
+  escorts: number;
 }
 
 /** One ship carries the trades of this long, by government (anarchy 0 .. corporate 7): busier worlds, more ships. */
 export const WINDOW_MS = [9, 8, 7, 6, 6, 5, 5, 4].map((m) => m * 60_000);
 /** The Titan's freighters: one about this often while a build is on. */
 export const TITAN_WINDOW_MS = 8 * 60_000;
+/** The chance a Titan run has an escort, by government (anarchy 0 .. corporate 7): more where it's dangerous. */
+export const TITAN_ESCORT = [0.9, 0.8, 0.65, 0.5, 0.4, 0.35, 0.3, 0.25];
+/** Goods worth guarding: a company run carrying these may have an escort. */
+export const VALUABLE = new Set(['luxuries', 'computers', 'platinum', 'gold', 'alien', 'firearms']);
 /** Systems a trader would come from or go to: one jump. */
 export const LANE_LY = 7;
 
@@ -95,6 +101,9 @@ function voyageFor(s: StarSystem, leg: 'in' | 'out', to: 'station' | 'titan', k:
   const salt = leg === 'in' ? 0 : 1;
   const lanes = lanesFrom(s);
   const hull = company === 'wy' && (to === 'titan' || hash(s, 91_300 + salt, k) < 0.5) ? 'bullsnake' : 'cobra-mk3';
+  const t = to === 'titan' ? 2 : 0;
+  const chance = to === 'titan' ? TITAN_ESCORT[s.government] : company && cargo.some((c) => VALUABLE.has(c.id)) ? 0.35 : 0;
+  const escorts = hash(s, 91_700 + salt + t, k) < chance ? (hash(s, 91_800 + salt + t, k) < 0.35 ? 2 : 1) : 0;
   return {
     id: `${s.galaxy}:${s.index}:${to}:${leg}:${k}`,
     leg,
@@ -105,6 +114,7 @@ function voyageFor(s: StarSystem, leg: 'in' | 'out', to: 'station' | 'titan', k:
     hull,
     name: NAMES[Math.floor(hash(s, 91_100 + salt + (to === 'titan' ? 2 : 0), k) * NAMES.length)],
     other: lanes[Math.floor(hash(s, 91_200 + salt + (to === 'titan' ? 2 : 0), k) * lanes.length)],
+    escorts,
   };
 }
 

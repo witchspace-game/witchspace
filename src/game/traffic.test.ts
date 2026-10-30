@@ -70,8 +70,22 @@ describe('traffic', () => {
     expect(found).toBeGreaterThan(0);
   });
 
+  it('escorts the Titan’s runs, more often where it’s dangerous, and some valuable company cargo', () => {
+    const share = (gov: number) => {
+      const runs = g.filter((s) => s.government === gov).flatMap((s) => [0, 1, 2, 3, 4, 5].flatMap((d) => voyages(s, t0 + d * 4 * HOUR, t0 + d * 4 * HOUR + HOUR)));
+      const station = runs.filter((v) => v.to === 'station');
+      expect(station.filter((v) => v.escorts && !v.company)).toEqual([]);
+      return station.filter((v) => v.escorts).length / station.length;
+    };
+    expect(share(0)).toBeGreaterThan(0);
+    const yard = yardsOf(0, t0)[0];
+    for (const v of titanVoyages(g[yard.system], t0, t0 + 6 * HOUR)) expect(v.escorts).toBeLessThanOrEqual(2);
+    const escorted = titanVoyages(g[yard.system], t0, t0 + 6 * HOUR).filter((v) => v.escorts).length;
+    expect(escorted).toBeGreaterThan(0);
+  });
+
   it('introduces itself when hailed', () => {
-    const v = { id: 'x', leg: 'in' as const, to: 'titan' as const, at: 0, cargo: [{ id: 'alloys', t: 0, qty: 30 }, { id: 'computers', t: 0, qty: 5 }], company: 'wy' as const, hull: 'bullsnake', name: 'Patience', other: 7 };
+    const v = { id: 'x', leg: 'in' as const, to: 'titan' as const, at: 0, cargo: [{ id: 'alloys', t: 0, qty: 30 }, { id: 'computers', t: 0, qty: 5 }], company: 'wy' as const, hull: 'bullsnake', name: 'Patience', other: 7, escorts: 0 };
     expect(voyageHail(v, 'Diso')).toBe('Patience, in from Diso with alloys and computers for the Titan.');
     expect(voyageHail({ ...v, to: 'station', leg: 'out', company: null }, 'Leesti')).toBe('Patience, outbound for Leesti with alloys and computers.');
   });

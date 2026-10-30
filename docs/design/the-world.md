@@ -52,6 +52,7 @@ How the first steps work in the game (Modern rules; Classic keeps 1984's traffic
 - **The Titan's freighters:** while a yard builds, a Wexley-Yorozu Bullsnake comes about every 8 minutes with what the stage needs, and flies to the Titan.
 - **Relief:** while an event leaves a world short (famine, drought, plague), ships bring what's missing about every 7 minutes, half of them the Carriers' Mutual.
 - **Hail one and it says who it is:** "Dry Dock, in from Atriso with alloys for the Titan."
+- **Company security (Mark: "is their no protection for the Titan or are they paying for protection anywhere?"):** Vipers in company colours. Two or three guard each yard's Titan (more in lawless space), and a lost guard is replaced from her hold after three minutes. Escorts fly alongside most of the Titan's runs (nine in ten in an anarchy, one in four in a corporate state) and a third of company runs carrying valuable cargo. They fight pirates and whoever fires on the company's ships, and answer to the company, not the law: firing on them makes you an offender, not a fugitive. Hail one: "Wexley-Yorozu yard security".
 - **Not yet:** losses don't slow the yard (step 5's exceptions), and in shared space each phone flies its own copy once a ship is close.
 
 ## 1. Where we are
@@ -276,6 +277,12 @@ A yard at Onrira (`yards.ts`) is building a station. Today, Bullsnakes run ore f
 Steps 1 to 4 need no server, so they can start straight after Show HN.
 
 ---
+
+## Next for the supply line
+
+- **Escort contracts (Mark likes this one):** Wexley-Yorozu hires commanders at the station to bring a named freighter in safely: "Bring the *Steady Hand* in from Atriso, 300 Cr." The freighter is already on the timetable; the contract just puts you beside her.
+- **Protection money, in anarchies:** where there's no law, Wexley-Yorozu quietly pays the local pirates to leave its freighters alone, and pirates there pass them by, until the payments stop. A Saloon regular might let it slip. A story can grow from it.
+- **Losses slow the build** (step 5's exceptions).
 
 ## 10. Open questions for Mark
 

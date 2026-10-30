@@ -17,7 +17,7 @@ export const RADIO_RANGE = 12000; // metres
 /** How far the comms array hears the news and the boards: jumps out. */
 export const ARRAY_JUMPS = 2;
 
-export type Speaker = 'station' | 'police' | 'marshal' | 'trader' | 'pirate' | 'falcon';
+export type Speaker = 'station' | 'police' | 'marshal' | 'trader' | 'pirate' | 'falcon' | 'security';
 
 export interface HailContext {
   system: StarSystem;
@@ -33,6 +33,8 @@ export interface HailContext {
   wronged?: boolean;
   /** For traders: the company it flies for. */
   company?: string;
+  /** For company security: escorting a freighter rather than guarding a yard. */
+  escort?: boolean;
   /** Lawless: anarchies and feudal worlds don't check clearance. */
   lawless?: boolean;
 }
@@ -78,6 +80,13 @@ const PIRATE = [
   "We've been waiting for someone like you.",
   'Keep talking. It makes you easier to find.',
 ];
+const SECURITY = [
+  'Company security. Keep your guns cold near the yard, Commander.',
+  'Wexley-Yorozu security. Nothing to see. Move along.',
+  'We look after our own. Pirates take note.',
+  'Mind the tugs. They don’t stop for anyone.',
+];
+const SECURITY_ESCORT = ['Escort. Give our freighter room, Commander.', 'Riding shotgun. Keep your distance.', 'She’s with us. Stay clear.'];
 const MARSHAL = ['Co-operative Marshals. Surrender, or be taken.', 'The warrant stands, Commander. Cut your engines.'];
 const FALCON = ["You don't want this, Commander.", '...', 'Turn around.'];
 
@@ -95,6 +104,9 @@ export function hailReply(who: Speaker, ctx: HailContext): HailReply {
       return { text: pick(ctx, 2, POLICE) };
     case 'marshal':
       return { text: pick(ctx, 3, MARSHAL) };
+    case 'security':
+      if (ctx.wronged) return { text: 'You fired on the company. Big mistake.' };
+      return { text: pick(ctx, 10, ctx.escort ? SECURITY_ESCORT : SECURITY) };
     case 'trader':
       if (ctx.wronged) return { text: pick(ctx, 4, TRADER_WRONGED) };
       if (ctx.scared) return { text: pick(ctx, 5, TRADER_SCARED) };
