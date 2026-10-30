@@ -213,6 +213,16 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   }
   check('Modern: the Titan has guards', guards.filter((g) => !g.with).length >= 2, `${guards.length} security ships`);
   check('Modern: a freighter is bound for the Titan', runs.length > 0, runs.map((r) => r.name).join(', '));
+  const jumped = await s.w(async () => {
+    const w = window.witchspace;
+    for (const n of w.npcs.filter((n) => n.role === 'pirate')) n.obj.position.set(9e5, 9e5, 9e5); // nothing to mass-lock the drive
+    const from = w.player.obj.position.clone();
+    dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyJ' }));
+    dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyJ' }));
+    await new Promise((r) => setTimeout(r, 2500));
+    return Math.round(w.player.obj.position.distanceTo(from));
+  });
+  check('Modern: the in-system jump', jumped > 5000, `${jumped} m`);
   check('Modern: the yard raises no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }
