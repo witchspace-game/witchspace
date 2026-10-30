@@ -1599,3 +1599,48 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .manual .man-more > summary { cursor: pointer; color: var(--muted); font-weight: 600; }
 .manual .man-more[open] > summary { margin-bottom: 12px; }
 .manual .man-more > .card { padding: 0; border: 0; background: none; }
+
+/* Claim your callsign (/callsign/): the box and its steps beside the card it makes. The card's words are
+   sized from --u, a hundredth of its width (set by src/site/callsign.ts), so the preview is the picture in small. */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.link-button { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; cursor: pointer; }
+.callsign-hero h1 { margin: 6px 0 12px; font-family: var(--display); font-size: clamp(36px, 5vw, 60px); line-height: 1.05; letter-spacing: -0.02em; }
+.cs-grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 28px; align-items: start; margin-top: 34px; }
+.cs-form { display: flex; flex-direction: column; gap: 18px; padding: 24px; }
+.cs-form h2 { margin: 0 0 10px; font-size: 21px; }
+.cs-label { display: block; margin-bottom: 10px; font-family: var(--display); font-size: 22px; font-weight: 600; }
+.cs-box { display: flex; align-items: center; gap: 10px; padding: 4px 16px; border-radius: 12px; border: 1px solid var(--border-strong); background: rgba(0, 0, 0, 0.35); transition: border-color 0.15s; }
+.cs-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(61, 255, 176, 0.15); }
+.cs-cmdr { color: var(--muted); font: 600 15px var(--font); letter-spacing: 0.12em; }
+.cs-box input { flex: 1; min-width: 0; padding: 12px 0; border: 0; background: none; color: var(--fg); font: 600 clamp(20px, 2.4vw, 26px) var(--display); outline: none; }
+.cs-verdict { margin: 10px 0 0; min-height: 1.5em; color: var(--muted); font-size: 15px; }
+.cs-verdict.free, .cs-verdict.yours { color: var(--accent); }
+.cs-verdict.taken, .cs-verdict.reserved, .cs-verdict.never { color: var(--amber); }
+.cs-try { margin: 6px 0 0; font-size: 15px; color: var(--muted); }
+.cs-try .chip { margin: 4px 6px 0 0; }
+.cs-roles { margin: 0; padding: 0; border: 0; }
+.cs-roles legend { margin-bottom: 8px; color: var(--muted); font-size: 14px; }
+.cs-roles .chips { margin: 0; }
+.cs-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.cs-row input { flex: 1 1 200px; min-width: 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-strong); background: rgba(0, 0, 0, 0.3); color: var(--fg); font: 16px var(--font); }
+.cs-row input:focus { outline: none; border-color: var(--accent); }
+#cs-code { letter-spacing: 0.3em; font-variant-numeric: tabular-nums; }
+.cs-step .turnstile { margin-top: 10px; }
+.cs-step .form-note { margin-top: 10px; }
+.cs-done h2 { font-family: var(--display); font-size: 28px; color: var(--accent); }
+.cs-card { position: sticky; top: 92px; margin: 0; aspect-ratio: 1200 / 630; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); background: #05070d; }
+.cs-ship { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cs-card-glow { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(5, 7, 13, 0.92) 0%, rgba(5, 7, 13, 0.55) 46%, rgba(5, 7, 13, 0) 70%); }
+.cs-card-copy { position: absolute; left: 6%; top: 10%; bottom: 9.5%; width: 56%; display: flex; flex-direction: column; pointer-events: none; }
+.cs-card-brand { display: flex; align-items: center; gap: calc(var(--u, 7px) * 1.2); font: 700 calc(var(--u, 7px) * 2) var(--display); letter-spacing: 0.32em; }
+.cs-card-brand svg { width: calc(var(--u, 7px) * 3.3); height: calc(var(--u, 7px) * 3.3); fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; filter: drop-shadow(0 0 6px var(--accent)); }
+.cs-card-kicker { margin-top: auto; color: var(--accent); font: 600 calc(var(--u, 7px) * 1.7) var(--font); letter-spacing: 0.18em; text-transform: uppercase; }
+.cs-card-name { margin: calc(var(--u, 7px) * 0.9) 0 calc(var(--u, 7px) * 1.2); font: 700 calc(var(--u, 7px) * 5.6)/1.02 var(--display); letter-spacing: -0.02em; overflow-wrap: anywhere; }
+.cs-card-name.long { font-size: calc(var(--u, 7px) * 4.4); }
+.cs-card-sub { color: #b9c6d8; font-size: calc(var(--u, 7px) * 2.2); }
+.cs-card-foot { margin-top: calc(var(--u, 7px) * 2.5); color: #95a3b8; font-size: calc(var(--u, 7px) * 1.7); }
+.cs-card-foot b { color: var(--fg); font-weight: 600; }
+@media (max-width: 860px) {
+  .cs-grid { grid-template-columns: minmax(0, 1fr); }
+  .cs-card { position: relative; top: 0; order: -1; }
+}

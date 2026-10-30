@@ -1,0 +1,88 @@
+<!-- {"path": "/callsign/", "title": "Claim your callsign · Witchspace", "description": "Every pirate, trader, explorer, hero and legend needs a callsign. Claim yours for Witchspace, the free space game you play in your browser: one name, yours alone, first come first served.", "scripts": ["/src/site/callsign.ts"], "bodyClass": "callsign-page"} -->
+<section class="section callsign-hero">
+  <div class="section-head">
+    <p class="kicker" id="cs-line">Every pilot needs a callsign.</p>
+    <h1>Claim your callsign</h1>
+    <p class="lede">One name, yours alone, on your ship in shared space and on the galaxy chart for every world you find first. First come, first served. <span id="cs-claim">Claim yours.</span></p>
+  </div>
+
+  <div class="cs-grid">
+    <div class="cs-form card">
+      <form id="cs-name-form" autocomplete="off">
+        <label for="cs-name" class="cs-label">Every pilot needs a callsign.</label>
+        <div class="cs-box"><span class="cs-cmdr" aria-hidden="true">CMDR</span><input id="cs-name" name="callsign" maxlength="24" placeholder="Your callsign" autocapitalize="words" spellcheck="false" enterkeyhint="go" aria-describedby="cs-verdict" /></div>
+        <p class="cs-verdict" id="cs-verdict" aria-live="polite">Letters, numbers and spaces, two to 24 of them.</p>
+        <p class="cs-try" id="cs-try" hidden></p>
+      </form>
+
+      <fieldset class="cs-roles">
+        <legend>Your card</legend>
+        <div class="chips" id="cs-roles"></div>
+      </fieldset>
+
+      <div class="cs-step" id="cs-email-step" hidden>
+        <h2>Make it yours</h2>
+        <form id="cs-email-form" class="cs-row">
+          <label class="visually-hidden" for="cs-email">Your email</label>
+          <input id="cs-email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com" required />
+          <button type="submit" class="button primary" id="cs-send">Email me a code</button>
+        </form>
+        <div class="turnstile" id="cs-turnstile"></div>
+        <p class="form-note">Your email is only for signing in: no password, we send a code. Nothing but your callsign is ever shown.</p>
+      </div>
+
+      <div class="cs-step" id="cs-code-step" hidden>
+        <h2>Type the code</h2>
+        <p class="muted" id="cs-sent"></p>
+        <form id="cs-code-form" class="cs-row">
+          <label class="visually-hidden" for="cs-code">Six-digit code</label>
+          <input id="cs-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="6-digit code" required />
+          <button type="submit" class="button primary">Claim it</button>
+        </form>
+        <p class="form-note muted">No email? Check the spam folder, or <button type="button" class="link-button" id="cs-again">use a different address</button>.</p>
+      </div>
+
+      <div class="cs-step" id="cs-change-step" hidden>
+        <h2 id="cs-already"></h2>
+        <p class="connect-buttons"><button type="button" class="button primary" id="cs-keep"></button> <button type="button" class="button ghost" id="cs-change"></button></p>
+      </div>
+
+      <div class="cs-step" id="cs-claim-step" hidden>
+        <p class="connect-buttons"><button type="button" class="button primary big" id="cs-claim-now">Make it yours</button></p>
+      </div>
+
+      <p class="form-note warn" id="cs-error" role="alert" hidden></p>
+
+      <div class="cs-step cs-done" id="cs-done" hidden>
+        <h2 id="cs-done-title"></h2>
+        <p class="muted">It’s on your account: sign in with the same email on your phone or another computer and it’s waiting for you. It’s your way into <a href="/shared-space/">shared space</a>, too.</p>
+        <p class="connect-buttons"><a class="button primary big" href="/play/">Fly now</a> <button type="button" class="button ghost big" id="cs-share">Share your card</button></p>
+      </div>
+    </div>
+
+    <figure class="cs-card" id="cs-card" aria-label="Your callsign card">
+      <canvas class="cs-ship" id="cs-ship"></canvas>
+      <div class="cs-card-glow" aria-hidden="true"></div>
+      <figcaption class="cs-card-copy">
+        <span class="cs-card-brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 18 L12 9 L20 9 L28 18 L18 23 L14 23 Z M12 9 L14 23 M20 9 L18 23" /></svg>WITCHSPACE</span>
+        <span class="cs-card-kicker" id="cs-card-kicker">Every trader needs a callsign</span>
+        <b class="cs-card-name" id="cs-card-name">CMDR Your callsign</b>
+        <span class="cs-card-sub" id="cs-card-sub">Trader · flies a Cobra</span>
+        <span class="cs-card-foot"><b>witchspace.org.uk/callsign</b></span>
+      </figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="kicker">What a callsign is for</p>
+    <h2>Your name, out there</h2>
+  </div>
+  <div class="shared-grid">
+    <div class="card"><h3>Shared space</h3><p>Other commanders read it over your ship, with your rank: <b>◆◆ CMDR Jameson · 0.8 km</b>. Shared space is only for commanders with a callsign.</p></div>
+    <div class="card"><h3>The galaxy chart</h3><p>Bring a world’s data home first and your callsign goes on the chart beside it, for every commander to see.</p></div>
+    <div class="card"><h3>Every device</h3><p>Your callsign and your commander belong to your account, so the phone and the computer carry on from each other.</p></div>
+  </div>
+  <p class="muted">Callsigns are first come, first served. A few are kept back: names that sound official, names that aren’t kind, and names held for the people they belong to. See <a href="/privacy/">privacy</a> for what we keep.</p>
+</section>

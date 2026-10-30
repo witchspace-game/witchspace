@@ -13,6 +13,7 @@ import { companyPage, jobsPage, loadJobs } from './jobs';
 import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
 import { buildPage, editionPage, manualPage, papersPage, shipPage, shipsIndex } from './ships';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
+import { ROLES, roleLine } from '../src/site/callsignWords';
 
 const root = resolve(import.meta.dirname, '..');
 const REPO = 'https://github.com/witchspace-game/witchspace/blob/main/';
@@ -69,6 +70,7 @@ const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/economy/': { ship: 'falcon', kicker: 'Trade · the galaxy’s money', title: 'Money and markets', sub: 'Living markets, real-time Bitcoin, a currency for every system, company coins and liquidity pools. All in-game.' },
   '/shared-space/': { ship: 'viper', kicker: 'Multiplayer · in beta', title: 'Shared space', sub: 'The other ship on your scanner might be a person. Fly with other commanders, live, in your browser.' },
   '/privacy/': { ship: 'coriolis', kicker: 'Privacy', sub: 'What Witchspace keeps about you, why, and how to delete it.' },
+  '/callsign/': { ship: 'cobra-mk3', kicker: 'Claim your callsign', title: 'Every pilot needs a callsign.', sub: 'One name, yours alone: on your ship in shared space, and on the galaxy chart.' },
 };
 
 const ORG = { '@type': 'Organization', name: 'Witchspace', url: SITE, logo: `${SITE}/icons/icon-512.png`, sameAs: ['https://github.com/witchspace-game/witchspace', 'https://www.instagram.com/witchspace_game/', 'https://www.youtube.com/channel/UC0ZD9s_rEYbGhXb3S6ai-Iw'] };
@@ -89,7 +91,7 @@ const GAME = {
 };
 
 /** Names for breadcrumbs, by URL section. */
-const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', jobs: 'Jobs', companies: 'Jobs', submit: 'Hand in a design', connect: 'Connect your AI assistant', 'ship-editor': 'Ship editor', review: 'Review submissions', 'ship-preview': 'Ship preview', 'shared-space': 'Shared space', economy: 'Money and markets' };
+const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', jobs: 'Jobs', companies: 'Jobs', submit: 'Hand in a design', connect: 'Connect your AI assistant', 'ship-editor': 'Ship editor', review: 'Review submissions', 'ship-preview': 'Ship preview', 'shared-space': 'Shared space', economy: 'Money and markets', callsign: 'Claim your callsign' };
 /** Sections without an index page of their own: their breadcrumb points here instead. */
 const SECTION_URLS: Record<string, string> = { companies: '/jobs/' };
 
@@ -170,6 +172,18 @@ for (const name of readdirSync(join(root, 'site/pages'))) {
     // {{media:<id>:large}} and the like: a press item's link at a given size.
     .replace(/\{\{media:([\w-]+):(large|og|direct|video|embed)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct' | 'video' | 'embed') => links(media, media.items.find((i) => i.id === id)!)[size]!);
   write({ ...meta, content });
+  // Claim your callsign, once more for each role: the same page with that role chosen and its own share card
+  // ("Every pirate needs a callsign", on a Mamba), for the campaign's links. Kept out of search: /callsign/ is the page.
+  if (meta.path === '/callsign/')
+    for (const r of ROLES)
+      write({
+        ...meta,
+        path: `/callsign/${r.id}/`,
+        title: `${roleLine(r).replace(/\.$/, '')} · Witchspace`,
+        content,
+        head: '    <meta name="robots" content="noindex" />\n',
+        card: { ship: r.ship, kicker: 'Claim your callsign', title: roleLine(r), sub: `${r.name} · flies a ${r.shipName}. One name, yours alone, in Witchspace.` },
+      });
 }
 
 // --- A page per press image and video, so each can be shared on its own ------
