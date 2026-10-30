@@ -135,7 +135,7 @@ Earned ships still need upkeep, insurance and the career's goodwill: lose your s
   - **A maiden voyage from the maker.** At the handover the yard (Zorgon Petterson for the Fer-de-lance) offers a first job there and then, suited to her: a shakedown run to a named system and back, a fast high-value delivery, or showing her off at Lave. It pays, and it gets you flying.
   - **Her first moment kept:** the launch from the yard is recorded as a moment, *Her maiden voyage*, ready to share.
   - **Never a blank screen:** the handover ends with one clear next step, flying her with the maker's offer, not just the berth.
-- **A wow moment when she's handed over** *(Mark, 29 October 2026; idea, to mock up first)*. Mark: "You should also make sure theres a 'wow' moment". For every new ship, the editions most of all:
+- **A wow moment when she's handed over** *(Mark, 29 October 2026; idea, to mock up first)*. Mark: "You should also make sure theres a 'wow' moment". **For the high-value ships only** (Mark, 30 October: "Probably just the high value ships"): anything dearer than a Cobra Mk III, so today the Falcon, the Fer-de-lance and every edition. A Sidewinder, Mamba or Cobra goes straight to the papers.
   - **The reveal before the paperwork.** The berth lights go down and she lights up section by section in her own glow (the Witch-fire's magenta and cyan, the Dark Edition's black-light lines). Never dimmed: this is where the Neo glow shines brightest.
   - **A slow orbit around her**, as in the trailer's cold open, with the music swelling (the Blue Danube, already in the game). Her name, and an edition's number, appear on the hull.
   - **Then the certificate, then flying her** with the maiden voyage offer.
