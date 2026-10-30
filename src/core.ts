@@ -16,6 +16,8 @@ export const game = {
   state: 'title' as State,
   /** Which of the station's places is open while docked. */
   dockTab: 'station' as DockTab,
+  /** A photograph is taken right after the next frame is drawn (P, or the booth's button). */
+  photoPending: false,
 };
 
 /** The commander, where one is certain to exist. */

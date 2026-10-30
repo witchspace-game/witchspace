@@ -98,6 +98,17 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     return `${before} → ${w.commander.contracts?.length ?? 0}`;
   });
   check('Modern: a contract can be taken', /^(\d+) → (\d+)$/.test(took) && Number(took.split(' → ')[1]) > Number(took.split(' → ')[0]), took);
+  const booth = await s.w(async () => {
+    document.querySelector('.tabs [data-tab="station"]')?.click();
+    await new Promise((r) => setTimeout(r, 300));
+    [...document.querySelectorAll('button')].find((b) => /Photograph her/i.test(b.textContent ?? ''))?.click();
+    await new Promise((r) => setTimeout(r, 600));
+    const open = !document.querySelector('#booth')?.hidden;
+    document.querySelector('#booth .booth-close, #booth [data-close], #booth button[aria-label*="lose"]')?.click();
+    await new Promise((r) => setTimeout(r, 300));
+    return open;
+  });
+  check('Modern: the photo booth opens', booth);
   check('Modern: docked screens raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
 
   // --- Modern: flight, traffic and hailing -----------------------------------------------
