@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { track as countEvent } from '@vercel/analytics';
 import { cycleSoundMode, danube, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
-import { boomAt, EngineSound, setListener, ShipVoice, tailWarning } from './audio/spatial';
+import { boomAt, setListener, ShipVoice, tailWarning } from './audio/spatial';
 import { shipById } from './content/ships';
 import type { ShipDef } from './content/types';
 import {
@@ -108,7 +108,7 @@ import { showClipView } from './ui/clipView';
 import { checkBtcOrders } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
 import { $, cmdr, currentSystem, game, modern, type State } from './core';
-import { aim, beams, dockingComputer, gimbalHold, dust, explosions, HULL_READ, flight, missiles, sharedSpace, npcs, ofRole, voices, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS } from './scene';
+import { aim, beams, engineSound, timer, dockingComputer, gimbalHold, dust, explosions, HULL_READ, flight, missiles, sharedSpace, npcs, ofRole, voices, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS } from './scene';
 import './style.css';
 import { initManual, renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
 import { newsLine } from './game/newsLines';
@@ -510,22 +510,13 @@ function setFlightLog(open: boolean) {
 
 // The station sits at the origin with its slot facing the planet, as in the
 // original. Everything else about the system is rebuilt on arrival.
-let planet: THREE.Group | null = null;
 
 
 // --- Police and combat ------------------------------------------------------
 
-const engineSound = new EngineSound();
-let tailWarningTimer = 0;
-let reinforceTimer = 0;
-let stationFlash = 0; // seconds of white-hot glow after being hit
-let repopulateTimer = 0;
-let thinkTimer = 0;
 const MAX_POLICE = 4;
 const SCAN_RANGE = 1200; // metres
 const SCAN_TIME = 3; // seconds within range for a police scan
-let scanned = false; // once per visit to a system
-let scanProgress = 0;
 
 const isFugitive = () => Boolean(game.commander) && legalStatus(cmdr()) === 'fugitive';
 
@@ -579,15 +570,15 @@ let builtSystem: StarSystem | null = null;
 function buildSystemScene(sys: StarSystem) {
   builtSystem = sys;
   track.clear(); // a new system: the old fight is over
-  if (planet) disposePlanet(planet);
+  if (flight.planet) disposePlanet(flight.planet);
   flight.planetRadius = sys.radius * 1.2;
   flight.atmosphere = flight.planetRadius * ATMOSPHERE_SCALE;
   planetPos.set(0, 0, flight.planetRadius + 9000);
   flight.planetGM = 0.05 * planetPos.z ** 2;
-  planet = buildPlanet(flight.planetRadius, planetColour(sys));
-  planet.position.copy(planetPos);
-  planet.rotation.set(((sys.extraSeed[0] / 255) - 0.5) * 0.8, sys.extraSeed[1] / 40, ((sys.extraSeed[2] / 255) - 0.5) * 0.8);
-  space.scene.add(planet);
+  flight.planet = buildPlanet(flight.planetRadius, planetColour(sys));
+  flight.planet.position.copy(planetPos);
+  flight.planet.rotation.set(((sys.extraSeed[0] / 255) - 0.5) * 0.8, sys.extraSeed[1] / 40, ((sys.extraSeed[2] / 255) - 0.5) * 0.8);
+  space.scene.add(flight.planet);
   // The sun sits somewhere different in each system.
   const a = (sys.extraSeed[3] / 255) * Math.PI * 2;
   SUN_POS.set(Math.cos(a) * 70000, 20000 + sys.extraSeed[1] * 40, Math.sin(a) * 70000 - 30000);
@@ -611,17 +602,17 @@ function buildSystemScene(sys: StarSystem) {
   for (const e of explosions) e.dispose();
   explosions.length = 0;
   for (let i = 0; i < PATROLS_BY_GOVERNMENT[sys.government]; i++) spawnViper(false);
-  reinforceTimer = repopulateTimer = 0;
+  flight.reinforceTimer = flight.repopulateTimer = 0;
   forgetDeliveries();
   // Some traffic already about, and maybe trouble soon after arrival.
   // Classic: a few traders at random. Modern: the timetable's (syncTraffic).
   resetTraffic();
   if (!modern()) for (let i = 0; i < TRADERS_BY_GOVERNMENT[sys.government] - 1; i++) spawnTrader(true, 5000 + Math.random() * 10000);
   startEncounters();
-  scanned = false;
-  scanProgress = 0;
-  unpinned = hail = null;
-  hullChecked = defiedPolice = false;
+  flight.scanned = false;
+  flight.scanProgress = 0;
+  flight.unpinned = flight.hail = null;
+  flight.hullChecked = flight.defiedPolice = false;
   buildExploreScene(sys);
   restoreAdrift();
 }
@@ -643,7 +634,7 @@ const EQUIPMENT_HIT_GAP = 10; // seconds between items lost
  * hull it may take out fitted equipment. Returns true if the ship is destroyed.
  */
 function damagePlayer(amount: number, from?: NpcShip): boolean {
-  if (from) lastHitBy = { npc: from, at: flight.elapsed };
+  if (from) flight.lastHitBy = { npc: from, at: flight.elapsed };
   // Under fire on the docking computer, you get the stick back: never a sitting duck on autopilot (Mark). Modern only.
   if (from && flight.autopilot && modern()) setAutopilot(false, 'Under fire · docking computer off · you have control');
   const hullBefore = player.hull;
@@ -688,7 +679,7 @@ function becomeFugitive(serious = false) {
   if (!identified()) {
     // Running dark: seen, not known. Police who saw it come after the ship anyway.
     unpinnedCrime('fugitive', serious);
-    if (ofRole('police').some((p) => p.obj.position.distanceTo(player.obj.position) < POLICE_SEE)) defiedPolice = true;
+    if (ofRole('police').some((p) => p.obj.position.distanceTo(player.obj.position) < POLICE_SEE)) flight.defiedPolice = true;
     return;
   }
   const hadWarrant = c.warrant;
@@ -700,7 +691,7 @@ function becomeFugitive(serious = false) {
     scheduleMarshals();
   }
   if (was) return;
-  reinforceTimer = 6;
+  flight.reinforceTimer = 6;
   if (!c.warrant || hadWarrant) flash('You are now a FUGITIVE', 2.5);
 }
 
@@ -962,13 +953,6 @@ const HAIL_TIME = 15; // seconds to answer a police hail
 const HAIL_SLOW = 0.2; // fraction of top speed: slow enough for a Viper to read your hull
 const SUSPECT_TIME = 180; // seconds after a crime that switching on near the law makes you the suspect
 
-/** A crime seen but not pinned on you. Forgotten when you leave the system. */
-let unpinned: { status: 'offender' | 'fugitive'; serious: boolean; at: number } | null = null;
-let hail: { by: NpcShip; until: number } | null = null;
-/** Police have read your hull this visit (a broken transponder): no more hails. */
-let hullChecked = false;
-/** You ignored a hail, or fired on police, while dark: they're after you, whoever you are. */
-let defiedPolice = false;
 
 const transponderBroken = () => game.commander !== null && cmdr().damaged.includes('transponder');
 /** Nobody can read who you are from afar. */
@@ -982,7 +966,7 @@ function identified(): boolean {
 }
 
 function unpinnedCrime(status: 'offender' | 'fugitive', serious: boolean) {
-  unpinned = { status: unpinned?.status === 'fugitive' ? 'fugitive' : status, serious: serious || Boolean(unpinned?.serious), at: flight.elapsed };
+  flight.unpinned = { status: flight.unpinned?.status === 'fugitive' ? 'fugitive' : status, serious: serious || Boolean(flight.unpinned?.serious), at: flight.elapsed };
   flash(`Seen, but not identified · an unidentified ${player.def.name}`, 2.5);
 }
 
@@ -993,8 +977,8 @@ function unpinnedCrime(status: 'offender' | 'fugitive', serious: boolean) {
 
 /** Seconds until switching on here is safe; 0 if it is now (Infinity: you defied the police here). */
 function suspectFor(): number {
-  if (defiedPolice) return Infinity;
-  return unpinned ? Math.max(0, SUSPECT_TIME - (flight.elapsed - unpinned.at)) : 0;
+  if (flight.defiedPolice) return Infinity;
+  return flight.unpinned ? Math.max(0, SUSPECT_TIME - (flight.elapsed - flight.unpinned.at)) : 0;
 }
 
 
@@ -1031,15 +1015,15 @@ function toggleTransponder() {
   const watched =
     player.obj.position.distanceTo(station.root.position) < STATION_SPACE ||
     ofRole('police').some((p) => p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
-  const crime = unpinned && flight.elapsed - unpinned.at < SUSPECT_TIME ? unpinned : null;
-  unpinned = null; // switched on quietly, or too late: the trail goes cold
-  if (watched && (crime || defiedPolice)) {
-    defiedPolice = false;
+  const crime = flight.unpinned && flight.elapsed - flight.unpinned.at < SUSPECT_TIME ? flight.unpinned : null;
+  flight.unpinned = null; // switched on quietly, or too late: the trail goes cold
+  if (watched && (crime || flight.defiedPolice)) {
+    flight.defiedPolice = false;
     if (crime?.status === 'fugitive') becomeFugitive(crime.serious);
     else becomeOffender(crime ? 'Transponder on, near the scene · you are the suspect · OFFENDER' : 'Transponder on · you ignored a police hail · OFFENDER');
     return;
   }
-  if (hail) radio('police', `${currentSystem().name} police`, 'Transponder read · thank you, Commander', { flash: 2, urgent: true, line: 'Transponder read · thank you, Commander' });
+  if (flight.hail) radio('police', `${currentSystem().name} police`, 'Transponder read · thank you, Commander', { flash: 2, urgent: true, line: 'Transponder read · thank you, Commander' });
   else flash('Transponder on', 2);
 }
 
@@ -1071,38 +1055,38 @@ function showTransponder() {
 function updateHail() {
   showTransponder();
   const box = $('#hail');
-  if (hail && !npcs.includes(hail.by)) hail = null; // the Viper's gone; another may ask
-  if (!dark() || !hasLaw(currentSystem()) || defiedPolice || (hullChecked && !flight.transponderOff)) {
-    hail = null;
+  if (flight.hail && !npcs.includes(flight.hail.by)) flight.hail = null; // the Viper's gone; another may ask
+  if (!dark() || !hasLaw(currentSystem()) || flight.defiedPolice || (flight.hullChecked && !flight.transponderOff)) {
+    flight.hail = null;
     box.hidden = true;
     return;
   }
-  if (!hail) {
+  if (!flight.hail) {
     const by = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
     if (!by) return;
-    hail = { by, until: flight.elapsed + HAIL_TIME };
+    flight.hail = { by, until: flight.elapsed + HAIL_TIME };
     sfx.beep();
     // One hail (Mark got two): in Modern the radio card is it, with the seconds left on it; Classic keeps the banner.
     const deadline = Date.now() + HAIL_TIME * 1000;
     radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, answers: transponderBroken() && !flight.transponderOff ? answerPolice() : answerPolice().map((a) => ({ ...a, until: deadline, clock: true })) });
   }
   // The Viper that hailed you comes to look.
-  hail.by.patrol.centre.copy(player.obj.position);
-  hail.by.patrol.radius = 400;
+  flight.hail.by.patrol.centre.copy(player.obj.position);
+  flight.hail.by.patrol.radius = 400;
   const broken = transponderBroken() && !flight.transponderOff;
   if (broken && player.speed <= player.maxSpeed * HAIL_SLOW) {
-    hail.until = Math.max(hail.until, flight.elapsed + 5); // holding still for them: the clock waits
-    if (hail.by.obj.position.distanceTo(player.obj.position) < HULL_READ) {
-      hail = null;
-      hullChecked = true;
+    flight.hail.until = Math.max(flight.hail.until, flight.elapsed + 5); // holding still for them: the clock waits
+    if (flight.hail.by.obj.position.distanceTo(player.obj.position) < HULL_READ) {
+      flight.hail = null;
+      flight.hullChecked = true;
       box.hidden = true;
       radio('police', `${currentSystem().name} police`, isFugitive() ? 'Hull read · you are wanted here' : 'Hull read · clean · get that transponder seen to at the next station', { flash: 3, urgent: true, line: isFugitive() ? 'Hull read · you are wanted here' : 'Hull read · clean · get that transponder seen to at the next station' });
       return;
     }
   }
-  if (flight.elapsed > hail.until) {
-    hail = null;
-    defiedPolice = true;
+  if (flight.elapsed > flight.hail.until) {
+    flight.hail = null;
+    flight.defiedPolice = true;
     box.hidden = true;
     sfx.beep();
     radio('police', `${currentSystem().name} police`, 'No answer · police are treating you as hostile', { flash: 3, urgent: true, line: 'No answer · police are treating you as hostile' });
@@ -1110,7 +1094,7 @@ function updateHail() {
   }
   // In Modern the card carries the hail; the banner stays for a broken transponder, whose clock waits while you hold still.
   box.hidden = modern() && !broken;
-  const left = Math.ceil(hail.until - flight.elapsed);
+  const left = Math.ceil(flight.hail.until - flight.elapsed);
   const text = broken
     ? `Police hail · transponder damaged: cut your speed and let the Viper read your hull · ${left} s`
     : `Police hail · switch on your transponder${document.body.classList.contains('touch') ? '' : ' (0)'} · ${left} s`;
@@ -1150,7 +1134,7 @@ function gimballed() {
 const GIMBAL_SLEW = THREE.MathUtils.degToRad(150); // degrees a second it can swing
 function gimbalRide(dt: number) {
   aim.dir.copy(gimbalHold).applyQuaternion(player.obj.quaternion);
-  if (!gimballed() || view !== 'front') return;
+  if (!gimballed() || flight.view !== 'front') return;
   const fwd = player.forward();
   const at = player.obj.position;
   const candidates = [flight.combatComputer?.target, ...npcs.filter((n) => n.hostile)].filter((n): n is NpcShip => Boolean(n) && npcs.includes(n!));
@@ -1167,14 +1151,14 @@ const GIMBAL_REACH = THREE.MathUtils.degToRad(30); // as far as the ring may lea
 
 /** The laser on the mount you're looking along, if any. */
 const mountLaser = () => {
-  const id = cmdr().lasers[view];
+  const id = cmdr().lasers[flight.view];
   return id ? PLAYER_LASERS[id] : null;
 };
 /** For heat and range: the current mount's laser, or the front one. */
 const playerLaser = () => mountLaser() ?? PLAYER_LASERS[cmdr().lasers.front ?? 'pulse'];
 
 function laserDirection() {
-  if (view === 'front') return gimballed() ? aim.dir.clone() : player.forward();
+  if (flight.view === 'front') return gimballed() ? aim.dir.clone() : player.forward();
   const dir = viewDirection();
   if (cmdr().difficulty !== 'modern') return dir;
   // Modern turrets swing onto the nearest ship near the middle of the view.
@@ -1195,7 +1179,7 @@ function laserDirection() {
 /** Where the beams leave the hull for the current mount. */
 function muzzles(): THREE.Vector3[] {
   const at = (x: number, y: number, z: number) => player.obj.localToWorld(new THREE.Vector3(x, y, z));
-  switch (view) {
+  switch (flight.view) {
     case 'rear':
       return [at(-7, -3, -14), at(7, -3, -14)];
     case 'left':
@@ -1230,7 +1214,7 @@ function firePlayerLaser() {
   const laser = mountLaser();
   if (!laser) {
     flight.laserCooldown = 0.6;
-    flash(`No ${view} laser fitted`, 1.2);
+    flash(`No ${flight.view} laser fitted`, 1.2);
     return;
   }
   if (flight.autopilot) {
@@ -1273,7 +1257,7 @@ function firePlayerLaser() {
     sfx.hit();
     playerHitNpc(shot.npc, gimballed() ? laser.damage * GIMBAL_DAMAGE : laser.damage);
   } else if (shot.kind === 'station') {
-    stationFlash = 0.25;
+    flight.stationFlash = 0.25;
     sfx.hit();
     playerHitStation();
   } else if (shot.kind === 'drifter') {
@@ -1305,7 +1289,7 @@ function playerHitStation() {
     becomeFugitive(true);
     flash('Station under attack · Police launching', 2.5);
   }
-  if (ofRole('police').length < MAX_POLICE && reinforceTimer > 1) reinforceTimer = 0.5;
+  if (ofRole('police').length < MAX_POLICE && flight.reinforceTimer > 1) flight.reinforceTimer = 0.5;
 }
 
 /** How much a ship weighs in a collision: its hull and shields together. */
@@ -1325,16 +1309,16 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   }
 
   // Decide who fights whom a few times a second.
-  thinkTimer -= dt;
-  if (thinkTimer <= 0) {
-    thinkTimer = 0.25;
+  flight.thinkTimer -= dt;
+  if (flight.thinkTimer <= 0) {
+    flight.thinkTimer = 0.25;
     const prices = game.commander ? new Map(quotes(tradeContext()).map((q) => [q.commodity.id, q.price])) : new Map<string, number>();
     const holdValue = (cargo: Record<string, number>) => Object.entries(cargo).reduce((v, [id, q]) => v + q * (prices.get(id) ?? 0), 0);
     const world = {
       player,
       playerPresent: alive,
       // Wanted here and known, or a dark ship that defied them.
-      playerWanted: (isFugitive() && identified()) || defiedPolice,
+      playerWanted: (isFugitive() && identified()) || flight.defiedPolice,
       npcs,
       inSafeZone: (at: THREE.Vector3) => cmdr().difficulty === 'classic' && inSafeZone(at),
       canSee: (npc: NpcShip) => playerVisibleAt(npc.obj.position.distanceTo(player.obj.position)),
@@ -1460,11 +1444,11 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   }
 
   // Police in lawful-ish systems scan ships that loiter near them.
-  if (alive && !scanned && scansCargo(currentSystem())) {
+  if (alive && !flight.scanned && scansCargo(currentSystem())) {
     const scanner = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < SCAN_RANGE);
-    scanProgress = scanner ? scanProgress + dt : Math.max(0, scanProgress - dt);
-    if (scanProgress >= SCAN_TIME) {
-      scanned = true;
+    flight.scanProgress = scanner ? flight.scanProgress + dt : Math.max(0, flight.scanProgress - dt);
+    if (flight.scanProgress >= SCAN_TIME) {
+      flight.scanned = true;
       if (illegalEquipment(cmdr()).length) becomeOffender('Scanned by police · distress jammer found · you are an OFFENDER');
       else if (carriesContraband(cmdr())) becomeOffender('Scanned by police · contraband found · you are an OFFENDER');
       else radio('police', `${currentSystem().name} police`, 'Scanned · clean', { flash: 1.5, line: 'Scanned by police · clean' });
@@ -1472,8 +1456,8 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   }
 
   // A soft double beep when a hostile is close behind you.
-  tailWarningTimer -= dt;
-  if (alive && tailWarningTimer <= 0) {
+  flight.tailWarningTimer -= dt;
+  if (alive && flight.tailWarningTimer <= 0) {
     const fwd = player.forward();
     const onTail = npcs.find((npc) => {
       if (!npc.hostile) return false;
@@ -1482,24 +1466,24 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
     });
     if (onTail) {
       tailWarning(onTail.obj.position);
-      tailWarningTimer = 2.5;
+      flight.tailWarningTimer = 2.5;
     }
   }
 
   // The station sends more police after a fugitive, and replaces patrols otherwise.
   const nearStation = player.obj.position.distanceTo(station.root.position) < 9000;
   if (alive && isFugitive() && nearStation && currentSystem().government > 0) {
-    reinforceTimer -= dt;
-    if (reinforceTimer <= 0 && ofRole('police').length < MAX_POLICE) {
+    flight.reinforceTimer -= dt;
+    if (flight.reinforceTimer <= 0 && ofRole('police').length < MAX_POLICE) {
       spawnViper(true);
       flash('Police launching', 1.5);
-      reinforceTimer = 20;
+      flight.reinforceTimer = 20;
     }
   } else if (!isFugitive() && ofRole('police').length < PATROLS_BY_GOVERNMENT[currentSystem().government]) {
-    repopulateTimer -= dt;
-    if (repopulateTimer <= 0) {
+    flight.repopulateTimer -= dt;
+    if (flight.repopulateTimer <= 0) {
       spawnViper(true);
-      repopulateTimer = 30;
+      flight.repopulateTimer = 30;
     }
   }
 }
@@ -1516,22 +1500,21 @@ const FLIP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0),
 
 const VIEW_TURN: Record<Mount, number> = { front: 0, rear: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 };
 const TURRET_CONE = THREE.MathUtils.degToRad(20);
-let view: Mount = 'front';
 
 function setView(next: Mount, glance = false) {
-  view = next;
+  flight.view = next;
   // The touch view button points where you're looking; its picker marks the view and closes.
   const turn: Record<Mount, number> = { front: 0, right: 90, rear: 180, left: -90 };
-  $('#view-button svg').style.transform = `rotate(${turn[view]}deg)`;
-  $('#view-button').classList.toggle('away', view !== 'front');
-  for (const b of document.querySelectorAll<HTMLButtonElement>('#view-picker [data-view]')) b.classList.toggle('on', b.dataset.view === view);
+  $('#view-button svg').style.transform = `rotate(${turn[flight.view]}deg)`;
+  $('#view-button').classList.toggle('away', flight.view !== 'front');
+  for (const b of document.querySelectorAll<HTMLButtonElement>('#view-picker [data-view]')) b.classList.toggle('on', b.dataset.view === flight.view);
   if (!glance) showViewPicker(false);
   const label = $('#view-label');
-  label.hidden = view === 'front';
-  label.textContent = `${view} view`;
-  if (view !== 'front' && !glance) {
-    const laser = cmdr().lasers[view];
-    flash(laser ? `${view} view · ${PLAYER_LASERS[laser].name}` : `${view} view · no ${view} laser fitted`, 1.4);
+  label.hidden = flight.view === 'front';
+  label.textContent = `${flight.view} view`;
+  if (flight.view !== 'front' && !glance) {
+    const laser = cmdr().lasers[flight.view];
+    flash(laser ? `${flight.view} view · ${PLAYER_LASERS[laser].name}` : `${flight.view} view · no ${flight.view} laser fitted`, 1.4);
   }
 }
 
@@ -1557,7 +1540,7 @@ viewButton.addEventListener('pointerdown', (e) => {
     /* no such pointer (a synthetic event): carry on without */
   }
   glanceTimer = window.setTimeout(() => {
-    glancing = view;
+    glancing = flight.view;
     showViewPicker(true);
   }, GLANCE_HOLD);
 });
@@ -1565,7 +1548,7 @@ viewButton.addEventListener('pointermove', (e) => {
   if (!glancing) return;
   const over = (document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('#view-picker [data-view]');
   const next = (over?.dataset.view as Mount | undefined) ?? glancing;
-  if (next !== view) setView(next, true);
+  if (next !== flight.view) setView(next, true);
 });
 const endGlance = (tap: boolean) => {
   clearTimeout(glanceTimer);
@@ -1602,13 +1585,13 @@ function steerInView(input: FlightInput, dt: number) {
   const up = -input.aimDy * k; // and tip up
   const rate = (r: number, max: number) => THREE.MathUtils.clamp(r / max, -1, 1);
   input.yaw = rate(across, player.yawRate);
-  if (view === 'rear') input.pitch = rate(-up, player.def.stats.pitchRate ?? 1.5);
-  else input.roll = rate(view === 'left' ? up : -up, player.def.stats.rollRate ?? 2);
+  if (flight.view === 'rear') input.pitch = rate(-up, player.def.stats.pitchRate ?? 1.5);
+  else input.roll = rate(flight.view === 'left' ? up : -up, player.def.stats.rollRate ?? 2);
 }
 
 /** Which way the current view looks, in the world. */
 function viewDirection(): THREE.Vector3 {
-  switch (view) {
+  switch (flight.view) {
     case 'rear':
       return player.forward().negate();
     case 'left':
@@ -1690,12 +1673,12 @@ function updateSpace(dt: number) {
       aim.move(player, input.aimDx, input.aimDy);
       aim.clamp(player);
       gimbalHold.copy(aim.dir).applyQuaternion(player.obj.quaternion.clone().invert());
-    } else if (controlScheme() === 'mouse' && isMouseCaptured() && !flight.autopilot && !flight.surveyPilot && !keysTurning && view === 'front') {
+    } else if (controlScheme() === 'mouse' && isMouseCaptured() && !flight.autopilot && !flight.surveyPilot && !keysTurning && flight.view === 'front') {
       aim.move(player, input.aimDx, input.aimDy);
       const s = aim.steer(player);
       input.pitch = s.pitch;
       input.yaw = s.yaw;
-    } else if (view !== 'front' && controlScheme() === 'mouse' && (isMouseCaptured() || isTouch) && !flight.autopilot && !flight.surveyPilot && !keysTurning) {
+    } else if (flight.view !== 'front' && controlScheme() === 'mouse' && (isMouseCaptured() || isTouch) && !flight.autopilot && !flight.surveyPilot && !keysTurning) {
       aim.reset(player);
       steerInView(input, dt);
     } else {
@@ -1718,7 +1701,7 @@ function updateSpace(dt: number) {
     }
     if (flight.autopilot) dockingComputer.update(dt, player, station);
     else if (flight.combatComputer) {
-      const hit = lastHitBy && npcs.includes(lastHitBy.npc) ? lastHitBy : null;
+      const hit = flight.lastHitBy && npcs.includes(flight.lastHitBy.npc) ? flight.lastHitBy : null;
       const status = { heat: Math.min(1, flight.laserHeat / 100), hitBy: hit?.npc ?? null, hitAgo: hit ? flight.elapsed - hit.at : Infinity };
       if (!flight.combatComputer.fly(dt, player, npcs, flight.locked, { centre: planetPos, radius: flight.planetRadius }, status)) stopCombatComputer('No hostiles · combat computer standing down · you have control');
       else if (flight.combatComputer.announce) {
@@ -1828,9 +1811,9 @@ function updateSpace(dt: number) {
     updateLegends(dt);
     updateRadio(dt);
   }
-  if (stationFlash > 0) {
-    stationFlash = Math.max(0, stationFlash - dt);
-    heatShip(station.model, stationFlash / 0.25);
+  if (flight.stationFlash > 0) {
+    flight.stationFlash = Math.max(0, flight.stationFlash - dt);
+    heatShip(station.model, flight.stationFlash / 0.25);
   }
 
   if (game.state === 'dead') {
@@ -1842,7 +1825,7 @@ function updateSpace(dt: number) {
   } else {
     camera.position.copy(player.obj.position);
     camera.quaternion.copy(player.obj.quaternion).multiply(FLIP);
-    if (view !== 'front') camera.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), VIEW_TURN[view]));
+    if (flight.view !== 'front') camera.quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), VIEW_TURN[flight.view]));
     if (flight.shake > 0.01) {
       camera.position.add(new THREE.Vector3().randomDirection().multiplyScalar(flight.shake * 2.5));
       flight.shake *= Math.exp(-dt * 6);
@@ -1997,7 +1980,7 @@ function updateAimDisplay() {
   }
   wasCaptured = captured;
   mousePrompt.hidden = !wantsMouseCapture();
-  reticle.hidden = !captured || controlScheme() !== 'mouse' || view !== 'front';
+  reticle.hidden = !captured || controlScheme() !== 'mouse' || flight.view !== 'front';
   if (reticle.hidden) return;
   // Project the aim direction onto whichever canvas is showing.
   const p = camera.position.clone().addScaledVector(aim.dir, 1000).project(camera);
@@ -2105,7 +2088,7 @@ async function launch() {
   if (repaired !== null) {
     flash(`${stationName(currentSystem()).name} · No launch clearance without a working transponder · repaired${repaired ? ` · ${repaired.toLocaleString()} Cr` : ' on the house'}`, 4.5);
   } else if (transponderBroken() && hasLaw(currentSystem())) {
-    hullChecked = true;
+    flight.hullChecked = true;
     flash(`${stationName(currentSystem()).name} · Transponder damaged · your hull is logged, police won't hail you here · repair it when you dock`, 4.5);
   } else flash(`${stationName(currentSystem()).name} · ${currentSystem().name}`, 2.5);
   if (recordVisit(cmdr(), currentSystem())) saveCommander(cmdr()); // where you started counts
@@ -2401,8 +2384,8 @@ async function surrender() {
   const settlement = settle(c);
   saveCommander(c);
   // They know exactly who you are now: whatever you did dark here is settled too.
-  defiedPolice = hullChecked = false;
-  unpinned = hail = null;
+  flight.defiedPolice = flight.hullChecked = false;
+  flight.unpinned = flight.hail = null;
   flight.transponderOff = flight.switchOnWhenClear = false;
   for (const n of ofRole('police')) if (n.target === player) n.target = null;
   enterDocked();
@@ -2417,7 +2400,6 @@ async function surrender() {
 const track = new TrackRecorder();
 const trackIds = new WeakMap<object, number>();
 let nextTrackId = 2; // 1 is you
-let lastHitBy: { npc: NpcShip; at: number } | null = null;
 const TRACK_RANGE = 12000; // metres: the scanner's long range
 
 function trackId(o: object): number {
@@ -2478,7 +2460,7 @@ function trackScene() {
 function die() {
   const c = cmdr();
   // The black box: the last seconds, and the ship going up, for the insurers' screen.
-  const killer = lastHitBy && flight.elapsed - lastHitBy.at < 5 ? lastHitBy.npc : null;
+  const killer = flight.lastHitBy && flight.elapsed - flight.lastHitBy.at < 5 ? flight.lastHitBy.npc : null;
   // Who did it, when someone did: a death worth watching from outside (ui/flightLog.ts worthWatching).
   const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}`, ...(killer ? { subject: killer.def.name } : {}) }, 26, 4);
   track.event({ t: flight.elapsed, kind: 'boom', id: trackId(player), p: player.obj.position.toArray() });
@@ -2777,7 +2759,7 @@ function handleKey(code: string) {
       } else if (code === 'KeyB') {
         energyBomb();
       } else if (code === 'KeyV') {
-        setView(MOUNTS[(MOUNTS.indexOf(view) + 1) % MOUNTS.length]);
+        setView(MOUNTS[(MOUNTS.indexOf(flight.view) + 1) % MOUNTS.length]);
       } else if (code === 'Digit0') {
         toggleTransponder();
       } else if (/^Digit[1-4]$/.test(code)) {
@@ -2878,7 +2860,7 @@ function watchSurroundings(dt: number) {
       ships,
       legends: npcs.filter((n) => LEGENDS.has(n.def.id)).length,
       station: station.root.position,
-      planet: planet ? { position: planetPos, radius: flight.planetRadius } : null,
+      planet: flight.planet ? { position: planetPos, radius: flight.planetRadius } : null,
       rift: Boolean(carrier?.rift),
     },
     dt,
@@ -3127,8 +3109,6 @@ setOutsideView(async (m) => {
 
 // --- Main loop --------------------------------------------------------------
 
-// Timer pauses while the tab is hidden, so there's no huge step on return.
-const timer = new THREE.Timer();
 timer.connect(document);
 
 // The battery (Mark: his phone went flat much quicker): never more than 60 frames a second, even on

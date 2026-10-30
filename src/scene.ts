@@ -3,10 +3,11 @@
 // ship. Made once; everything else about a system is rebuilt on arrival (main.ts buildSystemScene).
 
 import * as THREE from 'three';
-import type { ShipVoice } from './audio/spatial';
+import { EngineSound, type ShipVoice } from './audio/spatial';
 import { shipById } from './content/ships';
 import { DockingComputer } from './game/dockingComputer';
 import type { CombatPilot } from './game/combatPilot';
+import type { Mount } from './game/commander';
 import type { Body, Poi } from './game/explore';
 import { MouseAim } from './game/mouseAim';
 import type { SurveyPilot } from './game/surveyPilot';
@@ -38,6 +39,10 @@ space.scene.add(dust.group);
 export const player = new PlayerShip(shipById('cobra-mk3')!);
 space.scene.add(player.obj);
 export const dockingComputer = new DockingComputer();
+/** Your own engines. */
+export const engineSound = new EngineSound();
+/** The game's clock. It pauses while the tab is hidden, so there's no huge step on return. */
+export const timer = new THREE.Timer();
 /** Mouse (or thumb) aim: where the sights point, ahead of the nose. */
 export const aim = new MouseAim();
 /** Where the gimballed laser's ring points, in the ship's own frame. */
@@ -83,6 +88,7 @@ export const flight = {
   /** Seconds since the game started (the main loop's clock). */
   elapsed: 0,
   /** Rebuilt on arrival. */
+  planet: null as THREE.Group | null,
   planetRadius: 5000,
   autopilot: false,
   /** The top of the planet's atmosphere, in metres from its centre. */
@@ -136,6 +142,27 @@ export const flight = {
   routeJumpAt: null as number | null,
   /** The hyperspace countdown, in seconds, while it runs. */
   countdown: null as number | null,
+  /** Which way you're looking: the laser mount whose view is on screen. */
+  view: 'front' as Mount,
+  tailWarningTimer: 0,
+  reinforceTimer: 0,
+  /** Seconds of white-hot glow on the station after being hit. */
+  stationFlash: 0,
+  repopulateTimer: 0,
+  thinkTimer: 0,
+  /** The police have scanned your cargo (once per visit to a system), and how far a scan has got. */
+  scanned: false,
+  scanProgress: 0,
+  /** A crime seen but not pinned on you. Forgotten when you leave the system. */
+  unpinned: null as { status: 'offender' | 'fugitive'; serious: boolean; at: number } | null,
+  /** A police hail to answer, from whom, and by when. */
+  hail: null as { by: NpcShip; until: number } | null,
+  /** Police have read your hull this visit (a broken transponder): no more hails. */
+  hullChecked: false,
+  /** You ignored a hail, or fired on police, while dark: they're after you, whoever you are. */
+  defiedPolice: false,
+  /** Who last hit you, and when (the kill cam's "killed by"). */
+  lastHitBy: null as { npc: NpcShip; at: number } | null,
   /** A Viper detailed to fly with you, and until when. */
   escort: null as { npc: NpcShip; until: number } | null,
 };
