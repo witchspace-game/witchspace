@@ -10,6 +10,7 @@ import { drift, equilibriumPrice, freshMarket, priceAt } from '../economy/market
 import { distanceLy, galaxy, type StarSystem } from '../galaxy/generate';
 import { COMPANIES } from '../game/companies';
 import { cargoName, destinationOf } from '../game/contracts';
+import { cargoWords, voyages, type Voyage } from '../game/traffic';
 import { stageInfo, STAGES, yardsNear } from '../game/yards';
 import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
@@ -171,10 +172,19 @@ function render() {
     const { yard, where } = yards[0];
     const done = Math.min(1, (now - yard.start) / (yard.end - yard.start));
     $('now-yard')!.textContent = where.name;
-    $('now-yard-line')!.textContent = `Wexley-Yorozu's Titanoboa: ${stageInfo(yard.stage).news}.`;
+    $('now-yard-line')!.textContent = `Wexley-Yorozu's Titan: ${stageInfo(yard.stage).news}.`;
     $('now-yard-bar')!.style.width = `${Math.round(done * 100)}%`;
     $('now-yard-meta')!.textContent = `${ly(where)} · stage ${STAGES.findIndex((s) => s.stage === yard.stage) + 1} of ${STAGES.length} · opens in about ${Math.max(1, Math.ceil((yard.end - now) / 86400000))} days${near.length > 1 ? ` · ${near.length - 1} more within ${RANGE} LY` : ''}`;
   }
+
+  // Arrivals at Lave: the market's own timetable made visible, the next ships due in, the same for everyone.
+  const due = voyages(lave, now, now + 90 * 60_000).filter((v) => v.leg === 'in').slice(0, 4);
+  if (due.length) $('now-arrivals')!.innerHTML = due.map((v) => arrival(v, now)).join('');
+  // And the Titan's next supply run at the nearest yard, under guard.
+  const titan = yards.length ? voyages(yards[0].where, now, now + 30 * 60_000).find((v) => v.to === 'titan') : undefined;
+  const run = $('now-titan')!;
+  run.hidden = !titan;
+  if (titan) run.innerHTML = `Next for the Titan at ${escapeHtml(yards[0].where.name)}: the Wexley-Yorozu ${escapeHtml(hullName(titan.hull))} <b>${escapeHtml(titan.name)}</b> with ${escapeHtml(cargoWords(titan.cargo))}, ${inMin(titan.at, now)}${titan.escorts ? `, ${titan.escorts} Viper${titan.escorts > 1 ? 's' : ''} alongside` : ''}.`;
 
   // The ticker under the hero: a line at a time from all of the above.
   const first = ongoing[0];
@@ -185,8 +195,19 @@ function render() {
     first ? `<b>${escapeHtml(EVENT_KINDS[first.event.type].name)}</b> at ${escapeHtml(first.where.name)}, ${distanceLy(lave, first.where).toFixed(1)} LY out` : '',
     crisis ? `${escapeHtml(crisis.good)} <b>+${Math.round(crisis.pct * 100)}%</b> at ${escapeHtml(crisis.where.name)}` : '',
     yards.length ? `<b>${escapeHtml(yards[0].where.name)}</b> station: ${escapeHtml(stageInfo(yards[0].yard.stage).name)}` : '',
+    due[0] ? `<b>${escapeHtml(due[0].name)}</b> due at Lave from ${escapeHtml(galaxy(0)[due[0].other].name)}, ${inMin(due[0].at, now)}` : '',
     `<b>${trouble.length}</b> worlds in trouble right now`,
   ].filter(Boolean);
+}
+
+const hullName = (id: string) => shipById(id)?.name ?? id;
+const inMin = (t: number, now: number) => `in ${Math.max(1, Math.round((t - now) / 60_000))}\u00a0min`;
+
+/** One line of the arrivals board: when, who and for whom, from where, with what. */
+function arrival(v: Voyage, now: number): string {
+  const firm = v.company ? COMPANIES[v.company].name : 'Independent';
+  const why = v.relief ? ` · relief for the ${EVENT_KINDS[v.relief].name.toLowerCase()}` : '';
+  return `<li><time>${inMin(v.at, now).slice(3)}</time><span><b>${escapeHtml(v.name)}</b> <small>${escapeHtml(firm)} ${escapeHtml(hullName(v.hull))}</small></span><small>from ${escapeHtml(galaxy(0)[v.other].name)} with ${escapeHtml(cargoWords(v.cargo))}${why}${v.escorts ? ` · ${v.escorts} escort${v.escorts > 1 ? 's' : ''}` : ''}</small></li>`;
 }
 
 /** Fetch what commanders have done; on any failure keep what we had (nothing, at first). */

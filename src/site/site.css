@@ -1166,6 +1166,16 @@ body.menu-open { overflow: hidden; }
 .now-card { display: flex; flex-direction: column; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); }
 .now-card h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 12.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
 .now-card.news { grid-row: span 3; }
+/* The market's timetable made visible (src/game/traffic.ts): the next ships due in at Lave, like a station's board. */
+.now-card.traffic { grid-column: 1 / -1; }
+.arrivals { list-style: none; margin: 4px 0 12px; padding: 0; }
+.arrivals li { display: grid; grid-template-columns: 4.2em 1fr; gap: 2px 12px; padding: 9px 0; border-top: 1px solid var(--border); }
+.arrivals li:first-child { border-top: 0; }
+.arrivals li.muted { display: block; }
+.arrivals time { grid-row: span 2; color: var(--accent); font: 600 15px/1.3 var(--display); font-variant-numeric: tabular-nums; }
+.arrivals b { font-weight: 600; }
+.arrivals small { color: var(--muted); }
+.titan-run { margin: 0 0 10px; padding: 10px 12px; border-radius: 10px; background: rgba(255, 179, 71, 0.07); border: 1px solid rgba(255, 179, 71, 0.25); font-size: 14px; }
 /* Latest flight: a shared clip's own card beside its words, across two columns. */
 .now-card.flight { grid-column: span 2; flex-direction: row; gap: 20px; align-items: center; }
 .now-card .flight-pic { flex: 0 0 55%; display: block; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: #04060b; }
@@ -1247,6 +1257,7 @@ body.menu-open { overflow: hidden; }
   .now-grid, .fly, .together { grid-template-columns: 1fr; }
   .now-card.news { grid-row: auto; }
   .now-card.flight { grid-column: auto; flex-direction: column; gap: 0; }
+  .now-card.traffic { grid-column: auto; }
   .now-card .flight-pic { flex: none; margin: -20px -20px 16px; border: 0; border-radius: 16px 16px 0 0; }
   .ladders { grid-template-columns: 1fr 1fr; }
 }
@@ -1746,3 +1757,5 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
   .cs-nudge { transition: none; }
   .cs-nudge-copy b::after { animation: none; }
 }
+.ship-at-work p { margin: 0 0 10px; }
+.ship-at-work p:last-child { margin-bottom: 0; }
