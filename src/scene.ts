@@ -89,6 +89,14 @@ export const flight = {
   cabinTemp: 0,
   /** Seconds in the system, for the pirates after a lost case. */
   raidClock: 0,
+  /** Running dark (Modern): the transponder switched off. */
+  transponderOff: false,
+  /** The station has told you you're cleared to dock (or you've just left it). */
+  clearanceAnnounced: false,
+  /** Seconds until the comms array next listens for offers and news. */
+  arrayTimer: 0,
+  /** Seconds until the next distress call might come. */
+  distressTimer: 90,
   /** A Viper detailed to fly with you, and until when. */
   escort: null as { npc: NpcShip; until: number } | null,
 };

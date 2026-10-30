@@ -270,6 +270,13 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     return w.drifters.length - before;
   });
   check('Modern: a wreck spills cargo that drifts', adrift > 0, `${adrift} canisters`);
+  const mayday = await s.w(async () => {
+    const w = window.witchspace;
+    if (!w.spawnDistress()) return 'no room for a distress call';
+    for (let i = 0; i < 80 && !w.distresses.length; i++) await new Promise((r) => setTimeout(r, 250)); // the call goes out with the first hit
+    return `${w.distresses.length} calling`;
+  });
+  check('Modern: a trader under attack calls for help', /^[1-9]/.test(mayday), mayday);
   check('Modern: missiles raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }
