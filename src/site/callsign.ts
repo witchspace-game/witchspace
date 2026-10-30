@@ -504,7 +504,9 @@ async function asMe<T>(path: string, init: RequestInit = {}): Promise<T> {
   return data;
 }
 
-/** Keep the card on your account (PUT /me/card), for its link's preview; null if it can't be kept. */
+/** Keep the card on your account (PUT /me/card), for its link's preview; null if it can't be kept. The link to
+ *  share carries the card's version (?v=), so each new card is a new link to X and the rest, and they fetch its
+ *  preview afresh rather than showing the one they remember. */
 async function keep(): Promise<string | null> {
   if (preview || !mine(name)) return null;
   const file = await picture();
@@ -513,10 +515,10 @@ async function keep(): Promise<string | null> {
   body.append('card', JSON.stringify({ career: career.id, scene, ship: hull.ship, ...(hull.edition ? { edition: hull.edition } : {}), angle: ship?.angle() ?? { x: 0.35, y: 5.53 } }));
   body.append('image', file);
   try {
-    const r = await asMe<{ url: string }>('/me/card', { method: 'PUT', body });
+    const r = await asMe<{ url: string; v: number }>('/me/card', { method: 'PUT', body });
     cardUrl = r.url;
     drawActions();
-    return r.url;
+    return `${r.url}?v=${r.v}`;
   } catch {
     return null;
   }
