@@ -220,6 +220,26 @@
       "href": "/submit/",
       "text": "The Co-operative Marshals need somewhere to keep what they catch. A block of cells, one clear shape, and nothing facing the crew that shouldn't. Standard commission applies.",
       "meta": "Build · Open brief · 5,000 Cr when it's first fitted"
+    },
+    {
+      "company": "wy",
+      "title": "Hull Designer, Fleet Office",
+      "kinds": [
+        "build"
+      ],
+      "href": "/submit/",
+      "text": "Our freighters reach every system on time, to the timetable. They also all look the same. Design us a working hull: a bulk freighter, a liner, a tug, a mining ship. One clear shape you'd know at ten kilometres, built to carry, not to fight. An accepted hull flies in company colours across the galaxy, with your callsign in the registry. The design becomes the property of Wexley-Yorozu in perpetuity, across all systems known and unknown.* The Fleet Office thanks you for your patience.",
+      "meta": "Build · Open brief · Your callsign in the registry"
+    },
+    {
+      "company": "mutual",
+      "title": "Regulars Wanted, the Saloon",
+      "kinds": [
+        "build"
+      ],
+      "href": "/ideas/",
+      "text": "Every Mutual station keeps one chair empty. Help us fill the others. Write us a regular: who they are, what they want, and where their ship goes when they're not at the bar. A smuggler who drinks on Mondays and runs dark on Thursdays. A captain who never forgave Hexon. Write them well enough and they'll be out there, keeping their own hours, and remembering who helped them. The members will vote on it. Slowly.",
+      "meta": "Build · Writing · On the ideas board"
     }
   ],
   "howItWorks": [
@@ -237,7 +257,7 @@
     }
   },
   "build": {
-    "intro": "Wexley-Yorozu also commissions designs: sections of the Titanoboa, its constructor ship. These aren't contracts on the board. You design a module, and if it's accepted and built, the company pays your commander.",
+    "intro": "Wexley-Yorozu commissions designs: sections of the Titan, its constructor ship, and the working hulls that fly its routes. The Carriers' Mutual wants writers for the people in its Saloons. These aren't contracts on the board. You design something, and if it's accepted, it's in everyone's game. Module commissions also pay your commander, in the game.",
     "note": "*In the game. Out here, you keep your copyright: designs are shared under CC BY-SA 4.0, like the rest of Witchspace. Paid in credits, in the game, to the signed-in commander whose callsign is on the design. Nobody is paid real money. The real reward is your name on it and your module flying in everyone's game.",
     "how": "Hand it in on <a href=\"/submit/\">Hand in a design</a>: no GitHub needed, and it's checked as you go. The standard is on <a href=\"/design/ship-the-titanoboa/\">the design page</a>. A pull request on GitHub works too. Just an idea? Put it on <a href=\"/ideas/\">the ideas board</a>."
   }

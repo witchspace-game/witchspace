@@ -57,9 +57,11 @@ describe('the Build adverts', () => {
     expect(build.length).toBeGreaterThan(0);
     for (const a of build) {
       expect(a.href).toBeTruthy();
-      // The fee is designed, not yet paid: every pay line waits for the first fitting.
-      expect(a.meta).toMatch(/when it's first fitted/);
+      // The fee is designed, not yet paid: every pay line waits for the first fitting. (Hulls and characters
+      // name no fee at all: the world's design doesn't give one.)
+      if (/Cr\b/.test(a.meta)) expect(a.meta).toMatch(/when it's first fitted/);
     }
+    expect(build.some((a) => /Cr\b/.test(a.meta))).toBe(true);
   });
 });
 
