@@ -38,6 +38,8 @@ export const initLaw = (hooks: typeof main) => Object.assign(main, hooks);
 
 // --- Police and combat ------------------------------------------------------
 
+/** Police patrols by government: none in anarchies, most in democracies and corporate states. */
+export const PATROLS_BY_GOVERNMENT = [0, 1, 1, 2, 2, 2, 3, 3];
 export const MAX_POLICE = 4;
 export const SCAN_RANGE = 1200; // metres
 export const SCAN_TIME = 3; // seconds within range for a police scan

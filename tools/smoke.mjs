@@ -254,6 +254,18 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     return true;
   });
   check('Modern: a pirate to fire at', await hold());
+  const shot = await s.w(async () => {
+    const w = window.witchspace;
+    const p = w.npcs.find((n) => n.role === 'pirate');
+    const before = p.ship.shields + p.ship.hull;
+    dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF' }));
+    await new Promise((r) => setTimeout(r, 600));
+    const heat = w.laserHeat;
+    dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyF' }));
+    return `heat ${Math.round(heat)}, damage ${Math.round(before - (p.ship.shields + p.ship.hull))}`;
+  });
+  check('Modern: the lasers fire and hit', /^heat [1-9]\d*, damage [1-9]/.test(shot), shot);
+  await hold();
   await s.key('KeyT'); // arm: the seeker closes on what's in the sights
   let locked = false;
   for (let i = 0; i < 12 && !locked; i++) {
