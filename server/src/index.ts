@@ -74,6 +74,8 @@ export default {
     if (url.pathname.startsWith('/.well-known/oauth-') || ['/oauth/register', '/oauth/authorize', '/oauth/token'].includes(url.pathname)) return oauthRoute(request, env, url);
     // The live feed for the home page (server/src/feed.ts): public, cached at the edge.
     if (url.pathname === '/feed') return feedRoute(request, env, ctx);
+    // A commander's card, for link previews: public, no Origin (server/src/card.ts).
+    if (/^\/card(-image)?\//.test(url.pathname)) return accountsOf(env).fetch(request);
     // A link in an email, so no Origin: stop the companies getting in touch.
     if (url.pathname === '/contact/stop') return accountsOf(env).fetch(request);
     // The ideas board (/ideas…) and accounts (/auth…, /me…, /admin…, /submissions…), called from our pages and tools.

@@ -12,6 +12,8 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
+import { CARD_H, CARD_W, cardId, checkCard, finishFor, isFounding, MAX_CARD_BYTES, type SaveFacts } from './card';
+import { jpegSize } from './clipCheck';
 import { judgeCallsign, NAMES, nameKey, nameRule, type CallsignLookups } from './names';
 import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
 import { FEED_EACH, FLYING_NOW, type FirstEvent, type Flying } from './feed';
@@ -62,6 +64,8 @@ export interface Account {
 }
 
 const SITE = 'https://witchspace.org.uk';
+/** Where the Worker answers: card pictures are served from here. */
+const SPACE_HTTP = 'https://space.witchspace.org.uk';
 const LINK_MINUTES = 20;
 const CALLSIGN_CHECKS_PER_MINUTE = 30; // a network, on the callsign page
 const SESSION_DAYS = 30;
@@ -88,6 +92,19 @@ export class Accounts extends DurableObject<AccountsEnv> {
       /* already there */
     }
     this.sql.exec('CREATE INDEX IF NOT EXISTS accounts_loose ON accounts (callsign_loose)');
+    // Member numbers (the commander's card): in the order accounts first took a callsign, kept through renames.
+    for (const col of ['member INTEGER', 'member_since INTEGER']) {
+      try {
+        this.sql.exec(`ALTER TABLE accounts ADD COLUMN ${col}`);
+      } catch {
+        /* already there */
+      }
+    }
+    // Callsigns claimed before member numbers: in the order the accounts were made (the claim time wasn't kept).
+    for (const row of this.sql.exec('SELECT id, created FROM accounts WHERE callsign IS NOT NULL AND member IS NULL ORDER BY created, id').toArray())
+      this.giveMember(row.id as string, row.created as number);
+    // The commander's card: one each, its picture and the choices behind it, at a link of its own.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS cards (account TEXT PRIMARY KEY, id TEXT NOT NULL UNIQUE, v INTEGER NOT NULL, choices TEXT NOT NULL, finish TEXT NOT NULL, image BLOB NOT NULL, at INTEGER NOT NULL)');
     for (const row of this.sql.exec('SELECT id, callsign FROM accounts WHERE callsign IS NOT NULL AND callsign_loose IS NULL').toArray())
       this.sql.exec('UPDATE accounts SET callsign_loose = ? WHERE id = ?', nameKey(row.callsign as string), row.id as string);
     this.sql.exec('CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, account TEXT NOT NULL, expires INTEGER NOT NULL)');
@@ -188,6 +205,10 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'GET' && galaxy) return this.firstsOf(Number(galaxy[1]));
     if (m === 'POST' && path === '/submissions/check') return this.checkOnly(request);
     if (m === 'GET' && path === '/callsign/check') return this.checkCallsign(request, url);
+    const cardPage = path.match(/^\/card\/([a-z0-9]{10})$/);
+    if (m === 'GET' && cardPage) return this.cardPage(cardPage[1]);
+    const cardImage = path.match(/^\/card-image\/([a-z0-9]{10})\.jpg$/);
+    if (m === 'GET' && cardImage) return this.cardPicture(cardImage[1]);
     const signIn = path.match(/^\/oauth\/request\/([A-Za-z0-9_-]{20,64})$/);
     if (signIn && m === 'GET') return this.describeSignIn(request, signIn[1]);
     if (signIn && m === 'POST') return this.answerSignIn(request, signIn[1]);
@@ -200,7 +221,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
 
     const account = await this.sessionAccount(request);
     if (!account) return json({ error: 'Please sign in' }, 401);
-    if (m === 'GET' && path === '/me') return json({ account, saveUpdated: this.saveUpdated(account.id), maintainer: this.isMaintainer(account) });
+    if (m === 'GET' && path === '/me') return json({ account, saveUpdated: this.saveUpdated(account.id), maintainer: this.isMaintainer(account), ...this.membership(account.id) });
+    if (path === '/me/card') {
+      if (m === 'GET') return this.getCard(account);
+      if (m === 'PUT') return this.putCard(request, account);
+      if (m === 'DELETE') return this.deleteCard(account);
+    }
     if (m === 'POST' && path === '/me/callsign') return this.setCallsign(request, account);
     if (m === 'GET' && path === '/me/save') return this.getSave(account);
     if (m === 'PUT' && path === '/me/save') return this.putSave(request, account);
@@ -427,10 +453,110 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (verdict === 'taken') return json({ error: `CMDR ${callsign} is already taken: try another` }, 409);
     const key = callsign.toLowerCase();
     this.sql.exec('UPDATE accounts SET callsign = ?, callsign_key = ?, callsign_loose = ? WHERE id = ?', callsign, key, nameKey(callsign), account.id);
-    return json({ callsign });
+    this.giveMember(account.id, Date.now());
+    return json({ callsign, ...this.membership(account.id) });
   }
 
   /** The email a callsign has been released to, if any. */
+  /** The next member number, the first time this account takes a callsign; never again after. */
+  private giveMember(id: string, since: number) {
+    const has = this.sql.exec('SELECT member FROM accounts WHERE id = ?', id).toArray()[0];
+    if (!has || has.member !== null) return;
+    const next = ((this.sql.exec('SELECT MAX(member) AS n FROM accounts').one().n as number | null) ?? 0) + 1;
+    this.sql.exec('UPDATE accounts SET member = ?, member_since = ? WHERE id = ?', next, since, id);
+  }
+
+  private membership(id: string): { member: number | null; memberSince: number | null; founding: boolean } {
+    const r = this.sql.exec('SELECT member, member_since FROM accounts WHERE id = ?', id).toArray()[0];
+    const memberSince = (r?.member_since as number | null) ?? null;
+    return { member: (r?.member as number | null) ?? null, memberSince, founding: isFounding(memberSince) };
+  }
+
+  private saveFacts(id: string): SaveFacts | null {
+    const row = this.sql.exec('SELECT data FROM saves WHERE account = ?', id).toArray()[0];
+    if (!row) return null;
+    try {
+      return JSON.parse(row.data as string) as SaveFacts;
+    } catch {
+      return null;
+    }
+  }
+
+  private cardRow(account: string) {
+    return this.sql.exec('SELECT id, v, choices, finish FROM cards WHERE account = ?', account).toArray()[0];
+  }
+
+  /** GET /me/card: your card's choices, so the page can rebuild it for editing. */
+  private getCard(account: Account): Response {
+    const r = this.cardRow(account.id);
+    const finish = finishFor(this.membership(account.id).memberSince, this.saveFacts(account.id));
+    if (!r) return json({ card: null, finish });
+    return json({ card: { id: r.id, v: r.v, ...JSON.parse(r.choices as string), finish: r.finish, url: `${SITE}/card/${r.id}` }, finish });
+  }
+
+  /**
+   * PUT /me/card: multipart, "card" (the choices as JSON) and "image" (a 1200×630 JPEG). Only ships you
+   * own, an edition's card only for its owner, Legend only at Elite; the finish is the server's to say.
+   */
+  private async putCard(request: Request, account: Account): Promise<Response> {
+    if (!account.callsign) return json({ error: 'Claim a callsign first' }, 409);
+    const form = await request.formData().catch(() => null);
+    const image = form?.get('image');
+    let body: unknown = null;
+    try {
+      body = JSON.parse(String(form?.get('card') ?? ''));
+    } catch {
+      return json({ error: 'The card’s choices are missing' }, 400);
+    }
+    if (!image || typeof image === 'string') return json({ error: 'The card’s picture is missing' }, 400);
+    const jpeg = await (image as Blob).arrayBuffer();
+    if (jpeg.byteLength > MAX_CARD_BYTES) return json({ error: 'That card is too big' }, 413);
+    const size = jpegSize(new Uint8Array(jpeg));
+    if (!size || size.w !== CARD_W || size.h !== CARD_H) return json({ error: `A card is a ${CARD_W}×${CARD_H} JPEG` }, 400);
+    const save = this.saveFacts(account.id);
+    const owned = this.sql.exec('SELECT edition, number FROM editions WHERE account = ?', account.id).toArray().map((r) => ({ id: r.edition as string, number: r.number as number }));
+    const checked = checkCard(body, save, owned);
+    if ('error' in checked) return json({ error: checked.error }, 400);
+    const finish = finishFor(this.membership(account.id).memberSince, save);
+    const old = this.cardRow(account.id);
+    const id = (old?.id as string | undefined) ?? cardId();
+    const v = ((old?.v as number | undefined) ?? 0) + 1;
+    this.sql.exec('INSERT OR REPLACE INTO cards (account, id, v, choices, finish, image, at) VALUES (?, ?, ?, ?, ?, ?, ?)', account.id, id, v, JSON.stringify(checked.choices), finish, jpeg, Date.now());
+    return json({ id, v, finish, url: `${SITE}/card/${id}` });
+  }
+
+  private deleteCard(account: Account): Response {
+    this.sql.exec('DELETE FROM cards WHERE account = ?', account.id);
+    return json({ ok: true });
+  }
+
+  /** /card/<id> for link previews: the card's picture as og:image. People are sent to the callsign page. */
+  private cardPage(id: string): Response {
+    const r = this.sql.exec('SELECT c.v, a.callsign FROM cards c JOIN accounts a ON a.id = c.account WHERE c.id = ?', id).toArray()[0];
+    if (!r) return Response.redirect(`${SITE}/callsign/`, 302);
+    const esc = (t: string) => t.replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]!);
+    const title = `CMDR ${esc(String(r.callsign ?? 'Commander'))} · Witchspace`;
+    const desc = 'Every commander needs a callsign. Claim yours: Witchspace is free in your browser.';
+    const image = `${SPACE_HTTP}/card-image/${id}.jpg?v=${r.v}`;
+    const url = `${SITE}/card/${id}`;
+    const html = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><title>${title}</title>
+<meta name="description" content="${desc}"><link rel="canonical" href="${url}">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Witchspace"><meta property="og:title" content="${title}">
+<meta property="og:description" content="${desc}"><meta property="og:url" content="${url}"><meta property="og:image" content="${image}">
+<meta property="og:image:width" content="${CARD_W}"><meta property="og:image:height" content="${CARD_H}">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${title}"><meta name="twitter:description" content="${desc}"><meta name="twitter:image" content="${image}">
+<meta http-equiv="refresh" content="0; url=${SITE}/callsign/">
+</head><body><p><a href="${SITE}/callsign/">Claim your callsign</a></p></body></html>`;
+    return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' } });
+  }
+
+  private cardPicture(id: string): Response {
+    const r = this.sql.exec('SELECT image FROM cards WHERE id = ?', id).toArray()[0];
+    if (!r) return new Response('Not found', { status: 404 });
+    // Each version has its own address (?v=), so it can be kept a long time.
+    return new Response(r.image as ArrayBuffer, { headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=604800' } });
+  }
+
   private readonly callsignLookups: CallsignLookups = {
     holder: (key) => (this.sql.exec('SELECT id FROM accounts WHERE callsign_loose = ? LIMIT 1', key).toArray()[0]?.id as string | undefined) ?? null,
     releasedTo: (key) => (this.sql.exec('SELECT email FROM releases WHERE name_key = ?', key).toArray()[0]?.email as string | undefined) ?? null,
