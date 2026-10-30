@@ -63,7 +63,7 @@ import {
 import { MouseAim, SENSITIVITY as AIM_SENSITIVITY } from './game/mouseAim';
 import { allies, NpcShip } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
-import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
+import { type Remote, type SpaceEvent } from './net/space';
 import { sessionToken, signedIn, currentAccount } from './net/account';
 import { hideCardInvite, showCardInvite } from './ui/cardInvite';
 import { claimCallsign, commanderSaved, initAccount, isAccountPanelOpen, titleShown, toggleAccountPanel } from './ui/accountPanel';
@@ -122,7 +122,7 @@ import { showClipView } from './ui/clipView';
 import { checkBtcOrders } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
 import { $, cmdr, currentSystem, game, modern, type State } from './core';
-import { dockingComputer, dust, flight, missiles, npcs, ofRole, voices, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS, type SceneBody } from './scene';
+import { dockingComputer, dust, explosions, flight, hearSpace, missiles, sharedSpace, type SeekTarget, npcs, ofRole, voices, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS, type SceneBody } from './scene';
 import './style.css';
 import { initManual, renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
 import { newsLine } from './game/newsLines';
@@ -158,7 +158,7 @@ function setState(next: State) {
     surveyPilot = null;
     routeJumpAt = null;
     sharedSpace.leave(); // back in when flying again, wherever that is
-    lockedCommander = null;
+    flight.lockedCommander = null;
     for (const n of netMissiles.values()) n.missile.dispose();
     netMissiles.clear();
     // Overlays that only make sense in flight; they're updated each frame while flying.
@@ -633,7 +633,7 @@ function buildSystemScene(sys: StarSystem) {
   for (const m of missiles) m.dispose();
   missiles.length = 0;
   flight.locked = null;
-  seeker = null;
+  flight.seeker = null;
   for (const d of drifters) disposeShip(d.model);
   drifters.length = 0;
   for (const e of explosions) e.dispose();
@@ -842,7 +842,6 @@ const CLUTTER_RADIUS = 700; // metres round a wreck field's centre
 const HIDDEN_BEYOND = 1500; // metres
 const HIDDEN_BEYOND_DARK = 600; // metres, transponder off
 const SHOT_GIVES_AWAY = 3; // seconds after firing that everyone can see you
-let lastShotAt = -Infinity;
 let wasInClutter = false;
 
 function inClutter(pos: THREE.Vector3) {
@@ -850,7 +849,7 @@ function inClutter(pos: THREE.Vector3) {
 }
 /** Whether a ship at this distance can pick the player out. */
 function playerVisibleAt(distance: number) {
-  if (!exploring() || !inClutter(player.obj.position) || flight.elapsed - lastShotAt < SHOT_GIVES_AWAY) return true;
+  if (!exploring() || !inClutter(player.obj.position) || flight.elapsed - flight.lastShotAt < SHOT_GIVES_AWAY) return true;
   return distance < (dark() ? HIDDEN_BEYOND_DARK : HIDDEN_BEYOND);
 }
 
@@ -1021,7 +1020,6 @@ function arrivalNote(sys: StarSystem): string {
 // more than one item in quick succession, so a scrape doesn't strip the ship.
 const EQUIPMENT_RISK_HULL = 0.5; // fraction of full hull
 const EQUIPMENT_HIT_GAP = 10; // seconds between items lost
-let equipmentHitCooldown = 0;
 
 /**
  * The lost courier's prototype, the Will-o'-the-Wisp: enemy lasers miss half
@@ -1055,18 +1053,18 @@ function damagePlayer(amount: number, from?: NpcShip): boolean {
   const badlyHurt = player.hull < player.def.stats.hull * EQUIPMENT_RISK_HULL;
   // Pirates aim for the comms array: it's how you'd call for help.
   const aimed = from?.role === 'pirate';
-  if (!destroyed && player.hull < hullBefore && !badlyHurt && equipmentHitCooldown <= 0 && game.commander) {
+  if (!destroyed && player.hull < hullBefore && !badlyHurt && flight.equipmentHitCooldown <= 0 && game.commander) {
     const hit = rollFragileDamage(cmdr(), Math.random, aimed);
     if (hit) {
-      equipmentHitCooldown = EQUIPMENT_HIT_GAP;
+      flight.equipmentHitCooldown = EQUIPMENT_HIT_GAP;
       sfx.scrape();
       flash(`${hit.name} damaged · plain radio until it's repaired at a station`, 2.5);
     }
   }
-  if (!destroyed && player.hull < hullBefore && badlyHurt && equipmentHitCooldown <= 0 && game.commander) {
+  if (!destroyed && player.hull < hullBefore && badlyHurt && flight.equipmentHitCooldown <= 0 && game.commander) {
     const hit = rollEquipmentDamage(cmdr(), Math.random, aimed ? 'comms-array' : undefined);
     if (hit) {
-      equipmentHitCooldown = EQUIPMENT_HIT_GAP;
+      flight.equipmentHitCooldown = EQUIPMENT_HIT_GAP;
       sfx.scrape();
       flash(cmdr().difficulty === 'classic' ? `${hit.name} destroyed!` : hit.id === 'comms-array' ? `${hit.name} damaged · plain radio until it's repaired at a station` : `${hit.name} damaged · repair at a station`, 2.5);
       if (hit.id === 'docking-computer' && flight.autopilot) setAutopilot(false);
@@ -1092,7 +1090,7 @@ function becomeFugitive(serious = false) {
   const hadWarrant = c.warrant;
   const was = isFugitive();
   recordCrime(c, 'fugitive', serious);
-  surrenderTimer = null;
+  flight.surrenderTimer = null;
   if (c.warrant && !hadWarrant) {
     flash('Co-operative Marshals warrant issued', 2.5);
     scheduleMarshals();
@@ -1654,9 +1652,9 @@ function firePlayerLaser() {
     safetyFlash('Safety on · station in line of fire · hold fire to override');
     return;
   }
-  if (surrenderTimer !== null) breakSurrender();
+  if (flight.surrenderTimer !== null) breakSurrender();
   laserCooldown = laser.interval;
-  lastShotAt = flight.elapsed;
+  flight.lastShotAt = flight.elapsed;
   laserHeat += laser.heat;
   if (laserHeat >= 100) {
     overheated = true;
@@ -1906,7 +1904,6 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
 
 // --- Missiles and ECM ---------------------------------------------------------------
 
-let lockedCommander: Remote | null = null; // or a lock on another commander (shared space)
 let ecmCooldown = 0;
 let incomingTimer = 0;
 const LOCK_RANGE = 5000; // metres: how far away you can lock on
@@ -1937,9 +1934,9 @@ function sightedNpc(range = 5000, cone = 6): NpcShip | null {
 
 /** Let go of the missile: no lock, no seeking. */
 function disarmMissile() {
-  seeker = null;
+  flight.seeker = null;
   flight.locked = null;
-  lockedCommander = null;
+  flight.lockedCommander = null;
   flash('Missile disarmed', 1.2);
 }
 
@@ -1952,9 +1949,9 @@ function toggleLock() {
   }
   if (c.difficulty === 'modern') {
     // Arm, and the seeker does the rest: hold a ship in your sights and it locks.
-    if (seeker || flight.locked || lockedCommander) disarmMissile();
+    if (flight.seeker || flight.locked || flight.lockedCommander) disarmMissile();
     else {
-      seeker = { on: null, progress: 0, beep: 0 };
+      flight.seeker = { on: null, progress: 0, beep: 0 };
       flash('Missile armed · hold a ship in your sights', 1.5);
     }
     return;
@@ -1967,15 +1964,15 @@ function toggleLock() {
   const commanderTarget = target ? null : sightedCommander(LOCK_RANGE, LOCK_CONE);
   if (commanderTarget) {
     flight.locked = null;
-    lockedCommander = commanderTarget;
+    flight.lockedCommander = commanderTarget;
     sfx.lock();
     flash(`Missile locked · CMDR ${commanderTarget.name}`, 1.5);
     return;
   }
   if (!target) {
-    if (flight.locked || lockedCommander) {
+    if (flight.locked || flight.lockedCommander) {
       flight.locked = null;
-      lockedCommander = null;
+      flight.lockedCommander = null;
       flash('Missile disarmed', 1.2);
     } else {
       flash('No target in your sights', 1.2);
@@ -1983,7 +1980,7 @@ function toggleLock() {
     return;
   }
   flight.locked = target;
-  lockedCommander = null;
+  flight.lockedCommander = null;
   sfx.lock();
   flash(`Missile locked · ${target.def.name}`, 1.5);
 }
@@ -2011,30 +2008,27 @@ function sightedCommander(range: number, cone = 6): Remote | null {
 // locked. Then fire. Classic keeps the instant lock.
 
 const SEEK_TIME = 1; // seconds a ship must stay in your sights to lock
-type SeekTarget = NpcShip | Remote;
-/** Armed and seeking: what's in the sights, and how close to a lock (0..1). */
-let seeker: { on: SeekTarget | null; progress: number; beep: number } | null = null;
 const seekPosition = (t: SeekTarget) => (t instanceof NpcShip ? t.obj.position : t.position);
 
 function updateSeeker(dt: number) {
-  if (!seeker) return;
+  if (!flight.seeker) return;
   if (cmdr().missiles <= 0) {
-    seeker = null;
+    flight.seeker = null;
     return;
   }
   const jammed = riftInterference() > 0.4;
   const npc = jammed ? null : sightedNpc(LOCK_RANGE, LOCK_CONE);
   const target: SeekTarget | null = npc ?? (jammed ? null : sightedCommander(LOCK_RANGE, LOCK_CONE));
-  if (target !== seeker.on) seeker = { on: target, progress: 0, beep: 0 };
+  if (target !== flight.seeker.on) flight.seeker = { on: target, progress: 0, beep: 0 };
   if (!target) return;
-  seeker.progress += dt / SEEK_TIME;
-  seeker.beep -= dt;
-  if (seeker.beep <= 0) {
-    sfx.seek(seeker.progress);
-    seeker.beep = 0.28 - 0.2 * Math.min(1, seeker.progress);
+  flight.seeker.progress += dt / SEEK_TIME;
+  flight.seeker.beep -= dt;
+  if (flight.seeker.beep <= 0) {
+    sfx.seek(flight.seeker.progress);
+    flight.seeker.beep = 0.28 - 0.2 * Math.min(1, flight.seeker.progress);
   }
-  if (seeker.progress < 1) return;
-  seeker = null;
+  if (flight.seeker.progress < 1) return;
+  flight.seeker = null;
   sfx.lockTone();
   if (npc) {
     flight.locked = npc;
@@ -2043,17 +2037,17 @@ function updateSeeker(dt: number) {
     const off = isTouch ? 'hold to fire, tap to disarm' : 'X to fire, T to disarm';
     flash(law ? `Missile locked · ${npc.def.name} · police · firing is a crime · ${off}` : `Missile locked · ${npcIdentified(npc) ? npc.def.name : 'unidentified ship'} · ${off}`, law ? 3 : 1.8);
   } else {
-    lockedCommander = target as Remote;
-    flash(`Missile locked · CMDR ${lockedCommander.name} · ${isTouch ? 'hold to fire, tap to disarm' : 'X to fire, T to disarm'}`, 1.8);
+    flight.lockedCommander = target as Remote;
+    flash(`Missile locked · CMDR ${flight.lockedCommander.name} · ${isTouch ? 'hold to fire, tap to disarm' : 'X to fire, T to disarm'}`, 1.8);
   }
 }
 
 /** The seeker's box: wide and dashed while it searches, closing on a ship, red when locked. */
 const seekerBox = $('#seeker');
 function updateSeekerBox() {
-  const lockedAt = flight.locked?.obj.position ?? lockedCommander?.position ?? null;
-  const tracking = seeker?.on ? seekPosition(seeker.on) : null;
-  if ((!seeker && !lockedAt) || game.state !== 'flying') {
+  const lockedAt = flight.locked?.obj.position ?? flight.lockedCommander?.position ?? null;
+  const tracking = flight.seeker?.on ? seekPosition(flight.seeker.on) : null;
+  if ((!flight.seeker && !lockedAt) || game.state !== 'flying') {
     seekerBox.hidden = true;
     return;
   }
@@ -2066,7 +2060,7 @@ function updateSeekerBox() {
   const rect = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
   seekerBox.hidden = false;
   seekerBox.style.transform = `translate(${rect.left + ((p.x + 1) / 2) * rect.width}px, ${rect.top + ((1 - p.y) / 2) * rect.height}px)`;
-  const size = lockedAt ? 34 : tracking ? 90 - 56 * Math.min(1, seeker!.progress) : 90;
+  const size = lockedAt ? 34 : tracking ? 90 - 56 * Math.min(1, flight.seeker!.progress) : 90;
   seekerBox.style.setProperty('--s', `${Math.round(size)}px`);
   seekerBox.classList.toggle('locked', Boolean(lockedAt));
   seekerBox.classList.toggle('tracking', !lockedAt && Boolean(tracking));
@@ -2087,7 +2081,7 @@ missileButton.addEventListener('pointerdown', (e) => {
     /* no such pointer (a synthetic event): carry on without */
   }
   fired = false;
-  if (!flight.locked && !lockedCommander) return;
+  if (!flight.locked && !flight.lockedCommander) return;
   missileButton.classList.add('holding');
   holdTimer = window.setTimeout(() => {
     fired = true;
@@ -2100,7 +2094,7 @@ const releaseMissile = (tap: boolean) => {
   clearTimeout(holdTimer);
   missileButton.classList.remove('holding');
   if (tap && !fired) {
-    if (flight.locked || lockedCommander) disarmMissile();
+    if (flight.locked || flight.lockedCommander) disarmMissile();
     else toggleLock();
   }
   fired = false;
@@ -2114,40 +2108,40 @@ missileButton.addEventListener('pointercancel', () => releaseMissile(false));
 function updateMissileButton() {
   if (!game.commander) return;
   const n = cmdr().missiles;
-  const armed = Boolean(flight.locked || lockedCommander);
+  const armed = Boolean(flight.locked || flight.lockedCommander);
   const modern = cmdr().difficulty === 'modern';
   missileButton.classList.toggle('armed', armed);
-  missileButton.classList.toggle('seeking', Boolean(seeker) && !armed);
+  missileButton.classList.toggle('seeking', Boolean(flight.seeker) && !armed);
   missileButton.classList.toggle('empty', n <= 0);
   const label =
-    n <= 0 ? 'No missiles' : armed ? (isTouch ? `Hold to fire ×${n}` : `Fire ×${n}`) : seeker ? `Seeking ×${n}` : modern ? `Arm ×${n}` : `Lock ×${n}`;
+    n <= 0 ? 'No missiles' : armed ? (isTouch ? `Hold to fire ×${n}` : `Fire ×${n}`) : flight.seeker ? `Seeking ×${n}` : modern ? `Arm ×${n}` : `Lock ×${n}`;
   if (missileButton.textContent !== label) missileButton.textContent = label;
 }
 
 /** X: launch at the locked target. */
 function fireMissile() {
   const c = cmdr();
-  if (lockedCommander) {
+  if (flight.lockedCommander) {
     // The server flies missiles between commanders; we draw it when it says it's away.
-    if (surrenderTimer !== null) breakSurrender();
+    if (flight.surrenderTimer !== null) breakSurrender();
     c.missiles -= 1;
     saveCommander(c);
-    sharedSpace.launchMissile(lockedCommander.id);
+    sharedSpace.launchMissile(flight.lockedCommander.id);
     launchSound(player.def, null);
-    flash(`Missile away · CMDR ${lockedCommander.name}`, 1.2);
-    lockedCommander = null;
+    flash(`Missile away · CMDR ${flight.lockedCommander.name}`, 1.2);
+    flight.lockedCommander = null;
     return;
   }
   if (!flight.locked) {
-    const hint = c.difficulty !== 'modern' ? 'Lock a target first (T)' : seeker ? 'No lock yet · hold the ship in your sights' : 'Arm a missile first (T)';
+    const hint = c.difficulty !== 'modern' ? 'Lock a target first (T)' : flight.seeker ? 'No lock yet · hold the ship in your sights' : 'Arm a missile first (T)';
     flash(c.missiles > 0 ? hint : 'No missiles', 1.5);
     return;
   }
-  if (surrenderTimer !== null) breakSurrender();
+  if (flight.surrenderTimer !== null) breakSurrender();
   c.missiles -= 1;
   saveCommander(c);
   launchMissile(player, flight.locked.ship);
-  lastShotAt = flight.elapsed; // a launch gives you away too
+  flight.lastShotAt = flight.elapsed; // a launch gives you away too
   flash(`Missile away · ${flight.locked.def.name}`, 1.2);
   flight.locked = null;
 }
@@ -2199,7 +2193,7 @@ function energyBomb() {
     flash('No energy bomb fitted', 1.5);
     return;
   }
-  if (surrenderTimer !== null) breakSurrender();
+  if (flight.surrenderTimer !== null) breakSurrender();
   removeEquipment(c, 'energy-bomb');
   saveCommander(c);
   sfx.explosion();
@@ -2236,23 +2230,23 @@ function playerEcm() {
 
 function updateMissiles(dt: number) {
   ecmCooldown = Math.max(0, ecmCooldown - dt);
-  equipmentHitCooldown = Math.max(0, equipmentHitCooldown - dt);
+  flight.equipmentHitCooldown = Math.max(0, flight.equipmentHitCooldown - dt);
   const alive = game.state === 'flying';
   // A lost lock goes back to seeking (Modern), so the next ship in your sights can be locked.
   const lockLost = () => {
-    if (alive && game.commander && cmdr().difficulty === 'modern' && cmdr().missiles > 0) seeker = { on: null, progress: 0, beep: 0 };
-    if (alive) flash(seeker ? 'Missile lock lost · seeking' : 'Missile lock lost', 1.2);
+    if (alive && game.commander && cmdr().difficulty === 'modern' && cmdr().missiles > 0) flight.seeker = { on: null, progress: 0, beep: 0 };
+    if (alive) flash(flight.seeker ? 'Missile lock lost · seeking' : 'Missile lock lost', 1.2);
   };
   if (flight.locked && (!npcs.includes(flight.locked) || flight.locked.obj.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
     flight.locked = null;
     lockLost();
   }
-  if (lockedCommander && (![...sharedSpace.remotes.values()].includes(lockedCommander) || lockedCommander.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
-    lockedCommander = null;
+  if (flight.lockedCommander && (![...sharedSpace.remotes.values()].includes(flight.lockedCommander) || flight.lockedCommander.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
+    flight.lockedCommander = null;
     lockLost();
   }
   if (alive) updateSeeker(dt);
-  else seeker = null;
+  else flight.seeker = null;
   updateNetMissiles(dt);
 
   for (const m of [...missiles]) {
@@ -2630,7 +2624,6 @@ function updateDrifters(dt: number) {
   }
 }
 
-const explosions: Explosion[] = [];
 
 const FLIP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 
@@ -2994,7 +2987,7 @@ function updateSpace(dt: number) {
     blips.push({ position: flight.yardScene.centre, color: YARD_COLOUR, kind: 'station' });
     for (const h of flight.yardScene.haulers) blips.push({ position: h.root.position, color: YARD_COLOUR, kind: 'ship' });
   }
-  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: commanderColour(r), kind: 'commander', locked: r === lockedCommander });
+  for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: commanderColour(r), kind: 'commander', locked: r === flight.lockedCommander });
   for (const n of netMissiles.values()) blips.push({ position: n.missile.position, color: '#ff6b6b', kind: 'missile' });
   // Near a rift, contacts jitter about on the scanner.
   const noise = game.state === 'flying' ? riftInterference() : 0;
@@ -3221,7 +3214,7 @@ async function launch() {
   player.speed = player.maxSpeed * 0.3;
   cabinTemp = 0;
   flight.locked = null;
-  seeker = null;
+  flight.seeker = null;
   scheduleMarshals(); // still wanted? they'll be back
   raidClock = 0;
   setView('front');
@@ -3287,7 +3280,7 @@ function offerCard() {
 
 async function dock() {
   setAutopilot(false);
-  surrenderTimer = null;
+  flight.surrenderTimer = null;
   setState('transition');
   sfx.tunnel();
   await playTunnel();
@@ -3663,7 +3656,7 @@ function onMyWay(trader: NpcShip): RadioAction {
 /** Surrendering when asked to: the same as U. */
 function answerSurrender(): RadioAction {
   return { label: 'Surrender', done: 'Surrendering', run: () => {
-    if (surrenderTimer === null) toggleSurrender();
+    if (flight.surrenderTimer === null) toggleSurrender();
     return null;
   } };
 }
@@ -4000,13 +3993,12 @@ function updateContextButton() {
 
 const SURRENDER_TIME = 5; // seconds holding still before the police take you in
 const SURRENDER_SPEED = 0.15; // fraction of top speed
-let surrenderTimer: number | null = null;
 
 /** U: hand yourself in. Always works where there's law, and always hurts. */
 function toggleSurrender() {
   const c = cmdr();
-  if (surrenderTimer !== null) {
-    surrenderTimer = null;
+  if (flight.surrenderTimer !== null) {
+    flight.surrenderTimer = null;
     flash('Surrender withdrawn', 1.5);
     return;
   }
@@ -4020,34 +4012,34 @@ function toggleSurrender() {
   }
   setAutopilot(false);
   countdown = null;
-  surrenderTimer = SURRENDER_TIME;
+  flight.surrenderTimer = SURRENDER_TIME;
   if (isTouch) setTouchSpeed(0); // the slider drops to all stop with you
   flash('Surrender signalled · all stop, weapons cold', 2.5);
 }
 
 /** Firing or throttling up calls it off. No crime in that: you're just not surrendering. */
 function breakSurrender(why = 'Weapons fired') {
-  surrenderTimer = null;
+  flight.surrenderTimer = null;
   flash(`${why} · surrender withdrawn`, 2);
 }
 
 /** While surrendering, the ship brakes to a stop by itself; throttling up withdraws. */
 function holdForSurrender(input: FlightInput) {
-  if (surrenderTimer === null) return;
+  if (flight.surrenderTimer === null) return;
   if (input.throttle > 0 || input.speedStep > 0 || (input.speedTarget ?? 0) > SURRENDER_SPEED) return breakSurrender('Throttle up');
   input.throttle = 0;
   input.speedTarget = 0;
 }
 
 function updateSurrender(dt: number) {
-  if (surrenderTimer === null) return;
+  if (flight.surrenderTimer === null) return;
   // The escort's clock starts once you've slowed down.
   if (player.speed > player.maxSpeed * SURRENDER_SPEED) return;
-  const before = Math.ceil(surrenderTimer);
-  surrenderTimer -= dt;
-  if (Math.ceil(surrenderTimer) < before && surrenderTimer > 0) flash(`Police escort on its way · ${Math.ceil(surrenderTimer)}`, 1.1);
-  if (surrenderTimer <= 0) {
-    surrenderTimer = null;
+  const before = Math.ceil(flight.surrenderTimer);
+  flight.surrenderTimer -= dt;
+  if (Math.ceil(flight.surrenderTimer) < before && flight.surrenderTimer > 0) flash(`Police escort on its way · ${Math.ceil(flight.surrenderTimer)}`, 1.1);
+  if (flight.surrenderTimer <= 0) {
+    flight.surrenderTimer = null;
     void surrender();
   }
 }
@@ -4173,7 +4165,7 @@ function die() {
     c.records = {};
     c.warrant = false;
   }
-  surrenderTimer = null;
+  flight.surrenderTimer = null;
   laserHeat = 0;
   overheated = false;
 
@@ -4248,7 +4240,7 @@ const remoteUnidentified = (r: Remote) => r.dark && r.position.distanceTo(player
 const commanderColour = (r: Remote) => (sharedSpace.isHostile(r) ? '#ff4d6d' : remoteUnidentified(r) ? UNIDENTIFIED_HEX : COMMANDER_COLOUR);
 const BUMP_SEPARATION = 40; // metres each ship moves apart after a collision
 const remoteModels = new Map<string, { model: ShipModel; fireCooldown: number; unidentified: boolean }>();
-const sharedSpace = new SharedSpace(onSpaceEvent);
+hearSpace(onSpaceEvent);
 
 function sharedSpaceWanted(): boolean {
   try {
@@ -4810,7 +4802,7 @@ async function hyperspace() {
   flight.escort = null;
   arrayTimer = 12; // the array picks up the new system's boards once you're settled
   distressTimer = 60 + Math.random() * 90;
-  surrenderTimer = null;
+  flight.surrenderTimer = null;
   saveCommander(c);
   const slipped = carrier !== null && (carrier.phase === 'arriving' || carrier.phase === 'emerging');
   // Pirates who had your case when you left have got away with it.

@@ -8,6 +8,8 @@ import { shipById } from './content/ships';
 import { DockingComputer } from './game/dockingComputer';
 import type { Body } from './game/explore';
 import type { Missile } from './game/missile';
+import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
+import type { Explosion } from './render/explosion';
 import type { NpcRole, NpcShip } from './game/npc';
 import { PlayerShip } from './game/playerShip';
 import { Station } from './game/station';
@@ -37,6 +39,15 @@ export const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role && !
 /** Each ship's engine, heard in space. */
 export const voices = new Map<NpcShip, ShipVoice>();
 export const missiles: Missile[] = [];
+export const explosions: Explosion[] = [];
+
+/** Other commanders in this system (shared space). main.ts hears what they do (hearSpace). */
+let spaceEvents: (e: SpaceEvent) => void = () => {};
+export const sharedSpace = new SharedSpace((e) => spaceEvents(e));
+export const hearSpace = (fn: (e: SpaceEvent) => void) => (spaceEvents = fn);
+
+/** What an armed missile can lock on to: a ship, or another commander. */
+export type SeekTarget = NpcShip | Remote;
 
 export interface SceneBody {
   body: Body;
@@ -60,6 +71,16 @@ export const flight = {
   locked: null as NpcShip | null,
   /** How hard the camera shakes (a hit, a tremor); it dies away. */
   shake: 0,
+  /** When you last fired (everyone can see you for a moment after). */
+  lastShotAt: -Infinity,
+  /** Seconds until fitted equipment can be lost again. */
+  equipmentHitCooldown: 0,
+  /** A missile lock on another commander (shared space). */
+  lockedCommander: null as Remote | null,
+  /** Armed and seeking: what's in the sights, and how close to a lock (0..1). */
+  seeker: null as { on: SeekTarget | null; progress: number; beep: number } | null,
+  /** Holding still for the police: seconds so far. */
+  surrenderTimer: null as number | null,
   /** A Viper detailed to fly with you, and until when. */
   escort: null as { npc: NpcShip; until: number } | null,
 };
