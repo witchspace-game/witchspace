@@ -325,6 +325,17 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
 {
   const s = await newCommander('modern');
   await launch(s);
+  const beacon = await s.w(async () => {
+    const w = window.witchspace;
+    const press = (code) => { dispatchEvent(new KeyboardEvent('keydown', { code })); dispatchEvent(new KeyboardEvent('keyup', { code })); };
+    press('Backquote');
+    await new Promise((r) => setTimeout(r, 300));
+    const open = !document.querySelector('#beacon').hidden;
+    press('Digit4'); // request an escort
+    for (let i = 0; i < 20 && !w.escort; i++) await new Promise((r) => setTimeout(r, 250));
+    return `${open ? 'open' : 'closed'}, ${w.escort ? 'escorted' : 'no escort'}`;
+  });
+  check('Modern: the beacon calls an escort', beacon === 'open, escorted', beacon);
   await s.w(() => { const w = window.witchspace; w.player.speed = 0; w.setAutopilot(true); });
   let docked = false;
   for (let i = 0; i < 120 && !docked; i++) {

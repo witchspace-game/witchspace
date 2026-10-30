@@ -44,10 +44,8 @@ import {
   isTouch,
   setFlightInputSuppressed,
   setFlying,
-  setTouchSpeed,
   toggleControlScheme,
   toggleInvertPitch,
-  wantsMouseCapture,
   type FlightInput,
 } from './game/input';
 import { SENSITIVITY as AIM_SENSITIVITY } from './game/mouseAim';
@@ -59,7 +57,7 @@ import { cleanName } from '../server/src/protocol';
 import { combatRating } from './game/rating';
 import { EDITIONS } from './content/editions';
 import { deliveriesArrived } from './game/shipyard';
-import { PLAYER_LASERS, rayHit } from './game/weapons';
+import { PLAYER_LASERS } from './game/weapons';
 import { ledgerOf } from './game/ledger';
 import { filledLine, isRun, newSince, profitOf, runLine, runOf, seenNow } from './game/tradeMoments';
 import { ATMOSPHERE_SCALE, buildPlanet, disposePlanet } from './render/bodies';
@@ -70,11 +68,11 @@ import { bodiesOf, exploreOf, isFound, isSurveyed, poisOf, recordVisit } from '.
 import { yardsOf } from './game/yards';
 import { Explosion } from './render/explosion';
 import { camera, isRetro, lens, render, setRetro } from './render/renderer';
-import { disposeShip, heatShip, UNIDENTIFIED_HEX } from './render/shipModel';
+import { disposeShip, heatShip } from './render/shipModel';
 import { stationName } from './galaxy/stationNames';
 import { savePhoto, takePhoto } from './ui/photo';
 import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
-import { clearIndicators, updateIndicators, type Marker } from './ui/indicators';
+import { clearIndicators } from './ui/indicators';
 import { countDevice, countNewCommander } from './net/stats';
 import { loadFirsts } from './net/firsts';
 import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
@@ -85,7 +83,7 @@ import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { playTunnel } from './ui/tunnel';
 import { closeDrawer, initTouch, onTap, updateTouch } from './ui/touch';
-import { BEACON_CALLS, beacon, newBeacon, type BeaconCall } from './game/radio';
+import { BEACON_CALLS } from './game/radio';
 import { acceptLatest, clearRadio, initRadio, toggleRadio, wakeRadio } from './ui/radio';
 import { FlightRecorder, type Clip } from './game/recorder';
 import { RecorderWatch } from './game/recorderWatch';
@@ -98,7 +96,7 @@ import { showClipView } from './ui/clipView';
 import { checkBtcOrders } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
 import { $, cmdr, currentSystem, game, modern, type State } from './core';
-import { aim, engineSound, timer, dockingComputer, gimbalHold, dust, explosions, HULL_READ, flight, missiles, sharedSpace, npcs, ofRole, voices, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS } from './scene';
+import { aim, engineSound, timer, dockingComputer, gimbalHold, dust, explosions, flight, missiles, sharedSpace, npcs, voices, planetPos, player, space, station, sun, SUN_POS } from './scene';
 import './style.css';
 import { renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
 import { newsLine } from './game/newsLines';
@@ -110,17 +108,20 @@ import { initSaloon } from './ui/saloon';
 import { initMarket, renderMarket } from './ui/market';
 import { initStation, renderDocked, resetBoughtHere, showFittings } from './ui/station';
 import { setDockTab, updateDockHead } from './ui/places';
-import { MAX_PIRATES, PIRATE_CHANCE, TRADERS_BY_GOVERNMENT, escortOf, fightOn, forgetDeliveries, initTraffic, legs, markLaunched, pacing, railsOf, resetTraffic, spawnFalcon, spawnPirates, spawnTrader, startEncounters, updateIdentities, updateLegends, voyageOf } from './flight/traffic';
+import { TRADERS_BY_GOVERNMENT, escortOf, forgetDeliveries, initTraffic, legs, markLaunched, pacing, railsOf, resetTraffic, spawnFalcon, spawnPirates, spawnTrader, startEncounters, updateIdentities, updateLegends, voyageOf } from './flight/traffic';
 import { launchSound, remoteVoices, voiceOf } from './flight/sounds';
 import { carrier, clearMarshalTimer, disposeCarrier, initMarshals, marshalsStandDown, riftInterference, scheduleMarshals, summonCarrier, updateMarshals } from './flight/marshals';
 import { energyBomb, explodeMissile, fireMissile, initMissiles, launchMissile, netMissiles, playerEcm, sightedNpc, toggleLock, updateMissileButton, updateSeekerBox } from './flight/missiles';
 import { checkAdrift, drifters, initAdrift, restoreAdrift, spillCargo, spillSpecial, updateCaseRaid, updateDrifters, updateSun } from './flight/adrift';
-import { CLEARANCE_RANGE, FIGHT_RANGE, answerSurrender, arrayNews, arrayOffers, clearanceRefused, distresses, hailTarget, hasArray, initComms, lockedDown, messageIds, pirateThreats, radio, radioMessages, spawnDistress, speakerOf, traderName, updateClearance, updateDistress, updateJob } from './flight/comms';
-import { callsignTag, commanderColour, initSharedSpace, toggleSharedSpace, updateSharedButton, updateSharedSpace } from './flight/sharedSpace';
+import { clearanceRefused, distresses, hailTarget, initComms, lockedDown, messageIds, radio, radioMessages, spawnDistress, speakerOf, traderName, updateClearance, updateJob } from './flight/comms';
+import { commanderColour, initSharedSpace, toggleSharedSpace, updateSharedButton, updateSharedSpace } from './flight/sharedSpace';
 import { announceEvent, checkCombatComputer, flySurvey, hyperspace, inSystemJump, initTravel, stopCombatComputer, stopSurveyPilot, toggleCombatComputer, toggleGalacticJump, toggleHyperspace, toggleSurveyPilot, updateRouteAutopilot, updateTravel } from './flight/travel';
-import { HIDDEN_BEYOND, YARD_COLOUR, arrivalNote, bringHome, buildExploreScene, bumpCover, exploreMarkers, explorerTips, exploring, firstsLine, inClutter, initExplore, myFirsts, showLog, survey, updateExplore } from './flight/explore';
-import { MAX_POLICE, STATION_SPACE, becomeFugitive, becomeOffender, canSettle, damagePlayer, dark, darkRefused, destroyNpc, forgetResponses, identified, initLaw, isFugitive, legalLabel, playerHitNpc, rateKill, reportedBy, responses, spawnViper, toggleTransponder, transponderBroken, transponderOnToDock, updateHail, updateResponses, updateStationDefence, PATROLS_BY_GOVERNMENT } from './flight/law';
-import { gimbalRide, gimballed, initCombat, laserDirection, playerLaser, updateCombat } from './flight/combat';
+import { HIDDEN_BEYOND, YARD_COLOUR, arrivalNote, bringHome, buildExploreScene, bumpCover, explorerTips, exploring, firstsLine, inClutter, initExplore, myFirsts, showLog, survey, updateExplore } from './flight/explore';
+import { becomeFugitive, becomeOffender, canSettle, damagePlayer, dark, darkRefused, destroyNpc, forgetResponses, identified, initLaw, isFugitive, legalLabel, playerHitNpc, rateKill, reportedBy, spawnViper, toggleTransponder, transponderBroken, transponderOnToDock, updateHail, updateResponses, updateStationDefence, PATROLS_BY_GOVERNMENT } from './flight/law';
+import { gimbalRide, initCombat, laserDirection, updateCombat } from './flight/combat';
+import { npcColour, npcIdentified, updateAimDisplay, updateCombatHud, updateMarkers } from './flight/hud';
+import { beaconOpen, breakSurrender, holdForSurrender, initBeacon, sendBeacon, toggleBeacon, toggleSurrender, updateContextButton, updateRadio, updateSurrender } from './flight/beacon';
+initBeacon({ setState, enterDocked, setAutopilot, settlementMessage });
 initCombat({ viewDirection, hitFeedback, breakSurrender, trackBeam, die });
 initLaw({ setAutopilot, noteCardMoment, trackBoom, keepCombat });
 initExplore({ planetColour, dark: () => dark(), noteCardMoment, keepMoment });
@@ -953,124 +954,6 @@ function updateSpace(dt: number) {
   }
 }
 
-// --- Situational awareness markers ----------------------------------------------
-
-/** Red if it's after you; otherwise police blue, Marshals gold, trader green, pirate orange. */
-
-/** Can we say who this ship is? Yes, unless it's running dark and too far off to read its hull. */
-const npcIdentified = (npc: NpcShip) => !npc.dark || npc.obj.position.distanceTo(player.obj.position) < HULL_READ;
-
-function npcColour(npc: NpcShip) {
-  // Unknown until the hull is read; but once it has fired on you, whoever it is, it's hostile.
-  if (!npcIdentified(npc)) return npc.firedOnPlayer ? '#ff4d6d' : UNIDENTIFIED_HEX;
-  if (npc.hostile) return '#ff4d6d';
-  return npc.role === 'police' ? '#4aa8ff' : npc.role === 'marshal' ? '#ffd98a' : npc.role === 'pirate' ? '#ff9a3d' : '#9ef0c0';
-}
-
-function updateMarkers() {
-  const km = (p: THREE.Vector3) => {
-    const d = p.distanceTo(player.obj.position);
-    return d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`;
-  };
-  const calling = new Set(distresses.filter((d) => d.heard).map((d) => d.trader));
-  const markers: Marker[] = npcs.map((npc) => ({
-    position: npc.obj.position,
-    color: npc === flight.locked ? '#ff4d6d' : npcColour(npc),
-    radius: npc.radius,
-    // A trader's distress call gives its position away, wherever it is.
-    label: calling.has(npc) ? `MAYDAY ${km(npc.obj.position)}` : npc.hostile || npc.obj.position.distanceTo(player.obj.position) < 1500 ? km(npc.obj.position) : undefined,
-  }));
-  markers.push({ position: station.root.position, color: '#ffb347', radius: station.model.radius, label: `Station ${km(station.root.position)}` });
-  markers.push({ position: SUN_POS, color: '#ffe08a', radius: SUN_RADIUS, label: `Sun ${km(SUN_POS)}` });
-  markers.push(...exploreMarkers(km));
-  // Lost company cases beacon to anyone in the system.
-  for (const d of drifters) {
-    if (!d.special) continue;
-    const short = { hexon: 'Hexon', vorg: 'Vorg', mutual: 'Mutual', wy: 'W-Y' }[d.special.company];
-    markers.push({ position: d.model.root.position, color: COMPANIES[d.special.company].colour, radius: 6, label: `${short} property · sealed ${km(d.model.root.position)}` });
-  }
-  for (const r of sharedSpace.remotes.values()) markers.push({ position: r.position, color: commanderColour(r), radius: 30, label: callsignTag(r, km(r.position)) });
-  if (carrier?.rift) markers.push({ position: carrier.rift.group.position, color: '#cfe0ff', radius: carrier.rift.radius, label: `Rift ${km(carrier.rift.group.position)}` });
-  for (const m of missiles) if (m.target === player) markers.push({ position: m.position, color: '#ff4d6d', radius: 6, label: `MISSILE ${km(m.position)}` });
-  const view = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
-  updateIndicators(camera, view, markers);
-}
-
-// --- Combat HUD ------------------------------------------------------------------
-
-const laserGauge = $('#g-laser');
-const crosshair = $('.crosshair');
-const targetInfo = $('#target-info');
-const CARGO_SCAN_RANGE = 2000; // metres: close enough to read another ship's hold
-
-const missilePips = $('#missile-pips');
-
-function updateCombatHud() {
-  const rails = player.def.stats.missiles ?? 0;
-  if (missilePips.childElementCount !== rails) missilePips.innerHTML = '<i></i>'.repeat(rails);
-  missilePips.querySelectorAll('i').forEach((pip, i) => pip.classList.toggle('armed', i < cmdr().missiles));
-  missilePips.classList.toggle('locked', Boolean(flight.locked));
-  laserGauge.style.setProperty('--v', String(flight.laserHeat / 100));
-  laserGauge.classList.toggle('hot', flight.overheated || flight.laserHeat > 75);
-  // Name whatever is closest to where the guns point, if it's near enough.
-  const fwd = laserDirection();
-  // Whichever sight the lasers follow (ring if gimballed, centre cross if
-  // fixed) turns red when a shot would hit.
-  const onTarget = Boolean(
-    rayHit(player.obj.position, fwd, playerLaser().range, npcs.map((npc) => ({ value: npc, position: npc.obj.position, radius: npc.radius * 0.75 }))),
-  );
-  reticle.classList.toggle('on-target', onTarget && gimballed());
-  crosshair.classList.toggle('on-target', onTarget && !gimballed());
-  const best = sightedNpc();
-  targetInfo.hidden = !best;
-  if (best && !npcIdentified(best)) {
-    // No transponder, and too far for a hull read: a ship, and nothing more.
-    const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
-    targetInfo.textContent = `Unidentified ship · no transponder · ${km} km${best.firedOnPlayer ? ' · HOSTILE' : ''}${best === flight.locked ? ' · LOCKED' : ''}`;
-    targetInfo.classList.toggle('hostile', Boolean(best.firedOnPlayer));
-  } else if (best) {
-    // The transponder: type, role, condition and standing.
-    const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
-    const standing = best.role === 'pirate' ? 'WANTED' : best.guard ? 'SECURITY' : best.role === 'police' ? 'POLICE' : best.role === 'marshal' ? 'MARSHALS' : 'CLEAN';
-    const owner = best.company ? COMPANIES[best.company].name.toUpperCase() : best.role.toUpperCase();
-    targetInfo.textContent = `${best.def.name} · ${owner} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === flight.locked ? ' · LOCKED' : ''}`;
-    // Close enough, the scanner reads the hold.
-    if (best.obj.position.distanceTo(player.obj.position) < CARGO_SCAN_RANGE && best.role !== 'police' && best.role !== 'marshal') {
-      const hold = Object.entries(best.cargo)
-        .filter(([, q]) => q > 0)
-        .map(([id, q]) => `${q}${commodityById(id)?.unit === 't' ? ' t' : ' ' + commodityById(id)?.unit} ${commodityById(id)?.name ?? id}`);
-      const line = document.createElement('span');
-      line.className = 'cargo';
-      line.textContent = `Hold: ${hold.join(' · ') || 'empty'}`;
-      targetInfo.append(line);
-    }
-    targetInfo.classList.toggle('hostile', best.hostile);
-  }
-}
-
-// --- Mouse aim display and controls help -------------------------------------
-
-const reticle = $('#reticle');
-const mousePrompt = $('#mouse-prompt');
-let wasCaptured = false;
-
-function updateAimDisplay() {
-  const captured = isMouseCaptured();
-  if (captured !== wasCaptured && controlScheme() === 'mouse' && !isTouch) {
-    flash(captured ? 'Mouse aim · Esc to release' : 'Mouse released · click to fly', 1.5);
-  }
-  wasCaptured = captured;
-  mousePrompt.hidden = !wantsMouseCapture();
-  reticle.hidden = !captured || controlScheme() !== 'mouse' || flight.view !== 'front';
-  if (reticle.hidden) return;
-  // Project the aim direction onto whichever canvas is showing.
-  const p = camera.position.clone().addScaledVector(aim.dir, 1000).project(camera);
-  const rect = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
-  const x = rect.left + ((p.x + 1) / 2) * rect.width;
-  const y = rect.top + ((1 - p.y) / 2) * rect.height;
-  reticle.style.transform = `translate(${x}px, ${y}px)`;
-}
-
 // --- Full screen on phones ---------------------------------------------------
 // Android can go full screen from the page. iPhone Safari can't: its bars only
 // go when the game is added to the Home Screen (manifest + apple meta in
@@ -1268,209 +1151,6 @@ function settlementMessage(s: Settlement, lead: string) {
   if (s.confiscated.length) parts.push(`${s.confiscated.map((id) => commodityById(id)?.name ?? EQUIPMENT.find((e) => e.id === id)?.name ?? id).join(', ')} confiscated`);
   if (s.owed > 0) parts.push(`couldn't pay ${s.owed.toLocaleString()} Cr · equipment impounded`);
   return parts.join(' · ');
-}
-
-// --- The emergency beacon: fixed calls, from every ship --------------------------------
-
-const beaconState = newBeacon();
-let beaconOpen = false;
-let beaconTimer = 0;
-
-function toggleBeacon(show = !beaconOpen) {
-  if (show && !modern()) return flash('Classic rules: no emergency beacon', 1.5);
-  beaconOpen = show;
-  $('#beacon').hidden = !show;
-  clearTimeout(beaconTimer);
-  if (show) beaconTimer = window.setTimeout(() => toggleBeacon(false), 8000);
-}
-
-$('#beacon .beacon-calls').innerHTML = BEACON_CALLS.map((b, i) => `<button type="button" data-call="${b.call}">${isTouch ? '' : `${i + 1} · `}${escapeHtml(b.label)}</button>`).join('');
-$('#beacon .beacon-calls')
-  .querySelectorAll<HTMLButtonElement>('button')
-  .forEach((b) => onTap(b, () => sendBeacon(b.dataset.call as BeaconCall)));
-
-function sendBeacon(call: BeaconCall) {
-  toggleBeacon(false);
-  if (game.state !== 'flying') return;
-  const c = cmdr();
-  const here = currentSystem();
-  const pos = player.obj.position;
-  const label = BEACON_CALLS.find((b) => b.call === call)!.label;
-  const police = `${here.name} police`;
-  const nearest = galaxy(here.galaxy)
-    .filter((s) => s !== here)
-    .reduce((a, b) => (distanceLy(here, a) <= distanceLy(here, b) ? a : b));
-  const out = beacon(beaconState, call, flight.elapsed, {
-    lawful: hasLaw(here),
-    hostilesNear: npcs.some((n) => n.hostile && n.obj.position.distanceTo(pos) < FIGHT_RANGE) || [...sharedSpace.remotes.values()].some((r) => sharedSpace.isHostile(r) && r.position.distanceTo(pos) < FIGHT_RANGE),
-    hull: player.hull / player.def.stats.hull,
-    fuel: c.fuel,
-    nearestLy: distanceLy(here, nearest),
-    canDock: !clearanceRefused() && !lockedDown(),
-    system: `${here.galaxy}:${here.index}`,
-  });
-  if (out.kind === 'wait') return flash(`Beacon recharging · ${out.seconds} s`, 1.5);
-  sfx.beep();
-  radio('beacon', 'Beacon', `${label} sent`);
-  switch (out.kind) {
-    case 'police': {
-      if (isFugitive() && identified()) return radio('police', police, 'We know who you are, Commander. Surrender (U).', { flash: 3, urgent: true, answers: [answerSurrender()] });
-      const delay = Math.round(Math.max(10, 10 + (pos.distanceTo(station.root.position) - STATION_SPACE) / 200));
-      responses.push({ at: flight.elapsed + delay, where: pos.clone() });
-      // Any Viper already out comes too.
-      const near = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(pos) < 15000);
-      if (near) near.patrol.centre.copy(pos);
-      return radio('police', police, `Mayday received. Vipers on their way, about ${delay} s.`, { flash: 3, urgent: true });
-    }
-    case 'unanswered':
-      return radio('beacon', 'Beacon', "No answer: there's no law here to send help");
-    case 'false':
-      if (out.offence) {
-        radio('police', police, 'Second false alarm. Wasting police time is an offence, Commander.');
-        return becomeOffender('Wasting police time · you are an OFFENDER');
-      }
-      return radio('police', police, "Nothing on our scanner, Commander. Don't make a habit of it.", { flash: 3, urgent: true });
-    case 'escort': {
-      let npc = ofRole('police').filter((p) => !p.hostile).sort((a, b) => a.obj.position.distanceTo(pos) - b.obj.position.distanceTo(pos))[0];
-      if (!npc && ofRole('police').length < MAX_POLICE) {
-        spawnViper(true);
-        npc = npcs[npcs.length - 1];
-      }
-      if (npc) flight.escort = { npc, until: flight.elapsed + 150 };
-      return radio('police', police, call === 'hull' ? 'Emergency berth ready, Commander. A Viper will see you in.' : 'Escort on its way. Head for the station.', { flash: 3, urgent: true });
-    }
-    case 'fuel-ok':
-      return radio('station', stationName(here).name, `Your tanks read ${c.fuel.toFixed(1)} LY, and ${nearest.name} is ${distanceLy(here, nearest).toFixed(1)}. You'll make it.`);
-    case 'dock-for-fuel':
-      return radio('station', stationName(here).name, `Come in and fill up, Commander: ${FUEL_PRICE} Cr a light year at the pump.`);
-    case 'tender': {
-      const paid = Math.min(c.credits, out.cost);
-      c.credits = Math.round((c.credits - paid) * 10) / 10;
-      c.fuel = Math.min(fuelCapacity(c), Math.round((c.fuel + out.ly) * 10) / 10);
-      saveCommander(c);
-      return radio('company', "Carriers' Mutual", `Fuel tender alongside: ${out.ly.toFixed(1)} LY transferred · ${paid.toLocaleString()} Cr${paid < out.cost ? ', all you had' : ''}. Nobody gets stranded on our watch.`, { colour: COMPANIES.mutual.colour, flash: 4, urgent: true });
-    }
-    case 'tendered':
-      return radio('company', "Carriers' Mutual", "We've sent you one tender here already, Commander. Try a pair of fuel scoops.", { colour: COMPANIES.mutual.colour });
-  }
-}
-
-/** Each frame in flight (Modern): the radio's business. */
-function updateRadio(dt: number) {
-  if (!modern()) return;
-  pirateThreats();
-  updateDistress();
-  if (flight.escort) {
-    const { npc, until } = flight.escort;
-    if (!npcs.includes(npc) || npc.hostile || flight.elapsed > until) {
-      if (npcs.includes(npc)) Object.assign(npc.patrol, { radius: 900 }).centre.copy(station.root.position);
-      flight.escort = null;
-    } else {
-      npc.patrol.centre.copy(player.obj.position);
-      npc.patrol.radius = 350;
-    }
-  }
-  flight.arrayTimer -= dt;
-  if (flight.arrayTimer <= 0) {
-    flight.arrayTimer = 20;
-    if (hasArray()) {
-      arrayOffers();
-      arrayNews();
-    }
-  }
-  flight.distressTimer -= dt;
-  if (flight.distressTimer <= 0) {
-    flight.distressTimer = 100 + Math.random() * 120;
-    if (hasArray() && !distresses.length && !fightOn() && ofRole('pirate').length < MAX_PIRATES - 1 && Math.random() < PIRATE_CHANCE[currentSystem().government] + 0.15) spawnDistress();
-  }
-}
-
-/** On a touch screen, the obvious next step comes out of the drawer by itself. */
-const contextButton = $<HTMLButtonElement>('#touch .context-button');
-function updateContextButton() {
-  if (!isTouch) return;
-  const c = cmdr();
-  const here = currentSystem();
-  const pos = player.obj.position;
-  const hop = c.target !== null && c.target !== here.index ? systemAt(here.galaxy, c.target) : null;
-  const surveyNear =
-    exploring() && flight.sceneBodies.some((b) => b.body.kind !== 'star' && pos.distanceTo(b.centre) - b.radius < b.range * 2 && !isSurveyed(c, here, b.body.id));
-  let next: [string, string] = ['KeyJ', 'Jump'];
-  if (pos.distanceTo(station.root.position) < CLEARANCE_RANGE && hasEquipment(c, 'docking-computer')) next = ['KeyC', flight.autopilot ? 'Dock: on' : 'Dock'];
-  else if (surveyNear && hasEquipment(c, 'survey-autopilot')) next = ['Digit9', flight.surveyPilot ? 'Survey: on' : 'Survey'];
-  else if (flight.countdown !== null) next = ['KeyH', 'Cancel jump'];
-  else if (hop && distanceLy(here, hop) <= c.fuel + 1e-9) next = ['KeyH', `Hyper · ${hop.name}`];
-  if (contextButton.dataset.key !== next[0]) contextButton.dataset.key = next[0];
-  if (contextButton.textContent !== next[1]) contextButton.textContent = next[1];
-}
-
-const SURRENDER_TIME = 5; // seconds holding still before the police take you in
-const SURRENDER_SPEED = 0.15; // fraction of top speed
-
-/** U: hand yourself in. Always works where there's law, and always hurts. */
-function toggleSurrender() {
-  const c = cmdr();
-  if (flight.surrenderTimer !== null) {
-    flight.surrenderTimer = null;
-    flash('Surrender withdrawn', 1.5);
-    return;
-  }
-  if (!hasLaw(currentSystem())) {
-    flash('No law here to surrender to', 2);
-    return;
-  }
-  if (legalStatus(c) === 'clean' && !carriesContraband(c)) {
-    flash('Nothing on your record here', 2);
-    return;
-  }
-  setAutopilot(false);
-  flight.countdown = null;
-  flight.surrenderTimer = SURRENDER_TIME;
-  if (isTouch) setTouchSpeed(0); // the slider drops to all stop with you
-  flash('Surrender signalled · all stop, weapons cold', 2.5);
-}
-
-/** Firing or throttling up calls it off. No crime in that: you're just not surrendering. */
-function breakSurrender(why = 'Weapons fired') {
-  flight.surrenderTimer = null;
-  flash(`${why} · surrender withdrawn`, 2);
-}
-
-/** While surrendering, the ship brakes to a stop by itself; throttling up withdraws. */
-function holdForSurrender(input: FlightInput) {
-  if (flight.surrenderTimer === null) return;
-  if (input.throttle > 0 || input.speedStep > 0 || (input.speedTarget ?? 0) > SURRENDER_SPEED) return breakSurrender('Throttle up');
-  input.throttle = 0;
-  input.speedTarget = 0;
-}
-
-function updateSurrender(dt: number) {
-  if (flight.surrenderTimer === null) return;
-  // The escort's clock starts once you've slowed down.
-  if (player.speed > player.maxSpeed * SURRENDER_SPEED) return;
-  const before = Math.ceil(flight.surrenderTimer);
-  flight.surrenderTimer -= dt;
-  if (Math.ceil(flight.surrenderTimer) < before && flight.surrenderTimer > 0) flash(`Police escort on its way · ${Math.ceil(flight.surrenderTimer)}`, 1.1);
-  if (flight.surrenderTimer <= 0) {
-    flight.surrenderTimer = null;
-    void surrender();
-  }
-}
-
-async function surrender() {
-  setState('transition');
-  sfx.tunnel();
-  await playTunnel();
-  const c = cmdr();
-  const settlement = settle(c);
-  saveCommander(c);
-  // They know exactly who you are now: whatever you did dark here is settled too.
-  flight.defiedPolice = flight.hullChecked = false;
-  flight.unpinned = flight.hail = null;
-  flight.transponderOff = flight.switchOnWhenClear = false;
-  for (const n of ofRole('police')) if (n.target === player) n.target = null;
-  enterDocked();
-  flash(settlementMessage(settlement, 'You surrendered · record cleared'), 5);
 }
 
 // --- The kill cam's track (docs/design/kill-cam.md) ---------------------------
@@ -2279,6 +1959,7 @@ if (import.meta.env.DEV) {
       get locked() { return flight.locked; },
       get distresses() { return distresses; },
       get laserHeat() { return flight.laserHeat; },
+      get escort() { return flight.escort; },
       get seeker() { return flight.seeker; },
       get commander() { return game.commander; },
       get state() { return game.state; },
