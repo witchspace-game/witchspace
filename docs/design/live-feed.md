@@ -10,6 +10,7 @@ stages:
   - Latest flight - the most hearted clip of the two days (the newest of equals) on its own card, and each clip line with its card small beside it (Mark) | built
   - Best flights this week - a page ranked by hearts, for Latest flight to link to (needs a list from the server) | idea
   - Milestones - "a clip passed 10 hearts" (needs hearts with timestamps) | idea
+  - Editions handed over - "Dark Edition 001 left Zorgon Petterson's yard", with the edition's card; no callsign unless the owner chose to be named (Mark) | planned
 ---
 
 # Design: the live feed
@@ -69,6 +70,23 @@ Counts only, never names.
 
 - **`now`**: signed-in commanders whose cloud save changed in the last 15 minutes. The game sends a save to the cloud a few seconds after any local save (docking, trading, jumping and so on), so this is a fair "playing right now" for signed-in commanders. It misses anyone playing without an account, and anyone who has flown for more than 15 minutes without anything being saved.
 - **`today`**: devices that opened the game today (UTC), signed in or not: the `devices` total from the anonymous daily pings, which count each device (and each network) at most once a day. It resets at midnight UTC, so it's small early in the day.
+
+### Editions handed over
+
+*Planned, 29 October 2026 (Marketing, on Mark's yes; the plan checked with Mark the same day).* When a numbered special edition is collected in the game (the handover, where her owner sees her certificate and chooses whether to be named), it makes the news: in the station news (the game's) and here.
+
+```
+{ "kind": "edition", "t": 1761700000000, "editionId": "dark", "edition": "Dark Edition", "shipId": "fer-de-lance",
+  "number": 1, "limit": 50, "yard": "Goddard Ring", "maker": "Zorgon Petterson", "system": "Onrira",
+  "callsign": "MARK" }   // callsign only if the owner chose, at the handover, to be named; otherwise absent
+```
+
+- **When:** at collection, not when the maker signs her over (her owner hasn't chosen yet then). Nothing is backfilled, with one exception: Mark collected Dark Edition 001 on 28 October, before this existed, and it's announced once when edition news is built, dated then, unnamed unless he asks (Mark; ships-and-classes.md §5). Witch-fire 001 makes the news when it's collected.
+- **Never a callsign by default.** The server leaves it out unless the owner said yes at the handover; the site never has it to show. Mark Moxon's Witch-fire 001 is never named unless he agrees to publicity.
+- **No prices,** ever: editions are by invitation. "One of N", from the edition's own limit, is fine.
+- Within the last 48 hours, newest first, like the others.
+
+On the home page: a *Shipyard* line, "Dark Edition 001 left Zorgon Petterson's yard" (or, named, "Dark Edition 001 signed over to Commander MARK"), its note "Goddard Ring, Onrira · 2 h ago · One of 50" (the number from the edition's own `limit`, never fixed), beside it the edition's public share card (`/share/ships-<ship>-<edition>.jpg`), linked to the edition's public page (`/ships/<ship>/<edition>/`), never to her private certificate. The ticker opens with it while it's the newest commander line.
 
 ### Privacy
 

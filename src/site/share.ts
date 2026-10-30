@@ -20,6 +20,11 @@ export interface ShareTarget {
   title: string;
   /** The share card image; defaults to this page's og:image. */
   image?: string;
+  /** A picture made on the page (a commander's card): shown as the preview, sent with the device's own share
+   *  sheet where it takes files, and offered to save. */
+  file?: File;
+  /** A line under the preview, when there's something to say before it's shared. */
+  note?: string;
 }
 
 const canonical = (url: string) => (/^https?:/.test(url) ? url : SITE + url);
@@ -43,6 +48,7 @@ export function closeShare() {
   const sheet = open;
   open = null;
   sheet.classList.remove('shown');
+  sheet.dispatchEvent(new Event('share:closed'));
   setTimeout(() => sheet.remove(), 220);
   document.removeEventListener('keydown', onKey);
 }
@@ -57,8 +63,12 @@ function onKey(e: KeyboardEvent) {
 export function openShare(target: ShareTarget) {
   closeShare();
   const url = canonical(target.url);
-  const image = target.image ?? document.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.content;
+  const picture = target.file ? URL.createObjectURL(target.file) : null;
+  const image = picture ?? target.image ?? document.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.content;
   const text = target.title;
+  // The device's own share sheet, first and largest, but only on a phone or tablet: on a computer it's a menu of
+  // AirDrop and Notes, not where anyone posts. There, a picture to post is saved first, so that leads instead.
+  const native = typeof navigator.share === 'function' && matchMedia('(pointer: coarse)').matches;
 
   const sheet = document.createElement('div');
   sheet.className = 'share-backdrop';
@@ -70,13 +80,17 @@ export function openShare(target: ShareTarget) {
           ? `<figure class="share-preview"><img src="${image.startsWith(SITE) ? image.slice(SITE.length) : image}" alt="" /><figcaption><strong></strong><span>${url.replace(/^https?:\/\//, '')}</span></figcaption></figure>`
           : ''
       }
-      ${typeof navigator.share === 'function' ? `<button type="button" class="button primary share-native">${ICONS.share}Share…</button>` : ''}
+      ${target.note ? '<p class="share-note"></p>' : ''}
+      ${native ? `<button type="button" class="button primary share-native">${ICONS.share}Share…</button>` : picture ? `<button type="button" class="button primary share-save-main" data-save-picture>Save picture</button>` : ''}
       <div class="share-grid">
         ${destinations(url, text).map(([key, label, href]) => `<a href="${href}" target="_blank" rel="noopener">${ICONS[key]}<span>${label}</span></a>`).join('')}
       </div>
       <div class="share-link"><input type="text" readonly value="${url}" aria-label="Link" /><button type="button" class="button small" data-copy-link>${ICONS.link}Copy link</button></div>
+      ${picture && native ? `<button type="button" class="button ghost small share-save" data-save-picture>Save picture</button>` : ''}
     </div>`;
+  if (picture) sheet.addEventListener('share:closed', () => setTimeout(() => URL.revokeObjectURL(picture), 1000), { once: true });
   sheet.querySelector('.share-preview strong')?.append(text);
+  if (target.note) sheet.querySelector('.share-note')!.textContent = target.note;
   document.body.append(sheet);
   open = sheet;
 
@@ -86,11 +100,19 @@ export function openShare(target: ShareTarget) {
   sheet.querySelector('[data-close]')!.addEventListener('click', closeShare);
   sheet.querySelector('.share-native')?.addEventListener('click', async () => {
     try {
-      await navigator.share({ title: text, text, url });
+      // With a picture of its own, the picture goes too, where the device takes files.
+      const files = target.file && navigator.canShare?.({ files: [target.file] }) ? [target.file] : null;
+      await navigator.share(files ? { files, text: `${text} ${url}` } : { title: text, text, url });
       closeShare();
     } catch {
       // Dismissed: keep the other options open.
     }
+  });
+  sheet.querySelector('[data-save-picture]')?.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = picture!;
+    a.download = target.file!.name;
+    a.click();
   });
   const copy = sheet.querySelector<HTMLButtonElement>('[data-copy-link]')!;
   copy.addEventListener('click', async () => {

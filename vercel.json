@@ -63,6 +63,21 @@
       "destination": "/ships/:ship/:edition/papers/index.html"
     },
     {
+      "source": "/card/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*([Bb]ot|[Cc]rawler|[Ss]pider|facebookexternalhit|facebookcatalog|WhatsApp|Cardyb|Mastodon|Embedly|Iframely|SkypeUriPreview|vkShare).*"
+        }
+      ],
+      "destination": "https://space.witchspace.org.uk/card/:id"
+    },
+    {
+      "source": "/card/:id",
+      "destination": "/callsign/index.html"
+    },
+    {
       "source": "/clip/:id",
       "has": [
         {

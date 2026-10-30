@@ -1,0 +1,69 @@
+<!-- {"path": "/callsign/", "title": "Claim your callsign · Witchspace", "description": "Trade, fight, explore or build: every pilot needs a callsign. Make your card for Witchspace, the free space game you play in your browser, share it, and make the name yours.", "scripts": ["/src/site/callsign.ts"], "bodyClass": "callsign-page", "head": "    <link href=\"https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap\" rel=\"stylesheet\" />\n"} -->
+<section class="section callsign-hero">
+  <header class="cs-head">
+    <p class="kicker" id="cs-line">Every pilot needs a callsign.</p>
+    <h1>Claim your callsign</h1>
+    <p class="cs-lede">Make your card, share it, and make the name yours. <span id="cs-claim-line">Claim yours.</span></p>
+  </header>
+
+  <div class="cs-stage">
+    <figure class="cs-card" id="cs-card" data-finish="titanium" aria-label="Your card">
+      <img class="cs-scene" id="cs-scene" src="/callsign/debris.jpg" width="1200" height="630" alt="" />
+      <canvas class="cs-ship" id="cs-ship" aria-label="Your ship: drag to turn her"></canvas>
+      <div class="cs-card-glow" aria-hidden="true"></div>
+      <figcaption class="cs-card-copy">
+        <span class="cs-card-brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 18 L12 9 L20 9 L28 18 L18 23 L14 23 Z M12 9 L14 23 M20 9 L18 23" /></svg>WITCHSPACE</span>
+        <span class="cs-card-cmdr">CMDR</span>
+        <label class="visually-hidden" for="cs-name">Your callsign</label>
+        <span class="cs-name-wrap"><input class="cs-card-name" id="cs-name" name="callsign" maxlength="24" placeholder=" " autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" aria-describedby="cs-verdict" /><span class="cs-name-ghost" aria-hidden="true">Your callsign</span></span>
+        <span class="cs-card-sub" id="cs-card-sub">Explorer · Cobra Mk III</span>
+        <span class="cs-card-number" id="cs-card-number" hidden></span>
+      </figcaption>
+      <span class="cs-card-mark" id="cs-card-mark">Founding</span>
+      <span class="cs-card-locked" id="cs-card-locked" hidden>Locked</span>
+    </figure>
+    <p class="cs-verdict" id="cs-verdict" aria-live="polite"></p>
+    <p class="cs-try" id="cs-try" hidden></p>
+    <p class="cs-hint" id="cs-hint" hidden>Type your callsign on the card, and drag her round</p>
+    <div class="cs-earn-note" id="cs-earn-note" hidden><p id="cs-earn-how"></p><button type="button" class="link-button" id="cs-earn-back">Back to my card</button></div>
+  </div>
+
+  <div class="cs-build">
+    <div class="cs-scene-list" id="cs-scenes" aria-label="Behind her"></div>
+    <div class="cs-pick"><span class="cs-pick-label">What you do</span><div class="cs-tabs" id="cs-careers"></div></div>
+    <div class="cs-pick" id="cs-ships-row" hidden><span class="cs-pick-label">Your ship</span><div class="cs-tabs" id="cs-ships"></div></div>
+
+    <div class="cs-actions">
+      <button type="button" class="button primary" id="cs-share">Share your card</button>
+      <button type="button" class="button ghost" id="cs-claim-open">Make this callsign yours</button>
+      <a class="button ghost" id="cs-fly" href="/play/" hidden>Fly now</a>
+    </div>
+    <p class="cs-note" id="cs-founding" hidden>Founding member until launch, 3 November</p>
+
+    <div class="cs-claim" id="cs-claim" hidden>
+      <form class="cs-email" id="cs-email-form">
+        <label class="visually-hidden" for="cs-email">Your email</label>
+        <input id="cs-email" type="email" autocomplete="email" inputmode="email" placeholder="Your email" required />
+        <button type="submit" class="button primary" id="cs-send">Email me a link</button>
+        <div class="turnstile" id="cs-turnstile"></div>
+        <p class="cs-note">Only to sign you in. Nothing but your callsign is ever shown.</p>
+      </form>
+      <div id="cs-sent-step" hidden>
+        <p class="cs-note" id="cs-sent"></p>
+        <form class="cs-email" id="cs-code-form">
+          <label class="visually-hidden" for="cs-code">Six-digit code</label>
+          <input id="cs-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="Or the code from the email" required />
+          <button type="submit" class="button ghost">Claim it</button>
+        </form>
+      </div>
+    </div>
+    <p class="cs-note cs-mine" id="cs-mine" hidden></p>
+    <p class="cs-note warn" id="cs-error" role="alert" hidden></p>
+  </div>
+</section>
+
+<section class="section cs-earn-section">
+  <h2 class="cs-earn-head">Cards to earn</h2>
+  <div class="cs-earn" id="cs-earn"></div>
+  <p class="cs-small">Your card carries only ships you own, in their own paint. Callsigns are first come, first served; a few are kept back: names that sound official, that aren’t kind, or that are held for the people they belong to. See <a href="/privacy/">privacy</a>.</p>
+</section>
