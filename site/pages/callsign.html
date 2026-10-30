@@ -35,19 +35,27 @@
 
     <div class="cs-actions">
       <button type="button" class="button primary" id="cs-share">Share your card</button>
+      <button type="button" class="button ghost" id="cs-claim-open">Make this callsign yours</button>
       <a class="button ghost" id="cs-fly" href="/play/" hidden>Fly now</a>
     </div>
+    <p class="cs-note" id="cs-founding" hidden>Founding member until launch, 3 November</p>
 
-    <div class="cs-claim" id="cs-claim">
-      <button type="button" class="link-button" id="cs-claim-open">Make this callsign yours</button>
-      <form class="cs-email" id="cs-email-form" hidden>
+    <div class="cs-claim" id="cs-claim" hidden>
+      <form class="cs-email" id="cs-email-form">
         <label class="visually-hidden" for="cs-email">Your email</label>
         <input id="cs-email" type="email" autocomplete="email" inputmode="email" placeholder="Your email" required />
         <button type="submit" class="button primary" id="cs-send">Email me a link</button>
         <div class="turnstile" id="cs-turnstile"></div>
         <p class="cs-note">Only to sign you in. Nothing but your callsign is ever shown.</p>
       </form>
-      <p class="cs-note" id="cs-sent" hidden></p>
+      <div id="cs-sent-step" hidden>
+        <p class="cs-note" id="cs-sent"></p>
+        <form class="cs-email" id="cs-code-form">
+          <label class="visually-hidden" for="cs-code">Six-digit code</label>
+          <input id="cs-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="Or the code from the email" required />
+          <button type="submit" class="button ghost">Claim it</button>
+        </form>
+      </div>
     </div>
     <p class="cs-note cs-mine" id="cs-mine" hidden></p>
     <p class="cs-note warn" id="cs-error" role="alert" hidden></p>

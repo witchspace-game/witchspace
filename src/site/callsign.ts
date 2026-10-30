@@ -312,11 +312,16 @@ function drawActions() {
   const isMine = mine(name);
   $<HTMLButtonElement>('cs-share').disabled = !shareable() && !isMine;
   $('cs-fly').hidden = !isMine;
-  $('cs-claim').hidden = isMine || !shareable();
-  $('cs-claim-open').textContent = acct.currentAccount()?.callsign ? `Change your callsign to CMDR ${name}` : `Make CMDR ${name} yours`;
+  const claimable = !isMine && shareable();
+  $('cs-claim-open').hidden = !claimable;
+  if (!claimable) $('cs-claim').hidden = true;
+  $('cs-claim-open').textContent = acct.currentAccount()?.callsign ? `Change to CMDR ${name}` : `Make CMDR ${name} yours`;
+  // Why now: a callsign claimed before launch makes you a founding member.
+  $('cs-founding').hidden = !claimable || Date.now() >= LAUNCH;
   const mineEl = $('cs-mine');
   mineEl.hidden = !isMine;
-  mineEl.innerHTML = isMine ? `CMDR ${escapeHtml(name)} is yours${cardUrl ? ` · <a href="${escapeHtml(cardUrl)}">${escapeHtml(cardUrl.replace(/^https:\/\//, ''))}</a>` : ''}` : '';
+  const standing = member ? ` · ${founding ? 'Founding member' : 'Member'} ${memberNumber(member)}` : '';
+  mineEl.innerHTML = isMine ? `CMDR ${escapeHtml(name)} is yours${standing}${cardUrl ? `<br /><a href="${escapeHtml(cardUrl)}">${escapeHtml(cardUrl.replace(/^https:\/\//, ''))}</a>` : ''}` : '';
 }
 
 let asking = 0;
@@ -327,8 +332,7 @@ async function judge() {
   drawCard();
   tryEl.hidden = true;
   errorEl.hidden = true;
-  $('cs-email-form').hidden = true;
-  $('cs-sent').hidden = true;
+  $('cs-claim').hidden = true;
   if (!valid(n)) {
     say('');
     drawActions();
@@ -414,7 +418,9 @@ const choices = () => ({ name, career: career.id, scene, hull: hull.key, angle: 
 $('cs-claim-open').addEventListener('click', () => {
   // Signed in already: no email needed.
   if (acct.signedIn()) return void claim(name);
+  $('cs-claim').hidden = false;
   $('cs-email-form').hidden = false;
+  $('cs-sent-step').hidden = true;
   mountTurnstile();
   $('cs-email').focus();
 });
@@ -435,10 +441,11 @@ $('cs-email-form').addEventListener('submit', async (e) => {
     const r = (await res.json().catch(() => ({}))) as { error?: string; devLink?: string };
     if (!res.ok) throw new Error(r.error ?? 'Something went wrong');
     store.set(PENDING, JSON.stringify(choices()));
+    sentTo = email;
     $('cs-email-form').hidden = true;
+    $('cs-sent-step').hidden = false;
     const sent = $('cs-sent');
-    sent.hidden = false;
-    sent.textContent = `Check your email: open the link on this device, and CMDR ${name} is yours.`;
+    sent.textContent = `Check your email: open the link, and CMDR ${name} is yours.`;
     if (r.devLink) sent.insertAdjacentHTML('beforeend', ` <a href="${escapeHtml(r.devLink)}">Development: open it</a>`);
   } catch (err) {
     fail(err);
@@ -446,6 +453,21 @@ $('cs-email-form').addEventListener('submit', async (e) => {
     turnstileToken = '';
   } finally {
     send.disabled = false;
+  }
+});
+
+// Or the code from the same email, typed here: it works in any app's own browser (a link from Mail opens in
+// Safari, away from the card you made in X's or Instagram's), and the card is still on the page.
+let sentTo = '';
+$('cs-code-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorEl.hidden = true;
+  try {
+    await acct.signInWithCode(sentTo, $<HTMLInputElement>('cs-code').value.replace(/\D/g, ''));
+    store.set(PENDING, null);
+    await claim(name);
+  } catch (err) {
+    fail(err);
   }
 });
 
@@ -627,7 +649,9 @@ $('cs-share').addEventListener('click', async () => {
   const file = await picture();
   button.disabled = false;
   // The site's own share sheet, with the card as its preview and the picture to send or save.
-  openShare({ url, title: `${careerLine(career)} I’m CMDR ${name} in Witchspace.`, ...(file ? { file } : {}) });
+  // Not yours yet: say so where it matters, as it's shared.
+  const note = mine(name) ? undefined : `Anyone could still take CMDR ${name}. Make it yours, and your link shows this card.`;
+  openShare({ url, title: `${careerLine(career)} I’m CMDR ${name} in Witchspace.`, ...(file ? { file } : {}), ...(note ? { note } : {}) });
 });
 
 // --- Signed in: your own ships, your number, your card as you kept it, and a claim come back by email -----

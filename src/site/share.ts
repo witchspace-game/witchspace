@@ -23,6 +23,8 @@ export interface ShareTarget {
   /** A picture made on the page (a commander's card): shown as the preview, sent with the device's own share
    *  sheet where it takes files, and offered to save. */
   file?: File;
+  /** A line under the preview, when there's something to say before it's shared. */
+  note?: string;
 }
 
 const canonical = (url: string) => (/^https?:/.test(url) ? url : SITE + url);
@@ -75,6 +77,7 @@ export function openShare(target: ShareTarget) {
           ? `<figure class="share-preview"><img src="${image.startsWith(SITE) ? image.slice(SITE.length) : image}" alt="" /><figcaption><strong></strong><span>${url.replace(/^https?:\/\//, '')}</span></figcaption></figure>`
           : ''
       }
+      ${target.note ? '<p class="share-note"></p>' : ''}
       ${typeof navigator.share === 'function' ? `<button type="button" class="button primary share-native">${ICONS.share}Share…</button>` : ''}
       <div class="share-grid">
         ${destinations(url, text).map(([key, label, href]) => `<a href="${href}" target="_blank" rel="noopener">${ICONS[key]}<span>${label}</span></a>`).join('')}
@@ -84,6 +87,7 @@ export function openShare(target: ShareTarget) {
     </div>`;
   if (picture) sheet.addEventListener('share:closed', () => setTimeout(() => URL.revokeObjectURL(picture), 1000), { once: true });
   sheet.querySelector('.share-preview strong')?.append(text);
+  if (target.note) sheet.querySelector('.share-note')!.textContent = target.note;
   document.body.append(sheet);
   open = sheet;
 
