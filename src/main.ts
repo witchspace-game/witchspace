@@ -33,7 +33,6 @@ import {
   type ShipOrder,
   type Difficulty,
 } from './game/commander';
-import { DockingComputer } from './game/dockingComputer';
 import { fitCompartment, weighsShips, WEIGHBRIDGE_CHANCE } from './game/compartment';
 import {
   carriesContraband,
@@ -92,13 +91,13 @@ import { KIT_GROUPS, KIT_NAMES, kitGroup, type KitGroup } from './game/kit';
 import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, giftTradeIn, tradeIn, deliverShip, deliveriesArrived, deliveryQuote, swapShip, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
-import { SLOT, Station } from './game/station';
+import { SLOT } from './game/station';
 import { ledgerOf, record as ledgerRecord } from './game/ledger';
 import { filledLine, isRun, newSince, profitOf, runLine, runOf, seenNow } from './game/tradeMoments';
 import { inYards } from './game/manual';
 import { SCOOP_SPEED } from './game/controls';
 import { forDevice } from './ui/deviceWords';
-import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
+import { ATMOSPHERE_SCALE, buildPlanet, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, assignmentFor, offerFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase, type Message } from './game/assignments';
@@ -106,7 +105,6 @@ import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } fro
 import { applyCompanyBand } from './render/livery';
 import { laneDirection, voyageHail, voyages, type Voyage } from './game/traffic';
 import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, salvageCargo, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
-import { SpaceDust } from './render/dust';
 import { buildYard, type YardScene } from './render/yard';
 import { stageInfo, stageLabel, yardAt, yardsNear, yardsOf } from './game/yards';
 import { commissionsDue, firstFittingsAt, lineUpFor, payCommission } from './game/commissions';
@@ -149,6 +147,7 @@ import { btcQuote, checkBtcOrders, heardQuote } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
 import { btcValue, formatBtc, isFresh, satsOf } from './economy/bitcoin';
 import { $, cmdr, currentSystem, game, modern, type State } from './core';
+import { dockingComputer, dust, npcs, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS } from './scene';
 import './style.css';
 import { initManual, openManual, renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
 import { ago, attackNews, newsLine } from './game/newsLines';
@@ -2904,35 +2903,18 @@ const kitOpen = new Set<string>();
 
 // --- Space ------------------------------------------------------------------
 
-const space = makeSpace();
 // The station sits at the origin with its slot facing the planet, as in the
 // original. Everything else about the system is rebuilt on arrival.
-const planetPos = new THREE.Vector3(0, 0, 14000);
 let planetRadius = 5000;
 let atmosphere = planetRadius * ATMOSPHERE_SCALE;
 let planetGM = 0.05 * 14000 ** 2; // debris pull; see updateDrifters
 let planet: THREE.Group | null = null;
-const SUN_POS = new THREE.Vector3(-60000, 22000, -40000);
-const SUN_RADIUS = 4000;
-space.sun.position.copy(SUN_POS);
 
-const station = new Station(shipById('coriolis')!);
-space.scene.add(station.root);
-const sun = buildSun(SUN_RADIUS);
-sun.position.copy(SUN_POS);
-space.scene.add(sun);
-const dust = new SpaceDust();
-space.scene.add(dust.group);
 
-const player = new PlayerShip(shipById('cobra-mk3')!);
-space.scene.add(player.obj);
-const dockingComputer = new DockingComputer();
 let autopilot = false;
 
 // --- Police and combat ------------------------------------------------------
 
-/** Every computer-controlled ship in the system: police, traders and pirates. */
-const npcs: NpcShip[] = [];
 const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role && !n.guard); // company security isn't the police
 const engineSound = new EngineSound();
 const voices = new Map<NpcShip, ShipVoice>();
