@@ -230,7 +230,7 @@ The server runs on **Cloudflare Workers with SQLite-backed Durable Objects**, on
 - 8 systems × 24 h × 450 GB-s = **86,000 GB-s a day**, about 2.6 million a month: about **$27**.
 - **About $35 a month** with the $5 plan. A quiet month with a few commanders costs nothing beyond the $5.
 
-**Decided (Mark, 30 Oct 2026): move to Workers Paid ($5 a month) before Show HN.** On the free plan, the daily limits would be passed with about 3 commanders flying all day, and then requests fail until the next day, so shared space would stop working at the worst moment. Mark signs up in the Cloudflare dashboard himself.
+**Done (Mark, 30 Oct 2026): Workers Paid ($5 a month), signed up before Show HN.** On the free plan, the daily limits would be passed with about 3 commanders flying all day, and then requests fail until the next day, so shared space would stop working at the worst moment. Mark signed up in the Cloudflare dashboard on 30 October; no change to the Worker was needed.
 
 **Keeping the lights on, long term (Mark):** "I dont mind paying the 5 a month, however long term I need to work out how to keep the lights on." Still to work out. The directions so far:
 - **Donations, shown openly:** a supporters' page (GitHub Sponsors, Open Collective or Ko-fi) and a line on the site with this month's server bill and how much of it supporters covered.
