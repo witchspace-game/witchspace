@@ -13,7 +13,7 @@ import { companyPage, jobsPage, loadJobs } from './jobs';
 import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
 import { buildPage, editionPage, manualPage, papersPage, shipPage, shipsIndex } from './ships';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
-import { ROLES, roleLine } from '../src/site/callsignWords';
+import { CAREERS, careerLine } from '../src/site/callsignWords';
 
 const root = resolve(import.meta.dirname, '..');
 const REPO = 'https://github.com/witchspace-game/witchspace/blob/main/';
@@ -56,6 +56,9 @@ const cards: { file: string; ship: string; kicker: string; title: string; sub: s
 const cardFile = (path: string) => (path === '/' ? 'home' : path.replace(/^\/|\/$/g, '').replace(/\//g, '-')) + '.jpg';
 
 /** Branded cards for the hand-written pages (ships and design docs get theirs where they're made). */
+/** The ship on each career's share card (the campaign's links): a Cobra trades, a Viper fights, a Sidewinder scouts, the Titanoboa builds. */
+const CAREER_SHIPS: Record<string, string> = { trade: 'cobra-mk3', fight: 'viper', explore: 'sidewinder', build: 'titanoboa' };
+
 const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/': { ship: 'cobra-mk3', kicker: 'A love letter to Elite (1984)', title: 'Trade. Fight. Explore. Build.', sub: 'Eight galaxies of glowing vector space, built with the people who fly it.' },
   '/about/': { ship: 'cobra-mk3', kicker: 'About', sub: 'An unofficial, non-commercial tribute to Elite (1984), made in the open.' },
@@ -70,7 +73,7 @@ const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/economy/': { ship: 'falcon', kicker: 'Trade · the galaxy’s money', title: 'Money and markets', sub: 'Living markets, real-time Bitcoin, a currency for every system, company coins and liquidity pools. All in-game.' },
   '/shared-space/': { ship: 'viper', kicker: 'Multiplayer · in beta', title: 'Shared space', sub: 'The other ship on your scanner might be a person. Fly with other commanders, live, in your browser.' },
   '/privacy/': { ship: 'coriolis', kicker: 'Privacy', sub: 'What Witchspace keeps about you, why, and how to delete it.' },
-  '/callsign/': { ship: 'cobra-mk3', kicker: 'Claim your callsign', title: 'Every pilot needs a callsign.', sub: 'One name, yours alone: on your ship in shared space, and on the galaxy chart.' },
+  '/callsign/': { ship: 'cobra-mk3', kicker: 'Trade · Fight · Explore · Build', title: 'Every pilot needs a callsign.', sub: 'Claim yours, and build the card that carries it. Free, in your browser.' },
 };
 
 const ORG = { '@type': 'Organization', name: 'Witchspace', url: SITE, logo: `${SITE}/icons/icon-512.png`, sameAs: ['https://github.com/witchspace-game/witchspace', 'https://www.instagram.com/witchspace_game/', 'https://www.youtube.com/channel/UC0ZD9s_rEYbGhXb3S6ai-Iw'] };
@@ -172,17 +175,17 @@ for (const name of readdirSync(join(root, 'site/pages'))) {
     // {{media:<id>:large}} and the like: a press item's link at a given size.
     .replace(/\{\{media:([\w-]+):(large|og|direct|video|embed)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct' | 'video' | 'embed') => links(media, media.items.find((i) => i.id === id)!)[size]!);
   write({ ...meta, content });
-  // Claim your callsign, once more for each role: the same page with that role chosen and its own share card
-  // ("Every pirate needs a callsign", on a Mamba), for the campaign's links. Kept out of search: /callsign/ is the page.
+  // Claim your callsign, once more for each career: the same page with that career chosen and its own share
+  // card ("Every trader needs a callsign"), for the campaign's links. Kept out of search: /callsign/ is the page.
   if (meta.path === '/callsign/')
-    for (const r of ROLES)
+    for (const c of CAREERS)
       write({
         ...meta,
-        path: `/callsign/${r.id}/`,
-        title: `${roleLine(r).replace(/\.$/, '')} · Witchspace`,
+        path: `/callsign/${c.id}/`,
+        title: `${careerLine(c).replace(/\.$/, '')} · Witchspace`,
         content,
         head: '    <meta name="robots" content="noindex" />\n',
-        card: { ship: r.ship, kicker: 'Claim your callsign', title: roleLine(r), sub: `${r.name} · flies a ${r.shipName}. One name, yours alone, in Witchspace.` },
+        card: { ship: CAREER_SHIPS[c.id], kicker: `${c.name} · Claim your callsign`, title: careerLine(c), sub: 'One name, yours alone, and the card that carries it. Free, in your browser.' },
       });
 }
 

@@ -1,9 +1,9 @@
-<!-- {"path": "/callsign/", "title": "Claim your callsign · Witchspace", "description": "Every pirate, trader, explorer, hero and legend needs a callsign. Claim yours for Witchspace, the free space game you play in your browser: one name, yours alone, first come first served.", "scripts": ["/src/site/callsign.ts"], "bodyClass": "callsign-page"} -->
+<!-- {"path": "/callsign/", "title": "Claim your callsign · Witchspace", "description": "Trade, fight, explore or build: every pilot needs a callsign. Claim yours for Witchspace, the free space game you play in your browser, and build the card that carries it.", "scripts": ["/src/site/callsign.ts"], "bodyClass": "callsign-page"} -->
 <section class="section callsign-hero">
   <div class="section-head">
     <p class="kicker" id="cs-line">Every pilot needs a callsign.</p>
     <h1>Claim your callsign</h1>
-    <p class="lede">One name, yours alone: over your ship in shared space, and on the galaxy chart for every world you find first. First come, first served. <span id="cs-claim">Claim yours.</span></p>
+    <p class="lede">One name, yours alone, and the card that carries it: what you do, a moment from the game behind her, and your own ship, turned just so. First come, first served. <span id="cs-claim">Claim yours.</span></p>
   </div>
 
   <div class="cs-grid">
@@ -16,13 +16,19 @@
       </form>
 
       <fieldset class="cs-roles">
-        <legend>Your card</legend>
-        <div class="chips" id="cs-roles"></div>
+        <legend>What you do</legend>
+        <div class="chips" id="cs-careers"></div>
       </fieldset>
 
       <fieldset class="cs-scenes">
         <legend>Behind her</legend>
         <div class="cs-scene-list" id="cs-scenes"></div>
+      </fieldset>
+
+      <fieldset class="cs-roles">
+        <legend>Your ship</legend>
+        <div class="chips" id="cs-ships"></div>
+        <p class="form-note muted" id="cs-ships-note">Every commander starts in a Cobra. Signed in, the ships you own are here, in their own paint.</p>
       </fieldset>
 
       <div class="cs-step" id="cs-email-step" hidden>
@@ -61,12 +67,13 @@
       <div class="cs-step cs-done" id="cs-done" hidden>
         <h2 id="cs-done-title"></h2>
         <p class="muted">It’s on your account: sign in with the same email on your phone or another computer and it’s waiting for you. It’s your way into <a href="/shared-space/">shared space</a>, too.</p>
-        <p class="connect-buttons"><a class="button primary" href="/play/">Fly now</a> <button type="button" class="button ghost" id="cs-share">Share your card</button></p>
+        <p class="connect-buttons"><a class="button primary" href="/play/">Fly now</a> <button type="button" class="button ghost" id="cs-share">Share your card</button> <button type="button" class="button ghost" id="cs-keep-card">Keep this card</button></p>
+        <p class="form-note muted" id="cs-kept" hidden>Your card’s own link, whose preview is this card: <a id="cs-kept-link" href="/callsign/"></a></p>
       </div>
     </div>
 
     <div class="cs-stage">
-    <figure class="cs-card" id="cs-card" aria-label="Your callsign card">
+    <figure class="cs-card" id="cs-card" data-finish="titanium" aria-label="Your callsign card">
       <img class="cs-scene" id="cs-scene" src="/callsign/coriolis.jpg" width="1200" height="630" alt="" />
       <canvas class="cs-ship" id="cs-ship" aria-label="Your ship: drag to turn her"></canvas>
       <div class="cs-card-glow" aria-hidden="true"></div>
@@ -75,13 +82,26 @@
         <span class="cs-card-kicker" id="cs-card-kicker">Every trader needs a callsign</span>
         <span class="cs-card-cmdr">COMMANDER</span>
         <b class="cs-card-name" id="cs-card-name">Your callsign</b>
-        <span class="cs-card-sub" id="cs-card-sub">Trader · flies a Cobra</span>
-        <span class="cs-card-foot"><b>witchspace.org.uk/callsign</b></span>
+        <span class="cs-card-sub" id="cs-card-sub">Trader · Cobra Mk III</span>
+        <span class="cs-card-number"><b class="cs-metal" id="cs-card-number">•••• ••••</b><small id="cs-card-since">MEMBER SINCE 10/26</small></span>
       </figcaption>
+      <span class="cs-card-badge cs-metal" id="cs-card-badge">FOUNDING MEMBER</span>
+      <span class="cs-card-url">witchspace.org.uk/callsign</span>
+      <span class="cs-card-locked" id="cs-card-locked" hidden>Locked</span>
     </figure>
     <p class="cs-hint" id="cs-hint" hidden>Drag her round to the angle you like.</p>
+    <div class="cs-earn-note" id="cs-earn-note" hidden><p id="cs-earn-how"></p><button type="button" class="button ghost" id="cs-earn-back">Back to my card</button></div>
     </div>
   </div>
+</section>
+
+<section class="section cs-earn-section">
+  <div class="section-head">
+    <p class="kicker">Cards to earn</p>
+    <h2>Fly for these</h2>
+    <p class="lede">Your card carries only what you own, and what you’ve earned shows in its metal. Here’s everything else: choose one to see her on a card.</p>
+  </div>
+  <div class="cs-earn" id="cs-earn"></div>
 </section>
 
 <section class="section">

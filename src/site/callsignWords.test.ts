@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { claimLine, cleanCallsign, LAUNCH, parseCheck, roleById, roleLine, variants, verdictWords } from './callsignWords';
+import { careerById, careerLine, claimLine, cleanCallsign, finishFor, LAUNCH, memberNumber, memberSince, parseCheck, scenesFor, SCENES, variants, verdictWords } from './callsignWords';
 
 describe('a callsign as typed', () => {
   it('is tidied the way the server keeps it', () => {
@@ -36,15 +36,38 @@ describe('when a name is taken', () => {
   });
 });
 
-describe('the roles and the line', () => {
-  it('has a ship for each role, and the Trader by default', () => {
-    expect(roleById('pirate').ship).toBe('mamba');
-    expect(roleById('nonsense').id).toBe('trader');
-    expect(roleLine(roleById('legend'))).toBe('Every legend needs a callsign.');
+describe('the careers and the line', () => {
+  it('has the four, Trade by default, each with scenes that exist', () => {
+    expect(careerById('fight').noun).toBe('Fighter');
+    expect(careerById('nonsense').id).toBe('trade');
+    expect(careerLine(careerById('explore'))).toBe('Every explorer needs a callsign.');
+    for (const id of ['trade', 'fight', 'explore', 'build']) for (const s of careerById(id).scenes) expect(SCENES[s]).toBeTruthy();
+  });
+
+  it('puts a career’s own scenes first, and every scene once', () => {
+    const list = scenesFor(careerById('build'));
+    expect(list.slice(0, 2)).toEqual(['station-rising', 'yard']);
+    expect(new Set(list).size).toBe(Object.keys(SCENES).length);
   });
 
   it('says "before launch" only until Show HN', () => {
     expect(claimLine(LAUNCH - 1)).toBe('Claim yours before launch.');
     expect(claimLine(LAUNCH)).toBe('Claim yours.');
+  });
+});
+
+describe('the plate', () => {
+  it('wears what was earned: an edition its own, Elite black, a founder titanium', () => {
+    expect(finishFor({ edition: 'dark', elite: true })).toBe('dark');
+    expect(finishFor({ elite: true, founding: true })).toBe('black');
+    expect(finishFor({ founding: true })).toBe('titanium');
+    expect(finishFor({})).toBe('alloy');
+  });
+
+  it('numbers members in two groups of four, never like a bank card', () => {
+    expect(memberNumber(1)).toBe('0000 0001');
+    expect(memberNumber(12345)).toBe('0001 2345');
+    expect(memberNumber(null)).toBe('•••• ••••');
+    expect(memberSince(Date.UTC(2026, 9, 30))).toBe('MEMBER SINCE 10/26');
   });
 });

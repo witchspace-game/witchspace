@@ -5,8 +5,9 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { shipById } from '../content/ships';
-import { buildPainted, disposeShip, type ShipModel } from '../render/shipModel';
-import { setLineResolution } from '../render/wire';
+import { applyLivery } from '../render/livery';
+import { buildPainted, disposeShip, type Look, type ShipModel } from '../render/shipModel';
+import { applyParts, setLineResolution } from '../render/wire';
 
 // The callsign card's ship: the role's ship in neo-vector, on the right of the card and clear of the words,
 // as on the site's share cards (tools/share-card.ts), in front of the card's scene. She's drawn with her glow on
@@ -23,11 +24,14 @@ const CENTRE_X = 320 / CARD_W;
 const RADIUS = 215 / CARD_H;
 
 export interface CardShip {
-  show(shipId: string): void;
+  /** A ship in her own paint (or her maker's colours), and the Marshals' livery for their card. */
+  show(shipId: string, look?: Look | null, livery?: 'marshal'): void;
   /** The scene behind her (an image the card's size); resolves once it's loaded and showing. */
   scene(url: string): Promise<void>;
   /** The scene and the ship at the card's full size, for the picture. */
   picture(): HTMLCanvasElement;
+  /** Her angle as you left her (radians), to keep with the card; set it to bring a kept card back. */
+  angle(set?: { x: number; y: number }): { x: number; y: number };
 }
 
 /** How bright the scene shows behind her: dimmed, so she and the words come first. */
@@ -156,13 +160,19 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
   requestAnimationFrame(frame);
 
   return {
-    show(shipId) {
+    show(shipId, look, livery) {
       const def = shipById(shipId) ?? shipById('cobra-mk3')!;
       if (model) {
         scene.remove(model.root);
         disposeShip(model);
       }
-      model = buildPainted(def, null);
+      model = buildPainted(def, look ?? null);
+      if (livery) {
+        const parts = applyLivery(def, model.root, livery);
+        model.parts.neo.push(...parts.neo);
+        model.parts.retro.push(...parts.retro);
+        applyParts(model.parts);
+      }
       scene.add(model.root);
       resize();
       draw();
@@ -184,6 +194,13 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
           () => done(),
         );
       });
+    },
+    angle(set) {
+      if (set) {
+        Object.assign(spin, { x: set.x, y: set.y, held: true });
+        draw();
+      }
+      return { x: Math.round(spin.x * 1000) / 1000, y: Math.round((((spin.y % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) * 1000) / 1000 };
     },
     picture() {
       // Drawn at full size and copied out at once: the drawing buffer is cleared once the browser shows a frame.
