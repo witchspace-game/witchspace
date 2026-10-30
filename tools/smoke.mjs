@@ -317,6 +317,15 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     phase = await s.w(() => { const w = window.witchspace; w.player.repair(); return w.carrier?.phase ?? 'gone'; }); // the station's police shoot a wanted ship
   }
   check('Modern: the Bastion comes through', phase === 'deployed', phase);
+  await s.w(() => window.witchspace.damagePlayer(1e6));
+  const states = [];
+  for (let i = 0; i < 40; i++) {
+    await wait(500);
+    const st = await s.w(() => window.witchspace.state);
+    if (states[states.length - 1] !== st) states.push(st);
+    if (st === 'docked' || st === 'title') break;
+  }
+  check('Modern: destroyed, the kill cam plays and you wake up docked', states.includes('dead') && states[states.length - 1] === 'docked', states.join(' → '));
   check('Modern: the Marshals raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }
