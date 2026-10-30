@@ -146,7 +146,7 @@ import { hasBackRoom } from './economy/blackmarket';
 import { btcQuote, checkBtcOrders, heardQuote } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
 import { btcValue, formatBtc, isFresh, satsOf } from './economy/bitcoin';
-import { $, cmdr, currentSystem, game, modern, type State } from './core';
+import { $, cmdr, currentSystem, game, modern, type DockTab, type State } from './core';
 import { dockingComputer, dust, npcs, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS } from './scene';
 import './style.css';
 import { initManual, openManual, renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
@@ -833,11 +833,9 @@ function confirmSale(button: HTMLButtonElement, label: string, sell: () => void)
 
 // --- Docked tabs and the market ---------------------------------------------------
 
-type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard' | 'money';
-let dockTab: DockTab = 'station';
 
 function setDockTab(tab: DockTab) {
-  dockTab = tab;
+  game.dockTab = tab;
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
   if (tab === 'station' && game.state === 'docked') renderDocked(); // credits, hold and wallet may have changed at the exchange
@@ -889,17 +887,17 @@ const tabName = (b: HTMLElement) => {
 
 function updateDockHead() {
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]')];
-  const active = tabs.find((b) => b.dataset.tab === dockTab);
+  const active = tabs.find((b) => b.dataset.tab === game.dockTab);
   $('.dock-where').textContent = game.commander ? `${stationName(currentSystem()).name}\u00a0·\u00a0` : '';
-  $('.dock-which').textContent = dockTab === 'money' ? 'Money' : active ? tabName(active) : '';
-  const news = tabs.some((b) => !b.hidden && b.dataset.tab !== dockTab && b.querySelector('.tab-badge'));
+  $('.dock-which').textContent = game.dockTab === 'money' ? 'Money' : active ? tabName(active) : '';
+  const news = tabs.some((b) => !b.hidden && b.dataset.tab !== game.dockTab && b.querySelector('.tab-badge'));
   $('.dock-dot').hidden = !news;
   $('.dock-place').setAttribute('aria-label', `${$('.dock-which').textContent}: choose a place${news ? ', something new' : ''}`);
   $('#dock-places').innerHTML = tabs
     .filter((b) => !b.hidden && b.dataset.tab !== 'money')
     .map((b) => {
       const badge = b.querySelector('.tab-badge')?.textContent?.trim();
-      return `<button type="button" data-place="${b.dataset.tab}" aria-pressed="${b.dataset.tab === dockTab}">${escapeHtml(tabName(b))}${badge ? ` <b class="tab-badge">${escapeHtml(badge)}</b>` : ''}</button>`;
+      return `<button type="button" data-place="${b.dataset.tab}" aria-pressed="${b.dataset.tab === game.dockTab}">${escapeHtml(tabName(b))}${badge ? ` <b class="tab-badge">${escapeHtml(badge)}</b>` : ''}</button>`;
     })
     .join('');
   if (game.commander) $('.wallet-button').textContent = `${Math.floor(cmdr().credits).toLocaleString()} Cr`;
@@ -1083,7 +1081,7 @@ const specialsHere = (c: Commander, here: StarSystem, now: number) =>
 
 /** Unread messages, on the Contracts tab's button. */
 function markInbox(c: Commander) {
-  const unread = (c.messages ?? []).filter((m) => !m.read).length + (game.state === 'docked' && dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
+  const unread = (c.messages ?? []).filter((m) => !m.read).length + (game.state === 'docked' && game.dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
   // A small badge, not words: "Contracts · 2 new" spilled out of the tab on a phone (Mark).
   const tab = $('.tabs [data-tab="contracts"]');
   tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}<span class="tab-badge-word"> new</span></b>` : 'Contracts'; // "2 new" where there's room, "2" on a phone
@@ -1262,7 +1260,7 @@ setInterval(() => {
   const c = cmdr();
   const key = board(c, currentSystem(), Date.now()).map((o) => o.id).join();
   if (key === boardKey) return;
-  if (dockTab === 'contracts') renderContracts();
+  if (game.dockTab === 'contracts') renderContracts();
   else {
     boardKey = key;
     markInbox(c);
@@ -1389,7 +1387,7 @@ async function checkSiteSpec(announce: boolean) {
   const def = siteSpec && shipById(siteSpec.spec.ship);
   if (!def || cmdr().order || game.state !== 'docked' || !hasShipyard(currentSystem())) return;
   if (announce) flash(`The yard: your ${def.name} spec from the website is here · see the Shipyard`, 5);
-  if (dockTab === 'shipyard' && !spec) renderShipyard();
+  if (game.dockTab === 'shipyard' && !spec) renderShipyard();
 }
 
 /**
@@ -1444,7 +1442,7 @@ async function checkSignedOver() {
     saveCommander(c);
     markInbox(c);
     flash(`${def.manufacturer ?? 'The yard'}: ${what} has been signed over to you · see Contracts`, 6);
-    if (game.state === 'docked' && dockTab === 'shipyard' && !spec) renderShipyard();
+    if (game.state === 'docked' && game.dockTab === 'shipyard' && !spec) renderShipyard();
   }
 }
 
@@ -1606,7 +1604,7 @@ function renderShipyard() {
     editionsAsked = now;
     void editionCounts().then((r) => {
       editionsLeft = r;
-      if (game.state === 'docked' && dockTab === 'shipyard' && !spec) renderShipyard();
+      if (game.state === 'docked' && game.dockTab === 'shipyard' && !spec) renderShipyard();
     });
   }
   const edition = editionSel ? editionById(editionSel) : undefined;
@@ -2099,7 +2097,7 @@ function renderMoney() {
   // Ask for the price now and then while the tab is open; draw again when it comes.
   if (now - moneyAsked > 60_000) {
     moneyAsked = now;
-    void btcQuote().then((q) => q && game.state === 'docked' && dockTab === 'money' && renderMoney());
+    void btcQuote().then((q) => q && game.state === 'docked' && game.dockTab === 'money' && renderMoney());
   }
   const btc = btcNow();
   const live = heardQuote() && isFresh(heardQuote());
@@ -2510,11 +2508,11 @@ function renderDocked() {
   document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
   // The Money tab gave way to the wallet (Mark): its screen opens from there.
   document.querySelector<HTMLElement>('.tabs [data-tab="money"]')!.hidden = true;
-  if (cmdr().difficulty === 'classic' && dockTab === 'money') setDockTab('station');
+  if (cmdr().difficulty === 'classic' && game.dockTab === 'money') setDockTab('station');
   const noYard = cmdr().difficulty === 'classic' || !hasShipyard(currentSystem());
   document.querySelector<HTMLElement>('.tabs [data-tab="shipyard"]')!.hidden = noYard;
-  if (noYard && dockTab === 'shipyard') setDockTab('station');
-  else if (dockTab === 'shipyard') renderShipyard(); // docking put your own ship in the berth
+  if (noYard && game.dockTab === 'shipyard') setDockTab('station');
+  else if (game.dockTab === 'shipyard') renderShipyard(); // docking put your own ship in the berth
   const c = cmdr();
   // A ship waiting for you at this yard: a dot on the header, "ready" on the place.
   const hereNow = currentSystem();
@@ -2530,11 +2528,11 @@ function renderDocked() {
   updateDockHead();
   // Company contracts are Modern work; Classic stays as 1984.
   $('.tabs [data-tab="contracts"]').hidden = c.difficulty !== 'modern';
-  if (dockTab === 'contracts') renderContracts();
-  if (dockTab === 'market') renderMarket();
-  if (dockTab === 'news') renderNews();
+  if (game.dockTab === 'contracts') renderContracts();
+  if (game.dockTab === 'market') renderMarket();
+  if (game.dockTab === 'news') renderNews();
   // Docked somewhere new with the saloon still open: that station's regulars, not the last one's (Mark).
-  if (dockTab === 'saloon') renderSaloon();
+  if (game.dockTab === 'saloon') renderSaloon();
   const rows: [string, string][] = [
     ['Commander', `${escapeHtml(c.name)} <button type="button" class="rename" title="Change your callsign">Rename</button>`],
     ['Rules', DIFFICULTIES[c.difficulty].name],
@@ -8297,7 +8295,7 @@ function handleKey(code: string) {
     setRetro(!isRetro());
     updateModeLabel();
     if (game.state === 'newgame') showNewGame(); // the default rules follow the mode
-    if (game.state === 'docked' && dockTab === 'market') renderMarket(); // exchange or 1984 price list
+    if (game.state === 'docked' && game.dockTab === 'market') renderMarket(); // exchange or 1984 price list
     return;
   }
   if (code === 'KeyP' && game.state !== 'newgame') {
@@ -8344,7 +8342,7 @@ function handleKey(code: string) {
         tripDone();
       } else if (code === 'KeyF' || (code === 'Escape' && logOpen)) setFlightLog(!logOpen);
       else if (code === 'KeyL' || code === 'Enter') void launch();
-      else if (code === 'KeyT') setDockTab(dockTab === 'market' ? 'station' : 'market');
+      else if (code === 'KeyT') setDockTab(game.dockTab === 'market' ? 'station' : 'market');
       break;
     case 'flying':
       // The beacon's calls, while its panel is open: 1-4 send, Esc or ` cancel.

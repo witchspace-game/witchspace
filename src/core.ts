@@ -7,12 +7,15 @@ import type { Commander } from './game/commander';
 import { systemAt, type StarSystem } from './galaxy/generate';
 
 export type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
+export type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard' | 'money';
 
 export const game = {
   /** The commander being played, once one is loaded or made. */
   commander: null as Commander | null,
   /** Which screen the game is on (main.ts setState changes it, and everything that goes with it). */
   state: 'title' as State,
+  /** Which of the station's places is open while docked. */
+  dockTab: 'station' as DockTab,
 };
 
 /** The commander, where one is certain to exist. */
