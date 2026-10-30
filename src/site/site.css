@@ -1637,8 +1637,15 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .cs-card-cmdr { margin-top: auto; color: rgba(185, 198, 216, 0.75); font: 600 max(8px, calc(var(--u, 7px) * 1.25)) var(--font); letter-spacing: 0.32em; }
 /* The callsign in the game's own type (Rajdhani, as on the scanner tags and the cockpit), in capitals, typed
    straight onto the card: the card is the box. */
-.cs-card-name { width: 100%; margin: calc(var(--u, 7px) * 0.2) 0 calc(var(--u, 7px) * 0.9); padding: 0 0 2px; border: 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.22); border-radius: 0; background: none; color: #eef3fa; font: 600 max(24px, calc(var(--u, 7px) * 5.6))/1.05 'Rajdhani', var(--display); letter-spacing: 0.06em; text-transform: uppercase; outline: none; pointer-events: auto; caret-color: var(--role); transition: border-color 0.2s; }
-.cs-card-name::placeholder { color: rgba(238, 243, 250, 0.38); }
+.cs-name-wrap { position: relative; display: block; margin: calc(var(--u, 7px) * 0.2) 0 calc(var(--u, 7px) * 0.9); pointer-events: auto; }
+.cs-card-name { display: block; width: 100%; margin: 0; padding: 0 0 2px; border: 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.22); border-radius: 0; background: none; color: #eef3fa; font: 600 max(24px, calc(var(--u, 7px) * 5.6))/1.05 'Rajdhani', var(--display); letter-spacing: 0.06em; text-transform: uppercase; outline: none; pointer-events: auto; caret-color: var(--role); transition: border-color 0.2s; }
+/* "YOUR CALLSIGN" until you type, with a cursor blinking after it, inviting you to: drawn, since a phone shows
+   its own only once the box is tapped. Focused, the real cursor takes over; typed, the words go. */
+.cs-name-ghost { position: absolute; left: 0; top: 0; color: rgba(238, 243, 250, 0.4); font: 600 max(24px, calc(var(--u, 7px) * 5.6))/1.05 'Rajdhani', var(--display); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
+.cs-name-ghost::after { content: ''; display: inline-block; width: 0.07em; height: 0.82em; margin-left: 0.06em; vertical-align: -0.04em; background: var(--role); box-shadow: 0 0 8px var(--role); animation: cs-blink 1.06s steps(1) infinite; }
+.cs-card-name:not(:placeholder-shown) + .cs-name-ghost { display: none; }
+.cs-card-name:focus + .cs-name-ghost::after { display: none; }
+@keyframes cs-blink { 50% { opacity: 0; } }
 .cs-card-name:focus { border-bottom-color: var(--role); }
 .cs-card-name.set:not(:focus) { border-bottom-color: transparent; }
 .cs-card-name.long { font-size: max(20px, calc(var(--u, 7px) * 4.4)); }
@@ -1710,4 +1717,5 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 }
 @media (prefers-reduced-motion: reduce) {
   .cs-scene { transition: none; }
+  .cs-name-ghost::after { animation: none; }
 }
