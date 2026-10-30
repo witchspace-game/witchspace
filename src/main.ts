@@ -78,8 +78,8 @@ import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rig
 import { mountExchange } from './ui/exchange';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
 import { EDITIONS } from './content/editions';
-import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, mintedToday, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, supplyOf, walletHome, walletKey } from './economy/currencies';
-import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
+import { companyValue, currencyOf, fairRate, isCompanyKey, moneyNews, poolRate, walletHome } from './economy/currencies';
+import { poolHere, valueOf, walletOf } from './economy/money';
 import { KIT_GROUPS, KIT_NAMES, kitGroup, type KitGroup } from './game/kit';
 import { deliveriesArrived, laserLocked, production } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
@@ -93,7 +93,7 @@ import { ATMOSPHERE_SCALE, buildPlanet, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { addStanding, afterJump, board, BOARD_SLOT, cannotReserve, cargoName, collect, COLLECT_JUMPS, deliver, destinationOf, forContract, forgive, loseContracts, reserve, reservedTonnes, wyWorks, type Contract } from './game/contracts';
 import { ADRIFT_HOLD, caseLost, checkMessages, collectHeld, STATION_CREW_RANGE, takenByPirates, expireCases, recoverCase, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
-import { COMPANIES, COMPANY_IDS, pickCompany, type CompanyId } from './game/companies';
+import { COMPANIES, pickCompany, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
 import { laneDirection, voyageHail, voyages, type Voyage } from './game/traffic';
 import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, salvageCargo, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
@@ -116,7 +116,7 @@ import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type S
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
-import { activeEvent, eventsAt, EVENT_KINDS, newsAt, newsDelay, outputAt, setCausedEvents } from './economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, newsAt, newsDelay, setCausedEvents } from './economy/events';
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
@@ -132,11 +132,9 @@ import { momentDescription, momentTags, momentTitle, whoIs, type MomentContext, 
 import { closeReplay, closeTrip, isReplayOpen, isTripOpen, openReplay, openTrip, renderFlightLog, setOutsideView, setWatchClip, shareMoment } from './ui/flightLog';
 import { shareVideo as shareVideoPlain, KillCam } from './ui/killCam';
 import { showClipView } from './ui/clipView';
-import { record, regularsAt, slotOf, talk, venue } from './game/saloon';
-import { hasBackRoom } from './economy/blackmarket';
-import { btcQuote, checkBtcOrders, heardQuote } from './net/bitcoin';
+import { checkBtcOrders } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
-import { btcValue, formatBtc, isFresh, satsOf } from './economy/bitcoin';
+import { btcValue, formatBtc, satsOf } from './economy/bitcoin';
 import { $, cmdr, currentSystem, game, modern, type DockTab, type State } from './core';
 import { dockingComputer, dust, npcs, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS } from './scene';
 import './style.css';
@@ -145,6 +143,9 @@ import { ago, attackNews, newsLine } from './game/newsLines';
 import { answerAdvert, boardSeen, initContracts, linkSystem, markInbox, payCommissions, plotCourse, recruiter, renderContracts, routeTo } from './ui/contracts';
 import { booth, closeBooth, cobraIndex, openBooth, shipIndex, showShip, showroom, showroomModels, updateShowroom } from './ui/showroom';
 import { boardShip, checkSignedOver, checkSiteSpec, clearSpec, hasShipyard, myLook, renderShipyard, showOwnShip } from './ui/shipyard';
+import { btcNow, markDocked, renderMoney } from './ui/money';
+import { initSaloon, renderSaloon } from './ui/saloon';
+initSaloon({ setDockTab });
 initContracts({ showNewGame, enterDocked, setDockTab, checkSiteSpec, checkSignedOver, updateDockHead, renderDocked, toggleGalaxyMap });
 
 let inSpace = false;
@@ -390,7 +391,7 @@ function enterDocked(newShip = false) {
   showOwnShip();
   forgive(cmdr(), Date.now());
   boardSeen();
-  dockedAt = Date.now();
+  markDocked();
   payCommissions();
   // Work that's due here is handed in however you arrived: docking does it
   // first, but waking here in a new ship or loading the game docked must too
@@ -679,263 +680,7 @@ function tradeContext(): TradeContext {
   return { commander: cmdr(), system: currentSystem(), capacity: cargoCapacity(cmdr(), player.def.stats.cargo), now: Date.now() };
 }
 
-// --- News --------------------------------------------------------------------------
-
-// --- The saloon (docs/design/trading.md, section 3; game/saloon.ts) ------------------
-// Two to four regulars, coming and going with the clock. Buy one a drink and
-// they talk; the ones who know something early want paying properly, and so do
-// the liars. Their record builds as their tips come true or don't.
-
-// --- Money: the system's currency, the station's pool and your wallet ----------------------
-// (docs/design/system-currencies.md, stage one.)
-
-/** When you docked: an official-rate station's limit is per visit. */
-let dockedAt = 0;
-let moneySide: 'buy' | 'sell' = 'buy';
-let moneyMessage = '';
-
-/** The real Bitcoin price, where the money follows it; the reference price if we haven't heard. */
-const btcNow = () => {
-  const q = heardQuote();
-  return q && isFresh(q) ? q.price : BTC_REF;
-};
-let moneyAsked = 0;
-
-/** Providing liquidity to this station's pool: the offer, or your position and what it's done. */
-function liquidity(c: Commander, here: StarSystem, ticker: string, btc: number, now: number, fmtN: (n: number, d?: number) => string): string {
-  const p = c.fx?.lp?.[walletKey(here)];
-  if (p) {
-    const pos = positionNow(here, p, now, btc);
-    const loss = pos.held > 0 ? ((pos.value - pos.fees) / pos.held - 1) * 100 : 0;
-    return `<h3>Your liquidity here</h3><div class="money-form">
-      <p class="money-quote">Worth ${fmtN(pos.value, 0)} Cr now: ${fmtN(pos.credits, 0)} Cr and ${fmtN(pos.local)} ${ticker}, with ${fmtN(pos.fees, 1)} Cr in fees.</p>
-      <p class="yard-note">Had you simply held what you put in: ${fmtN(pos.held, 0)} Cr. ${Math.abs(loss) < 0.05 ? 'The rate hasn’t moved.' : `The rate's move has cost ${Math.abs(loss).toFixed(1)}% against holding (impermanent loss); the fees make up for it over time.`}</p>
-      <button type="button" class="lp-out">Withdraw it all</button></div>`;
-  }
-  return `<h3>Provide liquidity</h3><div class="money-form">
-    <p class="yard-note">Put credits and the same value of ${ticker} into the pool, and share its fees: about ${Math.round(feeYield(here) * 100)}% a year here. The risk is real: if the rate moves, you come out holding more of whichever side fell.</p>
-    <label class="money-amount"><span>Credits to put in (with the matching ${ticker} from your wallet)</span><input id="lp-n" type="number" min="0" step="any" inputmode="decimal" /></label>
-    <button type="button" class="lp-add">Add to the pool</button></div>`;
-}
-
-/** The companies' Bitcoin-backed coins: taken at any station, minted and redeemed here. */
-function companyDesk(btc: number, live: boolean | null | undefined, fmtN: (n: number, d?: number) => string): string {
-  const v = companyValue(btc);
-  return `<h3>Company stablecoins</h3><div class="money-form">
-    <p class="yard-note">Each big company issues a coin backed by Bitcoin locked up at ${Math.round(COLLATERAL * 100)}% of its value: no bank needed, taken at any station. ${live ? (v < 1 ? `Bitcoin has fallen so far the backing no longer covers them: a coin redeems for ${fmtN(v, 3)} Cr.` : `At today's Bitcoin price the backing is ${Math.round(COLLATERAL * (btc / BTC_REF) * 100)}%: a coin redeems for 1 Cr.`) : ''}</p>
-    <div class="co-row"><select id="co-pick">${COMPANY_IDS.map((id) => `<option value="${id}">${escapeHtml(COMPANIES[id].name)}</option>`).join('')}</select><input id="co-n" type="number" min="0" step="any" inputmode="decimal" placeholder="Credits" /></div>
-    <button type="button" class="co-mint">Mint coins (a credit each, 0.3% fee)</button></div>`;
-}
-
-function renderMoney() {
-  const c = cmdr();
-  const here = currentSystem();
-  const now = Date.now();
-  // Ask for the price now and then while the tab is open; draw again when it comes.
-  if (now - moneyAsked > 60_000) {
-    moneyAsked = now;
-    void btcQuote().then((q) => q && game.state === 'docked' && game.dockTab === 'money' && renderMoney());
-  }
-  const btc = btcNow();
-  const live = heardQuote() && isFresh(heardQuote());
-  const cur = currencyOf(here);
-  const el = $('#money');
-  const fmtN = (n: number, d = n < 10 ? 2 : 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: n < 10 && n > 0 ? Math.min(d, 2) : 0 });
-  const msg = moneyMessage ? `<p class="yard-message">${escapeHtml(moneyMessage)}</p>` : '';
-  moneyMessage = '';
-  const wallet = Object.entries(walletOf(c)).filter(([, u]) => u > 1e-6);
-  const holdings = wallet.length
-    ? `<ul class="money-wallet">${wallet
-        .map(([key, units]) => {
-          if (isCompanyKey(key)) {
-            const co = COMPANIES[key.slice(3) as CompanyId];
-            return `<li><strong>${fmtN(units)} ${escapeHtml(co?.name.split(' ')[0] ?? key)} coins</strong><span>${escapeHtml(co?.name ?? key)} · Bitcoin-backed · about ${fmtN(units * companyValue(btc), 0)} Cr</span><button type="button" data-redeem="${key.slice(3)}">Redeem</button></li>`;
-          }
-          const home = walletHome(key);
-          const hc = currencyOf(home)!;
-          const atHome = key === walletKey(here);
-          const value = valueOf(key, units, now, btc);
-          const action = atHome ? '<small>Change it above</small>' : hc.stable ? `<button type="button" data-cash="${key}">Cash it · ${fmtN(stableValue(home, units, now, btc), 0)} Cr</button>` : `<small>Change it at ${escapeHtml(home.name)}</small>`;
-          return `<li><strong>${fmtN(units)} ${hc.ticker}</strong><span>${escapeHtml(hc.name)} · ${escapeHtml(home.name)} · about ${fmtN(value, 0)} Cr</span>${action}</li>`;
-        })
-        .join('')}</ul>`
-    : '<p class="meta">Nothing yet. Money you change takes no hold space and survives your ship, like Bitcoin.</p>';
-  if (!cur) {
-    el.innerHTML = `${msg}<h3>No money is issued here</h3><p class="money-line">${escapeHtml(POLICY_TEXT.none.line)} Stablecoins from elsewhere are taken here at their rate.</p><h3>Your wallet</h3>${holdings}${companyDesk(btc, live, fmtN)}`;
-  } else {
-    const pol = POLICY_TEXT[cur.policy];
-    const pool = poolHere(c, here, now, btc);
-    const rate = poolRate(pool);
-    const fair = fairRate(here, now, btc);
-    const week = fairRate(here, now - 7 * 86_400_000, btc);
-    const change = (week / fair - 1) * 100; // the money's value against the credit
-    const trouble = cur.policy === 'feudal' ? crisis(here, now, 0.15) : cur.policy === 'printing' ? crisis(here, now, 0.12) : 0;
-    const left = officialLeft(c, here, dockedAt);
-    const have = walletOf(c)[walletKey(here)] ?? 0;
-    const supply = supplyOf(here, now, btc);
-    const minted = mintedToday(here, now, btc);
-    const big = (n: number) => (n >= 1e9 ? `${fmtN(n / 1e9, 1)}bn` : n >= 1e6 ? `${fmtN(n / 1e6, 1)}m` : fmtN(n, 0));
-    const output = outputAt(here, now);
-    const shock = activeEvent(here, now);
-    const floats = cur.policy === 'inflation' || cur.policy === 'printing' || cur.policy === 'scarce';
-    const outputLine =
-      Math.abs(output - 1) < 0.02
-        ? ''
-        : `<p class="money-line ${output < 1 ? 'short' : ''}">${shock ? `${escapeHtml(EVENT_KINDS[shock.type].name)}: o` : 'O'}utput here is ${output < 1 ? 'down' : 'up'} ${Math.round(Math.abs(output - 1) * 100)}%. ${
-            floats
-              ? output < 1
-                ? `The same ${cur.ticker} chases fewer goods, so each buys less until it recovers.`
-                : `More goods for the same ${cur.ticker}: each buys more while it lasts.`
-              : cur.stable
-                ? `The issuer ${output < 1 ? 'burns' : 'mints'} ${cur.ticker} to hold the peg.`
-                : 'The state holds its rate regardless.'
-          }</p>`;
-    el.innerHTML = `${msg}
-      <h3 class="money-title">${escapeHtml(cur.name)} <span>${cur.ticker}</span></h3>
-      <p class="money-policy"><b>${escapeHtml(pol.name)}.</b> ${escapeHtml(pol.line)}</p>
-      ${trouble > 0.05 ? `<p class="money-crisis">${cur.policy === 'feudal' ? `The peg has broken: a ${cur.ticker} is worth ${fmtN(1 / fair, 2)} Cr. The algorithm is minting to defend it, which only makes it worse.` : 'The presses are running day and night: prices here are climbing by the hour.'}</p>` : ''}
-      ${cur.policy === 'reserve' ? `<p class="money-line ${backing(here, btc) < 1 ? 'short' : ''}">Reserves published: ${Math.round((1 - reserveShare(here)) * 100)}% in credits, ${Math.round(reserveShare(here) * 100)}% in Bitcoin. ${live ? `At today's Bitcoin price they cover ${Math.round(backing(here, btc) * 100)}% of the coins${backing(here, btc) < 1 ? ': short, and holders are running' : ''}.` : ''}</p>` : ''}
-      ${cur.policy === 'scarce' && live ? `<p class="money-line">Bitcoin today: $${Math.round(btc).toLocaleString()} (1 Cr = $1). This money rises and falls with it.</p>` : ''}
-      <dl class="money-rates">
-        <div><dt>Here</dt><dd>1 Cr = ${fmtN(rate, 3)} ${cur.ticker}</dd></div>
-        <div><dt>Fair rate</dt><dd>${fmtN(fair, 3)} ${cur.ticker}</dd></div>
-        <div><dt>This week</dt><dd class="${change < -0.05 ? 'down' : change > 0.05 ? 'up' : ''}">${Math.abs(change) < 0.05 ? 'Steady against the credit' : `${change > 0 ? '+' : ''}${change.toFixed(1)}% against the credit`}</dd></div>
-        <div><dt>The pool</dt><dd>${fmtN(pool.local, 0)} ${cur.ticker} · ${fmtN(pool.credits, 0)} Cr</dd></div>
-        <div><dt>In circulation</dt><dd>${big(supply)} ${cur.ticker}</dd></div>
-        <div><dt>Today</dt><dd>${Math.abs(minted) < supply * 0.0005 ? 'Nothing minted or burned' : `${big(Math.abs(minted))} ${minted > 0 ? 'minted' : 'burned'}`}</dd></div>
-      </dl>
-      ${outputLine}
-      <div class="money-form">
-        <div class="yard-lasers money-sides"><button type="button" data-side="buy" aria-pressed="${moneySide === 'buy'}">Buy ${cur.ticker}</button><button type="button" data-side="sell" aria-pressed="${moneySide === 'sell'}">Sell ${cur.ticker}</button></div>
-        <label class="money-amount"><span>${moneySide === 'buy' ? 'Credits to change' : `${cur.ticker} to sell (you have ${fmtN(have)})`}</span><input id="money-n" type="number" min="0" step="any" inputmode="decimal" /></label>
-        <p class="money-quote" id="money-quote">&nbsp;</p>
-        <button type="button" class="primary money-go">${moneySide === 'buy' ? `Change for ${cur.ticker}` : 'Change for credits'}</button>
-        ${Number.isFinite(left) ? `<p class="yard-note">The state lets each visitor change ${fmtN(OFFICIAL_LIMIT, 0)} Cr a visit: ${fmtN(left, 0)} Cr left.</p>` : ''}
-        <p class="yard-note">The pool charges ${(POOL_FEE * 100).toFixed(1)}%, and a big swap moves the rate against you; it drifts back as other traders arbitrage.</p>
-      </div>
-      ${liquidity(c, here, cur.ticker, btc, now, fmtN)}
-      <h3>Your wallet</h3>${holdings}
-      ${companyDesk(btc, live, fmtN)}`;
-    const input = el.querySelector<HTMLInputElement>('#money-n')!;
-    const quote = el.querySelector<HTMLElement>('#money-quote')!;
-    const update = () => {
-      const n = Number(input.value);
-      if (!(n > 0)) return (quote.innerHTML = '&nbsp;');
-      quote.textContent = moneySide === 'buy' ? `You get about ${fmtN(quoteBuy(pool, Math.min(n, c.credits)))} ${cur.ticker}` : `You get about ${fmtN(quoteSell(pool, Math.min(n, have)), 1)} Cr`;
-    };
-    input.oninput = update;
-    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-side]'))
-      b.onclick = () => {
-        moneySide = b.dataset.side as 'buy' | 'sell';
-        renderMoney();
-      };
-    el.querySelector<HTMLButtonElement>('.money-go')!.onclick = () => {
-      const n = Number(input.value);
-      const r = moneySide === 'buy' ? buyLocal(c, here, n, Date.now(), dockedAt, btc) : sellLocal(c, here, n, Date.now(), dockedAt, btc);
-      moneyMessage = r.message;
-      if (r.ok) {
-        saveCommander(c);
-        sfx.beep();
-      }
-      renderMoney();
-    };
-  }
-  const done = (r: { ok: boolean; message: string }) => {
-    moneyMessage = r.message;
-    if (r.ok) {
-      saveCommander(c);
-      sfx.beep();
-    }
-    renderMoney();
-  };
-  el.querySelector<HTMLButtonElement>('.lp-add')?.addEventListener('click', () => done(addLiquidity(c, here, Number(el.querySelector<HTMLInputElement>('#lp-n')!.value), Date.now(), btc)));
-  el.querySelector<HTMLButtonElement>('.lp-out')?.addEventListener('click', () => done(withdrawLiquidity(c, here, Date.now(), btc)));
-  el.querySelector<HTMLButtonElement>('.co-mint')?.addEventListener('click', () =>
-    done(mintCompany(c, el.querySelector<HTMLSelectElement>('#co-pick')!.value, Number(el.querySelector<HTMLInputElement>('#co-n')!.value), Date.now(), here)),
-  );
-  for (const b of el.querySelectorAll<HTMLButtonElement>('[data-redeem]')) b.onclick = () => done(redeemCompany(c, b.dataset.redeem!, walletOf(c)[companyKey(b.dataset.redeem!)] ?? 0, Date.now(), here, btc));
-  for (const b of el.querySelectorAll<HTMLButtonElement>('[data-cash]'))
-    b.onclick = () => {
-      const key = b.dataset.cash!;
-      const r = cashStable(c, here, key, walletOf(c)[key] ?? 0, Date.now(), btc);
-      moneyMessage = r.message;
-      if (r.ok) {
-        saveCommander(c);
-        sfx.beep();
-      }
-      renderMoney();
-    };
-}
-
-function renderSaloon() {
-  const c = cmdr();
-  const here = currentSystem();
-  const now = Date.now();
-  const v = venue(here);
-  const slot = slotOf(now);
-  const s = (c.saloon ??= { drinks: [], heard: [] });
-  const sysName = (i: number) => systemAt(here.galaxy, i).name;
-  const cards = regularsAt(here, now)
-    .map((r) => {
-      const drunk = s.drinks.includes(`${r.id}@${slot}`);
-      const heard = s.heard.find((h) => h.who === r.id && h.slot === slot);
-      const words = drunk ? talk(r, sysName, Boolean(heard?.paid)) : null;
-      const rec = record(s.heard, r.id, now);
-      const before = s.heard.some((h) => h.who === r.id && h.slot !== slot); // on an earlier visit
-      const known = rec.right || rec.wrong ? `Their tips: ${rec.right} came true${rec.wrong ? ` · ${rec.wrong} didn't` : ''}` : before ? 'You have heard from them before: too soon to say' : '';
-      const action = !drunk
-        ? `<button data-drink="${r.id}" ${c.credits < r.drink ? 'disabled' : ''}>Buy a drink · ${r.drink} Cr</button>`
-        : words?.more
-          ? `<button data-pay="${r.id}" ${c.credits < r.price ? 'disabled' : ''}>Pay ${r.price} Cr for the rest</button>`
-          : '';
-      return `<li class="regular regular-${r.mood}">
-        <strong>${escapeHtml(r.name)}</strong> <small>${escapeHtml(r.trade)}</small>
-        <p class="regular-look">${escapeHtml(r.look)}</p>
-        ${known ? `<p class="regular-record">${escapeHtml(known)}</p>` : ''}
-        ${words ? `<p class="regular-says">“${escapeHtml(words.said)}”</p>` : ''}
-        ${action ? `<p class="regular-actions">${action}</p>` : ''}
-      </li>`;
-    })
-    .join('');
-  const back = hasBackRoom(c, here) ? `<button type="button" class="saloon-back">A door at the back ›</button>` : '';
-  $('#saloon').innerHTML = `
-    <h3>${escapeHtml(v.name)} <small>the ${v.kind} at ${escapeHtml(stationName(here).name)}</small></h3>
-    <p class="meta">Regulars come and go every couple of hours. What they tell you might be worth a fortune, or nothing at all: nobody here wears a label.</p>
-    <ul class="regulars">${cards}</ul>
-    ${back}`;
-}
-
-$('#saloon').addEventListener('click', (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
-  if (!b) return;
-  const c = cmdr();
-  const here = currentSystem();
-  const now = Date.now();
-  const slot = slotOf(now);
-  const s = (c.saloon ??= { drinks: [], heard: [] });
-  if (b.classList.contains('saloon-back')) {
-    // The back room: through the exchange's own door.
-    setDockTab('market');
-    document.querySelector<HTMLButtonElement>('#exchange .ex-backroom-toggle')?.click();
-    return;
-  }
-  const r = regularsAt(here, now).find((x) => x.id === (b.dataset.drink ?? b.dataset.pay));
-  if (!r) return;
-  if (b.dataset.drink && c.credits >= r.drink) {
-    c.credits = Math.round((c.credits - r.drink) * 10) / 10;
-    s.drinks = [...s.drinks, `${r.id}@${slot}`].slice(-40);
-    // Glad and mad tell all for a drink; sad and bad want paying for the rest.
-    if (r.tip) s.heard = [...s.heard, { who: r.id, name: r.name, galaxy: here.galaxy, at: now, slot, tip: r.tip, paid: r.price === 0 }].slice(-60);
-  } else if (b.dataset.pay && c.credits >= r.price) {
-    const h = s.heard.find((x) => x.who === r.id && x.slot === slot);
-    if (!h) return;
-    c.credits = Math.round((c.credits - r.price) * 10) / 10;
-    h.paid = true;
-  } else return;
-  saveCommander(c);
-  sfx.beep();
-  renderSaloon();
-});
+// --- News and the market ---------------------------------------------------------
 
 function renderNews() {
   const here = currentSystem();
