@@ -5975,7 +5975,13 @@ function updateSpace(dt: number) {
     }
     if (autopilot) dockingComputer.update(dt, player, station);
     else if (combatComputer) {
-      if (!combatComputer.fly(dt, player, npcs, locked, { centre: planetPos, radius: planetRadius })) stopCombatComputer('No hostiles · combat computer standing down · you have control');
+      const hit = lastHitBy && npcs.includes(lastHitBy.npc) ? lastHitBy : null;
+      const status = { heat: Math.min(1, laserHeat / 100), hitBy: hit?.npc ?? null, hitAgo: hit ? elapsed - hit.at : Infinity };
+      if (!combatComputer.fly(dt, player, npcs, locked, { centre: planetPos, radius: planetRadius }, status)) stopCombatComputer('No hostiles · combat computer standing down · you have control');
+      else if (combatComputer.announce) {
+        flash(`Combat computer · ${combatComputer.announce}`, 1.8);
+        combatComputer.announce = null;
+      }
     } else if (surveyPilot) flySurvey(dt, surveyPilot);
     else {
       holdForSurrender(input);

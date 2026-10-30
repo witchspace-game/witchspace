@@ -6,6 +6,7 @@ summary: Flight routines and better hardware for the combat computer, bought lik
 card: cobra-mk3
 stages:
   - The combat computer: a textbook chase while you man a turret | built
+  - It knows who's after you, and rotates its evasive moves | built
   - Routines as equipment, and the computer choosing between them | proposed
   - Marks I to III | proposed
   - Aces and the Falcon who read your routines | proposed
@@ -16,6 +17,15 @@ stages:
 *Proposed, October 2026, from Mark: "I am sure we can find advanced flight routines and upgrades." Change by pull request.*
 
 The combat computer is in the game (Modern rules, 6,000 Cr at tech level 9 and up). Press **O** and it flies your ship in a fight while you work a rear or side laser, the turrets. It flies one way, a textbook chase: close in, pass, break away, come round. That's predictable on purpose, so a good pilot beats it, and kills made with it on count half towards your combat rating.
+
+**Now cleverer** *(Mark, 30 October 2026: "It should be properly clever and rotate through proper evasive flying techniques and know who or what is attacking the ship!"; built)*. It watches every hostile: who's on your tail, whose nose is on you, who just hit you. It turns on whoever is hurting you, not just the ship in front, and picks a manoeuvre for the moment:
+- **Attack run:** the chase, as before.
+- **Break turn:** a sustained hard pull at full speed when someone is on your tail, so the line between you swings faster than they can follow.
+- **Scissors:** hard reversals when they're close behind, until they overshoot.
+- **Jinking:** a corkscrew when you're under fire.
+- **Extending:** away from everyone to let the shields come back or the laser cool, then back in.
+
+It never answers a tail with the same move twice running, and it says what it's doing and why on the HUD ("Break turn · Mamba firing on you"). In tests, a chasing pirate has you in its sights for about a fifth as long as when you fly straight (break turn), and under half with scissors. The gimballed front laser tracks the computer's target while it flies (Mark: the ring was "all over the place"). Kills with it on still count half, and a good commander still flies better. The routines below build on this: a dearer computer could fly them better, and aces still learn them.
 
 One habit is thin. Against the Falcon, who sits on your tail and [reads how you fly](legends-the-falcon.md#how-she-fights-the-ambusher), it's a liability. This design makes the computer a kit you choose: routines you buy and fit, better hardware, and pilots who learn to answer both.
 
