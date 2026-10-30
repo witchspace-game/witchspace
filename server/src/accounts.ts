@@ -344,8 +344,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
   // --- Signing in ---------------------------------------------------------------
 
   private async requestLink(request: Request): Promise<Response> {
-    const body = (await request.json().catch(() => null)) as { email?: unknown; turnstile?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as { email?: unknown; turnstile?: unknown; next?: unknown; callsign?: unknown } | null;
     const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
+    // Where the link lands: the game (the default) or the callsign page, which claims the name it was made for.
+    const next = body?.next === '/callsign/' ? '/callsign/' : '/play/';
+    const wanted = next === '/callsign/' && typeof body?.callsign === 'string' ? cleanName(body.callsign) : '';
+    const claim = wanted.length >= 2 && judgeCallsign(wanted, this.callsignLookups).verdict === 'free' ? wanted : undefined;
     if (!EMAIL.test(email) || email.length > 254) return json({ error: 'That doesn’t look like an email address' }, 400);
     const net = await networkOf(request, (this.env.ADMIN_KEY ?? 'witchspace') + ':accounts');
     const hourAgo = Date.now() - 3600_000;
@@ -361,7 +365,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('INSERT INTO sends (email, net, t) VALUES (?, ?, ?)', email, net, Date.now());
     const origin = request.headers.get('Origin') ?? SITE;
     const site = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin) ? origin : SITE;
-    const link = `${site}/play/?signin=${token}`;
+    const link = `${site}${next}?signin=${token}`;
     const code = String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0');
     this.sql.exec('INSERT OR REPLACE INTO codes (email, hash, expires, tries) VALUES (?, ?, ?, 0)', email, await sha256(`${email}:${code}`), Date.now() + LINK_MINUTES * 60_000);
 
@@ -376,7 +380,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
       body: JSON.stringify({
         from: 'Witchspace <signin@witchspace.org.uk>',
         to: [email],
-        ...signInEmail(link, code, LINK_MINUTES),
+        ...signInEmail(link, code, LINK_MINUTES, claim),
       }),
     });
     if (!sent.ok) return json({ error: 'The email couldn’t be sent just now: please try again' }, 502);
