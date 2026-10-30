@@ -128,8 +128,9 @@ function render(page: Page): string {
     const current = section === href || (href === '/roadmap/' && section === '/design/');
     return `<a href="${href}"${current ? ' aria-current="page"' : ''}>${label}</a>`;
   }).join('\n        ');
-  // Every page can be shared (src/site/share.ts), so every page loads it.
-  const scripts = [...new Set([...(page.scripts ?? []), '/src/site/share.ts', '/src/site/nav.ts', '/src/site/analytics.ts'])].map((src) => `    <script type="module" src="${src}"></script>`).join('\n');
+  // Every page can be shared (src/site/share.ts), so every page loads it; and every page may offer the callsign
+  // card once, on a computer, as a visitor leaves (src/site/nudge.ts).
+  const scripts = [...new Set([...(page.scripts ?? []), '/src/site/share.ts', '/src/site/nav.ts', '/src/site/analytics.ts', '/src/site/nudge.ts'])].map((src) => `    <script type="module" src="${src}"></script>`).join('\n');
   return template
     .replaceAll('{{title}}', escapeAttr(page.title))
     .replaceAll('{{description}}', escapeAttr(page.description))

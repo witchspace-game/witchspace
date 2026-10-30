@@ -4,6 +4,7 @@ import type { ShipDef } from '../content/types';
 import { hullOf, type Commander, type Paint } from '../game/commander';
 import { inYards } from '../game/manual';
 import { combatRating } from '../game/rating';
+import { SAVE_KEY } from '../game/saveKey';
 import { GLOWS } from '../game/shipyard';
 import * as acct from '../net/account';
 import type { Look } from '../render/shipModel';
@@ -47,7 +48,10 @@ interface Earnable extends Hull {
   mark?: string;
 }
 
-let career: Career = careerById(/^\/callsign\/([a-z]+)\/?$/.exec(location.pathname)?.[1] ?? 'explore');
+// Sent from the game at a moment worth a callsign (/callsign/?name=…&career=fight): the name it flies under, and
+// the career that fits what was just done. Otherwise the career page's own, or Explore.
+const asked = new URLSearchParams(location.search);
+let career: Career = careerById(asked.get('career') ?? /^\/callsign\/([a-z]+)\/?$/.exec(location.pathname)?.[1] ?? 'explore');
 let scene: string = career.scenes[0];
 let sceneChosen = false;
 let name = '';
@@ -682,23 +686,38 @@ async function loadMine() {
   if (typeof me.founding === 'boolean') founding = me.founding;
   try {
     const c = (await acct.fetchSave()).data as Commander | null;
-    if (c) {
-      const list = [hullFrom(hullOf(c), c.paint), ...(c.fleet ?? []).map((s) => hullFrom(s.ship, s.paint))].filter((h): h is Hull => Boolean(h));
-      owned = list.filter((h, i) => list.findIndex((o) => o.key === h.key) === i);
-      if (!owned.length) owned = [COBRA];
-      if (!owned.some((h) => h.key === hull.key)) hull = owned[0];
-      elite = combatRating(c.kills ?? 0) === 'Elite';
-    }
+    if (c) fromSave(c);
   } catch {
-    // No save in the cloud yet: the starter Cobra.
+    // No save in the cloud yet: what this device has, or the starter Cobra.
   }
+}
+
+/** The ships a save holds, each in her own paint, and whether its commander is Elite. */
+function fromSave(c: Commander) {
+  const list = [hullFrom(hullOf(c), c.paint), ...(c.fleet ?? []).map((s) => hullFrom(s.ship, s.paint))].filter((h): h is Hull => Boolean(h));
+  owned = list.filter((h, i) => list.findIndex((o) => o.key === h.key) === i);
+  if (!owned.length) owned = [COBRA];
+  if (!owned.some((h) => h.key === hull.key)) hull = owned[0];
+  elite = combatRating(c.kills ?? 0) === 'Elite';
   drawShips();
   drawEarn();
   showShip();
   drawCard();
 }
 
+/** The game's save on this device, signed in or not: the card can carry her before there's an account. */
+function localSave(): Commander | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    return raw ? (JSON.parse(raw) as Commander) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function start() {
+  const here = localSave();
+  if (here) fromSave(here);
   drawCard();
   drawActions();
   try {
@@ -736,5 +755,11 @@ async function start() {
   if (name && mine(name)) check = { name, verdict: 'yours' };
   drawCard();
   drawActions();
+  // Not signed in: the name from the game (or the one on this device's save), checked at once.
+  const offered = asked.get('name') ?? (here?.name && here.name !== 'Jameson' ? here.name : '');
+  if (!input.value && offered) {
+    input.value = cleanCallsign(offered);
+    void judge();
+  }
 }
 void start();
