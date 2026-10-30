@@ -222,7 +222,13 @@ The server runs on **Cloudflare Workers with SQLite-backed Durable Objects**, on
 - 8 systems × 24 h × 450 GB-s = **86,000 GB-s a day**, about 2.6 million a month: about **$27**.
 - **About $35 a month** with the $5 plan. A quiet month with a few commanders costs nothing beyond the $5.
 
-**Recommendation: move to Workers Paid ($5 a month) before Show HN** (Mark's spend, Mark's call). On the free plan, the daily limits would be passed with about 3 commanders flying all day, and then requests fail until the next day, so shared space would stop working at the worst moment.
+**Decided (Mark, 30 Oct 2026): move to Workers Paid ($5 a month) before Show HN.** On the free plan, the daily limits would be passed with about 3 commanders flying all day, and then requests fail until the next day, so shared space would stop working at the worst moment. Mark signs up in the Cloudflare dashboard himself.
+
+**Keeping the lights on, long term (Mark):** "I dont mind paying the 5 a month, however long term I need to work out how to keep the lights on." Still to work out. The directions so far:
+- **Donations, shown openly:** a supporters' page (GitHub Sponsors, Open Collective or Ko-fi) and a line on the site with this month's server bill and how much of it supporters covered.
+- **A thank-you, never an advantage:** a supporter's name in the credits or a small mark beside their callsign, but nothing that helps in the game, and never the special editions (by invitation only).
+- **Mind the tribute:** Witchspace is a free tribute to Elite, so anything that looks like selling the game needs care. Donations towards running costs are the safe kind.
+- **Keep the bill small first:** the savings below, and the cap on busy systems.
 
 **Keeping it cheap:**
 - Duration is the big cost, and it's per awake system, not per commander. An empty system already costs nothing.
@@ -253,7 +259,7 @@ Each step is a Worker deploy that Mark runs himself. Website and Marketing words
 
 ## 7. Open questions for Mark
 
-1. **Workers Paid ($5 a month) before Show HN?** Recommended (section 5).
+1. ~~**Workers Paid ($5 a month) before Show HN?**~~ Yes (Mark, 30 Oct). How to pay for it long term is still open (section 5).
 2. **Test pilots:** yes to server-run commanders that only Mark can call, for testing and load?
 3. **Rank carried over from single-player:** shown hollow until earned in shared space (recommended), shown as is, or reset to Harmless in shared space?
 4. **Player fights:** one galaxy with the law as the answer and no PvP-off switch (recommended), or an opt-out?
