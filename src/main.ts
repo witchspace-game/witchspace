@@ -131,12 +131,11 @@ initMarket({ exploring: () => exploring(), noticeTrades: () => noticeTrades(), u
 initSaloon({ setDockTab });
 initContracts({ showNewGame, enterDocked, setDockTab, checkSiteSpec, checkSignedOver, updateDockHead, renderDocked, toggleGalaxyMap });
 
-let inSpace = false;
 
 
 function setState(next: State) {
   if (next !== 'title' && isAccountPanelOpen()) toggleAccountPanel(false);
-  if (next !== 'docked' && logOpen) setFlightLog(false);
+  if (next !== 'docked' && game.logOpen) setFlightLog(false);
   if (next !== 'docked') closeTrip();
   if (next !== 'docked') hideCardInvite();
   if (next !== 'flying') music.stop(); // the moment's over: docked, jumped or dead
@@ -266,7 +265,7 @@ function updateTurnHint() {
 // --- Title, new commander and docked screens --------------------------------
 
 function showTitle() {
-  inSpace = false;
+  game.inSpace = false;
   showFittings(null);
   showShip(cobraIndex);
   const saved = loadCommander();
@@ -288,17 +287,15 @@ function showTitle() {
 
 // There's one commander at a time, and their rules can't change, so starting
 // again deletes them. That takes a second press.
-let newCommanderArmed = false;
-
 function armNewCommander(saved: Commander) {
-  newCommanderArmed = true;
+  game.newCommanderArmed = true;
   const b = $('#new-button');
   b.classList.add('armed');
   b.innerHTML = `<span class="key">N again · </span><span class="touch-word">Tap again to </span>delete ${escapeHtml(saved.name)} (${DIFFICULTIES[saved.difficulty].name} · ${saved.credits.toLocaleString()} Cr · ${combatRating(saved.kills)})`;
 }
 
 function disarmNewCommander() {
-  newCommanderArmed = false;
+  game.newCommanderArmed = false;
   const b = $('#new-button');
   b.classList.remove('armed');
   b.innerHTML = '<span class="key">N · </span>New commander';
@@ -339,8 +336,8 @@ let testStartDone = false;
 function startCommander(difficulty: Difficulty) {
   game.commander = newCommander(difficulty);
   // A new commander hasn't flown: the last commander's trip isn't theirs (Marketing saw "How I died at Lave").
-  flightFrom = Date.now();
-  tripSeen = true;
+  game.flightFrom = Date.now();
+  game.tripSeen = true;
   keepTrip();
   clearRadio();
   countNewCommander(difficulty, isRetro() ? '1984' : 'neo');
@@ -368,7 +365,7 @@ function startCommander(difficulty: Difficulty) {
 function enterDocked(newShip = false) {
   resetBoughtHere();
   ensureSystemScene();
-  inSpace = false;
+  game.inSpace = false;
   boardShip();
   player.repair();
   showOwnShip();
@@ -438,17 +435,17 @@ const savedTrip = ((): { from: number; seen?: boolean } | null => {
     return null;
   }
 })();
-let flightFrom = savedTrip?.from ?? Date.now(); // when this flight began: moments after it are this trip's
-let tripSeen = savedTrip?.seen ?? false;
+game.flightFrom = savedTrip?.from ?? Date.now();
+game.tripSeen = savedTrip?.seen ?? false;
 /** This trip's sheet has been seen: dismissed, or the log opened over it. */
 function tripDone() {
   setLogBadge(0);
-  tripSeen = true;
+  game.tripSeen = true;
   keepTrip();
 }
 function keepTrip() {
   try {
-    localStorage.setItem(TRIP_KEY, JSON.stringify({ from: flightFrom, seen: tripSeen }));
+    localStorage.setItem(TRIP_KEY, JSON.stringify({ from: game.flightFrom, seen: game.tripSeen }));
   } catch {
     /* storage blocked: the trip lasts as long as the page */
   }
@@ -457,23 +454,21 @@ function keepTrip() {
 /** Badge the Flight log button with what's new, and show this trip's moments if there are any. */
 async function showNewMoments(newShip: boolean) {
   if (classicRules()) return setLogBadge(0);
-  const fresh = (await listMoments().catch(() => [])).filter((m) => m.created >= flightFrom).length;
+  const fresh = (await listMoments().catch(() => [])).filter((m) => m.created >= game.flightFrom).length;
   setLogBadge(fresh);
   if (game.state !== 'docked' || isMapOpen()) return;
-  if (fresh && !tripSeen)
-    void openTrip(flightFrom, {
+  if (fresh && !game.tripSeen)
+    void openTrip(game.flightFrom, {
       onClose: tripDone,
       onLibrary: () => setFlightLog(true),
-      onChange: () => logOpen && refreshFlightLog(),
+      onChange: () => game.logOpen && refreshFlightLog(),
     });
   // The recorder asks once whether to stay on: after a first flight, not before a new commander has flown at all.
   else if (!newShip && recorder.available && !recorderIntroduced()) {
     setFlightLog(true);
-    logForIntro = logOpen;
+    game.logForIntro = game.logOpen;
   }
 }
-/** The flight log opened only to ask about the recorder: answering closes it, back to the station. */
-let logForIntro = false;
 
 function setLogBadge(n: number) {
   for (const b of document.querySelectorAll<HTMLButtonElement>('.log-button')) b.innerHTML = `<span class="key">F · </span>Flight log${n ? ` · ${n} new` : ''}`;
@@ -481,12 +476,11 @@ function setLogBadge(n: number) {
 
 // The flight log belongs to the ship, not the station: it opens full screen,
 // a gallery, from the button beside the galaxy map (F).
-let logOpen = false;
 function setFlightLog(open: boolean) {
-  logOpen = open && game.state === 'docked';
-  if (!logOpen) logForIntro = false;
-  $('#flight-log-view').hidden = !logOpen;
-  if (logOpen) {
+  game.logOpen = open && game.state === 'docked';
+  if (!game.logOpen) game.logForIntro = false;
+  $('#flight-log-view').hidden = !game.logOpen;
+  if (game.logOpen) {
     if (isTripOpen()) tripDone();
     closeTrip();
     refreshFlightLog();
@@ -641,14 +635,14 @@ async function launch() {
   if (!isRetro() && isWorking(cmdr(), 'docking-computer')) preloadRecording();
   sfx.tunnel();
   await playTunnel();
-  inSpace = true;
+  game.inSpace = true;
   closeDrawer(); // a clean screen to fly from
   sharedSpace.resume(); // launching here means flying here, even if another window had the ship
   player.repair();
   station.placeForLaunch(player);
   markLaunched();
-  flightFrom = Date.now();
-  tripSeen = false;
+  game.flightFrom = Date.now();
+  game.tripSeen = false;
   keepTrip();
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
@@ -712,7 +706,7 @@ function offerCard() {
   // After the dock's own news, and never over another sheet (your moments, the flight log): wait for them.
   const offer = () => {
     if (game.state !== 'docked' || signedIn()) return;
-    if (logOpen || isTripOpen() || !$('#handover').hidden) return void setTimeout(offer, 1500);
+    if (game.logOpen || isTripOpen() || !$('#handover').hidden) return void setTimeout(offer, 1500);
     showCardInvite(c.name, career);
   };
   setTimeout(offer, 3000);
@@ -1053,7 +1047,7 @@ function handleKey(code: string) {
   if (killCam.key(code)) return;
   if (handleMapKey(code)) return;
   if (code === 'KeyG' && (game.state === 'docked' || game.state === 'flying') && game.commander) {
-    if (logOpen) setFlightLog(false);
+    if (game.logOpen) setFlightLog(false);
     toggleGalaxyMap();
     return;
   }
@@ -1087,14 +1081,14 @@ function handleKey(code: string) {
         } else showNewGame();
       } else if (code === 'KeyN') {
         const saved = loadCommander();
-        if (saved && !newCommanderArmed) armNewCommander(saved);
+        if (saved && !game.newCommanderArmed) armNewCommander(saved);
         else showNewGame();
       } else if (code === 'KeyS') {
         toggleSharedSpace();
       } else if (code === 'KeyA' || (code === 'Escape' && isAccountPanelOpen())) {
         toggleAccountPanel();
       }
-      if (code !== 'KeyN' && newCommanderArmed) disarmNewCommander();
+      if (code !== 'KeyN' && game.newCommanderArmed) disarmNewCommander();
       break;
     case 'newgame':
       if (code === 'Digit1') startCommander('modern');
@@ -1106,7 +1100,7 @@ function handleKey(code: string) {
       if (code === 'Escape' && isTripOpen()) {
         closeTrip();
         tripDone();
-      } else if (code === 'KeyF' || (code === 'Escape' && logOpen)) setFlightLog(!logOpen);
+      } else if (code === 'KeyF' || (code === 'Escape' && game.logOpen)) setFlightLog(!game.logOpen);
       else if (code === 'KeyL' || code === 'Enter') void launch();
       else if (code === 'KeyT') setDockTab(game.dockTab === 'market' ? 'station' : 'market');
       break;
@@ -1285,8 +1279,8 @@ function noticeTrades(): boolean {
       void keepTrade(filledLine(at.name, here.name), profit, false);
       continue;
     }
-    if (!isRun(r) || (tripBest.trip === flightFrom && profit <= tripBest.profit)) continue;
-    tripBest = { trip: flightFrom, profit };
+    if (!isRun(r) || (tripBest.trip === game.flightFrom && profit <= tripBest.profit)) continue;
+    tripBest = { trip: game.flightFrom, profit };
     const ev = activeEvent(here, Date.now());
     const wanted = ev && (EVENT_KINDS[ev.type].effects[r.good as keyof (typeof EVENT_KINDS)[typeof ev.type]['effects']] ?? 0) < 0;
     void keepTrade(runLine(commodityById(r.good)?.name ?? r.good, wanted ? EVENT_KINDS[ev.type].name : null), profit, true);
@@ -1319,7 +1313,7 @@ async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedMoment, 
     system: ctx.system,
     ...media,
     saved: false,
-    trip: flightFrom,
+    trip: game.flightFrom,
   };
   if (!(await addMoment(m))) {
     flash('Your moments are full · let one go, or unstar one, in the flight log', 3);
@@ -1412,8 +1406,8 @@ function refreshFlightLog() {
       } catch {
         /* storage blocked: stays as it is */
       }
-      if (logForIntro) {
-        logForIntro = false;
+      if (game.logForIntro) {
+        game.logForIntro = false;
         setFlightLog(false);
         flash(on ? 'Flight recorder on · your best moments wait in the flight log (F)' : 'Flight recorder off · turn it on again in the flight log (F)', 3);
         return;
@@ -1506,7 +1500,7 @@ function hangarCovered(t: number): boolean {
 
 function frame(now?: number) {
   const t = now ?? performance.now();
-  const resting = !inSpace && game.state === 'docked' && !booth && !killCam.active && hangarCovered(t);
+  const resting = !game.inSpace && game.state === 'docked' && !booth && !killCam.active && hangarCovered(t);
   if (t - lastDrawn < (resting ? RESTING_FRAME : MIN_FRAME) - 1) {
     requestAnimationFrame(frame);
     return;
@@ -1529,7 +1523,7 @@ function frame(now?: number) {
     const code = padToKey(button);
     if (code) handleKey(code);
   }
-  if (inSpace) {
+  if (game.inSpace) {
     if (camera.view?.enabled) camera.clearViewOffset();
     if (game.state !== 'transition') updateSpace(dt);
     const rift = carrier?.rift;
