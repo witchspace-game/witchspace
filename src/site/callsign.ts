@@ -8,6 +8,7 @@ import { GLOWS } from '../game/shipyard';
 import * as acct from '../net/account';
 import type { Look } from '../render/shipModel';
 import { cardShip, CARD_H, CARD_W, type CardShip } from './callsignCard';
+import { openShare } from './share';
 import { careerById, careerLine, CAREERS, claimLine, cleanCallsign, finishFor, LAUNCH, memberNumber, parseCheck, rgbOf, SCENES, sceneUrl, scenesFor, variants, verdictWords, type Career, type Check, type Finish } from './callsignWords';
 
 // Claim your callsign (/callsign/, docs/design/callsign-card.md, Mark): make your card (a name, what you do,
@@ -617,24 +618,14 @@ async function picture(): Promise<File | null> {
 $('cs-share').addEventListener('click', async () => {
   if (preview) endPreview();
   if (!shareable() && !mine(name)) return;
+  const button = $<HTMLButtonElement>('cs-share');
+  button.disabled = true;
   // Yours: kept first, so its link's preview is this card. Not yet yours: the picture, and the page to make one.
-  const url = (await keep()) ?? cardUrl ?? `${location.origin}/callsign/${career.id}/`;
+  const url = (await keep()) ?? cardUrl ?? `/callsign/${career.id}/`;
   const file = await picture();
-  if (!file) return;
-  const text = `${careerLine(career)} I’m CMDR ${name} in Witchspace.`;
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], text: `${text} ${url}` });
-      return;
-    } catch (e) {
-      if ((e as Error).name === 'AbortError') return;
-    }
-  }
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(file);
-  a.download = file.name;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+  button.disabled = false;
+  // The site's own share sheet, with the card as its preview and the picture to send or save.
+  openShare({ url, title: `${careerLine(career)} I’m CMDR ${name} in Witchspace.`, ...(file ? { file } : {}) });
 });
 
 // --- Signed in: your own ships, your number, your card as you kept it, and a claim come back by email -----

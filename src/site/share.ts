@@ -20,6 +20,9 @@ export interface ShareTarget {
   title: string;
   /** The share card image; defaults to this page's og:image. */
   image?: string;
+  /** A picture made on the page (a commander's card): shown as the preview, sent with the device's own share
+   *  sheet where it takes files, and offered to save. */
+  file?: File;
 }
 
 const canonical = (url: string) => (/^https?:/.test(url) ? url : SITE + url);
@@ -43,6 +46,7 @@ export function closeShare() {
   const sheet = open;
   open = null;
   sheet.classList.remove('shown');
+  sheet.dispatchEvent(new Event('share:closed'));
   setTimeout(() => sheet.remove(), 220);
   document.removeEventListener('keydown', onKey);
 }
@@ -57,7 +61,8 @@ function onKey(e: KeyboardEvent) {
 export function openShare(target: ShareTarget) {
   closeShare();
   const url = canonical(target.url);
-  const image = target.image ?? document.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.content;
+  const picture = target.file ? URL.createObjectURL(target.file) : null;
+  const image = picture ?? target.image ?? document.querySelector<HTMLMetaElement>('meta[property="og:image"]')?.content;
   const text = target.title;
 
   const sheet = document.createElement('div');
@@ -75,7 +80,9 @@ export function openShare(target: ShareTarget) {
         ${destinations(url, text).map(([key, label, href]) => `<a href="${href}" target="_blank" rel="noopener">${ICONS[key]}<span>${label}</span></a>`).join('')}
       </div>
       <div class="share-link"><input type="text" readonly value="${url}" aria-label="Link" /><button type="button" class="button small" data-copy-link>${ICONS.link}Copy link</button></div>
+      ${picture ? `<button type="button" class="button ghost small share-save" data-save-picture>Save picture</button>` : ''}
     </div>`;
+  if (picture) sheet.addEventListener('share:closed', () => setTimeout(() => URL.revokeObjectURL(picture), 1000), { once: true });
   sheet.querySelector('.share-preview strong')?.append(text);
   document.body.append(sheet);
   open = sheet;
@@ -86,11 +93,19 @@ export function openShare(target: ShareTarget) {
   sheet.querySelector('[data-close]')!.addEventListener('click', closeShare);
   sheet.querySelector('.share-native')?.addEventListener('click', async () => {
     try {
-      await navigator.share({ title: text, text, url });
+      // With a picture of its own, the picture goes too, where the device takes files.
+      const files = target.file && navigator.canShare?.({ files: [target.file] }) ? [target.file] : null;
+      await navigator.share(files ? { files, text: `${text} ${url}` } : { title: text, text, url });
       closeShare();
     } catch {
       // Dismissed: keep the other options open.
     }
+  });
+  sheet.querySelector('[data-save-picture]')?.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = picture!;
+    a.download = target.file!.name;
+    a.click();
   });
   const copy = sheet.querySelector<HTMLButtonElement>('[data-copy-link]')!;
   copy.addEventListener('click', async () => {
