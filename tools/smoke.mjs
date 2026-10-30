@@ -28,8 +28,8 @@ const check = (name, ok, detail = '') => {
 const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu'] });
 
 /** A fresh phone with a new commander, docked at Lave (or wherever ?at= says, on the dev server). */
-async function newCommander(rules, at = '') {
-  const page = await (await browser.newContext({ ...devices['iPhone 13 landscape'] })).newPage();
+async function newCommander(rules, at = '', device = 'iPhone 13 landscape') {
+  const page = await (await browser.newContext({ ...devices[device] })).newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${BASE}/play/?touch${at ? `&at=${at}` : ''}`);
@@ -229,6 +229,25 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   }
   check('Modern: the docking computer docks', docked);
   check('Modern: docking raises no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
+  await s.page.context().close();
+}
+
+// --- Modern: a phone held upright, the slim header and its places menu ----------------------
+{
+  const s = await newCommander('modern', '', 'iPhone 13');
+  const places = await s.w(async () => {
+    const head = document.querySelector('.dock-place');
+    if (!head || !head.offsetParent) return 'no slim header';
+    head.click();
+    await new Promise((r) => setTimeout(r, 400));
+    const menu = document.querySelector('#dock-places');
+    const items = menu && !menu.hidden ? [...menu.querySelectorAll('[data-place]')] : [];
+    items.find((b) => b.dataset.place === 'market')?.click();
+    await new Promise((r) => setTimeout(r, 500));
+    return `${items.length} places, market ${document.querySelector('#tab-market')?.hidden ? 'closed' : 'open'}`;
+  });
+  check('Upright: the places menu opens the market', /^[4-9] places, market open$/.test(places), places);
+  check('Upright raises no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }
 
