@@ -14,6 +14,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
 import { CARD_H, CARD_W, cardId, CHARACTER_NUMBERS, checkCard, finishFor, isCharacterNumber, isFounding, MAX_CARD_BYTES, nextMember, type SaveFacts } from './card';
 import { jpegSize } from './clipCheck';
+import { emailKey } from './emailKey';
 import { judgeCallsign, NAMES, nameKey, nameRule, type CallsignLookups } from './names';
 import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
 import { FEED_EACH, FLYING_NOW, type FirstEvent, type Flying } from './feed';
@@ -92,6 +93,15 @@ export class Accounts extends DurableObject<AccountsEnv> {
       /* already there */
     }
     this.sql.exec('CREATE INDEX IF NOT EXISTS accounts_loose ON accounts (callsign_loose)');
+    // One inbox, one account (emailKey.ts): the key each address is matched by.
+    try {
+      this.sql.exec('ALTER TABLE accounts ADD COLUMN email_key TEXT');
+    } catch {
+      /* already there */
+    }
+    this.sql.exec('CREATE INDEX IF NOT EXISTS accounts_email_key ON accounts (email_key)');
+    for (const row of this.sql.exec('SELECT id, email FROM accounts WHERE email_key IS NULL').toArray())
+      this.sql.exec('UPDATE accounts SET email_key = ? WHERE id = ?', emailKey(row.email as string), row.id as string);
     // Member numbers (the commander's card): in the order accounts first took a callsign, kept through renames.
     for (const col of ['member INTEGER', 'member_since INTEGER', 'character INTEGER']) {
       try {
@@ -415,9 +425,15 @@ export class Accounts extends DurableObject<AccountsEnv> {
       this.sql.exec('DELETE FROM codes WHERE email = ?', email);
     }
     let account = this.sql.exec('SELECT id, email, callsign FROM accounts WHERE email = ?', email).toArray()[0];
+    // The same inbox under another spelling (name+tag@, Gmail's dots) signs in to the account it already has.
+    // Only a maintainer may keep second accounts this way, for testing and the game's own characters.
+    if (!account) {
+      const twin = this.sql.exec('SELECT id, email, callsign FROM accounts WHERE email_key = ? ORDER BY created LIMIT 1', emailKey(email)).toArray()[0];
+      if (twin && !this.isMaintainer(twin as unknown as Account)) account = twin;
+    }
     if (!account) {
       const id = crypto.randomUUID();
-      this.sql.exec('INSERT INTO accounts (id, email, created) VALUES (?, ?, ?)', id, email, Date.now());
+      this.sql.exec('INSERT INTO accounts (id, email, email_key, created) VALUES (?, ?, ?, ?)', id, email, emailKey(email), Date.now());
       account = { id, email, callsign: null };
     }
     const session = randomToken();
