@@ -127,7 +127,7 @@ import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type S
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
-import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsDelay, newsOf, outputAt, setCausedEvents } from './economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, newsAt, newsDelay, outputAt, setCausedEvents } from './economy/events';
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
@@ -151,6 +151,7 @@ import { btcValue, formatBtc, isFresh, satsOf } from './economy/bitcoin';
 import { $, cmdr, currentSystem, game, modern, type State } from './core';
 import './style.css';
 import { initManual, openManual, renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
+import { ago, attackNews, newsLine } from './game/newsLines';
 
 let inSpace = false;
 
@@ -981,39 +982,6 @@ function tradeContext(): TradeContext {
 }
 
 // --- News --------------------------------------------------------------------------
-
-const ago = (ms: number) => {
-  const m = Math.max(0, Math.round(ms / 60000));
-  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
-};
-
-/** A line for the galaxy map: the latest news of a system that has reached here. */
-function newsLine(s: StarSystem): string | null {
-  const n = newsOf(s, currentSystem(), Date.now());
-  if (!n) return null;
-  const over = Date.now() > n.event.end;
-  return `${EVENT_KINDS[n.event.type].name}${over ? ' (may be over)' : ''} · heard ${ago(Date.now() - n.heard)} ago`;
-}
-
-/**
- * News of traders being picked off: three or more deliveries lost near one
- * system within two hours. It spreads like any other news.
- */
-function attackNews(here: StarSystem, now: number) {
-  const out: { where: StarSystem; distance: number; heard: number; lost: number }[] = [];
-  for (const [key, market] of Object.entries(cmdr().markets)) {
-    const recent = (market.lost ?? []).filter((l) => l.t <= now && l.t > now - 2 * 3600_000);
-    if (recent.length < 3) continue;
-    const [g, i] = key.split(':').map(Number);
-    if (g !== here.galaxy) continue;
-    const where = systemAt(g, i);
-    const distance = distanceLy(where, here);
-    if (distance > 25) continue;
-    const heard = newsArrives(where, here, recent[2].t);
-    if (heard <= now) out.push({ where, distance, heard, lost: recent.length });
-  }
-  return out;
-}
 
 // --- Company contracts (Modern) -----------------------------------------------------
 
