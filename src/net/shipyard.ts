@@ -1,4 +1,4 @@
-import { API, sessionToken } from './account';
+import { API, sessionToken, signedIn } from './account';
 
 // The shipyard's few calls to the server: how many of each special edition are
 // signed over and the numbers you hold. Both need you signed in, so they belong
@@ -31,3 +31,14 @@ export const forgetAccountSpec = () => call<{ ok: true }>('DELETE', '/me/spec');
 
 /** Ships signed over to this account (no code): where each is waiting, and its edition number if it has one. */
 export const signedOver = () => call<{ gifts: { ship: string; edition: string | null; number: number | null; galaxy: number; system: number }[] }>('GET', '/me/gifts');
+
+/** Each held edition's certificate link (private: from the yard's office, for its owner only). */
+const papersLinks = new Map<string, string>();
+export async function papersLinkFor(id: string, number: number): Promise<string | null> {
+  const key = `${id}:${number}`;
+  if (!papersLinks.has(key) && signedIn()) {
+    const r = await heldEditions();
+    if (!('error' in r)) for (const e of r.editions) if (e.link) papersLinks.set(`${e.edition}:${e.number}`, e.link);
+  }
+  return papersLinks.get(key) ?? null;
+}

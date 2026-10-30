@@ -75,6 +75,17 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   check('Modern: the market lists goods', goods > 5, `${goods}`);
   const wallet = await s.w(async () => { document.querySelector('.wallet-button')?.click(); await new Promise((r) => setTimeout(r, 400)); const open = !document.querySelector('#wallet-sheet')?.hidden; document.querySelector('.wallet-button')?.click(); return open; });
   check('Modern: the wallet opens', wallet);
+  const manual = await s.w(async () => {
+    document.querySelector('.tabs [data-tab="station"]')?.click();
+    await new Promise((r) => setTimeout(r, 300));
+    [...document.querySelectorAll('button')].find((b) => /Owner.s manual/i.test(b.textContent ?? ''))?.click();
+    await new Promise((r) => setTimeout(r, 400));
+    const m = document.querySelector('#manual');
+    const shown = m && !m.hidden ? m.textContent.length : 0;
+    document.querySelector('#manual .manual-close')?.click();
+    return shown;
+  });
+  check('Modern: the owner\'s manual opens', manual > 200, `${manual} characters`);
   check('Modern: docked screens raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
 
   // --- Modern: flight, traffic and hailing -----------------------------------------------
