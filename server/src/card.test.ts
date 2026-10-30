@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardId, checkCard, finishFor, FOUNDING_BEFORE, isFounding, ownedShips } from './card';
+import { cardId, checkCard, finishFor, FOUNDING_BEFORE, isCharacterNumber, isFounding, nextMember, ownedShips } from './card';
 
 const ok = { career: 'fight', scene: 'coriolis', ship: 'cobra-mk3', angle: { x: 0.3, y: -0.2 } };
 
@@ -46,5 +46,20 @@ describe("the commander's card", () => {
 
   it('a link of ten letters and digits', () => {
     expect(cardId()).toMatch(/^[a-z0-9]{10}$/);
+  });
+});
+
+describe('member numbers', () => {
+  it('keeps 002 to 100 for characters', () => {
+    expect(isCharacterNumber(1)).toBe(false);
+    expect(isCharacterNumber(2)).toBe(true);
+    expect(isCharacterNumber(100)).toBe(true);
+    expect(isCharacterNumber(101)).toBe(false);
+  });
+  it('starts players at 101 and counts on from the highest', () => {
+    expect(nextMember(null)).toBe(101);
+    expect(nextMember(3)).toBe(101);
+    expect(nextMember(101)).toBe(102);
+    expect(nextMember(250)).toBe(251);
   });
 });

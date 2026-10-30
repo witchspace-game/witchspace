@@ -34,6 +34,12 @@ export interface SaveFacts {
   kills?: number;
 }
 
+/** Member numbers 002 to 100 are kept for the game's own characters (Mark): Saloon regulars and others who fly their own ships. 001 is Mark's; players start at 101. */
+export const CHARACTER_NUMBERS = { from: 2, to: 100 } as const;
+export const isCharacterNumber = (n: number) => Number.isInteger(n) && n >= CHARACTER_NUMBERS.from && n <= CHARACTER_NUMBERS.to;
+/** The next player's number, after the highest given so far, and never one kept for a character. */
+export const nextMember = (highest: number | null) => Math.max(highest ?? 0, CHARACTER_NUMBERS.to) + 1;
+
 export const isFounding = (memberSince: number | null) => memberSince !== null && memberSince < FOUNDING_BEFORE;
 export const isElite = (save: SaveFacts | null) => combatRating(save?.kills ?? 0) === 'Elite';
 export const finishFor = (memberSince: number | null, save: SaveFacts | null): Finish => (isElite(save) ? 'black' : isFounding(memberSince) ? 'titanium' : 'alloy');

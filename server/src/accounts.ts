@@ -12,7 +12,7 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
-import { CARD_H, CARD_W, cardId, checkCard, finishFor, isFounding, MAX_CARD_BYTES, type SaveFacts } from './card';
+import { CARD_H, CARD_W, cardId, CHARACTER_NUMBERS, checkCard, finishFor, isCharacterNumber, isFounding, MAX_CARD_BYTES, nextMember, type SaveFacts } from './card';
 import { jpegSize } from './clipCheck';
 import { judgeCallsign, NAMES, nameKey, nameRule, type CallsignLookups } from './names';
 import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
@@ -93,7 +93,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     }
     this.sql.exec('CREATE INDEX IF NOT EXISTS accounts_loose ON accounts (callsign_loose)');
     // Member numbers (the commander's card): in the order accounts first took a callsign, kept through renames.
-    for (const col of ['member INTEGER', 'member_since INTEGER']) {
+    for (const col of ['member INTEGER', 'member_since INTEGER', 'character INTEGER']) {
       try {
         this.sql.exec(`ALTER TABLE accounts ADD COLUMN ${col}`);
       } catch {
@@ -103,6 +103,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     // Callsigns claimed before member numbers: in the order the accounts were made (the claim time wasn't kept).
     for (const row of this.sql.exec('SELECT id, created FROM accounts WHERE callsign IS NOT NULL AND member IS NULL ORDER BY created, id').toArray())
       this.giveMember(row.id as string, row.created as number);
+    // 002 to 100 are kept for the game's characters (Mark, 30 Oct 2026): a player given one before that moves up past 100, in order.
+    for (const row of this.sql.exec('SELECT id FROM accounts WHERE member BETWEEN ? AND ? AND character IS NULL ORDER BY member', CHARACTER_NUMBERS.from, CHARACTER_NUMBERS.to).toArray())
+      this.sql.exec('UPDATE accounts SET member = ? WHERE id = ?', nextMember(this.highestMember()), row.id as string);
     // The commander's card: one each, its picture and the choices behind it, at a link of its own.
     this.sql.exec('CREATE TABLE IF NOT EXISTS cards (account TEXT PRIMARY KEY, id TEXT NOT NULL UNIQUE, v INTEGER NOT NULL, choices TEXT NOT NULL, finish TEXT NOT NULL, image BLOB NOT NULL, at INTEGER NOT NULL)');
     for (const row of this.sql.exec('SELECT id, callsign FROM accounts WHERE callsign IS NOT NULL AND callsign_loose IS NULL').toArray())
@@ -466,8 +469,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
   private giveMember(id: string, since: number) {
     const has = this.sql.exec('SELECT member FROM accounts WHERE id = ?', id).toArray()[0];
     if (!has || has.member !== null) return;
-    const next = ((this.sql.exec('SELECT MAX(member) AS n FROM accounts').one().n as number | null) ?? 0) + 1;
-    this.sql.exec('UPDATE accounts SET member = ?, member_since = ? WHERE id = ?', next, since, id);
+    this.sql.exec('UPDATE accounts SET member = ?, member_since = ? WHERE id = ?', nextMember(this.highestMember()), since, id);
+  }
+
+  /** The highest number a player holds (001 and the characters' numbers don't count). */
+  private highestMember(): number | null {
+    return (this.sql.exec('SELECT MAX(member) AS n FROM accounts WHERE member > ?', CHARACTER_NUMBERS.to).one().n as number | null) ?? null;
   }
 
   private membership(id: string): { member: number | null; memberSince: number | null; founding: boolean } {
@@ -927,6 +934,23 @@ export class Accounts extends DurableObject<AccountsEnv> {
       if (!who || !this.devicesOf(who.id as string).length) return json({ error: 'No devices for that commander' }, 404);
       const sent = await this.notify(who.id as string, "Ship's log · test", 'If you can read this, notifications reach you, Commander.');
       return json({ sent, devices: this.devicesOf(who.id as string).length });
+    }
+    // Member numbers: who holds which (no emails), giving a character one of 002 to 100, and 001 to the founder.
+    if (request.method === 'GET' && path === '/admin/members') {
+      const rows = this.sql.exec('SELECT a.callsign, a.member, a.member_since, a.character, c.id AS card FROM accounts a LEFT JOIN cards c ON c.account = a.id WHERE a.member IS NOT NULL ORDER BY a.member').toArray();
+      return json({ members: rows.map((r) => ({ callsign: r.callsign, member: r.member, character: r.character === 1, founding: isFounding(r.member_since as number | null), card: r.card !== null })) });
+    }
+    if (request.method === 'POST' && path === '/admin/members') {
+      const b = (await request.json().catch(() => null)) as { callsign?: unknown; member?: unknown } | null;
+      const member = Number(b?.member);
+      if (member !== 1 && !isCharacterNumber(member)) return json({ error: `Characters' numbers run from ${CHARACTER_NUMBERS.from} to ${CHARACTER_NUMBERS.to} (001 is the founder's)` }, 400);
+      const key = typeof b?.callsign === 'string' ? b.callsign.trim().toLowerCase() : '';
+      const who = this.sql.exec('SELECT id FROM accounts WHERE callsign_key = ?', key).toArray()[0];
+      if (!who) return json({ error: 'No commander has that callsign' }, 404);
+      const holder = this.sql.exec('SELECT callsign FROM accounts WHERE member = ? AND id != ?', member, who.id as string).toArray()[0];
+      if (holder) return json({ error: `${String(member).padStart(3, '0')} is ${holder.callsign}’s` }, 409);
+      this.sql.exec('UPDATE accounts SET member = ?, character = ?, member_since = COALESCE(member_since, ?) WHERE id = ?', member, member === 1 ? null : 1, Date.now(), who.id as string);
+      return json({ callsign: b?.callsign, member });
     }
     // Run the companies' hourly check now (testing), and see how many have asked to be contacted.
     if (request.method === 'POST' && path === '/admin/contact/run') {

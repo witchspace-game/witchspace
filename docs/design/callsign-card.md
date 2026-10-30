@@ -61,7 +61,7 @@ As on the callsign page: your email, then the six-digit code typed on the page, 
 
 Built like a clip's card (server/src/clips.ts): the browser draws the picture, the server keeps it and serves it to link previews.
 
-- **The member number**: given when an account first takes a callsign, in order (the first account to claim is 1). `GET /me` and `POST /me/callsign` return `member: number` and `memberSince: ms`.
+- **The member number**: given when an account first takes a callsign, in order. 001 is Mark's; **002 to 100 are kept for the game's own characters** (Mark, 30 Oct 2026), so players start at 101. The maintainer gives a character its number with `POST /admin/members {callsign, member}`; `GET /admin/members` lists who holds which (no emails). `GET /me` and `POST /me/callsign` return `member: number` and `memberSince: ms`.
 - **Founding**: a callsign first claimed before 3 November 2026, 14:00 UK. Returned as `founding: true`.
 - **`PUT /me/card`** `{ career, scene, ship, angle: {x, y} }` plus the picture: a 1200×630 JPEG, at most ~200 KB, as a clip's card is checked. The ship must be one the save holds (the flown ship or the fleet), or an edition the account owns; anything else is refused. Answers `{ id, v }`.
 - **`GET /me/card`**: the choices, so the page can build it again to change it.
