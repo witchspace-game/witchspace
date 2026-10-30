@@ -339,6 +339,18 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     return `${items.length} places, market ${document.querySelector('#tab-market')?.hidden ? 'closed' : 'open'}`;
   });
   check('Upright: the places menu opens the market', /^[4-9] places, market open$/.test(places), places);
+  const card = await s.w(async () => {
+    document.querySelectorAll('.ex-pairs-list .ex-pair')[2]?.click();
+    await new Promise((r) => setTimeout(r, 400));
+    const inline = document.querySelector('.ex-inline');
+    inline?.querySelector('.ex-more-toggle')?.click();
+    await new Promise((r) => setTimeout(r, 600));
+    const chart = inline?.querySelector('.ex-chart canvas');
+    return inline ? `chart ${chart ? chart.clientWidth : 0} wide in the good's card` : 'no card';
+  });
+  check("Upright: a good's chart opens in its own card", /^chart [1-9]\d+ wide/.test(card), card);
+  const wide = await s.w(() => [...document.querySelectorAll('body *')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > innerWidth + 0.5; }).map((e) => e.id || e.className).slice(0, 3));
+  check('Upright: nothing reaches past the right edge', !wide.length, wide.join(', '));
   check('Upright raises no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }

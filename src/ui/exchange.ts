@@ -987,21 +987,24 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   }
 
   // A phone (docs/design/flight-hud-and-touch.md, "The Market on a phone"): the list
-  // first, and the good you tap opens in place beneath it with its news and the trade form; the
-  // chart, order book and trades fold away under one line. A computer keeps the full exchange.
+  // first, and the good you tap opens in place beneath it with its news and the trade form; its
+  // chart, order book and trades fold away under one line there, so you needn't scroll to the
+  // bottom of the list for them (Mark). A computer keeps the full exchange.
   const phone = window.matchMedia('(max-width: 700px) and (orientation: portrait), (max-height: 500px)'); // a phone either way up
   const inline = document.createElement('div');
   inline.className = 'ex-inline';
   const head = $('.ex-head');
   const form = $('.ex-form');
+  const more = [$('.ex-more-toggle'), $('.ex-chart'), $('.ex-book'), $('.ex-trades')];
   function placeForPhone() {
     const ex = root.querySelector('.ex')!;
     if (phone.matches) {
-      inline.append(head, form);
+      inline.append(head, form, ...more);
       const active = root.querySelector('.ex-pairs-list .ex-pair.active');
       if (active) active.after(inline);
       else $('.ex-pairs-list').append(inline); // the good on screen is folded away in "All other goods"
     } else if (inline.firstChild) {
+      $('.ex-pairs').append(more[0]);
       ex.append(...inline.childNodes);
       inline.remove();
     }
