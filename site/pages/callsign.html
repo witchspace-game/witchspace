@@ -14,27 +14,23 @@
       <figcaption class="cs-card-copy">
         <span class="cs-card-brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 18 L12 9 L20 9 L28 18 L18 23 L14 23 Z M12 9 L14 23 M20 9 L18 23" /></svg>WITCHSPACE</span>
         <span class="cs-card-cmdr">CMDR</span>
-        <b class="cs-card-name" id="cs-card-name">Your callsign</b>
+        <label class="visually-hidden" for="cs-name">Your callsign</label>
+        <input class="cs-card-name" id="cs-name" name="callsign" maxlength="24" placeholder="Your callsign" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" aria-describedby="cs-verdict" />
         <span class="cs-card-sub" id="cs-card-sub">Explorer · Cobra Mk III</span>
         <span class="cs-card-number" id="cs-card-number" hidden></span>
       </figcaption>
       <span class="cs-card-mark" id="cs-card-mark">Founding</span>
       <span class="cs-card-locked" id="cs-card-locked" hidden>Locked</span>
     </figure>
-    <p class="cs-hint" id="cs-hint" hidden>Drag her round</p>
+    <p class="cs-verdict" id="cs-verdict" aria-live="polite"></p>
+    <p class="cs-try" id="cs-try" hidden></p>
+    <p class="cs-hint" id="cs-hint" hidden>Type your callsign on the card, and drag her round</p>
     <div class="cs-earn-note" id="cs-earn-note" hidden><p id="cs-earn-how"></p><button type="button" class="link-button" id="cs-earn-back">Back to my card</button></div>
   </div>
 
   <div class="cs-build">
-    <form class="cs-name-form" id="cs-name-form" autocomplete="off">
-      <label class="visually-hidden" for="cs-name">Your callsign</label>
-      <div class="cs-box"><span class="cs-cmdr" aria-hidden="true">CMDR</span><input id="cs-name" name="callsign" maxlength="24" placeholder="Your callsign" autocapitalize="words" spellcheck="false" enterkeyhint="done" aria-describedby="cs-verdict" /></div>
-      <p class="cs-verdict" id="cs-verdict" aria-live="polite"></p>
-      <p class="cs-try" id="cs-try" hidden></p>
-    </form>
-
+    <div class="cs-scene-list" id="cs-scenes" aria-label="Behind her"></div>
     <div class="cs-pick"><span class="cs-pick-label">What you do</span><div class="cs-tabs" id="cs-careers"></div></div>
-    <div class="cs-pick"><span class="cs-pick-label">Behind her</span><div class="cs-scene-list" id="cs-scenes"></div></div>
     <div class="cs-pick" id="cs-ships-row" hidden><span class="cs-pick-label">Your ship</span><div class="cs-tabs" id="cs-ships"></div></div>
 
     <div class="cs-actions">

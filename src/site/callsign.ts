@@ -66,6 +66,7 @@ let founding = Date.now() < LAUNCH;
 let cardUrl: string | null = null;
 
 const pad = (n: number) => String(n).padStart(3, '0');
+const valid = (n: string) => n.replace(/[^\p{L}\p{N}]/gu, '').length >= 2;
 const store = {
   get: (k: string) => {
     try {
@@ -134,9 +135,9 @@ const markNow = () => preview?.mark ?? (elite ? 'Legend' : hull.edition ? (editi
 const mine = (n: string) => Boolean(n) && acct.currentAccount()?.callsign?.toLowerCase() === n.toLowerCase();
 
 function drawCard() {
-  const n = $('cs-card-name');
-  n.textContent = shown();
-  n.classList.toggle('long', shown().length > 14);
+  // The name is typed on the card itself: only its size and its underline change here.
+  input.classList.toggle('long', name.length > 14);
+  input.classList.toggle('set', valid(name));
   $('cs-card-sub').textContent = `${career.noun} · ${onCard().label}`;
   const num = $('cs-card-number');
   num.hidden = !member || Boolean(preview);
@@ -303,7 +304,6 @@ function say(text: string, kind = '') {
 }
 
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const valid = (n: string) => n.replace(/[^\p{L}\p{N}]/gu, '').length >= 2;
 /** A card can be shared with a name that's free or yours (or when the check can't answer), never someone else's. */
 const shareable = () => valid(name) && (check === 'unknown' || (check !== null && (check.verdict === 'free' || check.verdict === 'yours')));
 
@@ -380,12 +380,14 @@ input.addEventListener('input', () => {
   clearTimeout(timer);
   timer = window.setTimeout(() => void judge(), 400);
 });
-$('cs-name-form').addEventListener('submit', (e) => {
+input.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
   e.preventDefault();
   clearTimeout(timer);
   input.blur();
   void judge();
 });
+input.addEventListener('focus', () => ($('cs-hint').hidden = true));
 
 // --- Making it yours: an email, a link back here --------------------------------------------------------
 
@@ -547,7 +549,7 @@ async function picture(): Promise<File | null> {
 
   const css = getComputedStyle(document.body);
   const body = css.fontFamily;
-  const head = getComputedStyle($('cs-card-name')).fontFamily;
+  const head = getComputedStyle(document.querySelector<HTMLElement>('.cs-card-brand')!).fontFamily;
   const accent = css.getPropertyValue('--accent').trim() || '#3dffb0';
   const x = 72;
   g.textBaseline = 'alphabetic';
@@ -589,7 +591,7 @@ async function picture(): Promise<File | null> {
   g.font = `400 20px ${body}`;
   g.fillText(`${career.noun} · ${onCard().label}`, x, y);
   y -= 34;
-  const callsignFont = getComputedStyle($('cs-card-name')).fontFamily;
+  const callsignFont = getComputedStyle(input).fontFamily;
   let size = name.length > 14 ? 53 : 67;
   g.font = `600 ${size}px ${callsignFont}`;
   g.letterSpacing = `${Math.round(size * 0.06)}px`;
