@@ -133,6 +133,24 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     return `${before} → ${held()} t`;
   });
   check('Modern: the market sells you something', /^0 → [1-9]/.test(bought), bought);
+  const refund = await s.w(async () => {
+    const w = window.witchspace;
+    document.querySelector('.tabs [data-tab="station"]')?.click();
+    await new Promise((r) => setTimeout(r, 400));
+    const find = (re) => [...document.querySelectorAll('#tab-station button')].find((b) => re.test(b.textContent ?? '') && !b.disabled);
+    const start = w.commander.credits;
+    const buy = find(/^\s*Buy 1 · \d+ Cr/);
+    if (!buy) return 'no missile to buy';
+    buy.click();
+    await new Promise((r) => setTimeout(r, 300));
+    const paid = start - w.commander.credits;
+    const sell = find(/^\s*Sell 1/);
+    if (!sell) return `paid ${paid}, nothing to sell`;
+    sell.click();
+    await new Promise((r) => setTimeout(r, 300));
+    return `paid ${paid}, back ${w.commander.credits - (start - paid)}`;
+  });
+  check('Modern: kit bought this visit sells back at full price', /^paid (\d+), back \1$/.test(refund) && !/paid 0/.test(refund), refund);
   check('Modern: docked screens raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
 
   // --- Modern: flight, traffic and hailing -----------------------------------------------
