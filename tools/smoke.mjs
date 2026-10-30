@@ -261,6 +261,15 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     gone = await s.w(() => window.witchspace.missiles.length === 0);
   }
   check('Modern: the missile reaches its target', gone);
+  const adrift = await s.w(async () => {
+    const w = window.witchspace;
+    const before = w.drifters.length;
+    const V = w.player.obj.position.constructor;
+    w.spillCargo(w.player.obj.position.clone().addScaledVector(w.player.forward(), 300), new V(), { food: 2 });
+    await new Promise((r) => setTimeout(r, 1500)); // they tumble a while
+    return w.drifters.length - before;
+  });
+  check('Modern: a wreck spills cargo that drifts', adrift > 0, `${adrift} canisters`);
   check('Modern: missiles raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }

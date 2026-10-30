@@ -17,7 +17,6 @@ import {
   hasEquipment,
   isWorking,
   loadCommander,
-  markStolen,
   REPAIR_FRACTION,
   type Mount,
   MOUNTS,
@@ -74,15 +73,13 @@ import { EDITIONS } from './content/editions';
 import { deliveriesArrived } from './game/shipyard';
 import { Beams, PLAYER_LASERS, POLICE_LASER, rayHit, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
-import { ledgerOf, record as ledgerRecord } from './game/ledger';
+import { ledgerOf } from './game/ledger';
 import { filledLine, isRun, newSince, profitOf, runLine, runOf, seenNow } from './game/tradeMoments';
-import { SCOOP_SPEED } from './game/controls';
 import { ATMOSPHERE_SCALE, buildPlanet, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
 import { addStanding, afterJump, board, BOARD_SLOT, cannotReserve, cargoName, collect, COLLECT_JUMPS, deliver, destinationOf, forgive, loseContracts, reserve, reservedTonnes, wyWorks, type Contract } from './game/contracts';
-import { ADRIFT_HOLD, caseLost, checkMessages, collectHeld, STATION_CREW_RANGE, takenByPirates, expireCases, recoverCase, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
+import { checkMessages, collectHeld, STATION_CREW_RANGE, takenByPirates, setAdrift, thanksFrom } from './game/assignments';
 import { COMPANIES, type CompanyId } from './game/companies';
-import { applyCompanyBand } from './render/livery';
 import { voyageHail } from './game/traffic';
 import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, salvageCargo, SURVEY, trailPoisOf, worldOf, type Poi, type SurveyData } from './game/explore';
 import { buildYard } from './render/yard';
@@ -99,8 +96,8 @@ import { countDevice, countNewCommander } from './net/stats';
 import { claimFirsts, firstsIn, loadFirsts } from './net/firsts';
 import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
-import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
-import { freeTonnes, marketState, quotes } from './economy/trade';
+import { commodityById } from './economy/commodities';
+import { marketState, quotes } from './economy/trade';
 import { loseDelivery } from './economy/market';
 import { activeEvent, eventsAt, EVENT_KINDS, setCausedEvents } from './economy/events';
 import { inspectionChance } from './economy/legality';
@@ -133,10 +130,12 @@ import { initSaloon } from './ui/saloon';
 import { initMarket, renderMarket, tradeContext } from './ui/market';
 import { initStation, renderDocked, resetBoughtHere, showFittings } from './ui/station';
 import { setDockTab, updateDockHead } from './ui/places';
-import { BOUNTIES, FALCON_DISABLES, MAX_PIRATES, PIRATE_CHANCE, TRADERS_BY_GOVERNMENT, TRADE_GOODS, addNpc, alertSecurity, deliveries, escortOf, fightOn, fleeing, flyForCompany, forgetDeliveries, initTraffic, legs, markLaunched, onSlotAxis, pacing, pirateLost, railsOf, randomCargo, removeNpc, resetTraffic, ride, spawnFalcon, spawnPirates, spawnTrader, startEncounters, updateIdentities, updateLegends, updateTraffic, voyageOf } from './flight/traffic';
+import { BOUNTIES, FALCON_DISABLES, MAX_PIRATES, PIRATE_CHANCE, TRADERS_BY_GOVERNMENT, addNpc, alertSecurity, deliveries, escortOf, fightOn, fleeing, flyForCompany, forgetDeliveries, initTraffic, legs, markLaunched, onSlotAxis, pacing, pirateLost, railsOf, randomCargo, removeNpc, resetTraffic, ride, spawnFalcon, spawnPirates, spawnTrader, startEncounters, updateIdentities, updateLegends, updateTraffic, voyageOf } from './flight/traffic';
 import { EVADE_LASERS, evading, wispShot } from './flight/wisp';
 import { bastionDestroyed, carrier, clearMarshalTimer, disposeCarrier, initMarshals, marshalsStandDown, riftInterference, scheduleMarshals, summonCarrier, updateMarshals } from './flight/marshals';
 import { energyBomb, explodeMissile, explodeNetMissile, fireMissile, initMissiles, launchMissile, maybeFireNpcMissile, netMissiles, playerEcm, sightedNpc, startNetMissile, toggleLock, updateMissileButton, updateMissiles, updateSeekerBox } from './flight/missiles';
+import { Drifter, checkAdrift, drifters, initAdrift, restoreAdrift, spillCargo, spillSpecial, updateCaseRaid, updateDrifters, updateSun } from './flight/adrift';
+initAdrift({ damagePlayer });
 initMissiles({ launchSound, damagePlayer, destroyNpc, playerHitNpc, laserDirection, hitFeedback, npcIdentified: (npc) => npcIdentified(npc), breakSurrender, die });
 initMarshals({ damagePlayer, spillCargo, die, keepMoment });
 initTraffic({ rateKill, reportedBy, explodeMissile, spillCargo, rollAssistApplies, npcIdentified: (npc) => npcIdentified(npc), radio, keepMoment, keepCombat });
@@ -512,8 +511,6 @@ function setFlightLog(open: boolean) {
 
 // The station sits at the origin with its slot facing the planet, as in the
 // original. Everything else about the system is rebuilt on arrival.
-let atmosphere = flight.planetRadius * ATMOSPHERE_SCALE;
-let planetGM = 0.05 * 14000 ** 2; // debris pull; see updateDrifters
 let planet: THREE.Group | null = null;
 
 
@@ -611,9 +608,9 @@ function buildSystemScene(sys: StarSystem) {
   track.clear(); // a new system: the old fight is over
   if (planet) disposePlanet(planet);
   flight.planetRadius = sys.radius * 1.2;
-  atmosphere = flight.planetRadius * ATMOSPHERE_SCALE;
+  flight.atmosphere = flight.planetRadius * ATMOSPHERE_SCALE;
   planetPos.set(0, 0, flight.planetRadius + 9000);
-  planetGM = 0.05 * planetPos.z ** 2;
+  flight.planetGM = 0.05 * planetPos.z ** 2;
   planet = buildPlanet(flight.planetRadius, planetColour(sys));
   planet.position.copy(planetPos);
   planet.rotation.set(((sys.extraSeed[0] / 255) - 0.5) * 0.8, sys.extraSeed[1] / 40, ((sys.extraSeed[2] / 255) - 0.5) * 0.8);
@@ -1893,327 +1890,6 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
 }
 
 
-/**
- * Things adrift: cargo canisters spilled from wrecks. They tumble near where
- * they were lost for a while, then the planet slowly pulls them in and they
- * burn up in the atmosphere. That keeps space tidy without anything vanishing
- * out of thin air.
- */
-interface Drifter {
-  model: ShipModel;
-  velocity: THREE.Vector3;
-  axis: THREE.Vector3;
-  spinRate: number;
-  /** Seconds spent burning in the atmosphere; 0 until it gets there. */
-  burn: number;
-  /** What's inside, for whoever scoops it up. */
-  contents: { id: string; qty: number } | null;
-  /** From a clean ship you destroyed: whoever scoops it is holding stolen goods. */
-  stolen?: boolean;
-  /** A company's special cargo that survived its ship: it holds station, beacons, and answers your transponder. */
-  special?: AdriftCase;
-}
-const drifters: Drifter[] = [];
-const RECOVER_RANGE = 60; // metres: close enough for a lost case to answer your transponder
-const MAX_DRIFTERS = 40;
-// Pull at the station's distance is about 0.05 m/s², so debris lingers for
-// several minutes (a window for scavengers) before falling in.
-// Simulated: canisters spilled near the station burn up after ~9 minutes
-// (2.5–13). The pull scales with each system's station-to-planet distance.
-const DRIFT_DRAG = 0.05;
-const BURN_TIME = 2.5; // seconds from first glow to break-up
-const LOST_IN_SPACE = 40000; // drifters further than this from the planet are removed
-
-/** Pack a cargo manifest into canisters: one per tonne, precious goods together. */
-function packCanisters(cargo: Record<string, number>): { id: string; qty: number }[] {
-  const out: { id: string; qty: number }[] = [];
-  for (const [id, qty] of Object.entries(cargo)) {
-    if (qty <= 0) continue;
-    const perCanister = UNITS_PER_TONNE[commodityById(id)?.unit ?? 't'];
-    for (let left = qty; left > 0; left -= perCanister) out.push({ id, qty: Math.min(perCanister, left) });
-  }
-  return out;
-}
-
-function spillCargo(at: THREE.Vector3, velocity: THREE.Vector3, cargo: Record<string, number> | number, stolen = false) {
-  const def = shipById('cargo-canister');
-  if (!def) return;
-  const loads = typeof cargo === 'number' ? Array.from({ length: cargo }, () => null) : packCanisters(cargo);
-  // Don't fill the sky: at most a dozen canisters from one wreck.
-  for (const contents of loads.slice(0, 12)) {
-    const model = buildShip(def);
-    model.root.position.copy(at).add(new THREE.Vector3().randomDirection().multiplyScalar(10));
-    model.root.quaternion.random();
-    space.scene.add(model.root);
-    drifters.push({
-      model,
-      velocity: velocity.clone().multiplyScalar(0.4).add(new THREE.Vector3().randomDirection().multiplyScalar(8 + Math.random() * 18)),
-      axis: new THREE.Vector3().randomDirection(),
-      spinRate: 0.3 + Math.random() * 1.2,
-      burn: 0,
-      contents,
-      stolen,
-    });
-  }
-  while (drifters.length > MAX_DRIFTERS) evictDrifter();
-}
-
-/** Make room, oldest first, but never a company's lost case. */
-function evictDrifter() {
-  const i = drifters.findIndex((d) => !d.special);
-  if (i < 0) return;
-  disposeShip(drifters[i].model);
-  drifters.splice(i, 1);
-}
-
-/** A company's lost case, in its colours, holding station where it was lost. */
-function spillSpecial(k: AdriftCase) {
-  const def = shipById('cargo-canister');
-  if (!def || drifters.some((d) => d.special?.contract === k.contract)) return;
-  const model = buildShip(def);
-  applyCompanyBand(model, COMPANIES[k.company].colour);
-  model.root.position.set(...k.position);
-  model.root.quaternion.random();
-  space.scene.add(model.root);
-  drifters.push({ model, velocity: new THREE.Vector3(), axis: new THREE.Vector3().randomDirection(), spinRate: 0.4, burn: 0, contents: null, special: k });
-  while (drifters.length > MAX_DRIFTERS) evictDrifter();
-}
-
-// --- Pirates after a lost case -----------------------------------------------------
-// A beaconing case is an advert. A while after you arrive, pirates come for it;
-// get there first and it's yours. If they take it and get away, they want paying.
-
-const RAID_DELAY = 75; // seconds in the system before the pirates turn up
-const PIRATES_ESCAPE = 22000; // metres from the station: a pirate this far out with your case has got away
-let raidClock = 0;
-const raided = new Set<string>();
-
-function updateCaseRaid(dt: number) {
-  if (!game.commander || game.state !== 'flying') return;
-  const c = cmdr();
-  // The pirates arrive.
-  raidClock += dt;
-  for (const d of drifters) {
-    if (!d.special || raided.has(d.special.contract) || raidClock < RAID_DELAY) continue;
-    raided.add(d.special.contract);
-    const at = d.model.root.position;
-    const from = at.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(6000));
-    for (let i = 0; i < 2; i++) {
-      const def = i === 0 ? 'mamba' : 'sidewinder';
-      const npc = addNpc(def, 'pirate', from.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(250)), at);
-      npc.errand = true;
-      npc.destination = at.clone();
-      npc.obj.lookAt(at);
-      npc.ship.speed = npc.ship.maxSpeed * 0.6;
-      npc.bounty = BOUNTIES[def] ?? 40;
-    }
-    flash(`Pirates inbound for the ${d.special.label}`, 3);
-  }
-  // A pirate reaches the case and takes it aboard, then runs for deep space.
-  for (const npc of npcs) {
-    if (!npc.errand || npc.carrying) continue;
-    const d = drifters.find((x) => x.special && x.model.root.position.distanceTo(npc.obj.position) < 70);
-    if (!d) continue;
-    npc.carrying = d.special!.contract;
-    npc.destination = station.root.position.clone().addScaledVector(npc.obj.position.clone().sub(station.root.position).normalize(), PIRATES_ESCAPE + 2000);
-    disposeShip(d.model);
-    drifters.splice(drifters.indexOf(d), 1);
-    flash(`Pirates have taken the ${d.special!.label}: stop them before they get away`, 3.5);
-  }
-  // One that gets away holds it for ransom.
-  for (const npc of [...npcs]) {
-    if (!npc.carrying || npc.obj.position.distanceTo(station.root.position) < PIRATES_ESCAPE) continue;
-    const note = takenByPirates(c, npc.carrying, Date.now());
-    saveCommander(c);
-    removeNpc(npc);
-    if (note) flash(`${note} · see Contracts`, 4);
-  }
-}
-
-/** Back in a system where you lost a case: it's still there. */
-function restoreAdrift() {
-  raidClock = 0;
-  raided.clear();
-  if (!game.commander) return;
-  const here = currentSystem();
-  for (const k of cmdr().adrift ?? []) if (!k.held && !k.fate && k.galaxy === here.galaxy && k.system === here.index) spillSpecial(k);
-}
-
-/** Cases whose time ran out elsewhere: tell the commander. */
-function checkAdrift() {
-  if (!game.commander) return [];
-  const notes = expireCases(cmdr(), Date.now(), (id) => drifters.some((d) => d.special?.contract === id));
-  if (notes.length) saveCommander(cmdr());
-  return notes;
-}
-
-// --- Fuel scoops: canisters and sun-skimming ----------------------------------------
-
-const SCOOP_RANGE = 45; // metres from the ship's centre
-const HEAT_RANGE = SUN_RADIUS * 2.5; // above the surface: the cabin starts to warm
-const SKIM_RANGE = SUN_RADIUS * 0.8; // above the surface: close enough to scoop fuel
-const SKIM_RATE = 0.12; // light years per second at full speed
-let cabinTemp = 0; // 0..100+, over 100 the hull starts to burn
-let lastHeatWarning = 0;
-let skimming = false;
-
-/** A lost case answers its own contract's transponder: no scoops needed, just come in slow. */
-function recoverCaseNear(d: Drifter): boolean {
-  if (!d.special || d.model.root.position.distanceTo(player.obj.position) > RECOVER_RANGE) return false;
-  const c = cmdr();
-  const a = c.contracts?.find((x) => x.id === d.special!.contract);
-  if (!a) return false;
-  if (player.speed > player.maxSpeed * SCOOP_SPEED) {
-    if (flight.elapsed - lastScoopWarning > 3) {
-      lastScoopWarning = flight.elapsed;
-      flash(`${a.label ?? 'Case'} · slow to under ${Math.round(SCOOP_SPEED * 100)}% speed to take it aboard`, 2);
-    }
-    return false;
-  }
-  if (freeTonnes(tradeContext()) < a.qty - 1e-9) {
-    if (flight.elapsed - lastHoldFullWarning > 3) {
-      lastHoldFullWarning = flight.elapsed;
-      flash(`No room for the ${a.label ?? 'case'}: ${a.qty} t needed`, 2);
-    }
-    return false;
-  }
-  flash(recoverCase(c, a.id), 3);
-  saveCommander(c);
-  sfx.beep();
-  return true;
-}
-
-/** Scoop a canister if it's close, we're slow and the scoops work. Returns true if it went in the hold. */
-function tryScoop(d: Drifter): boolean {
-  if (d.model.root.position.distanceTo(player.obj.position) > SCOOP_RANGE) return false;
-  const c = cmdr();
-  if (!isWorking(c, 'fuel-scoops') || player.speed > player.maxSpeed * SCOOP_SPEED) {
-    // Too fast, or no scoops: it bounces off, and we say why.
-    d.velocity.copy(d.model.root.position).sub(player.obj.position).setLength(25).addScaledVector(player.forward(), player.speed);
-    if (flight.elapsed - lastScoopWarning > 3) {
-      lastScoopWarning = flight.elapsed;
-      sfx.scrape();
-      if (!hasEquipment(c, 'fuel-scoops')) flash('Canister bounced off · no fuel scoops fitted', 2);
-      else if (!isWorking(c, 'fuel-scoops')) flash('Canister bounced off · fuel scoops damaged', 2);
-      else flash(`Too fast to scoop · slow to under ${Math.round(SCOOP_SPEED * 100)}% speed`, 2);
-    }
-    return false;
-  }
-  // Unlabelled canisters (debris from police ships) hold whatever was going spare.
-  const contents = d.contents ?? { id: TRADE_GOODS[Math.floor(Math.random() * TRADE_GOODS.length)], qty: 1 };
-  const commodity = commodityById(contents.id);
-  const tonnes = contents.qty / UNITS_PER_TONNE[commodity?.unit ?? 't'];
-  if (freeTonnes(tradeContext()) < tonnes - 1e-9) {
-    if (flight.elapsed - lastHoldFullWarning > 3) {
-      lastHoldFullWarning = flight.elapsed;
-      flash('Cargo hold full', 1.5);
-    }
-    return false;
-  }
-  c.cargo[contents.id] = (c.cargo[contents.id] ?? 0) + contents.qty;
-  { const here = currentSystem(); ledgerRecord(c, { k: 'scoop', d: 0, g: contents.id, q: contents.qty, s: [here.galaxy, here.index] }); }
-  if (d.stolen) markStolen(c, contents.id, contents.qty);
-  saveCommander(c);
-  sfx.beep();
-  const illegal = commodity?.legality === 'illegal' ? ' · illegal goods' : d.stolen ? ' · stolen goods' : '';
-  flash(`Scooped ${contents.qty}${commodity?.unit === 't' ? ' t' : ' ' + commodity?.unit} ${commodity?.name ?? contents.id}${illegal}`, 2);
-  return true;
-}
-let lastHoldFullWarning = 0;
-let lastScoopWarning = -Infinity;
-
-/** Heat from the sun; with scoops, fuel from skimming it. Returns true if the heat destroyed the ship. */
-function updateSun(dt: number): boolean {
-  const altitude = player.obj.position.distanceTo(SUN_POS) - SUN_RADIUS;
-  if (altitude < 0) return true; // flew into the sun
-  const exposure = THREE.MathUtils.clamp(1 - altitude / HEAT_RANGE, 0, 1);
-  // Temperature heads towards a level set by how close you are, and cools off away from the star.
-  const targetTemp = exposure ** 1.6 * 140;
-  cabinTemp += (targetTemp - cabinTemp) * Math.min(1, dt * (targetTemp > cabinTemp ? 0.35 : 0.5));
-  const gauge = $('#g-temp');
-  gauge.style.setProperty('--v', String(Math.min(1, cabinTemp / 100)));
-  gauge.classList.toggle('hot', cabinTemp > 75);
-  if (cabinTemp > 80 && flight.elapsed - lastHeatWarning > 4) {
-    lastHeatWarning = flight.elapsed;
-    sfx.beep();
-    flash(cabinTemp > 100 ? 'Cabin temperature critical · hull burning' : 'Cabin temperature high', 1.5);
-  }
-  if (cabinTemp > 100 && damagePlayer((cabinTemp - 100) * 0.6 * dt)) return true;
-
-  const c = cmdr();
-  const canSkim = altitude < SKIM_RANGE && isWorking(c, 'fuel-scoops') && player.speed > player.maxSpeed * 0.2;
-  if (canSkim && c.fuel < fuelCapacity(c)) {
-    if (!skimming) flash('Fuel scooping', 1.5);
-    c.fuel = Math.min(fuelCapacity(c), c.fuel + SKIM_RATE * (player.speed / player.maxSpeed) * dt);
-    if (c.fuel >= fuelCapacity(c)) {
-      c.fuel = fuelCapacity(c);
-      flash('Fuel tanks full', 1.5);
-    }
-  } else if (skimming) {
-    c.fuel = Math.round(c.fuel * 10) / 10;
-    saveCommander(c);
-  }
-  skimming = canSkim && c.fuel < fuelCapacity(c);
-  return false;
-}
-
-function updateDrifters(dt: number) {
-  const toPlanet = new THREE.Vector3();
-  for (let i = drifters.length - 1; i >= 0; i--) {
-    const d = drifters[i];
-    const root = d.model.root;
-    toPlanet.copy(planetPos).sub(root.position);
-    const r = toPlanet.length();
-    toPlanet.normalize();
-    if (d.special && game.state === 'flying' && recoverCaseNear(d)) {
-      disposeShip(d.model);
-      drifters.splice(i, 1);
-      continue;
-    }
-    if (d.special && Date.now() - d.special.lost < ADRIFT_HOLD) {
-      // Holding station on its own thrusters until containment runs down.
-      d.velocity.multiplyScalar(Math.exp(-dt));
-      root.position.addScaledVector(d.velocity, dt);
-      root.rotateOnAxis(d.axis, d.spinRate * dt);
-      continue;
-    }
-    d.velocity.addScaledVector(toPlanet, (planetGM / (r * r)) * dt);
-    // Sideways and outward drift slowly dies away; the fall itself doesn't.
-    // Without this, wrecks at speed would fling canisters off into deep space.
-    const falling = Math.max(0, d.velocity.dot(toPlanet));
-    d.velocity.addScaledVector(toPlanet, -falling).multiplyScalar(Math.exp(-DRIFT_DRAG * dt)).addScaledVector(toPlanet, falling);
-
-    if (r < atmosphere) {
-      // Re-entry: air drag, faster tumbling, and the hull glows towards white-hot.
-      d.burn += dt;
-      d.velocity.multiplyScalar(Math.exp(-dt * 0.3));
-      d.spinRate += dt * 3;
-      heatShip(d.model, Math.min(1, d.burn / BURN_TIME));
-    }
-    root.position.addScaledVector(d.velocity, dt);
-    root.rotateOnAxis(d.axis, d.spinRate * dt);
-
-    if (game.state === 'flying' && !d.special && tryScoop(d)) {
-      disposeShip(d.model);
-      drifters.splice(i, 1);
-      continue;
-    }
-
-    if (d.burn >= BURN_TIME || r < flight.planetRadius) {
-      const flare = new Explosion(d.model.def, root, d.velocity);
-      space.scene.add(flare.group);
-      explosions.push(flare);
-    }
-    if (d.burn >= BURN_TIME || r < flight.planetRadius || (r > LOST_IN_SPACE && !d.special)) {
-      if (d.special && game.commander) {
-        flash(caseLost(cmdr(), d.special.contract), 4);
-        saveCommander(cmdr());
-      }
-      disposeShip(d.model);
-      drifters.splice(i, 1);
-    }
-  }
-}
 
 
 const FLIP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
@@ -2803,11 +2479,11 @@ async function launch() {
   keepTrip();
   aim.reset(player);
   player.speed = player.maxSpeed * 0.3;
-  cabinTemp = 0;
+  flight.cabinTemp = 0;
   flight.locked = null;
   flight.seeker = null;
   scheduleMarshals(); // still wanted? they'll be back
-  raidClock = 0;
+  flight.raidClock = 0;
   setView('front');
   clearanceAnnounced = true; // you've just left; no need to tell you
   setState('flying');

@@ -13,7 +13,7 @@ import type { Explosion } from './render/explosion';
 import type { NpcRole, NpcShip } from './game/npc';
 import { PlayerShip } from './game/playerShip';
 import { Station } from './game/station';
-import { buildSun } from './render/bodies';
+import { ATMOSPHERE_SCALE, buildSun } from './render/bodies';
 import { SpaceDust } from './render/dust';
 import { makeSpace } from './render/renderer';
 import type { YardScene } from './render/yard';
@@ -64,6 +64,10 @@ export const flight = {
   /** Rebuilt on arrival. */
   planetRadius: 5000,
   autopilot: false,
+  /** The top of the planet's atmosphere, in metres from its centre. */
+  atmosphere: 5000 * ATMOSPHERE_SCALE,
+  /** The planet's pull on debris; see updateDrifters. */
+  planetGM: 0.05 * 14000 ** 2,
   sceneBodies: [] as SceneBody[],
   /** A Wexley-Yorozu yard by one of the moons (Modern), if there's one here now. */
   yardScene: null as YardScene | null,
@@ -81,6 +85,10 @@ export const flight = {
   seeker: null as { on: SeekTarget | null; progress: number; beep: number } | null,
   /** Holding still for the police: seconds so far. */
   surrenderTimer: null as number | null,
+  /** 0..100+, over 100 the hull starts to burn. */
+  cabinTemp: 0,
+  /** Seconds in the system, for the pirates after a lost case. */
+  raidClock: 0,
   /** A Viper detailed to fly with you, and until when. */
   escort: null as { npc: NpcShip; until: number } | null,
 };
