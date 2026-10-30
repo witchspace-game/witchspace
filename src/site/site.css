@@ -1633,7 +1633,7 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .cs-ship { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: pan-y; }
 .cs-ship.held:active { cursor: grabbing; }
 .cs-card-glow { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(3, 5, 10, 0.88) 0%, rgba(3, 5, 10, 0.5) 40%, rgba(3, 5, 10, 0) 64%); }
-.cs-card-copy { position: absolute; left: 6%; top: 10%; bottom: 10%; width: 60%; display: flex; flex-direction: column; pointer-events: none; }
+.cs-card-copy { position: absolute; left: 6%; top: 10%; bottom: 15.5%; width: 60%; display: flex; flex-direction: column; pointer-events: none; }
 .cs-card-brand { display: flex; align-items: center; gap: calc(var(--u, 7px) * 1.1); font: 700 max(8px, calc(var(--u, 7px) * 1.6)) var(--display); letter-spacing: 0.34em; color: rgba(238, 243, 250, 0.9); }
 .cs-card-brand svg { width: max(12px, calc(var(--u, 7px) * 2.6)); height: max(12px, calc(var(--u, 7px) * 2.6)); fill: none; stroke: var(--accent); stroke-width: 2.2; stroke-linejoin: round; filter: drop-shadow(0 0 5px var(--accent)); }
 .cs-card-cmdr { margin-top: auto; color: rgba(185, 198, 216, 0.75); font: 600 max(8px, calc(var(--u, 7px) * 1.25)) var(--font); letter-spacing: 0.32em; }
@@ -1652,7 +1652,9 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .cs-card-name.set:not(:focus) { border-bottom-color: transparent; }
 .cs-card-name.long { font-size: max(20px, calc(var(--u, 7px) * 4.4)); }
 .cs-card-sub { color: rgba(205, 214, 228, 0.82); font-size: max(11px, calc(var(--u, 7px) * 1.7)); }
-.cs-card-number { margin-top: calc(var(--u, 7px) * 1.6); color: rgba(205, 214, 228, 0.6); font: 500 max(9px, calc(var(--u, 7px) * 1.4)) var(--display); letter-spacing: 0.3em; }
+/* The number at the foot on the right, facing the finish's word: X lays its title over the bottom left of a
+   shared card, and the number mustn't sit under it (the left-hand words stand clear of it too). */
+.cs-card-number { position: absolute; right: 6%; bottom: 10%; color: rgba(205, 214, 228, 0.6); font: 500 max(9px, calc(var(--u, 7px) * 1.4)) var(--display); letter-spacing: 0.3em; }
 .cs-card-mark { position: absolute; top: 10%; right: 6%; color: var(--mark, #c9d3e0); font: 600 max(8px, calc(var(--u, 7px) * 1.25)) var(--font); letter-spacing: 0.32em; text-transform: uppercase; pointer-events: none; }
 .cs-card-locked { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); padding: calc(var(--u, 7px) * 0.5) calc(var(--u, 7px) * 1.8); border-radius: 999px; background: rgba(5, 7, 13, 0.7); border: 1px solid rgba(255, 255, 255, 0.25); color: #fff; font: 600 max(9px, calc(var(--u, 7px) * 1.3)) var(--font); letter-spacing: 0.3em; text-transform: uppercase; pointer-events: none; }
 .cs-hint { margin: 10px 0 0; text-align: center; color: var(--muted); font-size: 12px; letter-spacing: 0.06em; }
