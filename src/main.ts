@@ -4,7 +4,7 @@ import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
 import { cycleSoundMode, danube, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
 import { boomAt, EngineSound, grandShot, precisionLaunch, rocketAt, setListener, ShipVoice, tailWarning, zapAt, type EngineVoice, type LaserSound } from './audio/spatial';
 import { withLineUp } from './content/moduleFiles';
-import { shipById, ships } from './content/ships';
+import { shipById } from './content/ships';
 import type { ShipDef } from './content/types';
 import {
   cargoCapacity,
@@ -14,13 +14,13 @@ import {
   EQUIPMENT,
   FUEL_PRICE,
   fuelCapacity,
-  MISSILE_PRICE,
   hasEquipment,
   isWorking,
   loadCommander,
   markStolen,
   REPAIR_FRACTION,
   type Mount,
+  MOUNTS,
   rollEquipmentDamage,
   rollFragileDamage,
   newCommander,
@@ -28,24 +28,19 @@ import {
   removeEquipment,
   saveCommander,
   type Commander,
-  type EquipmentId,
   hullOf,
-  type ShipOrder,
   type Difficulty,
 } from './game/commander';
-import { DockingComputer } from './game/dockingComputer';
-import { fitCompartment, weighsShips, WEIGHBRIDGE_CHANCE } from './game/compartment';
+import { weighsShips, WEIGHBRIDGE_CHANCE } from './game/compartment';
 import {
   carriesContraband,
   checksClearance,
   coolRecords,
-  fineDue,
   hasLaw,
   hidingSomething,
   illegalEquipment,
   legalStatus,
   recordCrime,
-  redeemImpound,
   scansCargo,
   settle,
   systemKey,
@@ -77,57 +72,43 @@ import { cleanName } from '../server/src/protocol';
 import { ARRIVAL, ARRIVAL_WARNINGS, closingOpenness, EMERGE_SPEED, FIRST_LAUNCH, LAUNCH_GAP, MAX_OUT, marshalsDelay, RIFT_DISTANCE, RIFT_RADIUS, riftOpenness, WARNING, WING } from './game/marshals';
 import { think } from './game/ai';
 import { Missile, MISSILE } from './game/missile';
-import { combatRating, killPoints, pointsNote, rankInsignia, ratingProgress, rightOn, type Foe } from './game/rating';
-import { mountExchange } from './ui/exchange';
-import { buildFittings, disposeFittings, type Fittings, type Loadout } from './render/fittings';
-import { EDITIONS, editionById, editionNo, type Edition } from './content/editions';
-import { papersFor } from './game/papers';
-import { showHandover } from './ui/handover';
-import { accountSpec, editionCounts, forgetAccountSpec, heldEditions, signedOver } from './net/shipyard';
-import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } from './game/spec';
-import { backing, BTC_REF, companyKey, companyValue, COLLATERAL, crisis, currencyOf, fairRate, feeYield, isCompanyKey, mintedToday, moneyNews, positionNow, reserveShare, OFFICIAL_LIMIT, POLICY_TEXT, POOL_FEE, poolRate, quoteBuy, quoteSell, stableValue, supplyOf, walletHome, walletKey } from './economy/currencies';
-import { addLiquidity, buyLocal, cashStable, mintCompany, officialLeft, poolHere, redeemCompany, sellLocal, valueOf, walletOf, withdrawLiquidity } from './economy/money';
-import { enablePush, needsHomeScreen } from './net/notify';
-import { KIT_GROUPS, KIT_NAMES, kitGroup, type KitGroup } from './game/kit';
-import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, giftTradeIn, tradeIn, deliverShip, deliveriesArrived, deliveryQuote, swapShip, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from './game/shipyard';
+import { combatRating, killPoints, pointsNote, rankInsignia, rightOn, type Foe } from './game/rating';
+import { EDITIONS } from './content/editions';
+import { deliveriesArrived } from './game/shipyard';
 import { Beams, FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, PLAYER_LASERS, POLICE_LASER, rayHit, TRADER_LASER, type LaserId, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
-import { MAX_ROLL_ERROR, SLOT, Station } from './game/station';
+import { SLOT } from './game/station';
 import { ledgerOf, record as ledgerRecord } from './game/ledger';
 import { filledLine, isRun, newSince, profitOf, runLine, runOf, seenNow } from './game/tradeMoments';
-import { handling, inYards, notesFor } from './game/manual';
-import { controlRows as sharedControlRows, DASHBOARD, DOCKING, drawerHelp, PHONE, PHONE_DRAWER, RECORDER, SCHEMES, SCOOP_SPEED, TILT } from './game/controls';
-import { forDevice } from './ui/deviceWords';
-import { ATMOSPHERE_SCALE, buildPlanet, buildSun, disposePlanet } from './render/bodies';
+import { SCOOP_SPEED } from './game/controls';
+import { ATMOSPHERE_SCALE, buildPlanet, disposePlanet } from './render/bodies';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from './render/worlds';
-import { abandon, addStanding, afterJump, amendsCost, board, BOARD_SLOT, TICK, SIGNING_BONUS, welcome, cannotReserve, cannotTake, cargoName, collect, COLLECT_JUMPS, DANGEROUS, deliver, destinationOf, forContract, forgive, jumpsBetween, safeRoute, loseContracts, makeAmends, nextHop, reserve, reservedTonnes, standing, surveyDone, take, wyWorks, type Contract } from './game/contracts';
-import { ADRIFT_HOLD, assignmentFor, offerFor, caseLost, checkMessages, collectHeld, companyHere, decide, incidentChoices, STATION_CREW_RANGE, takenByPirates, type Choice, expireCases, fileOn, recoverCase, RIVAL, rivalPrice, sellToRival, setAdrift, thanksFrom, type AdriftCase, type Message } from './game/assignments';
-import { COMPANIES, COMPANY_IDS, pickCompany, standingName, type CompanyId } from './game/companies';
+import { addStanding, afterJump, board, BOARD_SLOT, cannotReserve, cargoName, collect, COLLECT_JUMPS, deliver, destinationOf, forgive, loseContracts, reserve, reservedTonnes, wyWorks, type Contract } from './game/contracts';
+import { ADRIFT_HOLD, caseLost, checkMessages, collectHeld, STATION_CREW_RANGE, takenByPirates, expireCases, recoverCase, setAdrift, thanksFrom, type AdriftCase } from './game/assignments';
+import { COMPANIES, pickCompany, type CompanyId } from './game/companies';
 import { applyCompanyBand } from './render/livery';
 import { laneDirection, voyageHail, voyages, type Voyage } from './game/traffic';
-import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, explorerRank, isFound, isSurveyed, poisOf, publishReports, recordDiscovery, recordSurvey, recordVisit, salvageCargo, NINEFOLD_REPORT, REPORT_PRICE, sellData, SURVEY, trailPoisOf, trailsUnderWay, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
-import { SpaceDust } from './render/dust';
+import { advanceTrail, bodiesOf, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, salvageCargo, SURVEY, trailPoisOf, worldOf, type Body, type Poi, type SurveyData } from './game/explore';
 import { buildYard, type YardScene } from './render/yard';
-import { stageInfo, stageLabel, yardAt, yardsNear, yardsOf } from './game/yards';
-import { commissionsDue, firstFittingsAt, lineUpFor, payCommission } from './game/commissions';
+import { stageLabel, yardAt, yardsOf } from './game/yards';
+import { lineUpFor } from './game/commissions';
 import { Explosion } from './render/explosion';
 import { Rift } from './render/rift';
 import { riftClose, riftDrone, riftGroan, type Drone } from './audio/rift';
-import { camera, isRetro, lens, makeSpace, render, setRetro } from './render/renderer';
-import { buildPainted, buildShip, disposeShip, heatShip, showUnidentified, UNIDENTIFIED, type Look, type ShipModel } from './render/shipModel';
-import { buildHangar } from './render/hangar';
+import { camera, isRetro, lens, render, setRetro } from './render/renderer';
+import { buildPainted, buildShip, disposeShip, heatShip, showUnidentified, UNIDENTIFIED, type ShipModel } from './render/shipModel';
 import { stationName } from './galaxy/stationNames';
 import { savePhoto, takePhoto } from './ui/photo';
-import { clearFlash, flash, setDashColour, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
+import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
 import { clearIndicators, showHitDirection, updateIndicators, type Marker } from './ui/indicators';
 import { countDevice, countNewCommander } from './net/stats';
 import { claimFirsts, firstsIn, loadFirsts } from './net/firsts';
-import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, showSystem, toggleMapMode } from './ui/galaxyMap';
+import { closeMap, chooseCursor, focusFind, isMapOpen, moveCursor, openMap, toggleMapMode } from './ui/galaxyMap';
 import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from './galaxy/generate';
 import { commodityById, UNITS_PER_TONNE } from './economy/commodities';
-import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, type TradeContext } from './economy/trade';
+import { freeTonnes, marketState, quotes } from './economy/trade';
 import { loseDelivery, upcomingDeliveries } from './economy/market';
-import { activeEvent, eventsAt, EVENT_KINDS, newsArrives, newsAt, newsDelay, newsOf, outputAt, setCausedEvents } from './economy/events';
+import { activeEvent, eventsAt, EVENT_KINDS, setCausedEvents } from './economy/events';
 import { inspectionChance } from './economy/legality';
 import { escapeHtml } from './ui/escape';
 import { fadeFromWhite, playTunnel } from './ui/tunnel';
@@ -143,18 +124,28 @@ import { momentDescription, momentTags, momentTitle, whoIs, type MomentContext, 
 import { closeReplay, closeTrip, isReplayOpen, isTripOpen, openReplay, openTrip, renderFlightLog, setOutsideView, setWatchClip, shareMoment } from './ui/flightLog';
 import { shareVideo as shareVideoPlain, KillCam } from './ui/killCam';
 import { showClipView } from './ui/clipView';
-import { record, regularsAt, slotOf, talk, venue } from './game/saloon';
-import { hasBackRoom } from './economy/blackmarket';
-import { btcQuote, checkBtcOrders, heardQuote } from './net/bitcoin';
+import { checkBtcOrders } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
-import { btcValue, formatBtc, isFresh, satsOf } from './economy/bitcoin';
+import { $, cmdr, currentSystem, game, modern, type State } from './core';
+import { dockingComputer, dust, npcs, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS } from './scene';
 import './style.css';
+import { initManual, renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
+import { newsLine } from './game/newsLines';
+import { answerAdvert, boardSeen, initContracts, markInbox, payCommissions, plotCourse, recruiter, routeTo } from './ui/contracts';
+import { booth, closeBooth, cobraIndex, shipIndex, showShip, showroom, updateShowroom } from './ui/showroom';
+import { boardShip, checkSignedOver, checkSiteSpec, myLook, showOwnShip } from './ui/shipyard';
+import { markDocked } from './ui/money';
+import { initSaloon } from './ui/saloon';
+import { initMarket, renderMarket, tradeContext } from './ui/market';
+import { initStation, renderDocked, resetBoughtHere, showFittings } from './ui/station';
+import { setDockTab, updateDockHead } from './ui/places';
+initStation({ setDockTab, updateDockHead, canSettle: (c) => canSettle(c), legalLabel, bringHome, myFirsts, explorerTips, showLog, settlementMessage, refreshFlightLog });
+initMarket({ exploring: () => exploring(), noticeTrades: () => noticeTrades(), updateDockHead: () => updateDockHead() });
+initSaloon({ setDockTab });
+initContracts({ showNewGame, enterDocked, setDockTab, checkSiteSpec, checkSignedOver, updateDockHead, renderDocked, toggleGalaxyMap });
 
-type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
-let state: State = 'title';
 let inSpace = false;
 
-const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 function setState(next: State) {
   if (next !== 'title' && isAccountPanelOpen()) toggleAccountPanel(false);
@@ -178,7 +169,7 @@ function setState(next: State) {
     closeMap();
     setFlightInputSuppressed(false);
   }
-  state = next;
+  game.state = next;
   document.body.dataset.state = next;
   document.querySelectorAll<HTMLElement>('[data-screen]').forEach((el) => {
     el.hidden = !el.dataset.screen!.split(' ').includes(next);
@@ -269,317 +260,21 @@ function updateTurnHint() {
   const hint = $('#turn');
   const phone = document.body.classList.contains('touch') && Math.min(innerWidth, innerHeight) < 500;
   const upright = innerHeight > innerWidth;
-  const want = state === 'flying' ? 'sideways' : state === 'title' || state === 'docked' ? 'upright' : null;
+  const want = game.state === 'flying' ? 'sideways' : game.state === 'title' || game.state === 'docked' ? 'upright' : null;
   if (!phone || !want || upright === (want === 'upright')) {
     hint.hidden = true;
     turnSeen = '';
     return;
   }
-  if (turnSeen === state) return; // already said, for this screen
-  turnSeen = state;
+  if (turnSeen === game.state) return; // already said, for this screen
+  turnSeen = game.state;
   hint.className = `turn ${want}`;
-  hint.textContent = state === 'flying' ? 'Turn your phone sideways to fly' : state === 'docked' ? 'Turn your phone upright in the station' : 'Best upright here · sideways to fly';
+  hint.textContent = game.state === 'flying' ? 'Turn your phone sideways to fly' : game.state === 'docked' ? 'Turn your phone upright in the station' : 'Best upright here · sideways to fly';
   hint.hidden = false;
   clearTimeout(turnTimer);
   turnTimer = setTimeout(() => (hint.hidden = true), 5000);
 }
 
-let commander: Commander | null = null;
-const cmdr = () => commander!;
-
-// --- Showroom (title, new game and docked screens) --------------------------
-
-const showroom = makeSpace();
-const showroomModels = ships.map(buildShip);
-for (const m of showroomModels) showroom.scene.add(m.root);
-const cobraIndex = Math.max(0, showroomModels.findIndex((m) => m.def.id === 'cobra-mk3'));
-let shipIndex = cobraIndex;
-/** Your own hull's place in the showroom. */
-const ownIndex = () => (commander ? Math.max(0, showroomModels.findIndex((m) => m.def.id === hullOf(commander!))) : cobraIndex);
-let flyIn = 0; // 0 = far away, 1 = arrived
-const spin = { x: 0.25, y: 0, dragging: false, lastX: 0, lastY: 0, idle: 0 };
-let zoom = 1; // showroom zoom: >1 is closer
-const ZOOM_MIN = 0.6;
-const ZOOM_MAX = 3;
-
-function showShip(index: number) {
-  shipIndex = (index + showroomModels.length) % showroomModels.length;
-  showroomModels.forEach((m, i) => (m.root.visible = i === shipIndex));
-  flyIn = 0;
-  resetShowroomView();
-  updateShipPanel();
-}
-
-function resetShowroomView() {
-  spin.x = 0.25;
-  spin.y = 0;
-  spin.idle = 0;
-  zoom = 1;
-}
-
-function updateShipPanel() {
-  const { def } = showroomModels[shipIndex];
-  const s = def.stats;
-  $('#ship-name').textContent = def.name;
-  $('.ship-nav-name').textContent = def.name;
-  $('#ship-meta').textContent = [def.concept ? 'Concept · coming soon' : '', def.manufacturer, def.role].filter(Boolean).join(' · ');
-  $('#ship-desc').textContent = def.description;
-  const rows: [string, string][] = [
-    ['Max speed', `${s.maxSpeed} m/s`],
-    ['Hull', `${s.hull}`],
-    ['Shields', `${s.shields}`],
-    ['Cargo', `${s.cargo} t`],
-    ['Missiles', `${s.missiles ?? 0}`],
-    ['Price', s.price ? `${def.concept ? 'About ' : ''}${s.price.toLocaleString()} Cr` : 'Not for sale'],
-  ];
-  $('#ship-stats').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  $('#ship-credits').textContent = `Design: ${def.credits.authors.join(', ')}${def.credits.aiAssisted ? ' (AI-assisted)' : ''} · ${def.credits.license}`;
-}
-
-// When docked, the ship sits in a berth and the camera walks around it.
-const hangar = buildHangar();
-hangar.visible = false;
-showroom.scene.add(hangar);
-
-function updateBerth(dt: number, model: ShipModel) {
-  hangar.visible = true;
-  showroom.stars.visible = false;
-  // Rest the ship on the pad: its lowest point at floor level.
-  const lowest = Math.min(...model.def.geometry.vertices.map((v) => v[1]));
-  model.root.position.set(0, -lowest + 1, 0);
-  model.root.rotation.set(0, 0.5, 0);
-  if (!spin.dragging) {
-    spin.idle += dt;
-    if (spin.idle > 1.5) spin.y += dt * 0.12; // a slow walk around the ship
-  }
-  const dist = (model.radius * 3.2) / zoom;
-  const elevation = THREE.MathUtils.clamp(0.28 + spin.x * 0.5, 0.05, 1.1);
-  const centre = new THREE.Vector3(0, -lowest * 0.6 + 4, 0);
-  camera.position.set(
-    Math.sin(spin.y) * Math.cos(elevation) * dist,
-    centre.y + Math.sin(elevation) * dist,
-    Math.cos(spin.y) * Math.cos(elevation) * dist,
-  );
-  // In the shipyard on a phone, the panel takes the lower part of the screen: lift the ship above it.
-  if (document.body.classList.contains('yard-open') && innerWidth <= 700) centre.y -= dist * 0.3;
-  camera.lookAt(centre);
-}
-
-// --- The photo booth ---------------------------------------------------------------
-// Your ship as specced (or as you own her), out of the berth, on black or in
-// space, from any angle including below, with a longer lens; the picture goes
-// to the flight log like a P photo (Mark: "the configurator but without the
-// hangar in the background").
-
-let booth: { bg: 'space' | 'black' } | null = null;
-const BOOTH_FOV = 28;
-const pinch = new Map<number, [number, number]>();
-
-function openBooth() {
-  booth = { bg: 'space' };
-  spin.x = 0.15;
-  spin.y = 0.6;
-  zoom = 1;
-  document.body.classList.add('photo-booth');
-  $('#booth').hidden = false;
-  $('#booth .booth-bg').textContent = 'Space';
-}
-
-function closeBooth() {
-  booth = null;
-  document.body.classList.remove('photo-booth');
-  $('#booth').hidden = true;
-  camera.fov = 50;
-  camera.updateProjectionMatrix();
-  resetShowroomView();
-}
-$('#booth .booth-close').addEventListener('click', closeBooth);
-$('#booth .booth-snap').addEventListener('click', () => (photoPending = true));
-$('#booth .booth-bg').addEventListener('click', (e) => {
-  if (!booth) return;
-  booth.bg = booth.bg === 'space' ? 'black' : 'space';
-  (e.target as HTMLElement).textContent = booth.bg === 'space' ? 'Space' : 'Black';
-});
-// Two fingers zoom.
-addEventListener('pointerdown', (e) => booth && pinch.set(e.pointerId, [e.clientX, e.clientY]));
-addEventListener('pointerup', (e) => pinch.delete(e.pointerId));
-addEventListener('pointercancel', (e) => pinch.delete(e.pointerId));
-addEventListener('pointermove', (e) => {
-  if (!booth || !pinch.has(e.pointerId) || pinch.size !== 2) return;
-  const [a, b] = [...pinch.values()];
-  const before = Math.hypot(a[0] - b[0], a[1] - b[1]);
-  pinch.set(e.pointerId, [e.clientX, e.clientY]);
-  const [c, d] = [...pinch.values()];
-  const after = Math.hypot(c[0] - d[0], c[1] - d[1]);
-  if (before > 0) zoom = THREE.MathUtils.clamp(zoom * (after / before), ZOOM_MIN, ZOOM_MAX);
-  spin.dragging = false; // a pinch, not a turn
-});
-
-function updateBooth(model: ShipModel) {
-  hangar.visible = false;
-  showroom.stars.visible = booth!.bg === 'space';
-  model.root.position.set(0, 0, 0);
-  model.root.rotation.set(0, 0, 0);
-  if (camera.fov !== BOOTH_FOV) {
-    camera.fov = BOOTH_FOV;
-    camera.updateProjectionMatrix();
-  }
-  if (camera.view?.enabled) camera.clearViewOffset();
-  // Free all the way round, and from well below: the angles the berth can't reach.
-  const elevation = THREE.MathUtils.clamp(spin.x * 0.6, -1.45, 1.45);
-  // Fit her to the narrower of the two sides, so a phone held upright frames her whole.
-  const half = THREE.MathUtils.degToRad(BOOTH_FOV / 2);
-  const narrow = Math.min(half, Math.atan(Math.tan(half) * camera.aspect));
-  const dist = (model.radius * 1.1) / Math.sin(narrow) / zoom;
-  camera.position.set(Math.sin(spin.y) * Math.cos(elevation) * dist, Math.sin(elevation) * dist, Math.cos(spin.y) * Math.cos(elevation) * dist);
-  camera.lookAt(0, 0, 0);
-  showroom.stars.position.copy(camera.position);
-}
-
-function updateShowroom(dt: number) {
-  const model = showroomModels[shipIndex];
-  if (booth && state === 'docked') return updateBooth(model);
-  if (state === 'docked') {
-    if (camera.view?.enabled) camera.clearViewOffset();
-    updateBerth(dt, model);
-    return;
-  }
-  hangar.visible = false;
-  showroom.stars.visible = true;
-  const dist = (showroomDistance(model.radius) ?? model.radius * 3.4) / zoom;
-  flyIn = Math.min(1, flyIn + dt * 0.7);
-  const ease = 1 - Math.pow(1 - flyIn, 3);
-  model.root.position.set(0, 0, -dist * 12 * (1 - ease));
-  if (!spin.dragging) {
-    spin.idle += dt;
-    if (spin.idle > 1.5) spin.y += dt * 0.5;
-  }
-  model.root.rotation.set(spin.x, spin.y, 0);
-  camera.position.set(0, model.radius * 0.35, dist);
-  camera.lookAt(0, 0, 0);
-  showroom.stars.position.copy(camera.position);
-  frameShipInSpace();
-  placeShipNav(model.radius, dist);
-}
-
-/** The ship browser sits just under the ship, wherever the ship is on screen, clear of the panel and buttons. */
-function placeShipNav(radius: number, dist: number) {
-  const nav = $('#ship-nav');
-  if (state !== 'title') return;
-  camera.updateMatrixWorld();
-  const centre = new THREE.Vector3(0, 0, 0).project(camera);
-  const x = ((centre.x + 1) / 2) * innerWidth;
-  const y = ((1 - centre.y) / 2) * innerHeight;
-  const shipPx = (radius / dist) * (innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)));
-  const space = showroomSpace();
-  const controls = document.querySelector<HTMLElement>('nav.controls[data-screen="title"]');
-  const floor = Math.min(space ? space.bottom - 52 : innerHeight, controls && !sideways.matches ? controls.getBoundingClientRect().top - 56 : innerHeight - 56);
-  // On a phone the open space round the ship is tight: the arrows go either side of it instead.
-  const flank = space !== null;
-  nav.classList.toggle('flank', flank);
-  if (space) nav.style.setProperty('--w', `${Math.round(space.right - space.left - 24)}px`);
-  nav.style.setProperty('--x', `${Math.round(x)}px`);
-  nav.style.setProperty('--y', `${Math.round(flank ? y - 22 : Math.min(y + shipPx * 0.75 + 16, floor))}px`);
-}
-
-/** Phones on their side: the title screen's card and buttons share a column on the left (style.css). */
-const sideways = matchMedia('(max-height: 500px) and (orientation: landscape)');
-
-/**
- * The open space the title-screen ship should fill, on a phone: between the
- * title and the panel when upright, right of the column on its side; null otherwise.
- */
-function showroomSpace(): { left: number; right: number; top: number; bottom: number } | null {
-  const panel = document.querySelector<HTMLElement>('.panel[data-screen="title"]');
-  const title = document.querySelector<HTMLElement>('header.title');
-  if (!panel || panel.hidden || !title) return null;
-  if (sideways.matches) return { left: panel.getBoundingClientRect().right, right: innerWidth, top: 0, bottom: innerHeight };
-  if (innerHeight <= innerWidth) return null;
-  return { left: 0, right: innerWidth, top: title.getBoundingClientRect().bottom, bottom: panel.getBoundingClientRect().top };
-}
-
-/** How far back the camera stands so the ship fits that space, side to side and top to bottom. */
-function showroomDistance(radius: number): number | null {
-  const space = showroomSpace();
-  if (!space) return null;
-  const room = Math.min(space.bottom - space.top, space.right - space.left) * 0.85; // pixels for the ship's full width
-  const halfFov = THREE.MathUtils.degToRad(camera.fov / 2);
-  return (radius * 2 * innerHeight) / (room * 2 * Math.tan(halfFov));
-}
-
-/**
- * On a phone the ship would sit behind the panel: shift the view so it's
- * centred in the open space instead.
- */
-function frameShipInSpace() {
-  const w = innerWidth;
-  const h = innerHeight;
-  const space = showroomSpace();
-  if (!space) {
-    if (camera.view?.enabled) camera.clearViewOffset();
-    return;
-  }
-  // How far the ship should move left and up, in pixels.
-  const shiftX = w / 2 - (space.left + space.right) / 2;
-  const shiftY = h / 2 - (space.top + space.bottom) / 2;
-  camera.setViewOffset(w, h, Math.round(shiftX), Math.round(shiftY), w, h);
-}
-
-// Inspect the ship on the title and docked screens: drag to rotate, scroll
-// (or swipe on a Magic Mouse or trackpad) to zoom, double-click to reset.
-const inShowroom = () => state === 'title' || state === 'docked' || state === 'newgame';
-const onControl = (e: Event) => Boolean((e.target as HTMLElement).closest('button, a, input, .panel, #galaxy-map, #controls-card'));
-
-// On the title screen a quick sideways flick changes the ship (a slow drag
-// still turns it), on the ship or on its card.
-const flick = { x: 0, y: 0, t: 0, spinY: 0, on: false };
-function flickStart(e: PointerEvent) {
-  Object.assign(flick, { x: e.clientX, y: e.clientY, t: performance.now(), spinY: spin.y, on: state === 'title' });
-}
-function flickEnd(e: PointerEvent) {
-  if (!flick.on) return;
-  flick.on = false;
-  const dx = e.clientX - flick.x;
-  const dy = e.clientY - flick.y;
-  if (performance.now() - flick.t > 350 || Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 2) return;
-  spin.y = flick.spinY; // it was a flick, not a turn
-  showShip(shipIndex + (dx < 0 ? 1 : -1));
-}
-document.querySelector<HTMLElement>('.panel[data-screen="title"]')?.addEventListener('pointerdown', flickStart);
-
-addEventListener('pointerdown', (e) => {
-  if (!inShowroom() || onControl(e)) return;
-  spin.dragging = true;
-  spin.lastX = e.clientX;
-  spin.lastY = e.clientY;
-  flickStart(e);
-});
-addEventListener('pointermove', (e) => {
-  if (!spin.dragging) return;
-  spin.y += (e.clientX - spin.lastX) * 0.01;
-  spin.x += (e.clientY - spin.lastY) * 0.01;
-  spin.lastX = e.clientX;
-  spin.lastY = e.clientY;
-  spin.idle = 0;
-});
-addEventListener('pointerup', (e) => {
-  spin.dragging = false;
-  flickEnd(e);
-});
-addEventListener(
-  'wheel',
-  (e) => {
-    if (!inShowroom() || onControl(e)) return;
-    const scale = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1;
-    zoom = THREE.MathUtils.clamp(zoom * Math.exp(-e.deltaY * scale * 0.0015), ZOOM_MIN, ZOOM_MAX);
-    spin.idle = 0;
-    e.preventDefault();
-  },
-  { passive: false },
-);
-addEventListener('dblclick', (e) => {
-  if (inShowroom() && !onControl(e)) resetShowroomView();
-});
 
 // --- Title, new commander and docked screens --------------------------------
 
@@ -655,7 +350,7 @@ function startAtForTesting(c: Commander) {
 let testStartDone = false;
 
 function startCommander(difficulty: Difficulty) {
-  commander = newCommander(difficulty);
+  game.commander = newCommander(difficulty);
   // A new commander hasn't flown: the last commander's trip isn't theirs (Marketing saw "How I died at Lave").
   flightFrom = Date.now();
   tripSeen = true;
@@ -663,36 +358,36 @@ function startCommander(difficulty: Difficulty) {
   clearRadio();
   countNewCommander(difficulty, isRetro() ? '1984' : 'neo');
   setCausedEvents([]);
-  startAtForTesting(commander);
+  startAtForTesting(game.commander);
   // Your callsign: what other commanders see. Blank keeps your account's, or the original's Jameson.
   const typed = $<HTMLInputElement>('#callsign').value.trim();
-  commander.name = cleanName(typed || currentAccount()?.callsign || commander.name);
-  if (signedIn() && commander.name !== currentAccount()?.callsign) {
-    const wanted = commander.name;
+  game.commander.name = cleanName(typed || currentAccount()?.callsign || game.commander.name);
+  if (signedIn() && game.commander.name !== currentAccount()?.callsign) {
+    const wanted = game.commander.name;
     claimCallsign(wanted).catch((e: Error) => {
       // Taken or reserved: keep the account's callsign, if it has one.
       const kept = currentAccount()?.callsign;
-      commander!.name = kept ?? 'Jameson';
-      saveCommander(commander!);
+      game.commander!.name = kept ?? 'Jameson';
+      saveCommander(game.commander!);
       flash(kept ? `${e.message} · you're CMDR ${kept}` : `${e.message} · choose a callsign at the station`, 4);
     });
   }
-  saveCommander(commander);
+  saveCommander(game.commander);
   sfx.beep();
   enterDocked(!recruiter); // a new ship: the flight log first, unless a recruiter is waiting
   if (recruiter && difficulty === 'modern') setDockTab('contracts');
 }
 
 function enterDocked(newShip = false) {
-  boughtHere = { equipment: new Set(), lasers: {}, missiles: 0 };
+  resetBoughtHere();
   ensureSystemScene();
   inSpace = false;
   boardShip();
   player.repair();
   showOwnShip();
   forgive(cmdr(), Date.now());
-  boardSeenAt = Date.now(); // what's on the board as you dock isn't news; what's posted while you're here is
-  dockedAt = Date.now();
+  boardSeen();
+  markDocked();
   payCommissions();
   // Work that's due here is handed in however you arrived: docking does it
   // first, but waking here in a new ship or loading the game docked must too
@@ -707,7 +402,7 @@ function enterDocked(newShip = false) {
     void checkBtcOrders(cmdr()).then((fills) => {
       if (!fills.length) return;
       saveCommander(cmdr());
-      if (state === 'docked') renderDocked();
+      if (game.state === 'docked') renderDocked();
       setTimeout(() => flash(fills.join(' · '), 6), newShip ? 7000 : 1200);
     });
   // Ships the Carriers' Mutual were bringing here may have arrived.
@@ -777,7 +472,7 @@ async function showNewMoments(newShip: boolean) {
   if (classicRules()) return setLogBadge(0);
   const fresh = (await listMoments().catch(() => [])).filter((m) => m.created >= flightFrom).length;
   setLogBadge(fresh);
-  if (state !== 'docked' || isMapOpen()) return;
+  if (game.state !== 'docked' || isMapOpen()) return;
   if (fresh && !tripSeen)
     void openTrip(flightFrom, {
       onClose: tripDone,
@@ -801,7 +496,7 @@ function setLogBadge(n: number) {
 // a gallery, from the button beside the galaxy map (F).
 let logOpen = false;
 function setFlightLog(open: boolean) {
-  logOpen = open && state === 'docked';
+  logOpen = open && game.state === 'docked';
   if (!logOpen) logForIntro = false;
   $('#flight-log-view').hidden = !logOpen;
   if (logOpen) {
@@ -812,2173 +507,20 @@ function setFlightLog(open: boolean) {
   }
 }
 
-// What was bought on this visit, so a change of mind before launch gets the
-// full price back. Anything older sells for half, like a laser part exchange.
-let boughtHere: {
-  equipment: Set<string>;
-  /** Per mount: what was fitted before, and what the swap cost. */
-  lasers: Partial<Record<Mount, { previous?: LaserId; paid: number }>>;
-  missiles: number;
-} = { equipment: new Set(), lasers: {}, missiles: 0 };
-
-/** A sale at half price loses money, so it asks for a second click. */
-function confirmSale(button: HTMLButtonElement, label: string, sell: () => void) {
-  button.addEventListener('click', () => {
-    if (button.dataset.armed) return sell();
-    button.dataset.armed = '1';
-    button.textContent = label;
-    button.classList.add('armed');
-  });
-  button.addEventListener('blur', () => {
-    if (button.dataset.armed) renderDocked();
-  });
-}
-
-// --- Docked tabs and the market ---------------------------------------------------
-
-type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard' | 'money';
-let dockTab: DockTab = 'station';
-
-function setDockTab(tab: DockTab) {
-  dockTab = tab;
-  document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
-  $('#tab-station').hidden = tab !== 'station';
-  if (tab === 'station' && state === 'docked') renderDocked(); // credits, hold and wallet may have changed at the exchange
-  $('#tab-market').hidden = tab !== 'market';
-  $('#tab-news').hidden = tab !== 'news';
-  $('#tab-saloon').hidden = tab !== 'saloon';
-  if (tab === 'saloon') renderSaloon();
-  $('#tab-shipyard').hidden = tab !== 'shipyard';
-  $('#tab-money').hidden = tab !== 'money';
-  if (tab === 'money') renderMoney();
-  document.body.classList.toggle('yard-open', tab === 'shipyard');
-  if (tab === 'shipyard') renderShipyard();
-  else if (state === 'docked') {
-    // Your own ship back in the berth, and the yard's hulls in their own glow.
-    spec = null;
-    showOwnShip();
-  }
-  $('#tab-contracts').hidden = tab !== 'contracts';
-  if (tab === 'news') renderNews();
-  if (tab === 'contracts') renderContracts();
-  if (tab === 'market') {
-    exchange.selectHeld(cmdr().cargo);
-    renderMarket();
-  } else {
-    $('.panel.docked').classList.remove('wide', 'exchange');
-    document.body.classList.remove('exchange-open');
-    exchange.stop();
-  }
-  if (tab === 'contracts') $('.panel.docked').classList.add('wide');
-  closeDockSheets();
-  updateDockHead();
-}
-
-// --- The slim header (phones held upright), the places and the wallet -------------
-// Mark: "Having 6 or 8 tabs taking up so much space feels wasteful." On a phone held
-// upright the tabs give way to one header, "Station name · Market ▾", that opens the places
-// laid out like the flight view picker, with a dot when anything inside has news; and a wallet
-// button with your credits replaces the Credits line and the Money tab (Mark: "Maybe we should
-// have a wallet rather than Credits"). docs/design/flight-hud-and-touch.md.
-
-/** A tab's name without its key or its badge ("Shipyard", not "Shipyard ready": Mark's screenshot). */
-const tabName = (b: HTMLElement) => {
-  const label = b.getAttribute('aria-label');
-  if (label) return label.replace(/,.*$/, '').trim();
-  const copy = b.cloneNode(true) as HTMLElement;
-  copy.querySelectorAll('.tab-badge, .key').forEach((n) => n.remove());
-  return (copy.textContent ?? '').trim();
-};
-
-function updateDockHead() {
-  const tabs = [...document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]')];
-  const active = tabs.find((b) => b.dataset.tab === dockTab);
-  $('.dock-where').textContent = commander ? `${stationName(currentSystem()).name}\u00a0·\u00a0` : '';
-  $('.dock-which').textContent = dockTab === 'money' ? 'Money' : active ? tabName(active) : '';
-  const news = tabs.some((b) => !b.hidden && b.dataset.tab !== dockTab && b.querySelector('.tab-badge'));
-  $('.dock-dot').hidden = !news;
-  $('.dock-place').setAttribute('aria-label', `${$('.dock-which').textContent}: choose a place${news ? ', something new' : ''}`);
-  $('#dock-places').innerHTML = tabs
-    .filter((b) => !b.hidden && b.dataset.tab !== 'money')
-    .map((b) => {
-      const badge = b.querySelector('.tab-badge')?.textContent?.trim();
-      return `<button type="button" data-place="${b.dataset.tab}" aria-pressed="${b.dataset.tab === dockTab}">${escapeHtml(tabName(b))}${badge ? ` <b class="tab-badge">${escapeHtml(badge)}</b>` : ''}</button>`;
-    })
-    .join('');
-  if (commander) $('.wallet-button').textContent = `${Math.floor(cmdr().credits).toLocaleString()} Cr`;
-  if (!$('#wallet-sheet').hidden) renderWallet();
-}
-
-function closeDockSheets() {
-  for (const [sheet, button] of [['#dock-places', '.dock-place'], ['#wallet-sheet', '.wallet-button']]) {
-    $(sheet).hidden = true;
-    $(button).setAttribute('aria-expanded', 'false');
-  }
-}
-
-function toggleSheet(sheet: string, button: string) {
-  const open = $(sheet).hidden;
-  closeDockSheets();
-  if (!open) return;
-  if (sheet === '#wallet-sheet') renderWallet();
-  $(sheet).hidden = false;
-  $(button).setAttribute('aria-expanded', 'true');
-}
-$('.dock-place').addEventListener('click', () => toggleSheet('#dock-places', '.dock-place'));
-$('.wallet-button').addEventListener('click', () => toggleSheet('#wallet-sheet', '.wallet-button'));
-$('#dock-places').addEventListener('click', (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-place]');
-  if (!b) return;
-  sfx.beep();
-  setDockTab(b.dataset.place as DockTab);
-});
-
-/** The wallet: everything you hold, in one place, and the station's money in a line. */
-function renderWallet() {
-  const c = cmdr();
-  const here = currentSystem();
-  const now = Date.now();
-  const btc = btcNow();
-  const fmtN = (n: number, d = n < 10 ? 2 : 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: n < 10 && n > 0 ? Math.min(d, 2) : 0 });
-  const rows: string[] = [`<li><strong>${c.credits.toLocaleString(undefined, { maximumFractionDigits: 1 })} Cr</strong><span>Credits: good at every station</span></li>`];
-  const sats = satsOf(c);
-  if (sats) rows.push(`<li><strong>${formatBtc(sats)}</strong><span>Bitcoin, at the real price · ${btcValue(c) ? `about ${fmtN(btcValue(c), 0)} Cr now` : 'its price comes in with the news'}</span></li>`);
-  const modern = c.difficulty === 'modern';
-  if (modern)
-    for (const [key, units] of Object.entries(walletOf(c)).filter(([, u]) => u > 1e-6)) {
-      if (isCompanyKey(key)) {
-        const co = COMPANIES[key.slice(3) as CompanyId];
-        rows.push(`<li><strong>${fmtN(units)} ${escapeHtml(co?.name.split(' ')[0] ?? key)} coins</strong><span>Bitcoin-backed · about ${fmtN(units * companyValue(btc), 0)} Cr</span></li>`);
-        continue;
-      }
-      const home = walletHome(key);
-      const hc = currencyOf(home)!;
-      rows.push(`<li><strong>${fmtN(units)} ${hc.ticker}</strong><span>${escapeHtml(hc.name)}, ${escapeHtml(home.name)}’s own money · about ${fmtN(valueOf(key, units, now, btc), 0)} Cr</span></li>`);
-    }
-  const cur = modern ? currencyOf(here) : null;
-  let station = '';
-  if (modern && cur) {
-    const fair = fairRate(here, now, btc);
-    const week = fairRate(here, now - 7 * 86_400_000, btc);
-    const change = (week / fair - 1) * 100;
-    station = `<p class="wallet-line">${escapeHtml(here.name)}’s money, the ${escapeHtml(cur.name)}: 1 Cr ≈ ${fmtN(fair, 2)} ${cur.ticker}, ${Math.abs(change) < 1 ? 'steady this week' : `${change > 0 ? 'up' : 'down'} ${Math.abs(change).toFixed(0)}% this week`}.</p>
-      <div class="wallet-actions"><button type="button" class="primary" data-wallet="money">Change money here</button><button type="button" data-wallet="money">More about it</button></div>`;
-  } else if (modern) station = `<p class="wallet-line">No money is issued at ${escapeHtml(here.name)}: credits do.</p><div class="wallet-actions"><button type="button" data-wallet="money">Money, stablecoins and company coins</button></div>`;
-  $('#wallet-sheet').innerHTML = `<p class="wallet-title">Your wallet</p><ul class="wallet-list">${rows.join('')}</ul>${station}${modern && !sats ? '<p class="wallet-line">Bitcoin trades on the Market.</p>' : ''}`;
-  $('#wallet-sheet').querySelectorAll<HTMLButtonElement>('[data-wallet]').forEach((b) =>
-    b.addEventListener('click', () => {
-      sfx.beep();
-      setDockTab('money');
-    }),
-  );
-}
-document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) =>
-  b.addEventListener('click', () => {
-    b.blur();
-    setDockTab(b.dataset.tab as DockTab);
-  }),
-);
-
-function tradeContext(): TradeContext {
-  return { commander: cmdr(), system: currentSystem(), capacity: cargoCapacity(cmdr(), player.def.stats.cargo), now: Date.now() };
-}
-
-// --- News --------------------------------------------------------------------------
-
-const ago = (ms: number) => {
-  const m = Math.max(0, Math.round(ms / 60000));
-  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
-};
-
-/** A line for the galaxy map: the latest news of a system that has reached here. */
-function newsLine(s: StarSystem): string | null {
-  const n = newsOf(s, currentSystem(), Date.now());
-  if (!n) return null;
-  const over = Date.now() > n.event.end;
-  return `${EVENT_KINDS[n.event.type].name}${over ? ' (may be over)' : ''} · heard ${ago(Date.now() - n.heard)} ago`;
-}
-
-/**
- * News of traders being picked off: three or more deliveries lost near one
- * system within two hours. It spreads like any other news.
- */
-function attackNews(here: StarSystem, now: number) {
-  const out: { where: StarSystem; distance: number; heard: number; lost: number }[] = [];
-  for (const [key, market] of Object.entries(cmdr().markets)) {
-    const recent = (market.lost ?? []).filter((l) => l.t <= now && l.t > now - 2 * 3600_000);
-    if (recent.length < 3) continue;
-    const [g, i] = key.split(':').map(Number);
-    if (g !== here.galaxy) continue;
-    const where = systemAt(g, i);
-    const distance = distanceLy(where, here);
-    if (distance > 25) continue;
-    const heard = newsArrives(where, here, recent[2].t);
-    if (heard <= now) out.push({ where, distance, heard, lost: recent.length });
-  }
-  return out;
-}
-
-// --- Company contracts (Modern) -----------------------------------------------------
-
-const companyMark = (id: CompanyId) => `<b class="company" style="--company:${COMPANIES[id].colour}">${escapeHtml(COMPANIES[id].name)}</b>`;
-const riskTag = (s: StarSystem) => (s.government <= 1 ? ` <em class="risk high">${GOVERNMENTS[s.government]} · pirates</em>` : s.government <= 3 ? ` <em class="risk">${GOVERNMENTS[s.government]}</em>` : '');
-let contractMessage = '';
-let justTaken: string | null = null; // after taking a contract, show it at the top, highlighted
-
-// Arriving from a company's advert (witchspace.org.uk/careers/, /play/?company=hexon):
-// straight to the Contracts tab, with a starter job from that company at the top.
-let recruiter: CompanyId | null = null;
-// Or from a live card on witchspace.org.uk/jobs/ (/play/?contract=<id>&company=hexon): that
-// contract at the top, highlighted, if it's still on the board here; if not, the welcome.
-let wanted: string | null = null;
-
-function answerAdvert() {
-  const url = new URL(location.href);
-  const id = url.searchParams.get('company') as CompanyId | null;
-  const contract = url.searchParams.get('contract');
-  url.searchParams.delete('contract');
-  if (!id || !COMPANY_IDS.includes(id)) return;
-  if (contract && /^[a-z0-9:]{1,48}$/.test(contract)) wanted = contract;
-  url.searchParams.delete('company');
-  history.replaceState(null, '', url.pathname + url.search + url.hash);
-  recruiter = id;
-  const saved = loadCommander();
-  if (saved && saved.difficulty !== 'modern') return; // Classic has no companies: just the title
-  if (!saved) {
-    showNewGame(); // pick a callsign; the welcome waits at the station
-    return;
-  }
-  commander = saved;
-  setCausedEvents(saved.caused);
-  enterDocked();
-  setDockTab('contracts');
-  void checkSiteSpec(true);
-  void checkSignedOver();
-}
-
-/** Wexley-Yorozu's commissions for modules you designed, paid when you dock after one is first fitted. */
-function payCommissions() {
-  const c = cmdr();
-  const due = commissionsDue(c, currentAccount()?.callsign ?? null, Date.now());
-  if (!due.length) return;
-  const lines = due.map((x) => payCommission(c, x, Date.now()));
-  saveCommander(c);
-  markInbox(c);
-  sfx.beep();
-  setTimeout(() => flash(lines.join(' · '), 6), 1200);
-}
-
-/** The welcome job from the company whose advert brought you here, if it's still to be taken, and the card you came for isn't here. */
-const welcomeHere = (c: Commander, here: StarSystem, now: number) =>
-  recruiter && c.difficulty === 'modern' && !(wanted && board(c, here, now).some((o) => o.id === wanted)) ? welcome(c, here, recruiter, now) : null;
-
-/** When you last looked at the board (or docked): offers posted since are new. */
-let boardSeenAt = 0;
-/** The board as it was last drawn, so a new post can be noticed while you're docked. */
-let boardKey = '';
-const newOffers = (c: Commander, here: StarSystem, now: number) => board(c, here, now).filter((o) => (o.posted ?? 0) > boardSeenAt).length;
-
-/**
- * Set a course to a system, however many jumps away: the first hop now, the
- * next after each jump (see hyperspace). Returns what to tell the commander.
- */
-/** The computer's route: the safe way (Modern), or simply the fewest jumps (Classic). */
-function routeTo(from: StarSystem, end: StarSystem): StarSystem[] | null {
-  if (modern()) return safeRoute(from, end);
-  const route: StarSystem[] = [];
-  for (let at: StarSystem | null = from; at && at !== end; ) {
-    at = nextHop(at, end);
-    if (!at) return null;
-    route.push(at);
-  }
-  return route.length ? route : null;
-}
-
-function plotCourse(c: Commander, system: number): string {
-  const here = currentSystem();
-  const end = systemAt(here.galaxy, system);
-  const route = routeTo(here, end);
-  if (!route) return `${end.name} is out of reach from here`;
-  const hop = route[0];
-  c.target = hop.index;
-  c.courseTo = hop === end ? null : end.index;
-  if (hop === end) return `Course set: ${end.name}`;
-  // No safe way round: say where the danger is, before you go.
-  const risky = route.slice(0, -1).filter(DANGEROUS);
-  const warning = risky.length ? ` · no safe way: through ${risky.map((s) => `${s.name} (${GOVERNMENTS[s.government].toLowerCase()})`).join(', ')}` : '';
-  const longer = modern() && !risky.length && route.length > jumpsBetween(here, end, 30) ? ' · the safe way round' : '';
-  return `Course plotted to ${end.name}: ${route.length} jumps, first ${hop.name}${distanceLy(here, hop) > c.fuel ? ' (refuel first)' : ''}${longer}${warning}`;
-}
-let openFile: CompanyId | null = null;
-
-/** Special assignments you could take at this station now. */
-const specialsHere = (c: Commander, here: StarSystem, now: number) =>
-  COMPANY_IDS.filter((id) => companyHere(id, here))
-    .map((id) => assignmentFor(c, id, here, now))
-    .filter((o): o is Contract & { expires: number } => o !== null);
-
-/** Unread messages, on the Contracts tab's button. */
-function markInbox(c: Commander) {
-  const unread = (c.messages ?? []).filter((m) => !m.read).length + (state === 'docked' && dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
-  // A small badge, not words: "Contracts · 2 new" spilled out of the tab on a phone (Mark).
-  const tab = $('.tabs [data-tab="contracts"]');
-  tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}<span class="tab-badge-word"> new</span></b>` : 'Contracts'; // "2 new" where there's room, "2" on a phone
-  tab.setAttribute('aria-label', unread ? `Contracts, ${unread} new` : 'Contracts');
-  updateDockHead();
-}
-
-/** Earlier messages stays open while you archive from it. */
-let earlierOpen = false;
-
-function renderContracts() {
-  const c = cmdr();
-  const here = currentSystem();
-  const now = Date.now();
-  const free = cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c);
-  const hoursLeft = (t: number) => Math.max(1, Math.round((t - now) / 3600_000));
-  const goodName = (id: string) => escapeHtml(commodityById(id)?.name ?? id);
-  const place = (s: StarSystem) => `${escapeHtml(s.name)} <small>${distanceLy(here, s).toFixed(1)} LY</small>${riskTag(s)}`;
-  // Messages: what's new in full; receipts (paid, handed in) in a line each; anything
-  // already read folded away, so the tab opens on the work, not on old news.
-  const sender = (m: Message) => (m.from ? `<b class="company">${escapeHtml(m.from)}</b>` : companyMark(m.company));
-  const receipt = (m: Message) => /:delivered$/.test(m.id);
-  const archive = (m: Message) => `<button type="button" class="message-archive" data-archive="${escapeHtml(m.id)}" aria-label="Archive this message" title="Archive">×</button>`;
-  const line = (m: Message) => `<li class="message receipt${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <small>${escapeHtml(m.body.replace(/^Your /, '').replace(/ was handed in: /, ' handed in · ').replace(/: ([\d,]+ Cr) paid\./, ' · $1').replace(/\.$/, ''))}</small></li>`;
-  // A company's offer says what you can do about it: take it here, or where to go, or that it has gone (Mark).
-  const answer = (m: Message) => {
-    const o = offerFor(c, m, here, now);
-    if (!o) return '';
-    if (o.kind === 'taken') return `<br><small class="why">Taken: it's in your contracts</small>`;
-    if (o.kind === 'closed') return `<br><small class="why">This offer has closed</small>`;
-    const decline = `<button data-decline="${escapeHtml(m.id)}">Decline</button>`;
-    if (o.kind === 'here') {
-      const why = cannotTake(c, o.offer, free);
-      return `<br><small>${o.offer.qty} t ${escapeHtml(cargoName(o.offer))} → ${place(destinationOf(o.offer))} · <b class="pay">${o.offer.pay.toLocaleString()} Cr</b> · closes in ${hoursLeft(o.offer.expires)} h</small>
-        <span class="actions"><button data-take="${o.offer.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button>${decline}</span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}`;
-    }
-    const name = escapeHtml(COMPANIES[m.company].name);
-    const s = o.station;
-    const where = s ? `Pick it up at any ${name} station: nearest ${escapeHtml(s.system.name)}, ${s.jumps} jump${s.jumps === 1 ? '' : 's'}` : `Pick it up at any ${name} station (none within reach)`;
-    const course = !s ? '' : c.target === s.system.index ? '<span class="on-course">On course</span>' : `<button data-course="${s.system.index}">Set course</button>`;
-    return `<br><small>${where} · closes in ${hoursLeft(o.offer.expires)} h</small><span class="actions">${course}${decline}</span>`;
-  };
-  const full = (m: Message) => `<li class="message${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small>${answer(m)}</li>`;
-  const shown = (c.messages ?? []).filter((m) => !m.archived);
-  // An offer you can still take stays in view after you've read it.
-  const live = (m: Message) => ['here', 'elsewhere'].includes(offerFor(c, m, here, now)?.kind ?? '');
-  const unread = shown.filter((m) => !m.read || live(m));
-  const earlier = shown.filter((m) => m.read && !live(m)).slice(0, 10);
-  const messages =
-    unread.map((m) => (receipt(m) ? line(m) : full(m))).join('') +
-    (earlier.length ? `<li class="message-earlier"><button type="button" class="message-archive-all" data-archive="read">Archive all</button><details${earlierOpen ? ' open' : ''}><summary>Earlier messages (${earlier.length})</summary><ul class="contracts">${earlier.map((m) => (receipt(m) ? line(m) : full(m))).join('')}</ul></details></li>` : '');
-  for (const m of c.messages ?? []) m.read = true;
-  markInbox(c);
-  const hello = welcomeHere(c, here, now);
-  const welcomeCard = hello
-    ? `<li class="special welcome" style="--company:${COMPANIES[hello.company].colour}">${companyMark(hello.company)} <em class="risk">Welcome aboard</em> · ${hello.qty} t ${escapeHtml(cargoName(hello))} → ${place(destinationOf(hello))}<br>
-        <small>${escapeHtml(COMPANIES[hello.company].motto)} Your first job with us, within ${hello.jumps} jumps · <b class="pay">${hello.pay.toLocaleString()} Cr</b>, including a ${SIGNING_BONUS} Cr signing bonus</small>
-        <span class="actions"><button data-take="${hello.id}" ${cannotTake(c, hello, free) ? 'disabled' : ''}>Take</button></span></li>`
-    : '';
-  const specials = specialsHere(c, here, now)
-    .map((o) => {
-      const to = destinationOf(o);
-      const why = cannotTake(c, o, free);
-      const compartment = o.company !== 'mutual' && !c.compartment ? ' <em class="risk" title="Hides up to 4 t from police scans. Yours to keep.">Shielded compartment fitted</em>' : '';
-      return `<li class="special">${companyMark(o.company)} <em class="risk">Special assignment</em>${compartment} · ${o.qty} t ${escapeHtml(cargoName(o))} → ${place(to)}<br>
-        <small>within ${o.jumps} jumps · <b class="pay">${o.pay.toLocaleString()} Cr</b> · offer closes in ${hoursLeft(o.expires)} h</small>
-        <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}</li>`;
-    })
-    .join('');
-  // Lost cases that put a choice to you: the police, a blackmailer, pirates.
-  const incidents = (c.adrift ?? [])
-    .filter((k) => k.fate && k.fate !== 'honest')
-    .map((k) => {
-      const a = c.contracts?.find((x) => x.id === k.contract);
-      if (!a) return '';
-      const there = k.galaxy === here.galaxy && k.system === here.index;
-      const station = systemAt(k.galaxy, k.system).name;
-      const title = { police: `${station} station police: a word about your ${k.label}`, blackmail: `Someone at ${station} station has your ${k.label}`, ransom: `Pirates have your ${k.label}` }[k.fate as 'police'];
-      const needsStation = (ch: Choice) => (k.fate === 'police' || ch === 'find') && !there;
-      const buttons = incidentChoices(k, a.pay)
-        .map((o) => `<button data-incident="${k.contract}" data-choice="${o.choice}" ${needsStation(o.choice) || (o.cost && c.credits < o.cost) ? 'disabled' : ''} ${needsStation(o.choice) ? `title="At ${escapeHtml(station)} station"` : ''}>${escapeHtml(o.label)}</button>`)
-        .join('');
-      return `<li class="special">${companyMark(a.company)} · <b>${escapeHtml(title)}</b>${k.fate === 'police' && !there ? `<br><small>Report to ${escapeHtml(station)} station</small>` : ''}<span class="actions incident">${buttons}</span></li>`;
-    })
-    .join('');
-  const file = openFile ? fileOn(c, openFile, here, now) : null;
-  const fileHtml = file
-    ? `<div class="file" style="--company:${COMPANIES[openFile!].colour}"><h4>${escapeHtml(file.title)}</h4>${file.lines
-        .map((l) => (l.redacted ? `<p><span class="redacted" title="Redacted">${'█'.repeat(Math.min(40, l.text.length))}</span></p>` : `<p>${escapeHtml(l.text)}</p>`))
-        .join('')}<button data-close-file>Close file</button></div>`
-    : '';
-  const fileButtons = COMPANY_IDS.filter((id) => standing(c, id) > 0)
-    .map((id) => `<button data-file="${id}">${escapeHtml(COMPANIES[id].name)}: your file</button>`)
-    .join('');
-  const mine = (c.contracts ?? [])
-    .map((a) => {
-      const to = destinationOf(a);
-      const k = c.adrift?.find((x) => x.contract === a.id);
-      const falls = k ? Math.max(0, Math.round((k.lost + ADRIFT_HOLD - now) / 3600_000)) : 0;
-      const where = k ? systemAt(k.galaxy, k.system) : null;
-      const left =
-        (k?.held
-          ? `<span class="late">Held by the station crew at ${escapeHtml(where!.name)}: dock there to collect it</span> · `
-          : k
-            ? `<span class="late">Adrift near ${escapeHtml(where!.name)}, beaconing: ${falls ? `${falls} h before it starts to fall` : 'falling'}</span> · `
-            : '') +
-        (a.jumpsLeft >= 0 ? `${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'} left` : `<span class="late">late: half pay</span>`);
-      const rival = RIVAL[a.company];
-      const sale = a.special && !k && rival && companyHere(rival, here) ? `<button data-rival="${a.id}" title="${escapeHtml(COMPANIES[a.company].name)} will find out">Offer to ${escapeHtml(COMPANIES[rival].name)} · ${rivalPrice(a).toLocaleString()} Cr</button>` : '';
-      const course = c.target === to.index ? '<span class="on-course">On course</span>' : `<button data-course="${to.index}">Set course</button>`;
-      // Accepted over the comms array: waiting at its station to be collected.
-      if (a.reserved) {
-        const from = systemAt(a.from.galaxy, a.from.system);
-        const here_ = from === here;
-        const wait = a.jumpsLeft === 0 ? 'collect it before your next jump' : `collect within ${a.jumpsLeft} jump${a.jumpsLeft === 1 ? '' : 's'}`;
-        const fits = a.qty <= free + 1e-9;
-        return `<li class="${a.id === justTaken ? 'fresh' : ''}">${companyMark(a.company)} · ${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br>
-        <small>Reserved over the comms array · waiting at ${escapeHtml(stationName(from).name)}, ${escapeHtml(from.name)} · ${wait} · ${a.pay.toLocaleString()} Cr on delivery, ${a.jumps} jumps from loading</small>
-        <span class="actions">${here_ ? `<button data-collect="${a.id}" ${fits ? '' : `disabled title="Needs ${a.qty} t free"`}>Load · ${a.qty} t</button>` : c.target === from.index ? '<span class="on-course">On course</span>' : `<button data-course="${from.index}">Set course</button>`}<button data-abandon="${a.id}" title="The company gives it to someone else, and remembers">Abandon</button></span>${here_ && !fits ? `<small class="why">Make ${+(a.qty - free).toFixed(1)} t more room in the hold to load it</small>` : ''}</li>`;
-      }
-      const what = a.survey
-        ? `Survey the moons of ${place(to)}<br><small>${left} · ${worldOf(to).moons.filter((_, i) => isSurveyed(c, to, `moon${i}`)).length} of ${worldOf(to).moons.length} surveyed${surveyDone(c, a) ? ' · hand in at any Wexley-Yorozu station' : ''} · ${a.pay.toLocaleString()} Cr</small>`
-        : `${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>`;
-      return `<li class="${a.special ? 'special' : ''}${a.id === justTaken ? ' fresh' : ''}">${companyMark(a.company)} · ${what}
-        <span class="actions">${k && where!.index !== here.index ? `<button data-course="${where!.index}">Set course</button>` : course}${sale}<button data-abandon="${a.id}" title="The company takes its cargo back, and remembers">Abandon</button></span></li>`;
-    })
-    .join('');
-  const onBoard = board(c, here, now);
-  const sought = wanted ? onBoard.find((o) => o.id === wanted) : undefined;
-  boardSeenAt = now;
-  boardKey = onBoard.map((o) => o.id).join();
-  const offers = (sought ? [sought, ...onBoard.filter((o) => o !== sought)] : onBoard)
-    .map((o) => {
-      const to = destinationOf(o);
-      const why = cannotTake(c, o, free);
-      const fresh = o.posted !== undefined && now - o.posted < TICK;
-      return `<li class="${o === sought ? 'fresh sought' : ''}">${companyMark(o.company)}${fresh ? ' <em class="posted">Just posted</em>' : ''}${o.rush ? ' <em class="risk">Rush</em>' : ''} · ${o.survey ? `Survey the moons of ${place(to)} <small>(${worldOf(to).moons.length}) · data to any Wexley-Yorozu station</small>` : `${o.qty} t ${goodName(o.good)} → ${place(to)}`}<br>
-        <small>within ${o.jumps} jump${o.jumps === 1 ? '' : 's'} · <b class="pay">${o.pay.toLocaleString()} Cr</b>${o.danger ? ` (${o.danger} danger bonus)` : ''}${o.needs !== 'Casual' ? ` · needs ${o.needs}` : ''}</small>
-        <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}</li>`;
-    })
-    .join('');
-  const standings = COMPANY_IDS.filter((id) => (c.standing?.[id] ?? 0) !== 0)
-    .map((id) => {
-      const cost = amendsCost(standing(c, id));
-      // Badly out of favour with a company that works here: you can pay to be taken back.
-      const amends = cost && companyHere(id, here) ? ` <button data-amends="${id}" ${c.credits < cost ? 'disabled' : ''}>Make amends · ${cost.toLocaleString()} Cr</button>` : '';
-      return `${companyMark(id)} ${standingName(standing(c, id))}${amends}`;
-    })
-    .join(' · ');
-  $('#contracts').innerHTML = `
-    ${incidents ? `<h3>Incidents</h3><ul class="contracts">${incidents}</ul>` : ''}
-    ${messages ? `<h3>Messages</h3><ul class="contracts">${messages}</ul>` : ''}
-    ${mine ? `<h3>Your contracts</h3><ul class="contracts">${mine}</ul>` : ''}
-    <h3>On offer at ${escapeHtml(stationName(here).name)}</h3>
-    ${welcomeCard || specials || offers ? `<ul class="contracts">${welcomeCard}${specials}${offers}</ul>` : '<p class="meta">Nothing on the board. New work is posted every few minutes.</p>'}
-    ${fileHtml || (fileButtons ? `<p class="files">${fileButtons}</p>` : '')}
-    <p class="meta">Hold: ${+(free).toFixed(1)} t free · new work posted every few minutes${standings ? `<br>Standing: ${standings}` : ''}</p>
-    <p class="market-message" aria-live="polite">${escapeHtml(contractMessage)}</p>`;
-  if (justTaken) {
-    // Bring the contract you just took into view, with what happened.
-    const fresh = $('#contracts').querySelector<HTMLElement>('li.fresh');
-    const note = $('#contracts').querySelector<HTMLElement>('.market-message');
-    if (fresh && note) fresh.after(Object.assign(document.createElement('p'), { className: 'market-message', textContent: contractMessage }));
-    note?.remove();
-    fresh?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-    justTaken = null;
-  } else if (sought) {
-    $('#contracts').querySelector<HTMLElement>('li.sought')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }
-  markInbox(c);
-}
-
-// While you're docked the board rolls on: a new post slides in if you're looking, or counts on the tab if not.
-setInterval(() => {
-  if (state !== 'docked' || !commander || commander.difficulty !== 'modern') return;
-  const c = cmdr();
-  const key = board(c, currentSystem(), Date.now()).map((o) => o.id).join();
-  if (key === boardKey) return;
-  if (dockTab === 'contracts') renderContracts();
-  else {
-    boardKey = key;
-    markInbox(c);
-  }
-}, 15_000);
-
-$('#contracts').addEventListener('click', (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
-  if (!b) return;
-  b.blur();
-  const c = cmdr();
-  // Archive a message, or every one already read: out of the list, remembered so it isn't sent again.
-  if (b.dataset.archive) {
-    earlierOpen = Boolean(b.closest('details')?.open);
-    for (const m of c.messages ?? []) if (b.dataset.archive === 'read' ? m.read : m.id === b.dataset.archive) m.archived = true;
-    saveCommander(c);
-    renderContracts();
-    return;
-  }
-  if (b.dataset.decline) {
-    const m = c.messages?.find((x) => x.id === b.dataset.decline);
-    if (m) {
-      m.archived = true;
-      contractMessage = `Declined. ${COMPANIES[m.company].name} will be in touch with other work.`;
-    }
-  } else if (b.dataset.take) {
-    const now = Date.now();
-    const hello = welcomeHere(c, currentSystem(), now);
-    const offer = [...(hello ? [hello] : []), ...specialsHere(c, currentSystem(), now), ...board(c, currentSystem(), now)].find((o) => o.id === b.dataset.take);
-    if (offer && offer.id === hello?.id) recruiter = null; // welcomed
-    if (offer && offer.id === wanted) recruiter = wanted = null; // the card you came for
-    if (!offer) return;
-    const why = take(c, offer, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
-    contractMessage = why ?? (offer.survey ? `Survey contract taken: the moons of ${destinationOf(offer).name}, data to any Wexley-Yorozu station` : `Contract taken: ${offer.qty} t ${cargoName(offer)} for ${destinationOf(offer).name}, loaded`);
-    if (!why) {
-      const fitted = fitCompartment(c, offer);
-      if (fitted) contractMessage += ` · ${fitted}`;
-      contractMessage += ` · ${plotCourse(c, offer.to.system)}`;
-      justTaken = offer.id;
-      sfx.beep();
-    }
-  } else if (b.dataset.collect) {
-    const notes = collect(c, currentSystem(), cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
-    contractMessage = notes.join(' · ');
-    const loaded = c.contracts?.find((a) => a.id === b.dataset.collect);
-    if (loaded && !loaded.reserved) {
-      contractMessage += ` · ${plotCourse(c, loaded.to.system)}`;
-      justTaken = loaded.id;
-      sfx.beep();
-    }
-  } else if (b.dataset.abandon) {
-    contractMessage = abandon(c, b.dataset.abandon);
-  } else if (b.dataset.incident) {
-    contractMessage = decide(c, b.dataset.incident, b.dataset.choice as Choice, currentSystem()) ?? '';
-    sfx.beep();
-  } else if (b.dataset.amends) {
-    contractMessage = makeAmends(c, b.dataset.amends as CompanyId);
-    sfx.beep();
-  } else if (b.dataset.rival) {
-    contractMessage = sellToRival(c, b.dataset.rival, currentSystem()) ?? '';
-    sfx.beep();
-  } else if (b.dataset.file) {
-    openFile = b.dataset.file as CompanyId;
-  } else if (b.dataset.closeFile !== undefined) {
-    openFile = null;
-  } else if (b.dataset.course) {
-    contractMessage = plotCourse(c, Number(b.dataset.course));
-    sfx.beep();
-  }
-  saveCommander(c);
-  renderDocked(); // the hold, credits and standing all change with a contract
-});
-
-/** A line of news with the system's name made a link: tap it to see the system on the chart. */
-function linkSystem(text: string, s: StarSystem): string {
-  const name = escapeHtml(s.name);
-  return escapeHtml(text).replace(name, `<button type="button" class="sys-link" data-system="${s.index}" title="Show ${name} on the chart">${name}</button>`);
-}
-
-$('#news-list').addEventListener('click', (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-system]');
-  if (!b) return;
-  b.blur(); // or Enter on the chart would press it again
-  if (!isMapOpen()) toggleGalaxyMap();
-  showSystem(systemAt(currentSystem().galaxy, Number(b.dataset.system)));
-});
-
-// --- The saloon (docs/design/trading.md, section 3; game/saloon.ts) ------------------
-// Two to four regulars, coming and going with the clock. Buy one a drink and
-// they talk; the ones who know something early want paying properly, and so do
-// the liars. Their record builds as their tips come true or don't.
-
-// --- The shipyard: a showroom for now ------------------------------------------
-// Higher-tech stations show the hulls you'll be able to buy, each turning in the
-// berth, and the makers' concepts, coming soon (docs/design/ships-and-classes.md:
-// "something to drool over"). Buying, selling and trading in come later.
-
-/** Stations with a shipyard: the better-built worlds. */
-const SHIPYARD_TECH = 7;
-const hasShipyard = (s: StarSystem) => s.techLevel >= SHIPYARD_TECH;
-let yardPick: string | null = null;
-/** The ship being specced, while the configurator is open. */
-let spec: Spec | null = null;
-/** What the configurator is doing: your own spec, naming a numbered edition, or a gift signed over to you. */
-let yardMode: 'spec' | 'edition' | 'gift' | 'repaint' = 'spec';
-/** The special edition you're looking at in the yard, if any. */
-let editionSel: string | null = null;
-let editionsLeft: Record<string, { limit: number; taken: number }> = {};
-let editionsAsked = 0;
-/** Special editions are by invitation (Mark): signed over by the maker, never reserved at the counter. */
-const INVITATION = '<p class="yard-note yard-invite"><b>If you have to ask, you can’t afford one.</b> Special editions are by invitation: for now, the maker signs them over to the people who build Witchspace.</p>';
-let yardMessage = '';
-/** A ship specced on the site, waiting for you at the next shipyard: the newer of this browser's and your account's. */
-let siteSpec: WaitingSpec | null = null;
-
-/** Look for a spec from the site; when there is one and nothing's in production, the yard says so. */
-async function checkSiteSpec(announce: boolean) {
-  siteSpec = localSpec();
-  if (signedIn()) {
-    const r = await accountSpec();
-    const spec = 'error' in r ? null : validSpec(r.spec);
-    if (spec && !('error' in r) && r.at) siteSpec = newerSpec(siteSpec, { spec, at: r.at });
-  }
-  const def = siteSpec && shipById(siteSpec.spec.ship);
-  if (!def || cmdr().order || state !== 'docked' || !hasShipyard(currentSystem())) return;
-  if (announce) flash(`The yard: your ${def.name} spec from the website is here · see the Shipyard`, 5);
-  if (dockTab === 'shipyard' && !spec) renderShipyard();
-}
-
-/**
- * A ship signed over to you by the yard's office (no code to type: Mark, for Mark Moxon's 001): she
- * becomes your gift, waiting at the maker's own yard, and the maker writes to say so. Asked on load
- * and on docking, signed in; one already had (waiting, on order, or flown) is left alone.
- */
-/** Each held edition's certificate link (private: from the yard's office, for its owner only). */
-const papersLinks = new Map<string, string>();
-async function papersLinkFor(id: string, number: number): Promise<string | null> {
-  const key = `${id}:${number}`;
-  if (!papersLinks.has(key) && signedIn()) {
-    const r = await heldEditions();
-    if (!('error' in r)) for (const e of r.editions) if (e.link) papersLinks.set(`${e.edition}:${e.number}`, e.link);
-  }
-  return papersLinks.get(key) ?? null;
-}
-
-/** The maker hands over the keys: her certificate, full screen (the edition delivery pack). */
-function handOver(c: Commander, def: ShipDef, ed: Edition) {
-  const number = c.paint!.edition!.number;
-  // The maker's letter now points to her papers.
-  const letter = c.messages?.find((m) => m.id === `gift:${def.id}:${ed.id}:${number}`);
-  if (letter && !letter.body.includes('Her papers')) {
-    letter.body += ' Her papers: see your certificate, linked in her owner’s manual.';
-    saveCommander(c);
-  }
-  showHandover($('#handover'), {
-    papers: papersFor(ed, number, def.name, { galaxy: currentSystem().galaxy, system: currentSystem().index }),
-    maker: def.manufacturer ?? 'The yard',
-    name: c.paint?.name ?? '',
-    callsign: c.name,
-    at: Date.now(),
-    link: papersLinkFor(ed.id, number),
-  }, () => renderShipyard());
-}
-
-async function checkSignedOver() {
-  if (!signedIn() || !commander || commander.difficulty !== 'modern') return;
-  const r = await signedOver();
-  if ('error' in r) return;
-  const c = cmdr();
-  for (const g of r.gifts) {
-    const def = shipById(g.ship);
-    const id = `gift:${g.ship}:${g.edition ?? ''}:${g.number ?? ''}`;
-    const same = (e?: { id: string; number: number }) => Boolean(g.edition && e && e.id === g.edition && e.number === g.number);
-    if (!def || c.messages?.some((m) => m.id === id) || same(c.gift?.edition) || same(c.order?.edition) || same(c.paint?.edition) || c.fleet?.some((f) => same(f.paint?.edition)) || (c.gift && !g.edition)) continue;
-    const at = systemAt(g.galaxy, g.system);
-    const edition = g.edition ? editionById(g.edition) : undefined;
-    const what = edition && g.number ? `${edition.name} ${editionNo(g.number)}` : `A ${def.name}`;
-    c.gift = { ship: g.ship, ...(edition && g.number ? { edition: { id: edition.id, number: g.number } } : {}), at: { galaxy: g.galaxy, system: g.system } };
-    c.messages = [
-      {
-        id,
-        company: 'hexon' as const, // shown as from the maker, not a company
-        from: def.manufacturer ?? 'The yard',
-        subject: `${what} is yours`,
-        body: `Commander ${c.name}, ${what} has been signed over to you, built and paid for. She's waiting at our own yard, ${stationName(at).name}, ${at.name}. Bring your ship: keep her in your hangar or let us take her, and we'll hand you the keys.`,
-        at: Date.now(),
-      },
-      ...(c.messages ?? []),
-    ].slice(0, 20);
-    saveCommander(c);
-    markInbox(c);
-    flash(`${def.manufacturer ?? 'The yard'}: ${what} has been signed over to you · see Contracts`, 6);
-    if (state === 'docked' && dockTab === 'shipyard' && !spec) renderShipyard();
-  }
-}
-
-/** The site's spec is ordered: it's done with, here and on the account. */
-function forgetSiteSpec() {
-  if (!siteSpec) return;
-  siteSpec = null;
-  clearLocalSpec();
-  if (signedIn()) void forgetAccountSpec();
-}
-
-const berthLooks: string[] = [];
-
-/** A hull in the berth in another finish: rebuilt from its file with the look changed. */
-function recolourShowroom(i: number, look: Look) {
-  const base = ships[i];
-  const key = `${look.colour}|${look.glow}|${look.trim ?? ''}|${look.lights ? 'l' : ''}`;
-  if ((berthLooks[i] ?? `${base.style.lineColor}|${base.style.glow ?? 1}||`) === key) return;
-  berthLooks[i] = key;
-  const old = showroomModels[i];
-  const m = buildPainted(base, look);
-  showroom.scene.remove(old.root);
-  disposeShip(old);
-  showroom.scene.add(m.root);
-  m.root.visible = i === shipIndex;
-  showroomModels[i] = m;
-}
-const plainLook = (def: ShipDef): Look => ({ colour: def.style.lineColor, glow: def.style.glow ?? 1, trim: null });
-const paintLook = (def: ShipDef, p: { colour: string; glow?: GlowId; trim?: string | null; luxuries?: string[]; ghost?: boolean }): Look => ({
-  colour: p.colour,
-  glow: GLOWS[p.glow ?? 'standard'].glow * (def.style.glow ?? 1),
-  trim: p.trim ?? null,
-  // Black-light running lights, unless the owner flies her as a full ghost.
-  ...(p.luxuries?.includes('black-light-lights') && !p.ghost ? { lights: true } : {}),
-});
-
-/** Your own ship's look, for the kill cam, clips and other commanders; null in the maker's colours. */
-const myLook = (): Look | null => {
-  const c = commander;
-  return c?.paint ? paintLook(player.def, c.paint) : null;
-};
-
-/** Your hull in the berth, in its paint, and every other hull in its maker's own. */
-function showOwnShip() {
-  const c = commander;
-  ships.forEach((def, i) => recolourShowroom(i, c?.paint && def.id === hullOf(c) ? paintLook(def, c.paint) : plainLook(def)));
-  showShip(ownIndex());
-}
-
-/** Fly the hull your commander owns, with its paint on the dashboard and its name on the plate. */
-function boardShip() {
-  const c = cmdr();
-  const def = shipById(hullOf(c)) ?? shipById('cobra-mk3')!;
-  if (player.def.id !== def.id) player.fly(def);
-  setDashColour(c.paint?.colour ?? null);
-  const plate = $('#dash-plate');
-  const ed = c.paint?.edition && editionById(c.paint.edition.id);
-  const words = [c.paint?.name, ed ? `${ed.name} ${editionNo(c.paint!.edition!.number)}` : c.paint ? def.name : ''].filter(Boolean);
-  plate.textContent = words.join(' · ');
-  plate.hidden = !words.length;
-}
-
-/** Whether this device has been asked (or has said yes) to notifications for the yard, this session. */
-let notifyAsked = false;
-
-/** Ask to be told when she's ready (Mark: "ask anyone ordering a ship to turn on notifications"). */
-function notifyPrompt(): string {
-  if (typeof Notification !== 'undefined' && Notification.permission === 'granted' && signedIn()) return '<span class="yard-note">The yard will send you a notification when she’s ready for collection.</span>';
-  const why = !signedIn() ? 'Sign in (from the menu), then turn on notifications' : needsHomeScreen() ? 'On iPhone, add Witchspace to your Home Screen, then turn on notifications there' : '';
-  return why
-    ? `<span class="yard-note">Want to know the moment she’s ready? ${why}.</span>`
-    : '<button type="button" class="yard-notify">Tell me when she’s ready: turn on notifications</button>';
-}
-
-/**
- * Collecting a ship: what happens to the one you came in (Mark). Keep her in your hangar, as she is,
- * free; or let the yard take her (a gift's yard pays for her kit at the dock's price; an order's, its
- * trade-in). Kept unless you choose otherwise.
- */
-let keepOld = true;
-function oldShipChoice(gift: boolean): string {
-  const c = cmdr();
-  const name = `${player.def.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}`;
-  const kit = c.equipment.filter((id) => UPGRADES.some((e) => e.id === id)).map((id) => EQUIPMENT.find((e) => e.id === id)?.name ?? id);
-  const lasers = Object.values(c.lasers).filter(Boolean).map((l) => PLAYER_LASERS[l!].name);
-  const aboard = [...lasers, ...kit];
-  const taken = gift ? giftTradeIn(c, player.def) : tradeIn(c, player.def);
-  const pays = taken ? `${taken.toLocaleString()} Cr` : 'nothing';
-  const here = stationName(currentSystem()).name;
-  return `<div class="yard-old" role="radiogroup" aria-label="Your ${escapeHtml(player.def.name)}">
-      <p class="yard-old-head">Your ${escapeHtml(name)}</p>
-      <button type="button" role="radio" data-old="keep" aria-checked="${keepOld}"><b>Keep her in your hangar</b><span>As she is, for later${aboard.length ? `: ${escapeHtml(aboard.join(', '))}` : ''}. Free. She waits here at ${escapeHtml(here)}.</span></button>
-      <button type="button" role="radio" data-old="sell" aria-checked="${!keepOld}"><b>Let the yard take her</b><span>${gift ? `The yard pays ${pays} for her kit, what the dock pays for each item.${c.paint?.gifted ? ' Her hull was a gift, so it pays nothing.' : c.ship === undefined ? ' She came with your licence, so her hull pays nothing.' : ''}` : `The yard gives ${pays} for her and her kit.`}</span></button>
-    </div>`;
-}
-
-/** The way to take delivery: here at the yard that built it, the bill with your trade-in; elsewhere, where to go. */
-function collectButton(o: ShipOrder): string {
-  const here = currentSystem();
-  if (o.galaxy !== here.galaxy || o.system !== here.index) return '';
-  const bill = collection(cmdr(), player.def, keepOld)!;
-  const pay = bill.due >= 0 ? `pay ${Math.ceil(bill.due).toLocaleString()} Cr` : `receive ${Math.floor(-bill.due).toLocaleString()} Cr`;
-  return `${o.gifted ? '' : oldShipChoice(false)}${keepOld ? '' : `<span>Balance ${bill.balance.toLocaleString()} Cr, less ${bill.tradeIn.toLocaleString()} Cr for your ${escapeHtml(player.def.name)} and its kit</span>`}
-    ${o.gifted ? oldShipChoice(true) : ''}
-    <button type="button" class="primary yard-collect" ${cmdr().credits < bill.due ? 'disabled' : ''}>Collect her${bill.due ? ` · ${pay}` : ''}</button>`;
-}
-
-/** The hull you fly, in the yard's list: yours, not one to spec (Mark: "its asking me to spec my Fdl but i have the Dark Edition!"). */
-function ownCard(c: Commander, def: ShipDef): string {
-  const ed = c.paint?.edition && editionById(c.paint.edition.id);
-  const what = ed ? `${escapeHtml(ed.name)} ${editionNo(c.paint!.edition!.number)}` : `your ${escapeHtml(def.name)}`;
-  return `<div class="yard-order" style="--hull:${c.paint?.colour ?? def.style.lineColor}"><strong>She’s yours: ${what}${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</strong><span>In the berth and ready to fly.</span></div>`;
-}
-
-/** Your fleet: the ships waiting in hangars, where each is, and swapping or sending for her (Mark). */
-function fleetCard(): string {
-  const c = cmdr();
-  if (!c.fleet?.length) return '';
-  const here = currentSystem();
-  const now = Date.now();
-  const rows = c.fleet.map((s) => {
-    const def = shipById(s.ship);
-    const name = `${def?.name ?? s.ship}${s.paint?.name ? ` “${escapeHtml(s.paint.name)}”` : ''}${s.paint?.edition ? ` · ${escapeHtml(editionById(s.paint.edition.id)?.name ?? '')} ${editionNo(s.paint.edition.number)}` : ''}`;
-    const where = s.at.galaxy === here.galaxy ? systemAt(s.at.galaxy, s.at.system) : null;
-    let line: string;
-    let act = '';
-    if (s.delivery) {
-      const to = systemAt(s.delivery.to.galaxy, s.delivery.to.system);
-      const h = Math.max(0.1, (s.delivery.arrives - now) / 3600_000);
-      line = `On her way to ${escapeHtml(stationName(to).name)}, ${escapeHtml(to.name)} · about ${h < 1 ? `${Math.ceil(h * 60)} min` : `${h.toFixed(1)} h`}`;
-    } else if (where && s.at.system === here.index) {
-      line = 'In the hangar here';
-      act = `<button type="button" class="primary" data-fly="${s.id}">Fly her</button>`;
-    } else if (where && def) {
-      const ly = distanceLy(here, where);
-      const q = deliveryQuote(def, ly);
-      line = `In the hangar at ${escapeHtml(stationName(where).name)}, ${escapeHtml(where.name)} · ${ly.toFixed(1)} LY`;
-      act = `<button type="button" data-deliver="${s.id}" ${c.credits < q.cost ? 'disabled' : ''}>Have her delivered here · ${q.cost.toLocaleString()} Cr · about ${(q.ms / 3600_000).toFixed(1)} h</button>`;
-    } else line = `In a hangar in galaxy ${s.at.galaxy + 1}`;
-    return `<li style="--hull:${s.paint?.colour ?? def?.style.lineColor ?? 'var(--accent)'}"><strong>${name}</strong><span>${line}</span>${act}</li>`;
-  });
-  return `<div class="yard-fleet"><p class="yard-old-head">Your fleet · ${c.fleet.length + 1} ships</p><ul>${rows.join('')}</ul>${c.fleet.some((s) => !s.delivery && !(s.at.galaxy === here.galaxy && s.at.system === here.index)) ? '<p class="yard-note">The Carriers’ Mutual carry her, at their haulage rate. Or fly there to swap.</p>' : ''}</div>`;
-}
-
-function renderShipyard() {
-  const c = cmdr();
-  const here = currentSystem();
-  const now = Date.now();
-  // A ship signed over to you waits at one yard (the maker's own): elsewhere, the yard says where.
-  const giftAt = c.gift?.at;
-  const giftWaiting = giftAt && !(giftAt.galaxy === here.galaxy && giftAt.system === here.index) ? systemAt(giftAt.galaxy, giftAt.system) : null;
-  const yard = ships
-    .map((def, i) => ({ def, i }))
-    .filter(({ def }) => inYards(def))
-    // Concepts first: the reveal, then the yard's line from the dearest.
-    .sort((a, b) => Number(Boolean(b.def.concept)) - Number(Boolean(a.def.concept)) || b.def.stats.price - a.def.stats.price);
-  // How many of each edition are left: asked of the server now and then, and shown when it answers.
-  if (now - editionsAsked > 60_000) {
-    editionsAsked = now;
-    void editionCounts().then((r) => {
-      editionsLeft = r;
-      if (state === 'docked' && dockTab === 'shipyard' && !spec) renderShipyard();
-    });
-  }
-  const edition = editionSel ? editionById(editionSel) : undefined;
-  const pick = yard.find((y) => y.def.id === (spec?.ship ?? edition?.ship ?? yardPick)) ?? yard[0];
-  if (!pick) return;
-  yardPick = pick.def.id;
-  // The berth shows the glow you're choosing, the edition you're looking at, or the one you ordered.
-  const lookOf = (def: ShipDef): Look => {
-    const o = spec && def.id === spec.ship ? spec : !spec && edition?.ship === def.id ? edition : c.order?.ship === def.id ? c.order : c.paint && hullOf(c) === def.id ? c.paint : null;
-    return o ? paintLook(def, o) : plainLook(def);
-  };
-  for (const { i, def } of yard) recolourShowroom(i, lookOf(def));
-  const nameOf = (colour: string | null) => PALETTE.find((p) => p.colour === colour)?.name ?? 'the maker’s own';
-  if (shipIndex !== pick.i) showShip(pick.i);
-  const el = $('#shipyard');
-  const msg = `<p class="yard-funds">You have <b>${Math.floor(c.credits).toLocaleString()} Cr</b></p>${yardMessage ? `<p class="yard-message">${escapeHtml(yardMessage)}</p>` : ''}`;
-  yardMessage = '';
-
-  // Your ship in production, at the top whatever you're looking at.
-  let orderCard = '';
-  if (c.order) {
-    const o = c.order;
-    const def = shipById(o.ship);
-    const p = production(o, now);
-    const at = o.galaxy === here.galaxy ? systemAt(o.galaxy, o.system) : null;
-    const where = at ? `${stationName(at).name}, ${at.name}` : 'a yard in another galaxy';
-    orderCard = `<div class="yard-order" style="--hull:${o.colour}">
-      <strong>Your ${escapeHtml(def?.name ?? o.ship)}${o.name ? ` “${escapeHtml(o.name)}”` : ''}</strong>
-      ${o.edition ? `<span class="yard-edition-no">${escapeHtml(editionById(o.edition.id)?.name ?? '')} ${editionNo(o.edition.number)}${o.gifted ? ' · a gift' : ''}</span>` : o.gifted ? '<span class="yard-edition-no">A gift</span>' : ''}
-      <span>${p.built ? `Ready, and waiting for you at ${escapeHtml(where)}.` : `Being finished at ${escapeHtml(where)}: ${p.stage.toLowerCase()} · about ${p.hoursLeft} h to go`}</span>
-      <div class="rec-meter"><span style="width:${(p.fraction * 100).toFixed(1)}%"></span></div>
-      <span>${o.gifted ? 'Built for you by the yard, with its thanks: nothing to pay' : `Deposit ${o.deposit.toLocaleString()} Cr paid · ${(o.quoted - o.deposit).toLocaleString()} Cr on collection`}</span>
-      ${!p.built && !notifyAsked ? notifyPrompt() : ''}
-      ${p.built ? collectButton(o) : o.gifted ? '' : `<button type="button" class="yard-cancel">Cancel and refund ${o.deposit.toLocaleString()} Cr</button>`}
-    </div>`;
-  }
-
-  if (spec) {
-    const def = pick.def;
-    const fixed = yardMode === 'edition' ? editionById(editionSel ?? '') : undefined;
-    const gift = yardMode === 'gift';
-    const giftEdition = gift && c.gift?.edition ? editionById(c.gift.edition.id) : undefined;
-    const total = fixed ? editionQuote(def, fixed) : gift ? 0 : quote(def, spec);
-    const lines = priceLines(def, spec);
-    const deposit = depositFor(total);
-    const cost = (n: number) => (n ? `${n.toLocaleString()} Cr` : 'Included');
-    const swatches = (attr: string, chosen: string | null) =>
-      `<div class="yard-colours">${(yardMode === 'repaint' ? PALETTE.filter((p) => paintable(c, p.colour)) : ORDERABLE).map((p) => `<button type="button" ${attr}="${p.colour}" aria-pressed="${chosen === p.colour}" title="${escapeHtml(p.line)}" style="--sw:${p.colour}" ${gift && p.price ? 'disabled' : ''}><i></i><span>${p.name}</span><small>${p.price ? `${p.price.toLocaleString()} Cr` : 'Included'}</small></button>`).join('')}</div>`;
-    const chosenColour = PALETTE.find((p) => p.colour === spec!.colour);
-    const laserRow = (Object.keys(PLAYER_LASERS) as LaserId[])
-      .map((id) => `<button type="button" data-laser="${id}" aria-pressed="${spec!.laser === id}" ${laserLocked(c, id) ? `disabled title="${escapeHtml(laserLocked(c, id)!)}"` : ''}>${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`)
-      .join('');
-    const kit = UPGRADES.filter((e) => !e.modernOnly || c.difficulty === 'modern')
-      .map((e) =>
-        standardKit(def).includes(e.id)
-          ? `<label><input type="checkbox" checked disabled /> <span>${escapeHtml(e.name)}</span><small>Standard</small></label>`
-          : `<label><input type="checkbox" data-up="${e.id}" ${spec!.upgrades.includes(e.id) ? 'checked' : ''} /> <span>${escapeHtml(e.name)}</span><small>${Math.round(e.price * fitScale(def)).toLocaleString()} Cr</small></label>`,
-      )
-      .join('');
-    const repainting = yardMode === 'repaint';
-    const repaintCost = repainting ? repaintQuote(def, { colour: spec.colour, glow: spec.glow, trim: spec.trim }, c.paint) : 0;
-    const action = repainting
-      ? `<button type="button" class="primary yard-repaint" ${c.credits < repaintCost ? 'disabled' : ''}>Repaint her · ${repaintCost.toLocaleString()} Cr</button>
-        <p class="yard-note">Done while you wait. Her name${c.paint?.edition ? ', her number' : ''} and what's aboard stay as they are.</p>`
-      : fixed
-      ? INVITATION
-      : gift
-        ? c.order
-          ? '<p class="meta">One ship in production at a time: collect that one first.</p>'
-          : `${oldShipChoice(true)}<button type="button" class="primary yard-gift">Take her now · a gift</button>
-            <p class="yard-note">${giftEdition ? 'In the edition’s colours' : 'The hull as it leaves the yard, in your colour'}, with your name on her: built and waiting. Upgrades are yours to earn.</p>`
-        : def.concept
-      ? c.order
-        ? '<p class="meta">One ship in production at a time.</p>'
-        : `<button type="button" class="primary yard-deposit" ${c.credits < deposit ? 'disabled' : ''}>Place a deposit · ${deposit.toLocaleString()} Cr</button>
-          <p class="yard-note">${escapeHtml(def.manufacturer ?? 'The yard')} lay down a ${escapeHtml(def.name)} every few months, so there's always one on the line: yours is the next off it. Finishing her to your spec takes about ${PRODUCTION_HOURS / 24} days, here at ${escapeHtml(stationName(here).name)}, at this price. A tenth now, refundable until she's ready.</p>`
-      : '<p class="yard-note">Shipyards open soon: you\'ll buy it outright then.</p>';
-    const nameField = `<label class="yard-label" for="spec-name">Its name, painted on${fixed ? ' beside its number' : ''}</label>
-      <input id="spec-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" />`;
-    const body = fixed
-      ? `<p class="yard-desc">${escapeHtml(fixed.blurb)}</p>
-        <p class="yard-label">The edition</p>
-        <ul class="yard-spec-list">
-          <li>${escapeHtml(nameOf(fixed.colour))}${fixed.trim ? `, the fine lines in ${escapeHtml(nameOf(fixed.trim))}` : ''}, ${GLOWS[fixed.glow].name.toLowerCase()}</li>
-          <li>${fixed.rear === fixed.laser ? `${escapeHtml(PLAYER_LASERS[fixed.laser].name)}s front and rear` : `${escapeHtml(PLAYER_LASERS[fixed.laser].name)}${fixed.rear ? `, a ${escapeHtml(PLAYER_LASERS[fixed.rear].name.toLowerCase())} aft` : ''}`} · ${fixed.upgrades.map((u) => escapeHtml(UPGRADES.find((e) => e.id === u)?.name ?? u)).join(' · ')}</li>
-          <li>${fixed.luxuries.map((l) => escapeHtml(LUXURIES.find((x) => x.id === l)?.name ?? l)).join(' · ')}</li>
-          <li>Its number painted beside its name</li>
-        </ul>
-        ${nameField}
-        <p class="yard-total"><span>The spec ${quote(def, spec).toLocaleString()} · numbered ${(total - quote(def, spec)).toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>`
-      : repainting
-        ? `<p class="yard-label">Her colour <span>${escapeHtml(nameOf(spec.colour))}</span></p>
-          ${swatches('data-colour', spec.colour)}
-          <p class="yard-label">How hard she glows</p>
-          <div class="yard-lasers">${(Object.keys(GLOWS) as GlowId[]).map((g) => `<button type="button" data-glow="${g}" aria-pressed="${spec!.glow === g}">${GLOWS[g].name}<small>${cost(GLOWS[g].price)}</small></button>`).join('')}</div>
-          <label class="yard-check"><input type="checkbox" class="yard-two-tone" ${spec.trim ? 'checked' : ''} /> <span>Two-tone: the fine lines in a second colour</span><small>${TRIM_PRICE.toLocaleString()} Cr</small></label>
-          ${spec.trim ? swatches('data-trim', spec.trim) : ''}
-          <p class="yard-total"><span>Labour ${repaintLabour(def, spec.glow).toLocaleString()} · finish ${(repaintCost - repaintLabour(def, spec.glow)).toLocaleString()}</span><b>${repaintCost.toLocaleString()} Cr</b></p>`
-        : gift && giftEdition
-        ? `<p class="yard-desc">${escapeHtml(giftEdition.blurb)}</p>
-          <ul class="yard-spec-list">
-            <li>${escapeHtml(nameOf(giftEdition.colour))}${giftEdition.trim ? `, the fine lines in ${escapeHtml(nameOf(giftEdition.trim))}` : ''}, ${GLOWS[giftEdition.glow].name.toLowerCase()}</li>
-            <li>${giftEdition.luxuries.map((l) => escapeHtml(LUXURIES.find((x) => x.id === l)?.name ?? l)).join(' · ')}</li>
-            <li>${editionNo(c.gift!.edition!.number)} beside its name</li>
-            <li>Beam lasers front and rear, a docking computer and a combat computer: the rest is yours to earn</li>
-          </ul>
-          ${nameField}
-          <p class="yard-total"><span>${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}</span><b>A gift</b></p>`
-        : gift
-        ? `<p class="yard-label">Its colour <span>${escapeHtml(nameOf(spec.colour))} · the included colours</span></p>
-          ${swatches('data-colour', spec.colour)}
-          ${nameField}
-          <p class="yard-total"><span>Hull, ${escapeHtml(PLAYER_LASERS[standardLaser(def)].name.toLowerCase())}, standard fit</span><b>A gift</b></p>`
-        : '';
-    el.innerHTML = `${msg}${orderCard}<button type="button" class="yard-back">‹ The yard</button> <button type="button" class="yard-photo">Photograph her</button>
-      <h3 class="yard-title" style="--hull:${spec.colour}">${repainting ? `Repaint your ${escapeHtml(def.name)}` : fixed ? `${escapeHtml(fixed.name)}: ${escapeHtml(def.name)}` : giftEdition ? `Your gift: ${escapeHtml(giftEdition.name)} ${editionNo(c.gift!.edition!.number)}` : gift ? `Your gift: a ${escapeHtml(def.name)}` : `Spec your ${escapeHtml(def.name)}`}</h3>
-      ${body ? `${body}${action}` : `<p class="yard-label">Its colour <span>${chosenColour ? `${chosenColour.name} · ${cost(chosenColour.price)}` : 'The maker’s own'}</span></p>
-      ${swatches('data-colour', spec.colour)}
-      ${chosenColour ? `<p class="yard-note">${escapeHtml(chosenColour.line)}</p>` : ''}
-      <p class="yard-label">How hard it glows</p>
-      <div class="yard-lasers">${(Object.keys(GLOWS) as GlowId[]).map((g) => `<button type="button" data-glow="${g}" aria-pressed="${spec!.glow === g}">${GLOWS[g].name}<small>${cost(GLOWS[g].price)}</small></button>`).join('')}</div>
-      <label class="yard-check"><input type="checkbox" class="yard-two-tone" ${spec.trim ? 'checked' : ''} /> <span>Two-tone: the fine lines in a second colour</span><small>${TRIM_PRICE.toLocaleString()} Cr</small></label>
-      ${spec.trim ? swatches('data-trim', spec.trim) : ''}
-      <label class="yard-label" for="spec-name">Its name, painted on</label>
-      <input id="spec-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" />
-      <p class="yard-label">Its laser</p>
-      <div class="yard-lasers">${laserRow}</div>
-      <p class="yard-label">Rear laser</p>
-      <div class="yard-lasers yard-rear"><button type="button" data-rear="" aria-pressed="${!spec.rear}">None<small>—</small></button>${(Object.keys(PLAYER_LASERS) as LaserId[]).map((id) => `<button type="button" data-rear="${id}" aria-pressed="${spec!.rear === id}" ${laserLocked(c, id) ? `disabled title="${escapeHtml(laserLocked(c, id)!)}"` : ''}>${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`).join('')}</div>
-      <p class="yard-label">Upgrades <span>fitted to a hull this size: ×${fitScale(def).toFixed(1)}</span></p>
-      <div class="yard-kit">${kit}</div>
-      <p class="yard-label">Luxuries <span>comfort and showing off, nothing that flies or fights better</span></p>
-      <div class="yard-kit yard-lux">${ORDERABLE_LUXURIES.map((l) => `<label><input type="checkbox" data-lux="${l.id}" ${spec!.luxuries.includes(l.id) ? 'checked' : ''} /> <span>${escapeHtml(l.name)}<em>${escapeHtml(l.blurb)}</em></span><small>${l.price.toLocaleString()} Cr</small></label>`).join('')}</div>
-      <p class="yard-total"><span>Hull ${lines.hull.toLocaleString()} · fit-out ${lines.fit.toLocaleString()} · finish ${lines.finish.toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>
-      ${action}`}`;
-    const keep = () => renderShipyard();
-    el.querySelector<HTMLButtonElement>('.yard-back')!.onclick = () => {
-      spec = null;
-      yardMode = 'spec';
-      keep();
-    };
-    el.querySelector<HTMLButtonElement>('.yard-photo')!.onclick = openBooth;
-    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-colour]'))
-      b.onclick = () => {
-        spec!.colour = b.dataset.colour!;
-        keep();
-      };
-    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-trim]'))
-      b.onclick = () => {
-        spec!.trim = b.dataset.trim!;
-        keep();
-      };
-    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-glow]'))
-      b.onclick = () => {
-        spec!.glow = b.dataset.glow as GlowId;
-        keep();
-      };
-    el.querySelector<HTMLInputElement>('.yard-two-tone')?.addEventListener('change', (e) => {
-      spec!.trim = (e.target as HTMLInputElement).checked ? (ORDERABLE.find((p) => p.colour !== spec!.colour)?.colour ?? '#f2f6ff') : null;
-      keep();
-    });
-    for (const box of el.querySelectorAll<HTMLInputElement>('[data-lux]'))
-      box.onchange = () => {
-        const id = box.dataset.lux!;
-        spec!.luxuries = box.checked ? [...spec!.luxuries, id] : spec!.luxuries.filter((l) => l !== id);
-        keep();
-      };
-    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-rear]'))
-      b.onclick = () => {
-        spec!.rear = (b.dataset.rear || undefined) as LaserId | undefined;
-        keep();
-      };
-    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-laser]'))
-      b.onclick = () => {
-        spec!.laser = b.dataset.laser as LaserId;
-        keep();
-      };
-    for (const box of el.querySelectorAll<HTMLInputElement>('[data-up]'))
-      box.onchange = () => {
-        const id = box.dataset.up as EquipmentId;
-        spec!.upgrades = box.checked ? [...spec!.upgrades, id] : spec!.upgrades.filter((u) => u !== id);
-        keep();
-      };
-    const name = el.querySelector<HTMLInputElement>('#spec-name');
-    if (name) name.oninput = () => (spec!.name = name.value);
-    const dep = el.querySelector<HTMLButtonElement>('.yard-deposit');
-    if (dep)
-      dep.onclick = () => {
-        if (!dep.dataset.armed) {
-          dep.dataset.armed = '1';
-          dep.textContent = `Pay ${deposit.toLocaleString()} Cr now? Press again`;
-          return;
-        }
-        const r = placeOrder(c, def, spec!, { galaxy: here.galaxy, system: here.index }, Date.now());
-        if (!r.ok) yardMessage = r.message;
-        else {
-          yardMessage = `Deposit paid. Your ${def.name}${r.order.name ? ` “${r.order.name}”` : ''} is the next off the line: the yard at ${stationName(here).name} is finishing her to your spec.`;
-          spec = null;
-          forgetSiteSpec();
-          saveCommander(c);
-          sfx.beep();
-        }
-        renderShipyard();
-      };
-    const paintGo = el.querySelector<HTMLButtonElement>('.yard-repaint');
-    if (paintGo && repainting)
-      paintGo.onclick = () => {
-        if (!paintGo.dataset.armed) {
-          paintGo.dataset.armed = '1';
-          paintGo.textContent = `Pay ${repaintCost.toLocaleString()} Cr and repaint her? Press again`;
-          return;
-        }
-        const r = repaint(c, def, { colour: spec!.colour, glow: spec!.glow, trim: spec!.trim });
-        if (!r.ok) yardMessage = r.message;
-        else {
-          yardMessage = `Repainted in ${nameOf(spec!.colour)}. She looks the part.`;
-          spec = null;
-          yardMode = 'spec';
-          saveCommander(c);
-          sfx.beep();
-        }
-        renderShipyard();
-      };
-    const giftGo = el.querySelector<HTMLButtonElement>('.yard-gift');
-    if (giftGo && gift)
-      giftGo.onclick = () => {
-        const at = { galaxy: here.galaxy, system: here.index };
-        const r = placeOrder(c, def, spec!, at, Date.now(), { gift: true });
-        // Built and waiting: you fly out in her now.
-        const got = r.ok ? collectOrder(c, player.def, def, at, cargoTonnes(c), Date.now(), keepOld) : null;
-        if (!r.ok) yardMessage = r.message;
-        else if (got && !got.ok) yardMessage = `Built and waiting for you here: ${got.message}.`;
-        else {
-          boardShip();
-          const ed = c.paint?.edition && editionById(c.paint.edition.id);
-          yardMessage = `She's yours: your ${def.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}${ed ? `, ${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''}, in the berth and ready to fly. With the yard's thanks.`;
-          yardPick = def.id;
-          if (ed) handOver(c, def, ed);
-        }
-        if (r.ok) {
-          spec = null;
-          yardMode = 'spec';
-          saveCommander(c);
-          sfx.beep();
-        }
-        renderShipyard();
-      };
-  } else {
-    el.innerHTML = `${msg}${orderCard}${fleetCard()}<p class="meta">Shipyards open soon: you'll buy, sell and trade in here. Spec your perfect ship now, and put a deposit on a concept to have it built for you.</p>
-      <ul class="yard">${yard
-        .map(({ def }) => {
-          const st = def.stats;
-          const tag = def.id === hullOf(c) ? `<em>Your ship${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</em>` : def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : '';
-          const mine = def.id === hullOf(c) && c.paint;
-          const ed = mine && c.paint!.edition ? editionById(c.paint!.edition.id) : undefined;
-          return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${mine ? c.paint!.colour : def.style.lineColor}">
-            <strong>${escapeHtml(def.name)}${ed ? ` · ${escapeHtml(ed.name)} ${editionNo(c.paint!.edition!.number)}` : ''}</strong> ${tag}
-            <span>${[def.manufacturer, def.role].filter(Boolean).map((x) => escapeHtml(x!)).join(' · ')}</span>
-            <span>${st.maxSpeed} m/s · hull ${st.hull} · shields ${st.shields} · ${st.cargo} t · ${st.missiles ?? 0} missiles</span>
-            <b>${def.concept ? 'About ' : ''}${st.price.toLocaleString()} Cr</b>
-          </button></li>`;
-        })
-        .join('')}${EDITIONS.map((e) => {
-          const d = shipById(e.ship);
-          if (!d) return '';
-          const taken = editionsLeft[e.id]?.taken ?? 0;
-          return `<li><button type="button" data-edition="${e.id}" aria-pressed="${editionSel === e.id}" style="--hull:${e.colour}">
-            <strong>${escapeHtml(e.name)}</strong> <em class="yard-concept">${escapeHtml(d.name)} · numbered</em>
-            <span>${taken ? `${taken} of ${e.limit} signed over` : `${e.limit} will be built`} · for contributors</span>
-            <span>${escapeHtml(nameOf(e.colour))}${e.trim ? ` · ${escapeHtml(nameOf(e.trim))} trim` : ''} · ${GLOWS[e.glow].name}</span>
-            <b>By invitation</b>
-          </button></li>`;
-        }).join('')}</ul>
-      <p class="yard-desc">${escapeHtml(edition ? edition.blurb : pick.def.description)}</p>
-      ${siteSpec && !c.order && shipById(siteSpec.spec.ship) ? `<div class="yard-order" style="--hull:${siteSpec.spec.colour}"><strong>Your ${escapeHtml(shipById(siteSpec.spec.ship)!.name)} spec from the website is here</strong><span>${siteSpec.spec.name ? `“${escapeHtml(siteSpec.spec.name)}”, ` : ''}${escapeHtml(nameOf(siteSpec.spec.colour))}: ${quote(shipById(siteSpec.spec.ship)!, siteSpec.spec).toLocaleString()} Cr as specced.</span><button type="button" class="primary yard-open-site">Open it</button></div>` : ''}
-      ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span>${giftWaiting ? `<span>Waiting for you at the maker’s own yard: ${escapeHtml(stationName(giftWaiting).name)}, ${escapeHtml(giftWaiting.name)}${giftWaiting.galaxy === here.galaxy ? `, ${jumpsBetween(here, giftWaiting, 12)} jumps from here` : ''}.</span>${giftWaiting.galaxy === here.galaxy ? `<button type="button" class="primary yard-gift-course">${c.target === giftWaiting.index ? 'On course' : 'Set course'}</button>` : ''}` : '<button type="button" class="primary yard-open-gift">Spec your gift</button>'}</div>` : ''}
-      ${pick.def.id === hullOf(c) && !edition ? `<button type="button" class="yard-manual yard-repaint-open">Repaint your ${escapeHtml(pick.def.name)}</button>` : ''}
-      <button type="button" class="yard-manual">The ${escapeHtml(edition ? (shipById(edition.ship)?.name ?? '') : pick.def.name)} owner's manual</button>
-      ${edition ? INVITATION : pick.def.id === hullOf(c) ? `${ownCard(c, pick.def)}<button type="button" class="yard-manual yard-spec">Spec another ${escapeHtml(pick.def.name)}</button>` : `<button type="button" class="primary yard-spec">Spec your ${escapeHtml(pick.def.name)}</button>`}`;
-    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-yard]'))
-      b.onclick = () => {
-        yardPick = b.dataset.yard!;
-        editionSel = null;
-        resetShowroomView();
-        renderShipyard();
-      };
-    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-edition]'))
-      b.onclick = () => {
-        editionSel = b.dataset.edition!;
-        resetShowroomView();
-        renderShipyard();
-      };
-    el.querySelector<HTMLButtonElement>('.yard-repaint-open')?.addEventListener('click', () => {
-      yardMode = 'repaint';
-      const p = c.paint;
-      spec = { ...defaultSpec(pick.def), colour: p?.colour ?? pick.def.style.lineColor, glow: p?.glow ?? 'standard', trim: p?.trim ?? null };
-      renderShipyard();
-    });
-    el.querySelector<HTMLButtonElement>('.yard-manual:not(.yard-repaint-open)')!.onclick = () => openManual(edition ? shipById(edition.ship)! : pick.def);
-    const specOpen = el.querySelector<HTMLButtonElement>('.yard-spec');
-    if (specOpen) specOpen.onclick = () => {
-      if (edition) {
-        yardMode = 'edition';
-        spec = editionSpec(edition);
-      } else {
-        yardMode = 'spec';
-        spec = defaultSpec(pick.def);
-      }
-      renderShipyard();
-    };
-    const openGift = () => {
-      const d = c.gift && shipById(c.gift.ship);
-      if (!d) return;
-      yardMode = 'gift';
-      editionSel = null;
-      const e = c.gift!.edition && editionById(c.gift!.edition.id);
-      spec = e ? editionGiftSpec(e, c.name) : { ...defaultSpec(d), name: c.name };
-      renderShipyard();
-    };
-    el.querySelector<HTMLButtonElement>('.yard-open-gift')?.addEventListener('click', openGift);
-    el.querySelector<HTMLButtonElement>('.yard-gift-course')?.addEventListener('click', () => {
-      if (!giftWaiting) return;
-      yardMessage = plotCourse(c, giftWaiting.index);
-      saveCommander(c);
-      sfx.beep();
-      renderShipyard();
-    });
-    el.querySelector<HTMLButtonElement>('.yard-open-site')?.addEventListener('click', () => {
-      if (!siteSpec) return;
-      yardMode = 'spec';
-      editionSel = null;
-      yardPick = siteSpec.spec.ship;
-      spec = { ...siteSpec.spec, upgrades: [...siteSpec.spec.upgrades], luxuries: [...siteSpec.spec.luxuries] };
-      resetShowroomView();
-      renderShipyard();
-    });
-    // No voucher box (Mark: "nobody gets a gift voucher for a 500K ship!"): an edition is signed
-    // over to a contributor's account (tools/voucher.ts gift) and is waiting when they sign in.
-  }
-  const tell = el.querySelector<HTMLButtonElement>('.yard-notify');
-  if (tell)
-    tell.onclick = async () => {
-      tell.disabled = true;
-      try {
-        await enablePush();
-        yardMessage = 'Notifications on: the yard will tell you the moment she’s ready for collection.';
-      } catch (e) {
-        yardMessage = (e as Error).message;
-      }
-      notifyAsked = true;
-      renderShipyard();
-    };
-  el.querySelectorAll<HTMLButtonElement>('[data-old]').forEach((b) => {
-    b.onclick = () => {
-      keepOld = b.dataset.old === 'keep';
-      renderShipyard();
-    };
-  });
-  el.querySelectorAll<HTMLButtonElement>('[data-fly]').forEach((b) => {
-    b.onclick = () => {
-      const s = c.fleet?.find((x) => x.id === b.dataset.fly);
-      const next = s && shipById(s.ship);
-      if (!next) return;
-      const r = swapShip(c, player.def, next, s.id, { galaxy: here.galaxy, system: here.index }, cargoTonnes(c), Date.now());
-      if (!r.ok) yardMessage = r.message;
-      else {
-        boardShip();
-        showOwnShip();
-        saveCommander(c);
-        sfx.beep();
-        yardMessage = `You're in your ${next.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}. Your old ship waits in the hangar here.`;
-        yardPick = next.id;
-      }
-      renderShipyard();
-    };
-  });
-  el.querySelectorAll<HTMLButtonElement>('[data-deliver]').forEach((b) => {
-    b.onclick = () => {
-      const s = c.fleet?.find((x) => x.id === b.dataset.deliver);
-      const def = s && shipById(s.ship);
-      if (!def) return;
-      if (!b.dataset.armed) {
-        b.dataset.armed = '1';
-        b.textContent = `Send for her? Press again`;
-        return;
-      }
-      const r = deliverShip(c, def, s.id, here, distanceLy(systemAt(s.at.galaxy, s.at.system), here), Date.now());
-      if (!r.ok) yardMessage = r.message;
-      else {
-        saveCommander(c);
-        sfx.beep();
-        yardMessage = `The Carriers’ Mutual have her: your ${def.name} arrives here in about ${((r.arrives - Date.now()) / 3600_000).toFixed(1)} h.`;
-      }
-      renderShipyard();
-    };
-  });
-  const take = el.querySelector<HTMLButtonElement>('.yard-collect');
-  if (take && c.order)
-    take.onclick = async () => {
-      if (!take.dataset.armed) {
-        take.dataset.armed = '1';
-        take.textContent = keepOld ? `Keep your ${player.def.name} in the hangar and take her? Press again` : `Trade in your ${player.def.name} and take her? Press again`;
-        return;
-      }
-      const next = shipById(c.order!.ship)!;
-      // A numbered edition is handed over only if the yard's office has the number down as yours.
-      const ed = c.order!.edition;
-      if (ed) {
-        take.disabled = true;
-        const held = await heldEditions();
-        if ('error' in held || !held.editions.some((x) => x.edition === ed.id && x.number === ed.number)) {
-          yardMessage = 'error' in held ? held.error : 'The yard’s office has no record of that number in your name. Get in touch: hello@witchspace.org.uk';
-          renderShipyard();
-          return;
-        }
-      }
-      const r = collectOrder(c, player.def, next, { galaxy: here.galaxy, system: here.index }, cargoTonnes(c), Date.now(), keepOld);
-      if (!r.ok) yardMessage = r.message;
-      else {
-        boardShip();
-        saveCommander(c);
-        sfx.beep();
-        yardMessage = `She's yours: your ${next.name}${c.paint?.name ? ` “${c.paint.name}”` : ''}, in the berth and ready to fly.`;
-        yardPick = next.id;
-        const owned = c.paint?.edition && editionById(c.paint.edition.id);
-        if (owned) handOver(c, next, owned);
-      }
-      renderShipyard();
-    };
-  const cancel = el.querySelector<HTMLButtonElement>('.yard-cancel');
-  if (cancel)
-    cancel.onclick = () => {
-      if (!cancel.dataset.armed) {
-        cancel.dataset.armed = '1';
-        cancel.textContent = 'Cancel the build? Press again';
-        return;
-      }
-      const back = cancelOrder(c, Date.now());
-      yardMessage = back ? `Cancelled. ${back.toLocaleString()} Cr refunded.` : '';
-      saveCommander(c);
-      renderShipyard();
-    };
-}
-
-// --- Money: the system's currency, the station's pool and your wallet ----------------------
-// (docs/design/system-currencies.md, stage one.)
-
-/** When you docked: an official-rate station's limit is per visit. */
-let dockedAt = 0;
-let moneySide: 'buy' | 'sell' = 'buy';
-let moneyMessage = '';
-
-/** The real Bitcoin price, where the money follows it; the reference price if we haven't heard. */
-const btcNow = () => {
-  const q = heardQuote();
-  return q && isFresh(q) ? q.price : BTC_REF;
-};
-let moneyAsked = 0;
-
-/** Providing liquidity to this station's pool: the offer, or your position and what it's done. */
-function liquidity(c: Commander, here: StarSystem, ticker: string, btc: number, now: number, fmtN: (n: number, d?: number) => string): string {
-  const p = c.fx?.lp?.[walletKey(here)];
-  if (p) {
-    const pos = positionNow(here, p, now, btc);
-    const loss = pos.held > 0 ? ((pos.value - pos.fees) / pos.held - 1) * 100 : 0;
-    return `<h3>Your liquidity here</h3><div class="money-form">
-      <p class="money-quote">Worth ${fmtN(pos.value, 0)} Cr now: ${fmtN(pos.credits, 0)} Cr and ${fmtN(pos.local)} ${ticker}, with ${fmtN(pos.fees, 1)} Cr in fees.</p>
-      <p class="yard-note">Had you simply held what you put in: ${fmtN(pos.held, 0)} Cr. ${Math.abs(loss) < 0.05 ? 'The rate hasn’t moved.' : `The rate's move has cost ${Math.abs(loss).toFixed(1)}% against holding (impermanent loss); the fees make up for it over time.`}</p>
-      <button type="button" class="lp-out">Withdraw it all</button></div>`;
-  }
-  return `<h3>Provide liquidity</h3><div class="money-form">
-    <p class="yard-note">Put credits and the same value of ${ticker} into the pool, and share its fees: about ${Math.round(feeYield(here) * 100)}% a year here. The risk is real: if the rate moves, you come out holding more of whichever side fell.</p>
-    <label class="money-amount"><span>Credits to put in (with the matching ${ticker} from your wallet)</span><input id="lp-n" type="number" min="0" step="any" inputmode="decimal" /></label>
-    <button type="button" class="lp-add">Add to the pool</button></div>`;
-}
-
-/** The companies' Bitcoin-backed coins: taken at any station, minted and redeemed here. */
-function companyDesk(btc: number, live: boolean | null | undefined, fmtN: (n: number, d?: number) => string): string {
-  const v = companyValue(btc);
-  return `<h3>Company stablecoins</h3><div class="money-form">
-    <p class="yard-note">Each big company issues a coin backed by Bitcoin locked up at ${Math.round(COLLATERAL * 100)}% of its value: no bank needed, taken at any station. ${live ? (v < 1 ? `Bitcoin has fallen so far the backing no longer covers them: a coin redeems for ${fmtN(v, 3)} Cr.` : `At today's Bitcoin price the backing is ${Math.round(COLLATERAL * (btc / BTC_REF) * 100)}%: a coin redeems for 1 Cr.`) : ''}</p>
-    <div class="co-row"><select id="co-pick">${COMPANY_IDS.map((id) => `<option value="${id}">${escapeHtml(COMPANIES[id].name)}</option>`).join('')}</select><input id="co-n" type="number" min="0" step="any" inputmode="decimal" placeholder="Credits" /></div>
-    <button type="button" class="co-mint">Mint coins (a credit each, 0.3% fee)</button></div>`;
-}
-
-function renderMoney() {
-  const c = cmdr();
-  const here = currentSystem();
-  const now = Date.now();
-  // Ask for the price now and then while the tab is open; draw again when it comes.
-  if (now - moneyAsked > 60_000) {
-    moneyAsked = now;
-    void btcQuote().then((q) => q && state === 'docked' && dockTab === 'money' && renderMoney());
-  }
-  const btc = btcNow();
-  const live = heardQuote() && isFresh(heardQuote());
-  const cur = currencyOf(here);
-  const el = $('#money');
-  const fmtN = (n: number, d = n < 10 ? 2 : 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: n < 10 && n > 0 ? Math.min(d, 2) : 0 });
-  const msg = moneyMessage ? `<p class="yard-message">${escapeHtml(moneyMessage)}</p>` : '';
-  moneyMessage = '';
-  const wallet = Object.entries(walletOf(c)).filter(([, u]) => u > 1e-6);
-  const holdings = wallet.length
-    ? `<ul class="money-wallet">${wallet
-        .map(([key, units]) => {
-          if (isCompanyKey(key)) {
-            const co = COMPANIES[key.slice(3) as CompanyId];
-            return `<li><strong>${fmtN(units)} ${escapeHtml(co?.name.split(' ')[0] ?? key)} coins</strong><span>${escapeHtml(co?.name ?? key)} · Bitcoin-backed · about ${fmtN(units * companyValue(btc), 0)} Cr</span><button type="button" data-redeem="${key.slice(3)}">Redeem</button></li>`;
-          }
-          const home = walletHome(key);
-          const hc = currencyOf(home)!;
-          const atHome = key === walletKey(here);
-          const value = valueOf(key, units, now, btc);
-          const action = atHome ? '<small>Change it above</small>' : hc.stable ? `<button type="button" data-cash="${key}">Cash it · ${fmtN(stableValue(home, units, now, btc), 0)} Cr</button>` : `<small>Change it at ${escapeHtml(home.name)}</small>`;
-          return `<li><strong>${fmtN(units)} ${hc.ticker}</strong><span>${escapeHtml(hc.name)} · ${escapeHtml(home.name)} · about ${fmtN(value, 0)} Cr</span>${action}</li>`;
-        })
-        .join('')}</ul>`
-    : '<p class="meta">Nothing yet. Money you change takes no hold space and survives your ship, like Bitcoin.</p>';
-  if (!cur) {
-    el.innerHTML = `${msg}<h3>No money is issued here</h3><p class="money-line">${escapeHtml(POLICY_TEXT.none.line)} Stablecoins from elsewhere are taken here at their rate.</p><h3>Your wallet</h3>${holdings}${companyDesk(btc, live, fmtN)}`;
-  } else {
-    const pol = POLICY_TEXT[cur.policy];
-    const pool = poolHere(c, here, now, btc);
-    const rate = poolRate(pool);
-    const fair = fairRate(here, now, btc);
-    const week = fairRate(here, now - 7 * 86_400_000, btc);
-    const change = (week / fair - 1) * 100; // the money's value against the credit
-    const trouble = cur.policy === 'feudal' ? crisis(here, now, 0.15) : cur.policy === 'printing' ? crisis(here, now, 0.12) : 0;
-    const left = officialLeft(c, here, dockedAt);
-    const have = walletOf(c)[walletKey(here)] ?? 0;
-    const supply = supplyOf(here, now, btc);
-    const minted = mintedToday(here, now, btc);
-    const big = (n: number) => (n >= 1e9 ? `${fmtN(n / 1e9, 1)}bn` : n >= 1e6 ? `${fmtN(n / 1e6, 1)}m` : fmtN(n, 0));
-    const output = outputAt(here, now);
-    const shock = activeEvent(here, now);
-    const floats = cur.policy === 'inflation' || cur.policy === 'printing' || cur.policy === 'scarce';
-    const outputLine =
-      Math.abs(output - 1) < 0.02
-        ? ''
-        : `<p class="money-line ${output < 1 ? 'short' : ''}">${shock ? `${escapeHtml(EVENT_KINDS[shock.type].name)}: o` : 'O'}utput here is ${output < 1 ? 'down' : 'up'} ${Math.round(Math.abs(output - 1) * 100)}%. ${
-            floats
-              ? output < 1
-                ? `The same ${cur.ticker} chases fewer goods, so each buys less until it recovers.`
-                : `More goods for the same ${cur.ticker}: each buys more while it lasts.`
-              : cur.stable
-                ? `The issuer ${output < 1 ? 'burns' : 'mints'} ${cur.ticker} to hold the peg.`
-                : 'The state holds its rate regardless.'
-          }</p>`;
-    el.innerHTML = `${msg}
-      <h3 class="money-title">${escapeHtml(cur.name)} <span>${cur.ticker}</span></h3>
-      <p class="money-policy"><b>${escapeHtml(pol.name)}.</b> ${escapeHtml(pol.line)}</p>
-      ${trouble > 0.05 ? `<p class="money-crisis">${cur.policy === 'feudal' ? `The peg has broken: a ${cur.ticker} is worth ${fmtN(1 / fair, 2)} Cr. The algorithm is minting to defend it, which only makes it worse.` : 'The presses are running day and night: prices here are climbing by the hour.'}</p>` : ''}
-      ${cur.policy === 'reserve' ? `<p class="money-line ${backing(here, btc) < 1 ? 'short' : ''}">Reserves published: ${Math.round((1 - reserveShare(here)) * 100)}% in credits, ${Math.round(reserveShare(here) * 100)}% in Bitcoin. ${live ? `At today's Bitcoin price they cover ${Math.round(backing(here, btc) * 100)}% of the coins${backing(here, btc) < 1 ? ': short, and holders are running' : ''}.` : ''}</p>` : ''}
-      ${cur.policy === 'scarce' && live ? `<p class="money-line">Bitcoin today: $${Math.round(btc).toLocaleString()} (1 Cr = $1). This money rises and falls with it.</p>` : ''}
-      <dl class="money-rates">
-        <div><dt>Here</dt><dd>1 Cr = ${fmtN(rate, 3)} ${cur.ticker}</dd></div>
-        <div><dt>Fair rate</dt><dd>${fmtN(fair, 3)} ${cur.ticker}</dd></div>
-        <div><dt>This week</dt><dd class="${change < -0.05 ? 'down' : change > 0.05 ? 'up' : ''}">${Math.abs(change) < 0.05 ? 'Steady against the credit' : `${change > 0 ? '+' : ''}${change.toFixed(1)}% against the credit`}</dd></div>
-        <div><dt>The pool</dt><dd>${fmtN(pool.local, 0)} ${cur.ticker} · ${fmtN(pool.credits, 0)} Cr</dd></div>
-        <div><dt>In circulation</dt><dd>${big(supply)} ${cur.ticker}</dd></div>
-        <div><dt>Today</dt><dd>${Math.abs(minted) < supply * 0.0005 ? 'Nothing minted or burned' : `${big(Math.abs(minted))} ${minted > 0 ? 'minted' : 'burned'}`}</dd></div>
-      </dl>
-      ${outputLine}
-      <div class="money-form">
-        <div class="yard-lasers money-sides"><button type="button" data-side="buy" aria-pressed="${moneySide === 'buy'}">Buy ${cur.ticker}</button><button type="button" data-side="sell" aria-pressed="${moneySide === 'sell'}">Sell ${cur.ticker}</button></div>
-        <label class="money-amount"><span>${moneySide === 'buy' ? 'Credits to change' : `${cur.ticker} to sell (you have ${fmtN(have)})`}</span><input id="money-n" type="number" min="0" step="any" inputmode="decimal" /></label>
-        <p class="money-quote" id="money-quote">&nbsp;</p>
-        <button type="button" class="primary money-go">${moneySide === 'buy' ? `Change for ${cur.ticker}` : 'Change for credits'}</button>
-        ${Number.isFinite(left) ? `<p class="yard-note">The state lets each visitor change ${fmtN(OFFICIAL_LIMIT, 0)} Cr a visit: ${fmtN(left, 0)} Cr left.</p>` : ''}
-        <p class="yard-note">The pool charges ${(POOL_FEE * 100).toFixed(1)}%, and a big swap moves the rate against you; it drifts back as other traders arbitrage.</p>
-      </div>
-      ${liquidity(c, here, cur.ticker, btc, now, fmtN)}
-      <h3>Your wallet</h3>${holdings}
-      ${companyDesk(btc, live, fmtN)}`;
-    const input = el.querySelector<HTMLInputElement>('#money-n')!;
-    const quote = el.querySelector<HTMLElement>('#money-quote')!;
-    const update = () => {
-      const n = Number(input.value);
-      if (!(n > 0)) return (quote.innerHTML = '&nbsp;');
-      quote.textContent = moneySide === 'buy' ? `You get about ${fmtN(quoteBuy(pool, Math.min(n, c.credits)))} ${cur.ticker}` : `You get about ${fmtN(quoteSell(pool, Math.min(n, have)), 1)} Cr`;
-    };
-    input.oninput = update;
-    for (const b of el.querySelectorAll<HTMLButtonElement>('[data-side]'))
-      b.onclick = () => {
-        moneySide = b.dataset.side as 'buy' | 'sell';
-        renderMoney();
-      };
-    el.querySelector<HTMLButtonElement>('.money-go')!.onclick = () => {
-      const n = Number(input.value);
-      const r = moneySide === 'buy' ? buyLocal(c, here, n, Date.now(), dockedAt, btc) : sellLocal(c, here, n, Date.now(), dockedAt, btc);
-      moneyMessage = r.message;
-      if (r.ok) {
-        saveCommander(c);
-        sfx.beep();
-      }
-      renderMoney();
-    };
-  }
-  const done = (r: { ok: boolean; message: string }) => {
-    moneyMessage = r.message;
-    if (r.ok) {
-      saveCommander(c);
-      sfx.beep();
-    }
-    renderMoney();
-  };
-  el.querySelector<HTMLButtonElement>('.lp-add')?.addEventListener('click', () => done(addLiquidity(c, here, Number(el.querySelector<HTMLInputElement>('#lp-n')!.value), Date.now(), btc)));
-  el.querySelector<HTMLButtonElement>('.lp-out')?.addEventListener('click', () => done(withdrawLiquidity(c, here, Date.now(), btc)));
-  el.querySelector<HTMLButtonElement>('.co-mint')?.addEventListener('click', () =>
-    done(mintCompany(c, el.querySelector<HTMLSelectElement>('#co-pick')!.value, Number(el.querySelector<HTMLInputElement>('#co-n')!.value), Date.now(), here)),
-  );
-  for (const b of el.querySelectorAll<HTMLButtonElement>('[data-redeem]')) b.onclick = () => done(redeemCompany(c, b.dataset.redeem!, walletOf(c)[companyKey(b.dataset.redeem!)] ?? 0, Date.now(), here, btc));
-  for (const b of el.querySelectorAll<HTMLButtonElement>('[data-cash]'))
-    b.onclick = () => {
-      const key = b.dataset.cash!;
-      const r = cashStable(c, here, key, walletOf(c)[key] ?? 0, Date.now(), btc);
-      moneyMessage = r.message;
-      if (r.ok) {
-        saveCommander(c);
-        sfx.beep();
-      }
-      renderMoney();
-    };
-}
-
-function renderSaloon() {
-  const c = cmdr();
-  const here = currentSystem();
-  const now = Date.now();
-  const v = venue(here);
-  const slot = slotOf(now);
-  const s = (c.saloon ??= { drinks: [], heard: [] });
-  const sysName = (i: number) => systemAt(here.galaxy, i).name;
-  const cards = regularsAt(here, now)
-    .map((r) => {
-      const drunk = s.drinks.includes(`${r.id}@${slot}`);
-      const heard = s.heard.find((h) => h.who === r.id && h.slot === slot);
-      const words = drunk ? talk(r, sysName, Boolean(heard?.paid)) : null;
-      const rec = record(s.heard, r.id, now);
-      const before = s.heard.some((h) => h.who === r.id && h.slot !== slot); // on an earlier visit
-      const known = rec.right || rec.wrong ? `Their tips: ${rec.right} came true${rec.wrong ? ` · ${rec.wrong} didn't` : ''}` : before ? 'You have heard from them before: too soon to say' : '';
-      const action = !drunk
-        ? `<button data-drink="${r.id}" ${c.credits < r.drink ? 'disabled' : ''}>Buy a drink · ${r.drink} Cr</button>`
-        : words?.more
-          ? `<button data-pay="${r.id}" ${c.credits < r.price ? 'disabled' : ''}>Pay ${r.price} Cr for the rest</button>`
-          : '';
-      return `<li class="regular regular-${r.mood}">
-        <strong>${escapeHtml(r.name)}</strong> <small>${escapeHtml(r.trade)}</small>
-        <p class="regular-look">${escapeHtml(r.look)}</p>
-        ${known ? `<p class="regular-record">${escapeHtml(known)}</p>` : ''}
-        ${words ? `<p class="regular-says">“${escapeHtml(words.said)}”</p>` : ''}
-        ${action ? `<p class="regular-actions">${action}</p>` : ''}
-      </li>`;
-    })
-    .join('');
-  const back = hasBackRoom(c, here) ? `<button type="button" class="saloon-back">A door at the back ›</button>` : '';
-  $('#saloon').innerHTML = `
-    <h3>${escapeHtml(v.name)} <small>the ${v.kind} at ${escapeHtml(stationName(here).name)}</small></h3>
-    <p class="meta">Regulars come and go every couple of hours. What they tell you might be worth a fortune, or nothing at all: nobody here wears a label.</p>
-    <ul class="regulars">${cards}</ul>
-    ${back}`;
-}
-
-$('#saloon').addEventListener('click', (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
-  if (!b) return;
-  const c = cmdr();
-  const here = currentSystem();
-  const now = Date.now();
-  const slot = slotOf(now);
-  const s = (c.saloon ??= { drinks: [], heard: [] });
-  if (b.classList.contains('saloon-back')) {
-    // The back room: through the exchange's own door.
-    setDockTab('market');
-    document.querySelector<HTMLButtonElement>('#exchange .ex-backroom-toggle')?.click();
-    return;
-  }
-  const r = regularsAt(here, now).find((x) => x.id === (b.dataset.drink ?? b.dataset.pay));
-  if (!r) return;
-  if (b.dataset.drink && c.credits >= r.drink) {
-    c.credits = Math.round((c.credits - r.drink) * 10) / 10;
-    s.drinks = [...s.drinks, `${r.id}@${slot}`].slice(-40);
-    // Glad and mad tell all for a drink; sad and bad want paying for the rest.
-    if (r.tip) s.heard = [...s.heard, { who: r.id, name: r.name, galaxy: here.galaxy, at: now, slot, tip: r.tip, paid: r.price === 0 }].slice(-60);
-  } else if (b.dataset.pay && c.credits >= r.price) {
-    const h = s.heard.find((x) => x.who === r.id && x.slot === slot);
-    if (!h) return;
-    c.credits = Math.round((c.credits - r.price) * 10) / 10;
-    h.paid = true;
-  } else return;
-  saveCommander(c);
-  sfx.beep();
-  renderSaloon();
-});
-
-function renderNews() {
-  const here = currentSystem();
-  const now = Date.now();
-  // Ongoing news first, then what's probably over; the latest eight.
-  const items = newsAt(here, now)
-    .sort((a, b) => Number(now > a.event.end) - Number(now > b.event.end) || b.heard - a.heard)
-    .slice(0, 8);
-  const attacks = attackNews(here, now)
-    .map(
-      (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Traders attacked near ${n.where.name}: ${n.lost} shipments lost`, n.where)}</b>
-        <small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · heard ${ago(now - n.heard)} ago · Wanted: whatever it imports</small></li>`,
-    )
-    .join('');
-  // Money in trouble in the region: a peg breaking, the presses running (Modern).
-  const money =
-    cmdr().difficulty === 'modern'
-      ? moneyNews(here, now, (w) => newsDelay(w, here), btcNow())
-          .slice(0, 3)
-          .map((n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(n.text, n.where)}</b><small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · stablecoins and Bitcoin are the ways out</small></li>`)
-          .join('')
-      : '';
-  // Wexley-Yorozu yards in the region: news, not a market event (Modern).
-  const yards = exploring()
-    ? yardsNear(here, now)
-        .slice(0, 3)
-        .map(
-          (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Wexley-Yorozu yard at ${n.where.name}: ${stageInfo(n.yard.stage).news}`, n.where)}</b>
-        <small>${escapeHtml(n.where === here ? 'Here, by the moon' : `${n.distance.toFixed(1)} LY away`)} · ${escapeHtml(stageLabel(n.yard))}</small></li>${firstFittingsAt(n.yard)
-          .map((x) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(x.kind === 'design' ? `Wexley-Yorozu fits CMDR ${x.to}'s new ${x.module.name.toLowerCase()} at ${n.where.name}` : `Wexley-Yorozu fits CMDR ${x.to}'s improved ${x.module.name.toLowerCase()} at ${n.where.name}`, n.where)}</b>
-        <small>${x.kind === 'design' ? 'The first Titanoboa to carry it' : `Designed by CMDR ${escapeHtml(x.module.designer)}, revised by CMDR ${escapeHtml(x.to)}`}</small></li>`)
-          .join('')}`,
-        )
-        .join('')
-    : '';
-  $('#news-list').innerHTML = (attacks || money || yards || items.length)
-    ? attacks + money + yards + items
-        .map((n) => {
-          const kind = EVENT_KINDS[n.event.type];
-          const local = n.where === here;
-          const over = now > n.event.end;
-          const status = local ? (over ? 'Over' : 'Here, now') : over ? 'May be over by now' : `${n.distance.toFixed(1)} LY away · news ${ago(n.heard - n.event.start)} old when it arrived`;
-          return `<li class="${local ? 'here' : ''}${over ? ' over' : ''}"><b>${linkSystem(kind.headline(n.where.name), n.where)}</b>
-            <small>${escapeHtml(status)} · heard ${ago(now - n.heard)} ago · Wanted: ${escapeHtml(kind.wanted)}</small></li>`;
-        })
-        .join('')
-    : '<li class="quiet">No news. All quiet within 25 light years.</li>';
-}
-
-// Modern markets in neo-vector mode get the full exchange; Classic and 1984
-// mode keep the plain price list.
-const exchange = mountExchange($('#exchange'), {
-  context: tradeContext,
-  localMoney(sys) {
-    const cur = currencyOf(sys);
-    if (!cur) return null;
-    const here = currentSystem();
-    const now = Date.now();
-    // Here, the pool's rate (what changing would give); another market on screen, its fair rate.
-    const rate = sys.galaxy === here.galaxy && sys.index === here.index ? poolRate(poolHere(cmdr(), sys, now, btcNow())) : fairRate(sys, now, btcNow());
-    return { ticker: cur.ticker, rate };
-  },
-  setCourse(dest) {
-    cmdr().target = dest.index;
-    saveCommander(cmdr());
-    sfx.beep();
-    flash(`Course set: ${dest.name} · ${distanceLy(currentSystem(), dest).toFixed(1)} LY`, 2);
-  },
-  traded(result) {
-    if (result.ok) {
-      noticeTrades();
-      saveCommander(cmdr());
-      sfx.beep();
-    }
-    renderMarket(result.message);
-  },
-  dealt(result) {
-    if (result.ok) saveCommander(cmdr());
-    if (result.caught) {
-      recordCrime(cmdr(), 'offender');
-      saveCommander(cmdr());
-      sfx.explosion();
-    } else if (result.ok) sfx.beep();
-    renderMarket();
-  },
-});
-const useExchange = () => cmdr().difficulty === 'modern' && !isRetro();
-
-function renderMarket(message = '') {
-  const ex = useExchange();
-  $('.panel.docked').classList.toggle('exchange', ex);
-  $('.panel.docked').classList.toggle('wide', !ex);
-  document.body.classList.toggle('exchange-open', ex);
-  if (ex) {
-    const ctx = tradeContext();
-    const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    updateDockHead();
-    $('#dock-funds').innerHTML = `Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>`;
-  }
-  $('#exchange').hidden = !ex;
-  for (const id of ['#market-summary', '#market-table', '#market-message']) $(id).hidden = ex;
-  if (ex) {
-    exchange.render(message || undefined);
-    exchange.start();
-    return;
-  }
-  exchange.stop();
-  const ctx = tradeContext();
-  const c = ctx.commander;
-  const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-  $('#market-summary').innerHTML =
-    `Credits <b>${fmt(c.credits)} Cr</b> · Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>` +
-    (c.difficulty === 'classic' ? ' · 1984 prices' : '');
-  const rows = quotes(ctx)
-    .map((q) => {
-      const id = q.commodity.id;
-      const held = c.cargo[id] ?? 0;
-      const canBuy = maxBuyable(ctx, id);
-      const illegal = q.commodity.legality === 'illegal' ? '<span class="illegal">Illegal</span>' : '';
-      return `<tr class="${held ? 'held' : ''}">
-        <td>${q.commodity.name}${illegal}</td>
-        <td class="num">${fmt(q.price)} Cr/${q.commodity.unit}</td>
-        <td class="num">${q.stock}${q.commodity.unit === 't' ? 't' : q.commodity.unit}</td>
-        <td class="num">${held || '-'}</td>
-        <td class="actions">
-          <button data-buy="${id}" data-qty="1" ${canBuy >= 1 ? '' : 'disabled'} title="Buy one">+1</button>
-          <button data-buy="${id}" data-qty="${canBuy}" ${canBuy >= 1 ? '' : 'disabled'} title="Buy as much as you can">Max</button>
-          <button data-sell="${id}" data-qty="1" ${held >= 1 ? '' : 'disabled'} title="Sell one">-1</button>
-          <button data-sell="${id}" data-qty="${held}" ${held >= 1 ? '' : 'disabled'} title="Sell all">All</button>
-        </td>
-      </tr>`;
-    })
-    .join('');
-  $('#market-table').innerHTML = `<thead><tr><th>Goods</th><th>Price</th><th>Stock</th><th>Hold</th><th></th></tr></thead><tbody>${rows}</tbody>`;
-  $('#market-message').textContent = message;
-}
-
-$('#market-table').addEventListener('click', (e) => {
-  const b = (e.target as HTMLElement).closest('button');
-  if (!b || b.disabled) return;
-  b.blur();
-  const ctx = tradeContext();
-  const qty = Number(b.dataset.qty);
-  const result = b.dataset.buy ? buy(ctx, b.dataset.buy, qty) : sell(ctx, b.dataset.sell!, qty);
-  if (result.ok) {
-    saveCommander(ctx.commander);
-    sfx.beep();
-  }
-  renderMarket(result.message);
-});
-
-// The commander's lasers, missiles and equipment, drawn on the hangar ship.
-let fittings: Fittings | null = null;
-
-function showFittings(c: Commander | null) {
-  if (fittings) disposeFittings(fittings);
-  fittings = null;
-  const model = showroomModels.find((m) => m.def.id === player.def.id);
-  if (!c || !model) return;
-  const size = { pulse: 1, beam: 2, military: 3 };
-  const lasers: Loadout['lasers'] = {};
-  for (const mount of VIEWS) {
-    const id = c.lasers[mount];
-    if (id) lasers[mount] = { color: PLAYER_LASERS[id].color, size: size[id] };
-  }
-  fittings = buildFittings(model.def, { lasers, missiles: c.missiles, equipment: c.equipment });
-  model.root.add(fittings.group);
-}
-
-/** Change your callsign at a station: the name becomes a little form until you save or cancel. */
-function startRename() {
-  const c = cmdr();
-  const dd = $('#cmdr .rename').parentElement!;
-  dd.innerHTML = `<form class="rename-form"><input maxlength="24" value="${escapeHtml(c.name).replace(/"/g, '&quot;')}" aria-label="Callsign" /> <button type="submit">Save</button> <button type="button" data-cancel>Cancel</button></form>`;
-  const input = dd.querySelector('input')!;
-  input.focus();
-  input.select();
-  dd.querySelector('[data-cancel]')!.addEventListener('click', () => renderDocked());
-  dd.querySelector('form')!.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const name = cleanName(input.value);
-    if (name === c.name) return renderDocked();
-    // Signed in, your callsign is your account's: it has to be free.
-    claimCallsign(name)
-      .then((claimed) => {
-        c.name = claimed;
-        saveCommander(c);
-        flash(`Callsign changed: CMDR ${claimed}`, 2);
-      })
-      .catch((err: Error) => flash(err.message, 3))
-      .finally(() => renderDocked());
-  });
-}
-
-/** What's in the hold, company cargo included, for the Station tab. */
-function holdList(c: Commander): string {
-  const own = Object.entries(c.cargo)
-    .filter(([, q]) => q > 0)
-    .map(([id, q]) => `${q}${commodityById(id)?.unit === 't' ? ' t' : ' ' + commodityById(id)?.unit} ${escapeHtml(commodityById(id)?.name ?? id)}`);
-  const company = (c.contracts ?? []).filter((a) => !a.adrift).map((a) => `${a.qty} t ${escapeHtml(cargoName(a))} <small>(${escapeHtml(COMPANIES[a.company].name)}, for ${escapeHtml(destinationOf(a).name)})</small>`);
-  const all = [...own, ...company];
-  return all.length ? `<br><small class="hold-list">${all.join(' · ')}</small>` : '';
-}
-
-function renderDocked() {
-  // The saloon is Modern's: Classic stations are as they were in 1984.
-  document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
-  // The Money tab gave way to the wallet (Mark): its screen opens from there.
-  document.querySelector<HTMLElement>('.tabs [data-tab="money"]')!.hidden = true;
-  if (cmdr().difficulty === 'classic' && dockTab === 'money') setDockTab('station');
-  const noYard = cmdr().difficulty === 'classic' || !hasShipyard(currentSystem());
-  document.querySelector<HTMLElement>('.tabs [data-tab="shipyard"]')!.hidden = noYard;
-  if (noYard && dockTab === 'shipyard') setDockTab('station');
-  else if (dockTab === 'shipyard') renderShipyard(); // docking put your own ship in the berth
-  const c = cmdr();
-  // A ship waiting for you at this yard: a dot on the header, "ready" on the place.
-  const hereNow = currentSystem();
-  const atYard = (at?: { galaxy: number; system: number }) => at && at.galaxy === hereNow.galaxy && at.system === hereNow.index;
-  const ready = (c.order && atYard(c.order) && production(c.order, Date.now()).built) || (c.gift && (!c.gift.at || atYard(c.gift.at)));
-  $('.tabs [data-tab="shipyard"]').innerHTML = ready ? 'Shipyard <b class="tab-badge">ready</b>' : 'Shipyard';
-  showFittings(c);
-  refreshFlightLog();
-  const here = currentSystem();
-  const st = stationName(here);
-  $('#dock-location').textContent = `${st.name} · ${here.name}`;
-  $('#dock-location').title = st.honours ? `Named for ${st.honours}` : '';
-  updateDockHead();
-  // Company contracts are Modern work; Classic stays as 1984.
-  $('.tabs [data-tab="contracts"]').hidden = c.difficulty !== 'modern';
-  if (dockTab === 'contracts') renderContracts();
-  if (dockTab === 'market') renderMarket();
-  if (dockTab === 'news') renderNews();
-  // Docked somewhere new with the saloon still open: that station's regulars, not the last one's (Mark).
-  if (dockTab === 'saloon') renderSaloon();
-  const rows: [string, string][] = [
-    ['Commander', `${escapeHtml(c.name)} <button type="button" class="rename" title="Change your callsign">Rename</button>`],
-    ['Rules', DIFFICULTIES[c.difficulty].name],
-    ['Ship', `${escapeHtml(player.def.name)} <button type="button" class="small manual-open">Owner's manual</button> <button type="button" class="small manual-open booth-open">Photograph her</button>`],
-    // The Dark Edition's running lights, or the full ghost: just the hull (Mark).
-    ...(c.paint?.luxuries.includes('black-light-lights')
-      ? ([['Running lights', `${c.paint.ghost ? 'Off: the full ghost, just the hull' : 'Black-light, seen only close to'} <button type="button" class="small lights-toggle">${c.paint.ghost ? 'Lights on' : 'Go full ghost'}</button>`]] as [string, string][])
-      : []),
-    ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
-    ['Lasers', VIEWS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
-    ['Legal status', `${legalLabel()}${canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
-    ['Destination', c.target === null ? (isTouch ? 'None (choose on the Galaxy map)' : 'None (press G)') : systemAt(here.galaxy, c.target).name],
-    ['Rating', c.difficulty === 'classic' ? combatRating(c.kills) : ratingProgress(c.kills)],
-    ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited${myFirsts(here.galaxy) ? ` · ${myFirsts(here.galaxy)} first${myFirsts(here.galaxy) === 1 ? '' : 's'} on the chart` : ''}`],
-    ...trailsUnderWay(c, here.galaxy).map((t): [string, string] => ['Trail', `${escapeHtml(t.title)} · ${t.found} of ${t.of} found · the clue points to ${escapeHtml(t.next)}`]),
-    ...explorerTips(c, here),
-  ];
-  $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  $('#cmdr .manual-open:not(.booth-open)')?.addEventListener('click', () => openManual(player.def));
-  $('#cmdr .lights-toggle')?.addEventListener('click', () => {
-    if (!c.paint) return;
-    c.paint.ghost = !c.paint.ghost;
-    saveCommander(c);
-    showOwnShip();
-    flash(c.paint.ghost ? 'Running lights off · the full ghost' : 'Running lights on', 2);
-    renderDocked();
-  });
-  $('#cmdr .booth-open')?.addEventListener('click', () => {
-    showOwnShip();
-    openBooth();
-  });
-  $('#cmdr .rename').addEventListener('click', () => startRename());
-  document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
-    flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);
-    saveCommander(c);
-    renderDocked();
-  });
-  document.querySelector('#cmdr .settle')?.addEventListener('click', () => {
-    const settlement = settle(c);
-    saveCommander(c);
-    sfx.beep();
-    renderDocked();
-    flash(settlementMessage(settlement, 'Settled with the law'), 5);
-  });
-
-  // Fuel: top up to a full tank at the station.
-  const missing = Math.round((fuelCapacity(c) - c.fuel) * 10) / 10;
-  const fuelCost = Math.round(missing * FUEL_PRICE * 10) / 10;
-  const affordable = Math.min(missing, Math.floor((c.credits / FUEL_PRICE) * 10) / 10);
-  $('#fuel').innerHTML = `<span>Fuel <b>${c.fuel.toFixed(1)} / ${fuelCapacity(c)} LY</b></span>`;
-  const refuel = document.createElement('button');
-  refuel.textContent = missing <= 0 ? 'Full' : affordable < missing ? `${affordable.toFixed(1)} LY · ${(affordable * FUEL_PRICE).toFixed(1)} Cr` : `Refuel · ${fuelCost.toFixed(1)} Cr`;
-  refuel.disabled = missing <= 0 || affordable <= 0;
-  refuel.title = affordable < missing ? `Refuel as far as your credits allow` : `Fill the tank`;
-  refuel.addEventListener('click', () => {
-    c.credits = Math.round((c.credits - affordable * FUEL_PRICE) * 10) / 10;
-    c.fuel = Math.round((c.fuel + affordable) * 10) / 10;
-    saveCommander(c);
-    sfx.beep();
-    renderDocked();
-  });
-  $('#fuel').append(refuel);
-
-  // Survey data: sold here, for more the further it's come.
-  const dataRow = $('#data-row');
-  const data = exploreOf(c).data;
-  dataRow.hidden = c.difficulty !== 'modern';
-  if (!dataRow.hidden) {
-    // Wexley-Yorozu pays best, and is the only one the Science Division's report goes to.
-    const wy = wyWorks(here);
-    // Moons a survey contract is for are the contract's: kept for it, never sold off cheap.
-    const kept = data.filter((d) => forContract(c, d));
-    const sellable = data.filter((d) => (wy || !d.report) && !kept.includes(d));
-    const worth = sellable.reduce((sum, d) => sum + dataValue(d, here, wy), 0);
-    // Say what's in it (a tooltip doesn't show on a phone), and that a company station pays more.
-    const names = data.filter((d) => !kept.includes(d)).map((d) => d.name).join(', ');
-    const keptLine = kept.length ? `${kept.map((d) => d.name).join(', ')}: kept for your Wexley-Yorozu survey contract` : '';
-    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${data.length ? ` <small>${[escapeHtml(names), escapeHtml(keptLine), wy ? 'This is a Wexley-Yorozu station: data sells for 25% more here' : 'Wexley-Yorozu stations pay 25% more: look for them on the galaxy map'].filter(Boolean).join(' · ')}</small>` : ''}</span>`;
-    dataRow.title = data.length ? data.map((d) => `${d.name}: ${dataValue(d, here, wy)} Cr`).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
-    const sell = document.createElement('button');
-    sell.textContent = sellable.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
-    sell.disabled = !sellable.length;
-    if (wy && data.some((d) => d.report)) sell.title = `Includes the Ninefold report: the Science Division pays ${REPORT_PRICE.wy.toLocaleString()} Cr, remembers you kindly, and goes looking for Sam Dray`;
-    sell.addEventListener('click', () => {
-      const held = [...data];
-      const { credits, reports } = sellData(c, here, wy, (d) => forContract(c, d));
-      bringHome(held);
-      if (reports) addStanding(c, 'wy', 3);
-      saveCommander(c);
-      sfx.beep();
-      flash(reports ? `The Science Division takes the Ninefold report · ${credits.toLocaleString()} Cr with your data · Wexley-Yorozu is grateful, and the relay keeps saying all well` : `Survey data sold · ${credits.toLocaleString()} Cr`, 4);
-      renderDocked();
-    });
-    dataRow.append(sell);
-    // The report: read it before you decide who gets it.
-    if (data.some((d) => d.report)) {
-      const read = document.createElement('button');
-      read.className = 'read-report';
-      read.textContent = 'Read the Ninefold report';
-      read.addEventListener('click', () => {
-        sfx.beep();
-        showLog(NINEFOLD_REPORT.title, NINEFOLD_REPORT.lines.join('\n\n'), 60000);
-      });
-      dataRow.querySelector('span')!.append(read);
-    }
-    // The report, anywhere else: publish it, and live with it.
-    if (!wy && data.some((d) => d.report)) {
-      const publish = document.createElement('button');
-      publish.textContent = `Publish the Ninefold report · ${REPORT_PRICE.published} Cr`;
-      publish.title = "The Mutual's newsletter pays, the families learn what happened to the Ninefold, and Mira's message reaches her gran. Wexley-Yorozu will remember. Or keep it for a Wexley-Yorozu station.";
-      confirmSale(publish, 'Publish it? Wexley-Yorozu will remember', () => {
-        const held = [...data];
-        const paid = publishReports(c);
-        bringHome(held);
-        addStanding(c, 'wy', -3);
-        saveCommander(c);
-        sfx.beep();
-        flash(`The Ninefold report is published · ${paid} Cr · the families know now, and so does Wexley-Yorozu`, 5);
-        renderDocked();
-      });
-      dataRow.append(publish);
-    }
-  }
-
-  // Missiles: top up the rails.
-  const rails = player.def.stats.missiles ?? 0;
-  const short = rails - c.missiles;
-  const canAfford = Math.min(short, Math.floor(c.credits / MISSILE_PRICE));
-  $('#missile-row').innerHTML = `<span>Missiles <b>${c.missiles} / ${rails}</b></span>`;
-  const rearm = document.createElement('button');
-  rearm.textContent = short <= 0 ? 'Full' : `Buy ${canAfford || short} · ${(canAfford || short) * MISSILE_PRICE} Cr`;
-  rearm.disabled = short <= 0 || canAfford <= 0;
-  rearm.addEventListener('click', () => {
-    c.credits -= canAfford * MISSILE_PRICE;
-    c.missiles += canAfford;
-    boughtHere.missiles += canAfford;
-    saveCommander(c);
-    sfx.beep();
-    renderDocked();
-  });
-  const missileButtons = document.createElement('div');
-  missileButtons.className = 'buttons';
-  missileButtons.append(rearm);
-  $('#missile-row').append(missileButtons);
-  if (c.missiles > 0) {
-    const undo = boughtHere.missiles > 0;
-    const back = undo ? MISSILE_PRICE : MISSILE_PRICE / 2;
-    const sell = document.createElement('button');
-    sell.textContent = `Sell 1 · +${back} Cr`;
-    sell.title = undo ? 'Bought here: full refund' : 'Sells for half price';
-    sell.addEventListener('click', () => {
-      c.credits += back;
-      c.missiles -= 1;
-      if (undo) boughtHere.missiles -= 1;
-      saveCommander(c);
-      sfx.beep();
-      renderDocked();
-    });
-    missileButtons.append(sell);
-  }
-
-  const list = $('#equip');
-  list.innerHTML = '';
-  // The kit, grouped (Combat · Trade · Exploration · Ship) with what you can buy here first and what
-  // isn't sold here folded to one line, saying why (Mark and Marketing's walkthrough). Repairs first.
-  const kit: { group: KitGroup | 'repair'; kind: 'buy' | 'owned' | 'away'; li: HTMLLIElement; short?: string }[] = [];
-  const add = (group: KitGroup | 'repair', kind: 'buy' | 'owned' | 'away', li: HTMLLIElement, short?: string) => kit.push({ group, kind, li, short });
-  const needMore = (b: HTMLButtonElement, price: number) => {
-    if (c.credits >= price) return;
-    b.textContent = `Need ${Math.ceil(price - c.credits).toLocaleString()} Cr more`;
-    b.classList.add('short');
-  };
-  // Equipment held here until a fine is paid.
-  if (c.impound) {
-    const imp = c.impound;
-    const li = document.createElement('li');
-    const names = imp.items.map((id) => EQUIPMENT.find((e) => e.id === id)?.name ?? id).join(', ') || 'Nothing';
-    const atHere = imp.at === systemKey(here);
-    const where = atHere ? 'this station' : systemAt(Number(imp.at.split(':')[0]), Number(imp.at.split(':')[1])).name;
-    li.innerHTML = `<span>Impounded <em class="damaged">${imp.owed.toLocaleString()} Cr owed</em></span><small>${names}, held at ${where} until it's paid.</small>`;
-    const pay = document.createElement('button');
-    pay.textContent = atHere ? `Pay · ${imp.owed.toLocaleString()} Cr` : 'Pay there';
-    pay.disabled = !atHere || c.credits < imp.owed;
-    pay.addEventListener('click', () => {
-      if (!redeemImpound(c)) return;
-      saveCommander(c);
-      sfx.beep();
-      renderDocked();
-    });
-    li.append(pay);
-    add('repair', 'buy', li);
-  }
-  // Lasers, for each of the four mounts. Whatever was on the mount is taken
-  // in part exchange at half its price.
-  for (const laser of Object.values(PLAYER_LASERS)) {
-    const li = document.createElement('li');
-    const sold = here.techLevel >= laser.minTech;
-    li.innerHTML = `<span>${laser.name}</span><small>${laser.blurb} ${laser.price.toLocaleString()} Cr per mount.</small>`;
-    const mounts = document.createElement('div');
-    mounts.className = 'mounts';
-    for (const mount of VIEWS) {
-      const old = c.lasers[mount];
-      const tradeIn = old ? Math.round(PLAYER_LASERS[old].price / 2) : 0;
-      const cost = laser.price - tradeIn;
-      const fit = document.createElement('button');
-      const fitted = old === laser.id;
-      fit.classList.toggle('fitted', fitted);
-      fit.textContent = mount;
-      if (fitted) {
-        // Fitted this visit: put back what was there and refund the swap.
-        // Otherwise take it off for half price.
-        const undo = boughtHere.lasers[mount];
-        const back = undo ? undo.paid : Math.round(laser.price / 2);
-        fit.title = undo
-          ? `Undo: ${undo.previous ? `refit the ${PLAYER_LASERS[undo.previous].name.toLowerCase()} and ` : ''}refund ${back.toLocaleString()} Cr`
-          : `Remove from the ${mount} mount: sells for ${back.toLocaleString()} Cr`;
-        const remove = () => {
-          c.credits += back;
-          if (undo?.previous) c.lasers[mount] = undo.previous;
-          else delete c.lasers[mount];
-          delete boughtHere.lasers[mount];
-          saveCommander(c);
-          sfx.beep();
-          renderDocked();
-        };
-        if (undo) fit.addEventListener('click', remove);
-        // Selling the only laser leaves the ship unarmed: say so.
-        else confirmSale(fit, Object.values(c.lasers).filter(Boolean).length === 1 ? `Your only laser! Sell · +${back.toLocaleString()} Cr?` : `Sell · +${back.toLocaleString()} Cr?`, remove);
-        mounts.append(fit);
-        continue;
-      }
-      const locked = laserLocked(c, laser.id as LaserId);
-      fit.disabled = !sold || Boolean(locked) || c.credits < cost;
-      fit.title = !sold
-          ? `Needs tech level ${laser.minTech}`
-          : locked
-          ? locked
-          : `Fit to the ${mount} mount: ${cost.toLocaleString()} Cr${tradeIn ? ` after ${tradeIn.toLocaleString()} Cr for the ${PLAYER_LASERS[old!].name.toLowerCase()}` : ''}`;
-      fit.addEventListener('click', () => {
-        c.credits -= cost;
-        // Swapping twice in one visit undoes back to what was fitted on arrival.
-        const earlier = boughtHere.lasers[mount];
-        boughtHere.lasers[mount] = { previous: earlier ? earlier.previous : old, paid: (earlier?.paid ?? 0) + cost };
-        c.lasers[mount] = laser.id as LaserId;
-        saveCommander(c);
-        sfx.beep();
-        renderDocked();
-      });
-      mounts.append(fit);
-    }
-    const onIt = VIEWS.filter((m) => c.lasers[m] === laser.id);
-    if (onIt.length) li.querySelector('span')!.insertAdjacentHTML('afterbegin', '<i class="tick" aria-label="Fitted">✓</i> ');
-    const cheapest = Math.min(...VIEWS.map((m) => laser.price - (c.lasers[m] ? Math.round(PLAYER_LASERS[c.lasers[m]!].price / 2) : 0)));
-    if (sold && !onIt.length && c.credits < cheapest) li.querySelector('small')!.insertAdjacentHTML('beforeend', ` <b class="short">Need ${Math.ceil(cheapest - c.credits).toLocaleString()} Cr more</b>`);
-    li.append(mounts);
-    add('combat', onIt.length ? 'owned' : sold ? 'buy' : 'away', li, `${laser.name} · tech level ${laser.minTech}`);
-  }
-
-  for (const item of EQUIPMENT) {
-    if (item.classicOnly && c.difficulty !== 'classic') continue;
-    if (item.modernOnly && c.difficulty !== 'modern') continue;
-    const li = document.createElement('li');
-    const owned = hasEquipment(c, item.id);
-    const damaged = c.damaged.includes(item.id);
-    if (item.standard && !damaged) continue; // fitted to every ship: listed only when it needs repair
-    if (item.found && !owned) continue; // never sold: found out there
-    const repairCost = Math.round(item.price * REPAIR_FRACTION);
-    const banned = Boolean(item.illegal) && scansCargo(here); // illegal here: not sold
-    const unranked = Boolean(item.explorer) && exploreOf(c).points < item.explorer!; // explorers only
-    const sold = here.techLevel >= item.minTech && !banned && !unranked;
-    li.innerHTML = `<span>${owned && !damaged ? '<i class="tick" aria-label="Fitted">✓</i> ' : ''}${item.name}${damaged ? ' <em class="damaged">Damaged</em>' : ''}</span><small>${forDevice(item.blurb)}</small>`;
-    const group = damaged ? 'repair' : kitGroup(item.id);
-    const buy = document.createElement('button');
-    if (damaged) {
-      buy.textContent = `Repair · ${repairCost.toLocaleString()} Cr`;
-      buy.disabled = c.credits < repairCost;
-      needMore(buy, repairCost);
-    } else if (!owned && !sold) {
-      // High-tech gear needs a high-tech world; illegal gear, a lawless one; explorer's gear, an explorer.
-      buy.textContent = unranked ? `${explorerRank(item.explorer!)} rank` : banned ? 'Illegal here' : `Needs tech level ${item.minTech}`;
-      buy.title = unranked ? `You're ${explorerRank(exploreOf(c).points)}: survey, find signals and follow trails to rise` : banned ? 'Sold only where police don\'t scan: anarchies and feudal worlds' : `${here.name} is tech level ${here.techLevel}`;
-      buy.disabled = true;
-      add(group, 'away', li, `${item.name} · ${unranked ? `${explorerRank(item.explorer!)} rank` : banned ? 'illegal here' : `tech level ${item.minTech}`}`);
-      li.append(buy);
-      continue;
-    } else if (owned && item.found) {
-      buy.textContent = 'Fitted';
-      buy.classList.add('fitted');
-      buy.disabled = true;
-      buy.title = 'Found, not bought: nobody will buy it from you, and you would not want them to';
-      li.append(buy);
-      add(group, 'owned', li);
-      continue;
-    } else if (owned) {
-      const undo = boughtHere.equipment.has(item.id);
-      const back = undo ? item.price : Math.round(item.price / 2);
-      const remove = () => {
-        c.credits += back;
-        removeEquipment(c, item.id);
-        boughtHere.equipment.delete(item.id);
-        saveCommander(c);
-        sfx.beep();
-        renderDocked();
-      };
-      // The hold can't shrink below what's in it.
-      const full = item.id === 'large-cargo-bay' && cargoTonnes(c) > player.def.stats.cargo;
-      buy.textContent = undo ? `Undo · +${back.toLocaleString()} Cr` : `Sell · +${back.toLocaleString()} Cr`;
-      buy.classList.add('fitted');
-      buy.disabled = full;
-      buy.title = full ? 'Sell cargo first: it would not fit in the smaller hold' : undo ? 'Bought here: full refund' : 'Sells for half price';
-      if (undo) buy.addEventListener('click', remove);
-      else confirmSale(buy, `Sell for ${back.toLocaleString()} Cr?`, remove);
-      li.append(buy);
-      add(group, 'owned', li);
-      continue;
-    } else {
-      buy.textContent = `Buy · ${item.price.toLocaleString()} Cr`;
-      buy.disabled = c.credits < item.price;
-      needMore(buy, item.price);
-    }
-    buy.addEventListener('click', () => {
-      if (damaged) {
-        c.credits -= repairCost;
-        c.damaged = c.damaged.filter((id) => id !== item.id);
-      } else {
-        c.credits -= item.price;
-        c.equipment.push(item.id);
-        boughtHere.equipment.add(item.id);
-      }
-      saveCommander(c);
-      sfx.beep();
-      renderDocked();
-    });
-    li.append(buy);
-    add(group, 'buy', li);
-  }
-
-  for (const g of ['repair', ...KIT_GROUPS] as const) {
-    const items = kit.filter((k) => k.group === g);
-    if (!items.length) continue;
-    const here = items.filter((k) => k.kind !== 'away');
-    const away = items.filter((k) => k.kind === 'away');
-    const head = document.createElement('li');
-    head.className = 'kit-head';
-    head.innerHTML = g === 'repair' ? 'Repairs' : `${KIT_NAMES[g]} <small>${here.length ? `${here.length} here` : 'none here'}</small>`;
-    list.append(head, ...here.filter((k) => k.kind === 'buy').map((k) => k.li), ...here.filter((k) => k.kind === 'owned').map((k) => k.li));
-    if (!away.length) continue;
-    // Not sold here: one line saying why, opening to the items themselves.
-    const fold = document.createElement('li');
-    fold.className = 'kit-away';
-    const shown = away.slice(0, 2).map((k) => k.short).join(' · ');
-    const open = kitOpen.has(g);
-    fold.innerHTML = `<button type="button" aria-expanded="${open}"><span>Not sold here: ${escapeHtml(shown)}${away.length > 2 ? ` · ${away.length - 2} more` : ''}</span></button>`;
-    fold.querySelector('button')!.addEventListener('click', () => {
-      if (kitOpen.has(g)) kitOpen.delete(g);
-      else kitOpen.add(g);
-      renderDocked();
-    });
-    list.append(fold);
-    if (open) for (const k of away) list.append(Object.assign(k.li, { className: 'away' }));
-  }
-}
-
-/** Which groups of kit not sold here are opened out, this session. */
-const kitOpen = new Set<string>();
-
 // --- Space ------------------------------------------------------------------
 
-const space = makeSpace();
 // The station sits at the origin with its slot facing the planet, as in the
 // original. Everything else about the system is rebuilt on arrival.
-const planetPos = new THREE.Vector3(0, 0, 14000);
 let planetRadius = 5000;
 let atmosphere = planetRadius * ATMOSPHERE_SCALE;
 let planetGM = 0.05 * 14000 ** 2; // debris pull; see updateDrifters
 let planet: THREE.Group | null = null;
-const SUN_POS = new THREE.Vector3(-60000, 22000, -40000);
-const SUN_RADIUS = 4000;
-space.sun.position.copy(SUN_POS);
 
-const station = new Station(shipById('coriolis')!);
-space.scene.add(station.root);
-const sun = buildSun(SUN_RADIUS);
-sun.position.copy(SUN_POS);
-space.scene.add(sun);
-const dust = new SpaceDust();
-space.scene.add(dust.group);
 
-const player = new PlayerShip(shipById('cobra-mk3')!);
-space.scene.add(player.obj);
-const dockingComputer = new DockingComputer();
 let autopilot = false;
 
 // --- Police and combat ------------------------------------------------------
 
-/** Every computer-controlled ship in the system: police, traders and pirates. */
-const npcs: NpcShip[] = [];
 const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role && !n.guard); // company security isn't the police
 const engineSound = new EngineSound();
 const voices = new Map<NpcShip, ShipVoice>();
@@ -3019,7 +561,7 @@ const SCAN_TIME = 3; // seconds within range for a police scan
 let scanned = false; // once per visit to a system
 let scanProgress = 0;
 
-const isFugitive = () => Boolean(commander) && legalStatus(cmdr()) === 'fugitive';
+const isFugitive = () => Boolean(game.commander) && legalStatus(cmdr()) === 'fugitive';
 
 /** Wanted here, you can pay your way clean at the station rather than launch into the police. */
 const canSettle = (c: Commander) => hasLaw(currentSystem()) && legalStatus(c) !== 'clean';
@@ -3083,7 +625,7 @@ function pirateLost() {
   if (!modern()) return;
   const before = wariness();
   pirateLosses.set(systemKey(currentSystem()), { n: before + 1, at: Date.now() });
-  if (before + 1 >= 6 && !toldWary.has(systemKey(currentSystem())) && toldWary.add(systemKey(currentSystem()))) setTimeout(() => state === 'flying' && flash('Word gets round · pirates here are giving you a wide berth', 4), 3000);
+  if (before + 1 >= 6 && !toldWary.has(systemKey(currentSystem())) && toldWary.add(systemKey(currentSystem()))) setTimeout(() => game.state === 'flying' && flash('Word gets round · pirates here are giving you a wide berth', 4), 3000);
 }
 /** Pirates about you, or anyone out to get you. */
 const fightOn = () => npcs.some((n) => n.hostile || (n.role === 'pirate' && n.obj.position.distanceTo(player.obj.position) < FIGHT_NEAR));
@@ -3105,7 +647,7 @@ let carried = new Set<string>(); // deliveries already given to a trader in this
 const DELIVERY_WINDOW = [2 * 60_000, 15 * 60_000]; // ms ahead: due after the trader could dock
 
 function loadDeliveries(npc: NpcShip): boolean {
-  if (!commander || cmdr().difficulty !== 'modern') return false;
+  if (!game.commander || cmdr().difficulty !== 'modern') return false;
   const now = Date.now();
   const due = upcomingDeliveries(currentSystem(), marketState(tradeContext()), now + DELIVERY_WINDOW[0], now + DELIVERY_WINDOW[1]).filter(
     (d) => !carried.has(`${d.id}:${d.t}`),
@@ -3156,7 +698,7 @@ function addNpc(def: string, role: NpcRole, at: THREE.Vector3, patrolCentre = st
 
 /** Under Modern rules, most traders fly for one of the companies working this system, in its colours. */
 function flyForCompany(npc: NpcShip) {
-  if (!commander || cmdr().difficulty !== 'modern' || Math.random() < 0.2) return;
+  if (!game.commander || cmdr().difficulty !== 'modern' || Math.random() < 0.2) return;
   npc.company = pickCompany(currentSystem(), Math.random());
   applyCompanyBand(npc.model, COMPANIES[npc.company].colour);
 }
@@ -3299,7 +841,7 @@ const cruiseOf = (hull: string) => shipById(hull)!.stats.maxSpeed * 0.5;
 
 /** Ships on their lanes right now that aren't in the scene yet: put them there. */
 function syncTraffic(dt: number) {
-  if (!modern() || !commander) return;
+  if (!modern() || !game.commander) return;
   trafficCheck -= dt;
   if (trafficCheck > 0) return;
   trafficCheck = 1;
@@ -3345,7 +887,7 @@ function ride(npc: NpcShip, now: number) {
   const r = railsOf.get(npc);
   if (!r) return;
   const u = (now - r.start) / (r.end - r.start);
-  const near = state === 'flying' && npc.obj.position.distanceTo(player.obj.position) < RAILS_NEAR;
+  const near = game.state === 'flying' && npc.obj.position.distanceTo(player.obj.position) < RAILS_NEAR;
   if (u >= 1 || near || npc.hostile || npc.attackedAgo < 60) {
     railsOf.delete(npc);
     return;
@@ -3437,7 +979,7 @@ function updateLegends(dt: number) {
     if (!npc.won || fleeing.has(npc)) continue;
     fleeing.set(npc, FALCON_JUMP_DELAY * 2);
     Object.assign(npc, { mode: 'flee', hostile: false, fights: false, target: player });
-    const taken = commander ? takeFalconsPrice(cmdr()) : '';
+    const taken = game.commander ? takeFalconsPrice(cmdr()) : '';
     radio('pirate', 'Falcon', FALCON_CALLING[Math.floor(Math.random() * FALCON_CALLING.length)], { colour: '#ff4d6d' });
     flash(taken ? `The Falcon took ${taken}` : 'The Falcon found nothing worth taking', 3.5);
     void keepCombat({ kind: 'legend', text: taken ? `The Falcon took ${taken}` : 'Beaten by the Falcon', subject: 'The Falcon' }, 20, 6);
@@ -3451,9 +993,9 @@ function updateLegends(dt: number) {
     if (npc.obj.position.distanceTo(player.obj.position) < 6000) sfx.ecm();
     spillCargo(npc.obj.position, npc.ship.forward().multiplyScalar(npc.ship.speed * 0.3), { gems: FALCON_FEE });
     radio('pirate', 'Falcon', FALCON_PARTING[Math.floor(Math.random() * FALCON_PARTING.length)], { colour: '#ff4d6d' });
-    if (npc.attacker === player && commander && falconAvoiding()) {
+    if (npc.attacker === player && game.commander && falconAvoiding()) {
       flash('Falcon driven off · no bounty: you beat her less than a day ago', 3);
-    } else if (npc.attacker === player && commander) {
+    } else if (npc.attacker === player && game.commander) {
       const c = cmdr();
       const rated = rateKill(npc);
       c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
@@ -3533,7 +1075,7 @@ const SLOT_CLEAR = 4000; // metres from the station
 const LAUNCH_CLEAR = 15; // seconds after launching
 let launchedAt = -Infinity;
 const slotReserved = () =>
-  state === 'flying' &&
+  game.state === 'flying' &&
   player.obj.position.distanceTo(station.root.position) < SLOT_CLEAR &&
   (autopilot || rollAssistApplies() || elapsed - launchedAt < LAUNCH_CLEAR);
 const holding = new WeakSet<NpcShip>();
@@ -3580,7 +1122,7 @@ function updateTraffic(dt: number) {
   const wary = modern() ? wariness() : 0;
   const calm = !modern() || (!fightOn() && elapsed - lastFightAt > CALM_BETWEEN_FIGHTS + sys.government * 10 + wary * WARY_CALM);
   encounterTimer -= dt;
-  if (encounterTimer <= 0 && state === 'flying' && calm) {
+  if (encounterTimer <= 0 && game.state === 'flying' && calm) {
     encounterTimer = ENCOUNTER_INTERVAL * (0.6 + Math.random() * 0.8);
     if (ofRole('pirate').length < MAX_PIRATES && Math.random() < PIRATE_CHANCE[sys.government] * WARY_ODDS ** wary) {
       const met = spawnPirates(player.obj.position);
@@ -3647,7 +1189,7 @@ const CARRIER_WITHDRAW_HEALTH = 0.25;
 
 /** Start the clock on a carrier, if a warrant here calls for one. */
 function scheduleMarshals() {
-  if (carrier || marshalTimer !== null || !commander) return;
+  if (carrier || marshalTimer !== null || !game.commander) return;
   marshalTimer = marshalsDelay(cmdr(), currentSystem());
 }
 
@@ -3727,7 +1269,7 @@ function carrierLeaves(c: Carrier, message: string) {
   c.mouth = new THREE.Plane(fwd.clone().negate(), fwd.dot(at));
   clipShip(c.npc, c.mouth);
   c.drone = riftDrone(6);
-  if (state === 'flying') flash(message, 3);
+  if (game.state === 'flying') flash(message, 3);
 }
 
 /** Their quarry is dead: the carrier and its wing quietly leave the system. */
@@ -3763,7 +1305,7 @@ function riftInterference(): number {
 
 function riftPull(c: Carrier, dt: number) {
   const r = c.rift;
-  if (!r || r.open <= 0 || state !== 'flying') return;
+  if (!r || r.open <= 0 || game.state !== 'flying') return;
   const to = r.group.position.clone().sub(player.obj.position);
   const d = to.length();
   const reach = r.radius * RIFT_PULL_RANGE;
@@ -3785,7 +1327,7 @@ function riftPull(c: Carrier, dt: number) {
 }
 
 function updateMarshals(dt: number) {
-  const flying = state === 'flying';
+  const flying = game.state === 'flying';
   if (marshalTimer !== null && flying) {
     marshalTimer -= dt;
     if (marshalTimer <= 0) {
@@ -3856,7 +1398,7 @@ function updateMarshals(dt: number) {
     const from = c.npc.obj.position.clone().sub(player.obj.position);
     const around = from.setLength(CARRIER_STANDOFF).applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.5);
     c.npc.destination = player.obj.position.clone().add(around);
-    const wanted = Boolean(commander) && cmdr().warrant;
+    const wanted = Boolean(game.commander) && cmdr().warrant;
     // Never more than a few out at once: the rest wait to replace losses.
     if (wanted && flying && c.bay > 0 && c.wing.size < MAX_OUT) {
       c.launchTimer -= dt;
@@ -3919,7 +1461,7 @@ function launchLancers(c: Carrier) {
     c.wing.add(lancer);
     c.bay--;
   }
-  if (state === 'flying') flash(first ? 'The Bastion is launching Lancers' : `Lancers launching · ${c.bay} still aboard`, 2);
+  if (game.state === 'flying') flash(first ? 'The Bastion is launching Lancers' : `Lancers launching · ${c.bay} still aboard`, 2);
 }
 // --- Building a star system -------------------------------------------------------
 
@@ -4042,7 +1584,7 @@ function disposeExploreScene() {
 function buildExploreScene(sys: StarSystem) {
   disposeExploreScene();
   const w = worldOf(sys);
-  const c = commander;
+  const c = game.commander;
   if (w.rings) {
     const rings = buildRings(planetRadius, w.rings, planetColour(sys));
     rings.position.copy(planetPos);
@@ -4140,7 +1682,7 @@ function updateExplore(dt: number): boolean {
       if (done.id === 'planet') {
         const hidden = scenePois.filter((p) => !p.revealed);
         for (const p of hidden) p.revealed = true;
-        if (hidden.length) setTimeout(() => state === 'flying' && flash(hidden.length === 1 ? 'The survey picked up an unidentified signal' : `The survey picked up ${hidden.length} unidentified signals`, 3), 3800);
+        if (hidden.length) setTimeout(() => game.state === 'flying' && flash(hidden.length === 1 ? 'The survey picked up an unidentified signal' : `The survey picked up ${hidden.length} unidentified signals`, 3), 3800);
       }
     } else if (survey.progress <= 0 && near !== survey.target) survey = null;
   }
@@ -4220,7 +1762,7 @@ function discover(p: ScenePoi) {
   if (p.poi.prize && !hasEquipment(c, p.poi.prize)) {
     c.equipment.push(p.poi.prize);
     exploreOf(c).points += COURIER_POINTS;
-    setTimeout(() => state === 'flying' && flash('Will-o’-the-Wisp fitted · enemy lasers miss half the time, half the missiles are spoofed · Wexley-Yorozu will want it back', 6), 5200);
+    setTimeout(() => game.state === 'flying' && flash('Will-o’-the-Wisp fitted · enemy lasers miss half the time, half the missiles are spoofed · Wexley-Yorozu will want it back', 6), 5200);
   }
   if (p.poi.salvage.length) {
     spillCargo(p.position, new THREE.Vector3(), salvageCargo(p.poi.salvage));
@@ -4251,7 +1793,7 @@ function bringHome(held: SurveyData[]) {
     const one = gone.find((d) => d.galaxy === won[0].galaxy && d.system === won[0].system && d.body === won[0].body);
     const what = won.length === 1 ? (one?.name ?? 'one find') : `${won.length} finds`;
     setTimeout(() => flash(`First to bring it home · your callsign goes on the chart for ${what}`, 5), 2500);
-    if (state === 'docked') renderDocked();
+    if (game.state === 'docked') renderDocked();
   });
 }
 
@@ -4376,7 +1918,7 @@ const EVADE_MISSILE_RANGE = 400; // metres: where it decides whether a missile i
 const WISP_COLD = 10; // seconds since you last fired
 let lastPlayerShot = -Infinity;
 const evadeChecked = new WeakSet<object>();
-const evading = () => commander?.difficulty === 'modern' && isWorking(commander, 'wisp') && elapsed - lastPlayerShot > WISP_COLD;
+const evading = () => game.commander?.difficulty === 'modern' && isWorking(game.commander, 'wisp') && elapsed - lastPlayerShot > WISP_COLD;
 
 /**
  * Damage the player's ship. Shields soak hits first; once a hit reaches the
@@ -4397,7 +1939,7 @@ function damagePlayer(amount: number, from?: NpcShip): boolean {
   const badlyHurt = player.hull < player.def.stats.hull * EQUIPMENT_RISK_HULL;
   // Pirates aim for the comms array: it's how you'd call for help.
   const aimed = from?.role === 'pirate';
-  if (!destroyed && player.hull < hullBefore && !badlyHurt && equipmentHitCooldown <= 0 && commander) {
+  if (!destroyed && player.hull < hullBefore && !badlyHurt && equipmentHitCooldown <= 0 && game.commander) {
     const hit = rollFragileDamage(cmdr(), Math.random, aimed);
     if (hit) {
       equipmentHitCooldown = EQUIPMENT_HIT_GAP;
@@ -4405,7 +1947,7 @@ function damagePlayer(amount: number, from?: NpcShip): boolean {
       flash(`${hit.name} damaged · plain radio until it's repaired at a station`, 2.5);
     }
   }
-  if (!destroyed && player.hull < hullBefore && badlyHurt && equipmentHitCooldown <= 0 && commander) {
+  if (!destroyed && player.hull < hullBefore && badlyHurt && equipmentHitCooldown <= 0 && game.commander) {
     const hit = rollEquipmentDamage(cmdr(), Math.random, aimed ? 'comms-array' : undefined);
     if (hit) {
       equipmentHitCooldown = EQUIPMENT_HIT_GAP;
@@ -4460,7 +2002,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   explosions.push(boom);
   boomAt(npc.obj.position, 2.2, 1600, 1.6);
   // A pirate carrying your lost case drops it again.
-  if (npc.carrying && commander) {
+  if (npc.carrying && game.commander) {
     const k = cmdr().adrift?.find((x) => x.contract === npc.carrying);
     if (k) {
       const p = npc.obj.position;
@@ -4474,7 +2016,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   // Cargo from a clean ship you destroyed is stolen; from a pirate, or someone else's kill, it's salvage.
   if (Object.keys(npc.cargo).length) spillCargo(npc.obj.position, velocity, npc.cargo, killer === player.obj && npc.role !== 'pirate');
   const lost = deliveries.get(npc);
-  if (lost && commander) {
+  if (lost && game.commander) {
     const market = marketState(tradeContext());
     for (const d of lost) loseDelivery(market, d, Date.now());
     saveCommander(cmdr());
@@ -4484,7 +2026,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
     }
   }
   // A trader that called for help, and didn't get it.
-  if (distresses.some((d) => d.trader === npc && d.heard) && state === 'flying') radio('mayday', traderName(npc), 'Signal lost', { colour: traderColour(npc) });
+  if (distresses.some((d) => d.trader === npc && d.heard) && game.state === 'flying') radio('mayday', traderName(npc), 'Signal lost', { colour: traderColour(npc) });
   removeNpc(npc);
   if (carrier?.npc === npc) bastionDestroyed(carrier, velocity, killer === player.obj);
   if (killer !== player.obj) return;
@@ -4558,7 +2100,7 @@ function bastionDestroyed(c: Carrier, velocity: THREE.Vector3, byPlayer: boolean
     spillCargo(at, velocity, { alloys: 3 + Math.floor(Math.random() * 4) }, byPlayer);
     setTimeout(() => boomAt(at, 3, 2400, 2), 300 + i * 450);
   }
-  if (!byPlayer || !commander) return;
+  if (!byPlayer || !game.commander) return;
   const cm = cmdr();
   cm.bastionsDestroyed = (cm.bastionsDestroyed ?? 0) + 1;
   setTimeout(() => flash(`Bastion carrier destroyed${aboard ? ` with ${aboard} Lancers aboard` : ''} · the Marshals will not forget`, 4), 1800);
@@ -4566,7 +2108,7 @@ function bastionDestroyed(c: Carrier, velocity: THREE.Vector3, byPlayer: boolean
 
 /** The station's safe zone: close enough for its guns and its police to see. */
 const SAFE_ZONE = 5000; // metres
-const inSafeZone = (at: THREE.Vector3) => commander !== null && at.distanceTo(station.root.position) < SAFE_ZONE;
+const inSafeZone = (at: THREE.Vector3) => game.commander !== null && at.distanceTo(station.root.position) < SAFE_ZONE;
 
 /** The player shot or rammed a ship. Pirates are fair game; anyone else is a crime. */
 // Friendly fire (Mark: a police Viper flies across you in a fight, catches one shot, and you're a
@@ -4627,7 +2169,7 @@ const SHIPS_SEE = 6000; // metres: another ship sees a crime this close (and liv
 
 /** Would anyone see a crime here? (The victim doesn't count: it reports only if it gets away.) */
 function witnessed(at: THREE.Vector3, victim: NpcShip | null): boolean {
-  if (!commander || cmdr().difficulty !== 'modern') return true;
+  if (!game.commander || cmdr().difficulty !== 'modern') return true;
   if (at.distanceTo(station.root.position) < STATION_SPACE) return true;
   return npcs.some((n) => {
     if (n === victim || n.role === 'pirate') return false;
@@ -4704,7 +2246,7 @@ function updateStationDefence(dt: number) {
 
 /** A trader you attacked, getting away: it reports you (in the system where it happened). */
 function reportedBy(npc: NpcShip) {
-  if (!npc.unreported || !commander) return;
+  if (!npc.unreported || !game.commander) return;
   npc.unreported = false;
   becomeOffender('The trader you attacked got away, and reported you · you are an OFFENDER', npc.seenDark);
 }
@@ -4731,9 +2273,9 @@ let hullChecked = false;
 /** You ignored a hail, or fired on police, while dark: they're after you, whoever you are. */
 let defiedPolice = false;
 
-const transponderBroken = () => commander !== null && cmdr().damaged.includes('transponder');
+const transponderBroken = () => game.commander !== null && cmdr().damaged.includes('transponder');
 /** Nobody can read who you are from afar. */
-const dark = () => commander !== null && cmdr().difficulty === 'modern' && (transponderOff || transponderBroken());
+const dark = () => game.commander !== null && cmdr().difficulty === 'modern' && (transponderOff || transponderBroken());
 
 /** Whether the law knows it's you: transponder on, or the station or a police ship close enough to read your hull. */
 function identified(): boolean {
@@ -4899,8 +2441,9 @@ type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter 
 // for that convenience.
 const GIMBAL_DAMAGE = 0.8;
 
+initManual({ gimballed: () => gimballed() });
 function gimballed() {
-  return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(commander) && isWorking(cmdr(), 'gimbal-mount');
+  return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(game.commander) && isWorking(cmdr(), 'gimbal-mount');
 }
 
 /**
@@ -5076,7 +2619,7 @@ const heft = (def: ShipDef) => def.stats.hull + def.stats.shields;
 const CRUSHING = 5; // a ship this many times heavier crushes you
 
 function updateCombat(dt: number, input: { fire: boolean } | null) {
-  const alive = state === 'flying';
+  const alive = game.state === 'flying';
   beams.update(dt);
   fireHeld = alive && input?.fire ? fireHeld + dt : 0;
 
@@ -5091,7 +2634,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   thinkTimer -= dt;
   if (thinkTimer <= 0) {
     thinkTimer = 0.25;
-    const prices = commander ? new Map(quotes(tradeContext()).map((q) => [q.commodity.id, q.price])) : new Map<string, number>();
+    const prices = game.commander ? new Map(quotes(tradeContext()).map((q) => [q.commodity.id, q.price])) : new Map<string, number>();
     const holdValue = (cargo: Record<string, number>) => Object.entries(cargo).reduce((v, [id, q]) => v + q * (prices.get(id) ?? 0), 0);
     const world = {
       player,
@@ -5101,7 +2644,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       npcs,
       inSafeZone: (at: THREE.Vector3) => cmdr().difficulty === 'classic' && inSafeZone(at),
       canSee: (npc: NpcShip) => playerVisibleAt(npc.obj.position.distanceTo(player.obj.position)),
-      cargoValue: (ship: PlayerShip) => (ship === player ? (commander ? holdValue(cmdr().cargo) : 0) : holdValue(npcs.find((n) => n.ship === ship)?.cargo ?? {})),
+      cargoValue: (ship: PlayerShip) => (ship === player ? (game.commander ? holdValue(cmdr().cargo) : 0) : holdValue(npcs.find((n) => n.ship === ship)?.cargo ?? {})),
     };
     const hunting = (n: NpcShip) => n.target === player && (n.mode === 'attack' || n.mode === 'breakoff');
     const before = new Map(npcs.map((n) => [n, n.mode === 'search' ? 'search' : hunting(n) ? 'hunt' : '']));
@@ -5418,7 +2961,7 @@ const seekerBox = $('#seeker');
 function updateSeekerBox() {
   const lockedAt = locked?.obj.position ?? lockedCommander?.position ?? null;
   const tracking = seeker?.on ? seekPosition(seeker.on) : null;
-  if ((!seeker && !lockedAt) || state !== 'flying') {
+  if ((!seeker && !lockedAt) || game.state !== 'flying') {
     seekerBox.hidden = true;
     return;
   }
@@ -5477,7 +3020,7 @@ missileButton.addEventListener('pointercancel', () => releaseMissile(false));
 
 /** Its label: how many missiles, and whether one is locked. */
 function updateMissileButton() {
-  if (!commander) return;
+  if (!game.commander) return;
   const n = cmdr().missiles;
   const armed = Boolean(locked || lockedCommander);
   const modern = cmdr().difficulty === 'modern';
@@ -5535,7 +3078,7 @@ const NPC_MISSILE_GAP = 20; // seconds between one ship's missiles (Modern)
 
 function maybeFireNpcMissile(npc: NpcShip) {
   if (npc.missiles <= 0 || npc.mode !== 'attack' || !npc.target || npc.role === 'trader') return;
-  if (npc.target === player && state !== 'flying') return;
+  if (npc.target === player && game.state !== 'flying') return;
   // Modern: no salvos. One missile homing on you at a time, and a pause between
   // a ship's missiles, so each one is a fight you can win (break, or ECM).
   if (modern() && npc.target === player && (missiles.some((m) => m.target === player) || elapsed - (npcMissileAt.get(npc) ?? -Infinity) < NPC_MISSILE_GAP)) return;
@@ -5602,10 +3145,10 @@ function playerEcm() {
 function updateMissiles(dt: number) {
   ecmCooldown = Math.max(0, ecmCooldown - dt);
   equipmentHitCooldown = Math.max(0, equipmentHitCooldown - dt);
-  const alive = state === 'flying';
+  const alive = game.state === 'flying';
   // A lost lock goes back to seeking (Modern), so the next ship in your sights can be locked.
   const lockLost = () => {
-    if (alive && commander && cmdr().difficulty === 'modern' && cmdr().missiles > 0) seeker = { on: null, progress: 0, beep: 0 };
+    if (alive && game.commander && cmdr().difficulty === 'modern' && cmdr().missiles > 0) seeker = { on: null, progress: 0, beep: 0 };
     if (alive) flash(seeker ? 'Missile lock lost · seeking' : 'Missile lock lost', 1.2);
   };
   if (locked && (!npcs.includes(locked) || locked.obj.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
@@ -5769,7 +3312,7 @@ let raidClock = 0;
 const raided = new Set<string>();
 
 function updateCaseRaid(dt: number) {
-  if (!commander || state !== 'flying') return;
+  if (!game.commander || game.state !== 'flying') return;
   const c = cmdr();
   // The pirates arrive.
   raidClock += dt;
@@ -5814,14 +3357,14 @@ function updateCaseRaid(dt: number) {
 function restoreAdrift() {
   raidClock = 0;
   raided.clear();
-  if (!commander) return;
+  if (!game.commander) return;
   const here = currentSystem();
   for (const k of cmdr().adrift ?? []) if (!k.held && !k.fate && k.galaxy === here.galaxy && k.system === here.index) spillSpecial(k);
 }
 
 /** Cases whose time ran out elsewhere: tell the commander. */
 function checkAdrift() {
-  if (!commander) return [];
+  if (!game.commander) return [];
   const notes = expireCases(cmdr(), Date.now(), (id) => drifters.some((d) => d.special?.contract === id));
   if (notes.length) saveCommander(cmdr());
   return notes;
@@ -5945,7 +3488,7 @@ function updateDrifters(dt: number) {
     toPlanet.copy(planetPos).sub(root.position);
     const r = toPlanet.length();
     toPlanet.normalize();
-    if (d.special && state === 'flying' && recoverCaseNear(d)) {
+    if (d.special && game.state === 'flying' && recoverCaseNear(d)) {
       disposeShip(d.model);
       drifters.splice(i, 1);
       continue;
@@ -5973,7 +3516,7 @@ function updateDrifters(dt: number) {
     root.position.addScaledVector(d.velocity, dt);
     root.rotateOnAxis(d.axis, d.spinRate * dt);
 
-    if (state === 'flying' && !d.special && tryScoop(d)) {
+    if (game.state === 'flying' && !d.special && tryScoop(d)) {
       disposeShip(d.model);
       drifters.splice(i, 1);
       continue;
@@ -5985,7 +3528,7 @@ function updateDrifters(dt: number) {
       explosions.push(flare);
     }
     if (d.burn >= BURN_TIME || r < planetRadius || (r > LOST_IN_SPACE && !d.special)) {
-      if (d.special && commander) {
+      if (d.special && game.commander) {
         flash(caseLost(cmdr(), d.special.contract), 4);
         saveCommander(cmdr());
       }
@@ -6004,7 +3547,6 @@ const FLIP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0),
 // 1984; Modern rear and side mounts are turrets that hit the nearest ship
 // near the middle of the view.
 
-const VIEWS: Mount[] = ['front', 'rear', 'left', 'right'];
 const VIEW_TURN: Record<Mount, number> = { front: 0, rear: Math.PI, left: Math.PI / 2, right: -Math.PI / 2 };
 const TURRET_CONE = THREE.MathUtils.degToRad(20);
 let view: Mount = 'front';
@@ -6167,7 +3709,7 @@ function updateSpace(dt: number) {
   updateMarshals(dt);
 
   let input: ReturnType<typeof flightInput> | null = null;
-  if (state === 'flying') {
+  if (game.state === 'flying') {
     const prev = station.toLocal(player.obj.position);
     input = flightInput();
     if (autopilot && input.active) setAutopilot(false, 'Docking computer off');
@@ -6309,11 +3851,11 @@ function updateSpace(dt: number) {
 
   updateCombat(dt, input);
   updateSharedSpace(dt, input);
-  if (state === 'flying' || state === 'dead') recordTrack();
+  if (game.state === 'flying' || game.state === 'dead') recordTrack();
   // A cue ends with its moment: the Falcon gone (jumped, driven off), the Marshals gone.
   if (music.playing === 'falcon' && !npcs.some((n) => n.def.id === 'falcon')) music.stop('falcon');
   if (music.playing === 'marshals' && !carrier) music.stop('marshals');
-  if (state === 'flying') {
+  if (game.state === 'flying') {
     updateClearance();
     updateSurrender(dt);
     updateRouteAutopilot();
@@ -6326,7 +3868,7 @@ function updateSpace(dt: number) {
     heatShip(station.model, stationFlash / 0.25);
   }
 
-  if (state === 'dead') {
+  if (game.state === 'dead') {
     // Watch the wreck from outside, slowly circling, as the original did.
     deathCam.t += dt;
     const orbit = deathCam.offset.clone().applyAxisAngle(deathCam.axis, deathCam.t * 0.25);
@@ -6344,11 +3886,11 @@ function updateSpace(dt: number) {
   space.stars.position.copy(camera.position);
   camera.updateMatrixWorld();
   setListener(camera);
-  dust.update(camera.position, state === 'flying' ? player.forward().multiplyScalar(player.speed) : new THREE.Vector3());
+  dust.update(camera.position, game.state === 'flying' ? player.forward().multiplyScalar(player.speed) : new THREE.Vector3());
 
-  const sighted = state === 'flying' ? sightedNpc() : null;
+  const sighted = game.state === 'flying' ? sightedNpc() : null;
   // In a wreck field your scanner is cluttered too: far contacts drop off it.
-  const cluttered = state === 'flying' && exploring() && inClutter(player.obj.position);
+  const cluttered = game.state === 'flying' && exploring() && inClutter(player.obj.position);
   const blips: Blip[] = [
     { position: station.root.position, color: '#ffb347', kind: 'station' },
     ...npcs
@@ -6365,11 +3907,11 @@ function updateSpace(dt: number) {
   for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: commanderColour(r), kind: 'commander', locked: r === lockedCommander });
   for (const n of netMissiles.values()) blips.push({ position: n.missile.position, color: '#ff6b6b', kind: 'missile' });
   // Near a rift, contacts jitter about on the scanner.
-  const noise = state === 'flying' ? riftInterference() : 0;
+  const noise = game.state === 'flying' ? riftInterference() : 0;
   if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
   setInterference(noise);
   updateSeekerBox();
-  if (state === 'flying') {
+  if (game.state === 'flying') {
     updateHud(player, station, blips, autopilot || Boolean(combatComputer), rollAssist);
     updateTouch(dt, player.speed / player.maxSpeed);
     updateAimDisplay();
@@ -6501,151 +4043,6 @@ function updateAimDisplay() {
   const x = rect.left + ((p.x + 1) / 2) * rect.width;
   const y = rect.top + ((1 - p.y) / 2) * rect.height;
   reticle.style.transform = `translate(${x}px, ${y}px)`;
-}
-
-const KEYS_HINT = {
-  mouse: 'Mouse aim · Click fire · W/S throttle · A/D roll · T arm missile · X fire it · G map · H hyperspace · J jump · C docking computer · P photo · F1 controls',
-  keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · T arm missile · X fire it · G map · H hyperspace · J jump · C docking · P photo · F1 controls',
-};
-
-/** Every control, as key and what it does: the controls card and the owner's manual both read this. */
-function controlRows(mouse: boolean): string[][] {
-  return sharedControlRows(mouse, { gimballed: gimballed() || Boolean(commander && isWorking(cmdr(), 'gimbal-mount')), modern: commander?.difficulty === 'modern' });
-}
-
-// --- The owner's manual ---------------------------------------------------------
-// Every ship comes with one (Mark: "that's how owners find where the buttons are,
-// how Tilt works and Invert, and it will help them dock early on"). The controls
-// are read from the game's own lists, so the manual can't drift from the buttons.
-
-/** What a phone button does: from the key it presses (the controls list), or its own title. */
-const touchHelp = (b: HTMLElement, rows: string[][]) => drawerHelp(b.dataset.key, b.title || b.getAttribute('aria-label') || '', rows);
-
-function openManual(def: ShipDef) {
-  const c = commander;
-  const mine = c && def.id === hullOf(c);
-  const cobra = shipById('cobra-mk3')!;
-  const ed = mine && c!.paint?.edition ? editionById(c!.paint.edition.id) : undefined;
-  const title = `${def.name}${mine && c!.paint?.name ? ` “${c!.paint.name}”` : ''}${ed ? ` · ${ed.name} ${editionNo(c!.paint!.edition!.number)}` : ''}`;
-  const rows = (m: boolean) => controlRows(m).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  const all = [...controlRows(true), ...controlRows(false)];
-  const label = (b: HTMLElement) => escapeHtml(b.textContent?.trim() || b.getAttribute('aria-label') || '');
-  // Said for a phone: each button's own words, or the keyboard list's with its keys taken out.
-  const drawer = [...document.querySelectorAll<HTMLElement>('#touch .touch-actions button')]
-    .map((b) => `<dt>${label(b)}</dt><dd>${escapeHtml(PHONE_DRAWER[b.dataset.key ?? ''] ?? touchHelp(b, all).replace(/\s*\((?:[A-Z0-9]|[A-Z0-9] again[^)]*)\)/g, ''))}</dd>`)
-    .join('');
-  const notes = notesFor(def);
-  const kit = mine ? c!.equipment.map((id) => EQUIPMENT.find((e) => e.id === id)).filter(Boolean) : [];
-  const roll = Math.round(THREE.MathUtils.radToDeg(MAX_ROLL_ERROR));
-  // An edition's owner gets a manual made theirs: her own cover, and her edition's page (the edition delivery pack).
-  const papers = ed ? papersFor(ed, c!.paint!.edition!.number, def.name) : null;
-  const cover = papers
-    ? `<section class="man-cover man-edition-cover" style="--hull:${c!.paint!.colour}">
-      <p class="meta">${escapeHtml(def.manufacturer ?? 'Witchspace')} · ${escapeHtml(papers.edition)} ${papers.no}</p>
-      <h3>${c!.paint!.name ? `“${escapeHtml(c!.paint!.name)}”` : escapeHtml(`${papers.edition} ${papers.no}`)}</h3>
-      <p>The owner’s manual, prepared for Commander ${escapeHtml(c!.name)}</p>
-    </section>`
-    : `<section class="man-cover" style="--hull:${mine && c!.paint ? c!.paint.colour : def.style.lineColor}">
-      <p class="meta">${escapeHtml(def.concept ? 'Concept' : def.manufacturer ?? 'Witchspace')} · ${escapeHtml(def.role)}</p>
-      <h3>${escapeHtml(title)}</h3>
-      <p>${escapeHtml(def.description)}</p>
-    </section>`;
-  const yours = papers
-    ? `<section id="man-edition"><h3>Your edition</h3>
-      <dl class="man-keys">
-        <dt>Finish</dt><dd>${escapeHtml(papers.finish)}</dd>
-        <dt>Glow</dt><dd>${escapeHtml(papers.glow)}</dd>
-${papers.aboard.map((a) => `        <dt>${escapeHtml(a.name)}</dt><dd>${escapeHtml(a.blurb)}</dd>
-`).join('')}      </dl>
-      <p class="man-papers meta">One of ${papers.limit}, built at ${escapeHtml(papers.yard)}, ${escapeHtml(papers.system)}.</p>
-    </section>`
-    : '';
-  // On a phone its own controls come first, and the keyboard's fold away (Mark).
-  const desk = `<section id="man-desk"><h3>On a computer</h3>
-      <p>${SCHEMES}</p>
-      <h4>Mouse and keyboard</h4><dl class="man-keys">${rows(true)}</dl>
-      <h4>Keyboard only</h4><dl class="man-keys">${rows(false)}</dl>
-    </section>`;
-  $('#manual-body').innerHTML = `
-    ${cover}
-    <nav class="man-toc">${papers ? '<a href="#man-edition">Your edition</a>' : ''}<a href="#man-ship">How she flies</a><a href="#man-dash">The dashboard</a><a href="#man-dock">Docking</a>${isTouch ? '<a href="#man-phone">On your phone</a>' : '<a href="#man-desk">On a computer</a><a href="#man-phone">On a phone</a>'}<a href="#man-rec">The flight recorder</a>${kit.length ? '<a href="#man-kit">Your kit</a>' : ''}</nav>
-    ${yours}
-
-    <section id="man-ship"><h3>How she flies</h3>
-      ${notes.length ? `<ul>${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join('')}</ul>` : ''}
-      <table class="man-table"><tr><th></th><th>${escapeHtml(def.name)}</th>${def.id === 'cobra-mk3' ? '' : '<th>against a Cobra</th>'}</tr>
-      ${handling(def, cobra).map((h) => `<tr><td>${h.label}</td><td>${h.value}</td>${def.id === 'cobra-mk3' ? '' : `<td>${h.versus}</td>`}</tr>`).join('')}</table>
-    </section>
-
-    <section id="man-dash"><h3>The dashboard</h3>
-      <dl class="man-keys">${DASHBOARD.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
-    </section>
-
-    <section id="man-dock"><h3>Docking</h3>
-      <ol>
-${DOCKING(roll, standardKit(def).includes('docking-computer')).map((li) => `        <li>${li}</li>
-`).join('')}      </ol>
-      ${def.id !== 'cobra-mk3' ? `<p class="meta">${escapeHtml(def.name)}: ${escapeHtml(handling(def, cobra).find((h) => h.label === 'Span')!.versus)}.</p>` : ''}
-    </section>
-
-    ${isTouch ? '' : desk}
-
-    <section id="man-phone"><h3>${isTouch ? 'On your phone' : 'On a phone'}</h3>
-      <dl class="man-keys">
-${PHONE.map(([k, v]) => `        <dt>${k}</dt><dd>${v}</dd>
-`).join('')}      </dl>
-      <h4>The drawer: everything else</h4>
-      <p>Tap the <b>‹</b> tab on the right edge of the screen to slide it open, and again to close it.</p>
-      <dl class="man-keys">${drawer}</dl>
-      <p class="meta">${TILT}</p>
-    </section>
-    ${isTouch ? `<details class="man-more"><summary>On a computer, with a keyboard</summary>${desk}</details>` : ''}
-
-    <section id="man-rec"><h3>The flight recorder</h3>${RECORDER.map((p) => `<p>${p}</p>`).join('')}</section>
-
-    ${kit.length ? `<section id="man-kit"><h3>Your kit</h3><dl class="man-keys">${kit.map((e) => `<dt>${escapeHtml(e!.name)}</dt><dd>${escapeHtml(forDevice(e!.blurb))}</dd>`).join('')}</dl></section>` : ''}
-    ${mine && c!.paint?.luxuries?.length ? `<section><h3>Aboard</h3><ul>${c!.paint.luxuries.map((l) => LUXURIES.find((x) => x.id === l)).filter(Boolean).map((l) => `<li><b>${escapeHtml(l!.name)}</b>: ${escapeHtml(l!.blurb)}</li>`).join('')}</ul></section>` : ''}`;
-  if (papers)
-    void papersLinkFor(papers.editionId, papers.number).then((link) => {
-      const line = $('#manual-body').querySelector('.man-papers');
-      if (link && line) line.insertAdjacentHTML('beforeend', ` <a href="${escapeHtml(link)}" target="_blank" rel="noopener">Her certificate of build</a> (a private link: share it only if you want to).`);
-    });
-  $('#manual').hidden = false;
-  $('#manual').scrollTop = 0;
-}
-$('#manual .manual-close').addEventListener('click', () => ($('#manual').hidden = true));
-$('#manual').addEventListener('click', (e) => {
-  const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('.man-toc a');
-  if (!a) return;
-  e.preventDefault();
-  $('#manual').querySelector(a.getAttribute('href')!)?.scrollIntoView({ behavior: 'smooth' });
-});
-
-function renderControlsCard() {
-  const mouse = controlScheme() === 'mouse';
-  $('#keys-hint').textContent = KEYS_HINT[controlScheme()];
-  $('#controls-scheme').textContent = mouse ? 'Mouse + keyboard' : 'Keyboard only (classic)';
-  $('#controls-list').innerHTML = controlRows(mouse)
-    .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
-    .join('');
-}
-
-function toggleControlsCard(show = $('#controls-card').hidden) {
-  renderControlsCard();
-  $('#controls-card').hidden = !show;
-}
-
-/** First flight: a nudge towards the controls card, rather than opening it over the view. */
-function showControlsCardOnce() {
-  renderControlsCard();
-  if (isTouch) return; // touch has its own on-screen controls
-  try {
-    if (localStorage.getItem('witchspace.seenControls')) return;
-    localStorage.setItem('witchspace.seenControls', '1');
-  } catch {
-    // Storage blocked: a nudge every launch is harmless.
-  }
-  setTimeout(() => state === 'flying' && flash('Press F1 for the controls', 4), 1500);
 }
 
 // --- Full screen on phones ---------------------------------------------------
@@ -6791,7 +4188,7 @@ function offerCard() {
   saveCommander(c);
   // After the dock's own news, and never over another sheet (your moments, the flight log): wait for them.
   const offer = () => {
-    if (state !== 'docked' || signedIn()) return;
+    if (game.state !== 'docked' || signedIn()) return;
     if (logOpen || isTripOpen() || !$('#handover').hidden) return void setTimeout(offer, 1500);
     showCardInvite(c.name, career);
   };
@@ -6870,7 +4267,7 @@ function updateClearance() {
   else if (darkRefused()) radio('station', name, 'Unidentified ship: switch on your transponder to dock', { flash: 4, urgent: true });
   else if (checksClearance(currentSystem())) radio('station', name, 'Transponder checked · Docking clearance granted', { flash: 2.5 });
   else radio('station', name, 'No questions asked', { flash: 2.5 });
-  if (!lockedDown() && !clearanceRefused()) setTimeout(() => state === 'flying' && offerRouteWork(), 3000);
+  if (!lockedDown() && !clearanceRefused()) setTimeout(() => game.state === 'flying' && offerRouteWork(), 3000);
 }
 
 // --- What you're doing, and what's next (docs/design/flight-hud-and-touch.md) -------
@@ -6996,7 +4393,6 @@ document.addEventListener(
 // own colour. The few lines that matter this second still flash as well.
 // Classic keeps its flashes, as in 1984.
 
-const modern = () => commander !== null && cmdr().difficulty === 'modern';
 /** A working comms array: the companies reach you anywhere, and you hear further. */
 const hasArray = () => modern() && isWorking(cmdr(), 'comms-array');
 
@@ -7312,7 +4708,7 @@ function distressCall(trader: NpcShip, pirate: NpcShip) {
     return;
   }
   const d = trader.obj.position.distanceTo(player.obj.position);
-  const heard = state === 'flying' && (d < RADIO_RANGE || hasArray());
+  const heard = game.state === 'flying' && (d < RADIO_RANGE || hasArray());
   distresses.push({ trader, pirates: new Set([pirate]), heard, arrived: false, until: elapsed + DISTRESS_TIME });
   if (!heard) return;
   sfx.beep();
@@ -7332,7 +4728,7 @@ function updateDistress() {
     if (still.length && pos.distanceTo(t.obj.position) < DISTRESS_ARRIVE) d.arrived = true;
     if (still.length) continue;
     distresses.splice(i, 1);
-    if (d.arrived && state === 'flying') rescued(d);
+    if (d.arrived && game.state === 'flying') rescued(d);
   }
 }
 
@@ -7413,7 +4809,7 @@ $('#beacon .beacon-calls')
 
 function sendBeacon(call: BeaconCall) {
   toggleBeacon(false);
-  if (state !== 'flying') return;
+  if (game.state !== 'flying') return;
   const c = cmdr();
   const here = currentSystem();
   const pos = player.obj.position;
@@ -7624,7 +5020,7 @@ function recordTrack() {
   if (classicRules() || !track.due(elapsed)) return;
   const here = player.obj.position;
   const poses: Pose[] = [];
-  if (state === 'flying') {
+  if (game.state === 'flying') {
     track.ship({ id: 1, def: player.def.id, role: 'you', label: whoIs({ callsign: shareName() }), ...(myLook() ? { look: myLook()! } : {}) });
     poses.push(poseOf(1, player.obj));
   }
@@ -7726,7 +5122,7 @@ function die() {
     clearFlash();
     if (gameOver) {
       deleteCommander();
-      commander = null;
+      game.commander = null;
       showTitle();
       return;
     }
@@ -7758,7 +5154,7 @@ function die() {
     marshalsStandDown();
     enterDocked(true); // a new ship from the insurers
     flash(message, 5);
-    void blackBox.then((m) => m && state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog, recorderIntroduced() ? undefined : RECORDER_INTRO));
+    void blackBox.then((m) => m && game.state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog, recorderIntroduced() ? undefined : RECORDER_INTRO));
   }, 5000);
 }
 
@@ -7823,10 +5219,10 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     }
     case 'full':
-      if (state === 'flying') flash(e.busy ? `${e.busy} · flying solo for now` : `Shared space in ${currentSystem().name} is full (${e.max} commanders) · flying solo for now`, 3.5);
+      if (game.state === 'flying') flash(e.busy ? `${e.busy} · flying solo for now` : `Shared space in ${currentSystem().name} is full (${e.max} commanders) · flying solo for now`, 3.5);
       break;
     case 'lost':
-      if (state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
+      if (game.state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
       break;
     case 'signin':
       flash(e.need === 'callsign' ? 'Shared space · claim a callsign first (A on the title screen) · flying solo for now' : 'Shared space is for commanders with a callsign · sign in on the title screen (A) · flying solo for now', 4.5);
@@ -7836,7 +5232,7 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     case 'hit':
       // The server's word on our shields and hull.
-      if (state !== 'flying') break;
+      if (game.state !== 'flying') break;
       player.shields = e.shields;
       player.hull = e.hull;
       sfx.hit();
@@ -7865,7 +5261,7 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     case 'bump':
       // The server's word on the damage; move apart so we're not still touching.
-      if (state !== 'flying') break;
+      if (game.state !== 'flying') break;
       player.shields = e.shields;
       player.hull = e.hull;
       player.obj.position.addScaledVector(e.push, BUMP_SEPARATION);
@@ -7876,7 +5272,7 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     case 'destroyed':
       if (e.me) {
-        if (state === 'flying') {
+        if (game.state === 'flying') {
           flash(e.collision ? 'Destroyed in a collision' : e.by ? `Destroyed by Commander ${e.by.name}` : 'Ship destroyed', 3);
           die();
         }
@@ -7909,7 +5305,7 @@ function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
 }
 
 function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
-  const share = state === 'flying' && Boolean(commander) && cmdr().difficulty === 'modern' && sharedSpaceWanted() && canShare();
+  const share = game.state === 'flying' && Boolean(game.commander) && cmdr().difficulty === 'modern' && sharedSpaceWanted() && canShare();
   if (!share) {
     if (sharedSpace.connected) sharedSpace.leave();
     return;
@@ -7986,7 +5382,7 @@ function startNetMissile(e: Extract<SpaceEvent, { kind: 'missile' }>) {
   netMissiles.set(e.id, { missile, target, remote: e.target });
   if (e.ownerIsMe) return;
   rocketAt(missile.position, 0.5);
-  if (e.targetIsMe && state === 'flying') {
+  if (e.targetIsMe && game.state === 'flying') {
     sfx.incoming();
     incomingTimer = 1;
     flash(`INCOMING MISSILE from CMDR ${e.owner?.name ?? 'unknown'} · break hard or use ECM (Z)`, 2.5);
@@ -8142,7 +5538,6 @@ function checkCombatComputer(input: FlightInput) {
 
 // --- Photos -----------------------------------------------------------------
 
-let photoPending = false;
 
 /** P: copy the frame just drawn, with a shutter flash, into the flight log (or saved or shared, where there's no log). */
 function snapPhoto() {
@@ -8158,7 +5553,7 @@ function snapPhoto() {
     if (!photo) return flash('Photo failed', 2.5);
     const m = ctx && (await logMoment({ events: [{ kind: 'photo', text: 'Photo taken' }], ctx }, { photo, poster: null, seconds: 0 }));
     flash(m ? 'Photo · in your flight log' : await savePhoto(photo), 2.5);
-    if (m && state === 'docked') refreshFlightLog();
+    if (m && game.state === 'docked') refreshFlightLog();
   });
 }
 
@@ -8172,8 +5567,8 @@ function updateModeLabel() {
 /** Gamepad buttons map onto the keyboard action for the current screen. */
 function padToKey(button: 'PadA' | 'PadB' | 'PadY' | 'PadStart'): string | null {
   if (button === 'PadY') return 'KeyM';
-  if (button === 'PadB') return state === 'newgame' ? 'Escape' : null;
-  switch (state) {
+  if (button === 'PadB') return game.state === 'newgame' ? 'Escape' : null;
+  switch (game.state) {
     case 'title':
     case 'newgame':
       return 'Enter';
@@ -8321,7 +5716,7 @@ async function hyperspace() {
   if (transponderOff) {
     transponderOff = false;
     switchOnWhenClear = false;
-    setTimeout(() => state === 'flying' && flash('Transponder on · new system (0 to run dark again)', 3), 6500);
+    setTimeout(() => game.state === 'flying' && flash('Transponder on · new system (0 to run dark again)', 3), 6500);
   }
   // The Route Autopilot takes the next jump by itself, after a moment to look around.
   if (routeNote && isWorking(c, 'route-autopilot') && c.target !== null && distanceLy(dest, systemAt(dest.galaxy, c.target)) <= c.fuel) {
@@ -8333,8 +5728,8 @@ async function hyperspace() {
   const adriftNotes = checkAdrift();
   // Under Modern rules the companies' notes come over the radio; the route is the ship's computer.
   const contractNotes = modern() ? adriftNotes : [...jumpNotes, ...adriftNotes];
-  if (contractNotes.length || routeNote) setTimeout(() => state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
-  setTimeout(() => state === 'flying' && radioMessages(seen), 9000);
+  if (contractNotes.length || routeNote) setTimeout(() => game.state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
+  setTimeout(() => game.state === 'flying' && radioMessages(seen), 9000);
   distresses.length = 0;
   escort = null;
   arrayTimer = 12; // the array picks up the new system's boards once you're settled
@@ -8363,21 +5758,21 @@ async function hyperspace() {
   const wanted = legalStatus(c);
   const note = arrivalNote(dest);
   saveCommander(c);
-  if (note) setTimeout(() => state === 'flying' && flash(note, 3), 4200);
+  if (note) setTimeout(() => game.state === 'flying' && flash(note, 3), 4200);
   flash(
     `${dest.name} · ${GOVERNMENTS[dest.government]} · ${ECONOMIES[dest.economy]}` +
       (wanted === 'fugitive' ? (c.warrant ? ' · Marshals warrant: police hostile' : ' · You are wanted here') : wanted === 'offender' ? ' · Offender here' : ''),
     4,
   );
   announceEvent(dest, note ? 7800 : 4500);
-  if (slipped) setTimeout(() => state === 'flying' && flash('You slipped away before the Marshals came through', 3.5), 5000);
+  if (slipped) setTimeout(() => game.state === 'flying' && flash('You slipped away before the Marshals came through', 3.5), 5000);
   scheduleMarshals();
 }
 
 /** Arriving somewhere in the middle of a crisis: say so. */
 function announceEvent(sys: StarSystem, delay: number) {
   const e = activeEvent(sys, Date.now());
-  if (e) setTimeout(() => state === 'flying' && (modern() ? radio('news', `${sys.name} news`, EVENT_KINDS[e.type].headline(sys.name), { flash: 4, urgent: true, line: EVENT_KINDS[e.type].headline(sys.name) }) : flash(EVENT_KINDS[e.type].headline(sys.name), 4)), delay);
+  if (e) setTimeout(() => game.state === 'flying' && (modern() ? radio('news', `${sys.name} news`, EVENT_KINDS[e.type].headline(sys.name), { flash: 4, urgent: true, line: EVENT_KINDS[e.type].headline(sys.name) }) : flash(EVENT_KINDS[e.type].headline(sys.name), 4)), delay);
 }
 
 /** The original's J key: leap ahead when nothing is near enough to mass-lock you. */
@@ -8425,10 +5820,6 @@ function inSystemJump(quiet = false): boolean {
 // --- Where you are, and the galaxy charts ---------------------------------------
 
 
-function currentSystem(): StarSystem {
-  const loc = commander?.location ?? { galaxy: 0, system: 7 };
-  return systemAt(loc.galaxy, loc.system);
-}
 
 function toggleGalaxyMap() {
   if (isMapOpen()) {
@@ -8471,13 +5862,13 @@ function toggleGalaxyMap() {
       } else flash(route, 3);
       saveCommander(c);
       sfx.beep();
-      if (state === 'docked') renderDocked();
+      if (game.state === 'docked') renderDocked();
       else flash(`Destination: ${s.name}`, 1.5);
     },
   });
   // The galactic hyperdrive is launched from here, in flight.
   const galactic = $('#galaxy-map .map-galactic');
-  galactic.hidden = !(state === 'flying' && hasEquipment(c, 'galactic-hyperdrive'));
+  galactic.hidden = !(game.state === 'flying' && hasEquipment(c, 'galactic-hyperdrive'));
   galactic.textContent = `Y · Galactic hyperdrive to Galaxy ${((here.galaxy + 1) % 8) + 1}`;
   setFlightInputSuppressed(true);
 }
@@ -8501,7 +5892,7 @@ function handleKey(code: string) {
   unlockAudio();
   if (killCam.key(code)) return;
   if (handleMapKey(code)) return;
-  if (code === 'KeyG' && (state === 'docked' || state === 'flying') && commander) {
+  if (code === 'KeyG' && (game.state === 'docked' || game.state === 'flying') && game.commander) {
     if (logOpen) setFlightLog(false);
     toggleGalaxyMap();
     return;
@@ -8509,27 +5900,27 @@ function handleKey(code: string) {
   if (code === 'KeyM') {
     setRetro(!isRetro());
     updateModeLabel();
-    if (state === 'newgame') showNewGame(); // the default rules follow the mode
-    if (state === 'docked' && dockTab === 'market') renderMarket(); // exchange or 1984 price list
+    if (game.state === 'newgame') showNewGame(); // the default rules follow the mode
+    if (game.state === 'docked' && game.dockTab === 'market') renderMarket(); // exchange or 1984 price list
     return;
   }
-  if (code === 'KeyP' && state !== 'newgame') {
-    photoPending = true; // taken right after the next frame is drawn
+  if (code === 'KeyP' && game.state !== 'newgame') {
+    game.photoPending = true; // taken right after the next frame is drawn
     return;
   }
-  if (code === 'KeyN' && state !== 'title') {
+  if (code === 'KeyN' && game.state !== 'title') {
     const mode = cycleSoundMode();
     flash(mode === 'full' ? 'Sound: full' : mode === 'effects' ? 'Sound: effects only (no engine hum)' : 'Sound: off', 1.6);
     return;
   }
-  switch (state) {
+  switch (game.state) {
     case 'title':
       if (code === 'ArrowRight') showShip(shipIndex + 1);
       else if (code === 'ArrowLeft') showShip(shipIndex - 1);
       else if (code === 'KeyY' || code === 'Enter') {
-        commander = loadCommander();
-        setCausedEvents(commander?.caused);
-        if (commander) {
+        game.commander = loadCommander();
+        setCausedEvents(game.commander?.caused);
+        if (game.commander) {
           enterDocked();
           void checkSiteSpec(true);
           void checkSignedOver();
@@ -8557,7 +5948,7 @@ function handleKey(code: string) {
         tripDone();
       } else if (code === 'KeyF' || (code === 'Escape' && logOpen)) setFlightLog(!logOpen);
       else if (code === 'KeyL' || code === 'Enter') void launch();
-      else if (code === 'KeyT') setDockTab(dockTab === 'market' ? 'station' : 'market');
+      else if (code === 'KeyT') setDockTab(game.dockTab === 'market' ? 'station' : 'market');
       break;
     case 'flying':
       // The beacon's calls, while its panel is open: 1-4 send, Esc or ` cancel.
@@ -8583,11 +5974,11 @@ function handleKey(code: string) {
       } else if (code === 'KeyB') {
         energyBomb();
       } else if (code === 'KeyV') {
-        setView(VIEWS[(VIEWS.indexOf(view) + 1) % VIEWS.length]);
+        setView(MOUNTS[(MOUNTS.indexOf(view) + 1) % MOUNTS.length]);
       } else if (code === 'Digit0') {
         toggleTransponder();
       } else if (/^Digit[1-4]$/.test(code)) {
-        setView(VIEWS[Number(code.slice(5)) - 1]);
+        setView(MOUNTS[Number(code.slice(5)) - 1]);
       } else if (code === 'KeyL') {
         hailTarget();
       } else if (code === 'Quote') {
@@ -8653,7 +6044,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) => {
 
 const RECORDER_KEY = 'witchspace-recorder';
 /** Classic stays as 1984 had it: no recorder (photos still work). */
-const classicRules = () => !!commander && cmdr().difficulty !== 'modern';
+const classicRules = () => !!game.commander && cmdr().difficulty !== 'modern';
 const recorderOn = () => {
   if (classicRules()) return false;
   try {
@@ -8700,7 +6091,7 @@ const viewCanvas = () => $<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo');
 const shareName = (): string | null => (signedIn() && currentAccount()?.callsign) || null;
 
 function momentContext(): MomentContext | null {
-  if (!commander) return null;
+  if (!game.commander) return null;
   const c = cmdr();
   const sys = currentSystem();
   return { callsign: shareName(), system: sys.name, galaxy: sys.galaxy + 1, government: GOVERNMENTS[sys.government], rank: combatRating(c.kills), when: Date.now() };
@@ -8718,7 +6109,7 @@ let tripBest = { trip: 0, profit: 0 };
 /** Look through the ledger's new sales for moments worth keeping. Returns whether anything was looked at (save it). */
 function noticeTrades(): boolean {
   const c = cmdr();
-  if (classicRules() || state !== 'docked') return false;
+  if (classicRules() || game.state !== 'docked') return false;
   const l = ledgerOf(c);
   const from = newSince(l.entries, c.tradeSeen);
   const last = seenNow(l.entries);
@@ -8753,7 +6144,7 @@ async function keepTrade(subject: string, credits: number, docking: boolean) {
   }
   if (!m) return;
   flash(`${event.text} · in your flight log`, 3.5);
-  if (state === 'docked') refreshFlightLog();
+  if (game.state === 'docked') refreshFlightLog();
 }
 
 /** Write a clip or photo into the flight log. Resolves with the logged moment, or null if there was no room. */
@@ -8823,7 +6214,7 @@ function keepCombat(event: MomentEvent, before: number, after: number): Promise<
   void Promise.all([earlier, f.moment]).then(async ([old, now]) => {
     if (old && now && old.id !== now.id) {
       await deleteMoment(old.id);
-      if (state === 'docked') refreshFlightLog();
+      if (game.state === 'docked') refreshFlightLog();
     }
   });
   return f.moment;
@@ -8842,7 +6233,7 @@ const recorderIntroduced = () => {
 };
 let introFlashed = false;
 function introduceRecorder(m: LoggedMoment) {
-  if (introFlashed || recorderIntroduced() || state !== 'flying' || m.events.some((e) => e.kind === 'death')) return;
+  if (introFlashed || recorderIntroduced() || game.state !== 'flying' || m.events.some((e) => e.kind === 'death')) return;
   introFlashed = true;
   setTimeout(() => flash('Flight recorder kept that · watch it in the flight log when you dock · Shift+P keeps any moment', 5), 2600);
 }
@@ -8871,11 +6262,11 @@ function refreshFlightLog() {
     },
   });
 }
-void recorder.ready.then(() => state === 'docked' && refreshFlightLog());
+void recorder.ready.then(() => game.state === 'docked' && refreshFlightLog());
 
 /** Shift+P, or holding the camera button: keep the last 30 seconds yourself. */
 function keepByHand() {
-  if (state !== 'flying') return;
+  if (game.state !== 'flying') return;
   if (classicRules()) return flash('Classic rules: no flight recorder', 2);
   if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the flight log' : `This browser can't record video${recorder.why ? ` · ${recorder.why}` : ''}`, 4);
   flash('Flight recorder · last 30 seconds kept', 2);
@@ -8919,7 +6310,7 @@ killCam.onVideo = async (v) => {
   const when = Date.now();
   const m: LoggedMoment = { id: `${when}-recon`, created: when, title: v.title, description: v.description, tags: ['witchspace', 'reconstruction', 'killcam'], events: [], system: v.system, seconds: v.seconds, video: v.video, poster: v.poster, saved: false, ...(v.track ? { track: await trackBlob(v.track) } : {}) };
   lastRecon = (await addMoment(m)) ? m : null;
-  if (state === 'docked') refreshFlightLog();
+  if (game.state === 'docked') refreshFlightLog();
 };
 // Sharing it shares that moment, with its page when it's your own fight.
 killCam.onShare = (v) => (lastRecon && lastRecon.video === v.video ? shareMoment(lastRecon) : shareVideoPlain(v));
@@ -8957,7 +6348,7 @@ function hangarCovered(t: number): boolean {
 
 function frame(now?: number) {
   const t = now ?? performance.now();
-  const resting = !inSpace && state === 'docked' && !booth && !killCam.active && hangarCovered(t);
+  const resting = !inSpace && game.state === 'docked' && !booth && !killCam.active && hangarCovered(t);
   if (t - lastDrawn < (resting ? RESTING_FRAME : MIN_FRAME) - 1) {
     requestAnimationFrame(frame);
     return;
@@ -8982,12 +6373,12 @@ function frame(now?: number) {
   }
   if (inSpace) {
     if (camera.view?.enabled) camera.clearViewOffset();
-    if (state !== 'transition') updateSpace(dt);
+    if (game.state !== 'transition') updateSpace(dt);
     const rift = carrier?.rift;
     lens.aim(camera, rift ? rift.group.position : null, rift ? rift.radius * rift.open : 0, rift ? rift.open : 0);
     render(space.scene);
-    if (state === 'flying') watchSurroundings(dt);
-    if (state === 'flying' || state === 'dead') recorder.capture(viewCanvas(), dt, state === 'flying' && recorderWatch.resting);
+    if (game.state === 'flying') watchSurroundings(dt);
+    if (game.state === 'flying' || game.state === 'dead') recorder.capture(viewCanvas(), dt, game.state === 'flying' && recorderWatch.resting);
     else recorder.pause();
   } else {
     lens.aim(camera, null, 0, 0);
@@ -8995,8 +6386,8 @@ function frame(now?: number) {
     render(showroom.scene);
     recorder.pause();
   }
-  if (photoPending) {
-    photoPending = false;
+  if (game.photoPending) {
+    game.photoPending = false;
     snapPhoto();
   }
   requestAnimationFrame(frame);
@@ -9021,8 +6412,8 @@ if (import.meta.env.DEV) {
     witchspace: {
       player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier, setAutopilot,
       get carrier() { return carrier; },
-      get commander() { return commander; },
-      get state() { return state; },
+      get commander() { return game.commander; },
+      get state() { return game.state; },
       get autopilot() { return autopilot; },
       get explore() { return { bodies: sceneBodies, pois: scenePois, planetPos, survey }; },
       get yard() { return yardScene; },
@@ -9089,12 +6480,12 @@ onSave((c) => setCausedEvents(c.caused));
 void initAccount({
   flash,
   commanderReplaced: () => {
-    if (state === 'title') showTitle();
+    if (game.state === 'title') showTitle();
   },
-  onTitle: () => state === 'title',
+  onTitle: () => game.state === 'title',
 }).then(() => {
   // Signed in after docking (the account loads in the background): a commission may be waiting.
-  if (state === 'docked' && commander) payCommissions();
+  if (game.state === 'docked' && game.commander) payCommissions();
 });
 
 // Started: the old-browser note (public/old-browser.js) stays away.

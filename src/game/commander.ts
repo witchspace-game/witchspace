@@ -23,6 +23,8 @@ export type EquipmentId =
   | 'survey-autopilot' | 'route-autopilot' | 'wisp' | 'comms-array';
 
 export type Mount = 'front' | 'rear' | 'left' | 'right';
+/** The four mounts, front first: also the four ways to look. */
+export const MOUNTS: Mount[] = ['front', 'rear', 'left', 'right'];
 
 export type LegalStatus = 'clean' | 'offender' | 'fugitive';
 
