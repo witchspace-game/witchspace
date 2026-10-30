@@ -148,13 +148,11 @@ import { hasBackRoom } from './economy/blackmarket';
 import { btcQuote, checkBtcOrders, heardQuote } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
 import { btcValue, formatBtc, isFresh, satsOf } from './economy/bitcoin';
+import { $, cmdr, currentSystem, game, modern, type State } from './core';
 import './style.css';
 
-type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
-let state: State = 'title';
 let inSpace = false;
 
-const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 function setState(next: State) {
   if (next !== 'title' && isAccountPanelOpen()) toggleAccountPanel(false);
@@ -178,7 +176,7 @@ function setState(next: State) {
     closeMap();
     setFlightInputSuppressed(false);
   }
-  state = next;
+  game.state = next;
   document.body.dataset.state = next;
   document.querySelectorAll<HTMLElement>('[data-screen]').forEach((el) => {
     el.hidden = !el.dataset.screen!.split(' ').includes(next);
@@ -269,23 +267,21 @@ function updateTurnHint() {
   const hint = $('#turn');
   const phone = document.body.classList.contains('touch') && Math.min(innerWidth, innerHeight) < 500;
   const upright = innerHeight > innerWidth;
-  const want = state === 'flying' ? 'sideways' : state === 'title' || state === 'docked' ? 'upright' : null;
+  const want = game.state === 'flying' ? 'sideways' : game.state === 'title' || game.state === 'docked' ? 'upright' : null;
   if (!phone || !want || upright === (want === 'upright')) {
     hint.hidden = true;
     turnSeen = '';
     return;
   }
-  if (turnSeen === state) return; // already said, for this screen
-  turnSeen = state;
+  if (turnSeen === game.state) return; // already said, for this screen
+  turnSeen = game.state;
   hint.className = `turn ${want}`;
-  hint.textContent = state === 'flying' ? 'Turn your phone sideways to fly' : state === 'docked' ? 'Turn your phone upright in the station' : 'Best upright here · sideways to fly';
+  hint.textContent = game.state === 'flying' ? 'Turn your phone sideways to fly' : game.state === 'docked' ? 'Turn your phone upright in the station' : 'Best upright here · sideways to fly';
   hint.hidden = false;
   clearTimeout(turnTimer);
   turnTimer = setTimeout(() => (hint.hidden = true), 5000);
 }
 
-let commander: Commander | null = null;
-const cmdr = () => commander!;
 
 // --- Showroom (title, new game and docked screens) --------------------------
 
@@ -295,7 +291,7 @@ for (const m of showroomModels) showroom.scene.add(m.root);
 const cobraIndex = Math.max(0, showroomModels.findIndex((m) => m.def.id === 'cobra-mk3'));
 let shipIndex = cobraIndex;
 /** Your own hull's place in the showroom. */
-const ownIndex = () => (commander ? Math.max(0, showroomModels.findIndex((m) => m.def.id === hullOf(commander!))) : cobraIndex);
+const ownIndex = () => (game.commander ? Math.max(0, showroomModels.findIndex((m) => m.def.id === hullOf(game.commander!))) : cobraIndex);
 let flyIn = 0; // 0 = far away, 1 = arrived
 const spin = { x: 0.25, y: 0, dragging: false, lastX: 0, lastY: 0, idle: 0 };
 let zoom = 1; // showroom zoom: >1 is closer
@@ -438,8 +434,8 @@ function updateBooth(model: ShipModel) {
 
 function updateShowroom(dt: number) {
   const model = showroomModels[shipIndex];
-  if (booth && state === 'docked') return updateBooth(model);
-  if (state === 'docked') {
+  if (booth && game.state === 'docked') return updateBooth(model);
+  if (game.state === 'docked') {
     if (camera.view?.enabled) camera.clearViewOffset();
     updateBerth(dt, model);
     return;
@@ -465,7 +461,7 @@ function updateShowroom(dt: number) {
 /** The ship browser sits just under the ship, wherever the ship is on screen, clear of the panel and buttons. */
 function placeShipNav(radius: number, dist: number) {
   const nav = $('#ship-nav');
-  if (state !== 'title') return;
+  if (game.state !== 'title') return;
   camera.updateMatrixWorld();
   const centre = new THREE.Vector3(0, 0, 0).project(camera);
   const x = ((centre.x + 1) / 2) * innerWidth;
@@ -527,14 +523,14 @@ function frameShipInSpace() {
 
 // Inspect the ship on the title and docked screens: drag to rotate, scroll
 // (or swipe on a Magic Mouse or trackpad) to zoom, double-click to reset.
-const inShowroom = () => state === 'title' || state === 'docked' || state === 'newgame';
+const inShowroom = () => game.state === 'title' || game.state === 'docked' || game.state === 'newgame';
 const onControl = (e: Event) => Boolean((e.target as HTMLElement).closest('button, a, input, .panel, #galaxy-map, #controls-card'));
 
 // On the title screen a quick sideways flick changes the ship (a slow drag
 // still turns it), on the ship or on its card.
 const flick = { x: 0, y: 0, t: 0, spinY: 0, on: false };
 function flickStart(e: PointerEvent) {
-  Object.assign(flick, { x: e.clientX, y: e.clientY, t: performance.now(), spinY: spin.y, on: state === 'title' });
+  Object.assign(flick, { x: e.clientX, y: e.clientY, t: performance.now(), spinY: spin.y, on: game.state === 'title' });
 }
 function flickEnd(e: PointerEvent) {
   if (!flick.on) return;
@@ -655,7 +651,7 @@ function startAtForTesting(c: Commander) {
 let testStartDone = false;
 
 function startCommander(difficulty: Difficulty) {
-  commander = newCommander(difficulty);
+  game.commander = newCommander(difficulty);
   // A new commander hasn't flown: the last commander's trip isn't theirs (Marketing saw "How I died at Lave").
   flightFrom = Date.now();
   tripSeen = true;
@@ -663,21 +659,21 @@ function startCommander(difficulty: Difficulty) {
   clearRadio();
   countNewCommander(difficulty, isRetro() ? '1984' : 'neo');
   setCausedEvents([]);
-  startAtForTesting(commander);
+  startAtForTesting(game.commander);
   // Your callsign: what other commanders see. Blank keeps your account's, or the original's Jameson.
   const typed = $<HTMLInputElement>('#callsign').value.trim();
-  commander.name = cleanName(typed || currentAccount()?.callsign || commander.name);
-  if (signedIn() && commander.name !== currentAccount()?.callsign) {
-    const wanted = commander.name;
+  game.commander.name = cleanName(typed || currentAccount()?.callsign || game.commander.name);
+  if (signedIn() && game.commander.name !== currentAccount()?.callsign) {
+    const wanted = game.commander.name;
     claimCallsign(wanted).catch((e: Error) => {
       // Taken or reserved: keep the account's callsign, if it has one.
       const kept = currentAccount()?.callsign;
-      commander!.name = kept ?? 'Jameson';
-      saveCommander(commander!);
+      game.commander!.name = kept ?? 'Jameson';
+      saveCommander(game.commander!);
       flash(kept ? `${e.message} · you're CMDR ${kept}` : `${e.message} · choose a callsign at the station`, 4);
     });
   }
-  saveCommander(commander);
+  saveCommander(game.commander);
   sfx.beep();
   enterDocked(!recruiter); // a new ship: the flight log first, unless a recruiter is waiting
   if (recruiter && difficulty === 'modern') setDockTab('contracts');
@@ -707,7 +703,7 @@ function enterDocked(newShip = false) {
     void checkBtcOrders(cmdr()).then((fills) => {
       if (!fills.length) return;
       saveCommander(cmdr());
-      if (state === 'docked') renderDocked();
+      if (game.state === 'docked') renderDocked();
       setTimeout(() => flash(fills.join(' · '), 6), newShip ? 7000 : 1200);
     });
   // Ships the Carriers' Mutual were bringing here may have arrived.
@@ -777,7 +773,7 @@ async function showNewMoments(newShip: boolean) {
   if (classicRules()) return setLogBadge(0);
   const fresh = (await listMoments().catch(() => [])).filter((m) => m.created >= flightFrom).length;
   setLogBadge(fresh);
-  if (state !== 'docked' || isMapOpen()) return;
+  if (game.state !== 'docked' || isMapOpen()) return;
   if (fresh && !tripSeen)
     void openTrip(flightFrom, {
       onClose: tripDone,
@@ -801,7 +797,7 @@ function setLogBadge(n: number) {
 // a gallery, from the button beside the galaxy map (F).
 let logOpen = false;
 function setFlightLog(open: boolean) {
-  logOpen = open && state === 'docked';
+  logOpen = open && game.state === 'docked';
   if (!logOpen) logForIntro = false;
   $('#flight-log-view').hidden = !logOpen;
   if (logOpen) {
@@ -843,7 +839,7 @@ function setDockTab(tab: DockTab) {
   dockTab = tab;
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
-  if (tab === 'station' && state === 'docked') renderDocked(); // credits, hold and wallet may have changed at the exchange
+  if (tab === 'station' && game.state === 'docked') renderDocked(); // credits, hold and wallet may have changed at the exchange
   $('#tab-market').hidden = tab !== 'market';
   $('#tab-news').hidden = tab !== 'news';
   $('#tab-saloon').hidden = tab !== 'saloon';
@@ -853,7 +849,7 @@ function setDockTab(tab: DockTab) {
   if (tab === 'money') renderMoney();
   document.body.classList.toggle('yard-open', tab === 'shipyard');
   if (tab === 'shipyard') renderShipyard();
-  else if (state === 'docked') {
+  else if (game.state === 'docked') {
     // Your own ship back in the berth, and the yard's hulls in their own glow.
     spec = null;
     showOwnShip();
@@ -893,7 +889,7 @@ const tabName = (b: HTMLElement) => {
 function updateDockHead() {
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]')];
   const active = tabs.find((b) => b.dataset.tab === dockTab);
-  $('.dock-where').textContent = commander ? `${stationName(currentSystem()).name}\u00a0·\u00a0` : '';
+  $('.dock-where').textContent = game.commander ? `${stationName(currentSystem()).name}\u00a0·\u00a0` : '';
   $('.dock-which').textContent = dockTab === 'money' ? 'Money' : active ? tabName(active) : '';
   const news = tabs.some((b) => !b.hidden && b.dataset.tab !== dockTab && b.querySelector('.tab-badge'));
   $('.dock-dot').hidden = !news;
@@ -905,7 +901,7 @@ function updateDockHead() {
       return `<button type="button" data-place="${b.dataset.tab}" aria-pressed="${b.dataset.tab === dockTab}">${escapeHtml(tabName(b))}${badge ? ` <b class="tab-badge">${escapeHtml(badge)}</b>` : ''}</button>`;
     })
     .join('');
-  if (commander) $('.wallet-button').textContent = `${Math.floor(cmdr().credits).toLocaleString()} Cr`;
+  if (game.commander) $('.wallet-button').textContent = `${Math.floor(cmdr().credits).toLocaleString()} Cr`;
   if (!$('#wallet-sheet').hidden) renderWallet();
 }
 
@@ -1048,7 +1044,7 @@ function answerAdvert() {
     showNewGame(); // pick a callsign; the welcome waits at the station
     return;
   }
-  commander = saved;
+  game.commander = saved;
   setCausedEvents(saved.caused);
   enterDocked();
   setDockTab('contracts');
@@ -1119,7 +1115,7 @@ const specialsHere = (c: Commander, here: StarSystem, now: number) =>
 
 /** Unread messages, on the Contracts tab's button. */
 function markInbox(c: Commander) {
-  const unread = (c.messages ?? []).filter((m) => !m.read).length + (state === 'docked' && dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
+  const unread = (c.messages ?? []).filter((m) => !m.read).length + (game.state === 'docked' && dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
   // A small badge, not words: "Contracts · 2 new" spilled out of the tab on a phone (Mark).
   const tab = $('.tabs [data-tab="contracts"]');
   tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}<span class="tab-badge-word"> new</span></b>` : 'Contracts'; // "2 new" where there's room, "2" on a phone
@@ -1294,7 +1290,7 @@ function renderContracts() {
 
 // While you're docked the board rolls on: a new post slides in if you're looking, or counts on the tab if not.
 setInterval(() => {
-  if (state !== 'docked' || !commander || commander.difficulty !== 'modern') return;
+  if (game.state !== 'docked' || !game.commander || game.commander.difficulty !== 'modern') return;
   const c = cmdr();
   const key = board(c, currentSystem(), Date.now()).map((o) => o.id).join();
   if (key === boardKey) return;
@@ -1423,7 +1419,7 @@ async function checkSiteSpec(announce: boolean) {
     if (spec && !('error' in r) && r.at) siteSpec = newerSpec(siteSpec, { spec, at: r.at });
   }
   const def = siteSpec && shipById(siteSpec.spec.ship);
-  if (!def || cmdr().order || state !== 'docked' || !hasShipyard(currentSystem())) return;
+  if (!def || cmdr().order || game.state !== 'docked' || !hasShipyard(currentSystem())) return;
   if (announce) flash(`The yard: your ${def.name} spec from the website is here · see the Shipyard`, 5);
   if (dockTab === 'shipyard' && !spec) renderShipyard();
 }
@@ -1464,7 +1460,7 @@ function handOver(c: Commander, def: ShipDef, ed: Edition) {
 }
 
 async function checkSignedOver() {
-  if (!signedIn() || !commander || commander.difficulty !== 'modern') return;
+  if (!signedIn() || !game.commander || game.commander.difficulty !== 'modern') return;
   const r = await signedOver();
   if ('error' in r) return;
   const c = cmdr();
@@ -1491,7 +1487,7 @@ async function checkSignedOver() {
     saveCommander(c);
     markInbox(c);
     flash(`${def.manufacturer ?? 'The yard'}: ${what} has been signed over to you · see Contracts`, 6);
-    if (state === 'docked' && dockTab === 'shipyard' && !spec) renderShipyard();
+    if (game.state === 'docked' && dockTab === 'shipyard' && !spec) renderShipyard();
   }
 }
 
@@ -1530,13 +1526,13 @@ const paintLook = (def: ShipDef, p: { colour: string; glow?: GlowId; trim?: stri
 
 /** Your own ship's look, for the kill cam, clips and other commanders; null in the maker's colours. */
 const myLook = (): Look | null => {
-  const c = commander;
+  const c = game.commander;
   return c?.paint ? paintLook(player.def, c.paint) : null;
 };
 
 /** Your hull in the berth, in its paint, and every other hull in its maker's own. */
 function showOwnShip() {
-  const c = commander;
+  const c = game.commander;
   ships.forEach((def, i) => recolourShowroom(i, c?.paint && def.id === hullOf(c) ? paintLook(def, c.paint) : plainLook(def)));
   showShip(ownIndex());
 }
@@ -1653,7 +1649,7 @@ function renderShipyard() {
     editionsAsked = now;
     void editionCounts().then((r) => {
       editionsLeft = r;
-      if (state === 'docked' && dockTab === 'shipyard' && !spec) renderShipyard();
+      if (game.state === 'docked' && dockTab === 'shipyard' && !spec) renderShipyard();
     });
   }
   const edition = editionSel ? editionById(editionSel) : undefined;
@@ -2146,7 +2142,7 @@ function renderMoney() {
   // Ask for the price now and then while the tab is open; draw again when it comes.
   if (now - moneyAsked > 60_000) {
     moneyAsked = now;
-    void btcQuote().then((q) => q && state === 'docked' && dockTab === 'money' && renderMoney());
+    void btcQuote().then((q) => q && game.state === 'docked' && dockTab === 'money' && renderMoney());
   }
   const btc = btcNow();
   const live = heardQuote() && isFresh(heardQuote());
@@ -3019,7 +3015,7 @@ const SCAN_TIME = 3; // seconds within range for a police scan
 let scanned = false; // once per visit to a system
 let scanProgress = 0;
 
-const isFugitive = () => Boolean(commander) && legalStatus(cmdr()) === 'fugitive';
+const isFugitive = () => Boolean(game.commander) && legalStatus(cmdr()) === 'fugitive';
 
 /** Wanted here, you can pay your way clean at the station rather than launch into the police. */
 const canSettle = (c: Commander) => hasLaw(currentSystem()) && legalStatus(c) !== 'clean';
@@ -3083,7 +3079,7 @@ function pirateLost() {
   if (!modern()) return;
   const before = wariness();
   pirateLosses.set(systemKey(currentSystem()), { n: before + 1, at: Date.now() });
-  if (before + 1 >= 6 && !toldWary.has(systemKey(currentSystem())) && toldWary.add(systemKey(currentSystem()))) setTimeout(() => state === 'flying' && flash('Word gets round · pirates here are giving you a wide berth', 4), 3000);
+  if (before + 1 >= 6 && !toldWary.has(systemKey(currentSystem())) && toldWary.add(systemKey(currentSystem()))) setTimeout(() => game.state === 'flying' && flash('Word gets round · pirates here are giving you a wide berth', 4), 3000);
 }
 /** Pirates about you, or anyone out to get you. */
 const fightOn = () => npcs.some((n) => n.hostile || (n.role === 'pirate' && n.obj.position.distanceTo(player.obj.position) < FIGHT_NEAR));
@@ -3105,7 +3101,7 @@ let carried = new Set<string>(); // deliveries already given to a trader in this
 const DELIVERY_WINDOW = [2 * 60_000, 15 * 60_000]; // ms ahead: due after the trader could dock
 
 function loadDeliveries(npc: NpcShip): boolean {
-  if (!commander || cmdr().difficulty !== 'modern') return false;
+  if (!game.commander || cmdr().difficulty !== 'modern') return false;
   const now = Date.now();
   const due = upcomingDeliveries(currentSystem(), marketState(tradeContext()), now + DELIVERY_WINDOW[0], now + DELIVERY_WINDOW[1]).filter(
     (d) => !carried.has(`${d.id}:${d.t}`),
@@ -3156,7 +3152,7 @@ function addNpc(def: string, role: NpcRole, at: THREE.Vector3, patrolCentre = st
 
 /** Under Modern rules, most traders fly for one of the companies working this system, in its colours. */
 function flyForCompany(npc: NpcShip) {
-  if (!commander || cmdr().difficulty !== 'modern' || Math.random() < 0.2) return;
+  if (!game.commander || cmdr().difficulty !== 'modern' || Math.random() < 0.2) return;
   npc.company = pickCompany(currentSystem(), Math.random());
   applyCompanyBand(npc.model, COMPANIES[npc.company].colour);
 }
@@ -3299,7 +3295,7 @@ const cruiseOf = (hull: string) => shipById(hull)!.stats.maxSpeed * 0.5;
 
 /** Ships on their lanes right now that aren't in the scene yet: put them there. */
 function syncTraffic(dt: number) {
-  if (!modern() || !commander) return;
+  if (!modern() || !game.commander) return;
   trafficCheck -= dt;
   if (trafficCheck > 0) return;
   trafficCheck = 1;
@@ -3345,7 +3341,7 @@ function ride(npc: NpcShip, now: number) {
   const r = railsOf.get(npc);
   if (!r) return;
   const u = (now - r.start) / (r.end - r.start);
-  const near = state === 'flying' && npc.obj.position.distanceTo(player.obj.position) < RAILS_NEAR;
+  const near = game.state === 'flying' && npc.obj.position.distanceTo(player.obj.position) < RAILS_NEAR;
   if (u >= 1 || near || npc.hostile || npc.attackedAgo < 60) {
     railsOf.delete(npc);
     return;
@@ -3437,7 +3433,7 @@ function updateLegends(dt: number) {
     if (!npc.won || fleeing.has(npc)) continue;
     fleeing.set(npc, FALCON_JUMP_DELAY * 2);
     Object.assign(npc, { mode: 'flee', hostile: false, fights: false, target: player });
-    const taken = commander ? takeFalconsPrice(cmdr()) : '';
+    const taken = game.commander ? takeFalconsPrice(cmdr()) : '';
     radio('pirate', 'Falcon', FALCON_CALLING[Math.floor(Math.random() * FALCON_CALLING.length)], { colour: '#ff4d6d' });
     flash(taken ? `The Falcon took ${taken}` : 'The Falcon found nothing worth taking', 3.5);
     void keepCombat({ kind: 'legend', text: taken ? `The Falcon took ${taken}` : 'Beaten by the Falcon', subject: 'The Falcon' }, 20, 6);
@@ -3451,9 +3447,9 @@ function updateLegends(dt: number) {
     if (npc.obj.position.distanceTo(player.obj.position) < 6000) sfx.ecm();
     spillCargo(npc.obj.position, npc.ship.forward().multiplyScalar(npc.ship.speed * 0.3), { gems: FALCON_FEE });
     radio('pirate', 'Falcon', FALCON_PARTING[Math.floor(Math.random() * FALCON_PARTING.length)], { colour: '#ff4d6d' });
-    if (npc.attacker === player && commander && falconAvoiding()) {
+    if (npc.attacker === player && game.commander && falconAvoiding()) {
       flash('Falcon driven off · no bounty: you beat her less than a day ago', 3);
-    } else if (npc.attacker === player && commander) {
+    } else if (npc.attacker === player && game.commander) {
       const c = cmdr();
       const rated = rateKill(npc);
       c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
@@ -3533,7 +3529,7 @@ const SLOT_CLEAR = 4000; // metres from the station
 const LAUNCH_CLEAR = 15; // seconds after launching
 let launchedAt = -Infinity;
 const slotReserved = () =>
-  state === 'flying' &&
+  game.state === 'flying' &&
   player.obj.position.distanceTo(station.root.position) < SLOT_CLEAR &&
   (autopilot || rollAssistApplies() || elapsed - launchedAt < LAUNCH_CLEAR);
 const holding = new WeakSet<NpcShip>();
@@ -3580,7 +3576,7 @@ function updateTraffic(dt: number) {
   const wary = modern() ? wariness() : 0;
   const calm = !modern() || (!fightOn() && elapsed - lastFightAt > CALM_BETWEEN_FIGHTS + sys.government * 10 + wary * WARY_CALM);
   encounterTimer -= dt;
-  if (encounterTimer <= 0 && state === 'flying' && calm) {
+  if (encounterTimer <= 0 && game.state === 'flying' && calm) {
     encounterTimer = ENCOUNTER_INTERVAL * (0.6 + Math.random() * 0.8);
     if (ofRole('pirate').length < MAX_PIRATES && Math.random() < PIRATE_CHANCE[sys.government] * WARY_ODDS ** wary) {
       const met = spawnPirates(player.obj.position);
@@ -3647,7 +3643,7 @@ const CARRIER_WITHDRAW_HEALTH = 0.25;
 
 /** Start the clock on a carrier, if a warrant here calls for one. */
 function scheduleMarshals() {
-  if (carrier || marshalTimer !== null || !commander) return;
+  if (carrier || marshalTimer !== null || !game.commander) return;
   marshalTimer = marshalsDelay(cmdr(), currentSystem());
 }
 
@@ -3727,7 +3723,7 @@ function carrierLeaves(c: Carrier, message: string) {
   c.mouth = new THREE.Plane(fwd.clone().negate(), fwd.dot(at));
   clipShip(c.npc, c.mouth);
   c.drone = riftDrone(6);
-  if (state === 'flying') flash(message, 3);
+  if (game.state === 'flying') flash(message, 3);
 }
 
 /** Their quarry is dead: the carrier and its wing quietly leave the system. */
@@ -3763,7 +3759,7 @@ function riftInterference(): number {
 
 function riftPull(c: Carrier, dt: number) {
   const r = c.rift;
-  if (!r || r.open <= 0 || state !== 'flying') return;
+  if (!r || r.open <= 0 || game.state !== 'flying') return;
   const to = r.group.position.clone().sub(player.obj.position);
   const d = to.length();
   const reach = r.radius * RIFT_PULL_RANGE;
@@ -3785,7 +3781,7 @@ function riftPull(c: Carrier, dt: number) {
 }
 
 function updateMarshals(dt: number) {
-  const flying = state === 'flying';
+  const flying = game.state === 'flying';
   if (marshalTimer !== null && flying) {
     marshalTimer -= dt;
     if (marshalTimer <= 0) {
@@ -3856,7 +3852,7 @@ function updateMarshals(dt: number) {
     const from = c.npc.obj.position.clone().sub(player.obj.position);
     const around = from.setLength(CARRIER_STANDOFF).applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.5);
     c.npc.destination = player.obj.position.clone().add(around);
-    const wanted = Boolean(commander) && cmdr().warrant;
+    const wanted = Boolean(game.commander) && cmdr().warrant;
     // Never more than a few out at once: the rest wait to replace losses.
     if (wanted && flying && c.bay > 0 && c.wing.size < MAX_OUT) {
       c.launchTimer -= dt;
@@ -3919,7 +3915,7 @@ function launchLancers(c: Carrier) {
     c.wing.add(lancer);
     c.bay--;
   }
-  if (state === 'flying') flash(first ? 'The Bastion is launching Lancers' : `Lancers launching · ${c.bay} still aboard`, 2);
+  if (game.state === 'flying') flash(first ? 'The Bastion is launching Lancers' : `Lancers launching · ${c.bay} still aboard`, 2);
 }
 // --- Building a star system -------------------------------------------------------
 
@@ -4042,7 +4038,7 @@ function disposeExploreScene() {
 function buildExploreScene(sys: StarSystem) {
   disposeExploreScene();
   const w = worldOf(sys);
-  const c = commander;
+  const c = game.commander;
   if (w.rings) {
     const rings = buildRings(planetRadius, w.rings, planetColour(sys));
     rings.position.copy(planetPos);
@@ -4140,7 +4136,7 @@ function updateExplore(dt: number): boolean {
       if (done.id === 'planet') {
         const hidden = scenePois.filter((p) => !p.revealed);
         for (const p of hidden) p.revealed = true;
-        if (hidden.length) setTimeout(() => state === 'flying' && flash(hidden.length === 1 ? 'The survey picked up an unidentified signal' : `The survey picked up ${hidden.length} unidentified signals`, 3), 3800);
+        if (hidden.length) setTimeout(() => game.state === 'flying' && flash(hidden.length === 1 ? 'The survey picked up an unidentified signal' : `The survey picked up ${hidden.length} unidentified signals`, 3), 3800);
       }
     } else if (survey.progress <= 0 && near !== survey.target) survey = null;
   }
@@ -4220,7 +4216,7 @@ function discover(p: ScenePoi) {
   if (p.poi.prize && !hasEquipment(c, p.poi.prize)) {
     c.equipment.push(p.poi.prize);
     exploreOf(c).points += COURIER_POINTS;
-    setTimeout(() => state === 'flying' && flash('Will-o’-the-Wisp fitted · enemy lasers miss half the time, half the missiles are spoofed · Wexley-Yorozu will want it back', 6), 5200);
+    setTimeout(() => game.state === 'flying' && flash('Will-o’-the-Wisp fitted · enemy lasers miss half the time, half the missiles are spoofed · Wexley-Yorozu will want it back', 6), 5200);
   }
   if (p.poi.salvage.length) {
     spillCargo(p.position, new THREE.Vector3(), salvageCargo(p.poi.salvage));
@@ -4251,7 +4247,7 @@ function bringHome(held: SurveyData[]) {
     const one = gone.find((d) => d.galaxy === won[0].galaxy && d.system === won[0].system && d.body === won[0].body);
     const what = won.length === 1 ? (one?.name ?? 'one find') : `${won.length} finds`;
     setTimeout(() => flash(`First to bring it home · your callsign goes on the chart for ${what}`, 5), 2500);
-    if (state === 'docked') renderDocked();
+    if (game.state === 'docked') renderDocked();
   });
 }
 
@@ -4376,7 +4372,7 @@ const EVADE_MISSILE_RANGE = 400; // metres: where it decides whether a missile i
 const WISP_COLD = 10; // seconds since you last fired
 let lastPlayerShot = -Infinity;
 const evadeChecked = new WeakSet<object>();
-const evading = () => commander?.difficulty === 'modern' && isWorking(commander, 'wisp') && elapsed - lastPlayerShot > WISP_COLD;
+const evading = () => game.commander?.difficulty === 'modern' && isWorking(game.commander, 'wisp') && elapsed - lastPlayerShot > WISP_COLD;
 
 /**
  * Damage the player's ship. Shields soak hits first; once a hit reaches the
@@ -4397,7 +4393,7 @@ function damagePlayer(amount: number, from?: NpcShip): boolean {
   const badlyHurt = player.hull < player.def.stats.hull * EQUIPMENT_RISK_HULL;
   // Pirates aim for the comms array: it's how you'd call for help.
   const aimed = from?.role === 'pirate';
-  if (!destroyed && player.hull < hullBefore && !badlyHurt && equipmentHitCooldown <= 0 && commander) {
+  if (!destroyed && player.hull < hullBefore && !badlyHurt && equipmentHitCooldown <= 0 && game.commander) {
     const hit = rollFragileDamage(cmdr(), Math.random, aimed);
     if (hit) {
       equipmentHitCooldown = EQUIPMENT_HIT_GAP;
@@ -4405,7 +4401,7 @@ function damagePlayer(amount: number, from?: NpcShip): boolean {
       flash(`${hit.name} damaged · plain radio until it's repaired at a station`, 2.5);
     }
   }
-  if (!destroyed && player.hull < hullBefore && badlyHurt && equipmentHitCooldown <= 0 && commander) {
+  if (!destroyed && player.hull < hullBefore && badlyHurt && equipmentHitCooldown <= 0 && game.commander) {
     const hit = rollEquipmentDamage(cmdr(), Math.random, aimed ? 'comms-array' : undefined);
     if (hit) {
       equipmentHitCooldown = EQUIPMENT_HIT_GAP;
@@ -4460,7 +4456,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   explosions.push(boom);
   boomAt(npc.obj.position, 2.2, 1600, 1.6);
   // A pirate carrying your lost case drops it again.
-  if (npc.carrying && commander) {
+  if (npc.carrying && game.commander) {
     const k = cmdr().adrift?.find((x) => x.contract === npc.carrying);
     if (k) {
       const p = npc.obj.position;
@@ -4474,7 +4470,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   // Cargo from a clean ship you destroyed is stolen; from a pirate, or someone else's kill, it's salvage.
   if (Object.keys(npc.cargo).length) spillCargo(npc.obj.position, velocity, npc.cargo, killer === player.obj && npc.role !== 'pirate');
   const lost = deliveries.get(npc);
-  if (lost && commander) {
+  if (lost && game.commander) {
     const market = marketState(tradeContext());
     for (const d of lost) loseDelivery(market, d, Date.now());
     saveCommander(cmdr());
@@ -4484,7 +4480,7 @@ function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
     }
   }
   // A trader that called for help, and didn't get it.
-  if (distresses.some((d) => d.trader === npc && d.heard) && state === 'flying') radio('mayday', traderName(npc), 'Signal lost', { colour: traderColour(npc) });
+  if (distresses.some((d) => d.trader === npc && d.heard) && game.state === 'flying') radio('mayday', traderName(npc), 'Signal lost', { colour: traderColour(npc) });
   removeNpc(npc);
   if (carrier?.npc === npc) bastionDestroyed(carrier, velocity, killer === player.obj);
   if (killer !== player.obj) return;
@@ -4558,7 +4554,7 @@ function bastionDestroyed(c: Carrier, velocity: THREE.Vector3, byPlayer: boolean
     spillCargo(at, velocity, { alloys: 3 + Math.floor(Math.random() * 4) }, byPlayer);
     setTimeout(() => boomAt(at, 3, 2400, 2), 300 + i * 450);
   }
-  if (!byPlayer || !commander) return;
+  if (!byPlayer || !game.commander) return;
   const cm = cmdr();
   cm.bastionsDestroyed = (cm.bastionsDestroyed ?? 0) + 1;
   setTimeout(() => flash(`Bastion carrier destroyed${aboard ? ` with ${aboard} Lancers aboard` : ''} · the Marshals will not forget`, 4), 1800);
@@ -4566,7 +4562,7 @@ function bastionDestroyed(c: Carrier, velocity: THREE.Vector3, byPlayer: boolean
 
 /** The station's safe zone: close enough for its guns and its police to see. */
 const SAFE_ZONE = 5000; // metres
-const inSafeZone = (at: THREE.Vector3) => commander !== null && at.distanceTo(station.root.position) < SAFE_ZONE;
+const inSafeZone = (at: THREE.Vector3) => game.commander !== null && at.distanceTo(station.root.position) < SAFE_ZONE;
 
 /** The player shot or rammed a ship. Pirates are fair game; anyone else is a crime. */
 // Friendly fire (Mark: a police Viper flies across you in a fight, catches one shot, and you're a
@@ -4627,7 +4623,7 @@ const SHIPS_SEE = 6000; // metres: another ship sees a crime this close (and liv
 
 /** Would anyone see a crime here? (The victim doesn't count: it reports only if it gets away.) */
 function witnessed(at: THREE.Vector3, victim: NpcShip | null): boolean {
-  if (!commander || cmdr().difficulty !== 'modern') return true;
+  if (!game.commander || cmdr().difficulty !== 'modern') return true;
   if (at.distanceTo(station.root.position) < STATION_SPACE) return true;
   return npcs.some((n) => {
     if (n === victim || n.role === 'pirate') return false;
@@ -4704,7 +4700,7 @@ function updateStationDefence(dt: number) {
 
 /** A trader you attacked, getting away: it reports you (in the system where it happened). */
 function reportedBy(npc: NpcShip) {
-  if (!npc.unreported || !commander) return;
+  if (!npc.unreported || !game.commander) return;
   npc.unreported = false;
   becomeOffender('The trader you attacked got away, and reported you · you are an OFFENDER', npc.seenDark);
 }
@@ -4731,9 +4727,9 @@ let hullChecked = false;
 /** You ignored a hail, or fired on police, while dark: they're after you, whoever you are. */
 let defiedPolice = false;
 
-const transponderBroken = () => commander !== null && cmdr().damaged.includes('transponder');
+const transponderBroken = () => game.commander !== null && cmdr().damaged.includes('transponder');
 /** Nobody can read who you are from afar. */
-const dark = () => commander !== null && cmdr().difficulty === 'modern' && (transponderOff || transponderBroken());
+const dark = () => game.commander !== null && cmdr().difficulty === 'modern' && (transponderOff || transponderBroken());
 
 /** Whether the law knows it's you: transponder on, or the station or a police ship close enough to read your hull. */
 function identified(): boolean {
@@ -4900,7 +4896,7 @@ type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter 
 const GIMBAL_DAMAGE = 0.8;
 
 function gimballed() {
-  return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(commander) && isWorking(cmdr(), 'gimbal-mount');
+  return controlScheme() === 'mouse' && isMouseCaptured() && Boolean(game.commander) && isWorking(cmdr(), 'gimbal-mount');
 }
 
 /**
@@ -5076,7 +5072,7 @@ const heft = (def: ShipDef) => def.stats.hull + def.stats.shields;
 const CRUSHING = 5; // a ship this many times heavier crushes you
 
 function updateCombat(dt: number, input: { fire: boolean } | null) {
-  const alive = state === 'flying';
+  const alive = game.state === 'flying';
   beams.update(dt);
   fireHeld = alive && input?.fire ? fireHeld + dt : 0;
 
@@ -5091,7 +5087,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   thinkTimer -= dt;
   if (thinkTimer <= 0) {
     thinkTimer = 0.25;
-    const prices = commander ? new Map(quotes(tradeContext()).map((q) => [q.commodity.id, q.price])) : new Map<string, number>();
+    const prices = game.commander ? new Map(quotes(tradeContext()).map((q) => [q.commodity.id, q.price])) : new Map<string, number>();
     const holdValue = (cargo: Record<string, number>) => Object.entries(cargo).reduce((v, [id, q]) => v + q * (prices.get(id) ?? 0), 0);
     const world = {
       player,
@@ -5101,7 +5097,7 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
       npcs,
       inSafeZone: (at: THREE.Vector3) => cmdr().difficulty === 'classic' && inSafeZone(at),
       canSee: (npc: NpcShip) => playerVisibleAt(npc.obj.position.distanceTo(player.obj.position)),
-      cargoValue: (ship: PlayerShip) => (ship === player ? (commander ? holdValue(cmdr().cargo) : 0) : holdValue(npcs.find((n) => n.ship === ship)?.cargo ?? {})),
+      cargoValue: (ship: PlayerShip) => (ship === player ? (game.commander ? holdValue(cmdr().cargo) : 0) : holdValue(npcs.find((n) => n.ship === ship)?.cargo ?? {})),
     };
     const hunting = (n: NpcShip) => n.target === player && (n.mode === 'attack' || n.mode === 'breakoff');
     const before = new Map(npcs.map((n) => [n, n.mode === 'search' ? 'search' : hunting(n) ? 'hunt' : '']));
@@ -5418,7 +5414,7 @@ const seekerBox = $('#seeker');
 function updateSeekerBox() {
   const lockedAt = locked?.obj.position ?? lockedCommander?.position ?? null;
   const tracking = seeker?.on ? seekPosition(seeker.on) : null;
-  if ((!seeker && !lockedAt) || state !== 'flying') {
+  if ((!seeker && !lockedAt) || game.state !== 'flying') {
     seekerBox.hidden = true;
     return;
   }
@@ -5477,7 +5473,7 @@ missileButton.addEventListener('pointercancel', () => releaseMissile(false));
 
 /** Its label: how many missiles, and whether one is locked. */
 function updateMissileButton() {
-  if (!commander) return;
+  if (!game.commander) return;
   const n = cmdr().missiles;
   const armed = Boolean(locked || lockedCommander);
   const modern = cmdr().difficulty === 'modern';
@@ -5535,7 +5531,7 @@ const NPC_MISSILE_GAP = 20; // seconds between one ship's missiles (Modern)
 
 function maybeFireNpcMissile(npc: NpcShip) {
   if (npc.missiles <= 0 || npc.mode !== 'attack' || !npc.target || npc.role === 'trader') return;
-  if (npc.target === player && state !== 'flying') return;
+  if (npc.target === player && game.state !== 'flying') return;
   // Modern: no salvos. One missile homing on you at a time, and a pause between
   // a ship's missiles, so each one is a fight you can win (break, or ECM).
   if (modern() && npc.target === player && (missiles.some((m) => m.target === player) || elapsed - (npcMissileAt.get(npc) ?? -Infinity) < NPC_MISSILE_GAP)) return;
@@ -5602,10 +5598,10 @@ function playerEcm() {
 function updateMissiles(dt: number) {
   ecmCooldown = Math.max(0, ecmCooldown - dt);
   equipmentHitCooldown = Math.max(0, equipmentHitCooldown - dt);
-  const alive = state === 'flying';
+  const alive = game.state === 'flying';
   // A lost lock goes back to seeking (Modern), so the next ship in your sights can be locked.
   const lockLost = () => {
-    if (alive && commander && cmdr().difficulty === 'modern' && cmdr().missiles > 0) seeker = { on: null, progress: 0, beep: 0 };
+    if (alive && game.commander && cmdr().difficulty === 'modern' && cmdr().missiles > 0) seeker = { on: null, progress: 0, beep: 0 };
     if (alive) flash(seeker ? 'Missile lock lost · seeking' : 'Missile lock lost', 1.2);
   };
   if (locked && (!npcs.includes(locked) || locked.obj.position.distanceTo(player.obj.position) > LOCK_HOLD)) {
@@ -5769,7 +5765,7 @@ let raidClock = 0;
 const raided = new Set<string>();
 
 function updateCaseRaid(dt: number) {
-  if (!commander || state !== 'flying') return;
+  if (!game.commander || game.state !== 'flying') return;
   const c = cmdr();
   // The pirates arrive.
   raidClock += dt;
@@ -5814,14 +5810,14 @@ function updateCaseRaid(dt: number) {
 function restoreAdrift() {
   raidClock = 0;
   raided.clear();
-  if (!commander) return;
+  if (!game.commander) return;
   const here = currentSystem();
   for (const k of cmdr().adrift ?? []) if (!k.held && !k.fate && k.galaxy === here.galaxy && k.system === here.index) spillSpecial(k);
 }
 
 /** Cases whose time ran out elsewhere: tell the commander. */
 function checkAdrift() {
-  if (!commander) return [];
+  if (!game.commander) return [];
   const notes = expireCases(cmdr(), Date.now(), (id) => drifters.some((d) => d.special?.contract === id));
   if (notes.length) saveCommander(cmdr());
   return notes;
@@ -5945,7 +5941,7 @@ function updateDrifters(dt: number) {
     toPlanet.copy(planetPos).sub(root.position);
     const r = toPlanet.length();
     toPlanet.normalize();
-    if (d.special && state === 'flying' && recoverCaseNear(d)) {
+    if (d.special && game.state === 'flying' && recoverCaseNear(d)) {
       disposeShip(d.model);
       drifters.splice(i, 1);
       continue;
@@ -5973,7 +5969,7 @@ function updateDrifters(dt: number) {
     root.position.addScaledVector(d.velocity, dt);
     root.rotateOnAxis(d.axis, d.spinRate * dt);
 
-    if (state === 'flying' && !d.special && tryScoop(d)) {
+    if (game.state === 'flying' && !d.special && tryScoop(d)) {
       disposeShip(d.model);
       drifters.splice(i, 1);
       continue;
@@ -5985,7 +5981,7 @@ function updateDrifters(dt: number) {
       explosions.push(flare);
     }
     if (d.burn >= BURN_TIME || r < planetRadius || (r > LOST_IN_SPACE && !d.special)) {
-      if (d.special && commander) {
+      if (d.special && game.commander) {
         flash(caseLost(cmdr(), d.special.contract), 4);
         saveCommander(cmdr());
       }
@@ -6167,7 +6163,7 @@ function updateSpace(dt: number) {
   updateMarshals(dt);
 
   let input: ReturnType<typeof flightInput> | null = null;
-  if (state === 'flying') {
+  if (game.state === 'flying') {
     const prev = station.toLocal(player.obj.position);
     input = flightInput();
     if (autopilot && input.active) setAutopilot(false, 'Docking computer off');
@@ -6309,11 +6305,11 @@ function updateSpace(dt: number) {
 
   updateCombat(dt, input);
   updateSharedSpace(dt, input);
-  if (state === 'flying' || state === 'dead') recordTrack();
+  if (game.state === 'flying' || game.state === 'dead') recordTrack();
   // A cue ends with its moment: the Falcon gone (jumped, driven off), the Marshals gone.
   if (music.playing === 'falcon' && !npcs.some((n) => n.def.id === 'falcon')) music.stop('falcon');
   if (music.playing === 'marshals' && !carrier) music.stop('marshals');
-  if (state === 'flying') {
+  if (game.state === 'flying') {
     updateClearance();
     updateSurrender(dt);
     updateRouteAutopilot();
@@ -6326,7 +6322,7 @@ function updateSpace(dt: number) {
     heatShip(station.model, stationFlash / 0.25);
   }
 
-  if (state === 'dead') {
+  if (game.state === 'dead') {
     // Watch the wreck from outside, slowly circling, as the original did.
     deathCam.t += dt;
     const orbit = deathCam.offset.clone().applyAxisAngle(deathCam.axis, deathCam.t * 0.25);
@@ -6344,11 +6340,11 @@ function updateSpace(dt: number) {
   space.stars.position.copy(camera.position);
   camera.updateMatrixWorld();
   setListener(camera);
-  dust.update(camera.position, state === 'flying' ? player.forward().multiplyScalar(player.speed) : new THREE.Vector3());
+  dust.update(camera.position, game.state === 'flying' ? player.forward().multiplyScalar(player.speed) : new THREE.Vector3());
 
-  const sighted = state === 'flying' ? sightedNpc() : null;
+  const sighted = game.state === 'flying' ? sightedNpc() : null;
   // In a wreck field your scanner is cluttered too: far contacts drop off it.
-  const cluttered = state === 'flying' && exploring() && inClutter(player.obj.position);
+  const cluttered = game.state === 'flying' && exploring() && inClutter(player.obj.position);
   const blips: Blip[] = [
     { position: station.root.position, color: '#ffb347', kind: 'station' },
     ...npcs
@@ -6365,11 +6361,11 @@ function updateSpace(dt: number) {
   for (const r of sharedSpace.remotes.values()) blips.push({ position: r.position, color: commanderColour(r), kind: 'commander', locked: r === lockedCommander });
   for (const n of netMissiles.values()) blips.push({ position: n.missile.position, color: '#ff6b6b', kind: 'missile' });
   // Near a rift, contacts jitter about on the scanner.
-  const noise = state === 'flying' ? riftInterference() : 0;
+  const noise = game.state === 'flying' ? riftInterference() : 0;
   if (noise > 0) for (const b of blips) b.position = b.position.clone().add(new THREE.Vector3().randomDirection().multiplyScalar(noise * 600 * Math.random()));
   setInterference(noise);
   updateSeekerBox();
-  if (state === 'flying') {
+  if (game.state === 'flying') {
     updateHud(player, station, blips, autopilot || Boolean(combatComputer), rollAssist);
     updateTouch(dt, player.speed / player.maxSpeed);
     updateAimDisplay();
@@ -6510,7 +6506,7 @@ const KEYS_HINT = {
 
 /** Every control, as key and what it does: the controls card and the owner's manual both read this. */
 function controlRows(mouse: boolean): string[][] {
-  return sharedControlRows(mouse, { gimballed: gimballed() || Boolean(commander && isWorking(cmdr(), 'gimbal-mount')), modern: commander?.difficulty === 'modern' });
+  return sharedControlRows(mouse, { gimballed: gimballed() || Boolean(game.commander && isWorking(cmdr(), 'gimbal-mount')), modern: game.commander?.difficulty === 'modern' });
 }
 
 // --- The owner's manual ---------------------------------------------------------
@@ -6522,7 +6518,7 @@ function controlRows(mouse: boolean): string[][] {
 const touchHelp = (b: HTMLElement, rows: string[][]) => drawerHelp(b.dataset.key, b.title || b.getAttribute('aria-label') || '', rows);
 
 function openManual(def: ShipDef) {
-  const c = commander;
+  const c = game.commander;
   const mine = c && def.id === hullOf(c);
   const cobra = shipById('cobra-mk3')!;
   const ed = mine && c!.paint?.edition ? editionById(c!.paint.edition.id) : undefined;
@@ -6645,7 +6641,7 @@ function showControlsCardOnce() {
   } catch {
     // Storage blocked: a nudge every launch is harmless.
   }
-  setTimeout(() => state === 'flying' && flash('Press F1 for the controls', 4), 1500);
+  setTimeout(() => game.state === 'flying' && flash('Press F1 for the controls', 4), 1500);
 }
 
 // --- Full screen on phones ---------------------------------------------------
@@ -6791,7 +6787,7 @@ function offerCard() {
   saveCommander(c);
   // After the dock's own news, and never over another sheet (your moments, the flight log): wait for them.
   const offer = () => {
-    if (state !== 'docked' || signedIn()) return;
+    if (game.state !== 'docked' || signedIn()) return;
     if (logOpen || isTripOpen() || !$('#handover').hidden) return void setTimeout(offer, 1500);
     showCardInvite(c.name, career);
   };
@@ -6870,7 +6866,7 @@ function updateClearance() {
   else if (darkRefused()) radio('station', name, 'Unidentified ship: switch on your transponder to dock', { flash: 4, urgent: true });
   else if (checksClearance(currentSystem())) radio('station', name, 'Transponder checked · Docking clearance granted', { flash: 2.5 });
   else radio('station', name, 'No questions asked', { flash: 2.5 });
-  if (!lockedDown() && !clearanceRefused()) setTimeout(() => state === 'flying' && offerRouteWork(), 3000);
+  if (!lockedDown() && !clearanceRefused()) setTimeout(() => game.state === 'flying' && offerRouteWork(), 3000);
 }
 
 // --- What you're doing, and what's next (docs/design/flight-hud-and-touch.md) -------
@@ -6996,7 +6992,6 @@ document.addEventListener(
 // own colour. The few lines that matter this second still flash as well.
 // Classic keeps its flashes, as in 1984.
 
-const modern = () => commander !== null && cmdr().difficulty === 'modern';
 /** A working comms array: the companies reach you anywhere, and you hear further. */
 const hasArray = () => modern() && isWorking(cmdr(), 'comms-array');
 
@@ -7312,7 +7307,7 @@ function distressCall(trader: NpcShip, pirate: NpcShip) {
     return;
   }
   const d = trader.obj.position.distanceTo(player.obj.position);
-  const heard = state === 'flying' && (d < RADIO_RANGE || hasArray());
+  const heard = game.state === 'flying' && (d < RADIO_RANGE || hasArray());
   distresses.push({ trader, pirates: new Set([pirate]), heard, arrived: false, until: elapsed + DISTRESS_TIME });
   if (!heard) return;
   sfx.beep();
@@ -7332,7 +7327,7 @@ function updateDistress() {
     if (still.length && pos.distanceTo(t.obj.position) < DISTRESS_ARRIVE) d.arrived = true;
     if (still.length) continue;
     distresses.splice(i, 1);
-    if (d.arrived && state === 'flying') rescued(d);
+    if (d.arrived && game.state === 'flying') rescued(d);
   }
 }
 
@@ -7413,7 +7408,7 @@ $('#beacon .beacon-calls')
 
 function sendBeacon(call: BeaconCall) {
   toggleBeacon(false);
-  if (state !== 'flying') return;
+  if (game.state !== 'flying') return;
   const c = cmdr();
   const here = currentSystem();
   const pos = player.obj.position;
@@ -7624,7 +7619,7 @@ function recordTrack() {
   if (classicRules() || !track.due(elapsed)) return;
   const here = player.obj.position;
   const poses: Pose[] = [];
-  if (state === 'flying') {
+  if (game.state === 'flying') {
     track.ship({ id: 1, def: player.def.id, role: 'you', label: whoIs({ callsign: shareName() }), ...(myLook() ? { look: myLook()! } : {}) });
     poses.push(poseOf(1, player.obj));
   }
@@ -7726,7 +7721,7 @@ function die() {
     clearFlash();
     if (gameOver) {
       deleteCommander();
-      commander = null;
+      game.commander = null;
       showTitle();
       return;
     }
@@ -7758,7 +7753,7 @@ function die() {
     marshalsStandDown();
     enterDocked(true); // a new ship from the insurers
     flash(message, 5);
-    void blackBox.then((m) => m && state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog, recorderIntroduced() ? undefined : RECORDER_INTRO));
+    void blackBox.then((m) => m && game.state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog, recorderIntroduced() ? undefined : RECORDER_INTRO));
   }, 5000);
 }
 
@@ -7823,10 +7818,10 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     }
     case 'full':
-      if (state === 'flying') flash(e.busy ? `${e.busy} · flying solo for now` : `Shared space in ${currentSystem().name} is full (${e.max} commanders) · flying solo for now`, 3.5);
+      if (game.state === 'flying') flash(e.busy ? `${e.busy} · flying solo for now` : `Shared space in ${currentSystem().name} is full (${e.max} commanders) · flying solo for now`, 3.5);
       break;
     case 'lost':
-      if (state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
+      if (game.state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
       break;
     case 'signin':
       flash(e.need === 'callsign' ? 'Shared space · claim a callsign first (A on the title screen) · flying solo for now' : 'Shared space is for commanders with a callsign · sign in on the title screen (A) · flying solo for now', 4.5);
@@ -7836,7 +7831,7 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     case 'hit':
       // The server's word on our shields and hull.
-      if (state !== 'flying') break;
+      if (game.state !== 'flying') break;
       player.shields = e.shields;
       player.hull = e.hull;
       sfx.hit();
@@ -7865,7 +7860,7 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     case 'bump':
       // The server's word on the damage; move apart so we're not still touching.
-      if (state !== 'flying') break;
+      if (game.state !== 'flying') break;
       player.shields = e.shields;
       player.hull = e.hull;
       player.obj.position.addScaledVector(e.push, BUMP_SEPARATION);
@@ -7876,7 +7871,7 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     case 'destroyed':
       if (e.me) {
-        if (state === 'flying') {
+        if (game.state === 'flying') {
           flash(e.collision ? 'Destroyed in a collision' : e.by ? `Destroyed by Commander ${e.by.name}` : 'Ship destroyed', 3);
           die();
         }
@@ -7909,7 +7904,7 @@ function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
 }
 
 function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
-  const share = state === 'flying' && Boolean(commander) && cmdr().difficulty === 'modern' && sharedSpaceWanted() && canShare();
+  const share = game.state === 'flying' && Boolean(game.commander) && cmdr().difficulty === 'modern' && sharedSpaceWanted() && canShare();
   if (!share) {
     if (sharedSpace.connected) sharedSpace.leave();
     return;
@@ -7986,7 +7981,7 @@ function startNetMissile(e: Extract<SpaceEvent, { kind: 'missile' }>) {
   netMissiles.set(e.id, { missile, target, remote: e.target });
   if (e.ownerIsMe) return;
   rocketAt(missile.position, 0.5);
-  if (e.targetIsMe && state === 'flying') {
+  if (e.targetIsMe && game.state === 'flying') {
     sfx.incoming();
     incomingTimer = 1;
     flash(`INCOMING MISSILE from CMDR ${e.owner?.name ?? 'unknown'} · break hard or use ECM (Z)`, 2.5);
@@ -8158,7 +8153,7 @@ function snapPhoto() {
     if (!photo) return flash('Photo failed', 2.5);
     const m = ctx && (await logMoment({ events: [{ kind: 'photo', text: 'Photo taken' }], ctx }, { photo, poster: null, seconds: 0 }));
     flash(m ? 'Photo · in your flight log' : await savePhoto(photo), 2.5);
-    if (m && state === 'docked') refreshFlightLog();
+    if (m && game.state === 'docked') refreshFlightLog();
   });
 }
 
@@ -8172,8 +8167,8 @@ function updateModeLabel() {
 /** Gamepad buttons map onto the keyboard action for the current screen. */
 function padToKey(button: 'PadA' | 'PadB' | 'PadY' | 'PadStart'): string | null {
   if (button === 'PadY') return 'KeyM';
-  if (button === 'PadB') return state === 'newgame' ? 'Escape' : null;
-  switch (state) {
+  if (button === 'PadB') return game.state === 'newgame' ? 'Escape' : null;
+  switch (game.state) {
     case 'title':
     case 'newgame':
       return 'Enter';
@@ -8321,7 +8316,7 @@ async function hyperspace() {
   if (transponderOff) {
     transponderOff = false;
     switchOnWhenClear = false;
-    setTimeout(() => state === 'flying' && flash('Transponder on · new system (0 to run dark again)', 3), 6500);
+    setTimeout(() => game.state === 'flying' && flash('Transponder on · new system (0 to run dark again)', 3), 6500);
   }
   // The Route Autopilot takes the next jump by itself, after a moment to look around.
   if (routeNote && isWorking(c, 'route-autopilot') && c.target !== null && distanceLy(dest, systemAt(dest.galaxy, c.target)) <= c.fuel) {
@@ -8333,8 +8328,8 @@ async function hyperspace() {
   const adriftNotes = checkAdrift();
   // Under Modern rules the companies' notes come over the radio; the route is the ship's computer.
   const contractNotes = modern() ? adriftNotes : [...jumpNotes, ...adriftNotes];
-  if (contractNotes.length || routeNote) setTimeout(() => state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
-  setTimeout(() => state === 'flying' && radioMessages(seen), 9000);
+  if (contractNotes.length || routeNote) setTimeout(() => game.state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
+  setTimeout(() => game.state === 'flying' && radioMessages(seen), 9000);
   distresses.length = 0;
   escort = null;
   arrayTimer = 12; // the array picks up the new system's boards once you're settled
@@ -8363,21 +8358,21 @@ async function hyperspace() {
   const wanted = legalStatus(c);
   const note = arrivalNote(dest);
   saveCommander(c);
-  if (note) setTimeout(() => state === 'flying' && flash(note, 3), 4200);
+  if (note) setTimeout(() => game.state === 'flying' && flash(note, 3), 4200);
   flash(
     `${dest.name} · ${GOVERNMENTS[dest.government]} · ${ECONOMIES[dest.economy]}` +
       (wanted === 'fugitive' ? (c.warrant ? ' · Marshals warrant: police hostile' : ' · You are wanted here') : wanted === 'offender' ? ' · Offender here' : ''),
     4,
   );
   announceEvent(dest, note ? 7800 : 4500);
-  if (slipped) setTimeout(() => state === 'flying' && flash('You slipped away before the Marshals came through', 3.5), 5000);
+  if (slipped) setTimeout(() => game.state === 'flying' && flash('You slipped away before the Marshals came through', 3.5), 5000);
   scheduleMarshals();
 }
 
 /** Arriving somewhere in the middle of a crisis: say so. */
 function announceEvent(sys: StarSystem, delay: number) {
   const e = activeEvent(sys, Date.now());
-  if (e) setTimeout(() => state === 'flying' && (modern() ? radio('news', `${sys.name} news`, EVENT_KINDS[e.type].headline(sys.name), { flash: 4, urgent: true, line: EVENT_KINDS[e.type].headline(sys.name) }) : flash(EVENT_KINDS[e.type].headline(sys.name), 4)), delay);
+  if (e) setTimeout(() => game.state === 'flying' && (modern() ? radio('news', `${sys.name} news`, EVENT_KINDS[e.type].headline(sys.name), { flash: 4, urgent: true, line: EVENT_KINDS[e.type].headline(sys.name) }) : flash(EVENT_KINDS[e.type].headline(sys.name), 4)), delay);
 }
 
 /** The original's J key: leap ahead when nothing is near enough to mass-lock you. */
@@ -8425,10 +8420,6 @@ function inSystemJump(quiet = false): boolean {
 // --- Where you are, and the galaxy charts ---------------------------------------
 
 
-function currentSystem(): StarSystem {
-  const loc = commander?.location ?? { galaxy: 0, system: 7 };
-  return systemAt(loc.galaxy, loc.system);
-}
 
 function toggleGalaxyMap() {
   if (isMapOpen()) {
@@ -8471,13 +8462,13 @@ function toggleGalaxyMap() {
       } else flash(route, 3);
       saveCommander(c);
       sfx.beep();
-      if (state === 'docked') renderDocked();
+      if (game.state === 'docked') renderDocked();
       else flash(`Destination: ${s.name}`, 1.5);
     },
   });
   // The galactic hyperdrive is launched from here, in flight.
   const galactic = $('#galaxy-map .map-galactic');
-  galactic.hidden = !(state === 'flying' && hasEquipment(c, 'galactic-hyperdrive'));
+  galactic.hidden = !(game.state === 'flying' && hasEquipment(c, 'galactic-hyperdrive'));
   galactic.textContent = `Y · Galactic hyperdrive to Galaxy ${((here.galaxy + 1) % 8) + 1}`;
   setFlightInputSuppressed(true);
 }
@@ -8501,7 +8492,7 @@ function handleKey(code: string) {
   unlockAudio();
   if (killCam.key(code)) return;
   if (handleMapKey(code)) return;
-  if (code === 'KeyG' && (state === 'docked' || state === 'flying') && commander) {
+  if (code === 'KeyG' && (game.state === 'docked' || game.state === 'flying') && game.commander) {
     if (logOpen) setFlightLog(false);
     toggleGalaxyMap();
     return;
@@ -8509,27 +8500,27 @@ function handleKey(code: string) {
   if (code === 'KeyM') {
     setRetro(!isRetro());
     updateModeLabel();
-    if (state === 'newgame') showNewGame(); // the default rules follow the mode
-    if (state === 'docked' && dockTab === 'market') renderMarket(); // exchange or 1984 price list
+    if (game.state === 'newgame') showNewGame(); // the default rules follow the mode
+    if (game.state === 'docked' && dockTab === 'market') renderMarket(); // exchange or 1984 price list
     return;
   }
-  if (code === 'KeyP' && state !== 'newgame') {
+  if (code === 'KeyP' && game.state !== 'newgame') {
     photoPending = true; // taken right after the next frame is drawn
     return;
   }
-  if (code === 'KeyN' && state !== 'title') {
+  if (code === 'KeyN' && game.state !== 'title') {
     const mode = cycleSoundMode();
     flash(mode === 'full' ? 'Sound: full' : mode === 'effects' ? 'Sound: effects only (no engine hum)' : 'Sound: off', 1.6);
     return;
   }
-  switch (state) {
+  switch (game.state) {
     case 'title':
       if (code === 'ArrowRight') showShip(shipIndex + 1);
       else if (code === 'ArrowLeft') showShip(shipIndex - 1);
       else if (code === 'KeyY' || code === 'Enter') {
-        commander = loadCommander();
-        setCausedEvents(commander?.caused);
-        if (commander) {
+        game.commander = loadCommander();
+        setCausedEvents(game.commander?.caused);
+        if (game.commander) {
           enterDocked();
           void checkSiteSpec(true);
           void checkSignedOver();
@@ -8653,7 +8644,7 @@ document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) => {
 
 const RECORDER_KEY = 'witchspace-recorder';
 /** Classic stays as 1984 had it: no recorder (photos still work). */
-const classicRules = () => !!commander && cmdr().difficulty !== 'modern';
+const classicRules = () => !!game.commander && cmdr().difficulty !== 'modern';
 const recorderOn = () => {
   if (classicRules()) return false;
   try {
@@ -8700,7 +8691,7 @@ const viewCanvas = () => $<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo');
 const shareName = (): string | null => (signedIn() && currentAccount()?.callsign) || null;
 
 function momentContext(): MomentContext | null {
-  if (!commander) return null;
+  if (!game.commander) return null;
   const c = cmdr();
   const sys = currentSystem();
   return { callsign: shareName(), system: sys.name, galaxy: sys.galaxy + 1, government: GOVERNMENTS[sys.government], rank: combatRating(c.kills), when: Date.now() };
@@ -8718,7 +8709,7 @@ let tripBest = { trip: 0, profit: 0 };
 /** Look through the ledger's new sales for moments worth keeping. Returns whether anything was looked at (save it). */
 function noticeTrades(): boolean {
   const c = cmdr();
-  if (classicRules() || state !== 'docked') return false;
+  if (classicRules() || game.state !== 'docked') return false;
   const l = ledgerOf(c);
   const from = newSince(l.entries, c.tradeSeen);
   const last = seenNow(l.entries);
@@ -8753,7 +8744,7 @@ async function keepTrade(subject: string, credits: number, docking: boolean) {
   }
   if (!m) return;
   flash(`${event.text} · in your flight log`, 3.5);
-  if (state === 'docked') refreshFlightLog();
+  if (game.state === 'docked') refreshFlightLog();
 }
 
 /** Write a clip or photo into the flight log. Resolves with the logged moment, or null if there was no room. */
@@ -8823,7 +8814,7 @@ function keepCombat(event: MomentEvent, before: number, after: number): Promise<
   void Promise.all([earlier, f.moment]).then(async ([old, now]) => {
     if (old && now && old.id !== now.id) {
       await deleteMoment(old.id);
-      if (state === 'docked') refreshFlightLog();
+      if (game.state === 'docked') refreshFlightLog();
     }
   });
   return f.moment;
@@ -8842,7 +8833,7 @@ const recorderIntroduced = () => {
 };
 let introFlashed = false;
 function introduceRecorder(m: LoggedMoment) {
-  if (introFlashed || recorderIntroduced() || state !== 'flying' || m.events.some((e) => e.kind === 'death')) return;
+  if (introFlashed || recorderIntroduced() || game.state !== 'flying' || m.events.some((e) => e.kind === 'death')) return;
   introFlashed = true;
   setTimeout(() => flash('Flight recorder kept that · watch it in the flight log when you dock · Shift+P keeps any moment', 5), 2600);
 }
@@ -8871,11 +8862,11 @@ function refreshFlightLog() {
     },
   });
 }
-void recorder.ready.then(() => state === 'docked' && refreshFlightLog());
+void recorder.ready.then(() => game.state === 'docked' && refreshFlightLog());
 
 /** Shift+P, or holding the camera button: keep the last 30 seconds yourself. */
 function keepByHand() {
-  if (state !== 'flying') return;
+  if (game.state !== 'flying') return;
   if (classicRules()) return flash('Classic rules: no flight recorder', 2);
   if (!recorder.available || !recorderOn()) return flash(recorder.available ? 'Flight recorder is off · turn it on in the flight log' : `This browser can't record video${recorder.why ? ` · ${recorder.why}` : ''}`, 4);
   flash('Flight recorder · last 30 seconds kept', 2);
@@ -8919,7 +8910,7 @@ killCam.onVideo = async (v) => {
   const when = Date.now();
   const m: LoggedMoment = { id: `${when}-recon`, created: when, title: v.title, description: v.description, tags: ['witchspace', 'reconstruction', 'killcam'], events: [], system: v.system, seconds: v.seconds, video: v.video, poster: v.poster, saved: false, ...(v.track ? { track: await trackBlob(v.track) } : {}) };
   lastRecon = (await addMoment(m)) ? m : null;
-  if (state === 'docked') refreshFlightLog();
+  if (game.state === 'docked') refreshFlightLog();
 };
 // Sharing it shares that moment, with its page when it's your own fight.
 killCam.onShare = (v) => (lastRecon && lastRecon.video === v.video ? shareMoment(lastRecon) : shareVideoPlain(v));
@@ -8957,7 +8948,7 @@ function hangarCovered(t: number): boolean {
 
 function frame(now?: number) {
   const t = now ?? performance.now();
-  const resting = !inSpace && state === 'docked' && !booth && !killCam.active && hangarCovered(t);
+  const resting = !inSpace && game.state === 'docked' && !booth && !killCam.active && hangarCovered(t);
   if (t - lastDrawn < (resting ? RESTING_FRAME : MIN_FRAME) - 1) {
     requestAnimationFrame(frame);
     return;
@@ -8982,12 +8973,12 @@ function frame(now?: number) {
   }
   if (inSpace) {
     if (camera.view?.enabled) camera.clearViewOffset();
-    if (state !== 'transition') updateSpace(dt);
+    if (game.state !== 'transition') updateSpace(dt);
     const rift = carrier?.rift;
     lens.aim(camera, rift ? rift.group.position : null, rift ? rift.radius * rift.open : 0, rift ? rift.open : 0);
     render(space.scene);
-    if (state === 'flying') watchSurroundings(dt);
-    if (state === 'flying' || state === 'dead') recorder.capture(viewCanvas(), dt, state === 'flying' && recorderWatch.resting);
+    if (game.state === 'flying') watchSurroundings(dt);
+    if (game.state === 'flying' || game.state === 'dead') recorder.capture(viewCanvas(), dt, game.state === 'flying' && recorderWatch.resting);
     else recorder.pause();
   } else {
     lens.aim(camera, null, 0, 0);
@@ -9021,8 +9012,8 @@ if (import.meta.env.DEV) {
     witchspace: {
       player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier, setAutopilot,
       get carrier() { return carrier; },
-      get commander() { return commander; },
-      get state() { return state; },
+      get commander() { return game.commander; },
+      get state() { return game.state; },
       get autopilot() { return autopilot; },
       get explore() { return { bodies: sceneBodies, pois: scenePois, planetPos, survey }; },
       get yard() { return yardScene; },
@@ -9089,12 +9080,12 @@ onSave((c) => setCausedEvents(c.caused));
 void initAccount({
   flash,
   commanderReplaced: () => {
-    if (state === 'title') showTitle();
+    if (game.state === 'title') showTitle();
   },
-  onTitle: () => state === 'title',
+  onTitle: () => game.state === 'title',
 }).then(() => {
   // Signed in after docking (the account loads in the background): a commission may be waiting.
-  if (state === 'docked' && commander) payCommissions();
+  if (game.state === 'docked' && game.commander) payCommissions();
 });
 
 // Started: the old-browser note (public/old-browser.js) stays away.
