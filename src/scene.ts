@@ -3,10 +3,12 @@
 // ship. Made once; everything else about a system is rebuilt on arrival (main.ts buildSystemScene).
 
 import * as THREE from 'three';
+import type { ShipVoice } from './audio/spatial';
 import { shipById } from './content/ships';
 import { DockingComputer } from './game/dockingComputer';
 import type { Body } from './game/explore';
-import type { NpcShip } from './game/npc';
+import type { Missile } from './game/missile';
+import type { NpcRole, NpcShip } from './game/npc';
 import { PlayerShip } from './game/playerShip';
 import { Station } from './game/station';
 import { buildSun } from './render/bodies';
@@ -31,6 +33,10 @@ space.scene.add(player.obj);
 export const dockingComputer = new DockingComputer();
 /** Every computer-controlled ship in the system: police, traders and pirates. */
 export const npcs: NpcShip[] = [];
+export const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role && !n.guard); // company security isn't the police
+/** Each ship's engine, heard in space. */
+export const voices = new Map<NpcShip, ShipVoice>();
+export const missiles: Missile[] = [];
 
 export interface SceneBody {
   body: Body;
