@@ -124,6 +124,8 @@ export const flight = {
   /** 0..100, the original's "LT" gauge. */
   laserHeat: 0,
   overheated: false,
+  /** In a wreck field's clutter last frame (to say so once on entering). */
+  wasInClutter: false,
   /** Waiting for the coast to clear before switching on to dock. */
   switchOnWhenClear: false,
   /** The combat computer flying the ship (Modern), if it's on. */

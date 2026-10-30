@@ -223,6 +223,8 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     return Math.round(w.player.obj.position.distanceTo(from));
   });
   check('Modern: the in-system jump', jumped > 5000, `${jumped} m`);
+  const world = await s.w(() => { const e = window.witchspace.explore; return `${e.bodies.length} bodies, ${e.pois.length} signals`; });
+  check('Modern: the system has bodies to survey', /^[1-9]/.test(world), world);
   check('Modern: the yard raises no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }
