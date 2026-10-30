@@ -8,6 +8,7 @@ import { shipById } from './content/ships';
 import { DockingComputer } from './game/dockingComputer';
 import type { Body } from './game/explore';
 import type { Missile } from './game/missile';
+import { Beams } from './game/weapons';
 import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
 import type { Explosion } from './render/explosion';
 import type { NpcRole, NpcShip } from './game/npc';
@@ -40,6 +41,9 @@ export const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role && !
 export const voices = new Map<NpcShip, ShipVoice>();
 export const missiles: Missile[] = [];
 export const explosions: Explosion[] = [];
+export const beams = new Beams(space.scene);
+/** Metres: close enough to read a hull registration, dark or not. */
+export const HULL_READ = 2000;
 
 /** Other commanders in this system (shared space). main.ts hears what they do (hearSpace). */
 let spaceEvents: (e: SpaceEvent) => void = () => {};
@@ -97,6 +101,11 @@ export const flight = {
   arrayTimer: 0,
   /** Seconds until the next distress call might come. */
   distressTimer: 90,
+  /** Seconds until the lasers can fire again. */
+  laserCooldown: 0,
+  /** 0..100, the original's "LT" gauge. */
+  laserHeat: 0,
+  overheated: false,
   /** A Viper detailed to fly with you, and until when. */
   escort: null as { npc: NpcShip; until: number } | null,
 };

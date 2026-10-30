@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { track as countEvent } from '@vercel/analytics';
 import { SurveyPilot, type SurveyGoal } from './game/surveyPilot';
 import { cycleSoundMode, danube, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
-import { boomAt, EngineSound, grandShot, precisionLaunch, rocketAt, setListener, ShipVoice, tailWarning, zapAt, type EngineVoice, type LaserSound } from './audio/spatial';
+import { boomAt, EngineSound, setListener, ShipVoice, tailWarning } from './audio/spatial';
 import { withLineUp } from './content/moduleFiles';
 import { shipById } from './content/ships';
 import type { ShipDef } from './content/types';
@@ -62,16 +62,15 @@ import {
 import { MouseAim, SENSITIVITY as AIM_SENSITIVITY } from './game/mouseAim';
 import { allies, NpcShip } from './game/npc';
 import { chooseTarget, CombatPilot } from './game/combatPilot';
-import { type Remote, type SpaceEvent } from './net/space';
-import { sessionToken, signedIn, currentAccount } from './net/account';
+import { signedIn, currentAccount } from './net/account';
 import { hideCardInvite, showCardInvite } from './ui/cardInvite';
 import { claimCallsign, commanderSaved, initAccount, isAccountPanelOpen, titleShown, toggleAccountPanel } from './ui/accountPanel';
 import { cleanName } from '../server/src/protocol';
 import { think } from './game/ai';
-import { combatRating, killPoints, pointsNote, rankInsignia, rightOn, type Foe } from './game/rating';
+import { combatRating, killPoints, pointsNote, rightOn, type Foe } from './game/rating';
 import { EDITIONS } from './content/editions';
 import { deliveriesArrived } from './game/shipyard';
-import { Beams, PLAYER_LASERS, POLICE_LASER, rayHit, type LaserId, type Target } from './game/weapons';
+import { PLAYER_LASERS, POLICE_LASER, rayHit, type Target } from './game/weapons';
 import { PlayerShip } from './game/playerShip';
 import { ledgerOf } from './game/ledger';
 import { filledLine, isRun, newSince, profitOf, runLine, runOf, seenNow } from './game/tradeMoments';
@@ -86,7 +85,7 @@ import { stageLabel, yardAt, yardsOf } from './game/yards';
 import { lineUpFor } from './game/commissions';
 import { Explosion } from './render/explosion';
 import { camera, isRetro, lens, render, setRetro } from './render/renderer';
-import { buildPainted, buildShip, disposeShip, heatShip, showUnidentified, UNIDENTIFIED_HEX, type ShipModel } from './render/shipModel';
+import { buildShip, disposeShip, heatShip, UNIDENTIFIED_HEX, type ShipModel } from './render/shipModel';
 import { stationName } from './galaxy/stationNames';
 import { savePhoto, takePhoto } from './ui/photo';
 import { clearFlash, flash, setInterference, toggleScannerRange, updateHud, type Blip } from './ui/hud';
@@ -116,7 +115,7 @@ import { showClipView } from './ui/clipView';
 import { checkBtcOrders } from './net/bitcoin';
 import { getClip, heartClip, reportClip } from './net/clips';
 import { $, cmdr, currentSystem, game, modern, type State } from './core';
-import { dockingComputer, dust, explosions, flight, hearSpace, missiles, sharedSpace, npcs, ofRole, voices, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS, type SceneBody } from './scene';
+import { beams, dockingComputer, dust, explosions, HULL_READ, flight, missiles, sharedSpace, npcs, ofRole, voices, planetPos, player, space, station, sun, SUN_POS, SUN_RADIUS, type SceneBody } from './scene';
 import './style.css';
 import { initManual, renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
 import { newsLine } from './game/newsLines';
@@ -129,11 +128,14 @@ import { initMarket, renderMarket, tradeContext } from './ui/market';
 import { initStation, renderDocked, resetBoughtHere, showFittings } from './ui/station';
 import { setDockTab, updateDockHead } from './ui/places';
 import { FALCON_DISABLES, MAX_PIRATES, PIRATE_CHANCE, TRADERS_BY_GOVERNMENT, alertSecurity, deliveries, escortOf, fightOn, fleeing, forgetDeliveries, initTraffic, legs, markLaunched, pacing, pirateLost, railsOf, removeNpc, resetTraffic, ride, spawnFalcon, spawnPirates, spawnTrader, startEncounters, updateIdentities, updateLegends, updateTraffic, voyageOf } from './flight/traffic';
+import { launchSound, laserSound, remoteVoices, shotSound, VOICE_RANGE, voiceOf } from './flight/sounds';
 import { EVADE_LASERS, evading, wispShot } from './flight/wisp';
 import { bastionDestroyed, carrier, clearMarshalTimer, disposeCarrier, initMarshals, marshalsStandDown, riftInterference, scheduleMarshals, summonCarrier, updateMarshals } from './flight/marshals';
-import { energyBomb, explodeMissile, explodeNetMissile, fireMissile, initMissiles, launchMissile, maybeFireNpcMissile, netMissiles, playerEcm, sightedNpc, startNetMissile, toggleLock, updateMissileButton, updateMissiles, updateSeekerBox } from './flight/missiles';
+import { energyBomb, explodeMissile, fireMissile, initMissiles, launchMissile, maybeFireNpcMissile, netMissiles, playerEcm, sightedNpc, toggleLock, updateMissileButton, updateMissiles, updateSeekerBox } from './flight/missiles';
 import { Drifter, checkAdrift, drifters, initAdrift, restoreAdrift, spillCargo, spillSpecial, updateCaseRaid, updateDrifters, updateSun } from './flight/adrift';
 import { CLEARANCE_RANGE, DISTRESS_SHIELDING, FIGHT_RANGE, answerPolice, answerSurrender, arrayNews, arrayOffers, clearanceRefused, distressCall, distresses, hailTarget, hasArray, initComms, lockedDown, messageIds, pirateThreats, radio, radioMessages, spawnDistress, speakerOf, traderColour, traderName, updateClearance, updateDistress, updateJob } from './flight/comms';
+import { callsignTag, commanderColour, initSharedSpace, toggleSharedSpace, updateSharedButton, updateSharedSpace } from './flight/sharedSpace';
+initSharedSpace({ becomeFugitive, becomeOffender, rateKill, hitFeedback, die });
 initComms({ isFugitive: () => isFugitive(), transponderBroken: () => transponderBroken(), dark: () => dark(), identified, transponderOnToDock, toggleTransponder, darkRefused: () => darkRefused(), npcIdentified: (npc) => npcIdentified(npc), updateContextButton, toggleSurrender });
 initAdrift({ damagePlayer });
 initMissiles({ launchSound, damagePlayer, destroyNpc, playerHitNpc, laserDirection, hitFeedback, npcIdentified: (npc) => npcIdentified(npc), breakSurrender, die });
@@ -517,33 +519,7 @@ let planet: THREE.Group | null = null;
 // --- Police and combat ------------------------------------------------------
 
 const engineSound = new EngineSound();
-/** Other commanders' engines in shared space, by their id, each with her own voice. */
-const remoteVoices = new Map<string, ShipVoice>();
-/** How a ship's engines sound: her ship file's style.engine (the Fer-de-lance's is a grand tourer's, Mark). */
-const voiceOf = (def: ShipDef | undefined): EngineVoice => def?.style.engine ?? 'drone';
-
-// A grand tourer's weapons sound like her engines (Mark): heavy lasers with an echo, each kind its own, and a
-// precision missile launch. Every other ship keeps the old zap and clunk.
-const laserSound = (l: object): LaserSound => {
-  const id = (l as { id?: string }).id;
-  return id === 'beam' || id === 'military' ? id : 'pulse';
-};
-function shotSound(def: ShipDef, kind: LaserSound, at: THREE.Vector3 | null) {
-  if (voiceOf(def) === 'grand') grandShot(kind, at);
-  else if (at) zapAt(at, 700, 120, 0.15, 0.5);
-  else sfx.laser();
-}
-function launchSound(def: ShipDef, at: THREE.Vector3 | null) {
-  if (voiceOf(def) === 'grand') precisionLaunch(at);
-  else if (at) rocketAt(at, 0.5);
-  else sfx.missileLaunch();
-}
-const VOICE_RANGE = 2000; // hear other ships' engines within this distance
 let tailWarningTimer = 0;
-const beams = new Beams(space.scene);
-let laserCooldown = 0;
-let laserHeat = 0; // 0..100, the original's "LT" gauge
-let overheated = false;
 let reinforceTimer = 0;
 let stationFlash = 0; // seconds of white-hot glow after being hit
 let repopulateTimer = 0;
@@ -1338,7 +1314,6 @@ function reportedBy(npc: NpcShip) {
 // police hail one: switch on within 15 s or, if it's broken, cut your speed
 // and let a Viper read your hull. Ignore them and they come after you.
 
-const HULL_READ = 2000; // metres: close enough to read a hull registration, dark or not
 const HAIL_TIME = 15; // seconds to answer a police hail
 const HAIL_SLOW = 0.2; // fraction of top speed: slow enough for a Viper to read your hull
 const SUSPECT_TIME = 180; // seconds after a crime that switching on near the law makes you the suspect
@@ -1613,12 +1588,12 @@ function firePlayerLaser() {
   wispShot(); // the Wisp goes quiet while you're shooting
   const laser = mountLaser();
   if (!laser) {
-    laserCooldown = 0.6;
+    flight.laserCooldown = 0.6;
     flash(`No ${view} laser fitted`, 1.2);
     return;
   }
   if (flight.autopilot) {
-    laserCooldown = 0.3;
+    flight.laserCooldown = 0.3;
     safetyFlash('Lasers locked · docking computer flying');
     return;
   }
@@ -1634,16 +1609,16 @@ function firePlayerLaser() {
   ];
   const hit = rayHit(origin, dir, laser.range, targets);
   if (hit?.target.value.kind === 'station' && cmdr().difficulty === 'modern' && fireHeld < FIRE_OVERRIDE && !isFugitive()) {
-    laserCooldown = 0.1;
+    flight.laserCooldown = 0.1;
     safetyFlash('Safety on · station in line of fire · hold fire to override');
     return;
   }
   if (flight.surrenderTimer !== null) breakSurrender();
-  laserCooldown = laser.interval;
+  flight.laserCooldown = laser.interval;
   flight.lastShotAt = flight.elapsed;
-  laserHeat += laser.heat;
-  if (laserHeat >= 100) {
-    overheated = true;
+  flight.laserHeat += laser.heat;
+  if (flight.laserHeat >= 100) {
+    flight.overheated = true;
     flash('Laser overheated', 1.2);
   }
   const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
@@ -1702,10 +1677,10 @@ function updateCombat(dt: number, input: { fire: boolean } | null) {
   fireHeld = alive && input?.fire ? fireHeld + dt : 0;
 
   if (alive && input) {
-    laserCooldown -= dt;
-    laserHeat = Math.max(0, laserHeat - playerLaser().cooling * dt);
-    if (overheated && laserHeat < 40) overheated = false;
-    if (input.fire && !overheated && laserCooldown <= 0) firePlayerLaser();
+    flight.laserCooldown -= dt;
+    flight.laserHeat = Math.max(0, flight.laserHeat - playerLaser().cooling * dt);
+    if (flight.overheated && flight.laserHeat < 40) flight.overheated = false;
+    if (input.fire && !flight.overheated && flight.laserCooldown <= 0) firePlayerLaser();
   }
 
   // Decide who fights whom a few times a second.
@@ -2103,7 +2078,7 @@ function updateSpace(dt: number) {
     if (flight.autopilot) dockingComputer.update(dt, player, station);
     else if (combatComputer) {
       const hit = lastHitBy && npcs.includes(lastHitBy.npc) ? lastHitBy : null;
-      const status = { heat: Math.min(1, laserHeat / 100), hitBy: hit?.npc ?? null, hitAgo: hit ? flight.elapsed - hit.at : Infinity };
+      const status = { heat: Math.min(1, flight.laserHeat / 100), hitBy: hit?.npc ?? null, hitAgo: hit ? flight.elapsed - hit.at : Infinity };
       if (!combatComputer.fly(dt, player, npcs, flight.locked, { centre: planetPos, radius: flight.planetRadius }, status)) stopCombatComputer('No hostiles · combat computer standing down · you have control');
       else if (combatComputer.announce) {
         flash(`Combat computer · ${combatComputer.announce}`, 1.8);
@@ -2330,8 +2305,8 @@ function updateCombatHud() {
   if (missilePips.childElementCount !== rails) missilePips.innerHTML = '<i></i>'.repeat(rails);
   missilePips.querySelectorAll('i').forEach((pip, i) => pip.classList.toggle('armed', i < cmdr().missiles));
   missilePips.classList.toggle('locked', Boolean(flight.locked));
-  laserGauge.style.setProperty('--v', String(laserHeat / 100));
-  laserGauge.classList.toggle('hot', overheated || laserHeat > 75);
+  laserGauge.style.setProperty('--v', String(flight.laserHeat / 100));
+  laserGauge.classList.toggle('hot', flight.overheated || flight.laserHeat > 75);
   // Name whatever is closest to where the guns point, if it's near enough.
   const fwd = laserDirection();
   // Whichever sight the lasers follow (ring if gimballed, centre cross if
@@ -2900,8 +2875,8 @@ function die() {
     c.warrant = false;
   }
   flight.surrenderTimer = null;
-  laserHeat = 0;
-  overheated = false;
+  flight.laserHeat = 0;
+  flight.overheated = false;
 
   deathCam.centre.copy(player.obj.position).addScaledVector(velocity, 0.6);
   // Watch from the side away from the nearest big body, so it never blocks the view.
@@ -2958,202 +2933,6 @@ function die() {
     flash(message, 5);
     void blackBox.then((m) => m && game.state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog, recorderIntroduced() ? undefined : RECORDER_INTRO));
   }, 5000);
-}
-
-// --- Shared space (stage 1) ------------------------------------------------
-// Opt-in, Modern rules: other commanders in your system, from its server
-// (see net/space.ts and server/). The server judges the fighting; nothing is
-// saved there yet. Signed-in commanders with a callsign only (Mark: no guests).
-
-const COMMANDER_COLOUR = '#dfe9ff'; // their tags and scanner marks; ships keep their own colours
-
-/** Another commander's tag: rank insignia, callsign and range, e.g. "◆◆ CMDR Moxon · 0.8 km". */
-const callsignTag = (r: Remote, range: string) => (remoteUnidentified(r) ? `Unidentified ship · ${range}` : `${rankInsignia(r.rank)} CMDR ${r.name} · ${range}`.trim());
-/** A commander running dark, too far off for a hull read: we can see them, not say who they are. */
-const remoteUnidentified = (r: Remote) => r.dark && r.position.distanceTo(player.obj.position) > HULL_READ;
-const commanderColour = (r: Remote) => (sharedSpace.isHostile(r) ? '#ff4d6d' : remoteUnidentified(r) ? UNIDENTIFIED_HEX : COMMANDER_COLOUR);
-const BUMP_SEPARATION = 40; // metres each ship moves apart after a collision
-const remoteModels = new Map<string, { model: ShipModel; fireCooldown: number; unidentified: boolean }>();
-hearSpace(onSpaceEvent);
-
-function sharedSpaceWanted(): boolean {
-  try {
-    return localStorage.getItem('witchspace.shared') === '1';
-  } catch {
-    return false;
-  }
-}
-
-/** Shared space is for commanders with a callsign (Mark): signed in, with one claimed. */
-const canShare = () => signedIn() && Boolean(currentAccount()?.callsign);
-const SIGN_IN_TO_SHARE = 'Shared space is for commanders with a callsign. Claim yours: it takes a minute.';
-
-function toggleSharedSpace() {
-  const on = !sharedSpaceWanted();
-  if (on && !canShare()) toggleAccountPanel(true, SIGN_IN_TO_SHARE);
-  try {
-    localStorage.setItem('witchspace.shared', on ? '1' : '0');
-  } catch {
-    // Not saved; it still applies until the page is closed.
-  }
-  updateSharedButton();
-  if (on) sharedSpace.resume();
-  // Signed out, the account panel says why it opened; no banner over it.
-  if (!on || canShare()) flash(on ? 'Shared space (beta) on: fly with other commanders · Modern rules only' : 'Shared space off: single-player', 2.5);
-}
-
-function updateSharedButton() {
-  $('#shared-button').innerHTML = `<span class="key">S · </span>Shared space (beta): ${sharedSpaceWanted() ? 'on' : 'off'}`;
-}
-
-function onSpaceEvent(e: SpaceEvent) {
-  switch (e.kind) {
-    case 'connected':
-      flash(e.others ? `Shared space · ${e.others} other commander${e.others === 1 ? '' : 's'} in ${currentSystem().name}` : `Shared space · nobody else in ${currentSystem().name} yet`, 3);
-      break;
-    case 'joined':
-      flash(`${`${rankInsignia(e.remote.rank)} CMDR ${e.remote.name}`.trim()} (${e.remote.rank}) has arrived`, 2.5);
-      break;
-    case 'left': {
-      const m = remoteModels.get(e.remote.id);
-      if (m) disposeShip(m.model);
-      remoteModels.delete(e.remote.id);
-      break;
-    }
-    case 'full':
-      if (game.state === 'flying') flash(e.busy ? `${e.busy} · flying solo for now` : `Shared space in ${currentSystem().name} is full (${e.max} commanders) · flying solo for now`, 3.5);
-      break;
-    case 'lost':
-      if (game.state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
-      break;
-    case 'signin':
-      flash(e.need === 'callsign' ? 'Shared space · claim a callsign first (A on the title screen) · flying solo for now' : 'Shared space is for commanders with a callsign · sign in on the title screen (A) · flying solo for now', 4.5);
-      break;
-    case 'replaced':
-      flash('Shared space · you joined from another window or device, so this one has left · launch again to fly here', 4.5);
-      break;
-    case 'hit':
-      // The server's word on our shields and hull.
-      if (game.state !== 'flying') break;
-      player.shields = e.shields;
-      player.hull = e.hull;
-      sfx.hit();
-      hitFeedback(0.35);
-      if (e.by) showHitDirection(camera, e.by.position);
-      break;
-    case 'hitconfirm':
-      sfx.hit();
-      // Firing on another commander is like firing on any clean ship.
-      becomeOffender(`Firing on Commander ${e.remote.name} · you are an OFFENDER`);
-      break;
-    case 'missile':
-      startNetMissile(e);
-      break;
-    case 'missileEnd': {
-      const n = netMissiles.get(e.id);
-      if (!n) break;
-      netMissiles.delete(e.id);
-      n.missile.position.copy(e.p);
-      explodeNetMissile(n.missile);
-      break;
-    }
-    case 'ecm':
-      if (e.p.distanceTo(player.obj.position) < 6000) sfx.ecm();
-      if (e.by) flash(`CMDR ${e.by.name} fired an ECM`, 1.2);
-      break;
-    case 'bump':
-      // The server's word on the damage; move apart so we're not still touching.
-      if (game.state !== 'flying') break;
-      player.shields = e.shields;
-      player.hull = e.hull;
-      player.obj.position.addScaledVector(e.push, BUMP_SEPARATION);
-      player.speed *= 0.5;
-      sfx.thud();
-      hitFeedback(0.9);
-      flash(e.with ? `Collision with Commander ${e.with.name}` : 'Collision', 2);
-      break;
-    case 'destroyed':
-      if (e.me) {
-        if (game.state === 'flying') {
-          flash(e.collision ? 'Destroyed in a collision' : e.by ? `Destroyed by Commander ${e.by.name}` : 'Ship destroyed', 3);
-          die();
-        }
-        break;
-      }
-      if (e.remote) commanderDestroyed(e.remote, e.byMe, e.collision);
-      break;
-  }
-}
-
-/** Another commander's ship breaks up. If we did it, the law and the rating take note. */
-function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
-  const m = remoteModels.get(r.id);
-  if (m) {
-    const boom = new Explosion(m.model.def, m.model.root, new THREE.Vector3(0, 0, 1).applyQuaternion(r.quaternion).multiplyScalar(100));
-    space.scene.add(boom.group);
-    explosions.push(boom);
-    boomAt(r.position, 2.2, 1600, 1.6);
-    m.model.root.visible = false; // gone; the server tells us when they leave
-  }
-  // A collision is an accident: no kill, and no crime.
-  if (!byMe || collision) {
-    flash(collision ? `Commander ${r.name} was destroyed in a collision` : `Commander ${r.name} has been destroyed`, 2.5);
-    return;
-  }
-  const c = cmdr();
-  flash(`Commander ${r.name} destroyed · ${rateKill('crime')}`, 2.5);
-  becomeFugitive(true); // killing a clean commander is a serious crime: no rating
-  saveCommander(c);
-}
-
-function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
-  const share = game.state === 'flying' && Boolean(game.commander) && cmdr().difficulty === 'modern' && sharedSpaceWanted() && canShare();
-  if (!share) {
-    if (sharedSpace.connected) sharedSpace.leave();
-    return;
-  }
-  const here = currentSystem();
-  const look = myLook();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken(), look ? { c: look.colour, g: look.glow, ...(look.trim ? { t: look.trim } : {}), ...(look.lights ? { l: 1 as const } : {}) } : undefined);
-  const back = sharedSpace.takeCorrection();
-  if (back) player.obj.position.copy(back);
-  sharedSpace.update(dt, {
-    position: player.obj.position,
-    quaternion: player.obj.quaternion,
-    speed: player.speed,
-    firing: Boolean(input?.fire) && !overheated,
-    shields: player.shields,
-    hull: player.hull,
-    dark: flight.transponderOff,
-  });
-  for (const r of sharedSpace.remotes.values()) {
-    let m = remoteModels.get(r.id);
-    if (!m) {
-      // Other commanders fly their ships in their own paint, or the maker's colours; their callsign tag says who they are.
-      const model = buildPainted(shipById(r.ship) ?? shipById('cobra-mk3')!, r.paint ? { colour: r.paint.c, glow: r.paint.g ?? 1, trim: r.paint.t ?? null, lights: r.paint.l === 1 } : null);
-      space.scene.add(model.root);
-      m = { model, fireCooldown: 0, unidentified: false };
-      remoteModels.set(r.id, m);
-    }
-    // Running dark: a cold white unknown until we're close enough to read the hull.
-    const unknown = remoteUnidentified(r);
-    if (unknown !== m.unidentified) {
-      showUnidentified(m.model, unknown);
-      m.unidentified = unknown;
-    }
-    m.model.root.position.copy(r.position);
-    m.model.root.quaternion.copy(r.quaternion);
-    // Their lasers, drawn straight ahead; they don't hit anything yet.
-    m.fireCooldown -= dt;
-    if (r.firing && m.fireCooldown <= 0) {
-      m.fireCooldown = 0.25;
-      const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(r.quaternion);
-      const origin = r.position.clone().addScaledVector(fwd, 20);
-      beams.fire(origin, origin.clone().addScaledVector(fwd, 2000), COMMANDER_COLOUR);
-      // A commander in a Fer-de-lance is heard by her guns (other commanders' lasers stay silent for now).
-      if (voiceOf(shipById(r.ship)) === 'grand') grandShot('pulse', origin);
-    }
-  }
 }
 
 // --- The combat computer ----------------------------------------------------
