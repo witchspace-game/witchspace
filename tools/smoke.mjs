@@ -109,6 +109,30 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     return open;
   });
   check('Modern: the photo booth opens', booth);
+  const bought = await s.w(async () => {
+    const w = window.witchspace;
+    const held = () => Object.values(w.commander.cargo).reduce((a, b) => a + b, 0);
+    w.commander.credits = Math.max(w.commander.credits, 500); // a contract's deposit may have taken the rest
+    document.querySelector('.tabs [data-tab="market"]')?.click();
+    await new Promise((r) => setTimeout(r, 500));
+    const food = document.querySelector('.ex-pair[data-id="food"]') ?? document.querySelector('.ex-pair:not(.btc):not(.off)');
+    food?.click();
+    await new Promise((r) => setTimeout(r, 600));
+    const before = held();
+    document.querySelector('#exchange [data-side="buy"]')?.click();
+    document.querySelector('#exchange [data-type="market"]')?.click();
+    const qty = document.querySelector('#exchange .ex-qty input');
+    if (!qty) return 'no quantity box';
+    qty.value = '2';
+    qty.dispatchEvent(new Event('input', { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 200));
+    const submit = document.querySelector('#exchange .ex-submit');
+    if (!submit || submit.disabled) return `can't submit: ${submit?.textContent}`;
+    submit.click();
+    await new Promise((r) => setTimeout(r, 600));
+    return `${before} → ${held()} t`;
+  });
+  check('Modern: the market sells you something', /^0 → [1-9]/.test(bought), bought);
   check('Modern: docked screens raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
 
   // --- Modern: flight, traffic and hailing -----------------------------------------------
