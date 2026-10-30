@@ -42,6 +42,12 @@ export const NAMES: NameRule[] = [
   // Nods to the films we love: held back until the founder says who gets them
   { name: 'Maverick', rule: 'protected', why: 'Film nod (Top Gun), held by the founder' },
   { name: 'Top Gun', rule: 'protected', why: 'Film nod, held by the founder' },
+  { name: 'Iceman', rule: 'protected', why: 'Film nod (Top Gun), held by the founder' },
+  { name: 'Goose', rule: 'protected', why: 'Film nod (Top Gun), held by the founder' },
+
+  // Famous aces, held by the founder like the film nods. Exact only: Ace, Red, Hawk stay free.
+  { name: 'Biggles', rule: 'protected', why: 'Fictional ace (W.E. Johns), held by the founder' },
+  { name: 'Snoopy', rule: 'protected', why: 'The Red Baron’s famous foe, held by the founder' },
 
   // Marvel's characters: theirs, not ours to hand out. Held by the founder, like the film nods.
   // Distinctive names only; names that are ordinary words or older myths (Thor, Loki, Storm,
@@ -76,6 +82,37 @@ export const NAMES: NameRule[] = [
   { name: 'Hulk', rule: 'protected', why: 'Marvel character, held by the founder' },
   { name: 'Gamora', rule: 'protected', within: true, why: 'Marvel character, held by the founder' },
   { name: 'Shuri', rule: 'protected', why: 'Marvel character, held by the founder' },
+
+  { name: 'Red Baron', rule: 'protected', within: true, why: 'Brand name (the pizza), and the WWI ace: held back' },
+
+  // Real public figures: in shared space a "Putin" or a "Trump" ends up on the news board, the
+  // feed and clips, and reads as our political joke. Exact only, never `within` ("Trumpet"), and
+  // common surnames alone (Johnson, Harris, Charles, Kim) stay free. Accents don't matter.
+  { name: 'Donald Trump', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Trump', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Joe Biden', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Biden', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Kamala Harris', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'JD Vance', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Obama', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Keir Starmer', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Starmer', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Farage', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Boris Johnson', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Rishi Sunak', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Sunak', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Macron', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Pedro Sánchez', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Meloni', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Zelensky', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Putin', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Xi Jinping', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Kim Jong Un', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Netanyahu', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Erdoğan', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Modi', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'King Charles', rule: 'never', why: 'A real public figure: nobody flies as one' },
+  { name: 'Prince William', rule: 'never', why: 'A real public figure: nobody flies as one' },
 
   // Sounding official
   { name: 'Admin', rule: 'never', why: 'Sounds official' },
