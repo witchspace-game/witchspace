@@ -603,15 +603,23 @@ async function picture(): Promise<File | null> {
     g.textAlign = 'left';
   }
 
-  // From the foot up: the number, what you fly, the name, CMDR.
-  let y = CARD_H - 63;
+  // The number at the foot on the right, facing the finish's word: X lays its title over the bottom left of a
+  // card, so nothing goes there. From the foot up on the left, clear of it: what you fly, the name, CMDR.
   if (member && !preview) {
     g.fillStyle = 'rgba(205,214,228,0.6)';
     g.font = `500 17px ${head}`;
     g.letterSpacing = '5px';
-    g.fillText(memberNumber(member), x, y);
-    y -= 36;
+    g.textAlign = 'right';
+    g.fillText(memberNumber(member), CARD_W - 72, CARD_H - 63);
+  } else {
+    // No number yet: where to make one instead.
+    g.fillStyle = 'rgba(205,214,228,0.45)';
+    g.font = `500 14px ${body}`;
+    g.textAlign = 'right';
+    g.fillText('witchspace.org.uk/callsign', CARD_W - 72, CARD_H - 63);
   }
+  g.textAlign = 'left';
+  let y = CARD_H - 99;
   g.letterSpacing = '0px';
   g.fillStyle = 'rgba(205,214,228,0.82)';
   g.font = `400 20px ${body}`;
@@ -631,11 +639,6 @@ async function picture(): Promise<File | null> {
   g.letterSpacing = '4.8px';
   g.fillText('CMDR', x, y - size * 0.9 - 8);
   g.letterSpacing = '0px';
-  g.fillStyle = 'rgba(205,214,228,0.45)';
-  g.font = `500 14px ${body}`;
-  g.textAlign = 'right';
-  g.fillText('witchspace.org.uk/callsign', CARD_W - 72, CARD_H - 63);
-  g.textAlign = 'left';
 
   const blob = await new Promise<Blob | null>((done) => c.toBlob(done, 'image/jpeg', 0.88));
   return blob ? new File([blob], `cmdr-${shown().toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-')}.jpg`, { type: 'image/jpeg' }) : null;
