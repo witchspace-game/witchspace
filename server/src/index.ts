@@ -14,6 +14,8 @@ import { authServerMetadata, BUILD_PATH, issuerOf, protectedResourceMetadata } f
 import { btc, isBtc } from './btc';
 import { ClipBoard, type ClipsEnv } from './clips';
 import { buildFeed, FEED_MAX_AGE, FEED_WINDOW } from './feed';
+import { networkOf } from './http';
+import { REPORT_EVERY_MS } from './spaceBudget';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
 
 export interface Env extends IdeasEnv, AccountsEnv, ClipsEnv {
@@ -47,7 +49,8 @@ const ORIGINS = [/^https:\/\/(www\.)?witchspace\.org\.uk$/, /^http:\/\/localhost
 // Commanders flying in one system at once (stage 1). Each one's position goes to all the others, one by one,
 // and a load test (28 October 2026) kept up smoothly to about 35; past the cap, the next commander flies solo.
 const MAX_PER_SYSTEM = 32;
-const MAX_MESSAGES_PER_SECOND = 30;
+// The game sends its position 10 times a second, and the fastest lasers fire 10 times a second: room for both, and little more.
+const MAX_MESSAGES_PER_SECOND = 24;
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -293,6 +296,8 @@ interface Attachment {
   count: number;
   /** When it connected (ms): a connection that never says anything doesn't hold a place for long. */
   since?: number;
+  /** Its network, scrambled (http.ts networkOf): how many systems one network joins an hour (spaceBudget.ts). */
+  net?: string;
 }
 
 /** A commander the server hasn't heard from in this long has gone (a phone that lost its signal): their place is freed. */
@@ -334,6 +339,9 @@ export class SystemRoom extends DurableObject<Env> {
   /** When each pair of commanders last collided (ms), so one contact only hurts once. */
   private readonly bumps = new Map<string, number>();
   private readonly inFlight = new Map<string, InFlight>();
+  /** Shared space's budget (spaceBudget.ts): this room's busy time and messages since its last report. */
+  private meterFrom = 0;
+  private meterMessages = 0;
 
   async fetch(request: Request): Promise<Response> {
     // Only commanders still flying count: close any that have gone silent.
@@ -360,7 +368,8 @@ export class SystemRoom extends DurableObject<Env> {
     const m = new URL(request.url).pathname.match(/^\/system\/(\d)\/(\d{1,3})$/);
     const [client, server] = Object.values(new WebSocketPair());
     this.ctx.acceptWebSocket(server);
-    server.serializeAttachment({ commander: null, room: m ? `${m[1]}:${m[2]}` : undefined, track: null, window: 0, count: 0, since: now } satisfies Attachment);
+    const net = await networkOf(request, 'space');
+    server.serializeAttachment({ commander: null, room: m ? `${m[1]}:${m[2]}` : undefined, track: null, window: 0, count: 0, since: now, net } satisfies Attachment);
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -371,6 +380,7 @@ export class SystemRoom extends DurableObject<Env> {
     const window = Math.floor(now / 1000);
     if (window !== a.window) Object.assign(a, { window, count: 0 });
     if (++a.count > MAX_MESSAGES_PER_SECOND) return ws.serializeAttachment(a);
+    this.meter(now);
 
     let msg: ClientMessage;
     try {
@@ -389,6 +399,13 @@ export class SystemRoom extends DurableObject<Env> {
       if (!who?.callsign) {
         this.send(ws, { type: 'signin', need: who ? 'callsign' : 'account' });
         ws.close(4003, 'Sign in with a callsign to fly in shared space');
+        return;
+      }
+      // Within today's budget, switched on, and not hopping through systems by the dozen (spaceBudget.ts).
+      const busy = await accountsOf(this.env).spaceGate(who.id, a.net ?? 'unknown', a.room ?? 'unknown');
+      if (busy) {
+        this.send(ws, { type: 'full', max: MAX_PER_SYSTEM, busy });
+        ws.close(4001, busy);
         return;
       }
       const verified = true;
@@ -639,6 +656,38 @@ export class SystemRoom extends DurableObject<Env> {
   async webSocketClose(ws: WebSocket) {
     this.forget(ws);
     this.leave(ws);
+    if (!this.commanders().length && this.meterFrom) this.report(Date.now());
+  }
+
+  /** Count this room's busy time and messages, and report them to the budget each minute. */
+  private meter(now: number) {
+    this.meterMessages++;
+    if (!this.meterFrom) this.meterFrom = now;
+    if (now - this.meterFrom >= REPORT_EVERY_MS) this.report(now);
+  }
+
+  private report(now: number) {
+    const seconds = (now - this.meterFrom) / 1000;
+    const messages = this.meterMessages;
+    this.meterFrom = this.commanders().length ? now : 0;
+    this.meterMessages = 0;
+    this.ctx.waitUntil(
+      accountsOf(this.env)
+        .spaceMeter(seconds, messages)
+        .then((stop) => {
+          if (!stop) return;
+          // The day's budget is spent (or shared space is switched off): everyone flies solo.
+          for (const ws of this.ctx.getWebSockets()) {
+            this.send(ws, { type: 'full', max: MAX_PER_SYSTEM, busy: 'Shared space is busy today' });
+            try {
+              ws.close(4001, 'Shared space is busy today');
+            } catch {
+              // Already closing.
+            }
+          }
+        })
+        .catch(() => undefined),
+    );
   }
 
   async webSocketError(ws: WebSocket) {
