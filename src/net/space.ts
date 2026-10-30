@@ -50,7 +50,7 @@ export type SpaceEvent =
   | { kind: 'connected'; others: number }
   | { kind: 'lost' }
   /** The system's shared space is full: flying solo, trying again now and then. */
-  | { kind: 'full'; max: number }
+  | { kind: 'full'; max: number; busy?: string }
   /** We were hit (by a commander we may not have seen yet): the server's word on our shields and hull. */
   | { kind: 'hit'; by: Remote | null; damage: number; shields: number; hull: number }
   /** Our shot hit them. */
@@ -86,6 +86,7 @@ export class SharedSpace {
   private lostReported = false;
   /** The server said this system is full (its cap), just before closing. */
   private fullAt = 0;
+  private fullBusy: string | undefined;
   private fullReported = false;
   /** Taken out because the account joined elsewhere: stay out until asked back in (resume). */
   private replaced = false;
@@ -116,7 +117,7 @@ export class SharedSpace {
       if (this.fullAt) {
         // Not lost: full. Say so once, and look again less often.
         this.retryAt = this.clock + FULL_RETRY;
-        if (!this.fullReported) this.onEvent({ kind: 'full', max: this.fullAt });
+        if (!this.fullReported) this.onEvent({ kind: 'full', max: this.fullAt, ...(this.fullBusy ? { busy: this.fullBusy } : {}) });
         this.fullReported = true;
         this.fullAt = 0;
         return;
@@ -211,6 +212,7 @@ export class SharedSpace {
         break;
       case 'full':
         this.fullAt = msg.max;
+        this.fullBusy = msg.busy;
         break;
       case 'signin':
         // Not for guests: stay out until signed in with a callsign and asked back in (resume).

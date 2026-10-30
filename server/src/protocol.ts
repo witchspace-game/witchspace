@@ -72,7 +72,7 @@ export type ServerMessage =
   /** Your account joined shared space from somewhere else: this ship has been taken out. One ship per account. */
   | { type: 'replaced' }
   /** This system's shared space has as many commanders flying as it takes: you fly solo for now. */
-  | { type: 'full'; max: number }
+  | { type: 'full'; max: number; busy?: string } // busy: why, when it's the day's budget or the switch (spaceBudget.ts), not a full system
   /** Shared space is for commanders with a callsign (Mark): sign in, or claim one, then come back. */
   | { type: 'signin'; need: 'account' | 'callsign' };
 

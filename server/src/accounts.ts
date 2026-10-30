@@ -15,6 +15,7 @@ import { cleanName } from './protocol';
 import { CARD_H, CARD_W, cardId, CHARACTER_NUMBERS, checkCard, finishFor, isCharacterNumber, isFounding, MAX_CARD_BYTES, nextMember, type SaveFacts } from './card';
 import { jpegSize } from './clipCheck';
 import { emailKey } from './emailKey';
+import { costOf, dayOf, JOIN_SHARE, MAX_REPORT_SECONDS, refusal, SPACE_BUDGET, stopAll, type SpaceDay } from './spaceBudget';
 import { judgeCallsign, NAMES, nameKey, nameRule, type CallsignLookups } from './names';
 import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
 import { FEED_EACH, FLYING_NOW, type FirstEvent, type Flying } from './feed';
@@ -117,6 +118,11 @@ export class Accounts extends DurableObject<AccountsEnv> {
     for (const row of this.sql.exec('SELECT id FROM accounts WHERE member BETWEEN ? AND ? AND character IS NULL ORDER BY member', CHARACTER_NUMBERS.from, CHARACTER_NUMBERS.to).toArray())
       this.sql.exec('UPDATE accounts SET member = ? WHERE id = ?', nextMember(this.highestMember()), row.id as string);
     // The commander's card: one each, its picture and the choices behind it, at a link of its own.
+    // Shared space's budget (spaceBudget.ts): the day's use, the settings, and who joined which system lately.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS space_days (day TEXT PRIMARY KEY, seconds REAL NOT NULL DEFAULT 0, messages INTEGER NOT NULL DEFAULT 0, cost REAL NOT NULL DEFAULT 0, told INTEGER NOT NULL DEFAULT 0)');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS space_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS space_joins (account TEXT NOT NULL, net TEXT NOT NULL, room TEXT NOT NULL, at INTEGER NOT NULL)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS space_joins_at ON space_joins (at)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS cards (account TEXT PRIMARY KEY, id TEXT NOT NULL UNIQUE, v INTEGER NOT NULL, choices TEXT NOT NULL, finish TEXT NOT NULL, image BLOB NOT NULL, at INTEGER NOT NULL)');
     for (const row of this.sql.exec('SELECT id, callsign FROM accounts WHERE callsign IS NOT NULL AND callsign_loose IS NULL').toArray())
       this.sql.exec('UPDATE accounts SET callsign_loose = ? WHERE id = ?', nameKey(row.callsign as string), row.id as string);
@@ -344,6 +350,62 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const before = this.present.get(account);
     this.present.set(account, { room, id });
     return before && before.id !== id ? before : null;
+  }
+
+  // --- Shared space's budget (spaceBudget.ts) -------------------------------------
+
+  private spaceDay(now = Date.now()): SpaceDay & { day: string; seconds: number; messages: number; told: number } {
+    const day = dayOf(now);
+    const row = this.sql.exec('SELECT seconds, messages, cost, told FROM space_days WHERE day = ?', day).toArray()[0];
+    const setting = (key: string) => this.sql.exec('SELECT value FROM space_settings WHERE key = ?', key).toArray()[0]?.value as string | undefined;
+    return {
+      day,
+      off: setting('off') === '1',
+      budget: Number(setting('budget') ?? SPACE_BUDGET),
+      cost: (row?.cost as number) ?? 0,
+      seconds: (row?.seconds as number) ?? 0,
+      messages: (row?.messages as number) ?? 0,
+      told: (row?.told as number) ?? 0,
+    };
+  }
+
+  /** May this account's ship join this system now? Null if so, or what to tell the commander. */
+  async spaceGate(account: string, net: string, room: string): Promise<string | null> {
+    const now = Date.now();
+    this.sql.exec('DELETE FROM space_joins WHERE at < ?', now - 3600_000);
+    const rooms = (col: 'account' | 'net', v: string) =>
+      this.sql.exec(`SELECT COUNT(DISTINCT room) AS n FROM space_joins WHERE ${col} = ? AND room != ?`, v, room).one().n as number;
+    const why = refusal(this.spaceDay(now), { account: rooms('account', account), network: rooms('net', net) });
+    if (!why) this.sql.exec('INSERT INTO space_joins (account, net, room, at) VALUES (?, ?, ?, ?)', account, net, room, now);
+    return why;
+  }
+
+  /** A busy room's use since its last report. Returns whether everyone should now fly solo. */
+  async spaceMeter(seconds: number, messages: number): Promise<boolean> {
+    const s = Math.max(0, Math.min(MAX_REPORT_SECONDS, Number(seconds) || 0));
+    const m = Math.max(0, Math.floor(Number(messages) || 0));
+    const day = dayOf(Date.now());
+    this.sql.exec(
+      'INSERT INTO space_days (day, seconds, messages, cost) VALUES (?, ?, ?, ?) ON CONFLICT(day) DO UPDATE SET seconds = seconds + excluded.seconds, messages = messages + excluded.messages, cost = cost + excluded.cost',
+      day, s, m, costOf(s, m),
+    );
+    const today = this.spaceDay();
+    // Tell the maintainers once at each mark: new ships stopped, then everyone solo.
+    const mark = today.cost >= today.budget ? 2 : today.cost >= today.budget * JOIN_SHARE ? 1 : 0;
+    if (mark > today.told) {
+      this.sql.exec('UPDATE space_days SET told = ? WHERE day = ?', mark, day);
+      const text = mark === 2
+        ? `Shared space has spent today's $${today.budget}: everyone is flying solo until midnight UTC. Raise the budget with POST /admin/space if it's real players.`
+        : `Shared space is near today's $${today.budget} ($${today.cost.toFixed(2)}): no new ships until midnight UTC. Raise the budget with POST /admin/space if it's real players.`;
+      for (const id of this.maintainerIds()) void this.notify(id, 'Shared space budget', text);
+    }
+    return stopAll(today);
+  }
+
+  private maintainerIds(): string[] {
+    const list = (this.env.MAINTAINERS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+    if (!list.length) return [];
+    return this.sql.exec(`SELECT id FROM accounts WHERE lower(email) IN (${list.map(() => '?').join(',')})`, ...list).toArray().map((r) => r.id as string);
   }
 
   async whoIs(session: string): Promise<{ id: string; callsign: string | null } | null> {
@@ -950,6 +1012,22 @@ export class Accounts extends DurableObject<AccountsEnv> {
       if (!who || !this.devicesOf(who.id as string).length) return json({ error: 'No devices for that commander' }, 404);
       const sent = await this.notify(who.id as string, "Ship's log · test", 'If you can read this, notifications reach you, Commander.');
       return json({ sent, devices: this.devicesOf(who.id as string).length });
+    }
+    // Shared space's budget: today's use and settings; switch it off or on, or change the daily budget (dollars).
+    if (request.method === 'GET' && path === '/admin/space') {
+      const d = this.spaceDay();
+      return json({ day: d.day, off: d.off, budget: d.budget, cost: Number(d.cost.toFixed(4)), busyHours: Number((d.seconds / 3600).toFixed(2)), messages: d.messages });
+    }
+    if (request.method === 'POST' && path === '/admin/space') {
+      const b = (await request.json().catch(() => null)) as { off?: unknown; budget?: unknown } | null;
+      if (typeof b?.off === 'boolean') this.sql.exec('INSERT OR REPLACE INTO space_settings (key, value) VALUES (?, ?)', 'off', b.off ? '1' : '0');
+      if (b?.budget !== undefined) {
+        const budget = Number(b.budget);
+        if (!Number.isFinite(budget) || budget < 0 || budget > 500) return json({ error: 'The budget is dollars a day, 0 to 500' }, 400);
+        this.sql.exec('INSERT OR REPLACE INTO space_settings (key, value) VALUES (?, ?)', 'budget', String(budget));
+      }
+      const d = this.spaceDay();
+      return json({ day: d.day, off: d.off, budget: d.budget, cost: Number(d.cost.toFixed(4)) });
     }
     // Member numbers: who holds which (no emails), giving a character one of 002 to 100, and 001 to the founder.
     if (request.method === 'GET' && path === '/admin/members') {

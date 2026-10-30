@@ -7823,7 +7823,7 @@ function onSpaceEvent(e: SpaceEvent) {
       break;
     }
     case 'full':
-      if (state === 'flying') flash(`Shared space in ${currentSystem().name} is full (${e.max} commanders) · flying solo for now`, 3.5);
+      if (state === 'flying') flash(e.busy ? `${e.busy} · flying solo for now` : `Shared space in ${currentSystem().name} is full (${e.max} commanders) · flying solo for now`, 3.5);
       break;
     case 'lost':
       if (state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);

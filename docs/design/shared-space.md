@@ -238,6 +238,13 @@ The server runs on **Cloudflare Workers with SQLite-backed Durable Objects**, on
 - **Mind the tribute:** Witchspace is a free tribute to Elite, so anything that looks like selling the game needs care. Donations towards running costs are the safe kind.
 - **Keep the bill small first:** the savings below, and the cap on busy systems.
 
+**The budget guard (Mark, 30 Oct 2026: "can i protect it so it doesnt get abused or i get a stupid bill i cant pay?"; built).** Cloudflare has no hard spending cap, so the server keeps its own (`server/src/spaceBudget.ts`):
+- Each system room reports its busy time and messages every minute; the day's cost (UTC) is worked out from Cloudflare's prices.
+- **$3 a day** (Mark). At 90% no new ship joins ("Shared space is busy today · flying solo for now"); at 100% everyone flies solo until midnight UTC. Single-player is never limited. Mark gets a notification at each mark.
+- **The worst month is about the budget times 31, plus the $5:** under $100.
+- **An off switch and the budget, with no deploy** (Mark: "You never know it may go viral!"): `npx tsx tools/space.ts` shows today; `budget 10` raises it; `off` and `on`. The budget stays where it's set until changed back.
+- **Per ship:** 24 messages a second at most (the game sends 10 positions and the fastest lasers 10 shots), and one account may join 60 systems an hour, one network 150.
+
 **Keeping it cheap:**
 - Duration is the big cost, and it's per awake system, not per commander. An empty system already costs nothing.
 - Sending 5 updates a second instead of 10 when nobody else is within 20 km halves requests for lone flyers.
