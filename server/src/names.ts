@@ -153,3 +153,42 @@ export function nameRule(name: string): NameRule | null {
   });
   return hits.find((r) => r.rule === 'never') ?? hits[0] ?? null;
 }
+
+/** Why a name can't be had, said in public: never pointing at a real person or a brand. */
+export function publicReason(r: NameRule): string {
+  if (r.rule === 'protected') return 'Reserved';
+  if (r.why.startsWith('Offensive')) return 'Offensive';
+  if (r.why.startsWith('A real public figure')) return 'Nobody flies as a real public figure';
+  if (r.why === 'Sounds official' || r.why.startsWith('The police')) return 'Sounds official';
+  return 'Not available';
+}
+
+export type Verdict = 'free' | 'taken' | 'reserved' | 'never' | 'yours';
+
+/** What the claim and the callsign page's check both ask of the accounts. */
+export interface CallsignLookups {
+  /** The account flying a name that matches this loose key, if any. */
+  holder(key: string): string | null;
+  /** The email a name with this loose key has been released to, if any. */
+  releasedTo(key: string): string | null;
+}
+
+/**
+ * One judgement for a callsign, shared by the claim (POST /me/callsign) and the check
+ * (GET /callsign/check), so the two can never disagree. `who` is the signed-in account, if any.
+ * "Taken" matches loosely, as reserved names do: with Lead Balloon flying, LeadBalloon and
+ * L3ad_Balloon are taken too. "yours" is a name released to you, or the one you already fly.
+ */
+export function judgeCallsign(name: string, lookups: CallsignLookups, who?: { id: string; email: string } | null): { verdict: Verdict; reason?: string } {
+  const key = nameKey(name);
+  const rule = nameRule(name);
+  if (rule?.rule === 'never') return { verdict: 'never', reason: publicReason(rule) };
+  const released = lookups.releasedTo(key);
+  if (released || rule) {
+    if (who && released === who.email) return { verdict: 'yours' };
+    return { verdict: 'reserved', reason: 'Reserved' };
+  }
+  const holder = lookups.holder(key);
+  if (holder && holder !== who?.id) return { verdict: 'taken' };
+  return { verdict: holder ? 'yours' : 'free' };
+}

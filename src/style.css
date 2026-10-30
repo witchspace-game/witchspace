@@ -1443,6 +1443,7 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
   .panel.account { left: auto; right: max(12px, env(safe-area-inset-right)); width: min(400px, 46vw); bottom: 12px; max-height: calc(100vh - 24px); }
 }
 .panel.account .meta { margin: 10px 0; color: var(--fg); line-height: 1.45; text-transform: none; letter-spacing: normal; font-size: 15px; }
+.panel.account .account-note { margin: 10px 0; padding: 8px 10px; border-left: 3px solid var(--accent); color: var(--fg); line-height: 1.45; font-size: 15px; }
 .panel.account dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 12px 0; }
 .panel.account dt { color: var(--dim); }
 .panel.account dd { margin: 0; overflow-wrap: anywhere; }

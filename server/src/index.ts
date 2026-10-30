@@ -5,8 +5,7 @@
 // See docs/design/servers-and-hosting.md.
 
 import { DurableObject } from 'cloudflare:workers';
-import { BUMP_COOLDOWN, cleanName, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, LOCK_RANGE, MISSILE, RANKS, REWIND, SHIPS, type ClientMessage, type Commander, type Paint, type ServerMessage, type Vec3 } from './protocol';
-import { nameRule } from './names';
+import { BUMP_COOLDOWN, COLLIDE, ECM_COOLDOWN, ECM_RANGE, GIMBAL_DAMAGE, isQuat, isVec3, LASERS, LOCK_RANGE, MISSILE, RANKS, REWIND, SHIPS, type ClientMessage, type Commander, type Paint, type ServerMessage, type Vec3 } from './protocol';
 import { Accounts, type AccountsEnv } from './accounts';
 import { IdeasBoard, type IdeasEnv } from './ideas';
 import { CORS as MCP_CORS, mcp } from './mcp';
@@ -75,11 +74,13 @@ export default {
     if (url.pathname.startsWith('/.well-known/oauth-') || ['/oauth/register', '/oauth/authorize', '/oauth/token'].includes(url.pathname)) return oauthRoute(request, env, url);
     // The live feed for the home page (server/src/feed.ts): public, cached at the edge.
     if (url.pathname === '/feed') return feedRoute(request, env, ctx);
+    // A commander's card, for link previews: public, no Origin (server/src/card.ts).
+    if (/^\/card(-image)?\//.test(url.pathname)) return accountsOf(env).fetch(request);
     // A link in an email, so no Origin: stop the companies getting in touch.
     if (url.pathname === '/contact/stop') return accountsOf(env).fetch(request);
     // The ideas board (/ideas…) and accounts (/auth…, /me…, /admin…, /submissions…), called from our pages and tools.
     const ideas = url.pathname === '/ideas' || url.pathname.startsWith('/ideas/');
-    const accounts = ['/auth/', '/me/', '/admin/', '/contact/', '/push/', '/stats/', '/firsts/', '/oauth/request/', '/shipyard/'].some((p) => url.pathname.startsWith(p)) || url.pathname === '/me' || url.pathname === '/submissions' || url.pathname.startsWith('/submissions/');
+    const accounts = ['/auth/', '/me/', '/admin/', '/contact/', '/push/', '/stats/', '/firsts/', '/oauth/request/', '/shipyard/', '/callsign/'].some((p) => url.pathname.startsWith(p)) || url.pathname === '/me' || url.pathname === '/submissions' || url.pathname.startsWith('/submissions/');
     if (ideas || accounts) {
       const origin = request.headers.get('Origin') ?? '';
       const allowed = ORIGINS.some((o) => o.test(origin));
@@ -383,12 +384,15 @@ export class SystemRoom extends DurableObject<Env> {
     if (msg.type === 'hello' && !a.commander) {
       const ship = msg.ship in SHIPS ? msg.ship : 'cobra-mk3';
       const rank = typeof msg.rank === 'string' && RANKS.includes(msg.rank) ? msg.rank : 'Harmless';
-      // Signed in: the callsign comes from the account, not the browser. Otherwise a guest.
+      // Signed-in commanders only, flying under their own callsign (Mark: no guests in shared space).
       const who = typeof msg.session === 'string' ? await accountsOf(this.env).whoIs(msg.session) : null;
-      const verified = Boolean(who?.callsign);
-      // A guest can't borrow a reserved name either.
-      const guestName = cleanName(msg.name);
-      const name = verified ? who!.callsign! : nameRule(guestName) ? 'Commander' : guestName;
+      if (!who?.callsign) {
+        this.send(ws, { type: 'signin', need: who ? 'callsign' : 'account' });
+        ws.close(4003, 'Sign in with a callsign to fly in shared space');
+        return;
+      }
+      const verified = true;
+      const name = who.callsign;
       const paint = cleanPaint(msg.paint);
       a.commander = { id: crypto.randomUUID().slice(0, 8), name, rank, verified, ship, p: [0, 0, 0], q: [0, 0, 0, 1], s: 0, f: false, ...(paint ? { paint } : {}) };
       ws.serializeAttachment(a);
@@ -408,7 +412,7 @@ export class SystemRoom extends DurableObject<Env> {
       // One ship per account: the newest wins, and the old one is taken out wherever it is.
       // Only games that understand being replaced (v2) take part: an older one would
       // just reconnect and throw the newer one out, again and again.
-      if (who && a.room && msg.v === 2) {
+      if (a.room && msg.v === 2) {
         const before = await accountsOf(this.env).arrive(who.id, a.room, a.commander.id);
         if (before?.room === a.room) this.replace(before.id);
         else if (before) await this.env.SYSTEMS.get(this.env.SYSTEMS.idFromName(before.room)).replace(before.id);

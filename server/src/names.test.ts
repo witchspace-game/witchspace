@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { nameRule } from './names';
+import { judgeCallsign, nameKey, nameRule } from './names';
 
 const rule = (n: string) => nameRule(n)?.rule ?? 'free';
 
@@ -38,5 +38,37 @@ describe('reserved callsigns', () => {
 
   it('a never rule wins when a name hits both', () => {
     expect(rule('Jameson the Nazi')).toBe('never');
+  });
+});
+
+describe('judging a callsign, for the claim and the check alike', () => {
+  const holders = new Map([[nameKey('Lead Balloon'), 'acc-1']]);
+  const released = new Map([[nameKey('Old Fan'), 'fan@example.com']]);
+  const lookups = { holder: (k: string) => holders.get(k) ?? null, releasedTo: (k: string) => released.get(k) ?? null };
+  const judge = (n: string, who?: { id: string; email: string }) => judgeCallsign(n, lookups, who);
+
+  it('matches taken names loosely, as reserved names are', () => {
+    for (const n of ['Lead Balloon', 'LeadBalloon', 'lead_balloon', 'L3ad Balloon', 'CMDR Lead Balloon']) expect(judge(n).verdict, n).toBe('taken');
+    expect(judge('Lead Balloon II').verdict).toBe('free');
+    expect(judge('LeadBalloon', { id: 'acc-1', email: 'a@b.c' }).verdict).toBe('yours');
+  });
+
+  it('says only "Reserved" for a protected or released name, never why', () => {
+    expect(judge('Red Baron')).toEqual({ verdict: 'reserved', reason: 'Reserved' });
+    expect(judge('Old Fan')).toEqual({ verdict: 'reserved', reason: 'Reserved' });
+    expect(judge('Old Fan', { id: 'x', email: 'fan@example.com' }).verdict).toBe('yours');
+  });
+
+  it('gives a plain reason for a name nobody can have', () => {
+    expect(judge('Putin')).toEqual({ verdict: 'never', reason: 'Nobody flies as a real public figure' });
+    expect(judge('Admin').reason).toBe('Sounds official');
+    expect(judge('GalCop').reason).toBe('Sounds official');
+    expect(judge('Fuckface').reason).toBe('Offensive');
+    expect(judge('Elite').reason).toBe('Not available');
+    expect(judge('Commander').reason).toBe('Not available');
+  });
+
+  it('leaves a free name free', () => {
+    expect(judge('Nova Quill')).toEqual({ verdict: 'free' });
   });
 });

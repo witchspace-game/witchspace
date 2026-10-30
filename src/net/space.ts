@@ -65,7 +65,8 @@ export type SpaceEvent =
   /** Someone else fired an ECM. */
   | { kind: 'ecm'; by: Remote | null; p: THREE.Vector3 }
   /** Our account joined from another window or device, which now has the ship. */
-  | { kind: 'replaced' };
+  | { kind: 'replaced' }
+  | { kind: 'signin'; need: 'account' | 'callsign' };
 
 const HOSTILE_FOR = 15; // seconds a commander who shot at you stays marked hostile
 
@@ -210,6 +211,12 @@ export class SharedSpace {
         break;
       case 'full':
         this.fullAt = msg.max;
+        break;
+      case 'signin':
+        // Not for guests: stay out until signed in with a callsign and asked back in (resume).
+        this.replaced = true;
+        this.leave();
+        this.onEvent({ kind: 'signin', need: msg.need });
         break;
       case 'replaced':
         // Don't reconnect, or the two would take turns throwing each other out.

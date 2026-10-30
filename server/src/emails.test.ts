@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { editionById } from '../../src/content/editions';
 import { papersFor, papersLink } from '../../src/game/papers';
-import { editionEmail } from './emails';
+import { editionEmail, signInEmail } from './emails';
 
 describe('the maker’s letter', () => {
   const p = papersFor(editionById('witch-fire')!, 1, 'Fer-de-lance');
@@ -25,5 +25,18 @@ describe('the maker’s letter', () => {
 
   it('greets a commander without a callsign plainly', () => {
     expect(editionEmail(p, 'Zorgon Petterson', null, link).text).toContain('Built for Commander\n');
+  });
+});
+
+describe('the sign-in email from the callsign page', () => {
+  it('names the callsign being claimed, escaped', () => {
+    const e = signInEmail('https://witchspace.org.uk/callsign/?signin=x', '123456', 20, 'Nova <Quill>');
+    expect(e.subject).toBe('Make CMDR Nova <Quill> yours: 123 456');
+    expect(e.html).toContain('Make CMDR Nova &lt;Quill&gt; yours');
+    expect(e.text).toContain('Open this link to make CMDR Nova <Quill> yours');
+    expect(e.text).toContain('123 456');
+  });
+  it('is the plain sign-in email otherwise', () => {
+    expect(signInEmail('l', '123456', 20).subject).toBe('Your Witchspace clearance: 123 456');
   });
 });

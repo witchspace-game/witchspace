@@ -113,15 +113,18 @@ function frame(look: Look, opts: { preheader: string; title: string; body: strin
 }
 
 /** The sign-in email: the link, and the code for a Home Screen app. */
-export function signInEmail(link: string, code: string, minutes: number): { subject: string; html: string; text: string } {
+/** `claim`: a callsign being claimed on the callsign page, said in the email ("make CMDR Nova yours"). */
+export function signInEmail(link: string, code: string, minutes: number, claim?: string): { subject: string; html: string; text: string } {
   const look = LOOKS.signin;
   const spaced = `${code.slice(0, 3)} ${code.slice(3)}`;
   return {
-    subject: `Your Witchspace clearance: ${spaced}`,
+    subject: claim ? `Make CMDR ${claim} yours: ${spaced}` : `Your Witchspace clearance: ${spaced}`,
     html: frame(look, {
       preheader: `Your sign-in code is ${spaced}. Your Cobra is fuelled and waiting.`,
-      title: 'Right on, Commander.',
-      body: `Your Cobra is fuelled and waiting in its berth. This link signs you in: it works once, for ${minutes} minutes.`,
+      title: claim ? `Make CMDR ${claim} yours.` : 'Right on, Commander.',
+      body: claim
+        ? `Open this link to make CMDR ${esc(claim)} yours and keep your card. It works once, for ${minutes} minutes.`
+        : `Your Cobra is fuelled and waiting in its berth. This link signs you in: it works once, for ${minutes} minutes.`,
       link,
       extra: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;border:1px solid #1f3a32;border-radius:10px;background:#07120f"><tr><td style="padding:16px 18px">
   <p style="margin:0 0 6px;font:bold 11px ${FONT};letter-spacing:3px;color:#3dffb0">CLEARANCE CODE</p>
@@ -130,7 +133,7 @@ export function signInEmail(link: string, code: string, minutes: number): { subj
 </td></tr></table>`,
       foot: 'Didn’t ask for this? Ignore it: nobody can sign in without the link or the code.',
     }),
-    text: `Right on, Commander.\n\nYour Cobra is fuelled and waiting. Sign in to Witchspace with this link (it works once, for ${minutes} minutes):\n\n${link}\n\nOr type this clearance code into the game: ${spaced}\n\nDidn't ask for this? Ignore it: nobody can sign in without the link or the code.\n\nWitchspace · ${SITE}`,
+    text: `${claim ? `Make CMDR ${claim} yours.\n\nOpen this link to make CMDR ${claim} yours and keep your card` : 'Right on, Commander.\n\nYour Cobra is fuelled and waiting. Sign in to Witchspace with this link'} (it works once, for ${minutes} minutes):\n\n${link}\n\nOr type this clearance code into the game: ${spaced}\n\nDidn't ask for this? Ignore it: nobody can sign in without the link or the code.\n\nWitchspace · ${SITE}`,
   };
 }
 

@@ -36,8 +36,12 @@ declare const turnstile: { render: (el: HTMLElement, opts: Record<string, unknow
 
 export const isAccountPanelOpen = () => !panel.hidden;
 
-export function toggleAccountPanel(show = panel.hidden) {
+/** Why the panel was opened for you, said at its top (shared space asking for a callsign). */
+let note = '';
+
+export function toggleAccountPanel(show = panel.hidden, why = '') {
   panel.hidden = !show;
+  note = show ? why : '';
   if (show) {
     view = choice ? 'choose' : view === 'sent' ? 'sent' : 'main';
     render();
@@ -163,6 +167,7 @@ async function choose(keep: 'local' | 'cloud') {
 function render() {
   const a = acct.currentAccount();
   let html = '<h2>Account</h2>';
+  if (note && !acct.currentAccount()?.callsign) html += `<p class="account-note">${escapeHtml(note)}</p>`;
   if (view === 'choose' && choice) {
     html += `<p class="meta">This device and your account have different commanders. Which do you want to keep? The other will be replaced.</p>
       <div class="account-choice">
@@ -181,6 +186,8 @@ function render() {
         <form class="account-form"><input type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email" value="${escapeHtml(lastEmail())}" />
         <div class="turnstile"></div><button type="submit" class="primary">Email me a link</button></form>`;
     }
+    // The callsign page (the site's front door to shared space): same tab, so a Home Screen game keeps its sign-in.
+    if (view !== 'sent') html += `<p class="meta">New here? <a href="/callsign/">Claim a callsign first</a></p>`;
     html += `<p class="small"><a href="/privacy/" target="_blank" rel="noopener">How we use your email</a></p>`;
   } else {
     html += `<dl><dt>Signed in</dt><dd>${escapeHtml(a.email)}</dd><dt>Callsign</dt><dd>${a.callsign ? `CMDR ${escapeHtml(a.callsign)}` : '<i>not claimed yet</i>'}</dd><dt>Cloud save</dt><dd>${acct.syncedAt() ? 'On: your commander saves to your account' : 'Waiting for your first save'}</dd></dl>`;
