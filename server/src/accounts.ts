@@ -12,7 +12,7 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
-import { NAMES, nameKey, nameRule } from './names';
+import { judgeCallsign, NAMES, nameKey, nameRule, type CallsignLookups } from './names';
 import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
 import { FEED_EACH, FLYING_NOW, type FirstEvent, type Flying } from './feed';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
@@ -63,6 +63,7 @@ export interface Account {
 
 const SITE = 'https://witchspace.org.uk';
 const LINK_MINUTES = 20;
+const CALLSIGN_CHECKS_PER_MINUTE = 30; // a network, on the callsign page
 const SESSION_DAYS = 30;
 const SAVE_MAX = 512 * 1024; // bytes
 const LINKS_PER_EMAIL_PER_HOUR = 3;
@@ -80,6 +81,15 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE TABLE IF NOT EXISTS links (hash TEXT PRIMARY KEY, email TEXT NOT NULL, expires INTEGER NOT NULL)');
     // The same sign-in as a 6-digit code, for apps the link can't open in (an iPhone Home Screen app).
     this.sql.exec('CREATE TABLE IF NOT EXISTS codes (email TEXT PRIMARY KEY, hash TEXT NOT NULL, expires INTEGER NOT NULL, tries INTEGER NOT NULL DEFAULT 0)');
+    // Callsigns are taken loosely, as reserved names are matched (names.ts nameKey): a column to look them up by.
+    try {
+      this.sql.exec('ALTER TABLE accounts ADD COLUMN callsign_loose TEXT');
+    } catch {
+      /* already there */
+    }
+    this.sql.exec('CREATE INDEX IF NOT EXISTS accounts_loose ON accounts (callsign_loose)');
+    for (const row of this.sql.exec('SELECT id, callsign FROM accounts WHERE callsign IS NOT NULL AND callsign_loose IS NULL').toArray())
+      this.sql.exec('UPDATE accounts SET callsign_loose = ? WHERE id = ?', nameKey(row.callsign as string), row.id as string);
     this.sql.exec('CREATE TABLE IF NOT EXISTS sessions (hash TEXT PRIMARY KEY, account TEXT NOT NULL, expires INTEGER NOT NULL)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS saves (account TEXT PRIMARY KEY, data TEXT NOT NULL, updated INTEGER NOT NULL)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS sends (email TEXT NOT NULL, net TEXT NOT NULL, t INTEGER NOT NULL)');
@@ -177,6 +187,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const galaxy = path.match(/^\/firsts\/([0-7])$/);
     if (m === 'GET' && galaxy) return this.firstsOf(Number(galaxy[1]));
     if (m === 'POST' && path === '/submissions/check') return this.checkOnly(request);
+    if (m === 'GET' && path === '/callsign/check') return this.checkCallsign(request, url);
     const signIn = path.match(/^\/oauth\/request\/([A-Za-z0-9_-]{20,64})$/);
     if (signIn && m === 'GET') return this.describeSignIn(request, signIn[1]);
     if (signIn && m === 'POST') return this.answerSignIn(request, signIn[1]);
@@ -410,18 +421,41 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const body = (await request.json().catch(() => null)) as { callsign?: unknown } | null;
     const callsign = cleanName(body?.callsign);
     if (callsign.length < 2) return json({ error: 'Callsigns need at least two letters' }, 400);
-    const rule = nameRule(callsign);
-    if (rule?.rule === 'never') return json({ error: `${callsign} can't be used as a callsign: try another` }, 409);
-    const holder = this.releasedTo(callsign);
-    if ((rule || holder) && holder !== account.email) return json({ error: `${callsign} is reserved: try another` }, 409);
+    const { verdict } = judgeCallsign(callsign, this.callsignLookups, account);
+    if (verdict === 'never') return json({ error: `${callsign} can't be used as a callsign: try another` }, 409);
+    if (verdict === 'reserved') return json({ error: `${callsign} is reserved: try another` }, 409);
+    if (verdict === 'taken') return json({ error: `CMDR ${callsign} is already taken: try another` }, 409);
     const key = callsign.toLowerCase();
-    const taken = this.sql.exec('SELECT id FROM accounts WHERE callsign_key = ? AND id != ?', key, account.id).toArray()[0];
-    if (taken) return json({ error: `CMDR ${callsign} is already taken: try another` }, 409);
-    this.sql.exec('UPDATE accounts SET callsign = ?, callsign_key = ? WHERE id = ?', callsign, key, account.id);
+    this.sql.exec('UPDATE accounts SET callsign = ?, callsign_key = ?, callsign_loose = ? WHERE id = ?', callsign, key, nameKey(callsign), account.id);
     return json({ callsign });
   }
 
   /** The email a callsign has been released to, if any. */
+  private readonly callsignLookups: CallsignLookups = {
+    holder: (key) => (this.sql.exec('SELECT id FROM accounts WHERE callsign_loose = ? LIMIT 1', key).toArray()[0]?.id as string | undefined) ?? null,
+    releasedTo: (key) => (this.sql.exec('SELECT email FROM releases WHERE name_key = ?', key).toArray()[0]?.email as string | undefined) ?? null,
+  };
+
+  /**
+   * GET /callsign/check?name=… for the callsign page: free, taken, reserved, never, or yours (released
+   * to you, or already yours), judged exactly as a claim would be. Signed in or not; 30 a minute a network.
+   * Only a verdict and a plain reason come back: never who holds it, or why a name is held.
+   */
+  private async checkCallsign(request: Request, url: URL): Promise<Response> {
+    const minute = Math.floor(Date.now() / 60_000);
+    if (this.callsignChecks.minute !== minute) this.callsignChecks = { minute, counts: new Map() };
+    const net = await networkOf(request, (this.env.ADMIN_KEY ?? 'witchspace') + ':callsign');
+    const n = (this.callsignChecks.counts.get(net) ?? 0) + 1;
+    this.callsignChecks.counts.set(net, n);
+    if (n > CALLSIGN_CHECKS_PER_MINUTE) return json({ error: 'That’s a lot of names: try again in a minute' }, 429);
+    const raw = url.searchParams.get('name') ?? '';
+    const name = cleanName(raw);
+    if (!raw.trim() || name.length < 2) return json({ error: 'Callsigns need at least two letters' }, 400);
+    const account = await this.sessionAccount(request);
+    return json({ name, ...judgeCallsign(name, this.callsignLookups, account) });
+  }
+  private callsignChecks = { minute: 0, counts: new Map<string, number>() };
+
   private releasedTo(callsign: string): string | null {
     const row = this.sql.exec('SELECT email FROM releases WHERE name_key = ?', nameKey(callsign)).toArray()[0];
     return row ? (row.email as string) : null;
@@ -776,7 +810,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
       const email = typeof body?.email === 'string' ? body.email.trim().toLowerCase() : '';
       if (!EMAIL.test(email)) return json({ error: 'That email doesn’t look right' }, 400);
       if (name.length < 2) return json({ error: 'Callsigns need at least two letters' }, 400);
-      const holder = this.sql.exec('SELECT email FROM accounts WHERE callsign_key = ?', name.toLowerCase()).toArray()[0];
+      const holder = this.sql.exec('SELECT email FROM accounts WHERE callsign_loose = ?', nameKey(name)).toArray()[0];
       if (holder && holder.email !== email) return json({ error: `${name} is already someone’s callsign: revoke it first` }, 409);
       const rule = nameRule(name);
       // Releasing a name that isn't on the list protects it too: how we hold a fan's old callsign for them.
@@ -787,7 +821,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (request.method === 'POST' && path === '/admin/names/revoke') {
       this.sql.exec('DELETE FROM releases WHERE name_key = ?', nameKey(name));
       // Whoever holds it gives it up: they'll be asked for another callsign.
-      const freed = this.sql.exec('UPDATE accounts SET callsign = NULL, callsign_key = NULL WHERE callsign_key = ?', name.toLowerCase()).rowsWritten;
+      const freed = this.sql.exec('UPDATE accounts SET callsign = NULL, callsign_key = NULL, callsign_loose = NULL WHERE callsign_key = ?', name.toLowerCase()).rowsWritten;
       return json({ revoked: name, freed });
     }
     return json({ error: 'Not found' }, 404);
