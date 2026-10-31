@@ -156,6 +156,7 @@ main { display: block; }
   color: var(--accent);
 }
 .lede { font-size: clamp(17px, 1.6vw, 20px); color: var(--muted); max-width: 62ch; margin: 0; }
+.lede + .lede { margin-top: 0.75em; }
 .muted { color: var(--muted); }
 .section > .lede { margin-bottom: 32px; }
 
