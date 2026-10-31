@@ -37,6 +37,8 @@ export interface ManualData {
   beside: string;
   /** Her length against a Cobra's, in words ("twice the length"). */
   length: string;
+  /** Tilt, drawn (the game's own, src/game/manual.ts): made at build time, so the page needn't load the game's notes. */
+  tilt: string;
   /** Degrees off level the slot allows. */
   roll: number;
   /** She leaves the yard with a docking computer (the game's standardKit). */
