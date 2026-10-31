@@ -51,19 +51,6 @@ function numbered(name: string, label: string) {
   const i = shots[name]?.callouts?.findIndex((c) => c.label === label) ?? -1;
   return i < 0 ? label : `<b class="man-num">${i + 1}</b>${label}`;
 }
-
-/** Tilt, drawn: a phone on its side, its top edge tipping towards you, and the ship climbing. */
-const TILT_DRAWING = `<svg class="man-draw" viewBox="0 0 260 110" role="img" aria-label="Tip the top of the phone towards you, and she climbs">
-  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M40 92 L70 22" stroke-width="7" stroke="var(--muted)" />
-    <path d="M28 88 L58 18" stroke-dasharray="3 5" stroke="var(--muted)" />
-    <path d="M86 30 C 92 14, 80 6, 66 8" stroke="var(--accent)" /><path d="M72 3 L66 8 L72 13" stroke="var(--accent)" />
-    <path d="M150 74 L230 74 L190 92 Z" stroke="var(--accent)" transform="rotate(-18 190 80)" />
-    <path d="M192 52 L208 22" stroke="var(--accent)" /><path d="M199 24 L208 22 L211 31" stroke="var(--accent)" />
-  </g>
-  <text x="18" y="108" fill="var(--muted)" font-size="11">the top, towards you</text>
-  <text x="166" y="108" fill="var(--muted)" font-size="11">she climbs</text>
-</svg>`;
 const m = JSON.parse($('#manual-data').textContent!) as ManualData;
 const hullOf = (c: Owner) => c.ship ?? 'cobra-mk3';
 
@@ -152,7 +139,7 @@ function show(c: Owner) {
       <p>Tap the <b>‹</b> tab on the right edge of the screen to slide it open, and again to close it.</p>
       ${figure(['drawer'], 'Everything that isn’t the fight. Tap ‹ to open it, and again to close.')}
       ${list(drawer)}
-      <figure class="man-fig">${TILT_DRAWING}<figcaption>${TILT}</figcaption></figure>
+      <figure class="man-fig">${m.tilt}<figcaption>${TILT}</figcaption></figure>
     </section>
     ${touch ? `<details class="card man-more"><summary>On a computer, with a keyboard</summary>${desk}</details>` : ''}
     <section class="card" id="man-rec"><h3>The flight recorder</h3>${RECORDER.map((r) => `<p>${r}</p>`).join('')}
