@@ -1037,9 +1037,11 @@ document.querySelectorAll<HTMLButtonElement>('[data-key]').forEach((b) => {
 
 timer.connect(document);
 
-// The battery (Mark: his phone went flat much quicker): never more than 60 frames a second, even on
-// a 120 Hz screen, and docked behind a screen that covers the hangar, a few a second.
-const MIN_FRAME = 1000 / 61;
+// The battery (Mark: his phone went flat much quicker): on a phone or tablet, never more than 60 frames
+// a second, even on a 120 Hz screen. A computer runs at its screen's full rate, 144 on a 144 Hz monitor
+// (Mark: "the 144 is true if you have the hardware!"). Docked behind a screen that covers the hangar,
+// a few a second on either.
+const MIN_FRAME = isTouch ? 1000 / 61 : 0;
 const RESTING_FRAME = 1000 / 6;
 let lastDrawn = -Infinity;
 let coveredAt = 0;
