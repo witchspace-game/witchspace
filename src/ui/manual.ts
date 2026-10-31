@@ -28,10 +28,13 @@ export function initManual(hooks: { gimballed: () => boolean }) {
 const KEYS_HINT = {
   mouse: 'Mouse aim · Click fire · W/S throttle · A/D roll · T arm missile · X fire it · G map · H hyperspace · J jump · C docking computer · P photo · F1 controls',
   keyboard: 'W/S pitch · A/D roll · Space/Shift throttle · F fire · T arm missile · X fire it · G map · H hyperspace · J jump · C docking · P photo · F1 controls',
+  bbc: 'X/S climb/dive · < > roll · Space/? throttle · A fire · T arm missile · M fire it · U unarm · E ECM · J jump · H hyperspace · C docking · F1 controls',
 };
+/** What K says, and what the controls card is headed. */
+export const SCHEME_NAMES = { mouse: 'Mouse + keyboard', keyboard: 'Keyboard only (classic)', bbc: 'BBC Micro keys (1984)' } as const;
 
 /** Every control, as key and what it does: the controls card and the owner's manual both read this. */
-export function controlRows(mouse: boolean): string[][] {
+export function controlRows(mouse: boolean | 'bbc'): string[][] {
   return sharedControlRows(mouse, { gimballed: gimballed() || Boolean(game.commander && isWorking(cmdr(), 'gimbal-mount')), modern: game.commander?.difficulty === 'modern' });
 }
 
@@ -184,10 +187,10 @@ $('#manual').addEventListener('click', (e) => {
 });
 
 export function renderControlsCard() {
-  const mouse = controlScheme() === 'mouse';
-  $('#keys-hint').textContent = KEYS_HINT[controlScheme()];
-  $('#controls-scheme').textContent = mouse ? 'Mouse + keyboard' : 'Keyboard only (classic)';
-  $('#controls-list').innerHTML = controlRows(mouse)
+  const s = controlScheme();
+  $('#keys-hint').textContent = KEYS_HINT[s];
+  $('#controls-scheme').textContent = SCHEME_NAMES[s];
+  $('#controls-list').innerHTML = controlRows(s === 'bbc' ? 'bbc' : s === 'mouse')
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
     .join('');
 }

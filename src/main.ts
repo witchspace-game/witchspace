@@ -36,6 +36,7 @@ import {
   setFlightInputSuppressed,
   setFlying,
   toggleControlScheme,
+  controlScheme,
   toggleInvertPitch,
 } from './game/input';
 import { signedIn, currentAccount } from './net/account';
@@ -897,6 +898,11 @@ function handleKey(code: string) {
     toggleGalaxyMap();
     return;
   }
+  // The BBC Micro's keys put the missile on M, as in 1984; 1984 mode stays on M when not flying.
+  if (code === 'KeyM' && game.state === 'flying' && controlScheme() === 'bbc') {
+    fireMissile();
+    return;
+  }
   if (code === 'KeyM') {
     setRetro(!isRetro());
     updateModeLabel();
@@ -963,12 +969,18 @@ function handleKey(code: string) {
         flash(`Scanner range ${toggleScannerRange() / 1000} km`, 1.2);
       } else if (code === 'KeyJ') {
         inSystemJump();
+      } else if (code === 'KeyU' && controlScheme() === 'bbc') {
+        if (flight.seeker || flight.locked) toggleLock(); // unarm
+      } else if (code === 'KeyQ' && controlScheme() === 'bbc') {
+        toggleSurrender();
+      } else if (code === 'KeyE' && controlScheme() === 'bbc') {
+        playerEcm();
       } else if (code === 'KeyU') {
         toggleSurrender();
       } else if (code === 'KeyT') {
         toggleLock();
       } else if (code === 'KeyX') {
-        fireMissile();
+        if (controlScheme() !== 'bbc') fireMissile(); // the BBC Micro's keys climb on X
       } else if (code === 'KeyZ') {
         playerEcm();
       } else if (code === 'KeyB') {
@@ -992,7 +1004,7 @@ function handleKey(code: string) {
       } else if (code === 'KeyK') {
         const s = toggleControlScheme();
         renderControlsCard();
-        flash(s === 'mouse' ? 'Mouse + keyboard · click to aim' : 'Keyboard only (classic)', 2);
+        flash(s === 'mouse' ? 'Mouse + keyboard · click to aim' : s === 'bbc' ? 'BBC Micro keys · X/S climb and dive, A fire, M missile' : 'Keyboard only (classic)', 2);
       } else if (code === 'KeyI') {
         flash(toggleInvertPitch() ? 'Pitch inverted' : 'Pitch normal', 2);
       } else if (code === 'KeyO') {

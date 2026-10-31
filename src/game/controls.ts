@@ -13,7 +13,9 @@ export const SCHEMES = 'Two ways to fly: <b>mouse and keyboard</b> (the ship fol
 export const TILT = 'Tilt steers by tilting the phone, like a flight stick: tip the top towards you to climb. Invert swaps up and down, for dragging and tilting. Turn the phone on its side for the widest view.';
 
 /** Every control, as key and what it does. */
-export function controlRows(mouse: boolean, o: { gimballed: boolean; modern: boolean }): string[][] {
+export function controlRows(scheme: boolean | 'bbc', o: { gimballed: boolean; modern: boolean }): string[][] {
+  if (scheme === 'bbc') return bbcRows(controlRows(false, o));
+  const mouse = scheme;
   return (
     mouse
       ? [
@@ -62,7 +64,7 @@ export function controlRows(mouse: boolean, o: { gimballed: boolean; modern: boo
         : []),
       ['Scoop', `Fly slowly (under ${Math.round(SCOOP_SPEED * 100)}% speed) straight into a cargo canister, a yellow dot on the scanner (needs Fuel Scoops)`],
       ['G', 'Galaxy map (Tab: local chart, arrows + Enter: choose destination)'],
-      ['K', 'Switch control scheme'],
+      ['K', 'Switch control scheme: mouse and keyboard, keyboard only, or the BBC Micro\'s keys'],
       ['I', 'Invert pitch'],
       ['M', '1984 mode'],
       ['N', 'Sound: full / effects only / off'],
@@ -82,7 +84,7 @@ export const DOCKING = (rollDeg: number, fitted = false): string[] => [
 
 /** The phone's fixed controls, as label and what it does. */
 export const PHONE: string[][] = [
-  ['Left side', 'Drag to aim, like a stick: the further you drag, the faster she turns. Sideways rolls. In a rear or side view, dragging turns that view.'],
+  ['Left side', 'Drag like a flight stick: sideways to roll, down to climb and up to dive, diagonally to aim at a point. The further you drag, the faster she turns. In a rear or side view, dragging turns that view.'],
   ['Speed', 'Slide up for faster; it stays where you leave it. The fill is the speed you\'re doing, the tick the speed you asked for: when the docking computer slows you, the fill falls and the tick stays.'],
   ['Fire', 'Hold to fire the laser.'],
   ['Missile', 'Tap to arm a missile, and hold a ship in your sights until it locks. Then press and hold to launch; a tap lets go of the lock.'],
@@ -143,4 +145,29 @@ export function drawerHelp(code: string | undefined, title: string, rows: string
     if (row) return row[1];
   }
   return title;
+}
+
+/**
+ * The BBC Micro's own keys (maniacminer, Stardot t=33815: "M for missile, S/X up down, A fire laser"):
+ * the keyboard-only list, with flying, the laser and the missiles moved to where 1984 had them.
+ */
+function bbcRows(keyboard: string[][]): string[][] {
+  const flying = [
+    ['X / S', 'Climb / dive (I inverts)'],
+    ['< / >', 'Roll'],
+    ['Space / ?', 'Throttle up / down'],
+    ['A', 'Fire laser'],
+  ];
+  const moved: Record<string, string[][]> = {
+    T: [['T', 'Arm a missile (target): hold a ship in your sights until the tone goes solid'], ['M', 'Launch the locked missile'], ['U', 'Unarm the missile']],
+    X: [],
+    Z: [['E / Z', 'ECM: destroy every missile nearby, yours included (needs an ECM)']],
+    U: [['Q', 'Surrender to the police: the ship stops itself, then 5 seconds (fine, record cleared)']],
+    M: [['M (docked)', '1984 mode (in flight, M is the missile)']],
+  };
+  const firstKeys = new Set(['W / S', 'A / D', 'Space / Shift', 'F', 'Swipe / scroll']);
+  const rest = keyboard
+    .filter(([k]) => !firstKeys.has(k))
+    .flatMap((row) => moved[row[0]] ?? [row]);
+  return [...flying, ['Swipe / scroll', 'Throttle; sideways swipe rolls'], ...rest];
 }
