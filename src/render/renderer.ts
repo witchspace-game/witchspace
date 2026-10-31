@@ -46,7 +46,15 @@ neoRenderer.localClippingEnabled = retroRenderer.localClippingEnabled = true;
 export const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 1, 120000);
 
 const renderPass = new RenderPass(new THREE.Scene(), camera);
-const composer = new EffectComposer(neoRenderer);
+/**
+ * The scene is drawn into the glow's own image first, and that image had no anti-aliasing (the
+ * canvas's `antialias` doesn't reach it): every thin line had hard steps, and long lines at a
+ * shallow angle (the hangar's pad and floor) broke into dashes that crawled as the view moved (Mark:
+ * "Why do the lines on my desktop in the hanger etc flicker a lot"). Four samples a pixel on a
+ * computer; a phone's denser screen hides the steps, and its battery is spared the work.
+ */
+const SAMPLES = matchMedia('(pointer: coarse)').matches ? 0 : 4;
+const composer = new EffectComposer(neoRenderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: SAMPLES }));
 composer.addPass(renderPass);
 /** Space bending around a witchspace rift; see lens.ts. */
 export const lens = new LensPass();

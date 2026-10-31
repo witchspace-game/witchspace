@@ -309,6 +309,10 @@ function showNewGame() {
     b.addEventListener('click', () => startCommander(d));
     list.append(b);
   });
+  // Signed in with a callsign: that's the one this commander flies under, shown rather than "Jameson"
+  // (Mark, signing in a second account, was asked for a callsign again). Typing another claims it instead.
+  const own = currentAccount()?.callsign;
+  $<HTMLInputElement>('#callsign').placeholder = own ?? 'Jameson';
   setState('newgame');
 }
 
