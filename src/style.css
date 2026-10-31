@@ -788,6 +788,10 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
   border: 1px dashed rgba(61, 255, 176, 0.35); opacity: 0; transition: opacity 0.2s;
 }
 #touch .aim-pad.active .base { opacity: 1; }
+/* Hold, then slide: the ring turns to roll (amber, a roll arrow), and slides only sideways. */
+#touch .aim-pad.rolling .finger { opacity: 0.9; border-color: var(--amber); box-shadow: 0 0 14px rgba(255, 179, 71, 0.5); }
+#touch .aim-pad.rolling .finger::after { content: '⟲ ⟳'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--amber); font-size: 15px; letter-spacing: 0.1em; }
+#touch .aim-pad.rolling .base { border-color: rgba(255, 179, 71, 0.45); border-radius: 44px / 22px; height: 44px; top: -22px; }
 #touch .touch-fly { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); display: flex; align-items: flex-end; gap: 14px; }
 #touch .speed {
   position: relative; width: 44px; height: 150px; border: 1px solid var(--edge); background: rgba(0, 10, 6, 0.5);

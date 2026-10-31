@@ -10,7 +10,7 @@ export const SCOOP_SPEED = 0.4;
 export const SCHEMES = 'Two ways to fly: <b>mouse and keyboard</b> (the ship follows the ring) or <b>keyboard only</b>, as in 1984. K switches between them, F1 shows the card in flight.';
 
 /** Tilt and Invert on a phone. */
-export const TILT = 'Tilt steers by tilting the phone, like a flight stick: tip the top towards you to climb. Invert swaps up and down, for dragging and tilting. Turn the phone on its side for the widest view.';
+export const TILT = 'Tilt steers by tilting the phone, like a flight stick: turn it like a steering wheel to roll, tip the top towards you to climb. Invert swaps up and down, for dragging and tilting. Turn the phone on its side for the widest view.';
 
 /** Every control, as key and what it does. */
 export function controlRows(scheme: boolean | 'bbc', o: { gimballed: boolean; modern: boolean }): string[][] {
@@ -78,14 +78,14 @@ export function controlRows(scheme: boolean | 'bbc', o: { gimballed: boolean; mo
 export const DOCKING = (rollDeg: number, fitted = false): string[] => [
   `Fly towards the station and slow down. The slot is the lit rectangle on the face that points at the planet.`,
   `Within 3 km a docking aid opens: <b>Slot</b> (how far), <b>Approach</b> (how straight you're coming in) and <b>Roll</b> (how level you are with the slot). Green is good.`,
-  `The station turns. Roll until the marker sits in the middle: your wings must be within ${rollDeg}° of the slot. On a phone, line up with the slot and the ship rolls to match it by itself as you come in (Modern rules); in Classic, the docking computer is the way.`,
+  `The station turns. Roll until the marker sits in the middle: your wings must be within ${rollDeg}° of the slot. On a phone, line up and the ship rolls to match by itself (Modern rules), or roll yourself: hold, then slide sideways on the left, or turn the phone like a steering wheel with Tilt on.`,
   `Fly straight in, slowly. Too fast, too crooked or too far off level and you scrape the hull: shields first, then the ship.`,
   `<b>Or let the docking computer do it</b> (C, or the Dock button that appears by itself on a phone when you're close). ${fitted ? 'She has one fitted as standard.' : 'It’s 1,500 Cr at any station, and the best money a new pilot spends.'}`,
 ];
 
 /** The phone's fixed controls, as label and what it does. */
 export const PHONE: string[][] = [
-  ['Left side', 'Drag to aim, like a stick: the further you drag, the faster she turns. Sideways rolls. In a rear or side view, dragging turns that view.'],
+  ['Left side', 'Drag to aim, like a stick: the further you drag, the faster she turns. To roll, hold still a moment, then slide sideways: she rolls in place, nose held. A quick tap levels the wings. In a rear or side view, dragging turns that view.'],
   ['Speed', 'Slide up for faster; it stays where you leave it. The fill is the speed you\'re doing, the tick the speed you asked for: when the docking computer slows you, the fill falls and the tick stays.'],
   ['Fire', 'Hold to fire the laser.'],
   ['Missile', 'Tap to arm a missile, and hold a ship in your sights until it locks. Then press and hold to launch; a tap lets go of the lock.'],

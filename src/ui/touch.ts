@@ -1,4 +1,5 @@
-import { isPitchInverted, isTouch, setTouchFire, setTouchSpeed, toggleInvertPitch, touchAim, touchSpeedTarget } from '../game/input';
+import { isPitchInverted, isTouch, setTouchFire, setTouchRoll, setTouchSpeed, toggleInvertPitch, touchAim, touchLevel, touchSpeedTarget } from '../game/input';
+import { flash } from './hud';
 
 // On-screen controls for phones and tablets: drag on the left to aim, a speed
 // slider and a fire button on the right, and buttons for everything else
@@ -10,13 +11,35 @@ const AIM_SENSITIVITY = 1.6; // finger movement is smaller than mouse movement
 const STICK_DEADZONE = 18; // px
 const STICK_RATE = 4; // aim pixels per second, per pixel of offset
 
-// Tilt steering (optional): the phone is a flight stick. Tip it left or right
-// to turn that way; tip the top towards you (pull back) to climb, away from
-// you (push forward) to dive. Measured from how you were holding it when you
-// turned it on, and it keeps turning while you hold it tipped.
+// Tilt steering (optional): the phone is a flight stick. Turn it like a steering
+// wheel to roll that way (Mark: "a very innovative way to do it on a phone… the
+// phones gyroscope"); tip the top towards you (pull back) to climb, away from you
+// (push forward) to dive. Measured from how you were holding it when you turned
+// it on, and it keeps rolling or turning while you hold it there.
 const TILT_DEADZONE = 3; // degrees
 const TILT_RATE = 14; // aim pixels per second, per degree of tilt
 const TILT_MAX = 25; // degrees: tilting further doesn't turn faster
+const TILT_ROLL_FULL = 18; // degrees past the dead zone for a full-rate roll
+
+// Hold, then slide: the phone's right mouse button. Hold still on the left a moment and the ring turns
+// to roll; sliding sideways then rolls her in place, faster the further you slide, nose held. A quick
+// tap levels the wings and centres the aim. A drag that moves at once aims, as ever.
+const HOLD_MS = 320;
+const HOLD_STILL_PX = 9; // moving further than this before the hold aims instead
+const HOLD_DEADZONE = 10; // px
+const HOLD_ROLL_FULL = 80; // px past the dead zone for a full-rate roll
+const TAP_MS = 220;
+
+/** A tip shown once, the first time something happens (Mark: "a small on screen hint is quite a good one"). */
+function hintOnce(key: string, text: string, seconds = 4) {
+  try {
+    if (localStorage.getItem(key)) return;
+    localStorage.setItem(key, '1');
+  } catch {
+    /* storage blocked: shown each time, which is harmless */
+  }
+  flash(text, seconds);
+}
 let tiltOn = false;
 let tiltX = 0; // degrees right of centre
 let tiltY = 0; // degrees towards you (nose down)
@@ -49,6 +72,7 @@ addEventListener('deviceorientation', (e) => {
 async function toggleTilt(button: HTMLElement) {
   if (tiltOn) {
     tiltOn = false;
+    setTouchRoll('tilt', 0);
     button.classList.remove('on');
     return;
   }
@@ -62,9 +86,12 @@ async function toggleTilt(button: HTMLElement) {
   tiltCentre = null; // the next reading becomes "level"
   tiltX = tiltY = 0;
   button.classList.add('on');
+  hintOnce('witchspace.hint.tiltRoll', 'Tilt on · turn the phone like a steering wheel to roll, tip the top towards you to climb');
 }
 
 let aiming = false;
+/** Holding then sliding: the left side rolls instead of aiming. */
+let holdRoll = false;
 let startX = 0;
 let startY = 0;
 let curX = 0;
@@ -111,31 +138,61 @@ export function initTouch() {
   let aimId: number | null = null;
   let lastX = 0;
   let lastY = 0;
+  const label = pad.querySelector('span')!;
+  let downAt = 0;
+  let travel = 0;
+  let holdTimer = 0;
+  let holdX = 0;
   pad.addEventListener('pointerdown', (e) => {
     aimId = e.pointerId;
     aiming = true;
+    holdRoll = false;
+    downAt = performance.now();
+    travel = 0;
     lastX = startX = curX = e.clientX;
     lastY = startY = curY = e.clientY;
     base.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
     capture(pad, e.pointerId);
     finger.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
     pad.classList.add('active');
+    // Held still long enough: roll instead of aim, from where the finger is now.
+    clearTimeout(holdTimer);
+    const id = e.pointerId;
+    holdTimer = window.setTimeout(() => {
+      if (aimId !== id || travel > HOLD_STILL_PX) return;
+      holdRoll = true;
+      holdX = curX;
+      base.style.transform = `translate(${curX}px, ${curY}px)`;
+      pad.classList.add('rolling');
+      hintOnce('witchspace.hint.holdRoll', 'Rolling · slide sideways to roll, let go to stop · a quick tap levels the wings');
+    }, HOLD_MS);
   });
   pad.addEventListener('pointermove', (e) => {
     if (e.pointerId !== aimId) return;
-    touchAim((e.clientX - lastX) * AIM_SENSITIVITY, (e.clientY - lastY) * AIM_SENSITIVITY);
+    travel = Math.max(travel, Math.hypot(e.clientX - startX, e.clientY - startY));
+    if (holdRoll) {
+      const ox = e.clientX - holdX;
+      const past = Math.max(0, Math.abs(ox) - HOLD_DEADZONE);
+      setTouchRoll('hold', Math.sign(ox) * Math.min(1, past / HOLD_ROLL_FULL));
+    } else touchAim((e.clientX - lastX) * AIM_SENSITIVITY, (e.clientY - lastY) * AIM_SENSITIVITY);
     lastX = curX = e.clientX;
     lastY = curY = e.clientY;
-    finger.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
+    finger.style.transform = `translate(${e.clientX}px, ${holdRoll ? startY : e.clientY}px)`;
   });
   const endAim = (e: PointerEvent) => {
     if (e.pointerId !== aimId) return;
+    clearTimeout(holdTimer);
+    // A quick tap that didn't move: level the wings and centre the aim, like a quick right-click.
+    if (!holdRoll && performance.now() - downAt < TAP_MS && travel < HOLD_STILL_PX) touchLevel();
     aimId = null;
     aiming = false;
-    pad.classList.remove('active');
+    holdRoll = false;
+    setTouchRoll('hold', 0);
+    pad.classList.remove('active', 'rolling');
   };
   pad.addEventListener('pointerup', endAim);
   pad.addEventListener('pointercancel', endAim);
+  label.textContent = 'Drag to aim · hold to roll';
 
   // The drawer: tap the tab (or swipe in from it) to open; it closes after any
   // button in it, another tap on the tab, or a tap anywhere outside it.
@@ -216,9 +273,12 @@ export function updateTouch(dt: number, speedFraction: number) {
       const a = Math.min(TILT_MAX, Math.abs(deg));
       return a < TILT_DEADZONE ? 0 : Math.sign(deg) * (a - TILT_DEADZONE) * TILT_RATE * dt;
     };
-    touchAim(turn(tiltX), -turn(tiltY)); // pull back to climb
+    // Turned like a steering wheel, she rolls; tipped towards or away, she climbs or dives.
+    const a = Math.min(TILT_MAX, Math.abs(tiltX));
+    setTouchRoll('tilt', a < TILT_DEADZONE ? 0 : Math.sign(tiltX) * Math.min(1, (a - TILT_DEADZONE) / TILT_ROLL_FULL));
+    touchAim(0, -turn(tiltY)); // pull back to climb
   }
-  if (aiming) {
+  if (aiming && !holdRoll) {
     const ox = curX - startX;
     const oy = curY - startY;
     const d = Math.hypot(ox, oy);
