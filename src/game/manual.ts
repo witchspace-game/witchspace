@@ -9,7 +9,7 @@ import { SLOT } from '../content/slot';
 /** A few lines a maker would write about one of its hulls. */
 const NOTES: Record<string, string[]> = {
   'fer-de-lance': [
-    'She is long: twice a Cobra, nose to tail. Line up early for the slot, and remember the barbs reach back past the drives.',
+    'She is long: nearly two and a half Cobras, nose to tail. Line up early for the slot, and remember the barbs reach back past the drives.',
     'Quick in a straight line and steady in a turn: faster than a Cobra or a Viper, though a pirate’s Sidewinder or Mamba is quicker still, and turns tighter. Fight her at range, where her shields count.',
     'The shields are her armour. Let them come back between passes; the hull underneath is good, not endless.',
     'A thirty-tonne hold, for a ship that was never meant to haul. Luxuries in, a little cargo out.',
