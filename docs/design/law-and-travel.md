@@ -7,7 +7,7 @@ card: viper
 stages:
   - Transponders, records and running dark | built
   - Surrender, insurance and the Marshals | built
-  - A Marshals career for Dangerous commanders, and a Lancer of your own | proposed
+  - A Marshals career for Dangerous commanders, and a Lancer of your own (see marshals-career.md) | proposed
   - Disabling, capture and boarding | proposed
   - Loans and loan sharks | proposed
   - Ship registry and flags | proposed
@@ -194,6 +194,7 @@ What happens when a heavily armed veteran arrives somewhere poor and low-tech? *
 
 - **Unforgeable markings:** Marshals have their own livery and transponders (working idea: a gold band and white beacons), issued under the same rule as police markings (section 1). A system's police can be corrupt; the Marshals are meant to be incorruptible.
 - **Anarchies:** Marshals don't patrol there, though they may go in after their most-wanted.
+- **Joining them:** the galaxy's best pilots can become Marshals, with a Lancer of their own and warrant alerts on their phone: see [become a Marshal](marshals-career.md) (Mark).
 
 ### The response scales with the threat
 
