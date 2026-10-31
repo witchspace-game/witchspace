@@ -85,6 +85,7 @@ function advertHtml(a: Advert) {
   return `<li class="job" data-company="${a.company}" data-kinds="${a.kinds.join(' ')}">
             <h3>${esc(a.title)}</h3>
             <p>${esc(a.text)}</p>
+            ${a.note ? `<p class="note">${esc(a.note).replace(/\[([^\]]+)\]\(((?:\/|https:\/\/)[^)\s]*)\)/g, '<a href="$2">$1</a>')}</p>` : ''}
             <p class="meta">${esc(a.meta)}</p>
             <p class="on-board" data-on-board hidden></p>
             <a class="apply" href="${a.href ?? `/play/?company=${a.company}`}">Apply <span aria-hidden="true">→</span></a>

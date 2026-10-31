@@ -57,6 +57,8 @@ export interface Advert {
   meta: string;
   /** Where Apply goes, when it isn't the game (a design commission). */
   href?: string;
+  /** A line after the text, which may link: [words](/path or https://…). */
+  note?: string;
 }
 
 /** Kinds that never appear on a station's board: by invitation, not built yet, or design commissions. */
