@@ -16,7 +16,7 @@ help:
 
 # Design: the pirate's career *(Mark, 31 October 2026)*
 
-**Marshal or pirate: the two sides of the same skill.** Mark: *"Pirate should probably be a branch of fight. The bounty should reflect the rank. Higher rank equals higher bounty."*
+**Marshal or pirate: the two sides of the same skill.** Mark: *"Pirate should probably be a branch of Fight. The bounty should reflect the rank. Higher rank equals higher bounty."*
 
 Nothing here is built yet; it comes after launch. Its other half is [become a Marshal](marshals-career.md); the law both live under is [law, travel, debt and capture](law-and-travel.md); the Solos and their Falcon are [the Falcons, a Legend](legends-the-falcon.md).
 
@@ -71,7 +71,7 @@ The way to a Falcon is **how** you pirate, not how much: never kill someone who 
 
 ## 5. Going straight *(Mark)*
 
-Mark: *"Yes a pirate can go straight but would have to prove themsleves, maybe they get recruited for special missions, maybe they get captured and have no choice to do something for the Marshal's. This gives them a new identity and a chance to go straight kind of thing."*
+Mark: *"Yes a pirate can go straight but would have to prove themselves; maybe they get recruited for special missions, maybe they get captured and have no choice but to do something for the Marshals. This gives them a new identity and a chance to go straight kind of thing."*
 
 - **Recruited:** at Corsair or above, the Marshals make contact, for missions only a pirate could do: inside a pirate nest, working the back room, finding a gang's base, flying where a Lancer would be spotted.
 - **Captured:** taken alive (needs disabling and capture) and offered a deal with no real choice: serve the Marshals, or lose the ship and everything in it.

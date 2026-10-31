@@ -24,7 +24,7 @@ Underneath: *One of N. The number is painted beside her name, and no other ship 
 
 ## What next, after the handover *(Mark, 29 October 2026; idea)*
 
-"Immediately after picking her up there needs to be a mission or something because its deflating to not know what next?" Before the certificate, a reveal (Mark: "make sure theres a 'wow' moment"): the berth goes dark, she lights up in her own glow, a slow orbit with her name and number on the hull, kept as a moment. The handover should end with the maker's offer of a maiden voyage, and her first launch kept as a moment. Designed in ships-and-classes.md, §5 ("What next, the moment she's yours").
+"Immediately after picking her up there needs to be a mission or something because it's deflating to not know what next?" Before the certificate, a reveal (Mark: "make sure there's a 'wow' moment"): the berth goes dark, she lights up in her own glow, a slow orbit with her name and number on the hull, kept as a moment. The handover should end with the maker's offer of a maiden voyage, and her first launch kept as a moment. Designed in ships-and-classes.md, §5 ("What next, the moment she's yours").
 
 ## Private to her owner
 

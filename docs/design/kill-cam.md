@@ -73,7 +73,7 @@ The track is kept with the death's moment in the flight log (it adds a few per c
 
 ## The cut: camera work, labels and the ending
 
-*Built, 27 October 2026, after Mark watched his first saved reconstruction on his iPhone: CMDR Jameson shot down by a Sidewinder at Raoror. "The kill cam footage is a bit janky", and "at the end of the video pieces of the ships explosion seem to be hanging in the shot so it doesn't fade into anything like a closing Witchspace logo." (Mark). Going through that clip frame by frame found six things; this is what each became. The camera work is `src/ui/killCamShots.ts` (tested in Node), used by `src/ui/killCam.ts`.*
+*Built, 27 October 2026, after Mark watched his first saved reconstruction on his iPhone: CMDR Jameson shot down by a Sidewinder at Raoror. "The kill cam footage is a bit janky", and "at the end of the video pieces of the ship's explosion seem to be hanging in the shot so it doesn't fade into anything like a closing Witchspace logo." (Mark). Going through that clip frame by frame found six things; this is what each became. The camera work is `src/ui/killCamShots.ts` (tested in Node), used by `src/ui/killCam.ts`.*
 
 **The point of the replay** is to show you what killed you, and teach you something. Every rule below serves that.
 

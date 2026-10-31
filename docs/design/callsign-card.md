@@ -13,7 +13,7 @@ stages:
 
 # Design: your commander's card
 
-*Design, 30 October 2026 (Mark: "The original ideas behind Pirate/Trader etc were to inspire the design on the card. Like choosing a special type of bank card like Revolut did with their metal cards… Players build the card they want and therefore they are making micro commitments and then to keep the card they share it… they claim that callsign and membership card using their email"). Follows the callsign page in [the live feed](live-feed.md)'s spirit: real things only, nothing invented.*
+*Design, 30 October 2026. Mark wanted the career on the card (Pirate, Trader and the rest) to inspire its design, like choosing a special bank card: players build the card they want, claim their callsign and membership with their email, and share it. Follows the callsign page in [the live feed](live-feed.md)'s spirit: real things only, nothing invented.*
 
 ## Why
 

@@ -22,7 +22,7 @@ stages:
 
 *Proposed, 30 October 2026, at Mark's request. Plan only: nothing here is built until Mark says yes. Change by pull request.*
 
-Mark: "shared space is important for many reasons. I do want to be able to test it and I want to know whats already working." And: "This needs planning and doing properly."
+Mark: "shared space is important for many reasons. I do want to be able to test it and I want to know what's already working." And: "This needs planning and doing properly."
 
 This document gathers what's built, what other designs already planned, and the order to do the rest. It builds on [servers and hosting](servers-and-hosting.md) (the server's job and stage 1 as built), [radio and comms](radio-and-comms.md) (talking to other commanders), [combat rating](combat-rating.md#4-points-for-player-kills-multiplayer) (player kills), [law and travel](law-and-travel.md) (safe zones, protected starter systems) and [the live feed](live-feed.md).
 
@@ -98,7 +98,7 @@ Mark has to be able to test alone. See [section 4](#4-testing). In short: **test
 
 ### Step 3. Every ship flown as itself *(built, 31 October 2026)*
 
-Mark: *"What needs to happen before I can show off my Fdl in Shared Space? I feel like this could be a big thing."*
+Mark: *"What needs to happen before I can show off my FdL in shared space? I feel like this could be a big thing."*
 
 As built:
 - **The ships come from their files:** `src/content/flyable.ts` reads speed, shields, hull, missiles and a hit radius (71% of the hull's furthest point: the Cobra's 28 m, the Fer-de-lance's 46 m). The server's `SHIPS` is that list, and a test checks every hull a commander can own, and every edition's, is in it.
@@ -189,7 +189,7 @@ What the room needs to know, kept by the server, not claimed:
 | **A full system** | 32 flying; the next flies solo and retries. Batch updates into one message per commander per tick when it matters | built / later |
 | **Leaving mid-fight** to deny a kill | A ship that disconnects in a fight stays in space for 15 s (it already does, until it goes silent) and can be destroyed; the kill counts | 5 |
 
-**Second accounts and the network (Mark, 30 Oct 2026).** Mark: "If a user was determined they would use the same IP wouldnt they?" Often, but an address can't lock anyone out: mobile networks put thousands of phones behind one address, a household shares one, and a VPN changes it in seconds. So it's a signal, kept as the scrambled network fingerprint the rate limits already use, never the address itself:
+**Second accounts and the network (Mark, 30 Oct 2026).** Mark: "If a user was determined they would use the same IP, wouldn't they?" Often, but an address can't lock anyone out: mobile networks put thousands of phones behind one address, a household shares one, and a VPN changes it in seconds. So it's a signal, kept as the scrambled network fingerprint the rate limits already use, never the address itself:
 - **No bounty payout** when the killer and the victim have shared a sign-in network lately (step 8).
 - **No gifts or trades** between accounts that share a network while either is new (step 9).
 - **A flag for the maintainer** when several accounts come from one network and only ever deal with each other. People decide; nothing is banned automatically.
@@ -244,13 +244,13 @@ The server runs on **Cloudflare Workers with SQLite-backed Durable Objects**, on
 
 **Done (Mark, 30 Oct 2026): Workers Paid ($5 a month), signed up before Show HN.** On the free plan, the daily limits would be passed with about 3 commanders flying all day, and then requests fail until the next day, so shared space would stop working at the worst moment. Mark signed up in the Cloudflare dashboard on 30 October; no change to the Worker was needed.
 
-**Keeping the lights on, long term (Mark):** "I dont mind paying the 5 a month, however long term I need to work out how to keep the lights on." Still to work out. The directions so far:
+**Keeping the lights on, long term (Mark):** "I don't mind paying the 5 a month; however, long term I need to work out how to keep the lights on." Still to work out. The directions so far:
 - **Donations, shown openly:** a supporters' page (GitHub Sponsors, Open Collective or Ko-fi) and a line on the site with this month's server bill and how much of it supporters covered.
 - **A thank-you, never an advantage:** a supporter's name in the credits or a small mark beside their callsign, but nothing that helps in the game, and never the special editions (by invitation only).
 - **Mind the tribute:** Witchspace is a free tribute to Elite, so anything that looks like selling the game needs care. Donations towards running costs are the safe kind.
 - **Keep the bill small first:** the savings below, and the cap on busy systems.
 
-**The budget guard (Mark, 30 Oct 2026: "can i protect it so it doesnt get abused or i get a stupid bill i cant pay?"; built).** Cloudflare has no hard spending cap, so the server keeps its own (`server/src/spaceBudget.ts`):
+**The budget guard (Mark, 30 Oct 2026: "Can I protect it so it doesn't get abused or I get a stupid bill I can't pay?"; built).** Cloudflare has no hard spending cap, so the server keeps its own (`server/src/spaceBudget.ts`):
 - Each system room reports its busy time and messages every minute; the day's cost (UTC) is worked out from Cloudflare's prices.
 - **$3 a day** (Mark). At 90% no new ship joins ("Shared space is busy today · flying solo for now"); at 100% everyone flies solo until midnight UTC. Single-player is never limited. Mark gets a notification at each mark.
 - **The worst month is about the budget times 31, plus the $5:** under $100.
