@@ -262,3 +262,29 @@ ${
 </article>
 <div class="notices" data-notices aria-live="polite"></div>`;
 }
+
+/** /companies/: the four companies, what each wants, its ship and its jobs; the hub its pages' breadcrumbs point to. */
+export function companiesHub(copy: JobsCopy, companiesMd: string, shipIds: Set<string>): string {
+  return `<section class="section">
+  <div class="section-head">
+    <p class="kicker">A galaxy at work</p>
+    <h1>The companies of Witchspace</h1>
+    <p class="lede">Four companies post the work on every station’s board: freight, escorts, surveys and salvage. Who you work for decides who trusts you, and who doesn’t.</p>
+    ${GAME_NOTE}
+  </div>
+  <div class="company-hub">
+${COMPANY_IDS.map((id) => {
+  const c = copy.companies[id];
+  const co = COMPANIES[id];
+  const ship = canonFor(companiesMd, id).ship;
+  const shipId = ship?.name.toLowerCase() ?? '';
+  return `    <article class="card company-card" style="--c: ${co.colour}">
+      <div class="firm-head"><span class="firm-mark" aria-hidden="true">${c.mark}</span><div><h2><a href="/companies/${id}/">${esc(co.name)}</a></h2><p class="motto">${esc(co.motto.replace(/\.$/, ''))}</p></div></div>
+      <p>${esc(c.pitch)}</p>
+      <p class="ground"><b>Where it works:</b> ${esc(c.ground)}</p>
+      <p class="company-links"><a href="/companies/${id}/">About ${esc(co.name)} →</a> <a href="/jobs/#${id}">Its jobs →</a>${ship && shipIds.has(shipId) ? ` <a href="/ships/${shipId}/">Its ship, the ${esc(ship.name)} →</a>` : ''}</p>
+    </article>`;
+}).join('\n')}
+  </div>
+</section>`;
+}

@@ -23,16 +23,6 @@
       "permanent": true
     },
     {
-      "source": "/companies",
-      "destination": "/jobs/",
-      "permanent": false
-    },
-    {
-      "source": "/companies/",
-      "destination": "/jobs/",
-      "permanent": false
-    },
-    {
       "source": "/contribute",
       "destination": "/get-involved/",
       "permanent": true
