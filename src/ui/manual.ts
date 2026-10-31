@@ -138,7 +138,7 @@ export function openManual(def: ShipDef) {
       <p>The owner’s manual, prepared for Commander ${escapeHtml(c!.name)}</p>
     </section>`
     : `<section class="man-cover" style="--hull:${mine && c!.paint ? c!.paint.colour : def.style.lineColor}">
-      <p class="meta">${escapeHtml(def.concept ? 'Concept' : def.manufacturer ?? 'Witchspace')} · ${escapeHtml(def.role)}</p>
+      <p class="meta">${escapeHtml(def.manufacturer ?? 'Witchspace')} · ${escapeHtml(def.role)}</p>
       <h3>${escapeHtml(title)}</h3>
       <p>${escapeHtml(def.description)}</p>
     </section>`;

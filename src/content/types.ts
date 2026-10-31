@@ -12,8 +12,9 @@ export interface ShipDef {
   manufacturer?: string;
   role: ShipRole;
   /**
-   * A maker's concept: shown off on the site and in the showroom, coming soon,
-   * but not flying yet (docs/design/ships-and-classes.md, concepts).
+   * Built to order: a maker's hull you spec, put a deposit down on and collect from the yard
+   * (docs/design/ships-and-classes.md, "Spec it, and put down a deposit"). It began as a concept,
+   * coming soon; it flies now, so the game and the site say "built to order", not "coming soon".
    */
   concept?: true;
   /** False for a ship that never docks (a carrier, a yard hauler): it needn't fit the slot (src/content/slot.ts). */
