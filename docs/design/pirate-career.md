@@ -71,7 +71,7 @@ The way to a Falcon is **how** you pirate, not how much: never kill someone who 
 
 ## 5. Going straight *(Mark)*
 
-Mark: *"Yes a pirate can go straight but would have to prove themselves; maybe they get recruited for special missions, maybe they get captured and have no choice to do something for the Marshals. This gives them a new identity and a chance to go straight kind of thing."*
+Mark: *"Yes a pirate can go straight but would have to prove themselves; maybe they get recruited for special missions, maybe they get captured and have no choice but to do something for the Marshals. This gives them a new identity and a chance to go straight kind of thing."*
 
 - **Recruited:** at Corsair or above, the Marshals make contact, for missions only a pirate could do: inside a pirate nest, working the back room, finding a gang's base, flying where a Lancer would be spotted.
 - **Captured:** taken alive (needs disabling and capture) and offered a deal with no real choice: serve the Marshals, or lose the ship and everything in it.

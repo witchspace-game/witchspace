@@ -224,7 +224,7 @@ where(t) = plan evaluated at t
 
 ### 6.1 Worked example: CMDR Bond, 007, retired
 
-*Mark's character (30 October 2026). An easter egg first, and a mentor at most: never the lead of a story, and never "James Bond" in anything public. He's just Bond.*
+*Mark's character (30 October 2026). An easter egg first, and a mentor at most: never the lead of a story, and never his full name in anything public. He's just Bond.*
 
 - **What he was:** the Bureau of Continuity's best field agent ([lore](../lore.md)), in the years after the Grey Fever. He was there when Project Lantern, the Bureau's vaccine stockpile, was "spun off to bring its benefits to market" and became Hexagen, then Hexon.
 - **Why he left:** he knows what the Bureau traded to make that happen, and wouldn't sign the last report. They let him retire on a good pension, the way you pay someone to stay quiet. His Bureau file is all redactions.
