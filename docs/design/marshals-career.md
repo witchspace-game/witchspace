@@ -7,7 +7,7 @@ card: lancer
 stages:
   - The recruiter and the trial, against computer-flown warrants, solo and shared | proposed
   - The Lancer issued, in livery only the server can grant, the gold card and the tag | proposed
-  - Calls in shared space, players first and the Bastion as backstop, and warrant alerts on your phone | proposed
+  - Calls in shared space, players first and the Bastion as backstop, and warrant alerts on your phone that travel at the speed of news | proposed
   - Rank, wingmen and the Marshals' own stories | proposed
 help:
   - Write the recruiter's first approach in a Co-operative Saloon, and the three trial briefings | writing
@@ -94,6 +94,19 @@ Tap it and the game opens with Diso as your destination.
   - **Opt-in,** easy to turn off, with **quiet hours**. It names only the public callsign and the system, as the scanner tag already does.
 - **Why:** it brings players back ("someone's wanted at Diso, and I'm three jumps away"), it makes the law in shared space other players, and it's the kind of thing people screenshot.
 
+### The warrant travels at the speed of news *(Mark)*
+
+Mark: *"The warrant would be issued in the system and if theres no Marshal's in that system then the warrant would be passed to the next system according to the speed of information that is consistent with the game."*
+
+- **Issued where the crime was.** On-duty Marshals in that system are alerted at once.
+- **Then it spreads outward** at the game's own news delay, the same as headlines and price reports (`newsDelay` in `src/economy/events.ts`: 10 minutes, then 12 more for every light year). Each system hears it at the time of the crime plus that delay, and opted-in hunters docked there, or last flying there, are alerted when it arrives.
+- **Calculated, not simulated:** the server works out arrival times from the crime's time and place. One small query a minute finds who has just heard, with nothing stored or sent per system.
+- **The alert says how old the news is:**
+
+  > **Warrant heard at Lave:** CMDR Vex, wanted for murder at Diso, 3.6 LY away, 53 minutes ago. 4,000 Cr.
+
+- **It makes a chase.** The nearest hunters hear first and have the best chance; a Fugitive can try to outrun their own warrant, or run for an anarchy, where it never arrives.
+
 ## Stories it opens
 
 - **The Falcon's Debt** ([the Falcons](legends-the-falcon.md)): one day the Marshals catch her, and the Mayday comes on an old Mutual channel. If you're a Marshal, you may be the one sent. **Saving her is allowed:** it's dereliction, not murder. You're struck off, not made a Fugitive, and she hails you by name for good. A choice that costs something is the point.
@@ -115,6 +128,10 @@ Tap it and the game opens with Diso as your destination.
 4. **Rank,** wingmen and the Marshals' stories.
 
 **Depends on:** combat missions ([combat rating](combat-rating.md)); disabling and capture ([law and travel](law-and-travel.md), planned) for the trial's best version; [shared space](shared-space.md) steps 4 and 5 for stage 3; and a hangar for your own ship.
+
+## Open questions
+
+- **Should the police and the Bastion also wait for the news?** Consistent, and it gives the chase teeth, but it changes how warrants work today: a Marshals warrant follows you into every Co-operative system at once ([law and travel](law-and-travel.md), section 2), and in shared space the server sends the Marshals when the warrant comes due. There's also a balance problem: a hyperspace jump of up to 7 light years takes a minute or two, while news needs about an hour and a half to cover the same distance, so a Fugitive who keeps jumping would always stay ahead of a warrant that only travels as news, and never meet the law. **Proposed:** the hunters' alerts travel as news, as above; the Co-operative's own law keeps its instant warrant (the Marshals' network is faster than gossip), so running buys time from the bounty hunters, not from the Bastion. Decide when stage 3 is built.
 
 ## How we talk about it
 
