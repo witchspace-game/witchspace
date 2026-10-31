@@ -240,6 +240,10 @@ where(t) = plan evaluated at t
 
 Mark: "Some of those Characters will be from the saloon, but they have their own ships and fly around the systems doing what they do." Today's regulars (`saloon.ts`) are made for each station and hour. A **named regular** is a character: the same person in the same Saloon on their days there, and out on their route the rest of the week. You might drink with a smuggler on Monday and pass her ship, running dark, on Thursday.
 
+### 6.3 The first trader: Odile Venn
+
+Mark (31 October 2026): *"do we have any character NPCs trading as well?"* The first is designed: [Odile Venn](character-odile-venn.md), a Carriers' Mutual captain on a run round Lave, Leesti and Diso, in the traffic like any ship, with a daily detour to Riedquat that nobody pays her for. She's the first character to be built, before Bond: every new commander meets her in their first hour.
+
 ---
 
 ## 7. Worked example: the Titanoboa's supply line
@@ -292,4 +296,4 @@ Steps 1 to 4 need no server, so they can start straight after Show HN.
 2. **Solo changes:** stay in your own world (recommended), or count for everyone when you're signed in?
 3. **How busy:** how many convoys in a quiet system, and in a busy one? Too many and the lanes feel like a motorway; too few and nobody meets one.
 4. **Bond's world:** which agricultural system does he retire to?
-5. **The second character:** a Saloon regular with a ship (Mark's first idea), a Marshal, a smuggler, or a Mutual captain? Mark (31 October 2026) asked for characters who trade: a named trader on a regular run, in the traffic like any convoy but someone you can get to know, would put a face in the crowd.
+5. ~~**The second character:**~~ **A trader** (Mark, 31 October 2026: "do we have any character NPCs trading as well?"): [Odile Venn](character-odile-venn.md), a Mutual captain on a regular run. Her own open questions are in her design.
