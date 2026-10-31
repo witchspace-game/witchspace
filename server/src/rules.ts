@@ -1,9 +1,9 @@
 // What the server checks before it passes your position on (stage 1):
 // you can't fly faster than your ship can, or teleport, except for the
-// in-system jump, which has a cooldown. Anything else is refused and you're
-// put back where you were.
+// in-system jump, which has a cooldown and can't be made with another commander
+// close by. Anything else is refused and you're put back where you were.
 
-import { JUMP, JUMP_COOLDOWN, LASERS, MISSILE, SHIELD_RECHARGE, SHIPS, SLACK, SPREAD, SYSTEM_RADIUS, type Vec3 } from './protocol';
+import { JUMP, JUMP_COOLDOWN, JUMP_LOCK, LASERS, MISSILE, SHIELD_RECHARGE, SHIPS, SLACK, SPREAD, SYSTEM_RADIUS, type Vec3 } from './protocol';
 
 export interface Track {
   p: Vec3;
@@ -13,11 +13,12 @@ export interface Track {
   jumpedAt: number;
 }
 
-export type Verdict = 'ok' | 'jump' | 'speeding' | 'teleport' | 'out of bounds';
+export type Verdict = 'ok' | 'jump' | 'speeding' | 'teleport' | 'out of bounds' | 'mass locked';
 
 const dist = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 
-export function checkMove(ship: string, track: Track | null, p: Vec3, s: number, now: number): Verdict {
+/** `others`: where the other commanders in the system are, flying: one within JUMP_LOCK of where you jumped from mass-locks you. */
+export function checkMove(ship: string, track: Track | null, p: Vec3, s: number, now: number, others: Vec3[] = []): Verdict {
   const max = SHIPS[ship]?.maxSpeed ?? 0;
   if (Math.hypot(...p) > SYSTEM_RADIUS) return 'out of bounds';
   if (s < 0 || s > max * SLACK) return 'speeding';
@@ -25,7 +26,9 @@ export function checkMove(ship: string, track: Track | null, p: Vec3, s: number,
   const moved = dist(track.p, p);
   const dt = Math.max(0.05, (now - track.t) / 1000);
   if (moved <= max * SLACK * dt + 50) return 'ok';
-  if (moved <= JUMP + max * SLACK * dt && now - track.jumpedAt >= JUMP_COOLDOWN) return 'jump';
+  if (moved <= JUMP + max * SLACK * dt && now - track.jumpedAt >= JUMP_COOLDOWN) {
+    return others.some((o) => dist(o, track.p) < JUMP_LOCK) ? 'mass locked' : 'jump';
+  }
   return 'teleport';
 }
 

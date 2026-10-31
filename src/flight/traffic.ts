@@ -14,7 +14,8 @@ import { SLOT } from '../game/station';
 import { addStanding } from '../game/contracts';
 import { COMPANIES, pickCompany, type CompanyId } from '../game/companies';
 import { applyCompanyBand } from '../render/livery';
-import { laneDirection, voyages, type Voyage } from '../game/traffic';
+import { HOLD, laneDirection, packHolds, voyages, type Voyage } from '../game/traffic';
+import { JumpStreak } from '../render/jumpStreak';
 import { isRetro } from '../render/renderer';
 import { showUnidentified } from '../render/shipModel';
 import { flash } from '../ui/hud';
@@ -22,7 +23,7 @@ import { commodityById, UNITS_PER_TONNE } from '../economy/commodities';
 import { marketState } from '../economy/trade';
 import { upcomingDeliveries } from '../economy/market';
 import { cmdr, currentSystem, game, modern } from '../core';
-import { flight, missiles, npcs, ofRole, voices, planetPos, player, space, station } from '../scene';
+import { explosions, flight, missiles, npcs, ofRole, voices, planetPos, player, space, station } from '../scene';
 import { tradeContext } from '../ui/market';
 import * as THREE from 'three';
 import type { Missile } from '../game/missile';
@@ -102,6 +103,8 @@ function loadDeliveries(npc: NpcShip): boolean {
   const load: Delivery[] = [];
   for (const d of due) if (load.length < 3 && !load.some((x) => x.id === d.id)) load.push(d);
   if (!load.length) return false;
+  // What fits in her hold; the rest comes on a later ship.
+  load.splice(0, load.length, ...packHolds(load, HOLD['cobra-mk3'])[0]);
   for (const d of load) carried.add(`${d.id}:${d.t}`);
   deliveries.set(npc, load);
   npc.cargo = Object.fromEntries(load.map((d) => [d.id, d.qty]));
@@ -110,6 +113,21 @@ function loadDeliveries(npc: NpcShip): boolean {
 
 /** The station's approach lane: points on the slot axis, which don't move as it spins. */
 export const onSlotAxis = (d: number) => station.toWorld(new THREE.Vector3(0, 0, SLOT.z + d));
+
+/** Ships seen jumping from further than this aren't worth drawing. */
+const STREAK_SEEN = 20_000;
+/** Closer than this, you hear her go. */
+const STREAK_HEARD = 3000;
+
+/** A ship going into witchspace (or out of it, arriving): a streak along her heading, not a blink. */
+export function jumpStreak(npc: NpcShip, leaving: boolean) {
+  const d = npc.obj.position.distanceTo(player.obj.position);
+  if (game.state !== 'flying' || d > STREAK_SEEN) return;
+  const streak = new JumpStreak(npc.def, npc.obj, leaving);
+  space.scene.add(streak.group);
+  explosions.push(streak);
+  if (d < STREAK_HEARD) sfx.shipJump();
+}
 
 /** A random direction that keeps well clear of the planet. */
 function awayFromPlanet(): THREE.Vector3 {
@@ -161,6 +179,7 @@ export function spawnTrader(arriving: boolean, distance = 14000 + Math.random() 
     npc.destination = onSlotAxis(900);
     legs.set(npc, 'inbound');
     if (!loadDeliveries(npc)) npc.cargo = randomCargo();
+    jumpStreak(npc, false);
   } else {
     const npc = addNpc('cobra-mk3', 'trader', station.root.position);
     flyForCompany(npc);
@@ -183,12 +202,14 @@ export const railsOf = new WeakMap<NpcShip, Rails>();
 export const voyageOf = new WeakMap<NpcShip, Voyage>();
 const LANE_OUT = 30_000; // metres from the station where a lane begins or ends
 const RAILS_NEAR = 2500; // closer to you than this, a ship flies itself
-const MAX_VOYAGES = 5; // ships on their lanes at once, at most
+const MAX_VOYAGES = 8; // ships on their lanes at once, at most (5 until convoys, 31 October 2026: Mark wanted busier systems)
 let trafficShips = new Map<string, NpcShip>(); // voyage id → its ship, this visit
 let trafficDone = new Set<string>(); // voyages flown, docked or lost, this visit
 let trafficList: Voyage[] = [];
 let trafficListAt = -Infinity;
 let trafficCheck = 0;
+/** The visit's first ships are just there when you arrive; after that, a ship that appears near you arrives with a streak. */
+let trafficSettled = false;
 const lanePaths = new Map<string, THREE.QuadraticBezierCurve3>(); // worked out once a visit
 
 // Company security (Mark): Vipers in company colours. Guards patrol a yard's Titan;
@@ -252,6 +273,7 @@ export function resetTraffic() {
   trafficDone = new Set();
   trafficListAt = -Infinity;
   trafficCheck = 0;
+  trafficSettled = false;
 }
 
 /** A voyage's path through the system: from its lane's end, round the planet and moons, to the slot or the Titan (or back out). */
@@ -325,8 +347,12 @@ function syncTraffic(dt: number) {
     voyageOf.set(npc, v);
     trafficShips.set(v.id, npc);
     ride(npc, now);
+    // Never a blink in front of you (Mark: a Cobra "may of come back in the same system but slightly different place").
+    // A ship just launching comes out of the slot as she always has.
+    if (trafficSettled && !(v.leg === 'out' && now - start < 5000)) jumpStreak(npc, false);
     for (let i = 0; i < v.escorts && v.company; i++) escortOf.set(securityViper(v.company, npc.obj.position, 550 + i * 250, i), npc);
   }
+  if (game.state === 'flying') trafficSettled = true;
 }
 
 /** Move the ships riding their lanes to where the clock says; let go of any that are near you or in trouble. */
@@ -553,6 +579,7 @@ export function updateTraffic(dt: number) {
       removeNpc(npc); // unloading into the Titan's hold
     } else if (leg === 'outbound' && npc.obj.position.distanceTo(npc.destination!) < 600) {
       main.reportedBy(npc);
+      jumpStreak(npc, true);
       removeNpc(npc); // gone to witchspace
     }
   }

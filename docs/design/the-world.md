@@ -46,6 +46,8 @@ This document answers all three. It builds on [markets and trade](markets-and-tr
 How the first steps work in the game (Modern rules; Classic keeps 1984's traffic):
 
 - **The market's timetable is the traffic** (`game/traffic.ts`). The market already works out every NPC delivery and purchase from the seed and the clock (`npcTrades`); those are gathered into voyages, one ship per few minutes of trade (`WINDOW_MS`, 9 minutes in an anarchy down to 4 in a corporate state). So the deliveries an inbound ship carries are the ones the market is waiting for: destroy her and they never arrive, as before.
+- **A ship carries only what fits in her hold** (Mark, 31 October 2026, after meeting a Cobra with 22 t of one thing and 15 t of another): a Cobra 20 t, a Bullsnake 60 t. A bigger load is a convoy on the same lane, a ship every 25 seconds, a delivery split between them where it must be; lose one and the market loses only her share.
+- **Ships never blink in or out.** A ship leaving streaks into witchspace along her heading at her jump point; one arriving (at her lane's end, or appearing on her lane near you) streaks out of it. Lines and glow only, in her own colour.
 - **Each voyage comes from or goes to a real system a jump away,** flies for a company working this system (or is independent), and has a hull and a name, all from the seed.
 - **Its lane points the way the other system lies on the galaxy chart:** ships from Diso come in from Diso's side of the sky. The path is a curve from 30 km out to the slot (or back out), bent round the planet and moons.
 - **Far from you, a ship rides its lane by the clock.** Within 2.5 km, or once anyone shoots at it, it flies itself like any trader. Two phones at the same moment see the same ships within a metre of each other (tested).
@@ -290,4 +292,4 @@ Steps 1 to 4 need no server, so they can start straight after Show HN.
 2. **Solo changes:** stay in your own world (recommended), or count for everyone when you're signed in?
 3. **How busy:** how many convoys in a quiet system, and in a busy one? Too many and the lanes feel like a motorway; too few and nobody meets one.
 4. **Bond's world:** which agricultural system does he retire to?
-5. **The second character:** a Saloon regular with a ship (Mark's first idea), a Marshal, a smuggler, or a Mutual captain?
+5. **The second character:** a Saloon regular with a ship (Mark's first idea), a Marshal, a smuggler, or a Mutual captain? Mark (31 October 2026) asked for characters who trade: a named trader on a regular run, in the traffic like any convoy but someone you can get to know, would put a face in the crowd.

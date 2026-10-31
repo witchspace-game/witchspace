@@ -14,7 +14,6 @@ import type { SurveyPilot } from './game/surveyPilot';
 import type { Missile } from './game/missile';
 import { Beams } from './game/weapons';
 import { SharedSpace, type Remote, type SpaceEvent } from './net/space';
-import type { Explosion } from './render/explosion';
 import type { NpcRole, NpcShip } from './game/npc';
 import { PlayerShip } from './game/playerShip';
 import { Station } from './game/station';
@@ -53,7 +52,8 @@ export const ofRole = (role: NpcRole) => npcs.filter((n) => n.role === role && !
 /** Each ship's engine, heard in space. */
 export const voices = new Map<NpcShip, ShipVoice>();
 export const missiles: Missile[] = [];
-export const explosions: Explosion[] = [];
+/** Short-lived effects: explosions, and ships streaking into or out of witchspace. */
+export const explosions: { update(dt: number): boolean; dispose(): void }[] = [];
 export const beams = new Beams(space.scene);
 /** Metres: close enough to read a hull registration, dark or not. */
 export const HULL_READ = 2000;

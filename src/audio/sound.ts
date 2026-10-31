@@ -125,6 +125,11 @@ export const sfx = {
     noise(3.4, 'bandpass', 160, 2600, 0.28);
     zap(55, 220, 3.2, 0.06, 'sine');
   },
+  /** Another ship jumping, close by: a quick rising whoosh, quieter than your own. */
+  shipJump: () => {
+    noise(0.5, 'bandpass', 300, 2400, 0.12);
+    zap(140, 900, 0.45, 0.03, 'sine');
+  },
   /** A camera shutter: two quick clicks. */
   shutter: () => {
     noise(0.04, 'highpass', 4000, 3000, 0.35);

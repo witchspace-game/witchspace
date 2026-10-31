@@ -777,10 +777,19 @@ function settlementMessage(s: Settlement, lead: string) {
 // --- Photos -----------------------------------------------------------------
 
 
+/** What the scanner shows of the ship in your sights, line by line, for the photo's card (none if nothing's sighted). */
+function scannerCaption(): string[] {
+  const info = $('#target-info');
+  if (info.hidden || game.state !== 'flying') return [];
+  const hold = info.querySelector('.cargo')?.textContent ?? '';
+  const ship = (info.textContent ?? '').slice(0, (info.textContent ?? '').length - hold.length).trim();
+  return [ship, hold].filter(Boolean);
+}
+
 /** P: copy the frame just drawn, with a shutter flash, into the flight log (or saved or shared, where there's no log). */
 function snapPhoto() {
   const canvas = $<HTMLCanvasElement>(isRetro() ? '#retro' : '#neo');
-  const shot = takePhoto(canvas, isRetro());
+  const shot = takePhoto(canvas, isRetro(), scannerCaption());
   const ctx = momentContext();
   sfx.shutter();
   const el = $('#photo-flash');

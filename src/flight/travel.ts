@@ -17,7 +17,7 @@ import { distanceLy, ECONOMIES, GOVERNMENTS, nearestTo, systemAt, type StarSyste
 import { activeEvent, EVENT_KINDS } from '../economy/events';
 import { fadeFromWhite, playTunnel } from '../ui/tunnel';
 import { $, cmdr, currentSystem, game, modern } from '../core';
-import { aim, gimbalHold, flight, npcs, planetPos, player, station, SUN_POS, SUN_RADIUS } from '../scene';
+import { aim, gimbalHold, flight, npcs, planetPos, player, sharedSpace, station, SUN_POS, SUN_RADIUS } from '../scene';
 import { routeTo } from '../ui/contracts';
 import { carrier, scheduleMarshals } from './marshals';
 import { checkAdrift } from './adrift';
@@ -174,7 +174,7 @@ export function checkCombatComputer(input: FlightInput) {
 const HYPERSPACE_COUNTDOWN = 10; // seconds
 const MASS_LOCK_SHIPS = 2500; // metres: hostile ships this close stop a hyperspace jump
 const J_DISTANCE = 10000; // metres per in-system jump
-const J_LOCK_SHIPS = 3000;
+const J_LOCK_SHIPS = 3000; // the server's JUMP_LOCK, for other commanders
 const J_LOCK_STATION = 4000;
 const J_LOCK_PLANET = 3000; // above the surface
 const J_LOCK_SUN = 6000; // above the surface: jumps stop short of the heat
@@ -367,14 +367,17 @@ export function inSystemJump(quiet = false): boolean {
   if (jumpCooldown > 0) return false;
   const pos = player.obj.position;
   const shipsNear = npcs.some((p) => p.obj.position.distanceTo(pos) < J_LOCK_SHIPS);
+  // In shared space another commander mass-locks you too: no jumping out of a fight (Mark, 31 October 2026).
+  // The server refuses the jump anyway; this says why.
+  const commanderNear = [...sharedSpace.remotes.values()].some((r) => r.position.distanceTo(pos) < J_LOCK_SHIPS);
   const stationNear = pos.distanceTo(station.root.position) < J_LOCK_STATION;
   const planetNear = pos.distanceTo(planetPos) - flight.planetRadius < J_LOCK_PLANET;
   const sunNear = pos.distanceTo(SUN_POS) - SUN_RADIUS < J_LOCK_SUN;
   const moons = flight.sceneBodies.filter((b) => b.body.kind === 'moon');
   const moonNear = moons.some((m) => pos.distanceTo(m.centre) - m.radius < J_LOCK_MOON);
   const yardNear = flight.yardScene !== null && pos.distanceTo(flight.yardScene.centre) - flight.yardScene.radius < J_LOCK_YARD;
-  if (shipsNear || stationNear || planetNear || sunNear || moonNear || yardNear) {
-    if (!quiet) flash(`Mass locked · ${shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : sunNear ? 'sun' : moonNear ? 'moon' : 'yard'} too close`, 1.5);
+  if (shipsNear || commanderNear || stationNear || planetNear || sunNear || moonNear || yardNear) {
+    if (!quiet) flash(`Mass locked · ${commanderNear ? 'commander' : shipsNear ? 'ships' : stationNear ? 'station' : planetNear ? 'planet' : sunNear ? 'sun' : moonNear ? 'moon' : 'yard'} too close`, 1.5);
     return false;
   }
   // Leap forward, but stop short of the station, the planet, its moons or the sun if they're ahead.

@@ -441,7 +441,10 @@ export class SystemRoom extends DurableObject<Env> {
 
     if (msg.type === 'state' && a.commander) {
       if (!isVec3(msg.p) || !isQuat(msg.q) || typeof msg.s !== 'number') return;
-      const verdict = checkMove(a.commander.ship, a.track, msg.p, msg.s, now);
+      const near = this.commanders()
+        .filter((c) => c.id !== a.commander!.id && c.s >= 0 && !c.d)
+        .map((c) => c.p);
+      const verdict = checkMove(a.commander.ship, a.track, msg.p, msg.s, now, near);
       if (verdict !== 'ok' && verdict !== 'jump') {
         if (a.track) this.send(ws, { type: 'correct', p: a.track.p });
         return;
