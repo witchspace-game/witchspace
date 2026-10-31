@@ -1,6 +1,6 @@
 // The Witchspace MCP server's tools (docs/design/mcp-server.md, stage 1): for
 // contributors' AI assistants to validate, preview and balance-check a ship or a
-// Titanoboa module,
+// Titanoboa module, see any system as it is right now,
 // read the designs and help wanted, and look up any system. Pure functions
 // over a data bundle, so the Worker (server/src/mcp.ts), the local server
 // (tools/mcp.ts) and the tests all use the same code. Read-only.
@@ -12,6 +12,7 @@ import type { ModuleDef, ShipDef, Vec3 } from '../content/types';
 import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, systemsWithin, type StarSystem } from '../galaxy/generate';
 import { stationName } from '../galaxy/stationNames';
 import { describeWorld, worldOf } from '../game/explore';
+import { galaxyNow } from './galaxyNow';
 import { base64, Raster } from './png';
 import { VIEWER_HTML, VIEWER_MIME, VIEWER_URI, type ViewerModel } from './viewer';
 
@@ -513,6 +514,24 @@ export const TOOLS: Tool[] = [
     run: (args) => {
       const s = findSystem(args);
       return typeof s === 'string' ? text(s, true) : json(systemInfo(s));
+    },
+  },
+  {
+    name: 'galaxy_now',
+    title: 'A system right now',
+    description:
+      'A star system as it is right now, worked out from its seed and the clock exactly as the game does, so it matches what any commander docking there sees: the event on the world (famine, boom, war…), the news that has reached it from nearby, the ships due to dock and launch in the next half hour (name, hull, company, cargo, where from or to), any Wexley-Yorozu yard building a station and its stage, and its market: what it imports and exports, and what is dear or cheap there today. Nothing about any commander. Lave is in galaxy 1.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'The system name, e.g. "Lave".' },
+        index: { type: 'number', description: '0 to 255, instead of a name.' },
+        galaxy: { type: 'number', description: '1 to 8 (default 1).' },
+      },
+    },
+    run: (args, data) => {
+      const s = findSystem(args);
+      return typeof s === 'string' ? text(s, true) : json(galaxyNow(s, Date.now(), (id) => data.ships.find((x) => x.id === id)?.name ?? id));
     },
   },
 ];
