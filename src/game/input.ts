@@ -5,7 +5,7 @@
 //   mouse    (default) mouse aims, W/S throttle, A/D roll
 //   keyboard (classic) W/S pitch, A/D roll, Space/Shift throttle, as on the BBC
 
-export type ControlScheme = 'mouse' | 'keyboard';
+export type ControlScheme = 'mouse' | 'keyboard' | 'bbc';
 
 const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
 
@@ -27,12 +27,13 @@ function save(key: string, value: string) {
 
 // --- Settings -----------------------------------------------------------------
 
-let scheme = load<ControlScheme>('witchspace.controls', 'mouse', ['mouse', 'keyboard']);
+let scheme = load<ControlScheme>('witchspace.controls', 'mouse', ['mouse', 'keyboard', 'bbc']);
 export const controlScheme = () => scheme;
+/** K cycles: mouse and keyboard, keyboard only, the BBC Micro's keys. */
 export function toggleControlScheme(): ControlScheme {
-  scheme = scheme === 'mouse' ? 'keyboard' : 'mouse';
+  scheme = scheme === 'mouse' ? 'keyboard' : scheme === 'keyboard' ? 'bbc' : 'mouse';
   save('witchspace.controls', scheme);
-  if (scheme === 'keyboard' && document.pointerLockElement) document.exitPointerLock();
+  if (scheme !== 'mouse' && document.pointerLockElement) document.exitPointerLock();
   return scheme;
 }
 
@@ -55,7 +56,7 @@ const held = new Map<string, number>(); // code -> time first pressed (ms)
 
 const FLIGHT_KEYS = new Set([
   'KeyW', 'KeyS', 'KeyA', 'KeyD', 'KeyQ', 'KeyE', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
-  'Space', 'ShiftLeft', 'ShiftRight', 'Slash', 'Comma', 'Period', 'KeyX', 'KeyF',
+  'Space', 'ShiftLeft', 'ShiftRight', 'Slash', 'Comma', 'Period', 'KeyX', 'KeyF', 'KeyM',
   // The controls card: without this, Chrome and others open their own help (iainfm, Stardot t=33815).
   'F1',
 ]);
@@ -288,10 +289,14 @@ export function flightInput(): FlightInput {
     kbThrottle += (keyHeld('KeyW') ? 1 : 0) - (keyHeld('KeyS') ? 1 : 0);
     kbRoll += keyRamp(now, 'KeyD') - keyRamp(now, 'KeyA');
     kbYaw = keyRamp(now, 'KeyE') - keyRamp(now, 'KeyQ');
-  } else {
+  } else if (scheme === 'keyboard') {
     // Classic: W/S pitch (push forward to dive). X is the missile, so it doesn't climb too.
     kbPitch += keyRamp(now, 'KeyS') - keyRamp(now, 'KeyW');
     kbRoll += keyRamp(now, 'KeyD') - keyRamp(now, 'KeyA');
+  } else {
+    // The BBC Micro's own keys (maniacminer, Stardot t=33815: "S/X up down, A fire laser"): X climbs,
+    // S dives; < > roll, as above; A fires (below). The missile moves to M (main.ts).
+    kbPitch += keyRamp(now, 'KeyX') - keyRamp(now, 'KeyS');
   }
 
   const pad = activePad();
@@ -313,7 +318,7 @@ export function flightInput(): FlightInput {
     speedStep: wheel * SCROLL_SPEED,
     aimDx,
     aimDy: sign * aimDy,
-    fire: mouseFire || touchFire || keyHeld('KeyF') || Boolean(pad?.buttons[5]?.pressed),
+    fire: mouseFire || touchFire || keyHeld('KeyF') || (scheme === 'bbc' && keyHeld('KeyA')) || Boolean(pad?.buttons[5]?.pressed),
     speedTarget: touchSpeed ?? undefined,
     recentre,
     mouseRoll,

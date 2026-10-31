@@ -416,6 +416,37 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   await s.page.context().close();
 }
 
+// --- Controls from Stardot: the BBC Micro's keys, and a phone's Elite-style drags -------------------
+{
+  // Keyboard: K cycles to the BBC Micro's keys; X climbs (and no longer fires a missile), A fires.
+  const s = await newCommander('modern', '', 'Desktop Chrome');
+  await launch(s);
+  await s.w(() => { window.witchspace.player.obj.position.x += 30000; localStorage.setItem('witchspace.controls', 'mouse'); });
+  for (let i = 0; i < 3 && (await s.w(() => document.querySelector('#controls-scheme')?.textContent ?? '')) !== 'BBC Micro keys (1984)'; i++) {
+    await s.key('KeyK');
+    await s.w(() => { dispatchEvent(new KeyboardEvent('keydown', { code: 'F1' })); dispatchEvent(new KeyboardEvent('keyup', { code: 'F1' })); dispatchEvent(new KeyboardEvent('keydown', { code: 'F1' })); dispatchEvent(new KeyboardEvent('keyup', { code: 'F1' })); });
+  }
+  const bbc = await s.w(async () => {
+    const w = window.witchspace;
+    const missiles = w.missiles.length;
+    const before = w.player.forward().clone();
+    dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyX' }));
+    await new Promise((r) => setTimeout(r, 900));
+    dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyX' }));
+    const turned = before.angleTo(w.player.forward());
+    const heat = w.laserHeat;
+    dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' }));
+    await new Promise((r) => setTimeout(r, 600));
+    dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyA' }));
+    return { scheme: document.querySelector('#controls-scheme')?.textContent, turned: +turned.toFixed(3), fired: w.laserHeat > heat, missiles: w.missiles.length - missiles };
+  });
+  check('Controls: K reaches the BBC Micro keys', bbc.scheme === 'BBC Micro keys (1984)', bbc.scheme);
+  check('Controls: X climbs on the BBC Micro keys, and fires no missile', bbc.turned > 0.05 && bbc.missiles === 0, JSON.stringify(bbc));
+  check('Controls: A fires the laser on the BBC Micro keys', bbc.fired, JSON.stringify(bbc));
+  await s.w(() => localStorage.setItem('witchspace.controls', 'mouse'));
+  check('Controls: no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
+  await s.page.context().close();
+}
 // --- Classic ---------------------------------------------------------------------------------
 {
   const s = await newCommander('classic');
