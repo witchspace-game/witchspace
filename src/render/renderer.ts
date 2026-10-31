@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { LensPass } from './lens';
+import { BRIGHTEST, GLOW, GRAIN, MAX_PIXEL_RATIO, samplesFor, STARS } from './look';
 import { ORIGINAL_PIXELS, RETRO_DOT, registerParts, setLineResolution, setRetroParts } from './wire';
 
 // 1984 mode: white lines on black with hard pixels, letterboxed to 4:3. The
@@ -37,7 +38,7 @@ const neoCanvas = document.querySelector<HTMLCanvasElement>('#neo')!;
 const retroCanvas = document.querySelector<HTMLCanvasElement>('#retro')!;
 
 const neoRenderer = new THREE.WebGLRenderer({ canvas: neoCanvas, antialias: true });
-neoRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+neoRenderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
 const retroRenderer = new THREE.WebGLRenderer({ canvas: retroCanvas, antialias: false });
 retroRenderer.setPixelRatio(1);
 // Ships coming through a witchspace rift are clipped at its mouth.
@@ -48,29 +49,47 @@ export const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 
 const renderPass = new RenderPass(new THREE.Scene(), camera);
 /**
  * The scene is drawn into the glow's own image first, and that image had no anti-aliasing (the
- * canvas's `antialias` doesn't reach it): every thin line had hard steps, and long lines at a
- * shallow angle (the hangar's pad and floor) broke into dashes that crawled as the view moved (Mark:
- * "Why do the lines on my desktop in the hanger etc flicker a lot", on a 2560×1440 monitor at 1×).
- * Four samples a pixel on a 1× screen, where the steps show most and it costs least (measured: no
- * change at 1709×1284). Not on a Retina screen, whose steps are half the size, where even two samples
- * cost nearly half the frame rate (60 to 35 at 2×); nor on a phone, whose dense screen hides them.
+ * canvas's `antialias` doesn't reach it): long lines at a shallow angle broke into dashes that crawled
+ * (Mark: "Why do the lines on my desktop in the hanger etc flicker a lot"). How much, by screen: look.ts.
  */
-const SAMPLES = !matchMedia('(pointer: coarse)').matches && devicePixelRatio < 2 ? 4 : 0;
+const SAMPLES = samplesFor(matchMedia('(pointer: coarse)').matches, devicePixelRatio);
 const composer = new EffectComposer(neoRenderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: SAMPLES }));
 composer.addPass(renderPass);
 /** Space bending around a witchspace rift; see lens.ts. */
 export const lens = new LensPass();
 composer.addPass(lens);
-// The glow is five blurs, tight to screen-wide. Weighted towards the tight
-// ones, it hugs the lines; the widest is kept faint, or every ship sits in a
-// screen-sized disc of haze. (Radius 0 so these weights are used as given.)
-export const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.0, 0, 0.2);
-bloom.compositeMaterial.uniforms['bloomFactors'].value = [1, 0.75, 0.45, 0.18, 0.04];
+// With anti-aliasing on, the odd sample at a planet's edge comes out not-a-number or infinite, and the
+// glow spread it into a white disc that flashed for a frame (Mark: "white circular artifacts flshing
+// around the perimeter of the planet"). Clean it out before the glow: nothing is lost (look.ts BRIGHTEST).
+if (SAMPLES > 0)
+  composer.addPass(
+    new ShaderPass({
+      uniforms: { tDiffuse: { value: null } },
+      vertexShader: /* glsl */ `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform sampler2D tDiffuse;
+        varying vec2 vUv;
+        void main() {
+          vec4 c = texture2D(tDiffuse, vUv);
+          // A NaN fails every comparison, so it takes the 0; an infinity is capped.
+          c.rgb = vec3(c.r >= 0.0 ? min(c.r, ${BRIGHTEST.toFixed(1)}) : 0.0, c.g >= 0.0 ? min(c.g, ${BRIGHTEST.toFixed(1)}) : 0.0, c.b >= 0.0 ? min(c.b, ${BRIGHTEST.toFixed(1)}) : 0.0);
+          gl_FragColor = c;
+        }`,
+    }),
+  );
+// The glow: the signature, set in look.ts.
+export const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), GLOW.strength, GLOW.radius, GLOW.threshold);
+bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 // The glow fades to black over a wide area, and the screen has only a few
 // shades of dark red (or green, or blue) to do it in, so it showed as rings.
-// A grain of less than one shade per pixel, too fine to see, blends them.
+// A grain of less than one shade per pixel (look.ts GRAIN), too fine to see, blends them.
 composer.addPass(
   new ShaderPass({
     uniforms: { tDiffuse: { value: null } },
@@ -86,7 +105,7 @@ composer.addPass(
       void main() {
         vec4 c = texture2D(tDiffuse, vUv);
         float n = fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453);
-        gl_FragColor = vec4(c.rgb + (n - 0.5) / 255.0, c.a);
+        gl_FragColor = vec4(c.rgb + (n - 0.5) * ${GRAIN.toFixed(6)}, c.a);
       }`,
   }),
 );
@@ -112,10 +131,7 @@ export function render(scene: THREE.Scene) {
   }
 }
 
-/**
- * On a phone the glow is worked out at half the screen's resolution (Mark: the battery). It's five
- * blurs, so the lines glow as brightly and look the same; the lines themselves stay sharp.
- */
+/** On a phone the glow is worked out at a lower resolution (look.ts GLOW.phoneScale); the lines themselves stay sharp. */
 const LIGHT_GLOW = matchMedia('(pointer: coarse)').matches;
 
 function resize() {
@@ -127,7 +143,7 @@ function resize() {
   neoRenderer.setSize(innerWidth, innerHeight, false);
   composer.setSize(innerWidth, innerHeight);
   const buffer = neoRenderer.getDrawingBufferSize(new THREE.Vector2());
-  if (LIGHT_GLOW) bloom.setSize(Math.round(buffer.x * 0.75), Math.round(buffer.y * 0.75));
+  if (LIGHT_GLOW) bloom.setSize(Math.round(buffer.x * GLOW.phoneScale), Math.round(buffer.y * GLOW.phoneScale));
   setLineResolution(buffer);
 }
 addEventListener('resize', resize);
@@ -168,9 +184,9 @@ function starfield(count: number, size: number, colourful: boolean) {
   const col: number[] = [];
   const c = new THREE.Color();
   for (let i = 0; i < count; i++) {
-    const v = new THREE.Vector3().randomDirection().multiplyScalar(8000);
+    const v = new THREE.Vector3().randomDirection().multiplyScalar(STARS.distance);
     pos.push(v.x, v.y, v.z);
-    if (colourful) c.setHSL(0.55 + Math.random() * 0.15, 0.35, 0.08 + Math.random() ** 3 * 0.45);
+    if (colourful) c.setHSL(STARS.hue[0] + Math.random() * (STARS.hue[1] - STARS.hue[0]), STARS.saturation, STARS.lightness(Math.random()));
     else c.set(0xffffff);
     col.push(c.r, c.g, c.b);
   }
@@ -202,7 +218,7 @@ export function makeSpace(): Space {
   scene.add(sun);
 
   const stars = new THREE.Group();
-  const neo = starfield(2500, 1.2, true);
+  const neo = starfield(STARS.count, STARS.size, true);
   const old = starfield(70, RETRO_DOT, false);
   stars.add(neo, old);
   registerParts({ neo: [neo], retro: [old] });

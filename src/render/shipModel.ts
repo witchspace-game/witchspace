@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SHIP } from './look';
 import { deriveEdges } from '../content/geometry';
 import type { ShipDef, Vec3 } from '../content/types';
 import type { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js';
@@ -46,17 +47,17 @@ export function buildShip(def: ShipDef): ShipModel {
   const { hull, detail } = linePositions(def);
   const fill = fillGeometry(def);
 
-  const hullLines = neoLines(hull, color.clone().multiplyScalar(1.6 * glow), 2.2);
+  const hullLines = neoLines(hull, color.clone().multiplyScalar(SHIP.hull.brightness * glow), SHIP.hull.width);
   const neo: THREE.Object3D[] = [
     new THREE.Mesh(
       fill,
-      new THREE.MeshLambertMaterial({ color: color.clone().multiplyScalar(0.07), side: THREE.DoubleSide, ...behindLines }),
+      new THREE.MeshLambertMaterial({ color: color.clone().multiplyScalar(SHIP.fill), side: THREE.DoubleSide, ...behindLines }),
     ),
     hullLines,
   ];
   const lines = [{ material: hullLines.material, base: hullLines.material.color.clone() }];
   if (detail.length) {
-    const detailLines = neoLines(detail, color.clone().multiplyScalar(1.1 * glow), 1.4);
+    const detailLines = neoLines(detail, color.clone().multiplyScalar(SHIP.detail.brightness * glow), SHIP.detail.width);
     neo.push(detailLines);
     lines.push({ material: detailLines.material, base: detailLines.material.color.clone() });
   }

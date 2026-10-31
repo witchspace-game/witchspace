@@ -47,6 +47,43 @@ This builds on the first slice (rings, moons, surveys, signals; see [ideas](../i
 
 "The surveying needs to be improved. It's boring and isn't very good, as you could potentially fly into the planet as well." Holding a low orbit while a bar fills is a chore, not play, and flying low over a planet is a crash waiting to happen. To be designed: surveying as something you do, not wait through (sweeps you choose, features to find and frame, a scan that reveals the surface as you pass), with the ship keeping itself out of the ground: a safe orbit the computer holds while you work, or a warning and a pull-up, never a death by survey.
 
+## A survey reveals the world *(idea, Mark, 31 October 2026)*
+
+Mark: *"I actually think we could add a few interesting visual cues etc to planets once they have been surveyed. What do you think because right now they all look the same!"*
+
+Every planet today is the same glowing globe of latitude and longitude, only its colour changes. A survey should change how it looks, for good, in your game: what you found is drawn on it. All from the system's seed and its existing numbers (economy, government, tech level, population, species), so every commander who surveys it sees the same world, and all in lines and glow, never textures.
+- **Before a survey:** the plain grid, as now. It's an unknown.
+- **What a survey can show:**
+  - **Night-side lights** for the population: a scatter of points on the dark side, dense on a rich industrial world, a few on a frontier one, none on an empty one.
+  - **Ice caps:** a pale ring of short lines at each pole on a cold world.
+  - **Weather bands:** a few slow-turning cloud lines drawn just above the surface, wide on a stormy world.
+  - **Oceans and continents:** the grid drawn only over land, so the oceans read as dark smooth gaps.
+  - **Fire:** glowing points on the night side of a volcanic or war-torn world (and during a war event).
+  - **Aurora:** a shimmering curtain over the poles for a world with a strong field.
+  - **The marks of people:** an orbital ring of lights on a high-tech world; a Wexley-Yorozu works beside a moon.
+- **Moons too:** a surveyed Candidate moon gets a faint green tint, a Barren one stays grey.
+- **It pays the survey back:** a world you've surveyed looks different from one you haven't, so a chart of your surveyed worlds is a record of where you've been, and other explorers' worlds look plain until they survey them too (or buy the data).
+- **Fits the survey rethink** above: the surface is revealed as you sweep over it, so surveying becomes watching a world appear.
+- **Cost:** a few hundred more line segments and points per planet, only for surveyed worlds; nothing on the server.
+
+### Phenomena to catch, and photographs in the survey *(idea, Mark, 31 October 2026)*
+
+Mark: *"did we think about creating interesting planetary effects that may make exploring more fun and catching the images of those part of the Survey requirements?"*
+
+The surface features above are always there once surveyed. Phenomena are events: they happen at times worked out from the seed and the clock, so every commander can be there for the same one, and an explorer has to be in the right place at the right moment, like an eclipse chaser.
+- **What can happen:**
+  - **An eclipse:** a moon crossing the sun, its shadow sliding over the planet's grid;
+  - **An aurora storm:** curtains of light over a pole, for an hour, after a flare from the star;
+  - **An eruption:** a burst of glowing points on the night side, and a plume of lines into space;
+  - **A ring shadow:** the rings' shadow across the globe at the right angle;
+  - **A storm:** a weather band that thickens and spirals for a while;
+  - **A rare alignment:** the planet, its moons and the star in a line, once in many weeks.
+- **Found, then predicted:** a survey reveals what a world can do and when it next happens ("Aurora storms at Ensoreus: next in 2 h 40 min"), so surveying gives you somewhere to be.
+- **Photographs as survey requirements:** the camera (P) already takes photos of the view into your flight log. A survey contract can ask for one: *"Photograph the eclipse at Ensoreus, with the shadow on the planet."* The game checks the photo from where you were and what was in view when you took it (the phenomenon on screen, close enough, at the right time), not from the picture itself, so it can't be faked or failed by a bad frame.
+- **Who pays:** Wexley-Yorozu's Science Division for the record, the news for a striking picture (*Discoveries make the news*, below), and the first commander to photograph a phenomenon gets their callsign on it, like a first discovery.
+- **Shareable:** the photo is a moment, ready to share, and the best are the screenshots people post.
+- **Within the look:** every phenomenon is lines and glow ([the Neo look](neo-look.md)), drawn from `look.ts`, and checked by the look check before it's merged.
+
 ## Stage 1: reasons to go, things to spend on *(built, October 2026)*
 
 ### Trails
