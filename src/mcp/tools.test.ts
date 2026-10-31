@@ -70,6 +70,17 @@ describe('MCP server', () => {
     expect(r.content[1].text).toMatch(/→ my-hold →/);
   });
 
+  it('shows a system right now, the same as the game works it out', async () => {
+    const r = await parsed('galaxy_now', { name: 'Lave' });
+    expect(r.system).toBe('Lave');
+    expect(r.timetable.length).toBeGreaterThan(0);
+    expect(r.timetable[0].ship).toBeTruthy();
+    expect(r.market.imports.length + r.market.exports.length).toBeGreaterThan(0);
+    expect(r.timetable.map((t: { hull: string }) => t.hull).join()).not.toMatch(/cobra-mk3/);
+    expect(JSON.stringify(r)).not.toMatch(/commander"|callsign/i);
+    expect((await call('galaxy_now', { name: 'Nowhere' })).isError).toBe(true);
+  });
+
   it('flags a ship that is better at everything', async () => {
     const s = cobra();
     s.id = 'too-good';

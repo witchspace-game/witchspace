@@ -179,6 +179,7 @@ Tools:
 | `designs`, `get_design` | The roadmap and every design document: status, stages, summary, and the text. |
 | `help_wanted` | Every open task, by skill (ships, writing, art, playtest, design, code), with the design it belongs to. |
 | `galaxy_system` | Any system by name or number: government, economy, tech level, population, position, neighbours within 7 light years, and its description, so stories and missions land somewhere real. |
+| `galaxy_now` | *(31 October 2026)* Any system as it is right now, from the seed and the clock, the same as the game works it out: the event on the world, the news that has reached it, the ships due to dock and launch in the next half hour (name, hull, company, cargo, where from or to), any yard and its stage, and its market (imports, exports, what's dear or cheap today, before any commander's own trades). Public news only, nothing about any commander. Checked against the game: the ship it lists as launching is the one flying out. |
 | `worldbuilding` | The tone guide, the companies and the people, for writing that sounds like Witchspace. |
 
 Resources: the ship and module schemas, `AGENTS.md`, `CONTRIBUTING.md`, the worldbuilding guide and the lore, so an assistant can read them before it starts.
