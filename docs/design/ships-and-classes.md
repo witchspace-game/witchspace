@@ -201,7 +201,7 @@ This is where Build meets most pilots. The few who design hulls do it in their o
 
 ### The Fer-de-lance, a concept
 
-*(Mark, 28 October 2026: "Build it in the Neo for Witchspace.")* A statement ship: a private hotel with a fighter's bones. A lance-head hull twice a Cobra's length (118 m), a glass deck along its spine, two barbs swept back past the tail, 30 t of hold, about 180,000 Cr. Original geometry; its size, hold and character come from Samuel Penn's Traveller sheet. Its maker is Zorgon Petterson, the fast and flashy yard, keeping its 1984 name as homage ([the shipbuilders](shipbuilders.md)). It beats a Cobra at almost everything, as a statement ship should; what it costs is the price, and being the biggest, most tempting target in the sky.
+*(Mark, 28 October 2026: "Build it in the Neo for Witchspace.")* A statement ship: a private hotel with a fighter's bones. A lance-head hull nearly two and a half times a Cobra's length (118 m), a glass deck along its spine, two barbs swept back past the tail, 30 t of hold, about 180,000 Cr. Original geometry; its size, hold and character come from Samuel Penn's Traveller sheet. Its maker is Zorgon Petterson, the fast and flashy yard, keeping its 1984 name as homage ([the shipbuilders](shipbuilders.md)). It beats a Cobra at almost everything, as a statement ship should; what it costs is the price, and being the biggest, most tempting target in the sky.
 
 ## 7. Stages
 

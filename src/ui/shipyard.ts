@@ -29,8 +29,8 @@ import { openBooth, ownIndex, resetShowroomView, shipIndex, showShip, showroom, 
 
 // --- The shipyard: a showroom for now ------------------------------------------
 // Higher-tech stations show the hulls you'll be able to buy, each turning in the
-// berth, and the makers' concepts, coming soon (docs/design/ships-and-classes.md:
-// "something to drool over"). Buying, selling and trading in come later.
+// berth, and the hulls built to order, with a deposit (docs/design/ships-and-classes.md:
+// "something to drool over"). Buying outright, selling and trading in come later.
 
 /** Stations with a shipyard: the better-built worlds. */
 const SHIPYARD_TECH = 7;
@@ -535,14 +535,14 @@ export function renderShipyard() {
       <ul class="yard">${yard
         .map(({ def }) => {
           const st = def.stats;
-          const tag = def.id === hullOf(c) ? `<em>Your ship${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</em>` : def.concept ? '<em class="yard-concept">Concept · coming soon</em>' : '';
+          const tag = def.id === hullOf(c) ? `<em>Your ship${c.paint?.name ? ` “${escapeHtml(c.paint.name)}”` : ''}</em>` : def.concept ? '<em class="yard-concept">Built to order</em>' : '';
           const mine = def.id === hullOf(c) && c.paint;
           const ed = mine && c.paint!.edition ? editionById(c.paint!.edition.id) : undefined;
           return `<li><button type="button" data-yard="${def.id}" aria-pressed="${def.id === yardPick}" style="--hull:${mine ? c.paint!.colour : def.style.lineColor}">
             <strong>${escapeHtml(def.name)}${ed ? ` · ${escapeHtml(ed.name)} ${editionNo(c.paint!.edition!.number)}` : ''}</strong> ${tag}
             <span>${[def.manufacturer, def.role].filter(Boolean).map((x) => escapeHtml(x!)).join(' · ')}</span>
             <span>${st.maxSpeed} m/s · hull ${st.hull} · shields ${st.shields} · ${st.cargo} t · ${st.missiles ?? 0} missiles</span>
-            <b>${def.concept ? 'About ' : ''}${st.price.toLocaleString()} Cr</b>
+            <b>${st.price.toLocaleString()} Cr</b>
           </button></li>`;
         })
         .join('')}${EDITIONS.map((e) => {

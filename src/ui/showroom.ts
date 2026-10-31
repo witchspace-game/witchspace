@@ -44,7 +44,7 @@ function updateShipPanel() {
   const s = def.stats;
   $('#ship-name').textContent = def.name;
   $('.ship-nav-name').textContent = def.name;
-  $('#ship-meta').textContent = [def.concept ? 'Concept · coming soon' : '', def.manufacturer, def.role].filter(Boolean).join(' · ');
+  $('#ship-meta').textContent = [def.concept ? 'Built to order' : '', def.manufacturer, def.role].filter(Boolean).join(' · ');
   $('#ship-desc').textContent = def.description;
   const rows: [string, string][] = [
     ['Max speed', `${s.maxSpeed} m/s`],
@@ -52,7 +52,7 @@ function updateShipPanel() {
     ['Shields', `${s.shields}`],
     ['Cargo', `${s.cargo} t`],
     ['Missiles', `${s.missiles ?? 0}`],
-    ['Price', s.price ? `${def.concept ? 'About ' : ''}${s.price.toLocaleString()} Cr` : 'Not for sale'],
+    ['Price', s.price ? `${s.price.toLocaleString()} Cr` : 'Not for sale'],
   ];
   $('#ship-stats').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   $('#ship-credits').textContent = `Design: ${def.credits.authors.join(', ')}${def.credits.aiAssisted ? ' (AI-assisted)' : ''} · ${def.credits.license}`;

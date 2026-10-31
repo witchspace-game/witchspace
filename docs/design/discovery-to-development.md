@@ -87,8 +87,8 @@ When the last stage finishes, it's news across the region, and the system is per
 - **A new export.** The deposit's commodity is now made here in volume: cheap at the source, and the prices of that commodity drop a little at nearby stations as supply spreads. New trade routes for everyone.
 - **New imports.** A workforce needs food, medicine, liquor and luxuries: prices for those rise here.
 - **Tech level up** one step (two for a Wexley-Yorozu station), so better equipment is sold here.
-- **A new place.** An outpost or a second station on the chart, with its own name (and a first to dock there). Its name honours the find: *Nova's Find Station*.
-- **Opening premiums** for the first traders in, as for [a new station](companies-and-contracts.md#4b-building-worlds).
+- **A new place.** An outpost or a company station on the chart, with its own name honouring the find: *Nova's Find Station*. It's the developing company's own, run for its business, not a public dock, and abandoned when it stops paying ([company stations](companies-and-contracts.md#company-stations-mark-31-october-2026), Mark).
+- **The original station upgraded**, and open to everyone: more traffic, contracts and goods, with opening premiums for the first traders in.
 - **Who runs it.** The developing company's presence in the system goes up: more of its contracts, its police or its security wing, its rules.
 
 ### 5. Consequences: who's glad and who's mad
@@ -124,7 +124,7 @@ The people already there react, in news, messages and contracts:
 
 1. **Deposits and claims.** Traces and finds from surveys, grades, the claim choice at a station, finder's fees and standing, the finder's name on the site. Server: one claims table. The chart shows claimed sites and who claimed them.
 2. **The build.** Stages from the clock and deliveries; supply contracts from the developing company; delivering at the site; what you see in orbit at each stage (reusing the yard models of [building worlds](companies-and-contracts.md#4b-building-worlds) as they're made).
-3. **The open system.** New exports and imports, price effects nearby, tech level, the new station or outpost, opening news and premiums.
+3. **The open system.** New exports and imports, price effects nearby, tech level, the company station or outpost and the upgraded original station, opening news and premiums.
 4. **Raids and protection.** Pirates on supply routes, escort and bounty contracts, rival sabotage.
 5. **Consequences.** Relocations, news, the Mutual's newsletter, government shifts, unrest; a Ninefold-style story thread for W-Y builds.
 

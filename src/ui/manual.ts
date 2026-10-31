@@ -16,6 +16,7 @@ import { forDevice } from './deviceWords';
 import { flash } from './hud';
 import { escapeHtml } from './escape';
 import { $, cmdr, game } from '../core';
+import SHOTS from '../content/manualShots.json';
 import * as THREE from 'three';
 
 /** From main.ts: whether the laser is gimballed right now (it fills this in at start). */
@@ -42,6 +43,76 @@ export function controlRows(mouse: boolean): string[][] {
 /** What a phone button does: from the key it presses (the controls list), or its own title. */
 const touchHelp = (b: HTMLElement, rows: string[][]) => drawerHelp(b.dataset.key, b.title || b.getAttribute('aria-label') || '', rows);
 
+// --- Pictures (Mark: "the owners manuals have no images!") ---------------------------------
+// Taken from the game on a phone by tools/manual-shots.mjs, which also measures where each control
+// is, so the numbers sit on the controls. The numbers follow the manual's own lists (PHONE and
+// DASHBOARD), and each list row carries its number.
+
+type Shot = { w: number; h: number; callouts?: { label: string; x: number; y: number }[] };
+const shots = SHOTS as Record<string, Shot>;
+
+/** One or more pictures from the game under one caption, with numbered callouts. */
+function figure(names: string[], caption: string, cls = '') {
+  const shot = (name: string) => {
+    const s = shots[name];
+    if (!s) return '';
+    const marks = (s.callouts ?? []).map((c, i) => `<b style="left:${c.x}%;top:${c.y}%">${i + 1}</b>`).join('');
+    return `<div class="man-shot"><img src="/manual/${name}.jpg" width="${s.w}" height="${s.h}" loading="lazy" alt="" />${marks}</div>`;
+  };
+  return `<figure class="man-fig ${cls}"><div class="man-shots">${names.map(shot).join('')}</div><figcaption>${caption}</figcaption></figure>`;
+}
+
+/** A list row's callout number on a picture, as a badge for its <dt>. */
+function numbered(name: string, label: string) {
+  const i = shots[name]?.callouts?.findIndex((c) => c.label === label) ?? -1;
+  return i < 0 ? label : `<b class="man-num">${i + 1}</b>${label}`;
+}
+
+/** Tilt, drawn: a phone on its side, its top edge tipping towards you, and the ship climbing. */
+const TILT_DRAWING = `<svg class="man-draw" viewBox="0 0 260 110" role="img" aria-label="Tip the top of the phone towards you, and she climbs">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 92 L70 22" stroke-width="7" stroke="var(--dim)" />
+    <path d="M28 88 L58 18" stroke-dasharray="3 5" stroke="var(--dim)" />
+    <path d="M86 30 C 92 14, 80 6, 66 8" stroke="var(--accent)" /><path d="M72 3 L66 8 L72 13" stroke="var(--accent)" />
+    <path d="M150 74 L230 74 L190 92 Z" stroke="var(--accent)" transform="rotate(-18 190 80)" />
+    <path d="M192 52 L208 22" stroke="var(--accent)" /><path d="M199 24 L208 22 L211 31" stroke="var(--accent)" />
+  </g>
+  <text x="18" y="108" fill="var(--dim)" font-size="11">the top, towards you</text>
+  <text x="166" y="108" fill="var(--dim)" font-size="11">she climbs</text>
+</svg>`;
+
+/** Her outline from above beside a Cobra's, to scale (Marketing: "explains the Fer-de-lance's 'line up early for the slot'"). */
+function besideACobra(def: ShipDef, cobra: ShipDef) {
+  const PX = 0.9; // pixels a metre
+  const top = (d: ShipDef) => {
+    const v = d.geometry.vertices;
+    const xs = v.map((p) => p[0]);
+    const zs = v.map((p) => p[2]);
+    const [x0, z1] = [Math.min(...xs), Math.max(...zs)];
+    const at = (p: number[]) => `${((p[0] - x0) * PX).toFixed(1)},${((z1 - p[2]) * PX).toFixed(1)}`;
+    return { w: (Math.max(...xs) - x0) * PX, h: (z1 - Math.min(...zs)) * PX, path: d.geometry.faces.map((f) => `M${f.map((i) => at(v[i])).join('L')}Z`).join('') };
+  };
+  const [a, b] = [top(def), top(cobra)];
+  const gap = 28;
+  const h = Math.max(a.h, b.h);
+  const w = a.w + gap + b.w;
+  const ship = (t: typeof a, x: number, colour: string, name: string) =>
+    `<g transform="translate(${x.toFixed(1)} ${(h - t.h).toFixed(1)})"><path d="${t.path}" fill="none" stroke="${colour}" stroke-width="1" stroke-linejoin="round" /></g><text x="${(x + t.w / 2).toFixed(1)}" y="${(h + 16).toFixed(1)}" text-anchor="middle" fill="var(--dim)" font-size="11">${escapeHtml(name)}</text>`;
+  return `<svg class="man-draw" viewBox="-4 -4 ${(w + 8).toFixed(0)} ${(h + 26).toFixed(0)}" style="max-width:${Math.round(w + 8)}px" role="img" aria-label="${escapeHtml(def.name)} beside a Cobra Mk III, from above, to scale">
+    ${ship(a, 0, def.style.lineColor, def.name)}${ship(b, a.w + gap, 'var(--dim)', cobra.name)}
+  </svg>`;
+}
+
+/** "Twice the length", said from her Length row against a Cobra's. */
+function lengthWords(def: ShipDef, cobra: ShipDef) {
+  const len = (d: ShipDef) => Math.max(...d.geometry.vertices.map((v) => v[2])) - Math.min(...d.geometry.vertices.map((v) => v[2]));
+  const r = len(def) / len(cobra);
+  if (r > 1.85 && r < 2.15) return 'twice the length';
+  if (r >= 1.15) return `${r.toFixed(1)} times the length`;
+  if (r <= 0.87) return `${Math.round(r * 100)}% of the length`;
+  return 'about the same length';
+}
+
 export function openManual(def: ShipDef) {
   const c = game.commander;
   const mine = c && def.id === hullOf(c);
@@ -67,7 +138,7 @@ export function openManual(def: ShipDef) {
       <p>The owner’s manual, prepared for Commander ${escapeHtml(c!.name)}</p>
     </section>`
     : `<section class="man-cover" style="--hull:${mine && c!.paint ? c!.paint.colour : def.style.lineColor}">
-      <p class="meta">${escapeHtml(def.concept ? 'Concept' : def.manufacturer ?? 'Witchspace')} · ${escapeHtml(def.role)}</p>
+      <p class="meta">${escapeHtml(def.manufacturer ?? 'Witchspace')} · ${escapeHtml(def.role)}</p>
       <h3>${escapeHtml(title)}</h3>
       <p>${escapeHtml(def.description)}</p>
     </section>`;
@@ -99,30 +170,44 @@ ${papers.aboard.map((a) => `        <dt>${escapeHtml(a.name)}</dt><dd>${escapeHt
     </section>
 
     <section id="man-dash"><h3>The dashboard</h3>
-      <dl class="man-keys">${DASHBOARD.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+      ${figure(['dashboard'], 'Everything she can tell you, at a glance. Shields and hull on the left, speed and heat on the right, the scanner in the middle.')}
+      <dl class="man-keys">${DASHBOARD.map(([k, v]) => `<dt>${numbered('dashboard', k)}</dt><dd>${v}</dd>`).join('')}</dl>
+      ${figure(['scanner'], `You’re at the centre, facing up. A stalk up means it’s above you, down means below. Diamonds are commanders; bars are ships the game flies; red has just fired on you. ${isTouch ? 'Tap the scanner' : 'Press R'} to switch between 4 km and 12 km.`, 'man-small')}
+      ${figure(['compass-ahead', 'compass-behind'], 'Solid: the station is ahead. Hollow: it’s behind you.', 'man-tiny')}
     </section>
 
     <section id="man-dock"><h3>Docking</h3>
       <ol>
 ${DOCKING(roll, standardKit(def).includes('docking-computer')).map((li) => `        <li>${li}</li>
 `).join('')}      </ol>
-      ${def.id !== 'cobra-mk3' ? `<p class="meta">${escapeHtml(def.name)}: ${escapeHtml(handling(def, cobra).find((h) => h.label === 'Span')!.versus)}.</p>` : ''}
+      ${figure(['approach'], 'Slow down, line up, roll until the marker’s centred, and fly straight in. Green is good.')}
+      ${
+        def.id !== 'cobra-mk3'
+          ? `<figure class="man-fig">${besideACobra(def, cobra)}<figcaption>The ${escapeHtml(def.name)} beside a Cobra, from above: ${lengthWords(def, cobra)}, ${escapeHtml(handling(def, cobra).find((h) => h.label === 'Span')!.versus)}.</figcaption></figure>`
+          : ''
+      }
     </section>
 
     ${isTouch ? '' : desk}
 
     <section id="man-phone"><h3>${isTouch ? 'On your phone' : 'On a phone'}</h3>
+      ${figure(['flight'], 'Aim on the left, fight on the right. The big button always offers the obvious next thing.')}
       <dl class="man-keys">
-${PHONE.map(([k, v]) => `        <dt>${k}</dt><dd>${v}</dd>
+${PHONE.map(([k, v]) => `        <dt>${numbered('flight', k)}</dt><dd>${v}</dd>
 `).join('')}      </dl>
+      ${figure(['speed'], 'The tick is the speed you asked for; the fill is the speed you’re doing.', 'man-tiny')}
+      ${figure(['views-picker', 'views-glance'], 'Tap the arrow to choose a view. Hold and slide to glance, and let go to look ahead again. Your lasers fire the way you’re looking, if one is fitted there.', 'man-two')}
       <h4>The drawer: everything else</h4>
       <p>Tap the <b>‹</b> tab on the right edge of the screen to slide it open, and again to close it.</p>
+      ${figure(['drawer'], 'Everything that isn’t the fight. Tap ‹ to open it, and again to close.')}
       <dl class="man-keys">${drawer}</dl>
-      <p class="meta">${TILT}</p>
+      <figure class="man-fig">${TILT_DRAWING}<figcaption>${TILT}</figcaption></figure>
     </section>
     ${isTouch ? `<details class="man-more"><summary>On a computer, with a keyboard</summary>${desk}</details>` : ''}
 
-    <section id="man-rec"><h3>The flight recorder</h3>${RECORDER.map((p) => `<p>${p}</p>`).join('')}</section>
+    <section id="man-rec"><h3>The flight recorder</h3>${RECORDER.map((p) => `<p>${p}</p>`).join('')}
+      ${figure(['moments'], 'The best first. Share it, star it to keep it forever, or swipe it away.', 'man-upright')}
+    </section>
 
     ${kit.length ? `<section id="man-kit"><h3>Your kit</h3><dl class="man-keys">${kit.map((e) => `<dt>${escapeHtml(e!.name)}</dt><dd>${escapeHtml(forDevice(e!.blurb))}</dd>`).join('')}</dl></section>` : ''}
     ${mine && c!.paint?.luxuries?.length ? `<section><h3>Aboard</h3><ul>${c!.paint.luxuries.map((l) => LUXURIES.find((x) => x.id === l)).filter(Boolean).map((l) => `<li><b>${escapeHtml(l!.name)}</b>: ${escapeHtml(l!.blurb)}</li>`).join('')}</ul></section>` : ''}`;
