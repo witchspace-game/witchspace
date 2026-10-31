@@ -1,7 +1,7 @@
-// Bundles what the MCP server reads (the fleet, the design documents, AGENTS.md,
-// CONTRIBUTING.md and the ship schema) for the Worker, which can't read files,
+// Bundles what the MCP server reads (the fleet, the Titanoboa's modules, the design documents,
+// AGENTS.md, CONTRIBUTING.md and the ship and module schemas) for the Worker, which can't read files,
 // and compiles the ship and module schema checks ahead of time, since Workers
-// can't compile code at run time. The modules go in too, for submissions. Run before deploying the Worker (wrangler's build step
+// can't compile code at run time. Run before deploying the Worker (wrangler's build step
 // in server/wrangler.toml does it), and by the local server (tools/mcp.ts) directly.
 //
 //   npx tsx tools/mcp-data.ts     writes server/src/mcp-data.json, mcp-schema.js and module-schema.js
@@ -38,6 +38,7 @@ export function loadMcpData() {
     agents: readFileSync(join(root, 'AGENTS.md'), 'utf8'),
     contributing: readFileSync(join(root, 'CONTRIBUTING.md'), 'utf8'),
     schema: readFileSync(join(root, 'schemas/ship.schema.json'), 'utf8'),
+    moduleSchema: readFileSync(join(root, 'schemas/module.schema.json'), 'utf8'),
   };
   return { ships, modules, docs, texts };
 }
@@ -55,7 +56,13 @@ export function describeErrors(errors: { instancePath?: string; message?: string
 export function compileSchemaCheck(schema: string) {
   const ajv = new Ajv2020({ allErrors: true });
   const check = ajv.compile(JSON.parse(schema));
-  return (ship: unknown) => (check(ship) ? [] : describeErrors(check.errors));
+  return (file: unknown) => (check(file) ? [] : describeErrors(check.errors));
+}
+
+/** The MCP server's data, with both schema checks compiled now: for the local server and the tests. */
+export function localMcpData() {
+  const loaded = loadMcpData();
+  return { ...loaded, checkSchema: compileSchemaCheck(loaded.texts.schema), checkModuleSchema: compileSchemaCheck(loaded.texts.moduleSchema) };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {

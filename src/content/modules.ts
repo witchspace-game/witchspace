@@ -63,6 +63,22 @@ export function checkService(m: ModuleDef, all: ReadonlyMap<string, ModuleDef>):
   return errors;
 }
 
+/**
+ * Every check a module file must pass, as the hand-in (server/src/submissions.ts) and the MCP
+ * server's validate_module both run it: its schema first (`schemaErrors`, compiled where it runs),
+ * then the coupling standard and its service details.
+ */
+export function moduleCheck(schemaErrors: (m: unknown) => string[], modules: ReadonlyMap<string, ModuleDef>) {
+  return (m: ModuleDef): { errors: string[]; warnings: string[] } => {
+    const schema = schemaErrors(m).map((e) => `schema: ${e}`);
+    if (schema.length) return { errors: schema, warnings: [] };
+    // The coupling standard's sentences are about the shape; the service ones name their field.
+    const { errors, warnings } = checkModule(m);
+    const service = checkService(m, new Map([...modules, [m.id, m]])).map((e) => `${e.split(/[ "]/)[0]}: ${e}`);
+    return { errors: [...errors.map((e) => `geometry: ${e}`), ...service], warnings: warnings.map((w) => `geometry: ${w}`) };
+  };
+}
+
 /** Is this face flat at z, and does it cover the coupling square? (Faces are convex, so the square's corners are enough.) */
 function coversCoupling(vertices: Vec3[], face: number[], z: number): boolean {
   const p = face.map((i) => vertices[i]);

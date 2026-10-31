@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { compileSchemaCheck, loadMcpData } from '../../tools/mcp-data';
+import { localMcpData } from '../../tools/mcp-data';
 import { handle } from './protocol';
 import { TOOLS, type McpData } from './tools';
 
-const loaded = loadMcpData();
-const data: McpData = { ...loaded, checkSchema: compileSchemaCheck(loaded.texts.schema) };
+const data: McpData = localMcpData();
 const cobra = () => structuredClone(data.ships.find((s) => s.id === 'cobra-mk3')!);
 const call = async (name: string, args: Record<string, unknown>) => {
   const r = await handle({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } }, data, 'test');
@@ -48,6 +47,27 @@ describe('MCP server', () => {
     const r = await call('preview_ship', { ship: data.ships.find((s) => s.id === 'falcon') });
     expect(r.content[0].mimeType).toBe('image/png');
     expect(atob(r.content[0].data!).slice(1, 4)).toBe('PNG');
+  });
+
+  it('passes every module in the Titanoboa, and runs the same checks as a hand-in', async () => {
+    for (const module of data.modules) {
+      const r = await parsed('validate_module', { module });
+      expect(r.errors, module.id).toEqual([]);
+    }
+    const bad = structuredClone(data.modules.find((m) => m.id === 'hold')!);
+    bad.geometry.vertices = bad.geometry.vertices.map(([x, y, z]) => [x, y, z * 1.5]);
+    const r = await parsed('validate_module', { module: JSON.stringify(bad) });
+    expect(r.ok).toBe(false);
+    expect(r.errors.join(' ')).toMatch(/room for the necks/);
+    expect((await parsed('validate_module', { module: { id: 'x' } })).errors[0]).toMatch(/^schema:/);
+  });
+
+  it('draws a module coupled into a line-up as a PNG', async () => {
+    const hold = data.modules.find((m) => m.id === 'hold')!;
+    const r = await call('preview_module', { module: { ...hold, id: 'my-hold', name: 'My hold' } });
+    expect(r.content[0].mimeType).toBe('image/png');
+    expect(atob(r.content[0].data!).slice(1, 4)).toBe('PNG');
+    expect(r.content[1].text).toMatch(/→ my-hold →/);
   });
 
   it('flags a ship that is better at everything', async () => {

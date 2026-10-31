@@ -1,12 +1,14 @@
 // The Witchspace MCP server's tools (docs/design/mcp-server.md, stage 1): for
-// contributors' AI assistants to validate, preview and balance-check a ship,
+// contributors' AI assistants to validate, preview and balance-check a ship or a
+// Titanoboa module,
 // read the designs and help wanted, and look up any system. Pure functions
 // over a data bundle, so the Worker (server/src/mcp.ts), the local server
 // (tools/mcp.ts) and the tests all use the same code. Read-only.
 
 import { checkGeometry, deriveEdges, signedVolume } from '../content/geometry';
+import { assemble, canCouple, centresOf, COUPLING, moduleCheck, ZONES } from '../content/modules';
 import { NOT_FLOWN, slotProblem } from '../content/slot';
-import type { ShipDef, Vec3 } from '../content/types';
+import type { ModuleDef, ShipDef, Vec3 } from '../content/types';
 import { distanceLy, ECONOMIES, galaxy, GOVERNMENTS, systemsWithin, type StarSystem } from '../galaxy/generate';
 import { stationName } from '../galaxy/stationNames';
 import { describeWorld, worldOf } from '../game/explore';
@@ -27,11 +29,14 @@ export interface Doc {
 
 export interface McpData {
   ships: ShipDef[];
+  /** The Titanoboa's modules (content/modules). */
+  modules: ModuleDef[];
   docs: Doc[];
   /** AGENTS.md, CONTRIBUTING.md and the ship schema, for an assistant to read first. */
-  texts: { agents: string; contributing: string; schema: string };
-  /** The JSON Schema check, compiled ahead of time (Workers can't compile code at run time). */
+  texts: { agents: string; contributing: string; schema: string; moduleSchema: string };
+  /** The JSON Schema checks, compiled ahead of time (Workers can't compile code at run time). */
   checkSchema: (ship: unknown) => string[];
+  checkModuleSchema: (m: unknown) => string[];
 }
 
 export type Content = { type: 'text'; text: string } | { type: 'image'; data: string; mimeType: string };
@@ -55,24 +60,34 @@ export interface Tool {
 const text = (t: string, isError = false): ToolResult => ({ content: [{ type: 'text', text: t }], ...(isError ? { isError } : {}) });
 const json = (v: unknown): ToolResult => text(JSON.stringify(v, null, 2));
 
-/** A ship passed in as an object, or as JSON text (assistants do both). */
-function shipArg(args: Record<string, unknown>): { ship?: ShipDef; error?: string } {
-  let v = args.ship;
+/** A file passed in as an object, or as JSON text (assistants do both): "ship" or "module". */
+function fileArg(args: Record<string, unknown>, what: 'ship' | 'module'): { file?: unknown; error?: string } {
+  let v = args[what];
   if (typeof v === 'string') {
     try {
       v = JSON.parse(v);
     } catch (e) {
-      return { error: `The ship isn't valid JSON: ${(e as Error).message}` };
+      return { error: `The ${what} isn't valid JSON: ${(e as Error).message}` };
     }
   }
-  if (!v || typeof v !== 'object') return { error: 'Pass the ship file as "ship": the JSON object (or its text).' };
-  return { ship: v as ShipDef };
+  if (!v || typeof v !== 'object') return { error: `Pass the ${what} file as "${what}": the JSON object (or its text).` };
+  return { file: v };
 }
+const shipArg = (args: Record<string, unknown>) => {
+  const { file, error } = fileArg(args, 'ship');
+  return { ship: file as ShipDef | undefined, error };
+};
 
 const SHIP_INPUT = {
   type: 'object',
   properties: { ship: { description: 'The ship file: a JSON object following schemas/ship.schema.json (or the same as text).', oneOf: [{ type: 'object' }, { type: 'string' }] } },
   required: ['ship'],
+};
+
+const MODULE_INPUT = {
+  type: 'object',
+  properties: { module: { description: 'The module file: a JSON object following schemas/module.schema.json (or the same as text).', oneOf: [{ type: 'object' }, { type: 'string' }] } },
+  required: ['module'],
 };
 
 const ROLES_NOT_FLOWN = NOT_FLOWN;
@@ -105,6 +120,35 @@ export function validateShip(ship: ShipDef, data: McpData) {
   return { ok: errors.length === 0, errors, warnings };
 }
 
+// --- Checking a module ------------------------------------------------------------
+
+/** Where a module could go: the fleet's modules it can couple behind, and ahead of. */
+function neighbours(m: ModuleDef, data: McpData) {
+  const others = data.modules.filter((x) => x.id !== m.id);
+  // Nearest zones first, so the picture shows the module among the ones it would really sit beside.
+  const near = (x: ModuleDef) => Math.abs(ZONES.indexOf(x.zone) - ZONES.indexOf(m.zone));
+  return {
+    fore: others.filter((x) => canCouple(x, m)).sort((a, b) => near(a) - near(b)),
+    aft: others.filter((x) => canCouple(m, x)).sort((a, b) => near(a) - near(b)),
+  };
+}
+
+/** The coupling standard (docs/design/ship-the-titanoboa.md), the same checks a hand-in runs, and the written rules. */
+export function validateModule(m: ModuleDef, data: McpData) {
+  const { errors, warnings } = moduleCheck(data.checkModuleSchema, new Map(data.modules.map((x) => [x.id, x])))(m);
+  if (!errors.length) {
+    const existing = data.modules.find((x) => x.id === m.id);
+    if (existing) warnings.push(`id: "${m.id}" is already the ${existing.name}. Fine if this improves it (add yourself under revisions); otherwise pick a new id.`);
+    const { fore, aft } = neighbours(m, data);
+    if (m.couples.fore && !fore.length) warnings.push(`line-up: no module in the fleet can sit ahead of a ${m.zone} module. Zones run ${ZONES.join(', ')}, prow to stern.`);
+    if (m.couples.aft && !aft.length) warnings.push(`line-up: no module in the fleet can sit behind a ${m.zone} module.`);
+    if ((m.description ?? '').length < 40) warnings.push('description: one sentence, in Wexley-Yorozu\'s catalogue voice, saying what it does for the yard.');
+    if (m.credits && !m.credits.aiAssisted) warnings.push('credits: if an assistant helped make this, set credits.aiAssisted to true (AGENTS.md).');
+    warnings.push('homage: the geometry must be original. Evoke an idea; never trace a design from a film, a game or anyone\'s drawings.');
+  }
+  return { ok: errors.length === 0, errors, warnings };
+}
+
 // --- Drawing a ship -----------------------------------------------------------------
 
 const rgb = (hex: string): [number, number, number] => {
@@ -123,12 +167,16 @@ function view(v: Vec3, yaw: number, pitch: number): Vec3 {
   return [x1, y2, z2];
 }
 
-/** Four views of the ship (three-quarter, front, side, top), each with a Cobra Mk III's outline at the same scale. */
-export async function previewShip(ship: ShipDef, data: McpData): Promise<Uint8Array> {
+/**
+ * Four views of the ship (three-quarter, front, side, top), each with a Cobra Mk III's outline at the
+ * same scale, or with `beside` in its place (a module's neighbours in a line-up).
+ */
+export async function previewShip(ship: ShipDef, data: McpData, beside?: { name: string; def: ShipDef }): Promise<Uint8Array> {
   const W = 1200;
   const H = 840;
   const r = new Raster(W, H);
-  const cobra = data.ships.find((s) => s.id === 'cobra-mk3');
+  const fleetCobra = data.ships.find((s) => s.id === 'cobra-mk3');
+  const cobra = beside ? beside.def : fleetCobra && fleetCobra.id !== ship.id ? fleetCobra : undefined;
   const views: [string, number, number][] = [
     ['THREE-QUARTER', -0.75, 0.42],
     ['FRONT', Math.PI, 0],
@@ -165,7 +213,7 @@ export async function previewShip(ship: ShipDef, data: McpData): Promise<Uint8Ar
   views.forEach(([label, yaw, pitch], i) => {
     const cx = (i % 2) * cellW + cellW / 2;
     const cy = 40 + Math.floor(i / 2) * cellH + cellH / 2;
-    if (cobra && cobra.id !== ship.id) draw(cobra, cx, cy, yaw, pitch, [0.6, 0.65, 0.75], true);
+    if (cobra) draw(cobra, cx, cy, yaw, pitch, [0.6, 0.65, 0.75], true);
     draw(ship, cx, cy, yaw, pitch, color, false);
     r.text(label, (i % 2) * cellW + 16, 48 + Math.floor(i / 2) * cellH, 3, [0.55, 0.6, 0.7]);
   });
@@ -173,8 +221,20 @@ export async function previewShip(ship: ShipDef, data: McpData): Promise<Uint8Ar
   r.line(cellW, 40, cellW, H, [0.2, 0.25, 0.3], 1, 0.6);
   r.line(0, 40 + cellH, W, 40 + cellH, [0.2, 0.25, 0.3], 1, 0.6);
   r.text(`${ship.name ?? ship.id}`.slice(0, 40), 16, 12, 4, color);
-  if (cobra && cobra.id !== ship.id) r.text('GREY: COBRA MK III FOR SCALE', W - 16 - 28 * 4 * 2, 16, 2, [0.6, 0.65, 0.75]);
+  const greyLabel = `GREY: ${beside ? beside.name : 'COBRA MK III FOR SCALE'}`.toUpperCase().slice(0, 60);
+  if (cobra) r.text(greyLabel, W - 16 - greyLabel.length * 8, 16, 2, [0.6, 0.65, 0.75]);
   return r.png();
+}
+
+/** A module in a line-up: bright, coupled between the fleet modules it would sit beside, drawn in grey. */
+export async function previewModule(m: ModuleDef, data: McpData): Promise<{ png: Uint8Array; lineUp: string[] }> {
+  const { fore, aft } = neighbours(m, data);
+  const line = [...(m.couples.fore && fore[0] ? [fore[0]] : []), m, ...(m.couples.aft && aft[0] ? [aft[0]] : [])];
+  const at = centresOf(line).find((c) => c.id === m.id)!.z;
+  const asShip = (name: string, geometry: { vertices: Vec3[]; faces: number[][] }, lineColor: string) => ({ id: name, name, role: 'station', style: { lineColor, glow: 1 }, geometry }) as unknown as ShipDef;
+  const body = asShip(m.name ?? m.id, { vertices: m.geometry.vertices.map(([x, y, z]) => [x, y, z + at] as Vec3), faces: m.geometry.faces }, m.insignia?.color ?? '#ffd23f');
+  const png = await previewShip(body, data, line.length > 1 ? { name: line.map((x) => (x === m ? 'this' : x.name)).join(' - '), def: asShip('line-up', assemble(line).geometry, '#999999') } : undefined);
+  return { png, lineUp: line.map((x) => x.id) };
 }
 
 // --- Balance -------------------------------------------------------------------------
@@ -342,6 +402,32 @@ export const TOOLS: Tool[] = [
     },
   },
   {
+    name: 'validate_module',
+    title: 'Check a module',
+    description: `Check a Titanoboa module file against its schema and the coupling standard (a ${COUPLING} m square neck at each coupled end, the body clear of the necks, a closed hull of flat convex faces, at most 256 vertices) and its service details (designer, inService, revisions). These are the same checks a hand-in runs, so a module that passes here passes there. Run it before showing a design to a person.`,
+    inputSchema: MODULE_INPUT,
+    run: (args, data) => {
+      const { file, error } = fileArg(args, 'module');
+      if (!file) return text(error!, true);
+      return json(validateModule(file as ModuleDef, data));
+    },
+  },
+  {
+    name: 'preview_module',
+    title: 'Draw a module',
+    description: 'Draw a Titanoboa module as glowing wireframe in four views (three-quarter, front, side, top), coupled into a line-up between the fleet modules it would sit beside, drawn in grey. Returns a PNG. Use it to see the shape, and whether it lines up with the necks, before and after changes.',
+    inputSchema: MODULE_INPUT,
+    run: async (args, data) => {
+      const { file, error } = fileArg(args, 'module');
+      if (!file) return text(error!, true);
+      const m = file as ModuleDef;
+      const problems = validateModule(m, data).errors;
+      if (problems.length) return text(`Fix these first (validate_module explains each):\n${problems.join('\n')}`, true);
+      const { png, lineUp } = await previewModule(m, data);
+      return { content: [{ type: 'image', data: base64(png), mimeType: 'image/png' }, { type: 'text', text: `${m.name ?? m.id}: ${m.geometry.vertices.length} vertices, ${m.geometry.faces.length} faces, ${m.length} m long, shown in a line-up of ${lineUp.join(' → ')} (prow to stern). The prow points down the page in the top view.` }] };
+    },
+  },
+  {
     name: 'balance_check',
     title: 'Compare a ship with the fleet',
     description: "Compare a ship's stats (speed, turning, hull, shields, hold, missiles, price) with the fleet and with ships of the same role, and flag anything out of line. Ships should be trade-offs, not tiers.",
@@ -435,6 +521,7 @@ export const RESOURCES = [
   { uri: 'witchspace://agents', name: 'AGENTS.md', title: 'How AI assistants contribute to Witchspace', mimeType: 'text/markdown', read: (d: McpData) => d.texts.agents },
   { uri: 'witchspace://contributing', name: 'CONTRIBUTING.md', title: 'How to contribute', mimeType: 'text/markdown', read: (d: McpData) => d.texts.contributing },
   { uri: 'witchspace://schema/ship', name: 'ship.schema.json', title: 'The ship file schema', mimeType: 'application/schema+json', read: (d: McpData) => d.texts.schema },
+  { uri: 'witchspace://schema/module', name: 'module.schema.json', title: 'The Titanoboa module file schema', mimeType: 'application/schema+json', read: (d: McpData) => d.texts.moduleSchema },
   { uri: 'witchspace://design/worldbuilding', name: 'worldbuilding.md', title: 'The worldbuilding guide: tone, people, companies', mimeType: 'text/markdown', read: (d: McpData) => d.docs.find((x) => x.slug === 'worldbuilding')?.body ?? '' },
   { uri: VIEWER_URI, name: 'viewer.html', title: 'The live viewer: a ship turning in 3D (an MCP App, for view_ship)', mimeType: VIEWER_MIME, read: () => VIEWER_HTML },
   { uri: 'witchspace://lore', name: 'lore.md', title: 'The lore of Witchspace: the canon, by Trade, Fight, Explore and Build', mimeType: 'text/markdown', read: (d: McpData) => d.docs.find((x) => x.slug === 'lore')?.body ?? '' },

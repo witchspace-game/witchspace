@@ -8,10 +8,9 @@
 import { createInterface } from 'node:readline';
 import { handle, type Message } from '../src/mcp/protocol';
 import type { McpData } from '../src/mcp/tools';
-import { compileSchemaCheck, loadMcpData } from './mcp-data';
+import { localMcpData } from './mcp-data';
 
-const loaded = loadMcpData();
-const data: McpData = { ...loaded, checkSchema: compileSchemaCheck(loaded.texts.schema) };
+const data: McpData = localMcpData();
 
 const out = (v: unknown) => process.stdout.write(JSON.stringify(v) + '\n');
 

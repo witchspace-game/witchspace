@@ -10,6 +10,8 @@ import bundle from './mcp-data.json';
 // Compiled from the ship schema by tools/mcp-data.ts (Workers can't compile it at run time).
 // @ts-expect-error: generated JavaScript, no types
 import checkShip from './mcp-schema.js';
+// @ts-expect-error: generated JavaScript, no types
+import checkModule from './module-schema.js';
 
 const VERSION = '1';
 const MAX_BODY = 512 * 1024; // a ship file is a few KB; this is plenty
@@ -26,8 +28,9 @@ export function schemaErrors(check: (v: unknown) => boolean, value: unknown, wha
 }
 
 export const data: McpData = {
-  ...(bundle as unknown as Omit<McpData, 'checkSchema'>),
+  ...(bundle as unknown as Omit<McpData, 'checkSchema' | 'checkModuleSchema'>),
   checkSchema: (ship) => schemaErrors(checkShip, ship, 'ship'),
+  checkModuleSchema: (m) => schemaErrors(checkModule, m, 'module'),
 };
 
 // A rough per-address limit, per Worker instance: enough to stop a runaway loop.
