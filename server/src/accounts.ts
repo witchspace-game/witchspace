@@ -408,12 +408,15 @@ export class Accounts extends DurableObject<AccountsEnv> {
     return this.sql.exec(`SELECT id FROM accounts WHERE lower(email) IN (${list.map(() => '?').join(',')})`, ...list).toArray().map((r) => r.id as string);
   }
 
-  async whoIs(session: string): Promise<{ id: string; callsign: string | null } | null> {
+  /** Who a session belongs to, with the edition numbers they hold (shared space shows an edition only to its owner). */
+  async whoIs(session: string): Promise<{ id: string; callsign: string | null; editions: { id: string; number: number }[] } | null> {
     if (typeof session !== 'string' || session.length < 20) return null;
     const row = this.sql
       .exec('SELECT a.id, a.callsign FROM sessions s JOIN accounts a ON a.id = s.account WHERE s.hash = ? AND s.expires > ?', await sha256(session), Date.now())
       .toArray()[0];
-    return row ? { id: row.id as string, callsign: (row.callsign as string | null) ?? null } : null;
+    if (!row) return null;
+    const editions = this.sql.exec('SELECT edition, number FROM editions WHERE account = ?', row.id).toArray().map((r) => ({ id: r.edition as string, number: r.number as number }));
+    return { id: row.id as string, callsign: (row.callsign as string | null) ?? null, editions };
   }
 
   // --- Signing in ---------------------------------------------------------------

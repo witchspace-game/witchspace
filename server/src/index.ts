@@ -15,6 +15,7 @@ import { btc, isBtc } from './btc';
 import { ClipBoard, type ClipsEnv } from './clips';
 import { buildFeed, FEED_MAX_AGE, FEED_WINDOW } from './feed';
 import { networkOf } from './http';
+import { cleanPaint, ownPaint } from './paint';
 import { REPORT_EVERY_MS } from './spaceBudget';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
 
@@ -410,7 +411,7 @@ export class SystemRoom extends DurableObject<Env> {
       }
       const verified = true;
       const name = who.callsign;
-      const paint = cleanPaint(msg.paint);
+      const paint = ownPaint(cleanPaint(msg.paint), who.editions);
       a.commander = { id: crypto.randomUUID().slice(0, 8), name, rank, verified, ship, p: [0, 0, 0], q: [0, 0, 0, 1], s: 0, f: false, ...(paint ? { paint } : {}) };
       ws.serializeAttachment(a);
       const lasers = Array.isArray(msg.lasers) ? msg.lasers.filter((l): l is string => typeof l === 'string' && l in LASERS) : [];
@@ -745,14 +746,3 @@ function rotate(v: Vec3, q: [number, number, number, number]): Vec3 {
   return [ix * w + iw * -x + iy * -z - iz * -y, iy * w + iw * -y + iz * -x - ix * -z, iz * w + iw * -z + ix * -y - iy * -x];
 }
 
-/** A ship's paint, as sent: hex colours and a glow in range, or nothing. */
-function cleanPaint(p: unknown): Paint | undefined {
-  if (!p || typeof p !== 'object') return undefined;
-  const { c, g, t, l } = p as { c?: unknown; g?: unknown; t?: unknown; l?: unknown };
-  const hex = (x: unknown) => (typeof x === 'string' && /^#[0-9a-f]{6}$/i.test(x) ? x : undefined);
-  const colour = hex(c);
-  if (!colour) return undefined;
-  const glow = typeof g === 'number' && g >= 1 && g <= 1.5 ? g : undefined;
-  const trim = hex(t);
-  return { c: colour, ...(glow ? { g: glow } : {}), ...(trim ? { t: trim } : {}), ...(l === 1 ? { l: 1 as const } : {}) };
-}

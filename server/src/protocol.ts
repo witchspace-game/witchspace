@@ -3,6 +3,8 @@
 // WebSocket; positions in metres in the system's frame, rotations as
 // quaternions [x, y, z, w], speeds in m/s.
 
+import { FLYABLE } from '../../src/content/flyable';
+
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number];
 
@@ -33,6 +35,8 @@ export interface Paint {
   t?: string;
   /** Black-light running lights (the Dark Edition's luxury), unless she's flown as a full ghost. */
   l?: 1;
+  /** A numbered special edition, e.g. { i: 'dark', n: 1 }: kept only if the commander's account holds that number. */
+  e?: { i: string; n: number };
 }
 
 export type ClientMessage =
@@ -76,10 +80,8 @@ export type ServerMessage =
   /** Shared space is for commanders with a callsign (Mark): sign in, or claim one, then come back. */
   | { type: 'signin'; need: 'account' | 'callsign' };
 
-/** The ships commanders can fly in shared space (stage 1: the Cobra). Must match content/ships. */
-export const SHIPS: Record<string, { maxSpeed: number; shields: number; hull: number; radius: number; missiles: number }> = {
-  'cobra-mk3': { maxSpeed: 280, shields: 100, hull: 150, radius: 28, missiles: 4 },
-};
+/** The ships commanders fly in shared space, each as herself: read from their ship files (src/content/flyable.ts). */
+export const SHIPS = FLYABLE;
 
 /** Player lasers, as in src/game/weapons.ts (a test checks they match). */
 export const LASERS: Record<string, { interval: number; damage: number; range: number }> = {

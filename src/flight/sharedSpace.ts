@@ -21,6 +21,8 @@ import { myLook } from '../ui/shipyard';
 import { voiceOf } from './sounds';
 import { explodeNetMissile, netMissiles, startNetMissile } from './missiles';
 import * as THREE from 'three';
+import { editionById, editionNo } from '../content/editions';
+import { flyableOf } from '../content/flyable';
 import type { NpcShip } from '../game/npc';
 
 /** What main.ts still owns (it fills these in at start). */
@@ -41,7 +43,13 @@ export const initSharedSpace = (hooks: typeof main) => Object.assign(main, hooks
 const COMMANDER_COLOUR = '#dfe9ff'; // their tags and scanner marks; ships keep their own colours
 
 /** Another commander's tag: rank insignia, callsign and range, e.g. "◆◆ CMDR Moxon · 0.8 km". */
-export const callsignTag = (r: Remote, range: string) => (remoteUnidentified(r) ? `Unidentified ship · ${range}` : `${rankInsignia(r.rank)} CMDR ${r.name} · ${range}`.trim());
+export const callsignTag = (r: Remote, range: string) => (remoteUnidentified(r) ? `Unidentified ship · ${range}` : `${rankInsignia(r.rank)} CMDR ${r.name}${shipLabel(r)} · ${range}`.trim());
+/** What she is, when it's worth saying: a numbered edition (shown only by its owner: the server checks), or any hull but a Cobra. */
+function shipLabel(r: Remote): string {
+  const e = r.paint?.e && editionById(r.paint.e.i);
+  if (e && r.paint?.e) return ` · ${e.name} ${editionNo(r.paint.e.n)}`;
+  return r.ship === 'cobra-mk3' ? '' : ` · ${flyableOf(r.ship).name}`;
+}
 /** A commander running dark, too far off for a hull read: we can see them, not say who they are. */
 const remoteUnidentified = (r: Remote) => r.dark && r.position.distanceTo(player.obj.position) > HULL_READ;
 export const commanderColour = (r: Remote) => (sharedSpace.isHostile(r) ? '#ff4d6d' : remoteUnidentified(r) ? UNIDENTIFIED_HEX : COMMANDER_COLOUR);
@@ -187,7 +195,7 @@ export function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
   }
   const here = currentSystem();
   const look = myLook();
-  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken(), look ? { c: look.colour, g: look.glow, ...(look.trim ? { t: look.trim } : {}), ...(look.lights ? { l: 1 as const } : {}) } : undefined);
+  sharedSpace.join(here.galaxy, here.index, cmdr().name, hullOf(cmdr()), Object.values(cmdr().lasers).filter((l): l is LaserId => Boolean(l)), combatRating(cmdr().kills), cmdr().missiles, isWorking(cmdr(), 'ecm'), sessionToken(), look ? { c: look.colour, g: look.glow, ...(look.trim ? { t: look.trim } : {}), ...(look.lights ? { l: 1 as const } : {}), ...(cmdr().paint?.edition ? { e: { i: cmdr().paint!.edition!.id, n: cmdr().paint!.edition!.number } } : {}) } : undefined);
   const back = sharedSpace.takeCorrection();
   if (back) player.obj.position.copy(back);
   sharedSpace.update(dt, {

@@ -8,7 +8,7 @@ stages:
   - Stage 1: fly, fight and collide together, one system at a time | built
   - Signed-in commanders only, and a front door to claim a callsign | designed
   - Test pilots, room tests and a second account for testing alone | proposed
-  - Every ship flown as itself on the server | proposed
+  - Every ship flown as itself on the server | built
   - Rank, the law and your ship kept by the server | proposed
   - The law between commanders: self-defence, fair kills, protected starters | proposed
   - Talking to each other (player radio stage 2) | proposed
@@ -63,7 +63,7 @@ Checked against the code on 30 October 2026 (main plus PR #318).
 
 ### Not right yet
 
-1. **Every ship is a Cobra on the server.** `protocol.ts` `SHIPS` lists only `cobra-mk3`, and `hello` forces anything else to it (`index.ts:384`). Others see a Cobra, and the server holds her to Cobra numbers: Mark's Fer-de-lance has 240 shields and 200 hull in the game, but the server caps her at 100 and 150. Her first hit in shared space takes her shields down to the Cobra's. Her three missiles are fine; a ship with more than four would be cut to four.
+1. ~~**Every ship is a Cobra on the server.**~~ *Fixed: each hull flies as herself (step 3, below).* `protocol.ts` `SHIPS` lists only `cobra-mk3`, and `hello` forces anything else to it (`index.ts:384`). Others see a Cobra, and the server holds her to Cobra numbers: Mark's Fer-de-lance has 240 shields and 200 hull in the game, but the server caps her at 100 and 150. Her first hit in shared space takes her shields down to the Cobra's. Her three missiles are fine; a ship with more than four would be cut to four.
 2. **The law between commanders is one-sided.**
    - **Killing any commander makes you a Fugitive,** not only a clean one: the server doesn't know who's clean, so the game treats every commander kill as murder (`main.ts:7634`). Shooting back at someone who attacked you first makes you an Offender (`main.ts:7576`), and killing them makes you a Fugitive.
    - It's decided in the browser. Anarchies have no law (`hasLaw`), and running dark leaves the crime unpinned, as for NPCs.
@@ -96,7 +96,17 @@ Mark has to be able to test alone. See [section 4](#4-testing). In short: **test
 
 **Why second:** every later step changes how commanders treat each other, and none of it can be checked by one person today.
 
-### Step 3. Every ship flown as itself
+### Step 3. Every ship flown as itself *(built, 31 October 2026)*
+
+Mark: *"What needs to happen before I can show off my Fdl in Shared Space? I feel like this could be a big thing."*
+
+As built:
+- **The ships come from their files:** `src/content/flyable.ts` reads speed, shields, hull, missiles and a hit radius (71% of the hull's furthest point: the Cobra's 28 m, the Fer-de-lance's 46 m). The server's `SHIPS` is that list, and a test checks every hull a commander can own, and every edition's, is in it.
+- **An edition is shown only by its owner.** The game sends the edition's number with its paint, and the server keeps it only if the account holds that number (`server/src/paint.ts`). The Dark Edition's black-light lights come only with a Dark Edition. Anyone else claiming one flies plain.
+- **Tags say what she is:** *◆◆ CMDR Darkstar · Dark Edition 001 · 0.9 km*, or the hull's name for anything but a Cobra.
+- **Still to do here:** remote lasers drawn the way they fired, and each ship's own laser sound. Until step 4 the hull (not the edition) is still the browser's word.
+
+Planned:
 
 - `SHIPS` is built from `content/ships` (speed, shields, hull, radius, missiles), not typed by hand, with a test that they match. A commander's `hello` names their ship; the server accepts any ship in the fleet.
 - **Editions are seen by others** already through paint, including the Dark Edition's lights. With this step they're also the right hull, the right size for collisions and the right numbers for the fight.
