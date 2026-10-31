@@ -47,6 +47,25 @@ This builds on the first slice (rings, moons, surveys, signals; see [ideas](../i
 
 "The surveying needs to be improved. It's boring and isn't very good, as you could potentially fly into the planet as well." Holding a low orbit while a bar fills is a chore, not play, and flying low over a planet is a crash waiting to happen. To be designed: surveying as something you do, not wait through (sweeps you choose, features to find and frame, a scan that reveals the surface as you pass), with the ship keeping itself out of the ground: a safe orbit the computer holds while you work, or a warning and a pull-up, never a death by survey.
 
+## A survey reveals the world *(idea, Mark, 31 October 2026)*
+
+Mark: *"I actually think we could add a few interesting visual cues etc to planets once they have been surveyed. What do you think because right now they all look the same!"*
+
+Every planet today is the same glowing globe of latitude and longitude, only its colour changes. A survey should change how it looks, for good, in your game: what you found is drawn on it. All from the system's seed and its existing numbers (economy, government, tech level, population, species), so every commander who surveys it sees the same world, and all in lines and glow, never textures.
+- **Before a survey:** the plain grid, as now. It's an unknown.
+- **What a survey can show:**
+  - **Night-side lights** for the population: a scatter of points on the dark side, dense on a rich industrial world, a few on a frontier one, none on an empty one.
+  - **Ice caps:** a pale ring of short lines at each pole on a cold world.
+  - **Weather bands:** a few slow-turning cloud lines drawn just above the surface, wide on a stormy world.
+  - **Oceans and continents:** the grid drawn only over land, so the oceans read as dark smooth gaps.
+  - **Fire:** glowing points on the night side of a volcanic or war-torn world (and during a war event).
+  - **Aurora:** a shimmering curtain over the poles for a world with a strong field.
+  - **The marks of people:** an orbital ring of lights on a high-tech world; a Wexley-Yorozu works beside a moon.
+- **Moons too:** a surveyed Candidate moon gets a faint green tint, a Barren one stays grey.
+- **It pays the survey back:** a world you've surveyed looks different from one you haven't, so a chart of your surveyed worlds is a record of where you've been, and other explorers' worlds look plain until they survey them too (or buy the data).
+- **Fits the survey rethink** above: the surface is revealed as you sweep over it, so surveying becomes watching a world appear.
+- **Cost:** a few hundred more line segments and points per planet, only for surveyed worlds; nothing on the server.
+
 ## Stage 1: reasons to go, things to spend on *(built, October 2026)*
 
 ### Trails
