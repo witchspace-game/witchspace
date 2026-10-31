@@ -4,6 +4,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { ShipDef } from '../content/types';
+import { GLOW, MAX_PIXEL_RATIO } from '../render/look';
 import { buildPainted, disposeShip, type Look, type ShipModel } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 
@@ -23,14 +24,14 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Opaque, in the frame's own colour: over a see-through canvas the glow pools into a wash.
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#04060b');
   const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 50000);
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.0, 0, 0.2);
-  bloom.compositeMaterial.uniforms['bloomFactors'].value = [1, 0.75, 0.45, 0.18, 0.04];
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
+  bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
