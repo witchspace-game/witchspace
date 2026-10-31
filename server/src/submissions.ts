@@ -4,7 +4,7 @@
 // the credit and the commission can't go astray. The table and the routes are
 // in accounts.ts; the pull request is opened by github.ts.
 
-import { checkModule, checkService } from '../../src/content/modules';
+import { moduleCheck } from '../../src/content/modules';
 import type { ModuleDef, ShipDef } from '../../src/content/types';
 
 export const KINDS = ['ship', 'module'] as const;
@@ -31,17 +31,8 @@ export interface Checks {
   modules: ReadonlyMap<string, ModuleDef>;
 }
 
-/** A module's checks: its schema first (`schemaErrors`, compiled where it runs), then the coupling standard and its service. */
-export function moduleCheck(schemaErrors: (m: unknown) => string[], modules: ReadonlyMap<string, ModuleDef>): Checks['module'] {
-  return (m) => {
-    const schema = schemaErrors(m).map((e) => `schema: ${e}`);
-    if (schema.length) return { errors: schema, warnings: [] };
-    // The coupling standard's sentences are about the shape; the service ones name their field.
-    const { errors, warnings } = checkModule(m);
-    const service = checkService(m, new Map([...modules, [m.id, m]])).map((e) => `${e.split(/[ "]/)[0]}: ${e}`);
-    return { errors: [...errors.map((e) => `geometry: ${e}`), ...service], warnings: warnings.map((w) => `geometry: ${w}`) };
-  };
-}
+/** A module's checks, shared with the MCP server's validate_module (src/content/modules.ts). */
+export { moduleCheck };
 
 export interface Prepared {
   file: ShipDef | ModuleDef;

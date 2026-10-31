@@ -59,7 +59,7 @@ export function buildTools(as: AsAccount, callsign: string | null): Extra {
       name: 'submit',
       title: 'Hand it in',
       description:
-        'Hand in a ship or a Titanoboa module for review, credited to the signed-in commander and marked AI-assisted. Only when the person asks to hand it in, after they have seen it and it passes validate_ship (or, for a module, the coupling standard). It runs the same checks; a file that fails is not kept and the problems come back. Nothing is public until a maintainer accepts it; accepting opens a pull request, and an accepted module earns its designer a commission in the game.',
+        'Hand in a ship or a Titanoboa module for review, credited to the signed-in commander and marked AI-assisted. Only when the person asks to hand it in, after they have seen it and it passes validate_ship (or, for a module, validate_module). It runs the same checks; a file that fails is not kept and the problems come back. Nothing is public until a maintainer accepts it; accepting opens a pull request, and an accepted module earns its designer a commission in the game.',
       inputSchema: {
         type: 'object',
         properties: {

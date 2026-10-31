@@ -5,13 +5,11 @@
 import { balanceCheck, validateShip } from '../../src/mcp/tools';
 import { NOT_FLOWN } from '../../src/content/slot';
 import type { ModuleDef, ShipDef } from '../../src/content/types';
-import { data, schemaErrors } from './mcp';
-import bundle from './mcp-data.json';
-import { moduleCheck, type Checks } from './submissions';
-// @ts-expect-error: generated JavaScript, no types
-import checkModuleSchema from './module-schema.js';
+import { moduleCheck } from '../../src/content/modules';
+import { data } from './mcp';
+import type { Checks } from './submissions';
 
-const modules = new Map((bundle as unknown as { modules: ModuleDef[] }).modules.map((m) => [m.id, m]));
+const modules = new Map<string, ModuleDef>(data.modules.map((m) => [m.id, m]));
 
 export const CHECKS: Checks = {
   ship: (ship: ShipDef) => {
@@ -20,7 +18,7 @@ export const CHECKS: Checks = {
     const balance = errors.length || NOT_FLOWN.has(ship.role) ? [] : balanceCheck(ship, data).notes.filter((n) => !n.startsWith('Nothing stands out')).map((n) => `balance: ${n}`);
     return { errors, warnings: [...warnings, ...balance] };
   },
-  module: moduleCheck((m) => schemaErrors(checkModuleSchema, m, 'module'), modules),
+  module: moduleCheck(data.checkModuleSchema, modules),
   ships: new Map(data.ships.map((s) => [s.id, s])),
   modules,
 };

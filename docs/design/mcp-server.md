@@ -8,7 +8,7 @@ stages:
   - Contributors - validate, preview and balance-check ships; the designs and help wanted; galaxy lookups | built
   - Hand it in - sign in, submit, follow it, revise it; the review queue and a pull request made for you | building
   - Guided workshops - prompts for a first ship, a module, a saloon regular | proposed
-  - Every content type - Titanoboa modules, characters, news events, trails, company files | proposed
+  - Every content type - Titanoboa modules (validate_module, preview_module: built), characters, news events, trails, company files | building
   - Try it - the live viewer in the chat, and a link that flies your draft in the game, in a test system | building
   - The community - claim a task, post and vote on ideas, see your credits and commissions | proposed
   - Players - the live galaxy, public news only | proposed
@@ -172,6 +172,8 @@ Tools:
 |---|---|
 | `validate_ship` | Checks a ship file against `schemas/ship.schema.json` and the geometry rules in `validate.ts` (closed, convex parts, face winding, size), and the written rules: a class, a maker, a reason to exist ([ships, classes and makers](ships-and-classes.md)), and the homage rule (evoke, never copy an on-screen design). Returns every problem, with how to fix it. |
 | `preview_ship` | Draws the ship as wireframe pictures (three-quarter, front, side, top) with a Cobra Mk III beside it for scale, returned as an image. |
+| `validate_module` | *(31 October 2026)* Checks a Titanoboa module file against `schemas/module.schema.json`, the coupling standard (the 140 m necks, the body clear of them, a closed hull of flat convex faces, at most 256 vertices) and its service details, with the same code a hand-in runs (`moduleCheck` in `src/content/modules.ts`), so a module that passes here passes there. Warns when no module in the fleet can sit beside it. |
+| `preview_module` | *(31 October 2026)* Draws the module bright, coupled into a line-up between the fleet modules it would sit beside, in grey: the same four views as `preview_ship`. |
 | `balance_check` | Compares the ship's stats with its class in the class table: "fast for a bulk trader, and its hold is a third of a Python's". |
 | `list_ships`, `get_ship` | The fleet, and any ship's file, so an assistant can learn from real ones. |
 | `designs`, `get_design` | The roadmap and every design document: status, stages, summary, and the text. |
@@ -179,7 +181,7 @@ Tools:
 | `galaxy_system` | Any system by name or number: government, economy, tech level, population, position, neighbours within 7 light years, and its description, so stories and missions land somewhere real. |
 | `worldbuilding` | The tone guide, the companies and the people, for writing that sounds like Witchspace. |
 
-Resources: the ship schema, `AGENTS.md`, `CONTRIBUTING.md`, the worldbuilding guide and the lore, so an assistant can read them before it starts.
+Resources: the ship and module schemas, `AGENTS.md`, `CONTRIBUTING.md`, the worldbuilding guide and the lore, so an assistant can read them before it starts.
 
 **How it's built.** A route on the existing Worker (`server/src`) speaking MCP's streamable HTTP transport. The JSON Schema check is compiled at build time (Ajv's standalone output), since Workers can't compile code at run time; the geometry checks, the galaxy generator and the doc headers are plain TypeScript the Worker can import. Previews are drawn as SVG on the server (the same projection the game uses, without WebGL), so no browser is needed. A small stdio wrapper (`npx tsx tools/mcp.ts`) serves the same tools locally.
 
