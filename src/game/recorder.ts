@@ -1,7 +1,7 @@
 // The flight recorder (docs/design/flight-recorder.md, stage 2): every ship's
 // black box. While flying, the view is encoded (H.264, in the browser with
-// WebCodecs: HD, 720p at 30 fps, stepping down to 480p at 24 fps on a device
-// that can't keep up) into a rolling buffer of the last minute, held in
+// WebCodecs: HD, 1080p at 30 fps on a computer and 720p on a phone, stepping down
+// to 480p at 24 fps on a device that can't keep up) into a rolling buffer of the last minute, held in
 // memory (a few MB). Nothing is written until a moment happens (a kill, a Legend, the
 // Marshals, a discovery, your death, or you keep it yourself); then the
 // seconds around it become an MP4 for the flight log. Where WebCodecs or
@@ -18,10 +18,13 @@ const CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42e028', 'avc1.42001f'];
 // work, and still sharp on a phone's screen. The device remembers, and the
 // flight log offers to try HD again.
 export type Quality = 'hd' | 'sd';
+/** A computer's screen shows far more than 720p (Mark: "check the flight recorder on desktop is recording at full quality"). */
+const COMPUTER = typeof matchMedia !== 'undefined' && !matchMedia('(pointer: coarse)').matches;
 const QUALITY: Record<Quality, { height: number; fps: number; bitrate: number }> = {
   // Mark: "why is it so bad quality?" The lines need little, but the soft glow, the haze and the dark
-  // gradients (with the screen's fine grain) broke into blocks at 1.2 Mbps; 3 keeps them clean.
-  hd: { height: 720, fps: 30, bitrate: 3_000_000 },
+  // gradients (with the screen's fine grain) broke into blocks at 1.2 Mbps; 3 keeps them clean at 720p,
+  // and 6 at 1080p (the same bits a pixel as the kill cam's upright videos, ui/encodeVideo.ts).
+  hd: COMPUTER ? { height: 1080, fps: 30, bitrate: 6_000_000 } : { height: 720, fps: 30, bitrate: 3_000_000 },
   sd: { height: 480, fps: 24, bitrate: 1_600_000 },
 };
 const SLOW_FPS = 40;

@@ -50,10 +50,12 @@ const renderPass = new RenderPass(new THREE.Scene(), camera);
  * The scene is drawn into the glow's own image first, and that image had no anti-aliasing (the
  * canvas's `antialias` doesn't reach it): every thin line had hard steps, and long lines at a
  * shallow angle (the hangar's pad and floor) broke into dashes that crawled as the view moved (Mark:
- * "Why do the lines on my desktop in the hanger etc flicker a lot"). Four samples a pixel on a
- * computer; a phone's denser screen hides the steps, and its battery is spared the work.
+ * "Why do the lines on my desktop in the hanger etc flicker a lot", on a 2560×1440 monitor at 1×).
+ * Four samples a pixel on a 1× screen, where the steps show most and it costs least (measured: no
+ * change at 1709×1284). Not on a Retina screen, whose steps are half the size, where even two samples
+ * cost nearly half the frame rate (60 to 35 at 2×); nor on a phone, whose dense screen hides them.
  */
-const SAMPLES = matchMedia('(pointer: coarse)').matches ? 0 : 4;
+const SAMPLES = !matchMedia('(pointer: coarse)').matches && devicePixelRatio < 2 ? 4 : 0;
 const composer = new EffectComposer(neoRenderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: SAMPLES }));
 composer.addPass(renderPass);
 /** Space bending around a witchspace rift; see lens.ts. */
