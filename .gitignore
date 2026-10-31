@@ -59,3 +59,6 @@ CLAUDE.local.md
 /callsign/
 /economy/
 /public/sitemap*.xml
+
+# The look check's fresh pictures and differences (tools/look-check.mjs)
+tools/look/out/

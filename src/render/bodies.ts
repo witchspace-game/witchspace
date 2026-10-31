@@ -1,15 +1,16 @@
 import * as THREE from 'three';
+import { PLANET, SUN } from './look';
 import { behindLines, circleSegments, disposeObject, neoLines, registerParts, retroLines, unregisterParts } from './wire';
 
 /** Where the atmosphere ends, as a multiple of the planet's radius. Debris burns up inside it. */
-export const ATMOSPHERE_SCALE = 1.06;
+export const ATMOSPHERE_SCALE = PLANET.atmosphere.scale;
 
 /** A soft glowing rim: brightest where you look through the most air, at the planet's edge. */
 function buildAtmosphere(radius: number, color: THREE.Color): THREE.Mesh {
   return new THREE.Mesh(
     new THREE.SphereGeometry(radius, 96, 48),
     new THREE.ShaderMaterial({
-      uniforms: { glow: { value: color.clone().multiplyScalar(0.55) } },
+      uniforms: { glow: { value: color.clone().multiplyScalar(PLANET.atmosphere.strength) } },
       vertexShader: /* glsl */ `
         varying vec3 vNormal;
         varying vec3 vView;
@@ -25,7 +26,7 @@ function buildAtmosphere(radius: number, color: THREE.Color): THREE.Mesh {
         varying vec3 vView;
         void main() {
           float rim = 1.0 - abs(dot(vNormal, vView));
-          gl_FragColor = vec4(glow * pow(rim, 6.0), 1.0);
+          gl_FragColor = vec4(glow * pow(rim, ${PLANET.atmosphere.falloff.toFixed(1)}), 1.0);
         }`,
       transparent: true,
       blending: THREE.AdditiveBlending,
@@ -55,8 +56,8 @@ export function buildPlanet(radius: number, lineColor: string, atmosphere = true
 
   const neoGrid = [...[-60, -30, 0, 30, 60].flatMap(latitude), ...[0, 30, 60, 90, 120, 150].flatMap(meridian)];
   const neo = [
-    new THREE.Mesh(sphere, new THREE.MeshLambertMaterial({ color: color.clone().multiplyScalar(0.12), ...behindLines })),
-    neoLines(neoGrid, color.clone().multiplyScalar(0.9), 1.2),
+    new THREE.Mesh(sphere, new THREE.MeshLambertMaterial({ color: color.clone().multiplyScalar(PLANET.fill), ...behindLines })),
+    neoLines(neoGrid, color.clone().multiplyScalar(PLANET.grid.brightness), PLANET.grid.width),
     ...(atmosphere ? [buildAtmosphere(radius * ATMOSPHERE_SCALE, color)] : []),
   ];
   // The BBC Micro drew planets as an outline with an equator and a meridian.
@@ -81,7 +82,7 @@ export function buildSun(radius: number): THREE.Group {
   const g = new THREE.Group();
   const sphere = new THREE.SphereGeometry(radius, 48, 24);
   // Values above 1 feed the bloom pass, so the sun blazes.
-  const neo = new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 3.1, 1.8) }));
+  const neo = new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: new THREE.Color(...SUN) }));
   const retro = new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: 0xffffff }));
   g.add(neo, retro);
   registerParts({ neo: [neo], retro: [retro] });
