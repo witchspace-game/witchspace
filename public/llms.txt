@@ -18,11 +18,13 @@ Code is GPL-3.0. Content is CC BY-SA 4.0. Witchspace is not affiliated with Fron
 
 ## MCP server
 
-- [Witchspace MCP server](https://witchspace.org.uk/design/mcp-server/): connect to https://space.witchspace.org.uk/mcp (streamable HTTP, read-only, no sign-in) for validate_ship, preview_ship, balance_check, list_ships, get_ship, designs, get_design, help_wanted and galaxy_system
+- [Witchspace MCP server](https://witchspace.org.uk/design/mcp-server/): connect to https://space.witchspace.org.uk/mcp (streamable HTTP, read-only, no sign-in) for validate_ship, view_ship, preview_ship, validate_module, preview_module, balance_check, list_ships, get_ship, designs, get_design, help_wanted and galaxy_system; the ship and module schemas are resources (witchspace://schema/ship, witchspace://schema/module)
 
 ## Content formats
 
 - [Ship schema](https://github.com/witchspace-game/witchspace/blob/main/schemas/ship.schema.json): JSON Schema for ships and stations
+- [Module schema](https://github.com/witchspace-game/witchspace/blob/main/schemas/module.schema.json): JSON Schema for the Titanoboa's modules
+- [Example module: the maw](https://github.com/witchspace-game/witchspace/blob/main/content/modules/maw.json)
 - [Example ship: Cobra Mk III](https://github.com/witchspace-game/witchspace/blob/main/content/ships/cobra-mk3.json)
 - [Example station: Coriolis](https://github.com/witchspace-game/witchspace/blob/main/content/ships/coriolis.json)
 
