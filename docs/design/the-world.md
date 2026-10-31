@@ -20,13 +20,13 @@ help:
 
 # Design: the world
 
-*Proposed, 30 October 2026, with Mark. The traffic (section 9, steps 1 to 4) was built the same day for Show HN, at Mark's word: "This is the missing piece, lets get it done before HN." The rest waits. Change by pull request.*
+*Proposed, 30 October 2026, with Mark. The traffic (section 9, steps 1 to 4) was built the same day for Show HN, at Mark's word: "This is the missing piece, let's get it done before HN." The rest waits. Change by pull request.*
 
 Mark asked how the galaxy should feel, and how it should work underneath:
 
-- "How do we make the universe feel like more than just pirates and police and the cobra trader pirates. Have we got Company ships, Who's supplying the Titanoba with its materials?"
-- "How do players interact with NPC's in solo play and then how shared space actually works... Do we have AI players with goals in our universe whilst its still small?"
-- "How do we do it elegantly, efficiantly using math"
+- "How do we make the universe feel like more than just pirates and police and the Cobra trader pirates? Have we got company ships? Who's supplying the Titanoboa with its materials?"
+- "How do players interact with NPCs in solo play, and then how shared space actually works... Do we have AI players with goals in our universe whilst it's still small?"
+- "How do we do it elegantly, efficiently, using math?"
 
 This document answers all three. It builds on [markets and trade](markets-and-trade.md) (world events), [companies and contracts](companies-and-contracts.md) and [the companies](../companies.md), [the Titanoboa](ship-the-titanoboa.md) and its yards, [the Falcons](legends-the-falcon.md) (a Legend who remembers you), [exploration](exploration.md#stage-4-legends) (the Constrictor's trail), [radio and comms](radio-and-comms.md), [shared space](shared-space.md) and [servers and hosting](servers-and-hosting.md).
 
@@ -52,7 +52,7 @@ How the first steps work in the game (Modern rules; Classic keeps 1984's traffic
 - **The Titan's freighters:** while a yard builds, a Wexley-Yorozu Bullsnake comes about every 8 minutes with what the stage needs, and flies to the Titan.
 - **Relief:** while an event leaves a world short (famine, drought, plague), ships bring what's missing about every 7 minutes, half of them the Carriers' Mutual.
 - **Hail one and it says who it is:** "Dry Dock, in from Atriso with alloys for the Titan."
-- **Company security (Mark: "is their no protection for the Titan or are they paying for protection anywhere?"):** Vipers in company colours. Two or three guard each yard's Titan (more in lawless space), and a lost guard is replaced from her hold after three minutes. Escorts fly alongside most of the Titan's runs (nine in ten in an anarchy, one in four in a corporate state) and a third of company runs carrying valuable cargo. They fight pirates and whoever fires on the company's ships, and answer to the company, not the law: firing on them makes you an offender, not a fugitive. Hail one: "Wexley-Yorozu yard security".
+- **Company security (Mark: "is there no protection for the Titan or are they paying for protection anywhere?"):** Vipers in company colours. Two or three guard each yard's Titan (more in lawless space), and a lost guard is replaced from her hold after three minutes. Escorts fly alongside most of the Titan's runs (nine in ten in an anarchy, one in four in a corporate state) and a third of company runs carrying valuable cargo. They fight pirates and whoever fires on the company's ships, and answer to the company, not the law: firing on them makes you an offender, not a fugitive. Hail one: "Wexley-Yorozu yard security".
 - **Not yet:** losses don't slow the yard (step 5's exceptions), and in shared space each phone flies its own copy once a ship is close.
 
 ## 1. Where we are
@@ -286,7 +286,7 @@ Steps 1 to 4 need no server, so they can start straight after Show HN.
 
 ## 10. Open questions for Mark
 
-1. ~~**The order:**~~ **Traffic and the Titan first** (Mark, 30 Oct 2026: "Traffic and Titan ( which i prefer rather than Titanoboa ) and traffic"), then Bond. Mark prefers the name **Titan** to Titanoboa; renaming her across the game, site and docs is its own change.
+1. ~~**The order:**~~ **Traffic and the Titan first** (Mark, 30 Oct 2026: "Traffic and Titan (which I prefer rather than Titanoboa) and traffic"), then Bond. Mark prefers the name **Titan** to Titanoboa; renaming her across the game, site and docs is its own change.
 2. **Solo changes:** stay in your own world (recommended), or count for everyone when you're signed in?
 3. **How busy:** how many convoys in a quiet system, and in a busy one? Too many and the lanes feel like a motorway; too few and nobody meets one.
 4. **Bond's world:** which agricultural system does he retire to?

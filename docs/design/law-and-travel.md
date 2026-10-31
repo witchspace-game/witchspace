@@ -70,7 +70,7 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
 
 ### Warrants travel at the speed of news *(Mark, 31 October 2026)*
 
-Mark: *"It doesnt feel fair to have a warrant issued that is immediately galaxy wide thats not how information travels."* Proposed, not built; it replaces today's instant galaxy-wide warrant.
+Mark: *"It doesn't feel fair to have a warrant issued that is immediately galaxy-wide: that's not how information travels."* Proposed, not built; it replaces today's instant galaxy-wide warrant.
 
 - **Where the crime was, at once:** the local police and the station saw it. The protected starter systems stay protected.
 - **Everywhere else, as news:** the warrant spreads at the game's news delay (`newsDelay` in `src/economy/events.ts`: 10 minutes, then 12 more for every light year), reaching each system's police, its news board and opted-in bounty hunters ([become a Marshal](marshals-career.md#warrant-alerts-on-your-phone-mark)). Once heard, it stays on record there.
@@ -80,7 +80,7 @@ Mark: *"It doesnt feel fair to have a warrant issued that is immediately galaxy 
 
 ### Friendly fire *(Mark, 30 October 2026; built)*
 
-Mark: "when you are in combat and a police viper flies in front of you and it catches a laser shot you immediately become a fugutive!" Under Modern rules, in a fight (pirates about, or anyone after you), the first stray hit on a police or company security ship is forgiven: it radios "Check your fire, Commander!", and a burst that clips it counts once. Hit it again within 30 seconds, hit one with no fight on, or hit a ship you've locked a missile on, and it's a crime as before. Destroying one always counts. Classic keeps 1984's rule.
+Mark: "When you are in combat and a police Viper flies in front of you and it catches a laser shot, you immediately become a Fugitive!" Under Modern rules, in a fight (pirates about, or anyone after you), the first stray hit on a police or company security ship is forgiven: it radios "Check your fire, Commander!", and a burst that clips it counts once. Hit it again within 30 seconds, hit one with no fight on, or hit a ship you've locked a missile on, and it's a crime as before. Destroying one always counts. Classic keeps 1984's rule.
 
 ## 3. Ways out when you're wanted
 

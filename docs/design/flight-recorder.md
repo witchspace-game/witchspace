@@ -127,7 +127,7 @@ Everything shared carries the signed-in account's callsign, and callsigns are un
 
 ## Moments: one word, three actions *(Mark, 29 October 2026; built)*
 
-Mark: "I dont like the current flight log/recorder/killcam because its confusing. It needs to be brilliantly elegant and intuitive." Marketing's walkthrough (launch/flight-recorder-review.md) found too many names, four equal buttons on every moment, two kinds of share, and replays with nothing in them. So, from the phone mock-ups Mark approved:
+Mark: "I don't like the current flight log/recorder/killcam because it's confusing. It needs to be brilliantly elegant and intuitive." Marketing's walkthrough (launch/flight-recorder-review.md) found too many names, four equal buttons on every moment, two kinds of share, and replays with nothing in them. So, from the phone mock-ups Mark approved:
 
 - **One word, moments.** The sheet on docking is *Your moments · This trip*; the library's title is *Your moments* (the button stays *Flight log*).
 - **It catches them, you choose, you share.** The best first and big (`tripWeight`: a fight before a death that took nobody with it; a death with kills still leads), with one **Share** and **More**; the rest as rows with ☆, Share and ⋯.

@@ -96,7 +96,7 @@ Tap it and the game opens with Diso as your destination.
 
 ### The warrant travels at the speed of news *(Mark)*
 
-Mark: *"The warrant would be issued in the system and if theres no Marshal's in that system then the warrant would be passed to the next system according to the speed of information that is consistent with the game."*
+Mark: *"The warrant would be issued in the system, and if there's no Marshals in that system, then the warrant would be passed to the next system according to the speed of information that is consistent with the game."*
 
 - **Issued where the crime was.** On-duty Marshals in that system are alerted at once.
 - **Then it spreads outward** at the game's own news delay, the same as headlines and price reports (`newsDelay` in `src/economy/events.ts`: 10 minutes, then 12 more for every light year). Each system hears it at the time of the crime plus that delay, and opted-in hunters docked there, or last flying there, are alerted when it arrives.
@@ -106,7 +106,7 @@ Mark: *"The warrant would be issued in the system and if theres no Marshal's in 
   > **Warrant heard at Lave:** CMDR Vex, wanted for murder at Diso, 3.6 LY away, 53 minutes ago. 4,000 Cr.
 
 - **It makes a chase.** The nearest hunters hear first and have the best chance; a Fugitive can try to outrun their own warrant, or run for an anarchy, where it never arrives.
-- **The police wait for the news too** *(Mark: "It doesnt feel fair to have a warrant issued that is immediately galaxy wide thats not how information travels")*: only the system where the crime was knows at once. **The Bastion follows your witchspace trail**, a few minutes behind each jump, so running buys time from the hunters and the police, never from the Marshals on your tail. The full rule is in [law and travel](law-and-travel.md#warrants-travel-at-the-speed-of-news-mark-31-october-2026).
+- **The police wait for the news too** *(Mark: "It doesn't feel fair to have a warrant issued that is immediately galaxy-wide: that's not how information travels")*: only the system where the crime was knows at once. **The Bastion follows your witchspace trail**, a few minutes behind each jump, so running buys time from the hunters and the police, never from the Marshals on your tail. The full rule is in [law and travel](law-and-travel.md#warrants-travel-at-the-speed-of-news-mark-31-october-2026).
 
 ## Stories it opens
 
