@@ -1,0 +1,13 @@
+{
+  "flight": {"w":1500,"h":684,"callouts":[{"label":"Left side","x":3.2,"y":93.1},{"label":"Speed","x":80,"y":63.2},{"label":"Fire","x":87.7,"y":73.1},{"label":"Missile","x":87.7,"y":57.3},{"label":"ECM","x":87.7,"y":43.9},{"label":"The big button","x":88.5,"y":18.7},{"label":"The arrow","x":79.2,"y":18.7},{"label":"The camera","x":87.2,"y":2.3},{"label":"The scanner","x":47.7,"y":75.9},{"label":"The radio","x":1.3,"y":2.3}]},
+  "dashboard": {"w":756,"h":175,"callouts":[{"label":"The scanner","x":45.4,"y":10.7},{"label":"SH · HL","x":6.6,"y":19.1},{"label":"SP · FU","x":6.5,"y":43.8},{"label":"LT","x":6.1,"y":56.2},{"label":"CT","x":6.3,"y":80.9},{"label":"RL · DC","x":73,"y":29.8},{"label":"The compass","x":69.9,"y":50},{"label":"AUTO · DARK","x":77.2,"y":56.5},{"label":"The pips","x":91.9,"y":58.4}]},
+  "scanner": {"w":347,"h":146},
+  "compass-behind": {"w":55,"h":55},
+  "compass-ahead": {"w":55,"h":55},
+  "views-picker": {"w":1500,"h":684},
+  "views-glance": {"w":1500,"h":684},
+  "drawer": {"w":1500,"h":684},
+  "speed": {"w":100,"h":232},
+  "approach": {"w":1500,"h":684},
+  "moments": {"w":780,"h":1328}
+}
