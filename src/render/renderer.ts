@@ -61,6 +61,31 @@ composer.addPass(renderPass);
 /** Space bending around a witchspace rift; see lens.ts. */
 export const lens = new LensPass();
 composer.addPass(lens);
+// With anti-aliasing on, the odd sample at a planet's edge comes out not-a-number or infinite, and the
+// glow spread it into a white disc that flashed for a frame (Mark: "white circular artifacts flshing
+// around the perimeter of the planet"). Clean it out before the glow: nothing is lost, since the sun,
+// the brightest thing drawn, is 4.
+if (SAMPLES > 0)
+  composer.addPass(
+    new ShaderPass({
+      uniforms: { tDiffuse: { value: null } },
+      vertexShader: /* glsl */ `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: /* glsl */ `
+        uniform sampler2D tDiffuse;
+        varying vec2 vUv;
+        void main() {
+          vec4 c = texture2D(tDiffuse, vUv);
+          // A NaN fails every comparison, so it takes the 0; an infinity is capped.
+          c.rgb = vec3(c.r >= 0.0 ? min(c.r, 16.0) : 0.0, c.g >= 0.0 ? min(c.g, 16.0) : 0.0, c.b >= 0.0 ? min(c.b, 16.0) : 0.0);
+          gl_FragColor = c;
+        }`,
+    }),
+  );
 // The glow is five blurs, tight to screen-wide. Weighted towards the tight
 // ones, it hugs the lines; the widest is kept faint, or every ship sits in a
 // screen-sized disc of haze. (Radius 0 so these weights are used as given.)
