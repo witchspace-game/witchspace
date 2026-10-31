@@ -2119,3 +2119,53 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
 #card-invite .meta { text-transform: none; letter-spacing: normal; font-size: 15px; color: var(--fg); line-height: 1.45; }
 .card-invite-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 0; }
 .card-invite-actions .button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--accent); color: var(--accent); text-decoration: none; letter-spacing: 0.08em; }
+
+/* --- The pop-out keyboard (ui/keyboard.ts): Elite's keyboard overlay, ours. Each key in its group's colour. --- */
+.kb { --kb-size: 40px; --kb-gap: 4px; display: flex; align-items: flex-end; gap: calc(var(--kb-size) * 0.35); }
+.kb-main { display: flex; flex-direction: column; gap: var(--kb-gap); width: calc(var(--kb-size) * 15 + var(--kb-gap) * 14); }
+.kb-row { display: flex; gap: var(--kb-gap); }
+.kb-arrows { display: grid; grid-template-columns: repeat(3, var(--kb-size)); gap: var(--kb-gap); }
+.kb-key, .kb-gap { height: var(--kb-size); min-width: 0; }
+.kb-key {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 3px 4px;
+  border: 1px solid rgba(61, 255, 176, 0.12);
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--dim);
+  font: 600 calc(var(--kb-size) * 0.3) / 1 var(--font);
+  letter-spacing: 0;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+}
+.kb-key:disabled { cursor: default; opacity: 0.45; }
+.kb-key b { font-weight: 600; opacity: 0.6; text-transform: none; }
+.kb-key i { max-width: 100%; overflow: hidden; font-style: normal; font-weight: 500; font-size: calc(var(--kb-size) * 0.245); white-space: nowrap; text-overflow: ellipsis; }
+.kb-key.used { border-color: var(--kc); color: var(--kc); box-shadow: 0 0 7px color-mix(in srgb, var(--kc) 45%, transparent), inset 0 0 7px color-mix(in srgb, var(--kc) 18%, transparent); }
+.kb-key.used b { opacity: 1; color: var(--fg); }
+.kb-key.down { background: var(--kc, var(--accent)); color: #000; }
+.kb-key.down b { color: #000; }
+.kb-fly { --kc: var(--accent); }
+.kb-fight { --kc: var(--danger); }
+.kb-travel { --kc: #5ec8ff; }
+.kb-talk { --kc: var(--amber); }
+.kb-game { --kc: #b9a6ff; }
+body.retro .kb-key.used { --kc: #fff; box-shadow: none; }
+.kb-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+body:not(.touch) #controls-card { width: min(900px, calc(100vw - 32px)); }
+#controls-card .kb { --kb-size: 42px; margin-top: 10px; }
+/* Pinned over the game: see-through, and clicks pass through to the game, except on its handle. */
+#keyboard-pin { position: fixed; left: 0; top: 0; z-index: 6; padding: 6px 8px 8px; border: 1px solid var(--edge); border-radius: 8px; background: rgba(0, 10, 6, 0.55); opacity: var(--kb-opacity, 0.75); pointer-events: none; }
+#keyboard-pin .kb { --kb-size: var(--kb-size-pin, 34px); pointer-events: none; }
+#keyboard-pin .kb-handle { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; color: var(--dim); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: move; pointer-events: auto; user-select: none; }
+#keyboard-pin .kb-handle span { flex: 1; }
+#keyboard-pin .kb-handle button { min-width: 24px; padding: 1px 6px; font-size: 13px; line-height: 1.2; }
+body:not([data-state='flying']) #keyboard-pin { display: none; }
+/* In its own window. */
+body.keyboard-window { margin: 0; padding: 18px; background: #000; }
+body.keyboard-window .kb { --kb-size: 50px; }
+body.keyboard-window .kb-note { margin: 12px 0 0; color: var(--dim); font-size: 13px; }

@@ -13,6 +13,7 @@ import { MAX_ROLL_ERROR } from '../game/station';
 import { besideACobra, handling, lengthWords, notesFor, tiltDrawing } from '../game/manual';
 import { controlRows as sharedControlRows, DASHBOARD, DOCKING, drawerHelp, PHONE, PHONE_DRAWER, RECORDER, SCHEMES, TILT } from '../game/controls';
 import { forDevice } from './deviceWords';
+import { keyboardInCard, refreshKeyboards, setKeyDescriptions } from './keyboard';
 import { flash } from './hud';
 import { escapeHtml } from './escape';
 import { $, cmdr, game } from '../core';
@@ -194,9 +195,15 @@ export function renderControlsCard() {
   $('#keys-hint').innerHTML = `${escapeHtml(KEYS_HINT[s].replace(' · F1 controls', ''))} · <button type="button" class="keys-card">${mac ? 'fn F1' : 'F1'} controls</button>`;
   $('#keys-hint').querySelector('button')!.addEventListener('click', () => toggleControlsCard());
   $('#controls-scheme').textContent = SCHEME_NAMES[s];
-  $('#controls-list').innerHTML = controlRows(s === 'bbc' ? 'bbc' : s === 'mouse')
-    .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
-    .join('');
+  const rows = controlRows(s === 'bbc' ? 'bbc' : s === 'mouse');
+  $('#controls-list').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  // The keyboard above the list: each key's full words, on hover, from the same lines.
+  setKeyDescriptions((k) => {
+    const row = rows.find(([key]) => key.split(/[\s/]+/).includes(k.token)) ?? rows.find(([, v]) => v.includes(k.token));
+    return row ? `${k.label}: ${row[1].replace(/<[^>]+>/g, '')}` : k.label;
+  });
+  keyboardInCard($('#controls-card'));
+  refreshKeyboards();
 }
 
 export function toggleControlsCard(show = $('#controls-card').hidden) {

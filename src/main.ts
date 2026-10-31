@@ -80,6 +80,7 @@ import { $, cmdr, currentSystem, game, modern, type State } from './core';
 import { aim, engineSound, timer, dockingComputer, explosions, flight, missiles, sharedSpace, npcs, voices, planetPos, player, space, station, sun, SUN_POS } from './scene';
 import './style.css';
 import { renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
+import { initKeyboard } from './ui/keyboard';
 import { newsLine } from './game/newsLines';
 import { answerAdvert, boardSeen, initContracts, markInbox, payCommissions, plotCourse, recruiter } from './ui/contracts';
 import { booth, closeBooth, cobraIndex, shipIndex, showShip, showroom, updateShowroom } from './ui/showroom';
@@ -1170,6 +1171,7 @@ if (import.meta.env.DEV) {
 setRetro(false);
 updateModeLabel();
 initTouch();
+initKeyboard();
 initRadio();
 setDockTab('station');
 showTitle();
