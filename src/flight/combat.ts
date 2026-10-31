@@ -32,6 +32,7 @@ import { DISTRESS_SHIELDING, distressCall, radio } from './comms';
 import { HIDDEN_BEYOND, HIDDEN_BEYOND_DARK, coverTargets, exploring, inClutter, playerVisibleAt } from './explore';
 import { MAX_POLICE, SCAN_RANGE, SCAN_TIME, becomeFugitive, becomeOffender, damagePlayer, dark, destroyNpc, identified, inSafeZone, isFugitive, pirateFired, playerHitNpc, playerRammedNpc, spawnViper, PATROLS_BY_GOVERNMENT } from './law';
 import * as THREE from 'three';
+import { flyableOf } from '../content/flyable';
 
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
@@ -163,7 +164,7 @@ function firePlayerLaser() {
     ...drifters.map((drifter) => ({ value: { kind: 'drifter' as const, drifter }, position: drifter.model.root.position, radius: 7 })),
     { value: { kind: 'station' as const }, position: station.root.position, radius: 90 },
     // Other commanders stop the beam on screen; whether it hurt them is the server's call.
-    ...[...sharedSpace.remotes.values()].map((r) => ({ value: { kind: 'commander' as const }, position: r.position, radius: 28 })),
+    ...[...sharedSpace.remotes.values()].map((r) => ({ value: { kind: 'commander' as const }, position: r.position, radius: flyableOf(r.ship).radius })),
     ...coverTargets({ kind: 'cover' as const }),
   ];
   const hit = rayHit(origin, dir, laser.range, targets);
