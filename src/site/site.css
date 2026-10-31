@@ -1038,6 +1038,20 @@ button.button { cursor: pointer; }
 .manual-page .man-cover h1 span { display: inline-block; font-size: 0.5em; letter-spacing: 0; }
 .manual-page .man-cover h1 small { display: block; margin-top: 8px; font-size: 0.45em; letter-spacing: 0.02em; }
 .manual-page .man-cover .kicker { color: var(--hull); }
+/* The manual's pictures from the game, with numbered callouts (as the game's own manual, src/style.css). */
+.manual-page .man-fig { margin: 16px 0; }
+.manual-page .man-fig figcaption { margin-top: 6px; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.manual-page .man-shots { display: flex; gap: 8px; align-items: flex-start; }
+.manual-page .man-shot { position: relative; flex: 1 1 0; min-width: 0; }
+.manual-page .man-shot img { display: block; width: 100%; height: auto; border: 1px solid rgba(61, 255, 176, 0.18); border-radius: 6px; }
+.manual-page .man-shot b, .manual-page .man-num { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--amber); color: #000; font-size: 11px; font-weight: 700; line-height: 1; }
+.manual-page .man-shot b { position: absolute; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #000; }
+.manual-page .man-num { margin-right: 6px; vertical-align: 1px; }
+.manual-page .man-small .man-shots { max-width: 360px; }
+.manual-page .man-tiny .man-shots { max-width: 150px; }
+.manual-page .man-upright .man-shots { max-width: 260px; }
+.manual-page .man-draw { display: block; width: 100%; height: auto; max-width: 300px; color: var(--accent); }
+@media (max-width: 520px) { .manual-page .man-two .man-shots { flex-direction: column; } }
 .manual-gate { margin-top: 24px; max-width: 65ch; }
 .manual-gate h3 { margin: 0 0 8px; }
 .manual-gate .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }

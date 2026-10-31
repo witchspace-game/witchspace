@@ -33,6 +33,10 @@ export interface ManualData {
   handling: string[][];
   /** Room to spare in the slot ('' for the Cobra). */
   span: string;
+  /** Her outline from above beside a Cobra's, as an <svg> ('' for the Cobra). */
+  beside: string;
+  /** Her length against a Cobra's, in words ("twice the length"). */
+  length: string;
   /** Degrees off level the slot allows. */
   roll: number;
   /** She leaves the yard with a docking computer (the game's standardKit). */

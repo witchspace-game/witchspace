@@ -82,11 +82,13 @@ export function manualFor(s: ShipFile, cobra: ShipFile, drawer: ManualData['draw
     id: s.id,
     name: s.name,
     colour: s.style?.lineColor ?? '#7fd4ff',
-    meta: `${s.concept ? 'Concept' : (s.manufacturer ?? 'Witchspace')} · ${s.role ?? ''}`,
+    meta: `${s.manufacturer ?? 'Witchspace'} · ${s.role ?? ''}`,
     description: s.description ?? '',
     notes: notesFor(def),
     handling: rows.map((h) => [h.label, h.value, s.id === 'cobra-mk3' ? '' : h.versus]),
     span: s.id === 'cobra-mk3' ? '' : rows.find((h) => h.label === 'Span')!.versus,
+    beside: s.id === 'cobra-mk3' ? '' : besideACobra(def, cobra as unknown as ShipDef),
+    length: s.id === 'cobra-mk3' ? '' : lengthWords(def, cobra as unknown as ShipDef),
     roll: Math.round((MAX_ROLL_ERROR * 180) / Math.PI),
     dockingFitted: standardKit(def).includes('docking-computer'),
     kit: Object.fromEntries(EQUIPMENT.map((e) => [e.id, [e.name, e.blurb]])),
@@ -94,4 +96,38 @@ export function manualFor(s: ShipFile, cobra: ShipFile, drawer: ManualData['draw
     editions: Object.fromEntries(EDITIONS.map((e) => [e.id, e.name])),
     drawer,
   };
+}
+
+// Her outline beside a Cobra's, as the game's own manual draws it (src/ui/manual.ts besideACobra and lengthWords,
+// which run in the game's page and so can't be imported here): drawn at build time, for her manual on the site.
+
+/** Her outline from above beside a Cobra's, to scale. */
+function besideACobra(def: ShipDef, cobra: ShipDef) {
+  const PX = 0.9; // pixels a metre
+  const top = (d: ShipDef) => {
+    const v = d.geometry.vertices;
+    const xs = v.map((p) => p[0]);
+    const zs = v.map((p) => p[2]);
+    const [x0, z1] = [Math.min(...xs), Math.max(...zs)];
+    const at = (p: number[]) => `${((p[0] - x0) * PX).toFixed(1)},${((z1 - p[2]) * PX).toFixed(1)}`;
+    return { w: (Math.max(...xs) - x0) * PX, h: (z1 - Math.min(...zs)) * PX, path: d.geometry.faces.map((f) => `M${f.map((i) => at(v[i])).join('L')}Z`).join('') };
+  };
+  const [a, b] = [top(def), top(cobra)];
+  const gap = 28;
+  const h = Math.max(a.h, b.h);
+  const w = a.w + gap + b.w;
+  const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const ship = (t: typeof a, x: number, colour: string, name: string) =>
+    `<g transform="translate(${x.toFixed(1)} ${(h - t.h).toFixed(1)})"><path d="${t.path}" fill="none" stroke="${colour}" stroke-width="1" stroke-linejoin="round" /></g><text x="${(x + t.w / 2).toFixed(1)}" y="${(h + 16).toFixed(1)}" text-anchor="middle" fill="var(--muted)" font-size="11">${esc(name)}</text>`;
+  return `<svg class="man-draw" viewBox="-4 -4 ${(w + 8).toFixed(0)} ${(h + 26).toFixed(0)}" style="max-width:${Math.round(w + 8)}px" role="img" aria-label="${esc(def.name)} beside a Cobra Mk III, from above, to scale">${ship(a, 0, def.style.lineColor, def.name)}${ship(b, a.w + gap, 'var(--muted)', cobra.name)}</svg>`;
+}
+
+/** "Twice the length", from her length against a Cobra's. */
+function lengthWords(def: ShipDef, cobra: ShipDef) {
+  const len = (d: ShipDef) => Math.max(...d.geometry.vertices.map((v) => v[2])) - Math.min(...d.geometry.vertices.map((v) => v[2]));
+  const r = len(def) / len(cobra);
+  if (r > 1.85 && r < 2.15) return 'twice the length';
+  if (r >= 1.15) return `${r.toFixed(1)} times the length`;
+  if (r <= 0.87) return `${Math.round(r * 100)}% of the length`;
+  return 'about the same length';
 }
