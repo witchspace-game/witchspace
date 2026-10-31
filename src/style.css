@@ -72,20 +72,21 @@ body.retro #whiteout { background: #fff; }
 /* The look switch: top right, out of the way of the main actions. */
 #look {
   position: fixed;
-  top: 14px;
-  right: 16px;
+  /* Clear of the corner, and of an iPhone's rounded corners and notch in the Home Screen app (Mark: "looks cramped"). */
+  top: max(22px, calc(env(safe-area-inset-top) + 12px));
+  right: max(24px, calc(env(safe-area-inset-right) + 12px));
   z-index: 6;
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 3px;
+  gap: 4px;
+  padding: 4px;
   font-size: 12px;
   letter-spacing: 0.08em;
 }
-#look span { padding: 3px 9px; color: var(--dim); }
+#look span { padding: 5px 12px; color: var(--dim); }
 #look .neo, #look.retro .r84 { color: var(--bg, #000); background: var(--accent); }
 #look.retro .neo { color: var(--dim); background: none; }
-#look kbd { margin-left: 6px; padding: 0 5px; font: inherit; font-size: 10px; color: var(--dim); border: 1px solid var(--edge); }
+#look kbd { margin: 0 4px 0 8px; padding: 0 5px; font: inherit; font-size: 10px; color: var(--dim); border: 1px solid var(--edge); }
 body.retro #look { font-size: 8px; letter-spacing: 0; }
 body.retro #look .r84 { color: #000; background: #fff; }
 body.touch #look kbd { display: none; }
@@ -973,8 +974,8 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
 @media (max-width: 700px) {
   .keys { display: none; }
   /* The look switch keeps the top right; the title goes below it. */
-  #look { top: 10px; right: 10px; }
-  .title { top: 54px; }
+  #look { top: max(14px, calc(env(safe-area-inset-top) + 14px)); right: max(14px, calc(env(safe-area-inset-right) + 14px)); }
+  .title { top: 62px; }
   .title h1 { letter-spacing: 0.25em; }
   .prompt { top: 128px; font-size: 14px; letter-spacing: 0.12em; }
   .controls { left: 12px; right: 12px; bottom: 40px; justify-content: center; gap: 6px; }
@@ -1865,6 +1866,21 @@ body.photo-booth .panel, body.photo-booth nav.controls, body.photo-booth #look, 
 .man-keys { grid-template-columns: minmax(90px, auto) 1fr; gap: 6px 14px; font-size: 14px; }
 .man-keys dt { color: var(--fg); font-weight: 600; }
 .man-keys dd { text-align: left; color: var(--dim); }
+/* The manual's pictures, from the game (tools/manual-shots.mjs), with numbered callouts. */
+.man-fig { margin: 14px 0; }
+.man-fig figcaption { margin-top: 6px; color: var(--dim); font-size: 13px; line-height: 1.45; }
+.man-shots { display: flex; gap: 8px; align-items: flex-start; }
+.man-shot { position: relative; flex: 1 1 0; min-width: 0; }
+.man-shot img { display: block; width: 100%; height: auto; border: 1px solid rgba(61, 255, 176, 0.18); border-radius: 6px; }
+.man-shot b, .man-num { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #ffb347; color: #000; font-size: 11px; font-weight: 700; line-height: 1; }
+.man-shot b { position: absolute; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #000; }
+.man-num { margin-right: 6px; vertical-align: 1px; }
+.man-small .man-shots { max-width: 360px; }
+.man-tiny .man-shots { max-width: 150px; }
+.man-tiny .man-shot img { image-rendering: auto; }
+.man-upright .man-shots { max-width: 260px; }
+.man-draw { display: block; width: 100%; height: auto; max-width: 300px; color: var(--accent); }
+@media (max-width: 520px) { .man-two .man-shots { flex-direction: column; } }
 .yard-manual { width: 100%; margin-top: 10px; }
 .manual-open { margin-left: 6px; min-height: 0; padding: 1px 8px; font-size: 11px; }
 .log-head, #flight-log { max-width: 1100px; margin-inline: auto; }
