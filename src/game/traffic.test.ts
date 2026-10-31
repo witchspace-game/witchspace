@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { galaxy } from '../galaxy/generate';
 import { yardsOf } from './yards';
 import { activeEvent, EVENT_KINDS } from '../economy/events';
-import { cargoWords, laneDirection, lanesFrom, reliefVoyages, titanVoyages, voyageHail, voyages, WINDOW_MS } from './traffic';
+import { cargoWords, CONVOY_GAP_MS, HOLD, laneDirection, lanesFrom, packHolds, reliefVoyages, titanVoyages, voyageHail, voyages, WINDOW_MS } from './traffic';
+import { readFileSync } from 'node:fs';
+import { COMMODITIES, UNITS_PER_TONNE } from '../economy/commodities';
 
 const g = galaxy(0);
 const lave = g.find((s) => s.name.toLowerCase() === 'lave')!;
@@ -15,7 +17,8 @@ describe('traffic', () => {
   });
 
   it('gives a sensible number of ships an hour, more at busier worlds', () => {
-    const n = voyages(lave, t0, t0 + HOUR).filter((v) => v.to === 'station').length;
+    // A convoy (a load too big for one hold) counts once.
+    const n = new Set(voyages(lave, t0, t0 + HOUR).filter((v) => v.to === 'station').map((v) => v.id.replace(/:c\d+$/, ''))).size;
     expect(n).toBeGreaterThanOrEqual(10);
     expect(n).toBeLessThanOrEqual(36);
     expect(WINDOW_MS[7]).toBeLessThan(WINDOW_MS[0]);
@@ -28,7 +31,8 @@ describe('traffic', () => {
   });
 
   it('carries the market’s own deliveries, and drops a ship whose deliveries were all lost', () => {
-    const inbound = voyages(lave, t0, t0 + HOUR).find((v) => v.leg === 'in' && v.to === 'station' && !v.relief)!;
+    const all = voyages(lave, t0, t0 + HOUR);
+    const inbound = all.find((v) => v.leg === 'in' && v.to === 'station' && !v.relief && !/:c\d+$/.test(v.id) && !all.some((x) => x.id === `${v.id}:c1`))!;
     expect(inbound.cargo.length).toBeGreaterThan(0);
     const lost = inbound.cargo.map((c) => ({ id: c.id, t: c.t }));
     expect(voyages(lave, t0, t0 + HOUR, lost).some((v) => v.id === inbound.id)).toBe(false);
@@ -95,3 +99,49 @@ describe('traffic', () => {
     expect(cargoWords(many)).toBe('food, textiles, gold and more');
   });
 });
+
+describe('holds (Mark: a Cobra carrying 22 t and 15 t and more)', () => {
+  const tonnes = (cargo: { id: string; qty: number }[]) => cargo.reduce((sum, c) => sum + c.qty / UNITS_PER_TONNE[COMMODITIES.find((x) => x.id === c.id)!.unit], 0);
+  const t0 = Date.UTC(2026, 9, 31);
+
+  it('knows each traffic hull from its ship file', () => {
+    for (const [hull, hold] of Object.entries(HOLD)) expect(JSON.parse(readFileSync(`content/ships/${hull}.json`, 'utf8')).stats.cargo).toBe(hold);
+  });
+
+  it('never loads a ship past her hold', () => {
+    for (const s of galaxy(0).slice(0, 40))
+      for (const v of voyages(s, t0, t0 + 3 * 3600_000)) expect(tonnes(v.cargo)).toBeLessThanOrEqual(HOLD[v.hull] + 1e-9);
+  });
+
+  it('delivers the same goods, split into a convoy', () => {
+    const cargo = [
+      { id: 'food', t: 1, qty: 22 },
+      { id: 'textiles', t: 2, qty: 15 },
+      { id: 'gold', t: 3, qty: 4000 },
+    ];
+    const loads = packHolds(cargo, 20);
+    expect(loads.length).toBe(3);
+    for (const l of loads) expect(tonnes(l)).toBeLessThanOrEqual(20);
+    for (const c of cargo) expect(loads.flat().filter((x) => x.id === c.id && x.t === c.t).reduce((a, x) => a + x.qty, 0)).toBe(c.qty);
+  });
+
+  it('spaces a convoy out on its lane, each ship with its own id', () => {
+    const all = galaxy(0).slice(0, 40).flatMap((s) => voyages(s, t0, t0 + 3 * 3600_000));
+    const convoys = all.filter((v) => /:c\d+$/.test(v.id));
+    expect(convoys.length).toBeGreaterThan(0);
+    expect(new Set(all.map((v) => v.id)).size).toBe(all.length);
+    const v = convoys[0];
+    const lead = all.find((x) => x.id === v.id.replace(/:c\d+$/, ''));
+    if (lead) expect((v.at - lead.at) % CONVOY_GAP_MS).toBe(0);
+  });
+
+  it('a ship of a convoy lost takes only her share', () => {
+    const s = galaxy(0)[7];
+    const before = voyages(s, t0, t0 + 3600_000).filter((v) => v.leg === 'in' && v.to === 'station');
+    const c = before.find((v) => v.cargo.length)!.cargo[0];
+    const total = (vs: typeof before) => vs.flatMap((v) => v.cargo).filter((x) => x.id === c.id && x.t === c.t).reduce((a, x) => a + x.qty, 0);
+    const after = voyages(s, t0, t0 + 3600_000, [{ ...c }]).filter((v) => v.leg === 'in' && v.to === 'station');
+    expect(total(after)).toBe(total(before) - c.qty);
+  });
+});
+

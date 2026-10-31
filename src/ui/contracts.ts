@@ -398,8 +398,10 @@ export function linkSystem(text: string, s: StarSystem): string {
   return escapeHtml(text).replace(name, `<button type="button" class="sys-link" data-system="${s.index}" title="Show ${name} on the chart">${name}</button>`);
 }
 
-$('#news-list').addEventListener('click', (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-system]');
+// Any system name made a link (the news, a regular's tip in the saloon, the trade computer):
+// tap it to see the system on the chart, without having to search for it (Mark).
+document.addEventListener('click', (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('.sys-link[data-system]');
   if (!b) return;
   b.blur(); // or Enter on the chart would press it again
   if (!isMapOpen()) main.toggleGalaxyMap();

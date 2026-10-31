@@ -49,7 +49,7 @@ Checked against the code on 30 October 2026 (main plus PR #318).
 | Positions about **10 times a second**, drawn 0.15 s in the past and interpolated | `src/net/space.ts:11–12` |
 | **Hyperspace is the handover** between system servers; docked commanders aren't in shared space | `space.ts`, `main.ts:167` |
 | **Callsign tags** with rank insignia, scanner marks, **red once they've fired on you**, "has arrived" | `main.ts` shared space section |
-| **Moves refereed:** speed with 30% slack, teleports, the J jump with a cooldown, positions outside the system; refused moves put you back | `server/src/rules.ts` `checkMove` |
+| **Moves refereed:** speed with 30% slack, teleports, the J jump with a cooldown and never within 3 km of another commander (no jumping out of a fight, Mark, 31 October 2026), positions outside the system; refused moves put you back | `server/src/rules.ts` `checkMove` |
 | **Lasers refereed:** fitted laser, rate of fire, target rewound 0.2 s, each laser's scatter, shots off the nose 80% | `index.ts` `fire`, `protocol.ts` |
 | **Shields and hull kept by the server,** recharging as in the game; the browser can report damage from NPCs but only downwards | `rules.ts` `reportHealth` |
 | **Missiles flown by the server:** 5 km lock, the game's own flight model, 140 damage; **ECM** clears missiles within 4 km | `index.ts` `launch`, `flyMissiles`, `ecm` |

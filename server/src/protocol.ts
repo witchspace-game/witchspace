@@ -106,6 +106,8 @@ export const BUMP_COOLDOWN = 1000; // ms: one contact between two ships only hur
 /** How far apart two state messages may put you: speed with some slack, plus an in-system jump. */
 export const JUMP = 10_500; // metres: the J jump
 export const JUMP_COOLDOWN = 1000; // ms between jumps
+/** Another commander this close mass-locks you: no jumping away from a fight (Mark, 31 October 2026). The game's own J_LOCK_SHIPS. */
+export const JUMP_LOCK = 3000; // metres
 export const SLACK = 1.3; // allowance for lag and timing
 export const SYSTEM_RADIUS = 250_000; // metres from the station: nothing legitimate is further out
 

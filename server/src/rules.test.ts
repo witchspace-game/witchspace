@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cleanName, JUMP } from './protocol';
+import { cleanName, JUMP, JUMP_LOCK } from './protocol';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Track } from './rules';
 
 const at = (z: number, t: number, jumpedAt = -1e9): Track => ({ p: [0, 0, z], t, jumpedAt });
@@ -20,6 +20,13 @@ describe('shared space: what the server accepts', () => {
     expect(checkMove('cobra-mk3', at(0, 0), [0, 0, 3000], 280, 100)).toBe('jump');
     expect(checkMove('cobra-mk3', at(0, 0), [0, 0, JUMP - 100], 280, 100)).toBe('jump');
     expect(checkMove('cobra-mk3', at(0, 0, -500), [0, 0, JUMP - 100], 280, 100)).toBe('teleport');
+  });
+
+  it('refuses a jump with another commander close by (no jumping out of a fight)', () => {
+    expect(checkMove('cobra-mk3', at(0, 0), [0, 0, JUMP - 100], 280, 100, [[0, 500, 0]])).toBe('mass locked');
+    expect(checkMove('cobra-mk3', at(0, 0), [0, 0, JUMP - 100], 280, 100, [[0, 0, JUMP_LOCK + 100]])).toBe('jump');
+    // Ordinary flying is never mass-locked.
+    expect(checkMove('cobra-mk3', at(0, 0), [0, 0, 28], 280, 100, [[0, 50, 0]])).toBe('ok');
   });
 
   it('refuses positions far outside the system, and ships it doesn’t know', () => {

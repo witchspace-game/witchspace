@@ -45,7 +45,7 @@ export function controlRows(scheme: boolean | 'bbc', o: { gimballed: boolean; mo
       ['9', 'Survey autopilot: flies to whatever is left to survey or find here, and holds you in range (explorers; any flight control takes over)'],
       ['P', 'Take a photo of the view, without the HUD, into your flight log (share it when docked)'],
       ['Shift+P', 'Flight recorder: keep the last 30 seconds (or hold the camera button)'],
-      ['J', 'In-system jump: leap ~10 km ahead (not near ships, the station or the planet)'],
+      ['J', 'In-system jump: leap ~10 km ahead (not near ships or other commanders, the station or the planet)'],
       ['T', 'Arm a missile: hold a ship in your sights until the tone goes solid (Classic: lock at once). Again to disarm'],
       ['X', 'Launch the locked missile'],
       ['Z', 'ECM: destroy every missile nearby, yours included (needs an ECM)'],

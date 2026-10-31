@@ -15,7 +15,7 @@
 import { distanceLy, galaxy, type StarSystem } from '../galaxy/generate';
 import { npcTrades } from '../economy/market';
 import { activeEvent, EVENT_KINDS, type EventType } from '../economy/events';
-import { COMMODITIES } from '../economy/commodities';
+import { COMMODITIES, UNITS_PER_TONNE } from '../economy/commodities';
 import { hash } from '../economy/seed';
 import { pickCompany, type CompanyId } from './companies';
 import { yardAt, type YardStage } from './yards';
@@ -56,6 +56,12 @@ export const TITAN_WINDOW_MS = 8 * 60_000;
 export const TITAN_ESCORT = [0.9, 0.8, 0.65, 0.5, 0.4, 0.35, 0.3, 0.25];
 /** Goods worth guarding: a company run carrying these may have an escort. */
 export const VALUABLE = new Set(['luxuries', 'computers', 'platinum', 'gold', 'alien', 'firearms']);
+/** What each traffic hull can carry, in tonnes (its ship file's cargo; traffic.test.ts checks they agree). */
+export const HOLD: Record<string, number> = { 'cobra-mk3': 20, bullsnake: 60 };
+/** The ships of one convoy dock (or launch) this far apart, so they don't fly through each other. */
+export const CONVOY_GAP_MS = 25_000;
+/** How far back to look for a convoy whose later ships are still to come: longer than any convoy. */
+const CONVOY_SPAN_MS = 20 * CONVOY_GAP_MS;
 /** Systems a trader would come from or go to: one jump. */
 export const LANE_LY = 7;
 
@@ -118,24 +124,75 @@ function voyageFor(s: StarSystem, leg: 'in' | 'out', to: 'station' | 'titan', k:
   };
 }
 
+const tonnesPer = (id: string) => UNITS_PER_TONNE[COMMODITIES.find((c) => c.id === id)?.unit ?? 't'];
+
+/**
+ * Pack a voyage's cargo into holds (Mark, 31 October 2026: a Cobra "carrying way too much cargo 22 t
+ * of something and another 15 tonnes of something else"). A Cobra holds 20 t: a bigger load is a
+ * convoy, each ship full but the last, a delivery split between them where it must be. The market
+ * gets the same goods at the same times; a ship lost loses only what she carried.
+ */
+export function packHolds(cargo: Consignment[], hold: number): Consignment[][] {
+  const loads: Consignment[][] = [[]];
+  let space = hold;
+  for (const c of cargo) {
+    const per = tonnesPer(c.id);
+    let left = c.qty;
+    while (left > 0) {
+      if (space <= 1e-9) {
+        loads.push([]);
+        space = hold;
+      }
+      const qty = Math.min(left, Math.floor(space * per + 1e-9));
+      if (qty <= 0) {
+        space = 0;
+        continue;
+      }
+      loads[loads.length - 1].push({ id: c.id, t: c.t, qty });
+      left -= qty;
+      space -= qty / per;
+    }
+  }
+  return loads.filter((l) => l.length);
+}
+
+/** A voyage too big for her hold becomes a convoy: the same company and lane, a ship every CONVOY_GAP_MS. */
+function convoy(s: StarSystem, v: Voyage, k: number): Voyage[] {
+  const loads = packHolds(v.cargo, HOLD[v.hull] ?? 20);
+  if (loads.length <= 1) return [v];
+  return loads.map((cargo, i) => ({
+    ...v,
+    id: i ? `${v.id}:c${i}` : v.id,
+    at: v.at + i * CONVOY_GAP_MS,
+    cargo,
+    name: i ? NAMES[Math.floor(hash(s, 91_600 + i, k) * NAMES.length)] : v.name,
+  }));
+}
+
 /**
  * The voyages that dock or launch at a system between `from` and `to` (ms).
  * `lost` are deliveries that never arrived (their ship was destroyed): a voyage
  * carrying nothing else doesn't happen.
  */
-export function voyages(s: StarSystem, from: number, to: number, lost: { id: string; t: number }[] = []): Voyage[] {
+export function voyages(s: StarSystem, from: number, to: number, lost: { id: string; t: number; qty?: number }[] = []): Voyage[] {
   const window = WINDOW_MS[s.government];
   const phase = hash(s, 91_000, 0) * window;
+  // Whole windows, so every load is whole (a convoy's ships depend on all of it), and far enough back for a convoy still arriving.
+  const since = phase + Math.floor((from - window - CONVOY_SPAN_MS - phase) / window) * window;
+  const until = phase + (Math.floor((to - phase) / window) + 1) * window;
   const groups = new Map<string, Consignment[]>();
-  const gone = new Set(lost.map((l) => `${l.id}:${l.t}`));
+  // Tonnes already lost from each delivery: a ship of a convoy, destroyed, takes only her share.
+  const gone = new Map<string, number>();
+  for (const l of lost) gone.set(`${l.id}:${l.t}`, (gone.get(`${l.id}:${l.t}`) ?? 0) + (l.qty ?? Infinity));
   for (const c of COMMODITIES) {
     // A ship's trades can start a window before `from`: it docks at its first.
-    for (const e of npcTrades(s, c.id, from - window, to)) {
+    for (const e of npcTrades(s, c.id, since, until)) {
       const leg = e.side === 'sell' ? 'in' : 'out'; // the market buys what an inbound ship sells it
-      if (leg === 'in' && gone.has(`${c.id}:${e.t}`)) continue;
+      const qty = leg === 'in' ? e.qty - (gone.get(`${c.id}:${e.t}`) ?? 0) : e.qty;
+      if (qty <= 0) continue;
       const k = Math.floor((e.t - phase) / window);
       const key = `${leg}:${k}`;
-      groups.set(key, [...(groups.get(key) ?? []), { id: c.id, t: e.t, qty: e.qty }]);
+      groups.set(key, [...(groups.get(key) ?? []), { id: c.id, t: e.t, qty }]);
     }
   }
   const out: Voyage[] = [];
@@ -143,8 +200,7 @@ export function voyages(s: StarSystem, from: number, to: number, lost: { id: str
     const [leg, k] = key.split(':') as ['in' | 'out', string];
     const kn = Number(k);
     const company = hash(s, 91_400 + (leg === 'in' ? 0 : 1), kn) < 0.8 ? pickCompany(s, hash(s, 91_500 + (leg === 'in' ? 0 : 1), kn)) : null;
-    const v = voyageFor(s, leg, 'station', kn, cargo.sort((a, b) => a.t - b.t), company);
-    if (v.at >= from && v.at <= to) out.push(v);
+    for (const v of convoy(s, voyageFor(s, leg, 'station', kn, cargo.sort((a, b) => a.t - b.t), company), kn)) if (v.at >= from && v.at <= to) out.push(v);
   }
   out.push(...titanVoyages(s, from, to), ...reliefVoyages(s, from, to));
   return out.sort((a, b) => a.at - b.at);
@@ -154,14 +210,14 @@ export function voyages(s: StarSystem, from: number, to: number, lost: { id: str
 export function titanVoyages(s: StarSystem, from: number, to: number): Voyage[] {
   const out: Voyage[] = [];
   const phase = hash(s, 92_000, 0) * TITAN_WINDOW_MS;
-  for (let k = Math.floor((from - phase) / TITAN_WINDOW_MS); k <= Math.floor((to - phase) / TITAN_WINDOW_MS); k++) {
+  for (let k = Math.floor((from - CONVOY_SPAN_MS - phase) / TITAN_WINDOW_MS); k <= Math.floor((to - phase) / TITAN_WINDOW_MS); k++) {
     const at = phase + k * TITAN_WINDOW_MS + hash(s, 92_100, k) * TITAN_WINDOW_MS * 0.6;
-    if (at < from || at > to) continue;
+    if (at > to) continue;
     const yard = yardAt(s, at);
     const needs = yard ? TITAN_NEEDS[yard.stage] : [];
     if (!needs.length) continue;
     const id = needs[Math.floor(hash(s, 92_200, k) * needs.length)];
-    out.push(voyageFor(s, 'in', 'titan', k, [{ id, t: at, qty: 20 + Math.floor(hash(s, 92_300, k) * 30) }], 'wy'));
+    for (const v of convoy(s, voyageFor(s, 'in', 'titan', k, [{ id, t: at, qty: 20 + Math.floor(hash(s, 92_300, k) * 30) }], 'wy'), k)) if (v.at >= from && v.at <= to) out.push(v);
   }
   return out;
 }
@@ -173,16 +229,16 @@ export const RELIEF_WINDOW_MS = 7 * 60_000;
 export function reliefVoyages(s: StarSystem, from: number, to: number): Voyage[] {
   const out: Voyage[] = [];
   const phase = hash(s, 93_000, 0) * RELIEF_WINDOW_MS;
-  for (let k = Math.floor((from - phase) / RELIEF_WINDOW_MS); k <= Math.floor((to - phase) / RELIEF_WINDOW_MS); k++) {
+  for (let k = Math.floor((from - CONVOY_SPAN_MS - phase) / RELIEF_WINDOW_MS); k <= Math.floor((to - phase) / RELIEF_WINDOW_MS); k++) {
     const at = phase + k * RELIEF_WINDOW_MS + hash(s, 93_100, k) * RELIEF_WINDOW_MS * 0.6;
-    if (at < from || at > to) continue;
+    if (at > to) continue;
     const e = activeEvent(s, at);
     const short = e ? Object.entries(EVENT_KINDS[e.type].effects).filter(([id, v]) => v < 0 && COMMODITIES.some((c) => c.id === id)).map(([id]) => id) : [];
     if (!e || !short.length) continue;
     const id = short[Math.floor(hash(s, 93_200, k) * short.length)];
     const company = hash(s, 93_300, k) < 0.5 ? 'mutual' : pickCompany(s, hash(s, 93_400, k));
     const v = voyageFor(s, 'in', 'station', 1_000_000 + k, [{ id, t: at, qty: 15 + Math.floor(hash(s, 93_500, k) * 25) }], company);
-    out.push({ ...v, id: `${v.id}:relief`, relief: e.type });
+    for (const c of convoy(s, v, k)) if (c.at >= from && c.at <= to) out.push({ ...c, id: `${c.id}:relief`, relief: e.type });
   }
   return out;
 }
