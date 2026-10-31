@@ -229,7 +229,8 @@
       ],
       "href": "/submit/",
       "text": "Our freighters reach every system on time, to the timetable. They also all look the same. Design us a working hull: a bulk freighter, a liner, a tug, a mining ship. One clear shape you'd know at ten kilometres, built to carry, not to fight. An accepted hull flies in company colours across the galaxy, with your callsign in the registry. The design becomes the property of Wexley-Yorozu in perpetuity, across all systems known and unknown.* The Fleet Office thanks you for your patience.",
-      "meta": "Build · Open brief · Your callsign in the registry"
+      "meta": "Build · Open brief · Your callsign in the registry",
+      "note": "No drawing board? Ask your own AI assistant. [Add the Witchspace connector (space.witchspace.org.uk/mcp)](/get-involved/#ai) and it checks your hull against the Fleet Office standard and draws it beside a Cobra."
     },
     {
       "company": "mutual",
