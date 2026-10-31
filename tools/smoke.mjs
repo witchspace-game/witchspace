@@ -153,6 +153,23 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   check('Modern: kit bought this visit sells back at full price', /^paid (\d+), back \1$/.test(refund) && !/paid 0/.test(refund), refund);
   check('Modern: docked screens raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
 
+  // --- Modern: wanted at the station: said first, with Settle, and the first Launch only warns ---
+  const wanted = await s.w(async () => {
+    const w = window.witchspace;
+    const press = (code) => { dispatchEvent(new KeyboardEvent('keydown', { code })); dispatchEvent(new KeyboardEvent('keyup', { code })); };
+    const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+    w.becomeFugitive();
+    w.renderDocked();
+    const shown = !document.querySelector('#wanted').hidden;
+    press('KeyL');
+    await pause(600);
+    const held = w.state;
+    document.querySelector('#wanted .settle').click();
+    await pause(300);
+    return `${shown ? 'shown' : 'not shown'}, launch ${held === 'docked' ? 'held' : 'went'}, settled ${document.querySelector('#wanted').hidden ? 'clean' : 'still wanted'}`;
+  });
+  check('Modern: wanted, the station says so and the first Launch only warns', wanted === 'shown, launch held, settled clean', wanted);
+
   // --- Modern: flight, traffic and hailing -----------------------------------------------
   check('Modern: launches', await launch(s));
   await warp(s, 10);

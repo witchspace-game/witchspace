@@ -86,7 +86,7 @@ import { boardShip, checkSignedOver, checkSiteSpec, showOwnShip } from './ui/shi
 import { markDocked } from './ui/money';
 import { initSaloon } from './ui/saloon';
 import { initMarket, renderMarket } from './ui/market';
-import { initStation, renderDocked, resetBoughtHere, showFittings } from './ui/station';
+import { initStation, renderDocked, resetBoughtHere, showFittings, wantedOnLaunch } from './ui/station';
 import { setDockTab, updateDockHead } from './ui/places';
 import { TRADERS_BY_GOVERNMENT, escortOf, forgetDeliveries, initTraffic, legs, markLaunched, pacing, railsOf, resetTraffic, spawnFalcon, spawnPirates, spawnTrader, startEncounters, voyageOf } from './flight/traffic';
 import { launchSound, remoteVoices, voiceOf } from './flight/sounds';
@@ -613,7 +613,24 @@ if (isTouch && !isIos) {
 /** Whether this page load has launched yet: the first launch is counted once (Vercel Web Analytics: the rules and the controls, nothing personal). */
 let launchCounted = false;
 
+/** When the station last warned that you're wanted: Launch again soon after to go anyway. */
+let wantedWarnedAt = -Infinity;
+const WANTED_CONFIRM = 6000; // ms
+
 async function launch() {
+  if (wantedOnLaunch(cmdr()) && Date.now() - wantedWarnedAt > WANTED_CONFIRM) {
+    wantedWarnedAt = Date.now();
+    setDockTab('station');
+    const box = $('#wanted');
+    box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    box.classList.remove('pulse');
+    void box.offsetWidth; // restart the pulse
+    box.classList.add('pulse');
+    sfx.beep();
+    flash('Wanted here · the police will open fire · settle first, or Launch again to go anyway', 4);
+    return;
+  }
+  wantedWarnedAt = -Infinity;
   if (booth) closeBooth();
   if (!launchCounted) {
     launchCounted = true;
