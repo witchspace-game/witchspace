@@ -142,7 +142,7 @@ The turning point of a Falcon's story: the Legend who hunted you, caught, and yo
 - **The yard.** A trail across the Falcons' galaxies leads to the Solo yard and the forty-one, Sam Dray among them. Bring them something (Mira's yellow flowers, seed stock that works) and the Falcons spare you for good. Sell the yard's position to Wexley-Yorozu instead, and the Science Division comes in force, and every Falcon in the eight galaxies knows your name.
 - **Hunting her for the companies:** Wexley-Yorozu and Hexon post special assignments to find her.
 - **In the shared galaxy:** the chart records who drove her off last, a season at a time.
-- **Flying with them:** a pirate career that starts with an introduction to a Solo son, and ends, for those the Solos come to trust, with a Falcon of your own ([ships, classes and makers](ships-and-classes.md#4-earned-not-bought)).
+- **Flying with them:** a pirate career that starts with an introduction to a Solo son, and ends, for those the Solos come to trust, with a Falcon of your own ([ships, classes and makers](ships-and-classes.md#4-earned-not-bought)). Designed in [the pirate's career](pirate-career.md) (Mark): your bounty is your rank, robbery beats murder, and each son judges how you pirate.
 
 ## Building it in stages
 

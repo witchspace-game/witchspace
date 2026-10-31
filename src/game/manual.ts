@@ -75,6 +75,57 @@ export function handling(def: ShipDef, cobra: ShipDef): Handling[] {
 
 export const notesFor = (def: ShipDef) => NOTES[def.id] ?? [];
 
+const esc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+/**
+ * Her outline from above beside a Cobra's, to scale, as an SVG (Marketing: "explains the Fer-de-lance's
+ * 'line up early for the slot'"). The game's manual and the site's (tools/shipFiles.ts) both draw it;
+ * `muted` is the page's own colour for the Cobra and the labels.
+ */
+export function besideACobra(def: ShipDef, cobra: ShipDef, muted = 'var(--dim)') {
+  const PX = 0.9; // pixels a metre
+  const top = (d: ShipDef) => {
+    const v = d.geometry.vertices;
+    const xs = v.map((p) => p[0]);
+    const zs = v.map((p) => p[2]);
+    const [x0, z1] = [Math.min(...xs), Math.max(...zs)];
+    const at = (p: number[]) => `${((p[0] - x0) * PX).toFixed(1)},${((z1 - p[2]) * PX).toFixed(1)}`;
+    return { w: (Math.max(...xs) - x0) * PX, h: (z1 - Math.min(...zs)) * PX, path: d.geometry.faces.map((f) => `M${f.map((i) => at(v[i])).join('L')}Z`).join('') };
+  };
+  const [a, b] = [top(def), top(cobra)];
+  const gap = 28;
+  const h = Math.max(a.h, b.h);
+  const w = a.w + gap + b.w;
+  const ship = (t: typeof a, x: number, colour: string, name: string) =>
+    `<g transform="translate(${x.toFixed(1)} ${(h - t.h).toFixed(1)})"><path d="${t.path}" fill="none" stroke="${colour}" stroke-width="1" stroke-linejoin="round" /></g><text x="${(x + t.w / 2).toFixed(1)}" y="${(h + 16).toFixed(1)}" text-anchor="middle" fill="${muted}" font-size="11">${esc(name)}</text>`;
+  return `<svg class="man-draw" viewBox="-4 -4 ${(w + 8).toFixed(0)} ${(h + 26).toFixed(0)}" style="max-width:${Math.round(w + 8)}px" role="img" aria-label="${esc(def.name)} beside a Cobra Mk III, from above, to scale">
+    ${ship(a, 0, def.style.lineColor, def.name)}${ship(b, a.w + gap, muted, cobra.name)}
+  </svg>`;
+}
+
+/** Tilt, drawn: a phone on its side, its top edge tipping towards you, and the ship climbing (`muted` as above). */
+export const tiltDrawing = (muted = 'var(--dim)') => `<svg class="man-draw" viewBox="0 0 260 110" role="img" aria-label="Tip the top of the phone towards you, and she climbs">
+  <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M40 92 L70 22" stroke-width="7" stroke="${muted}" />
+    <path d="M28 88 L58 18" stroke-dasharray="3 5" stroke="${muted}" />
+    <path d="M86 30 C 92 14, 80 6, 66 8" stroke="var(--accent)" /><path d="M72 3 L66 8 L72 13" stroke="var(--accent)" />
+    <path d="M150 74 L230 74 L190 92 Z" stroke="var(--accent)" transform="rotate(-18 190 80)" />
+    <path d="M192 52 L208 22" stroke="var(--accent)" /><path d="M199 24 L208 22 L211 31" stroke="var(--accent)" />
+  </g>
+  <text x="18" y="108" fill="${muted}" font-size="11">the top, towards you</text>
+  <text x="166" y="108" fill="${muted}" font-size="11">she climbs</text>
+</svg>`;
+
+/** "Twice the length", said from her Length row against a Cobra's. */
+export function lengthWords(def: ShipDef, cobra: ShipDef) {
+  const len = (d: ShipDef) => Math.max(...d.geometry.vertices.map((v) => v[2])) - Math.min(...d.geometry.vertices.map((v) => v[2]));
+  const r = len(def) / len(cobra);
+  if (r > 1.85 && r < 2.15) return 'twice the length';
+  if (r >= 1.15) return `${r.toFixed(1)} times the length`;
+  if (r <= 0.87) return `${Math.round(r * 100)}% of the length`;
+  return 'about the same length';
+}
+
 // Earned, not bought: the Solos' Falcon. Police and Marshals' hulls have no price.
 const NOT_IN_YARDS = new Set(['falcon']);
 
