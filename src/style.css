@@ -612,14 +612,15 @@ body.retro #seeker.locked { border-color: #fff; border-width: 3px; }
   position: fixed;
   left: 50%;
   top: 50%;
-  width: min(60vh, 520px);
-  height: min(60vh, 520px);
+  width: min(60vh, 520px, 96vw);
+  height: min(60vh, 520px, 96vw);
   border-radius: 50%;
   border-top: 6px solid var(--danger);
   filter: drop-shadow(0 0 10px var(--danger));
   opacity: 0;
   pointer-events: none;
   z-index: 4;
+  transform: translate(-50%, -50%); /* centred before the first hit too (indicators.ts adds the turn), so it never reaches off the screen */
 }
 #hit-dir.on { animation: hit 0.7s ease-out; }
 
@@ -959,7 +960,8 @@ body.retro #beacon .beacon-calls button, body.retro #beacon h3 { font-size: 9px;
 body.touch .keys { display: none; }
 /* The scanner takes a tap (its range: Mark found no way on a phone); the rest of the dashboard lets touches through. */
 body.touch #scanner { pointer-events: auto; cursor: pointer; }
-body.touch .dash { top: 6px; bottom: auto; transform: translateX(-50%) scale(var(--dash-scale, 0.72)); transform-origin: top center; }
+/* Its full width, scaled to fit the screen (main.ts fitDashboard): capped instead, the gauges spill past the edge and Safari lets the whole page slide sideways. */
+body.touch .dash { top: 6px; bottom: auto; max-width: none; transform: translateX(-50%) scale(var(--dash-scale, 0.72)); transform-origin: top center; }
 body.touch #dock-aid { top: 128px; right: 12px; transform: scale(0.8); transform-origin: top right; }
 body.touch #target-info { top: 130px; }
 body.touch #banner { top: 64px; font-size: 15px; padding: 7px 12px; }

@@ -281,3 +281,16 @@ export function initRadio() {
     });
   }
 }
+
+/** How a line said to you is shown (main.ts radio()). */
+export interface RadioOpts {
+  /** Seconds to flash it: always under Classic, and under Modern if it's urgent. */
+  flash?: number;
+  urgent?: boolean;
+  colour?: string;
+  action?: RadioAction;
+  /** Several answers, as a card (src/ui/radio.ts); the first is what Enter does. */
+  answers?: RadioAction[];
+  /** The flashed text, when it isn't "from · text". */
+  line?: string;
+}

@@ -112,6 +112,9 @@ export interface Body {
   grade?: MoonGrade;
 }
 
+/** Metres: close enough to a signal to find out what it is. */
+export const SIGNAL_REACH = 900;
+
 export const SURVEY = {
   planet: { value: 45, time: 18, altitude: 0.6, points: 3 }, // altitude in planet radii
   moon: { value: 30, time: 12, altitude: 2.5, points: 2 }, // in moon radii

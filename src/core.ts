@@ -18,6 +18,18 @@ export const game = {
   dockTab: 'station' as DockTab,
   /** A photograph is taken right after the next frame is drawn (P, or the booth's button). */
   photoPending: false,
+  /** In space (launched, or on the way): the scene, not the station, is what's live. */
+  inSpace: false,
+  /** Starting again deletes the commander, so it takes a second press. */
+  newCommanderArmed: false,
+  /** When this flight began: moments after it are this trip's (main.ts keeps it over a reload). */
+  flightFrom: Date.now(),
+  /** This trip's sheet of moments has been seen. */
+  tripSeen: false,
+  /** The flight log is open (full screen, from the button beside the map). */
+  logOpen: false,
+  /** The flight log opened only to ask about the recorder: answering closes it, back to the station. */
+  logForIntro: false,
 };
 
 /** The commander, where one is certain to exist. */

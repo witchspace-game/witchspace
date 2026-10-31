@@ -95,6 +95,8 @@ const WHITE_HOT = new THREE.Color(5, 3.6, 2.2);
 /** 0 = normal, 1 = white-hot. Used for re-entry burn-up. */
 /** What the display shows for a ship with no transponder, until its hull is read: a cold white. */
 export const UNIDENTIFIED = new THREE.Color('#d8e2f0');
+/** The same, for text and markers. */
+export const UNIDENTIFIED_HEX = `#${UNIDENTIFIED.getHexString()}`;
 
 /**
  * Show a ship as unidentified (no transponder, too far for a hull read), or

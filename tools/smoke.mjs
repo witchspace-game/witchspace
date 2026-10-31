@@ -213,7 +213,120 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   }
   check('Modern: the Titan has guards', guards.filter((g) => !g.with).length >= 2, `${guards.length} security ships`);
   check('Modern: a freighter is bound for the Titan', runs.length > 0, runs.map((r) => r.name).join(', '));
+  const jumped = await s.w(async () => {
+    const w = window.witchspace;
+    for (const n of w.npcs.filter((n) => n.role === 'pirate')) n.obj.position.set(9e5, 9e5, 9e5); // nothing to mass-lock the drive
+    const from = w.player.obj.position.clone();
+    dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyJ' }));
+    dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyJ' }));
+    await new Promise((r) => setTimeout(r, 2500));
+    return Math.round(w.player.obj.position.distanceTo(from));
+  });
+  check('Modern: the in-system jump', jumped > 5000, `${jumped} m`);
+  const world = await s.w(() => { const e = window.witchspace.explore; return `${e.bodies.length} bodies, ${e.pois.length} signals`; });
+  check('Modern: the system has bodies to survey', /^[1-9]/.test(world), world);
   check('Modern: the yard raises no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
+  await s.page.context().close();
+}
+
+// --- Modern: a missile, locked on and fired ------------------------------------------------
+{
+  const s = await newCommander('modern');
+  await launch(s);
+  const before = await s.w(() => window.witchspace.commander.missiles);
+  // A pirate held 2 km dead ahead, well clear of the station and the planet. (Under Modern a stray
+  // trader is taken off: only the timetable's fly.)
+  await s.w(async () => {
+    const w = window.witchspace;
+    const V = w.player.obj.position.constructor;
+    w.player.obj.position.add(new V(0, 15000, 0)); // up and clear: the station faces the planet
+    w.player.speed = 0;
+    w.spawnPirates(w.player.obj.position);
+    w.aim.reset(w.player);
+  });
+  const hold = () => s.w(() => {
+    const w = window.witchspace;
+    const p = w.npcs.find((n) => n.role === 'pirate');
+    if (!p) return false;
+    p.obj.position.copy(w.player.obj.position).addScaledVector(w.player.forward(), 2000);
+    p.speed = 0;
+    w.player.repair();
+    return true;
+  });
+  check('Modern: a pirate to fire at', await hold());
+  const shot = await s.w(async () => {
+    const w = window.witchspace;
+    const p = w.npcs.find((n) => n.role === 'pirate');
+    const before = p.ship.shields + p.ship.hull;
+    dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyF' }));
+    await new Promise((r) => setTimeout(r, 600));
+    const heat = w.laserHeat;
+    dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyF' }));
+    return `heat ${Math.round(heat)}, damage ${Math.round(before - (p.ship.shields + p.ship.hull))}`;
+  });
+  check('Modern: the lasers fire and hit', /^heat [1-9]\d*, damage [1-9]/.test(shot), shot);
+  await hold();
+  await s.key('KeyT'); // arm: the seeker closes on what's in the sights
+  let locked = false;
+  for (let i = 0; i < 12 && !locked; i++) {
+    await wait(250);
+    await hold();
+    locked = await s.w(() => Boolean(window.witchspace.locked));
+  }
+  check('Modern: the seeker locks on', locked);
+  await s.key('KeyX');
+  await wait(300);
+  const flying = await s.w(() => window.witchspace.missiles.length);
+  const after = await s.w(() => window.witchspace.commander.missiles);
+  check('Modern: a missile flies', flying > 0 && after === before - 1, `${flying} in flight, ${before} → ${after} aboard`);
+  let gone = false;
+  for (let i = 0; i < 20 && !gone; i++) {
+    await wait(500);
+    gone = await s.w(() => window.witchspace.missiles.length === 0);
+  }
+  check('Modern: the missile reaches its target', gone);
+  const adrift = await s.w(async () => {
+    const w = window.witchspace;
+    const before = w.drifters.length;
+    const V = w.player.obj.position.constructor;
+    w.spillCargo(w.player.obj.position.clone().addScaledVector(w.player.forward(), 300), new V(), { food: 2 });
+    await new Promise((r) => setTimeout(r, 1500)); // they tumble a while
+    return w.drifters.length - before;
+  });
+  check('Modern: a wreck spills cargo that drifts', adrift > 0, `${adrift} canisters`);
+  const mayday = await s.w(async () => {
+    const w = window.witchspace;
+    if (!w.spawnDistress()) return 'no room for a distress call';
+    for (let i = 0; i < 80 && !w.distresses.length; i++) await new Promise((r) => setTimeout(r, 250)); // the call goes out with the first hit
+    return `${w.distresses.length} calling`;
+  });
+  check('Modern: a trader under attack calls for help', /^[1-9]/.test(mayday), mayday);
+  check('Modern: missiles raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
+  await s.page.context().close();
+}
+
+// --- Modern: a warrant brings the Marshals' Bastion through its rift -----------------------
+{
+  const s = await newCommander('modern');
+  await launch(s);
+  await s.w(() => { const w = window.witchspace; w.becomeFugitive(); w.commander.warrant = true; w.summonCarrier(); });
+  check('Modern: a rift opens for the Marshals', await s.w(() => Boolean(window.witchspace.carrier?.rift)));
+  let phase = '';
+  for (let i = 0; i < 90 && !['deployed', 'leaving'].includes(phase); i++) {
+    await wait(1000);
+    phase = await s.w(() => { const w = window.witchspace; w.player.repair(); return w.carrier?.phase ?? 'gone'; }); // the station's police shoot a wanted ship
+  }
+  check('Modern: the Bastion comes through', phase === 'deployed', phase);
+  await s.w(() => window.witchspace.damagePlayer(1e6));
+  const states = [];
+  for (let i = 0; i < 40; i++) {
+    await wait(500);
+    const st = await s.w(() => window.witchspace.state);
+    if (states[states.length - 1] !== st) states.push(st);
+    if (st === 'docked' || st === 'title') break;
+  }
+  check('Modern: destroyed, the kill cam plays and you wake up docked', states.includes('dead') && states[states.length - 1] === 'docked', states.join(' → '));
+  check('Modern: the Marshals raise no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }
 
@@ -221,6 +334,29 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
 {
   const s = await newCommander('modern');
   await launch(s);
+  const beacon = await s.w(async () => {
+    const w = window.witchspace;
+    const press = (code) => { dispatchEvent(new KeyboardEvent('keydown', { code })); dispatchEvent(new KeyboardEvent('keyup', { code })); };
+    press('Backquote');
+    await new Promise((r) => setTimeout(r, 300));
+    const open = !document.querySelector('#beacon').hidden;
+    press('Digit4'); // request an escort
+    for (let i = 0; i < 20 && !w.escort; i++) await new Promise((r) => setTimeout(r, 250));
+    return `${open ? 'open' : 'closed'}, ${w.escort ? 'escorted' : 'no escort'}`;
+  });
+  check('Modern: the beacon calls an escort', beacon === 'open, escorted', beacon);
+  const views = await s.w(async () => {
+    const w = window.witchspace;
+    const seen = [];
+    for (let i = 0; i < 4; i++) {
+      dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyV' }));
+      dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyV' }));
+      await new Promise((r) => setTimeout(r, 150));
+      seen.push(w.view);
+    }
+    return seen.join(' ');
+  });
+  check('Modern: V looks round all four views', views === 'rear left right front', views);
   await s.w(() => { const w = window.witchspace; w.player.speed = 0; w.setAutopilot(true); });
   let docked = false;
   for (let i = 0; i < 120 && !docked; i++) {
@@ -247,6 +383,18 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     return `${items.length} places, market ${document.querySelector('#tab-market')?.hidden ? 'closed' : 'open'}`;
   });
   check('Upright: the places menu opens the market', /^[4-9] places, market open$/.test(places), places);
+  const card = await s.w(async () => {
+    document.querySelectorAll('.ex-pairs-list .ex-pair')[2]?.click();
+    await new Promise((r) => setTimeout(r, 400));
+    const inline = document.querySelector('.ex-inline');
+    inline?.querySelector('.ex-more-toggle')?.click();
+    await new Promise((r) => setTimeout(r, 600));
+    const chart = inline?.querySelector('.ex-chart canvas');
+    return inline ? `chart ${chart ? chart.clientWidth : 0} wide in the good's card` : 'no card';
+  });
+  check("Upright: a good's chart opens in its own card", /^chart [1-9]\d+ wide/.test(card), card);
+  const wide = await s.w(() => [...document.querySelectorAll('body *')].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right > innerWidth + 0.5; }).map((e) => e.id || e.className).slice(0, 3));
+  check('Upright: nothing reaches past the right edge', !wide.length, wide.join(', '));
   check('Upright raises no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }

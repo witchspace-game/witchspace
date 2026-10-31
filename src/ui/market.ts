@@ -38,7 +38,7 @@ export function renderNews() {
   const items = newsAt(here, now)
     .sort((a, b) => Number(now > a.event.end) - Number(now > b.event.end) || b.heard - a.heard)
     .slice(0, 8);
-  const attacks = attackNews(here, now)
+  const attacks = attackNews(cmdr(), here, now)
     .map(
       (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Traders attacked near ${n.where.name}: ${n.lost} shipments lost`, n.where)}</b>
         <small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · heard ${ago(now - n.heard)} ago · Wanted: whatever it imports</small></li>`,
