@@ -68,7 +68,7 @@ export function controlRows(scheme: boolean | 'bbc', o: { gimballed: boolean; mo
       ['I', 'Invert pitch'],
       ['M', '1984 mode'],
       ['N', 'Sound: full / effects only / off'],
-      ['F1', 'Show / hide this card (Esc hides it too)'],
+      ['F1', 'Show / hide this card (Esc hides it too). On a Mac, fn F1, or click "F1 controls" at the top of the screen'],
     ]);
 }
 

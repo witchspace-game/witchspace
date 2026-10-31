@@ -301,6 +301,8 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
   pointer-events: none;
 }
 
+.keys .keys-card { pointer-events: auto; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; letter-spacing: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
 .dash {
   position: fixed;
   left: 50%;

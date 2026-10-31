@@ -188,7 +188,11 @@ $('#manual').addEventListener('click', (e) => {
 
 export function renderControlsCard() {
   const s = controlScheme();
-  $('#keys-hint').textContent = KEYS_HINT[s];
+  // The card's own key is a button too: on a Mac, F1 is the brightness key unless fn is held (Mark:
+  // "f1 on my mac doesnt work to bring up the controls").
+  const mac = /Mac/.test(navigator.platform);
+  $('#keys-hint').innerHTML = `${escapeHtml(KEYS_HINT[s].replace(' · F1 controls', ''))} · <button type="button" class="keys-card">${mac ? 'fn F1' : 'F1'} controls</button>`;
+  $('#keys-hint').querySelector('button')!.addEventListener('click', () => toggleControlsCard());
   $('#controls-scheme').textContent = SCHEME_NAMES[s];
   $('#controls-list').innerHTML = controlRows(s === 'bbc' ? 'bbc' : s === 'mouse')
     .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
