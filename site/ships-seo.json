@@ -1,0 +1,54 @@
+{
+  "/ships/cobra-mk3/": {
+    "title": "Cobra Mk III: where every commander starts",
+    "description": "A forgiving trader with 20 t of hold and room for four missiles. Every career begins in one, docked at Lave with 100 credits. Fly free in your browser."
+  },
+  "/ships/sidewinder/": {
+    "title": "Sidewinder: the pirate’s scout",
+    "description": "Flat, wide and quick to turn, with no hold at all: the first ship of half the pirates on the frontier, and soon at the yards. Fly free in your browser."
+  },
+  "/ships/mamba/": {
+    "title": "Mamba: built for racing, flown for raiding",
+    "description": "Built for racing, flown for raiding: mostly engine, thin shields, four tonnes of hold. Only a Marshal’s Lancer catches her. Fly free in your browser."
+  },
+  "/ships/fer-de-lance/": {
+    "title": "Fer-de-lance: a hotel with a fighter’s bones",
+    "description": "More than twice a Cobra’s length, with a glass deck along her spine, built to order. The ship every pilot saves for. Fly free in your browser."
+  },
+  "/ships/fer-de-lance/witch-fire/": {
+    "title": "Fer-de-lance Witch-fire Edition",
+    "description": "One hundred numbered Fer-de-lances, each glass deck lit in witch-fire. Never sold: each signed over by invitation to people who build Witchspace."
+  },
+  "/ships/fer-de-lance/dark/": {
+    "title": "Fer-de-lance Dark Edition",
+    "description": "Fifty numbered Fer-de-lances in black-light lines with one white-hot canopy. Never sold: each signed over by invitation to people who build Witchspace."
+  },
+  "/ships/viper/": {
+    "title": "Viper: the police ship on your tail",
+    "description": "Fast, cheap, and wherever a station keeps order. If your record isn’t clean, the one on your scanner is already turning. Fly free in your browser."
+  },
+  "/ships/lancer/": {
+    "title": "Lancer: the Marshals’ interceptor",
+    "description": "The fastest ship in the galaxy, flown by the Co-operative Marshals. Kill a commander where there’s law, and one comes for you. Fly free in your browser."
+  },
+  "/ships/bastion/": {
+    "title": "Bastion: the Marshals’ carrier",
+    "description": "An 800 m carrier with eight Lancers aboard. When the Co-operative Marshals arrive in force, this is what drops out of hyperspace. Fly free in your browser."
+  },
+  "/ships/falcon/": {
+    "title": "Falcon: the pirate nobody sees twice",
+    "description": "A lone pirate Legend who runs dark, built by Solo & Sons and never sold. Nobody sees her twice, and nobody forgets. Fly free in your browser."
+  },
+  "/ships/titanoboa/": {
+    "title": "Titanoboa: the ship that builds stations",
+    "description": "Wexley-Yorozu’s 2,500 m constructor eats a moon and leaves a station behind, stage by stage over days. Watch one rise. Fly free in your browser."
+  },
+  "/ships/bullsnake/": {
+    "title": "Bullsnake: the Titan’s ore hauler",
+    "description": "Short, square and slow, with tractor booms where the guns should be. Bullsnakes feed the Titan’s furnaces with ore from the moon. Fly free in your browser."
+  },
+  "/ships/coriolis/": {
+    "title": "Coriolis Station: matching the spin",
+    "description": "A slowly turning station with one docking slot. Match its spin, line up, keep your nerve, or let the docking computer do it. Fly free in your browser."
+  }
+}

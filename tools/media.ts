@@ -127,11 +127,11 @@ export function shareImage(media: Media, id?: string): string {
 export function itemPage(media: Media, item: MediaItem, site: string) {
   const l = links(media, item);
   const others = media.items.filter((i) => i.id !== item.id && i.group === item.group).slice(0, 3);
+  // A film plays here from our own file, even when it's on YouTube too: a search engine only indexes a video it can
+  // see playing on the page, and a YouTube player behind a click isn't one. The YouTube link sits with the buttons.
   const figure =
     item.kind === 'video'
-      ? l.embed
-        ? `<button type="button" class="item-media yt" data-embed="${l.embed}" aria-label="Play ${esc(item.title)}" style="--poster: url('${l.large}')"><span class="shot-play">${PLAY_ICON}</span></button>`
-        : `<video class="item-media" controls playsinline preload="metadata" poster="${l.large}"><source src="${l.video}" type="video/mp4" /></video>`
+      ? `<video class="item-media" controls playsinline preload="metadata" poster="${l.large}" style="--ar: ${item.width ?? 16} / ${item.height ?? 9}"><source src="${l.video}" type="video/mp4" /></video>`
       : `<a href="${l.direct}"><img class="item-media" src="${l.large}" alt="${esc(item.caption)}" width="${item.width ?? 1920}" height="${item.height ?? 1080}" /></a>`;
   const head =
     item.kind === 'video'
@@ -156,7 +156,8 @@ export function itemPage(media: Media, item: MediaItem, site: string) {
       <div class="actions">
         <a class="button primary" href="${l.download}" download>Download</a>
         <button type="button" class="button" data-share data-share-url="/press/${item.id}/" data-share-title="${esc(item.title)} · Witchspace" data-share-image="${l.og}">Share</button>
-        <button type="button" class="button" data-copy="${l.direct}">Copy image link</button>
+        <button type="button" class="button" data-copy="${l.direct}">Copy ${item.kind === 'video' ? 'video' : 'image'} link</button>
+        ${item.youtube ? `<a class="button" href="https://www.youtube.com/watch?v=${item.youtube}">Watch on YouTube</a>` : ''}
         <a class="button ghost" href="/play/">Play free</a>
       </div>
     </figcaption>

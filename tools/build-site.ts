@@ -9,9 +9,9 @@ import { dirname, join, posix, relative, resolve } from 'node:path';
 import { galleryData, galleryHtml, itemPage, links, loadMedia, shareImage } from './media';
 import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLARS, roadmapCompactHtml, roadmapHtml, roadmapSummaryHtml, STATUS } from './docs';
 import { currencyExamplesHtml } from './economy';
-import { companyPage, jobsPage, loadJobs } from './jobs';
+import { companiesHub, companyPage, jobsPage, loadJobs } from './jobs';
 import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
-import { buildPage, editionPage, manualPage, papersPage, shipPage, shipsIndex } from './ships';
+import { buildPage, editionPage, groupShips, manualPage, papersPage, shipPage, shipsIndex } from './ships';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
 import { CAREERS, careerLine } from '../src/site/callsignWords';
 
@@ -47,7 +47,14 @@ interface Page {
   card?: { ship: string; kicker: string; sub: string; title?: string; paint?: { colour: string; glow: number; trim: string | null; lights?: boolean } };
   /** Structured data for search engines (schema.org), besides the site and breadcrumbs added to every page. */
   schema?: Record<string, unknown>[];
+  /** Its short name, for breadcrumbs and its card, when the title is written for search ("Cobra Mk III"). */
+  name?: string;
+  /** A level between the section and this page in the breadcrumbs (an edition's ship). */
+  parent?: { name: string; path: string };
 }
+
+/** A page's short name: its own, or its title up to the first " · " or " | ". */
+const nameOf = (page: Page) => page.name ?? page.title.replace(/ (·|\|) .*$/, '');
 
 // --- Share cards and structured data ----------------------------------------------
 
@@ -94,15 +101,16 @@ const GAME = {
 };
 
 /** Names for breadcrumbs, by URL section. */
-const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', jobs: 'Jobs', companies: 'Jobs', submit: 'Hand in a design', connect: 'Connect your AI assistant', 'ship-editor': 'Ship editor', review: 'Review submissions', 'ship-preview': 'Ship preview', 'shared-space': 'Shared space', economy: 'Money and markets', callsign: 'Claim your callsign' };
+const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', jobs: 'Jobs', companies: 'Companies', submit: 'Hand in a design', connect: 'Connect your AI assistant', 'ship-editor': 'Ship editor', review: 'Review submissions', 'ship-preview': 'Ship preview', 'shared-space': 'Shared space', economy: 'Money and markets', callsign: 'Claim your callsign' };
 /** Sections without an index page of their own: their breadcrumb points here instead. */
-const SECTION_URLS: Record<string, string> = { companies: '/jobs/' };
+const SECTION_URLS: Record<string, string> = {};
 
 function structuredData(page: Page, image: string): string {
   const parts = page.path.split('/').filter(Boolean);
-  const name = page.title.replace(/ · .*$/, '');
+  const name = nameOf(page);
   const crumbs = [{ name: 'Witchspace', url: `${SITE}/` }];
   if (parts.length) crumbs.push({ name: SECTION_NAMES[parts[0]] ?? name, url: SITE + (SECTION_URLS[parts[0]] ?? `/${parts[0]}/`) });
+  if (page.parent) crumbs.push({ name: page.parent.name, url: SITE + page.parent.path });
   if (parts.length > 1) crumbs.push({ name, url: SITE + page.path });
   const graph: Record<string, unknown>[] = [
     page.path === '/' ? { '@type': 'WebSite', name: 'Witchspace', url: `${SITE}/`, description: page.description, publisher: ORG } : { '@type': 'WebPage', name, url: SITE + page.path, description: page.description, image, isPartOf: { '@type': 'WebSite', name: 'Witchspace', url: `${SITE}/` } },
@@ -117,7 +125,7 @@ const escapeAttr = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;
 
 function render(page: Page): string {
   const card = page.card ?? PAGE_CARDS[page.path];
-  const title = card?.title ?? page.title.replace(/ · .*$/, '');
+  const title = card?.title ?? nameOf(page);
   if (card) cards.push({ file: cardFile(page.path), ship: card.ship, kicker: card.kicker, title, sub: card.sub, ...(card.paint ? { paint: card.paint } : {}) });
   const own = card && existsSync(join(root, 'public/share', cardFile(page.path)));
   const image = page.image ?? (own ? `${SITE}/share/${cardFile(page.path)}` : shareImage(media));
@@ -149,6 +157,8 @@ function render(page: Page): string {
 
 /** Every page search engines may index, for the sitemap: anything marked noindex stays out. */
 const indexable: string[] = ['/play/'];
+/** The files each hand-written page is made from, for its lastmod. */
+const sources = new Map<string, string[]>([['/play/', ['play/index.html']]]);
 
 function write(page: Page) {
   if (!page.head?.includes('noindex')) indexable.push(page.path);
@@ -176,6 +186,7 @@ for (const name of readdirSync(join(root, 'site/pages'))) {
     // {{media:<id>:large}} and the like: a press item's link at a given size.
     .replace(/\{\{media:([\w-]+):(large|og|direct|video|embed)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct' | 'video' | 'embed') => links(media, media.items.find((i) => i.id === id)!)[size]!);
   write({ ...meta, content });
+  sources.set(meta.path, [`site/pages/${name}`]);
   // Claim your callsign, once more for each career: the same page with that career chosen and its own share
   // card ("Every trader needs a callsign"), for the campaign's links. Kept out of search: /callsign/ is the page.
   if (meta.path === '/callsign/')
@@ -207,7 +218,7 @@ for (const item of media.items) {
   const l = links(media, item);
   const object =
     item.kind === 'video'
-      ? { '@type': 'VideoObject', name: item.title, description: item.caption, thumbnailUrl: l.og, contentUrl: l.direct, uploadDate: item.added ?? addedOn(item.file), ...(item.duration ? { duration: `PT${Math.round(item.duration)}S` } : {}), publisher: ORG }
+      ? { '@type': 'VideoObject', name: item.title, description: item.caption, thumbnailUrl: l.og, contentUrl: l.direct, uploadDate: item.added ?? addedOn(item.file), ...(item.duration ? { duration: `PT${Math.round(item.duration)}S` } : {}), ...(item.youtube ? { embedUrl: `https://www.youtube.com/embed/${item.youtube}` } : {}), publisher: ORG }
       : { '@type': 'ImageObject', name: item.title, description: item.caption, contentUrl: l.direct, thumbnailUrl: l.og, creator: ORG, license: 'https://creativecommons.org/licenses/by-sa/4.0/', acquireLicensePage: `${SITE}/press/` };
   write({ ...p, schema: [object] });
 }
@@ -215,9 +226,36 @@ for (const item of media.items) {
 // --- The fleet: an index, and a page for each ship ------------------------------
 
 const ships = loadShips(root);
-write({ path: '/ships/', title: 'Ships · Witchspace', description: 'The Witchspace fleet: every ship, who flies it, who drew it, and how to make it better.', content: shipsIndex(ships), bodyClass: 'ships-page', card: { ship: 'falcon', kicker: 'The fleet', title: 'Ships', sub: 'Every ship, who flies it, who drew it, and how to make it better.' }, schema: [{ '@type': 'CollectionPage', name: 'Ships', hasPart: ships.map((sh) => ({ '@type': 'CreativeWork', name: sh.name, url: `${SITE}/ships/${sh.id}/` })) }] });
+/** Ships a commander can fly today: the Cobra every career starts in, and a hull built to order (the game's
+ *  `concept`: deposit, then collect). The yards list the others (ownable), but don't sell hulls outright yet. */
+const flyable = (s: (typeof ships)[number]) => s.id === 'cobra-mk3' || (ownable(s) && Boolean(s.concept));
+// In the hub's order, group by group (tools/ships.ts SHIP_GROUPS), for its ItemList.
+const fleetOrder = groupShips(ships, flyable).flatMap((g) => g.ships);
+write({
+  path: '/ships/',
+  title: 'Ships of Witchspace: the fleet you fly, fight and build',
+  description: 'Every ship in Witchspace, from the Cobra you start in to the Fer-de-lance built to order and the Titan that builds stations. Fly free in your browser.',
+  content: shipsIndex(ships, flyable),
+  bodyClass: 'ships-page',
+  card: { ship: 'falcon', kicker: 'The fleet', title: 'Ships', sub: 'Every ship, who flies it, who drew it, and how to make it better.' },
+  schema: [
+    {
+      '@type': 'CollectionPage',
+      name: 'Ships of Witchspace',
+      url: `${SITE}/ships/`,
+      about: { '@type': 'VideoGame', name: 'Witchspace', url: `${SITE}/` },
+      mainEntity: { '@type': 'ItemList', numberOfItems: fleetOrder.length, itemListElement: fleetOrder.map((sh, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE}/ships/${sh.id}/`, name: sh.name, image: `${SITE}/share/${cardFile(`/ships/${sh.id}/`)}` })) },
+    },
+  ],
+});
 const shipModules = loadModules(root);
-for (const s of ships) write({ path: `/ships/${s.id}/`, ...shipPage(s, shipModules, false, editionsFor(s), ownable(s)), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
+/** Ship and edition pages' titles and descriptions, written for search by Marketing: path → { title, description }. */
+const SHIP_SEO: Record<string, { title: string; description: string }> = JSON.parse(readFileSync(join(root, 'site/ships-seo.json'), 'utf8'));
+const forSearch = (path: string, name: string, p: Omit<Page, 'path'>): Page => {
+  const seo = SHIP_SEO[path];
+  return { ...p, path, name, ...(seo ? { title: `${seo.title} | Witchspace`, description: seo.description } : {}) };
+};
+for (const s of ships) write({ ...forSearch(`/ships/${s.id}/`, s.name, shipPage(s, shipModules, false, editionsFor(s), ownable(s))), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
 // Owner's manuals: one for every ship the yard sells, shown only to her owner.
 const cobra = ships.find((s) => s.id === 'cobra-mk3')!;
 const drawer = drawerButtons(root);
@@ -225,13 +263,14 @@ for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/manual/`, .
 // Each numbered edition's own page, at /ships/<ship>/<edition>/.
 for (const s of ships) {
   const eds = editionsFor(s);
-  for (const e of eds) write({ path: `/ships/${s.id}/${e.id}/`, ...editionPage(s, e, eds.filter((o) => o !== e)), scripts: ['/src/site/edition.ts'], bodyClass: 'ships-page edition-body' });
+  for (const e of eds) write({ ...forSearch(`/ships/${s.id}/${e.id}/`, e.name, editionPage(s, e, eds.filter((o) => o !== e))), parent: { name: s.name, path: `/ships/${s.id}/` }, scripts: ['/src/site/edition.ts'], bodyClass: 'ships-page edition-body' });
   // Her papers: one page for every number, which vercel.json serves at /ships/<ship>/<edition>/<no>/.
   for (const e of eds) write({ path: `/ships/${s.id}/${e.id}/papers/`, ...papersPage(s, e), scripts: ['/src/site/papers.ts'], bodyClass: 'ships-page papers-body' });
 }
 // The configurator: spec any hull the yard sells, and order her for the yard.
 const yardNames = Object.fromEntries(ships.filter(ownable).map((s) => [s.id, s.name]));
-for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/build/`, ...buildPage(s, yardNames), scripts: ['/src/site/build.ts'], bodyClass: 'ships-page build-body' });
+// Kept out of search, like the manuals and the papers: a tool, not a page to land on.
+for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/build/`, ...buildPage(s, yardNames), head: '    <meta name="robots" content="noindex, follow" />\n', scripts: ['/src/site/build.ts'], bodyClass: 'ships-page build-body' });
 
 // --- Design documents, the roadmap and the library (tools/docs.ts) --------------
 
@@ -290,6 +329,16 @@ write({
 });
 const companiesMd = readFileSync(join(root, 'docs/companies.md'), 'utf8');
 const shipIds = new Set(ships.map((s) => s.id));
+write({
+  path: '/companies/',
+  title: 'The companies of Witchspace: work for the Big Four',
+  name: 'Companies',
+  description: 'Four companies post the work on every station’s board in Witchspace: freight, escorts, surveys and salvage. Who they are, what they want, and their jobs.',
+  content: companiesHub(jobs, companiesMd, shipIds),
+  bodyClass: 'jobs-page',
+  card: { ship: 'titanoboa', kicker: 'A galaxy at work', title: 'The companies', sub: 'Four companies post the work on every station’s board. Who you work for decides who trusts you.' },
+  schema: [{ '@type': 'CollectionPage', name: 'The companies of Witchspace', about: GAME_REF, mainEntity: { '@type': 'ItemList', itemListElement: COMPANY_IDS.map((id, i) => ({ '@type': 'ListItem', position: i + 1, url: `${SITE}/companies/${id}/`, name: COMPANIES[id].name })) } }],
+});
 for (const id of COMPANY_IDS) {
   const c = jobs.companies[id];
   write({
@@ -360,12 +409,86 @@ cards.push({ file: 'play.jpg', ship: 'cobra-mk3', kicker: 'Play now · free', ti
 // The cards for tools/share-cards.mjs to photograph (git-ignored: it's made here).
 writeFileSync(join(root, 'tools/share-cards.json'), JSON.stringify(cards, null, 1));
 
-// The sitemap, from the pages just written (public/sitemap.xml is git-ignored: it's made on every build).
+// The sitemaps, from the pages just written (git-ignored: they're made on every build). An index of one sitemap
+// per section, so Search Console reports each section on its own, and every URL's lastmod is the last commit
+// to the files it's made from: honest, so search engines can trust it (never the build's own time).
+
+/** Each file's last commit date, newest first from one walk of the history. Empty if there's no history to read. */
+const lastCommit = new Map<string, string>();
+try {
+  // A shallow clone (as a host's build may be) would date everything to its one commit: deepen it, or go without.
+  if (execFileSync('git', ['rev-parse', '--is-shallow-repository'], { cwd: root, encoding: 'utf8' }).trim() === 'true') execFileSync('git', ['fetch', '--unshallow', '--quiet'], { cwd: root, stdio: 'ignore', timeout: 60_000 });
+  let date = '';
+  for (const line of execFileSync('git', ['log', '--format=@%cs', '--name-only', '--no-renames'], { cwd: root, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 }).split('\n')) {
+    if (line.startsWith('@')) date = line.slice(1);
+    else if (line && !lastCommit.has(line)) lastCommit.set(line, date);
+  }
+} catch {
+  lastCommit.clear(); // no history: no lastmod, rather than a wrong one
+}
+/** The newest commit among these files (a path ending in / means everything under it). */
+function lastmod(files: string[]): string | null {
+  let newest: string | null = null;
+  for (const f of files)
+    for (const [, date] of f.endsWith('/') ? [...lastCommit].filter(([k]) => k.startsWith(f)) : [[f, lastCommit.get(f)] as const])
+      if (date && (!newest || date > newest)) newest = date;
+  return newest;
+}
+/** What each page is made from. */
+function sourcesOf(path: string): string[] {
+  const parts = path.split('/').filter(Boolean);
+  if (sources.has(path)) return sources.get(path)!;
+  switch (parts[0]) {
+    case 'ships':
+      if (parts.length === 1) return ['content/ships/', 'site/ships-seo.json'];
+      return [`content/ships/${parts[1]}.json`, 'site/ships-seo.json', ...(parts.length > 2 ? ['src/content/editions.ts'] : [])];
+    case 'press': {
+      const item = media.items.find((i) => i.id === parts[1]);
+      return ['site/media.json', ...(item ? [item.file] : [])];
+    }
+    case 'design':
+      return parts.length > 1 ? [docs.find((d) => d.slug === parts[1])?.file ?? 'docs/'] : ['docs/'];
+    case 'roadmap':
+      return ['docs/'];
+    case 'jobs':
+      return ['site/jobs.json'];
+    case 'companies':
+      return ['site/jobs.json', 'docs/companies.md'];
+  }
+  return [];
+}
+const SECTIONS = ['pages', 'ships', 'companies', 'design', 'press'] as const;
+const sectionOf = (path: string): (typeof SECTIONS)[number] => {
+  const first = path.split('/')[1];
+  if (first === 'ships') return 'ships';
+  if (first === 'companies' || first === 'jobs') return 'companies';
+  if (first === 'design' || first === 'roadmap') return 'design';
+  if (first === 'press') return 'press';
+  return 'pages';
+};
+const xml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/** A ship page's picture (her share card), and a press film, for Google Images and Video. */
+function extras(path: string): string {
+  const parts = path.split('/').filter(Boolean);
+  if (parts[0] === 'ships' && parts.length > 1 && existsSync(join(root, 'public/share', cardFile(path)))) return `<image:image><image:loc>${SITE}/share/${cardFile(path)}</image:loc></image:image>`;
+  const item = parts[0] === 'press' && parts.length === 2 ? media.items.find((i) => i.id === parts[1]) : undefined;
+  if (item?.kind !== 'video') return '';
+  const l = links(media, item);
+  return `<video:video><video:thumbnail_loc>${xml(l.og!)}</video:thumbnail_loc><video:title>${xml(item.title)}</video:title><video:description>${xml(item.caption)}</video:description><video:content_loc>${xml(l.direct!)}</video:content_loc>${item.duration ? `<video:duration>${Math.round(item.duration)}</video:duration>` : ''}<video:publication_date>${item.added ?? addedOn(item.file)}</video:publication_date></video:video>`;
+}
 const urls = [...new Set(indexable)].sort((a, b) => (a === '/' ? -1 : b === '/' ? 1 : a.localeCompare(b)));
-writeFileSync(
-  join(root, 'public/sitemap.xml'),
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map((u) => `  <url><loc>${SITE}${u}</loc></url>`).join('\n')}\n</urlset>\n`,
-);
+const index: string[] = [];
+for (const section of SECTIONS) {
+  const mine = urls.filter((u) => sectionOf(u) === section);
+  const dates = mine.map((u) => lastmod(sourcesOf(u)));
+  writeFileSync(
+    join(root, `public/sitemap-${section}.xml`),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">\n${mine.map((u, i) => `  <url><loc>${SITE}${u}</loc>${dates[i] ? `<lastmod>${dates[i]}</lastmod>` : ''}${extras(u)}</url>`).join('\n')}\n</urlset>\n`,
+  );
+  const newest = dates.filter(Boolean).sort().pop();
+  index.push(`  <sitemap><loc>${SITE}/sitemap-${section}.xml</loc>${newest ? `<lastmod>${newest}</lastmod>` : ''}</sitemap>`);
+}
+writeFileSync(join(root, 'public/sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${index.join('\n')}\n</sitemapindex>\n`);
 const missing = cards.filter((c) => !existsSync(join(root, 'public/share', c.file)));
 if (missing.length) console.log(`Share cards still to make (npm run cards): ${missing.map((c) => c.file).join(', ')}`);
 console.log(`Built ${generated.length} pages: ${generated.map((f) => relative(root, join(root, f))).join(', ')}`);

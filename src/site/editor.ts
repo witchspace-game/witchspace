@@ -298,7 +298,7 @@ document.addEventListener('keydown', (e) => {
 // --- Starting points --------------------------------------------------------------------------
 
 const start = $<HTMLSelectElement>('#start');
-start.insertAdjacentHTML('beforeend', FLEET.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}${s.concept ? ' (concept)' : ''}</option>`).join(''));
+start.insertAdjacentHTML('beforeend', FLEET.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}${s.concept ? ' (built to order)' : ''}</option>`).join(''));
 const improveButton = $<HTMLButtonElement>('#improve');
 const syncStart = () => (improveButton.disabled = !start.value);
 start.addEventListener('change', syncStart);

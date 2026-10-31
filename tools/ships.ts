@@ -17,7 +17,7 @@ export interface ShipFile {
   style?: { lineColor?: string };
   insignia?: { color: string; vertices: number[][]; lines: number[][] };
   modules?: string[];
-  /** A maker's concept: shown off, not flying yet. */
+  /** Built to order: specced, a deposit down, and collected from the yard a few days later (the game's own meaning). */
   concept?: true;
 }
 
@@ -210,37 +210,76 @@ const STAT_LABELS: [string, string, (n: number) => string][] = [
 ];
 
 function roleLine(s: ShipFile) {
-  return [s.concept ? 'Concept' : '', s.manufacturer && s.manufacturer !== 'None' ? s.manufacturer : '', ROLE[s.role ?? ''] ?? s.role ?? ''].filter(Boolean).join(' · ');
+  return [s.concept ? 'Built to order' : '', s.manufacturer && s.manufacturer !== 'None' ? s.manufacturer : '', ROLE[s.role ?? ''] ?? s.role ?? ''].filter(Boolean).join(' · ');
 }
 
-const shipCard = (s: ShipFile) => `    <a class="card link ship-card${s.concept ? ' concept' : ''}" href="/ships/${s.id}/">
+const shipCard = (s: ShipFile, own: boolean) => `    <a class="card link ship-card" href="/ships/${s.id}/">
+      ${own ? '<span class="ship-badge">You can fly her</span>' : ''}
       ${shipSvg(s)}
       <h3>${esc(s.name)}</h3>
       <p class="muted">${esc(roleLine(s))}</p>
+      ${s.stats && (s.stats.maxSpeed || s.stats.cargo) ? `<p class="ship-card-stats"><span>${s.stats.maxSpeed ? `${s.stats.maxSpeed} m/s` : 'No engines'}</span><span>${s.stats.cargo ? `${s.stats.cargo} t hold` : 'No hold'}</span></p>` : ''}
     </a>`;
 
-export function shipsIndex(ships: ShipFile[]): string {
-  const concepts = ships.filter((s) => s.concept);
+/** The fleet's groups, in the hub's order: the ships you can own first, then who you'll meet out there. */
+export const SHIP_GROUPS: { id: string; name: string; line: string; has: (s: ShipFile, own: boolean) => boolean }[] = [
+  { id: 'own', name: 'Ships you can fly', line: 'Every commander starts in a Cobra. The Fer-de-lance is built to order at the shipyards; more hulls go on sale when the yards sell them outright.', has: (_, own) => own },
+  { id: 'law', name: 'The law', line: 'The police where a station keeps order, and the Co-operative Marshals when a warrant comes due.', has: (s) => s.role === 'police' || s.role === 'marshal' },
+  { id: 'pirates', name: 'Pirates and Legends', line: 'The Sidewinder and the Mamba are the pirates’ favourites, and on the shipyards’ lists for when the yards sell hulls outright. Some ships are only ever met.', has: (s) => s.role === 'pirate' },
+  { id: 'industry', name: 'Industry', line: 'Wexley-Yorozu’s yards: the Titan that builds stations, and the freighters that feed her.', has: (s) => s.role === 'miner' || s.role === 'freighter' },
+  { id: 'stations', name: 'Stations', line: 'Where you dock, trade, refit and take on work.', has: (s) => s.role === 'station' },
+  { id: 'more', name: 'More ships', line: 'The rest of the fleet.', has: () => true },
+];
+
+/** The order within a group: the one you meet first, first (the rest after, A to Z). */
+const FIRST = ['cobra-mk3', 'fer-de-lance', 'sidewinder', 'mamba', 'falcon', 'viper', 'lancer', 'bastion', 'titanoboa', 'bullsnake'];
+const rank = (s: ShipFile) => (FIRST.includes(s.id) ? FIRST.indexOf(s.id) : FIRST.length);
+
+/** Each ship in her group: the first group that has her, so no ship shows twice. */
+export function groupShips(ships: ShipFile[], ownable: (s: ShipFile) => boolean) {
+  const placed = new Set<string>();
+  const ordered = [...ships].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+  return SHIP_GROUPS.map((g) => ({ ...g, ships: ordered.filter((s) => !placed.has(s.id) && g.has(s, ownable(s)) && placed.add(s.id)) })).filter((g) => g.ships.length);
+}
+
+export function shipsIndex(ships: ShipFile[], ownable: (s: ShipFile) => boolean): string {
+  const groups = groupShips(ships, ownable);
   return `<section class="section">
   <div class="section-head">
     <p class="kicker">The fleet</p>
-    <h2>Ships</h2>
-    <p class="lede">Every ship in Witchspace is a small file anyone can read, improve or add to. Here's the fleet so far, who flies each one, and who drew it.</p>
+    <h1>Ships of Witchspace</h1>
+    <p class="lede">Every commander starts in a Cobra. Where you go from there decides what you fly, and what flies at you. Every ship here is a small open file anyone can improve.</p>
+    <p class="ship-jump">${groups.map((g) => `<a href="#${g.id}">${esc(g.name)}</a>`).join(' · ')} · <a href="#make">Add to the fleet</a></p>
   </div>
-  <div class="ship-grid">
-${ships.filter((s) => !s.concept).map(shipCard).join('\n')}
-  </div>
-${concepts.length ? `  <div class="ship-concepts">
-    <h3>Coming soon</h3>
-    <p class="muted">Concepts: what the makers are showing off before they fly.</p>
+${groups
+  .map(
+    (g) => `  <div class="ship-group" id="${g.id}">
+    <h2>${esc(g.name)}</h2>
+    <p class="muted">${g.line}</p>
     <div class="ship-grid">
-${concepts.map(shipCard).join('\n')}
+${g.ships.map((s) => shipCard(s, ownable(s))).join('\n')}
     </div>
-  </div>` : ''}
-  <div class="ship-make">
-    <h3>Design a ship</h3>
-    <p>A ship is a small file: points, faces and a few glowing details. You don't need to code to make one. <a href="/get-involved/#ai">Add Witchspace to your AI assistant</a>, ask it for the ship you have in mind, and it checks the design against the game's rules and draws it beside a Cobra. Then email the file to <a href="mailto:hello@witchspace.org.uk?subject=A%20ship%20for%20Witchspace">hello@witchspace.org.uk</a>, or <a href="/ideas/">put the idea on the ideas board</a> for someone to draw. Nods to films and books are welcome, copies of their designs aren't (<a href="${REPO}CONTRIBUTING.md#legends-and-homages">the rules on homages</a>).</p>
-    <p class="muted small">If you code: ships live in <a href="https://github.com/witchspace-game/witchspace/tree/main/content/ships">content/ships</a> on GitHub, open to pull requests (<a href="${REPO}CONTRIBUTING.md">how to contribute</a>).</p>
+  </div>`,
+  )
+  .join('\n')}
+  <div class="ship-group ship-make" id="make">
+    <h2>Add to the fleet</h2>
+    <p class="muted">Every ship here began as somebody’s idea. The next one could be yours.</p>
+    <div class="make-grid">
+      <a class="card link make-card" href="/ship-editor/">
+        <span class="make-glyph" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M6 30 L24 12 L42 30 L24 36 Z M24 12 L24 36" /></svg></span>
+        <h3>Build a ship</h3>
+        <p>Shape her from points in the ship editor, watch her glow, and hand her in. No code, no GitHub.</p>
+        <span class="button primary small">Open the ship editor</span>
+      </a>
+      <a class="card link make-card idea" href="/ideas/?about=${encodeURIComponent('A new ship')}">
+        <span class="make-glyph" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 8 a11 11 0 0 1 7 19.5 V32 H17 V27.5 A11 11 0 0 1 24 8 Z M18 37 H30 M20 41 H28" /></svg></span>
+        <h3>Got an idea for one?</h3>
+        <p>Describe the ship you’d love to meet out there, and someone may draw her. Vote up the ideas you want flying.</p>
+        <span class="button small">Share your idea</span>
+      </a>
+    </div>
+    <p class="muted small">Rather ask your AI assistant? <a href="/get-involved/#ai">Add Witchspace to it</a>, ask for the ship you have in mind, and it checks her against the game’s rules. Wexley-Yorozu’s fleet office is hiring, too: <a href="/jobs/#build">Hull Designer, Fleet Office</a>. Nods to films and books are welcome, copies of their designs aren’t (<a href="${REPO}CONTRIBUTING.md#legends-and-homages">the rules on homages</a>). If you code: ships live in <a href="https://github.com/witchspace-game/witchspace/tree/main/content/ships">content/ships</a> on GitHub, open to pull requests.</p>
   </div>
 </section>`;
 }
@@ -270,8 +309,7 @@ function modulesCard(s: ShipFile, modules: Map<string, ModuleFile>): string {
 export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map(), preview = false, editions: EditionCard[] = [], manual = false) {
   const c = s.credits ?? {};
   const stats = STAT_LABELS.filter(([k]) => s.stats?.[k] !== undefined)
-    // A concept's numbers are the makers' promises.
-    .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${s.concept && k === 'price' && s.stats![k] ? 'About ' : ''}${esc(f(s.stats![k]))}</dd></div>`)
+    .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${esc(f(s.stats![k]))}</dd></div>`)
     .join('');
   const design = DESIGN[s.id];
   const authors = (c.authors ?? []).join(', ') || 'Witchspace contributors';
@@ -303,7 +341,7 @@ export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map
       <p class="kicker">${esc(roleLine(s))}</p>
       <h1>${esc(s.name)}</h1>
       <p class="lede">${esc(s.description ?? '')}</p>
-      ${s.concept ? '<p class="concept-note">Coming soon. A concept: its makers are showing it off, and it isn’t flying yet. Its numbers may change before it does.</p>' : ''}
+      ${s.concept ? '<p class="concept-note">Built to order: spec her, put down a tenth, and collect her from the yard in a few days.</p>' : ''}
       ${stats ? `<dl class="ship-stats">${stats}</dl>` : ''}
       <p class="ship-share"><button type="button" class="button ghost small" data-share${preview ? '' : ` data-share-url="/ships/${esc(s.id)}/"`} data-share-title="${esc(s.name)}">Share the ${esc(s.name)}</button>${manual ? ` <a class="button ghost small" href="/ships/${esc(s.id)}/manual/">Owner’s manual</a>` : ''}</p>
       ${manual ? `<p class="ship-build"><a class="button primary" href="/ships/${esc(s.id)}/build/">Build yours</a></p>` : ''}
@@ -420,7 +458,7 @@ export function buildPage(s: ShipFile, names: Record<string, string>) {
     <div class="build-panel">
       <p class="kicker">${esc(roleLine(s))}</p>
       <h1>Spec your ${esc(s.name)}</h1>
-      <p class="lede">${s.concept ? `A concept: ${esc(s.manufacturer ?? 'her makers')} build her to order. Spec her here, and the deposit is one tap at the next shipyard you dock at.` : `Spec her here, and she’s waiting at the next shipyard you dock at.`}</p>
+      <p class="lede">${s.concept ? `${esc(s.manufacturer ?? 'Her makers')} build her to order. Spec her here, and the deposit is one tap at the next shipyard you dock at.` : `Spec her here, and she’s waiting at the next shipyard you dock at.`}</p>
       <div id="build-models"></div>
       <nav class="build-steps" id="build-steps" aria-label="Steps"></nav>
       <div id="build-options"></div>
