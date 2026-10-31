@@ -661,6 +661,17 @@ body.viewing { overflow: hidden; }
 /* A film keeps its shape and fits the screen's height (an upright one is centred), rather than filling the width. */
 video.item-media { aspect-ratio: var(--ar, 16 / 9); width: min(100%, calc(82vh * var(--ar, 16 / 9))); margin: 0 auto; }
 .item figcaption { max-width: 760px; margin-top: 24px; }
+.card.link.press-film { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; text-align: left; gap: 18px; margin: 0 0 24px; padding: 14px; }
+.press-film img { flex: none; width: 200px; height: auto; border-radius: 8px; }
+.press-film b { display: block; font-size: 18px; color: var(--fg); }
+.press-film small { display: block; margin-top: 4px; color: var(--muted); font-size: 14px; }
+@media (max-width: 640px) { .card.link.press-film { flex-direction: column; align-items: flex-start; } .press-film img { width: 100%; } }
+/* A film that lives on YouTube (site/pages/pirate-rescue.html), and its chapters. */
+iframe.yt-film { aspect-ratio: 16 / 9; height: auto; }
+.chapters { list-style: none; margin: 16px 0 20px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px 18px; font-size: 15px; }
+.chapters a { text-decoration: none; color: var(--fg); }
+.chapters a:hover { color: var(--accent); }
+.chapters time { display: inline-block; min-width: 3.2em; color: var(--accent); font-variant-numeric: tabular-nums; }
 .item h1 { margin: 0 0 10px; font-size: clamp(30px, 4vw, 46px); }
 .item p { color: #c2cddb; }
 .item .small { font-size: 14px; }

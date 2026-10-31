@@ -160,8 +160,13 @@ const indexable: string[] = ['/play/'];
 /** The files each hand-written page is made from, for its lastmod. */
 const sources = new Map<string, string[]>([['/play/', ['play/index.html']]]);
 
+/** Films that play from YouTube on a page of their own (not the press library's files), for the video sitemap. */
+const embeddedFilms = new Map<string, Record<string, unknown>>();
+
 function write(page: Page) {
   if (!page.head?.includes('noindex')) indexable.push(page.path);
+  const film = page.schema?.find((o) => o['@type'] === 'VideoObject' && o.embedUrl && !o.contentUrl);
+  if (film) embeddedFilms.set(page.path, film);
   const file = join(root, page.path, 'index.html');
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, render(page));
@@ -255,7 +260,13 @@ const forSearch = (path: string, name: string, p: Omit<Page, 'path'>): Page => {
   const seo = SHIP_SEO[path];
   return { ...p, path, name, ...(seo ? { title: `${seo.title} | Witchspace`, description: seo.description } : {}) };
 };
-for (const s of ships) write({ ...forSearch(`/ships/${s.id}/`, s.name, shipPage(s, shipModules, false, editionsFor(s), ownable(s))), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
+/** Films a ship stars in, for her page's schema (subjectOf). */
+const FILMS_OF: Record<string, { name: string; url: string; embedUrl?: string }[]> = {
+  sidewinder: [{ name: 'Witchspace on an iPhone: a jump, a mayday, three pirates', url: `${SITE}/press/pirate-rescue/`, embedUrl: 'https://www.youtube-nocookie.com/embed/vdKxStmYhOs' }],
+};
+const withFilms = (id: string, p: ReturnType<typeof shipPage>) =>
+  FILMS_OF[id] ? { ...p, schema: p.schema.map((o, i) => (i === 0 ? { ...o, subjectOf: FILMS_OF[id].map((f) => ({ '@type': 'VideoObject', ...f })) } : o)) } : p;
+for (const s of ships) write({ ...forSearch(`/ships/${s.id}/`, s.name, withFilms(s.id, shipPage(s, shipModules, false, editionsFor(s), ownable(s)))), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
 // Owner's manuals: one for every ship the yard sells, shown only to her owner.
 const cobra = ships.find((s) => s.id === 'cobra-mk3')!;
 const drawer = drawerButtons(root);
@@ -471,6 +482,11 @@ const xml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 function extras(path: string): string {
   const parts = path.split('/').filter(Boolean);
   if (parts[0] === 'ships' && parts.length > 1 && existsSync(join(root, 'public/share', cardFile(path)))) return `<image:image><image:loc>${SITE}/share/${cardFile(path)}</image:loc></image:image>`;
+  const film = embeddedFilms.get(path);
+  if (film) {
+    const seconds = String(film.duration ?? '').match(/^PT(?:(\d+)M)?(?:(\d+)S)?$/);
+    return `<video:video><video:thumbnail_loc>${xml(String(film.thumbnailUrl))}</video:thumbnail_loc><video:title>${xml(String(film.name))}</video:title><video:description>${xml(String(film.description))}</video:description><video:player_loc>${xml(String(film.embedUrl))}</video:player_loc>${seconds ? `<video:duration>${Number(seconds[1] ?? 0) * 60 + Number(seconds[2] ?? 0)}</video:duration>` : ''}<video:publication_date>${xml(String(film.uploadDate))}</video:publication_date></video:video>`;
+  }
   const item = parts[0] === 'press' && parts.length === 2 ? media.items.find((i) => i.id === parts[1]) : undefined;
   if (item?.kind !== 'video') return '';
   const l = links(media, item);
