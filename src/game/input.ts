@@ -124,6 +124,19 @@ export function touchAim(dx: number, dy: number) {
   aimDx += dx;
   aimDy += dy;
 }
+/**
+ * Rolling on a phone (Mark: "We need a way to roll the ship… without destroying the feel of the game"),
+ * -1..1, from two places that add up: Tilt, turning the phone like a steering wheel; and holding still
+ * on the left of the screen, then sliding sideways, as the right mouse button does (ui/touch.ts).
+ */
+const touchRoll = { tilt: 0, hold: 0 };
+export function setTouchRoll(from: keyof typeof touchRoll, r: number) {
+  touchRoll[from] = r;
+}
+/** A quick tap on the left of the screen: centre the aim and level the wings, as a quick right-click does. */
+export function touchLevel() {
+  recentre = level = true;
+}
 export function setTouchFire(on: boolean) {
   touchFire = on;
 }
@@ -312,7 +325,7 @@ export function flightInput(): FlightInput {
   const mouseRoll = rolling && rollTravel >= TAP_PX;
   const input: FlightInput = {
     pitch: sign * clamp1(kbPitch + padPitch),
-    roll: clamp1(kbRoll + padRoll + swipe + (rolling ? rollStick : 0)),
+    roll: clamp1(kbRoll + padRoll + swipe + touchRoll.tilt + touchRoll.hold + (rolling ? rollStick : 0)),
     yaw: clamp1(kbYaw + padYaw),
     throttle: clamp1(kbThrottle + padThrottle),
     speedStep: wheel * SCROLL_SPEED,

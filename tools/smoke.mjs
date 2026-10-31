@@ -473,6 +473,62 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   check('Controls: no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }
+// --- Rolling on a phone (Mark): hold then slide, a tap to level, and Tilt as a steering wheel -------------
+{
+  const s = await newCommander('modern');
+  await launch(s);
+  await s.w(() => { window.witchspace.player.obj.position.x += 30000; window.witchspace.player.speed = 0; });
+  await wait(600);
+  const pad = await s.page.locator('#touch .aim-pad').boundingBox();
+  const x0 = pad.x + pad.width * 0.5;
+  const y0 = pad.y + pad.height * 0.5;
+  const pose = () => s.w(() => { const w = window.witchspace; return { f: w.player.forward().toArray(), u: w.player.up().toArray(), r: w.player.right().toArray() }; });
+  const moved = (b) => s.w((b) => {
+    const w = window.witchspace;
+    const V = w.player.forward().constructor;
+    return { nose: +new V(...b.f).angleTo(w.player.forward()).toFixed(3), wings: +new V(...b.u).angleTo(w.player.up()).toFixed(3), right: +w.player.up().dot(new V(...b.r)).toFixed(3) };
+  }, b);
+  // A finger on the left of the screen: touch pointer events (a mouse would move the desktop's aiming ring too).
+  const finger = (steps) => s.w(async ([x, y, steps]) => {
+    const el = document.querySelector('#touch .aim-pad');
+    const ev = (type, px, py) => el.dispatchEvent(new PointerEvent(type, { pointerId: 9, pointerType: 'touch', clientX: px, clientY: py, bubbles: true }));
+    for (const [type, dx, dy, ms] of steps) { ev(type, x + dx, y + dy); await new Promise((r) => setTimeout(r, ms)); }
+  }, [x0, y0, steps]);
+
+  let b = await pose();
+  await finger([['pointerdown', 0, 0, 16], ...Array.from({ length: 8 }, (_, i) => ['pointermove', (i + 1) * 12, 0, 16]), ['pointermove', 96, 0, 700], ['pointerup', 96, 0, 0]]);
+  const aimed = await moved(b);
+  check('Phone: a drag that moves at once still aims', aimed.nose > 0.1, JSON.stringify(aimed));
+
+  await s.w(() => { const w = window.witchspace; w.aim?.reset?.(w.player); });
+  await finger([['pointerdown', 0, 0, 0], ['pointerup', 0, 0, 1200]]); // a tap: level and centre
+  b = await pose();
+  await finger([['pointerdown', 0, 0, 450], ...Array.from({ length: 8 }, (_, i) => ['pointermove', (i + 1) * 13, 0, 16]), ['pointermove', 104, 0, 900], ['pointerup', 104, 0, 0]]);
+  const rolled = await moved(b);
+  const ring = await s.w(() => document.querySelector('#touch .aim-pad').classList.contains('rolling'));
+  check('Phone: hold, then slide right, rolls her right in place', rolled.wings > 0.3 && rolled.nose < 0.05 && rolled.right > 0.2 && !ring, JSON.stringify(rolled));
+
+  await finger([['pointerdown', 0, 0, 0], ['pointerup', 0, 0, 2000]]);
+  const level = await s.w(() => +Math.abs(window.witchspace.player.right().y).toFixed(3));
+  check('Phone: a quick tap levels the wings', level < 0.1, `right wing ${level} out of level`);
+
+  // Tilt: turned like a steering wheel (right side down), she rolls right; nothing turns the nose.
+  await s.page.locator('#touch .drawer-tab').click();
+  await wait(400);
+  await s.page.locator('#touch .touch-actions .tilt').click();
+  await wait(300);
+  const orient = (beta, gamma) => s.w(([b, g]) => { const e = new Event('deviceorientation'); Object.assign(e, { beta: b, gamma: g, alpha: 0 }); dispatchEvent(e); }, [beta, gamma]);
+  await orient(0, 0);
+  await wait(300);
+  b = await pose();
+  for (let i = 0; i < 16; i++) { await orient(0, 22); await wait(50); }
+  const wheel = await moved(b);
+  await orient(0, 0);
+  check('Phone: with Tilt, turning the phone like a wheel rolls her', wheel.wings > 0.3 && wheel.nose < 0.05 && wheel.right > 0.2, JSON.stringify(wheel));
+  check('Phone roll: no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
+  await s.page.context().close();
+}
+
 // --- Classic ---------------------------------------------------------------------------------
 {
   const s = await newCommander('classic');
