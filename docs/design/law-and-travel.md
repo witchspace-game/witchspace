@@ -8,6 +8,7 @@ stages:
   - Transponders, records and running dark | built
   - Surrender, insurance and the Marshals | built
   - A Marshals career for Dangerous commanders, and a Lancer of your own (see marshals-career.md) | proposed
+  - Warrants at the speed of news, and fines that fit the crime | proposed
   - Disabling, capture and boarding | proposed
   - Loans and loan sharks | proposed
   - Ship registry and flags | proposed
@@ -60,12 +61,22 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
 | **Fugitive** | Serious crime (attacking police or stations, murder) | **Refused** (see "Ways out" below) |
 
 - **Ordinary crimes are local:** your record belongs to the system where the crime happened. You're wanted in Lave, not across the galaxy.
-- **Serious crimes become galaxy-wide:** attacking stations, killing clean ships, or crimes beyond the local police's reach produce a **Co-operative Marshals warrant** that follows you into every Co-operative system (see section 9).
+- **Serious crimes become galaxy-wide, at the speed of news:** attacking stations, killing clean ships, or crimes beyond the local police's reach produce a **Co-operative Marshals warrant**. Today it follows you into every Co-operative system at once; Mark has decided it should spread system by system as news does, with the Marshals following your trail (see [warrants travel at the speed of news](#warrants-travel-at-the-speed-of-news-mark-31-october-2026) below).
 - **Records cool down as you travel.** *(Built: each hyperspace jump away counts. An Offender record clears after 2 jumps; a Fugitive record cools to Offender after 6. Tune these in `src/game/law.ts`.)*
 - **The type of government shapes everything:**
   - *Lawful* (democracies, corporate states): fair fines, strict docking checks.
   - *Corrupt* (dictatorships, feudal worlds): bribes possible; the authorities may "lose" some of your cargo.
   - *Anarchies:* nobody checks transponders or records, and nobody protects you either.
+
+### Warrants travel at the speed of news *(Mark, 31 October 2026)*
+
+Mark: *"It doesnt feel fair to have a warrant issued that is immediately galaxy wide thats not how information travels."* Proposed, not built; it replaces today's instant galaxy-wide warrant.
+
+- **Where the crime was, at once:** the local police and the station saw it. The protected starter systems stay protected.
+- **Everywhere else, as news:** the warrant spreads at the game's news delay (`newsDelay` in `src/economy/events.ts`: 10 minutes, then 12 more for every light year), reaching each system's police, its news board and opted-in bounty hunters ([become a Marshal](marshals-career.md#warrant-alerts-on-your-phone-mark)). Once heard, it stays on record there.
+- **The Marshals follow your witchspace trail** rather than knowing everywhere: they arrive a set lag behind each jump (about 3 minutes, to tune). Dock or stop, and the rift opens. Running dark, or reaching an anarchy, cold-trails them; the news still spreads.
+- **A chase, not a teleport:** a Fugitive can outrun the news for a while, but not the Marshals on their trail, and every system the news reaches is closed to them.
+- **Calculated, not simulated:** the crime's time and place give each system's arrival time, and the last jump plus the lag gives the Marshals'. One row per warrant.
 
 ### Friendly fire *(Mark, 30 October 2026; built)*
 
@@ -106,6 +117,15 @@ Mark: "the station scans you on the way out and on the way in. So if you buy som
 - **Impounded** = held at the station. Pay the fine within a time limit to get it back; after that it's sold.
 - **Civilian gear** (docking computer, fuel scoops, escape pod) is never confiscated. It didn't commit the crime. It's only impounded if you can't pay.
 - If impounding everything still doesn't cover the fine, the remainder becomes **debt** (see section 7).
+
+### Fines that fit the crime *(Mark, 31 October 2026; proposed)*
+
+Today a murder costs at most 1,500 Cr (a Fugitive's 500 and a warrant's 1,000, in `src/game/law.ts`), and never more than half your spare credits: too cheap to stop a killer in lawful space.
+- **Murder costs a share of your wealth, your ship included** (10–20%, with a floor). The new commander's 100 Cr stake stays protected.
+- **Repeat offences double.**
+- **Part of the fine goes to the victim.**
+- **A murder warrant is settled only with the Marshals,** at a Co-operative station or the Bastion, and not where the news hasn't arrived.
+- **Surrendering holds your ship** for real minutes as well as the fine; being caught stays ×1.5.
 
 ## 5. Damage, disabling and capture
 
@@ -245,9 +265,13 @@ Classic stays true to 1984:
 
 ---
 
+## When it's built: keep it organised *(Mark: "keep organised and file size controlled")*
+
+The law will grow (warrants that travel, fines that fit, notoriety for [the pirate's career](pirate-career.md)). It grows in its own folder, not in big files: `src/game/law.ts` becomes `src/game/law/` (`fines.ts`, `warrants.ts`, `notoriety.ts`); on the server, warrants and their alerts are their own module (`server/src/warrants.ts`, beside `push.ts`), not more of `accounts.ts`; and `main.ts` stays wiring only.
+
 ## Open questions
 
-- ~~**Record scope:**~~ settled: ordinary crimes are local; serious crimes become a galaxy-wide Marshals warrant.
+- ~~**Record scope:**~~ settled: ordinary crimes are local; serious crimes become a Marshals warrant, which spreads at the speed of news (Mark, 31 October 2026).
 - **Marshals:** how arrival time and strength should scale with the threat (today: one carrier per warrant, sooner for each Bastion destroyed); a response to "traders attacked" headlines.
 - **Distress beacon and tug:** confirm, including player rescues in multiplayer.
 - **Travel pacing:** is under a minute per jump right, or should it be slower and more atmospheric?

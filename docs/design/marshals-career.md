@@ -106,6 +106,7 @@ Mark: *"The warrant would be issued in the system and if theres no Marshal's in 
   > **Warrant heard at Lave:** CMDR Vex, wanted for murder at Diso, 3.6 LY away, 53 minutes ago. 4,000 Cr.
 
 - **It makes a chase.** The nearest hunters hear first and have the best chance; a Fugitive can try to outrun their own warrant, or run for an anarchy, where it never arrives.
+- **The police wait for the news too** *(Mark: "It doesnt feel fair to have a warrant issued that is immediately galaxy wide thats not how information travels")*: only the system where the crime was knows at once. **The Bastion follows your witchspace trail**, a few minutes behind each jump, so running buys time from the hunters and the police, never from the Marshals on your tail. The full rule is in [law and travel](law-and-travel.md#warrants-travel-at-the-speed-of-news-mark-31-october-2026).
 
 ## Stories it opens
 
@@ -129,9 +130,9 @@ Mark: *"The warrant would be issued in the system and if theres no Marshal's in 
 
 **Depends on:** combat missions ([combat rating](combat-rating.md)); disabling and capture ([law and travel](law-and-travel.md), planned) for the trial's best version; [shared space](shared-space.md) steps 4 and 5 for stage 3; and a hangar for your own ship.
 
-## Open questions
+## Settled
 
-- **Should the police and the Bastion also wait for the news?** Consistent, and it gives the chase teeth, but it changes how warrants work today: a Marshals warrant follows you into every Co-operative system at once ([law and travel](law-and-travel.md), section 2), and in shared space the server sends the Marshals when the warrant comes due. There's also a balance problem: a hyperspace jump of up to 7 light years takes a minute or two, while news needs about an hour and a half to cover the same distance, so a Fugitive who keeps jumping would always stay ahead of a warrant that only travels as news, and never meet the law. **Proposed:** the hunters' alerts travel as news, as above; the Co-operative's own law keeps its instant warrant (the Marshals' network is faster than gossip), so running buys time from the bounty hunters, not from the Bastion. Decide when stage 3 is built.
+- ~~**Should the police and the Bastion also wait for the news?**~~ Decided by Mark (31 October 2026): yes, the police wait for the news, and the Marshals follow your witchspace trail instead of knowing everywhere (above). The note it replaced: Consistent, and it gives the chase teeth, but it changes how warrants work today: a Marshals warrant follows you into every Co-operative system at once ([law and travel](law-and-travel.md), section 2), and in shared space the server sends the Marshals when the warrant comes due. There's also a balance problem: a hyperspace jump of up to 7 light years takes a minute or two, while news needs about an hour and a half to cover the same distance, so a Fugitive who keeps jumping would always stay ahead of a warrant that only travels as news, and never meet the law. **Proposed:** the hunters' alerts travel as news, as above; the Co-operative's own law keeps its instant warrant (the Marshals' network is faster than gossip), so running buys time from the bounty hunters, not from the Bastion. Decide when stage 3 is built.
 
 ## How we talk about it
 

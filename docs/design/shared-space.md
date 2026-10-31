@@ -130,7 +130,9 @@ What the room needs to know, kept by the server, not claimed:
 - **Fair kill points:** a legitimate kill earns the victim's ship value × 3 × the rank factor. It earns nothing two or more ranks below you, half each time for the same commander within 24 hours, and nothing against a ship freshly launched, docking or disconnected.
 - **Safe zones:** inside a lawful station's 5 km, firing on a commander brings the station's guns on you. The server applies their damage itself, so it's the same for everyone.
 - **Protected starter systems** ([law and travel](law-and-travel.md)): in the core systems around the starting stations, killing a commander is always a Fugitive crime with a warrant at once, whatever your rank.
-- **Anarchies stay lawless.**
+- **Anarchies stay lawless,** and say so on arrival in shared space: *"Anarchy. No law here, and commanders may attack you."*
+- **No hit-and-run** *(Mark, 31 October 2026)*: you can't switch shared space off during a fight, or for a few minutes after firing on a commander (the 15-second linger stays). A warrant earned in shared space freezes in solo: it doesn't cool, can't be settled and doesn't age there. Legal status lives on the server (step 4).
+- **Warrants travel at the speed of news,** and murder costs a share of your wealth, part of it to the victim ([law and travel](law-and-travel.md#warrants-travel-at-the-speed-of-news-mark-31-october-2026)). Robbery that's paid stays robbery ([the pirate's career](pirate-career.md#2-robbery-beats-murder)).
 
 ### Step 6. Talking to each other
 
