@@ -28,7 +28,7 @@ const NOTES: Record<string, string[]> = {
     'Police know what a Sidewinder usually means. Keep your transponder on and your record clean, and they’ll leave you alone.',
   ],
   'mamba': [
-    'The fastest hull any yard will sell you. She is mostly engine, and she feels it: nothing in the lanes catches her but a Marshal’s Lancer.',
+    'The fastest hull on any shipyard’s list. She is mostly engine, and she feels it: nothing in the lanes catches her but a Marshal’s Lancer.',
     'Speed is her armour, because there isn’t much else: her shields and hull are both well under a Cobra’s. Choose when the fight starts, and when it ends.',
     'Four tonnes of hold: room for something small and valuable, and no questions asked of it.',
     'One missile rail. Make it count.',
