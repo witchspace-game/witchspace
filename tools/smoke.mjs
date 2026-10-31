@@ -32,7 +32,9 @@ async function newCommander(rules, at = '', device = 'iPhone 13 landscape') {
   const page = await (await browser.newContext({ ...devices[device] })).newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${BASE}/play/?touch${at ? `&at=${at}` : ''}`);
+  // A phone (touch controls) unless it's a desktop: there the keyboard, mouse and pop-out keyboard are what's tested.
+  const touch = !device.startsWith('Desktop');
+  await page.goto(`${BASE}/play/?${touch ? 'touch' : ''}${at ? `&at=${at}` : ''}`);
   await page.waitForFunction(() => window.witchspace, null, { timeout: 30_000 });
   await wait(1200);
   const key = (code) => page.evaluate((c) => { dispatchEvent(new KeyboardEvent('keydown', { code: c })); dispatchEvent(new KeyboardEvent('keyup', { code: c })); }, code);
@@ -443,6 +445,30 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   check('Controls: K reaches the BBC Micro keys', bbc.scheme === 'BBC Micro keys (1984)', bbc.scheme);
   check('Controls: X climbs on the BBC Micro keys, and fires no missile', bbc.turned > 0.05 && bbc.missiles === 0, JSON.stringify(bbc));
   check('Controls: A fires the laser on the BBC Micro keys', bbc.fired, JSON.stringify(bbc));
+  // The pop-out keyboard: in the card, relabelled by K, pinned over the game (clicks pass through), and in its own window.
+  const card = await s.w(() => {
+    dispatchEvent(new KeyboardEvent('keydown', { code: 'F1' }));
+    dispatchEvent(new KeyboardEvent('keyup', { code: 'F1' }));
+    return { keys: document.querySelectorAll('#controls-card .kb .kb-key.used').length, x: document.querySelector('#controls-card .kb [data-code="KeyX"] i')?.textContent };
+  });
+  check('Keyboard: the controls card draws it, labelled for the scheme', card.keys > 30 && card.x === 'Climb', JSON.stringify(card));
+  await s.page.locator('#controls-card .kb-pin').click();
+  await wait(300);
+  const pinned = await s.w(() => {
+    const p = document.querySelector('#keyboard-pin');
+    const r = p?.querySelector('.kb').getBoundingClientRect();
+    const hit = r && document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return { shown: Boolean(p && p.offsetWidth), passesThrough: Boolean(hit && !p.contains(hit)), saved: JSON.parse(localStorage.getItem('witchspace.keyboardPin') ?? '{}').on };
+  });
+  check('Keyboard: pinned over the game, clicks pass through it, and it remembers', pinned.shown && pinned.passesThrough && pinned.saved === true, JSON.stringify(pinned));
+  const [pop] = await Promise.all([s.page.context().waitForEvent('page'), s.w(() => document.querySelector('#keyboard-pin [data-act="window"]').click())]);
+  await wait(500);
+  await s.w(() => dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyA' })));
+  const lit = await pop.evaluate(() => document.querySelector('[data-code="KeyA"]')?.classList.contains('down'));
+  await s.w(() => dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyA' })));
+  check('Keyboard: in its own window, a key pressed in the game lights up there', lit === true);
+  await pop.close();
+  await s.w(() => localStorage.removeItem('witchspace.keyboardPin'));
   await s.w(() => localStorage.setItem('witchspace.controls', 'mouse'));
   check('Controls: no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();

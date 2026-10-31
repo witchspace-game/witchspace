@@ -24,20 +24,21 @@ export function controlRows(scheme: boolean | 'bbc', o: { gimballed: boolean; mo
           ['Left click / F', o.gimballed ? 'Fire: gimballed lasers hit what\'s under the ring' : 'Fire: lasers fire straight ahead at the centre cross'],
           ['Right click', 'Centre the aim and level the wings'],
           ['Hold right + mouse', 'Roll, nose held steady; the ship keeps that bank'],
-          ['W / S', 'Throttle up / down'],
-          ['A / D', 'Roll'],
+          ['W / S', 'Throttle up / down (Space / Shift / ? too)'],
+          ['A / D', 'Roll (< / > too)'],
           ['Q / E', 'Yaw (fine sideways adjustment)'],
           ['Swipe / scroll', 'Throttle; sideways swipe rolls (Magic Mouse, trackpad)'],
         ]
       : [
           ['W / S', 'Dive / climb (I inverts)'],
-          ['A / D', 'Roll'],
-          ['Space / Shift', 'Throttle up / down'],
+          ['A / D', 'Roll (< / > too)'],
+          ['Space / Shift / ?', 'Throttle up / down'],
           ['F', 'Fire laser'],
           ['Swipe / scroll', 'Throttle; sideways swipe rolls'],
         ]
   )
     .concat([
+      ['Arrows', 'Dive and climb (↑ ↓), roll (← →): in any scheme'],
       ['C', 'Docking computer'],
       ['H', 'Hyperspace to your destination (10 s countdown; H again cancels)'],
       ['O', 'Combat computer: it flies, you man the turrets (needs one fitted; any flight control takes over)'],
@@ -77,7 +78,7 @@ export function controlRows(scheme: boolean | 'bbc', o: { gimballed: boolean; mo
 export const DOCKING = (rollDeg: number, fitted = false): string[] => [
   `Fly towards the station and slow down. The slot is the lit rectangle on the face that points at the planet.`,
   `Within 3 km a docking aid opens: <b>Slot</b> (how far), <b>Approach</b> (how straight you're coming in) and <b>Roll</b> (how level you are with the slot). Green is good.`,
-  `The station turns. Roll until the marker sits in the middle: your wings must be within ${rollDeg}° of the slot. On a phone, drag sideways on the left of the screen, or tilt if you've turned Tilt on.`,
+  `The station turns. Roll until the marker sits in the middle: your wings must be within ${rollDeg}° of the slot. On a phone, line up with the slot and the ship rolls to match it by itself as you come in (Modern rules); in Classic, the docking computer is the way.`,
   `Fly straight in, slowly. Too fast, too crooked or too far off level and you scrape the hull: shields first, then the ship.`,
   `<b>Or let the docking computer do it</b> (C, or the Dock button that appears by itself on a phone when you're close). ${fitted ? 'She has one fitted as standard.' : 'It’s 1,500 Cr at any station, and the best money a new pilot spends.'}`,
 ];
@@ -155,7 +156,7 @@ function bbcRows(keyboard: string[][]): string[][] {
   const flying = [
     ['X / S', 'Climb / dive (I inverts)'],
     ['< / >', 'Roll'],
-    ['Space / ?', 'Throttle up / down'],
+    ['Space / ?', 'Throttle up / down (Shift slows too)'],
     ['A', 'Fire laser'],
   ];
   const moved: Record<string, string[][]> = {
@@ -165,7 +166,7 @@ function bbcRows(keyboard: string[][]): string[][] {
     U: [['Q', 'Surrender to the police: the ship stops itself, then 5 seconds (fine, record cleared)']],
     M: [['M (docked)', '1984 mode (in flight, M is the missile)']],
   };
-  const firstKeys = new Set(['W / S', 'A / D', 'Space / Shift', 'F', 'Swipe / scroll']);
+  const firstKeys = new Set(['W / S', 'A / D', 'Space / Shift / ?', 'F', 'Swipe / scroll']);
   const rest = keyboard
     .filter(([k]) => !firstKeys.has(k))
     .flatMap((row) => moved[row[0]] ?? [row]);
