@@ -135,8 +135,8 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 #news-list li { padding: 8px 10px; border-left: 2px solid var(--amber); background: rgba(255, 179, 71, 0.06); }
 #news-list li.here { border-left-color: var(--danger); background: rgba(255, 77, 109, 0.08); }
 /* A system named in the news: tap to see it on the chart. */
-#news-list .sys-link { display: inline; min-height: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
-#news-list .sys-link:hover { color: var(--accent); }
+.docked .sys-link { display: inline; min-height: 0; margin: 0; padding: 0; border: 0; background: none; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
+.docked .sys-link:hover { color: var(--accent); }
 #news-list li.over { opacity: 0.6; }
 #news-list li.quiet { border-left-color: var(--edge); background: none; color: var(--dim); }
 #news-list b { display: block; font-weight: 600; font-size: 15px; }

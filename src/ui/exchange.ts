@@ -898,7 +898,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const risk = (s: StarSystem) =>
       s.government <= 1 ? `<em class="ex-risk high">${GOVERNMENTS[s.government]} · pirates</em>` : s.government <= 3 ? `<em class="ex-risk">${GOVERNMENTS[s.government]}</em>` : '';
     const place = (s: StarSystem, ly: number, reachable = true) =>
-      `<b>${s.name}</b><small>${ly.toFixed(1)} LY${reachable ? '' : ' · refuel first'}</small>${risk(s)}`;
+      `<b><button type="button" class="sys-link" data-system="${s.index}" title="Show ${s.name} on the chart">${s.name}</button></b><small>${ly.toFixed(1)} LY${reachable ? '' : ' · refuel first'}</small>${risk(s)}`;
     const courseButton = (s: StarSystem) =>
       s.index === course ? '<span class="ex-on-course">On course</span>' : `<button data-course="${s.index}">Set course</button>`;
     const routes = bestRoutes(ctx);
@@ -1216,8 +1216,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       if (timer) return;
       refreshBtc();
       timer = window.setInterval(() => {
-        // Everything, including orders that have filled and goods to collect.
-        if (root.offsetParent && !document.hidden) {
+        // Everything, including orders that have filled and goods to collect. Not while you're typing a
+        // price or a quantity: on a phone, redrawing moves the form, which closed the keyboard every two
+        // seconds (Mark: "doesnt let me enter the price!"). It catches up as soon as you're done.
+        if (root.offsetParent && !document.hidden && document.activeElement !== priceInput && document.activeElement !== qtyInput) {
           refreshBtc();
           render();
         }

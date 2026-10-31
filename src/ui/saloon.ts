@@ -8,6 +8,7 @@ import { saveCommander } from '../game/commander';
 import { stationName } from '../galaxy/stationNames';
 import { systemAt } from '../galaxy/generate';
 import { escapeHtml } from './escape';
+import { linkSystem } from './contracts';
 import { record, regularsAt, slotOf, talk, venue } from '../game/saloon';
 import { hasBackRoom } from '../economy/blackmarket';
 import { $, cmdr, currentSystem, type DockTab } from '../core';
@@ -41,7 +42,7 @@ export function renderSaloon() {
         <strong>${escapeHtml(r.name)}</strong> <small>${escapeHtml(r.trade)}</small>
         <p class="regular-look">${escapeHtml(r.look)}</p>
         ${known ? `<p class="regular-record">${escapeHtml(known)}</p>` : ''}
-        ${words ? `<p class="regular-says">“${escapeHtml(words.said)}”</p>` : ''}
+        ${words ? `<p class="regular-says">“${r.tip && !words.more ? linkSystem(words.said, systemAt(here.galaxy, r.tip.system)) : escapeHtml(words.said)}”</p>` : ''}
         ${action ? `<p class="regular-actions">${action}</p>` : ''}
       </li>`;
     })
