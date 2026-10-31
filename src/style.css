@@ -1431,7 +1431,19 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .callsign input:focus, .rename-form input:focus, #spec-name:focus { border-color: var(--accent); }
 .rename-form { display: inline-flex; gap: 6px; align-items: center; }
 .rename-form input { width: 12em; font-size: 15px; padding: 3px 8px; }
-#cmdr .rename, #cmdr .settle, .rename-form button { padding: 2px 10px; font-size: 12px; margin-left: 6px; }
+#cmdr .rename, .rename-form button { padding: 2px 10px; font-size: 12px; margin-left: 6px; }
+/* Wanted here: said first, with the way out (Mark: a small Settle button gets missed, and you launch into the police). */
+#wanted { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--amber); border-left-width: 4px; border-radius: 6px; background: color-mix(in srgb, var(--amber) 10%, transparent); display: grid; gap: 8px; }
+#wanted.fugitive { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+#wanted b { color: var(--amber); letter-spacing: 0.08em; text-transform: uppercase; font-size: 13px; }
+#wanted.fugitive b { color: var(--danger); }
+#wanted p { margin: 0; font-size: 14px; line-height: 1.45; }
+#wanted .settle { justify-self: start; min-height: 44px; padding: 8px 18px; font-size: 15px; }
+#wanted.pulse { animation: wanted-pulse 0.4s ease-out 3; }
+@keyframes wanted-pulse { 50% { box-shadow: 0 0 0 3px var(--danger); } }
+/* Your ship's own buttons: full size, not squeezed beside her name. */
+.ship-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 0; }
+.ship-actions button { min-height: 44px; font-size: 14px; }
 body.retro .callsign input, body.retro .rename-form input { font-size: 12px; border-radius: 0; border-color: #fff; }
 
 /* The account panel (A on the title screen). */

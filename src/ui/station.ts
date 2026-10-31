@@ -3,7 +3,7 @@
 
 import { sfx } from '../audio/sound';
 import { cargoCapacity, cargoTonnes, DIFFICULTIES, EQUIPMENT, FUEL_PRICE, fuelCapacity, MISSILE_PRICE, hasEquipment, REPAIR_FRACTION, type Mount, MOUNTS, removeEquipment, saveCommander, type Commander } from '../game/commander';
-import { fineDue, redeemImpound, scansCargo, settle, systemKey } from '../game/law';
+import { fineDue, legalStatus, redeemImpound, scansCargo, settle, systemKey } from '../game/law';
 import { isTouch } from '../game/input';
 import { claimCallsign } from './accountPanel';
 import { cleanName } from '../../server/src/protocol';
@@ -128,6 +128,44 @@ function holdList(c: Commander): string {
   return all.length ? `<br><small class="hold-list">${all.join(' · ')}</small>` : '';
 }
 
+// Wanted here, the station says so first, with the way out (Mark, 31 October 2026: the Settle
+// button "would be missed by users and they would launch and immediately get attacked and not
+// understand why"). The first Launch while wanted only warns (main.ts launch).
+function renderWanted(c: Commander) {
+  const box = $('#wanted');
+  box.hidden = !main.canSettle(c);
+  if (box.hidden) return;
+  const fugitive = legalStatus(c) === 'fugitive';
+  const what = [
+    fugitive ? 'The police here will open fire as soon as you launch.' : 'You’re on the police’s books here: another crime and they’ll open fire.',
+    c.warrant ? 'The Co-operative Marshals are hunting you, and their carrier will come for you.' : '',
+  ].filter(Boolean).join(' ');
+  const fine = fineDue(c);
+  box.innerHTML = `<b>Wanted · ${escapeHtml(main.legalLabel())}</b><p>${what} Settle here for a clean record in this system${c.warrant ? ' and the warrant lifted' : ''}.</p>
+    <button type="button" class="settle primary" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fine ? `Settle · ${fine.toLocaleString()} Cr` : 'Settle · no charge'}</button>`;
+  box.classList.toggle('fugitive', fugitive || c.warrant);
+}
+
+/** Launching now would be into police who'll fire: the station's warning, held a moment. */
+export function wantedOnLaunch(c: Commander): boolean {
+  return main.canSettle(c) && (legalStatus(c) === 'fugitive' || c.warrant);
+}
+
+$('#wanted').addEventListener('click', (e) => {
+  if (!(e.target as HTMLElement).closest('.settle')) return;
+  const c = cmdr();
+  const settlement = settle(c);
+  saveCommander(c);
+  sfx.beep();
+  renderDocked();
+  flash(main.settlementMessage(settlement, 'Settled with the law'), 5);
+});
+$('#tab-station .ship-actions .manual-open').addEventListener('click', () => openManual(player.def));
+$('#tab-station .ship-actions .booth-open').addEventListener('click', () => {
+  showOwnShip();
+  openBooth();
+});
+
 export function renderDocked() {
   // The saloon is Modern's: Classic stations are as they were in 1984.
   document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
@@ -161,14 +199,14 @@ export function renderDocked() {
   const rows: [string, string][] = [
     ['Commander', `${escapeHtml(c.name)} <button type="button" class="rename" title="Change your callsign">Rename</button>`],
     ['Rules', DIFFICULTIES[c.difficulty].name],
-    ['Ship', `${escapeHtml(player.def.name)} <button type="button" class="small manual-open">Owner's manual</button> <button type="button" class="small manual-open booth-open">Photograph her</button>`],
+    ['Ship', escapeHtml(player.def.name)],
     // The Dark Edition's running lights, or the full ghost: just the hull (Mark).
     ...(c.paint?.luxuries.includes('black-light-lights')
       ? ([['Running lights', `${c.paint.ghost ? 'Off: the full ghost, just the hull' : 'Black-light, seen only close to'} <button type="button" class="small lights-toggle">${c.paint.ghost ? 'Lights on' : 'Go full ghost'}</button>`]] as [string, string][])
       : []),
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
     ['Lasers', MOUNTS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
-    ['Legal status', `${main.legalLabel()}${main.canSettle(c) ? ` <button type="button" class="settle" title="Pay the fine here (never more than half of what you have above 100 Cr): a clean record in this system, any warrant lifted, contraband confiscated">${fineDue(c) ? `Settle · ${fineDue(c).toLocaleString()} Cr` : 'Settle · no charge'}</button>` : ''}`],
+    ['Legal status', main.legalLabel()],
     ['Destination', c.target === null ? (isTouch ? 'None (choose on the Galaxy map)' : 'None (press G)') : systemAt(here.galaxy, c.target).name],
     ['Rating', c.difficulty === 'classic' ? combatRating(c.kills) : ratingProgress(c.kills)],
     ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited${main.myFirsts(here.galaxy) ? ` · ${main.myFirsts(here.galaxy)} first${main.myFirsts(here.galaxy) === 1 ? '' : 's'} on the chart` : ''}`],
@@ -176,7 +214,7 @@ export function renderDocked() {
     ...main.explorerTips(c, here),
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
-  $('#cmdr .manual-open:not(.booth-open)')?.addEventListener('click', () => openManual(player.def));
+  renderWanted(c);
   $('#cmdr .lights-toggle')?.addEventListener('click', () => {
     if (!c.paint) return;
     c.paint.ghost = !c.paint.ghost;
@@ -185,22 +223,11 @@ export function renderDocked() {
     flash(c.paint.ghost ? 'Running lights off · the full ghost' : 'Running lights on', 2);
     renderDocked();
   });
-  $('#cmdr .booth-open')?.addEventListener('click', () => {
-    showOwnShip();
-    openBooth();
-  });
   $('#cmdr .rename').addEventListener('click', () => startRename());
   document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
     flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);
     saveCommander(c);
     renderDocked();
-  });
-  document.querySelector('#cmdr .settle')?.addEventListener('click', () => {
-    const settlement = settle(c);
-    saveCommander(c);
-    sfx.beep();
-    renderDocked();
-    flash(main.settlementMessage(settlement, 'Settled with the law'), 5);
   });
 
   // Fuel: top up to a full tank at the station.
