@@ -104,6 +104,7 @@ As built:
 - **The ships come from their files:** `src/content/flyable.ts` reads speed, shields, hull, missiles and a hit radius (71% of the hull's furthest point: the Cobra's 28 m, the Fer-de-lance's 46 m). The server's `SHIPS` is that list, and a test checks every hull a commander can own, and every edition's, is in it.
 - **An edition is shown only by its owner.** The game sends the edition's number with its paint, and the server keeps it only if the account holds that number (`server/src/paint.ts`). The Dark Edition's black-light lights come only with a Dark Edition. Anyone else claiming one flies plain.
 - **Tags say what she is:** *◆◆ CMDR Darkstar · Dark Edition 001 · 0.9 km*, or the hull's name for anything but a Cobra.
+- **Seen live, 31 October 2026:** Mark flew Dark Edition 001 out of the Lamarr Terminal at Ensoreus on his iPhone, and a second account (CMDR spotter, on the Mac) saw her as herself: *"That worked I got to see her!"* How to test it again: a second account (a maintainer's own address with `+test`), and the Mac's production copy (`npm run build`, `npx vite preview --port 5312`) opened at `http://localhost:5312/play/?at=<system>`, which starts a new commander in that system and talks to the live server; the live server accepts `localhost` but not the Mac's network address.
 - **Still to do here:** remote lasers drawn the way they fired, and each ship's own laser sound. Until step 4 the hull (not the edition) is still the browser's word.
 
 Planned:

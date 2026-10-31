@@ -250,7 +250,8 @@ async function clipRoute(request: Request, env: Env, id: string | undefined, act
 // cut) goes up beside the clip into R2. The ClipBoard says whose clip it is and whether it's up; the
 // Worker moves the bytes, so a video never passes through the Durable Object.
 
-const MAX_VIDEO_BYTES = 40 * 1024 * 1024;
+/** A minute of the flight recorder's 1080p (6 Mbit/s) is about 45 MB, with room to spare. */
+const MAX_VIDEO_BYTES = 64 * 1024 * 1024;
 
 async function putClipVideo(request: Request, env: Env, id: string, account: string | null, voter: string | null) {
   if (!env.CLIP_VIDEOS) return { error: 'Videos are not stored here', status: 503 };
