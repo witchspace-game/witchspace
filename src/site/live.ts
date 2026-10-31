@@ -12,6 +12,7 @@ import { COMPANIES } from '../game/companies';
 import { cargoName, destinationOf } from '../game/contracts';
 import { cargoWords, voyages, type Voyage } from '../game/traffic';
 import { stageInfo, STAGES, yardsNear } from '../game/yards';
+import { GLOW, MAX_PIXEL_RATIO } from '../render/look';
 import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 import { escapeHtml } from '../ui/escape';
@@ -259,7 +260,7 @@ const canvas = $('now-falcon') as HTMLCanvasElement | null;
 if (canvas) {
   try {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#0c0f15');
     const camera = new THREE.PerspectiveCamera(30, 1, 1, 5000);
@@ -267,8 +268,8 @@ if (canvas) {
     scene.add(model.root);
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 1, 0, 0.2);
-    bloom.compositeMaterial.uniforms['bloomFactors'].value = [1, 0.75, 0.45, 0.18, 0.04];
+    const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
+    bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
     const size = () => {

@@ -7,6 +7,7 @@ import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPa
 import { shipById } from '../content/ships';
 import { applyLivery } from '../render/livery';
 import { buildPainted, disposeShip, type Look, type ShipModel } from '../render/shipModel';
+import { GLOW } from '../render/look';
 import { applyParts, setLineResolution } from '../render/wire';
 
 // The callsign card's ship: the role's ship in neo-vector, on the right of the card and clear of the words,
@@ -22,6 +23,8 @@ export const CARD_H = 630;
 /** The ship fits a circle right of the middle, as on the share cards: centre and radius as parts of the card. */
 const CENTRE_X = 320 / CARD_W;
 const RADIUS = 215 / CARD_H;
+/** Sharper than the game (look.ts MAX_PIXEL_RATIO is 2): it sets the picture people share, not the look. */
+const CARD_PIXEL_RATIO = 3;
 
 export interface CardShip {
   /** A ship in her own paint (or her maker's colours), and the Marshals' livery for their card. */
@@ -54,14 +57,14 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   // As sharp as the screen: a phone is 3×, and thin glowing lines show it.
-  renderer.setPixelRatio(Math.min(devicePixelRatio, 3));
+  renderer.setPixelRatio(Math.min(devicePixelRatio, CARD_PIXEL_RATIO));
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
   const camera = new THREE.PerspectiveCamera(30, CARD_W / CARD_H, 1, 100000);
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.0, 0, 0.2);
-  bloom.compositeMaterial.uniforms['bloomFactors'].value = [1, 0.75, 0.45, 0.18, 0.04];
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
+  bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   const blend = new ShaderPass(BLEND);

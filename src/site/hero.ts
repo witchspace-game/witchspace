@@ -4,6 +4,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ships } from '../content/ships';
+import { GLOW, MAX_PIXEL_RATIO, STARS } from '../render/look';
 import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 
@@ -15,7 +16,7 @@ const label = document.querySelector<HTMLElement>('#hero-ship');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x05070d);
@@ -34,13 +35,13 @@ const camera = new THREE.PerspectiveCamera(40, 1, 1, 20000);
   for (let i = 0; i < 1800; i++) {
     const v = new THREE.Vector3().randomDirection().multiplyScalar(6000);
     pos.push(v.x, v.y, v.z);
-    c.setHSL(0.55 + Math.random() * 0.15, 0.35, 0.08 + Math.random() ** 3 * 0.45);
+    c.setHSL(STARS.hue[0] + Math.random() * (STARS.hue[1] - STARS.hue[0]), STARS.saturation, STARS.lightness(Math.random()));
     col.push(c.r, c.g, c.b);
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.2, sizeAttenuation: false, vertexColors: true })));
+  scene.add(new THREE.Points(geo, new THREE.PointsMaterial({ size: STARS.size, sizeAttenuation: false, vertexColors: true })));
 }
 
 const showcase = ships.filter((s) => s.role !== 'cargo').map(buildShip);
@@ -72,7 +73,8 @@ show(index);
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 1.0, 0.5, 0.2);
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
+bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
