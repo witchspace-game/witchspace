@@ -1,4 +1,4 @@
-import { isPitchInverted, isTouch, setTouchFire, setTouchRoll, setTouchSpeed, toggleInvertPitch, touchAim, touchSpeedTarget } from '../game/input';
+import { isPitchInverted, isTouch, setTouchFire, setTouchSpeed, toggleInvertPitch, touchAim, touchSpeedTarget } from '../game/input';
 
 // On-screen controls for phones and tablets: drag on the left to aim, a speed
 // slider and a fire button on the right, and buttons for everything else
@@ -9,25 +9,6 @@ const AIM_SENSITIVITY = 1.6; // finger movement is smaller than mouse movement
 // that way, like a joystick, so long turns don't need swipe after swipe.
 const STICK_DEADZONE = 18; // px
 const STICK_RATE = 4; // aim pixels per second, per pixel of offset
-/**
- * Elite-style drags (dominicbeesley, Stardot t=33815: "Is there a way to roll without otherwise moving
- * on phones?"; Mark chose this): a drag within this angle of level rolls in place, one within it of
- * upright only climbs or dives, and anything between aims as before. Rolling, then pulling up, is how
- * the 1984 game turns.
- */
-const AXIS_SNAP = (25 * Math.PI) / 180;
-/**
- * A drag climbs and dives like a flight stick: pull down (towards you) to climb, as Tilt does (tip the
- * top towards you). Before, a drag climbed when pushed up, the opposite of Tilt, so Invert could never
- * make both feel like a stick (Mark). Invert now flips both together, to the game way round.
- */
-const STICK = -1;
-const ROLL_FULL = 90; // px past the dead zone for a full-rate roll
-/** Which way a drag from where the finger landed is going. */
-function dragKind(ox: number, oy: number): 'roll' | 'pitch' | 'aim' {
-  const a = Math.atan2(Math.abs(oy), Math.abs(ox));
-  return a < AXIS_SNAP ? 'roll' : a > Math.PI / 2 - AXIS_SNAP ? 'pitch' : 'aim';
-}
 
 // Tilt steering (optional): the phone is a flight stick. Tip it left or right
 // to turn that way; tip the top towards you (pull back) to climb, away from
@@ -142,8 +123,7 @@ export function initTouch() {
   });
   pad.addEventListener('pointermove', (e) => {
     if (e.pointerId !== aimId) return;
-    const kind = dragKind(e.clientX - startX, e.clientY - startY);
-    if (kind !== 'roll') touchAim(kind === 'pitch' ? 0 : (e.clientX - lastX) * AIM_SENSITIVITY, STICK * (e.clientY - lastY) * AIM_SENSITIVITY);
+    touchAim((e.clientX - lastX) * AIM_SENSITIVITY, (e.clientY - lastY) * AIM_SENSITIVITY);
     lastX = curX = e.clientX;
     lastY = curY = e.clientY;
     finger.style.transform = `translate(${e.clientX}px, ${e.clientY}px)`;
@@ -152,7 +132,6 @@ export function initTouch() {
     if (e.pointerId !== aimId) return;
     aimId = null;
     aiming = false;
-    setTouchRoll(0);
     pad.classList.remove('active');
   };
   pad.addEventListener('pointerup', endAim);
@@ -243,11 +222,9 @@ export function updateTouch(dt: number, speedFraction: number) {
     const ox = curX - startX;
     const oy = curY - startY;
     const d = Math.hypot(ox, oy);
-    const kind = dragKind(ox, oy);
-    setTouchRoll(kind === 'roll' && d > STICK_DEADZONE ? Math.sign(ox) * Math.min(1, (d - STICK_DEADZONE) / ROLL_FULL) : 0);
-    if (d > STICK_DEADZONE && kind !== 'roll') {
+    if (d > STICK_DEADZONE) {
       const k = ((d - STICK_DEADZONE) / d) * STICK_RATE * dt;
-      touchAim(kind === 'pitch' ? 0 : ox * k, STICK * oy * k);
+      touchAim(ox * k, oy * k);
     }
   }
   // The fill is the speed you're doing; a tick marks the speed you asked for. They part company when the

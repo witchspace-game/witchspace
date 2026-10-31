@@ -447,39 +447,6 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   check('Controls: no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
   await s.page.context().close();
 }
-{
-  // Phone: a sideways drag rolls in place (the nose stays put); an upright drag only pitches.
-  const s = await newCommander('modern');
-  await launch(s);
-  await s.w(() => { window.witchspace.player.obj.position.x += 30000; });
-  const pad = await s.page.locator('#touch .aim-pad').boundingBox();
-  const drag = async (dx, dy) => {
-    const before = await s.w(() => { const w = window.witchspace; return { f: w.player.forward().toArray(), u: w.player.up().toArray() }; });
-    // A finger: touch pointer events on the pad (a mouse would also move the desktop's aiming ring).
-    await s.w(async ([x, y, dx, dy]) => {
-      const el = document.querySelector('#touch .aim-pad');
-      const ev = (type, px, py) => el.dispatchEvent(new PointerEvent(type, { pointerId: 7, pointerType: 'touch', clientX: px, clientY: py, bubbles: true }));
-      ev('pointerdown', x, y);
-      for (let i = 1; i <= 8; i++) { ev('pointermove', x + (dx * i) / 8, y + (dy * i) / 8); await new Promise((r) => setTimeout(r, 16)); }
-      await new Promise((r) => setTimeout(r, 900));
-      ev('pointerup', x + dx, y + dy);
-    }, [pad.x + pad.width * 0.5, pad.y + pad.height * 0.5, dx, dy]);
-    return s.w((b) => {
-      const w = window.witchspace;
-      const V = w.player.forward().constructor;
-      const f0 = new V(...b.f);
-      const u0 = new V(...b.u);
-      return { nose: +f0.angleTo(w.player.forward()).toFixed(3), wings: +u0.angleTo(w.player.up()).toFixed(3), climb: +(w.player.forward().dot(u0)).toFixed(3) };
-    }, before);
-  };
-  const roll = await drag(110, 6);
-  check('Phone: a sideways drag rolls in place', roll.wings > 0.3 && roll.nose < 0.08, JSON.stringify(roll));
-  const pull = await drag(4, 110);
-  check('Phone: pulling down climbs, like a flight stick', pull.climb > 0.05, JSON.stringify(pull));
-  check('Phone controls: no errors', !s.errors.length, s.errors.slice(0, 2).join(' | '));
-  await s.page.context().close();
-}
-
 // --- Classic ---------------------------------------------------------------------------------
 {
   const s = await newCommander('classic');

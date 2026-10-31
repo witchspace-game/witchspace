@@ -84,7 +84,7 @@ export const DOCKING = (rollDeg: number, fitted = false): string[] => [
 
 /** The phone's fixed controls, as label and what it does. */
 export const PHONE: string[][] = [
-  ['Left side', 'Drag like a flight stick: sideways to roll, down to climb and up to dive, diagonally to aim at a point. The further you drag, the faster she turns. In a rear or side view, dragging turns that view.'],
+  ['Left side', 'Drag to aim, like a stick: the further you drag, the faster she turns. Sideways rolls. In a rear or side view, dragging turns that view.'],
   ['Speed', 'Slide up for faster; it stays where you leave it. The fill is the speed you\'re doing, the tick the speed you asked for: when the docking computer slows you, the fill falls and the tick stays.'],
   ['Fire', 'Hold to fire the laser.'],
   ['Missile', 'Tap to arm a missile, and hold a ship in your sights until it locks. Then press and hold to launch; a tap lets go of the lock.'],

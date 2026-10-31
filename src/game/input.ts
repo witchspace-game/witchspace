@@ -124,11 +124,6 @@ export function touchAim(dx: number, dy: number) {
   aimDx += dx;
   aimDy += dy;
 }
-/** A phone's sideways drag: a roll in place, -1..1 (touch.ts). */
-let touchRoll = 0;
-export function setTouchRoll(r: number) {
-  touchRoll = r;
-}
 export function setTouchFire(on: boolean) {
   touchFire = on;
 }
@@ -317,7 +312,7 @@ export function flightInput(): FlightInput {
   const mouseRoll = rolling && rollTravel >= TAP_PX;
   const input: FlightInput = {
     pitch: sign * clamp1(kbPitch + padPitch),
-    roll: clamp1(kbRoll + padRoll + swipe + touchRoll + (rolling ? rollStick : 0)),
+    roll: clamp1(kbRoll + padRoll + swipe + (rolling ? rollStick : 0)),
     yaw: clamp1(kbYaw + padYaw),
     throttle: clamp1(kbThrottle + padThrottle),
     speedStep: wheel * SCROLL_SPEED,
