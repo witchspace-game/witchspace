@@ -15,6 +15,7 @@ import { escapeHtml } from '../ui/escape';
 import { boardAt, LAVE } from './board';
 import { easer, inkable, lightUp, onPaper } from './ink';
 import { systemUrl } from './systemNow';
+import { clipModal } from './clipModal';
 import { chartedWhat, clipTitle, commanderLines, EMPTY, featuredClip, flyingLine, parseFeed, type CommanderLine, type Feed } from './feed';
 import { glow } from './glow';
 
@@ -200,6 +201,10 @@ function render() {
     `<b>${trouble.length}</b> worlds in trouble right now`,
   ].filter(Boolean);
 }
+
+// Clips in the live section (the Latest flight card, and commanders' clips in the news) play over the page.
+const nowSection = document.getElementById('now');
+if (nowSection) clipModal(nowSection);
 
 const hullName = (id: string) => shipById(id)?.name ?? id;
 /** A system's name, linked to its page (the first galaxy has pages). */

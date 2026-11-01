@@ -1950,3 +1950,22 @@ html .founding-strip a[href], html .founding-strip a[href]:hover { color: var(--
 body.home .founding-strip { position: fixed; top: 0; left: 0; right: 0; }
 body.home:has(.founding-strip:not([hidden])) .site-header { top: var(--strip, 34px); }
 body.home:has(.founding-strip:not([hidden])) main { margin-top: var(--strip, 34px); }
+
+/* A clip, played over the home page (src/site/clipModal.ts): always a window of space, whatever the page. */
+.clip-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(3, 5, 10, 0); transition: background 0.2s; }
+.clip-modal.shown { background: rgba(3, 5, 10, 0.82); }
+html.clip-open { overflow: hidden; }
+.clip-box { position: relative; width: min(960px, 100%); max-height: calc(100svh - 32px); display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; background: #05070d; color: #eef2f6; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6); outline: none; }
+.clip-box.upright { width: min(420px, 100%); }
+.clip-box video { display: block; width: 100%; min-height: 0; flex: 1 1 auto; max-height: calc(100svh - 170px); background: #000; object-fit: contain; }
+.clip-close { position: absolute; top: 10px; right: 10px; z-index: 1; display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgba(5, 7, 13, 0.7); color: #eef2f6; cursor: pointer; }
+.clip-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.clip-foot { padding: 14px 16px 16px; }
+.clip-title { margin: 0 0 10px; font: 600 17px var(--font); color: #eef2f6; }
+.clip-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.clip-modal .button.ghost { color: #eef2f6; border-color: rgba(255, 255, 255, 0.2); background: transparent; }
+.clip-modal .button.primary { background: #3dffb0; color: #04140d; }
+.clip-heart svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.clip-heart[aria-pressed='true'] svg { fill: #ff6b8e; stroke: #ff6b8e; }
+.clip-invite { margin: 12px 0 0; color: #9aa6b6; font: 14px var(--font); }
+.clip-invite a { color: #3dffb0; }
