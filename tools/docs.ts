@@ -77,7 +77,7 @@ const RECORDS: Record<string, string> = {
     'title: How the economy works',
     'status: guide',
     'pillar: trade',
-    'summary: The record of Witchspace\'s money as it is built, with the real numbers: the markets and limit orders, Bitcoin, every system\'s own currency, company stablecoins, liquidity pools, and how the server keeps every credit honest.',
+    'summary: The record of Witchspace\'s money as it is built, with the real numbers: the markets and limit orders, Bitcoin, every system\'s own currency and why it moves, and how the server keeps every credit honest.',
     'card: falcon',
   ].join('\n'),
 };

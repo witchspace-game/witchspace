@@ -80,7 +80,7 @@ const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/connect/': { ship: 'titanoboa', kicker: 'Build connector', title: 'Connect your AI assistant', sub: 'Let your assistant hand in ships and modules as you. Nothing goes public until it is accepted.' },
   '/ship-editor/': { ship: 'falcon', kicker: 'Build', title: 'Ship editor', sub: 'Shape a ship from points, see it glow, and hand it in. No code, no GitHub.' },
   '/submit/': { ship: 'titanoboa', kicker: 'Build', title: 'Hand in a design', sub: 'A ship or a Titanoboa module, checked as you go. No GitHub needed.' },
-  '/economy/': { ship: 'falcon', kicker: 'Trade · the galaxy’s money', title: 'Money and markets', sub: 'Living markets, real-time Bitcoin, a currency for every system, company coins and liquidity pools. All in-game.' },
+  '/economy/': { ship: 'falcon', kicker: 'Trade · the galaxy’s money', title: 'Money and markets', sub: 'Living markets, real-time Bitcoin, a money for every system, run by its government. All in-game.' },
   '/shared-space/': { ship: 'viper', kicker: 'Multiplayer · in beta', title: 'Shared space', sub: 'The other ship on your scanner might be a person. Fly with other commanders, live, in your browser.' },
   '/privacy/': { ship: 'coriolis', kicker: 'Privacy', sub: 'What Witchspace keeps about you, why, and how to delete it.' },
   '/galaxy/': { ship: 'coriolis', kicker: 'The first of eight galaxies', title: 'The galaxy, right now', sub: '256 star systems, worked out from one seed and one clock, the same for every commander.' },

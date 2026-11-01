@@ -1,11 +1,12 @@
-<!-- {"path": "/economy/", "title": "Money and markets · Witchspace", "description": "The galaxy's money: living markets, limit orders, real-time Bitcoin, a currency for every system with its own policy, company stablecoins, liquidity pools, and a ledger the server checks. All in-game: no real money goes in or comes out.", "scripts": ["/src/site/economy.ts"], "bodyClass": "economy-page"} -->
+<!-- {"path": "/economy/", "title": "Money and markets · Witchspace", "description": "The galaxy's money: living markets, limit orders, real-time Bitcoin, a currency for every system run by its government, why each one is moving, and a ledger the server checks. All in-game: no real money goes in or comes out.", "scripts": ["/src/site/economy.ts"], "bodyClass": "economy-page"} -->
 <section class="section money-hero">
   <p class="kicker">Trade · the galaxy’s money</p>
   <h1>Money and markets</h1>
-  <p class="lede">Witchspace began as Elite’s buy-low, sell-high. It has grown into a working financial system: markets that move when you trade, orders that fill while you’re away, the real Bitcoin price, a currency for nearly every star system, each run its own way, and coins and pools you can put your credits into. Every credit is in a ledger the server checks.</p>
+  <p class="lede">Witchspace began as Elite’s buy-low, sell-high. It has grown into a working financial system: markets that move when you trade, orders that fill while you’re away, the real Bitcoin price, and a money for nearly every star system, run the way its government runs everything else. Every credit is in a ledger the server checks.</p>
+  <p class="money-three">Three monies: the credit, backed by force; a world’s money, backed by work; and Bitcoin, backed by maths.</p>
   <div class="money-tickers">
     <div><span>Bitcoin, live</span><b id="btc-price">about 80,000 Cr</b><small>1 Cr is 1 US dollar, so it’s the real number</small></div>
-    <div><span>A company stablecoin</span><b id="co-value">1.000 Cr</b><small>Backed by Bitcoin at 150%</small></div>
+    <div><span>A corporate world’s money</span><b>1.000 Cr</b><small>Held at one credit, whatever Bitcoin does</small></div>
     <div><span>Currencies in galaxy one</span><b>224</b><small>Of 256 systems: all but the anarchies</small></div>
   </div>
   <p class="money-note">All of it is in-game: credits are earned by playing, never bought, and nothing can be cashed out. <a href="/about/#no-pay-to-win">No pay-to-win</a>.</p>
@@ -14,15 +15,14 @@
 <section class="section">
   <div class="section-head">
     <p class="kicker">At a glance</p>
-    <h2>Six ways to hold your wealth</h2>
+    <h2>Four ways to hold your wealth</h2>
+    <p class="lede">A new commander only needs credits, cargo and contracts. The rest is there when you want it: every world’s money moves with what that world makes and how its government runs it.</p>
   </div>
   <div class="money-grid">
     <div class="card"><h3>Credits</h3><p>The yardstick everything is priced in. Spent, fined, or put down as a deposit on a ship.</p></div>
     <div class="card"><h3>Cargo</h3><p>Bought at one station, sold at another. It sits in your hold, so you can lose it with the ship.</p></div>
     <div class="card"><h3>Bitcoin</h3><p>The real coin, at the real price. It takes no hold space, and nobody can take it from you: not pirates, not the police, not losing your ship.</p></div>
     <div class="card"><h3>System currencies</h3><p>A money for each system, run by its government. Some hold their value; some lose it by the week; one kind breaks.</p></div>
-    <div class="card"><h3>Company stablecoins</h3><p>Coins from the Big Four, worth a credit each and backed by Bitcoin, taken at any station.</p></div>
-    <div class="card"><h3>Liquidity</h3><p>Lend to a station’s currency pool and earn a share of its fees, with the risk that comes with it.</p></div>
   </div>
 </section>
 
@@ -67,28 +67,24 @@
   </div>
   <!-- economy:currencies -->
   <ul class="money-rules">
-    <li><strong>Crises leave scars.</strong> When a peg breaks or the presses run, a money recovers over a few days, but only partly. Buying the bottom is a bet, not a sure thing.</li>
+    <li><strong>Crises leave scars.</strong> When a peg breaks or the presses run, the money recovers, but only partly. Buying the bottom is a bet, not a sure thing.</li>
     <li><strong>Each station has a pool for its own money:</strong> a big swap moves the rate against you (a 0.3% fee), and the rate drifts back to fair over about an hour.</li>
-    <li><strong>Stablecoins are your way out:</strong> reserve-backed and algorithmic money is taken at any station, at its rate, so when a currency fails you can still get to credits.</li>
+    <li><strong>Change it anywhere:</strong> any system’s money can be changed back to credits at any station, at its fair rate less 2%, so when a currency fails you can still get out.</li>
+    <li><strong>One wallet:</strong> credits, Bitcoin and every system’s money you hold, each with its worth in credits. None of it takes hold space, and all of it survives the ship.</li>
     <li><strong>Communist states</strong> let each visitor change only 2,000 Cr a visit.</li>
   </ul>
 </section>
 
 <section class="section">
   <div class="section-head">
-    <p class="kicker">Company coins and pools</p>
-    <h2>Put your credits to work</h2>
+    <p class="kicker">The Money tab</p>
+    <h2>Why it’s moving</h2>
   </div>
-  <div class="money-grid two">
-    <div class="card">
-      <h3>Company stablecoins</h3>
-      <p>Hexon Holdings, Vorg Industries, Carriers’ Mutual and Wexley-Yorozu each issue a coin. Mint one for a credit (less 0.3%), redeem it at any station. Each is backed by Bitcoin locked up at 150% of the coins’ value, like DAI, so it holds at one credit unless Bitcoin falls by a third. Below that, a coin is worth what its collateral is.</p>
-    </div>
-    <div class="card">
-      <h3>Providing liquidity</h3>
-      <p>Put credits and the same value of a system’s money into its station’s pool, and earn a share of the fees: 8% plus 30% ÷ √population a year, so smaller stations pay more (about 20% to 42% in galaxy one). If the rate moves you come out holding more of whichever side fell: impermanent loss, shown honestly in your Money tab. Withdraw any time.</p>
-    </div>
-  </div>
+  <ul class="money-rules">
+    <li><strong>One money at a time:</strong> its government in a line, the rate at this station, the week’s move and the last eight days.</li>
+    <li><strong>The reasons, in plain words.</strong> A strike or a blockade cuts what a world makes, so its money buys less; a boom strengthens it. Each reason shows ▲ stronger, ▼ weaker or = holding.</li>
+    <li><strong>One box to change it,</strong> credits to the local money or back, with the 0.3% fee in a line.</li>
+  </ul>
 </section>
 
 <section class="section">
