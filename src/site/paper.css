@@ -45,7 +45,8 @@ html.paper body::before { display: none; }
 
 /* Type: a sans for headings and the things you press, a serif for reading, and spaced capitals for labels. */
 html.paper h1, html.paper h2, html.paper h3 { font-family: var(--display); font-weight: 600; letter-spacing: -0.012em; }
-html.paper .section h2 { font-size: clamp(30px, 4.4vw, 52px); line-height: 1.05; }
+html.paper .section h2:not([class]) { font-size: clamp(30px, 4.4vw, 52px); line-height: 1.05; }
+html.paper :is(.center, .cs-head) .kicker { justify-content: center; }
 /* Labels in spaced capitals, like the wordmark: the one piece of type that's unmistakably ours. */
 html.paper .kicker {
   display: flex;
@@ -196,3 +197,19 @@ html.paper .ship-stats dt { font-family: var(--display); font-weight: 600; font-
 html.paper .ship-stats dd { font-family: var(--display); font-size: 22px; letter-spacing: -0.01em; }
 html.paper .ship-columns .card { background: transparent; border: 0; border-top: 2px solid var(--ink); border-radius: 0; padding: 18px 0 0; }
 html.paper .ship-columns .card h3 { font-size: 22px; }
+
+/* --- Your callsign ------------------------------------------------------------------------------- */
+
+/* The card is a metal card on a desk: it keeps its own dark face, and casts a real shadow on the paper. */
+html.paper .cs-card { box-shadow: 0 28px 50px -18px rgba(22, 24, 29, 0.45), 0 2px 6px rgba(22, 24, 29, 0.12); }
+html.paper .cs-head h1 { font-size: clamp(30px, 3.6vw, 44px); }
+html.paper .cs-lede, html.paper .cs-hint { font-family: var(--serif); }
+html.paper .cs-scene-pick { opacity: 1; border-radius: 3px; border: 2px solid transparent; }
+html.paper .cs-scene-pick[aria-pressed='true'] { border-color: var(--ink); }
+html.paper .cs-tabs button { font-family: var(--display); font-weight: 600; letter-spacing: 0.04em; }
+html.paper .cs-tabs button[aria-pressed='true'] { border-bottom: 2px solid var(--ink); }
+html.paper .cs-email input { border-radius: 4px; background: var(--surface); color: var(--fg); }
+html.paper .cs-note.warn { color: #8a4b00; }
+html.paper .cs-actions .button:disabled { background: transparent; color: var(--muted); border: 1px solid var(--border-strong); opacity: 1; }
+html.paper .cs-earn-section .cs-earn-head { font: 600 12px var(--display); letter-spacing: 0.26em; color: var(--muted); border-top: 2px solid var(--ink); padding-top: 18px; }
+html.paper .cs-earn-note p, html.paper .cs-earn-section > p { font-family: var(--serif); }
