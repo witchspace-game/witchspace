@@ -8,20 +8,8 @@
     <meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#05070d" media="(prefers-color-scheme: dark)" />
     <meta name="color-scheme" content="light dark" />
-    <!-- Paper by day, space by night (Mark, 1 Nov 2026): the page is paper when the phone or computer is in
-         light mode, and space in dark mode. ?look=paper or ?look=space chooses for the visit (?look=auto undoes it).
-         Decided before anything is drawn, and painted at once, so a reload never flashes the wrong colour. -->
-    <script>
-      try {
-        const look = new URLSearchParams(location.search).get('look');
-        if (look) sessionStorage.setItem('witchspace.look', look);
-        const chosen = sessionStorage.getItem('witchspace.look');
-        const dark = matchMedia('(prefers-color-scheme: dark)');
-        const set = () => document.documentElement.classList.toggle('paper', chosen === 'paper' || (chosen !== 'space' && !dark.matches));
-        set();
-        dark.addEventListener('change', set);
-      } catch {}
-    </script>
+    <!-- Paper by day, space by night: public/look.js decides before anything is drawn. -->
+    <script src="/look.js"></script>
     <style>html { background: #05070d; color: #eaf0f6; color-scheme: dark; } html.paper { background: #f4f1ea; color: #16181d; color-scheme: light; }</style>
     <meta property="og:title" content="{{title}}" />
     <meta property="og:description" content="{{description}}" />
