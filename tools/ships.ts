@@ -98,13 +98,13 @@ const AT_WORK: Record<string, { heading: string; html: string }> = {
   titanoboa: {
     heading: 'Everyone calls her the Titan',
     html: `<p>Titanoboa is her name on Wexley-Yorozu's papers and in the module standard. Out in the galaxy, the news and the radio call her the Titan.</p>
-      <p>She doesn't build alone. While a yard works, a Wexley-Yorozu Bullsnake comes in every eight minutes or so from a real neighbouring system, with what the stage needs: machinery and food while she refines, alloys and minerals for the station’s frame and plating, computers to spin it up. Company Vipers guard her yard, a lost guard replaced from her hold, and most runs to her fly with an escort. Hail a freighter on the way in and she'll say so: <q>Dry Dock, in from Atriso with alloys for the Titan.</q></p>
-      <p>It's all the same on every phone: the freighter you pass is the one every commander there sees. <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
+      <p>She doesn't build alone. While a yard works, a Wexley-Yorozu trader comes in every eight minutes or so from a real neighbouring system, with what the stage needs: machinery and food while she refines, alloys and minerals for the station’s frame and plating, computers to spin it up. Company Vipers guard her yard, a lost guard replaced from her hold, and most runs to her fly with an escort. Hail a trader on the way in and she'll say so: <q>Dry Dock, in from Atriso with alloys for the Titan.</q></p>
+      <p>It's all the same on every phone: the trader you pass is the one every commander there sees. <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
   },
   bullsnake: {
     heading: 'Ore hauler and tug',
     html: `<p>Bullsnakes run ore from a moon into the Titan's maw: every commander sees the same ones, at the same moment. They're her tugs too, and the plan gives them more of her work: fetching food and materials from the local station, ferrying cargo (and one day prisoners) between the Titan and the surface, making repairs, and moving her modules to set her up for the job.</p>
-    <p>They stay in the system: traders carry every good between the stars. The one exception will be a module that has to travel: with an engine module and a fuel module stacked on its docking ring, and a Bullsnake docked in as its bridge, it flies to another system on its own. <a href="/design/ship-the-titanoboa/">The Titanoboa</a> · <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
+    <p>They stay in the system: traders carry every good between the stars. The one exception will be a module that has to travel: with an engine module and a fuel module stacked on its docking ring, and a Bullsnake docked in as its bridge, she flies the whole stack to another system. <a href="/design/ship-the-titanoboa/">The Titanoboa</a> · <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
   },
 };
 
@@ -236,7 +236,7 @@ export const SHIP_GROUPS: { id: string; name: string; line: string; has: (s: Shi
   { id: 'own', name: 'Ships you can fly', line: 'Every commander starts in a Cobra. The Fer-de-lance is built to order at the shipyards; more hulls go on sale when the yards sell them outright.', has: (_, own) => own },
   { id: 'law', name: 'The law', line: 'The police where a station keeps order, and the Co-operative Marshals when a warrant comes due.', has: (s) => s.role === 'police' || s.role === 'marshal' },
   { id: 'pirates', name: 'Pirates and Legends', line: 'The Sidewinder and the Mamba are the pirates’ favourites, and on the shipyards’ lists for when the yards sell hulls outright. Some ships are only ever met.', has: (s) => s.role === 'pirate' },
-  { id: 'industry', name: 'Industry', line: 'Wexley-Yorozu’s yards: the Titan that builds stations, and the freighters that feed her.', has: (s) => s.role === 'miner' || s.role === 'freighter' },
+  { id: 'industry', name: 'Industry', line: 'Wexley-Yorozu’s yards: the Titan that builds stations, and the Bullsnakes that work her yard.', has: (s) => s.role === 'miner' || s.role === 'freighter' },
   { id: 'stations', name: 'Stations', line: 'Where you dock, trade, refit and take on work.', has: (s) => s.role === 'station' },
   { id: 'more', name: 'More ships', line: 'The rest of the fleet.', has: () => true },
 ];
@@ -316,7 +316,9 @@ function modulesCard(s: ShipFile, modules: Map<string, ModuleFile>): string {
 }
 
 const MODULE_ZONES = ['intake', 'industry', 'logistics', 'crew', 'fabrication', 'add-on', 'power'];
-const byZone = (a: ModuleFile, b: ModuleFile) => MODULE_ZONES.indexOf(a.zone) - MODULE_ZONES.indexOf(b.zone);
+// Within a zone, a module that closes its aft end (the Drive) goes last: nothing can couple behind it.
+const closedAft = (m: ModuleFile) => ((m as Partial<ModuleBody>).couples?.aft === false ? 1 : 0);
+const byZone = (a: ModuleFile, b: ModuleFile) => MODULE_ZONES.indexOf(a.zone) - MODULE_ZONES.indexOf(b.zone) || closedAft(a) - closedAft(b);
 export const modulePath = (id: string) => `/ships/titanoboa/modules/${encodeURIComponent(id)}/`;
 
 /** What each zone is for, in the module standard's words (docs/design/ship-the-titanoboa.md). */
@@ -330,6 +332,28 @@ const ZONE_WORDS: Record<string, string> = {
   power: 'Power: the stern, where its heat and shadow fall on nobody.',
 };
 
+/** The Standard line-up, fore to aft, with this module coupled in where its zone puts it if the Standard doesn't carry it. */
+function lineUp(titan: ShipFile, m: ModuleFile, all: ModuleFile[]): string[] {
+  const ids = [...(titan.modules ?? [])];
+  if (ids.includes(m.id)) return ids;
+  const zone = (id: string) => MODULE_ZONES.indexOf(all.find((o) => o.id === id)?.zone ?? '');
+  const at = ids.findIndex((id) => zone(id) > MODULE_ZONES.indexOf(m.zone));
+  ids.splice(at < 0 ? ids.length : at, 0, m.id);
+  return ids;
+}
+
+/** Why each section sits where it does, from the design doc's anatomy (docs/design/ship-the-titanoboa.md). */
+const WHY: Record<string, string> = {
+  maw: 'At the prow, facing the moon. Ore goes from the mouth straight into the crucibles, so the dirtiest, hottest work is together at the end where nobody lives.',
+  furnace: 'Behind the maw, so ore goes straight into the crucibles, and ahead of the hold, where refined metal is stored as it comes out.',
+  hold: 'The buffer between making metal and making station: a furnace can stop for repairs and the fabricator keeps working. The crew arrive by its pads, and its bulk stands between them and the furnaces’ heat and noise.',
+  habitat: 'In the middle, shielded both ways: the crew arrive by the hold’s pads next door, and most of them work in the fabricator on the other side.',
+  fabricator: 'Beside the habitat, where most of its workers live. Material from the hold reaches it along the spine, through the habitat’s hub, and finished sections leave by its open sides.',
+  science: 'Past the fabricator, at the far end from the crew: one find to a pod, at arm’s length, and an ejected pod endangers nobody.',
+  reactor: 'At the stern. Its shadow shield faces forward, so everything ahead of it is in its shade, its radiators point where nothing else is, and its power runs forward along the spine.',
+  drive: 'At the very stern, behind the reactor, and only when a station has to be moved. It couples fore only, so nothing can go behind it.',
+};
+
 /** One Titanoboa module's own page: the section turning, what it does, and how to improve it (Mark: every module open to the community). */
 export function modulePage(m: ModuleFile & ModuleBody, titan: ShipFile, all: ModuleFile[]) {
   const order = [...all].sort(byZone);
@@ -338,7 +362,6 @@ export function modulePage(m: ModuleFile & ModuleBody, titan: ShipFile, all: Mod
   const next = order[(i + 1) % order.length];
   const inStandard = titan.modules?.filter((id) => id === m.id).length ?? 0;
   const c = m.credits ?? {};
-  const ends = [m.couples.fore && 'fore', m.couples.aft && 'aft'].filter(Boolean).join(' and ');
   const asShip = { id: m.id, name: m.name, geometry: m.geometry, style: titan.style } as ShipFile;
   const def = JSON.stringify({ id: m.id, name: m.name, role: titan.role, geometry: m.geometry, style: titan.style ?? {} }).replace(/</g, '\\u003c');
   const label = `Titanoboa ${m.name}`;
@@ -369,7 +392,7 @@ export function modulePage(m: ModuleFile & ModuleBody, titan: ShipFile, all: Mod
       <p class="lede">${esc(m.description)}</p>
       <dl class="ship-stats">
         <div><dt>Length</dt><dd>${m.length} m</dd></div>
-        <div><dt>Couples</dt><dd>${ends ? `${ends[0].toUpperCase()}${ends.slice(1)}` : 'Neither end'}</dd></div>
+        <div><dt>Couples</dt><dd>${m.couples.fore && m.couples.aft ? 'Fore and aft' : m.couples.fore ? 'Fore only (always the stern)' : m.couples.aft ? 'Aft only (always the prow)' : 'Neither end'}</dd></div>
         <div><dt>In the Standard</dt><dd>${inStandard ? (inStandard > 1 ? `×${inStandard}` : 'Yes') : 'When the job needs it'}</dd></div>
         <div><dt>Designed by</dt><dd>${esc(m.designer)}</dd></div>
       </dl>
@@ -379,22 +402,33 @@ export function modulePage(m: ModuleFile & ModuleBody, titan: ShipFile, all: Mod
   </div>
   <script type="application/json" id="ship-def">${def}</script>
 
+  <div class="card module-place">
+    <h3>Where it sits</h3>
+    <ol class="module-strip" aria-label="The Titanoboa, fore to aft">${lineUp(titan, m, all)
+      .map((id) => (id === m.id ? `<li aria-current="true"><b>${esc(m.name)}</b></li>` : `<li><a href="${modulePath(id)}">${esc(all.find((o) => o.id === id)?.name ?? id)}</a></li>`))
+      .join('')}</ol>
+    ${WHY[m.id] ? `<p>${WHY[m.id]}</p>` : ''}
+    ${inStandard ? '' : '<p class="muted small">Not in the Standard line-up: shown where it couples when the job needs it.</p>'}
+  </div>
+
   <div class="ship-columns">
     <div class="card">
       <h3>Make it better</h3>
-      <p>Every section of the Titanoboa is open. Redraw this one: a clearer shape, a better reason for where it sits, something it’s missing. Start from its file on the hand-in page, check it against the standard as you go, and send it. No GitHub needed. If it’s accepted, it goes into the game under your callsign, and the first time it’s fitted Wexley-Yorozu pays your commander 2,000 Cr.</p>
-      <p><a class="button primary small" href="/submit/?module=${esc(m.id)}&amp;as=improve">Improve the ${esc(m.name.toLowerCase())}</a> <a class="button ghost small" href="/ideas/?about=${encodeURIComponent(label)}">Suggest an idea instead</a></p>
+      <p>Every section of the Titanoboa is open. Redraw this one: a clearer shape, a better reason for where it sits, something it’s missing. Start from its file on the hand-in page, check it against the standard as you go, and send it. No GitHub needed. If it’s accepted, it goes into the game under your callsign. If the reviewers accept it as a revision (small fixes are credited, not paid), Wexley-Yorozu pays your commander 2,000 Cr the first time it’s fitted.</p>
+      <p><a class="button ghost small" href="/submit/?module=${esc(m.id)}&amp;as=improve">Improve the ${esc(m.name.toLowerCase())}</a> <a class="button ghost small" href="/ideas/?about=${encodeURIComponent(label)}">Suggest an idea instead</a></p>
       <ul class="ship-ideas" data-ship-name="${esc(label)}"><li class="muted">Looking for ideas about the ${esc(m.name.toLowerCase())}…</li></ul>
       <p class="muted small">Drawn by ${esc((c.authors ?? []).join(', ') || m.designer)}${c.aiAssisted ? ', with AI assistance' : ''}. Licence: ${esc(c.license ?? 'CC-BY-SA-4.0')}. <a href="${REPO}content/modules/${esc(m.id)}.json">The file on GitHub</a>.</p>
     </div>
     <div class="card">
       <h3>Or design a new one</h3>
-      <p>The Titanoboa is whatever the job needs: sections on one coupling, lined up for the work. Mining, building, hauling, or work the company would rather you didn’t ask about. A prison module is on the drawing board. Couple enough of them to a habitat and a science module (its sealed pods can be ejected if anything gets out) and you have a prison Titanoboa with a research wing, her Bullsnake tugs ferrying inmates down to the surface and back. Wexley-Yorozu calls it rehabilitation. Two more are wanted for the long haul between stars: an engine module and a fuel module, thrown away when it runs dry. Stack them on any module’s docking ring, dock a Bullsnake in its ring as the bridge, and that module can fly to another system on its own. Draw the module you think she’s missing: if it’s built, your commander is paid 5,000 Cr.</p>
+      <p>The Titanoboa is whatever the job needs: sections on one coupling, lined up for the work. Mining, building, hauling, or work the company would rather you didn’t ask about. A prison module is wanted. Bolt enough of them together, with accommodation, a gym complex and science stations where the inmates may be put to use in experiments (the science pods can be ejected if anything gets out), and you have a prison Titanoboa, her Bullsnake tugs ferrying inmates down to the surface and back. Wexley-Yorozu calls it rehabilitation. For the long haul between stars, a module is stacked on its docking ring with an engine module and a fuel module, thrown away when it runs dry; dock a Bullsnake in its ring as the bridge, and she flies the whole stack to another system. Draw the module you think she’s missing: if it’s built, your commander is paid 5,000 Cr the first time it’s fitted.</p>
+      <p class="muted small">Pay goes to a commander with an account and a callsign, and arrives the next time they dock in a Modern game.</p>
       <p><a class="button ghost small" href="/submit/?module=${esc(m.id)}&amp;as=new">Start a new module from this one</a> <a class="button ghost small" href="/design/ship-the-titanoboa/#designing-a-module-the-standard">The standard</a></p>
     </div>
   </div>
 
-  <nav class="module-nav" aria-label="The other modules"><a href="${modulePath(prev.id)}">← ${esc(prev.name)}</a><a href="/ships/titanoboa/">All of the Titan</a><a href="${modulePath(next.id)}">${esc(next.name)} →</a></nav>
+  <p class="module-play">Watch one work: <a class="button primary small" href="/play/">Play free</a></p>
+  <nav class="module-nav" aria-label="The other modules"><a href="${modulePath(prev.id)}">← ${esc(prev.name)}</a><a href="/ships/titanoboa/">The whole Titanoboa</a><a href="${modulePath(next.id)}">${esc(next.name)} →</a></nav>
 </section>`,
   };
 }

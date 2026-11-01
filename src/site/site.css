@@ -1968,3 +1968,12 @@ html.clip-open { overflow: hidden; }
 /* A Titanoboa module's page: the next and previous sections along the Titan. */
 .module-nav { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.95rem; }
 .module-nav a:nth-child(2) { color: var(--muted); }
+.module-place { margin-top: 32px; }
+.module-strip { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 12px 0 14px; counter-reset: none; }
+.module-strip li { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+.module-strip li + li::before { content: '→'; color: var(--muted); }
+.module-strip a, .module-strip b { padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px; text-decoration: none; }
+.module-strip b { border-color: var(--fg); background: var(--fg); color: var(--bg); font-weight: 600; }
+.module-play { margin-top: 32px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* The ideas board's "nothing yet" or "not answering" line: a note, not a list item. */
+.ship-ideas li.muted { list-style: none; margin-left: -18px; font-size: 0.9em; }
