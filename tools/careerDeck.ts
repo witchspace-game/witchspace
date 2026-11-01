@@ -13,6 +13,7 @@ export function careerDeck(cobra: ShipFile): string {
     (c, i) => `<button type="button" class="deck-card" data-career="${c.id}" data-pos="${i}" style="--c: ${c.colour}; --scene: url('/callsign/${c.scenes[0]}.jpg')" aria-label="${esc(c.noun)}: the card a ${esc(c.noun.toLowerCase())} carries">
         <span class="deck-brand"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 18 L12 9 L20 9 L28 18 L18 23 L14 23 Z M12 9 L14 23 M20 9 L18 23" /></svg>WITCHSPACE</span>
         ${shipSvg(cobra, 'deck-ship')}
+        <span class="deck-tab" aria-hidden="true">${esc(c.name)}</span>
         <span class="deck-copy"><span class="deck-cmdr">CMDR</span><span class="deck-name">Your callsign</span><span class="deck-sub">${esc(c.noun)} · Cobra Mk III</span></span>
       </button>`,
   ).join('\n      ');
