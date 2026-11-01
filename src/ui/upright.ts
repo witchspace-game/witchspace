@@ -20,6 +20,15 @@ export interface UprightClip {
   seconds: number;
 }
 
+/** Is this video taller than it is wide? False when it can't be measured: most clips are wide. */
+export async function isTall(video: Blob): Promise<boolean> {
+  const v = await load(video).catch(() => null);
+  if (!v) return false;
+  const tall = v.el.videoHeight > v.el.videoWidth;
+  v.done();
+  return tall;
+}
+
 /** Is this video wide (and so worth an upright cut)? */
 export async function isWide(video: Blob): Promise<boolean> {
   const v = await load(video).catch(() => null);

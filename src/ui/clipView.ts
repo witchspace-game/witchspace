@@ -54,6 +54,11 @@ export function showClipView(c: ClipView) {
     </div>`;
   document.body.append(el);
   const video = el.querySelector<HTMLVideoElement>('.cv-video')!;
+  // The video's own shape wins over what was stored: a sharer's phone that couldn't measure it
+  // once marked a wide clip upright (54c3b8e98a, 1318×720).
+  video.addEventListener('loadedmetadata', () => {
+    if (video.videoWidth && video.videoHeight) el.classList.toggle('upright', video.videoHeight > video.videoWidth);
+  });
   if (c.invite)
     video.addEventListener(
       'ended',

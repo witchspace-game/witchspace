@@ -4,7 +4,7 @@
 import { addMoment, BUDGET, byTrip, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
-import { isWide, uprightCut } from './upright';
+import { isTall, uprightCut } from './upright';
 import { tripWeight } from '../game/moments';
 import { clipIdOf, myClips, putCard, putVideo, sharedLink, shareTrack, takeDownClip, type MyClip } from '../net/clips';
 import { drawClipCard } from './clipCard';
@@ -321,7 +321,7 @@ async function sendVideo(url: string, video: Blob, m: LoggedMoment) {
   if (!id) return;
   const up = videosUp();
   if (up[id] === video.size) return;
-  if (!(await putVideo(id, video, !(await isWide(video)), killsOf(m)))) return;
+  if (!(await putVideo(id, video, await isTall(video), killsOf(m)))) return;
   try {
     localStorage.setItem(VIDEOS_KEY, JSON.stringify({ ...videosUp(), [id]: video.size }));
   } catch {
