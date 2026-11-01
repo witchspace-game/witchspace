@@ -256,6 +256,15 @@ What characters add is **doubt**. Today a trader is a target: shoot one and the 
 - **Not only traders:** explorers surveying, builders and tugs at the yards, miners in the fields, all taking part in Witchspace on the same rules as players.
 - **The cost of crossing one is personal and lasting:** they remember, their friends remember, and it counts in an anarchy, where there's no law but there are still people. Piracy stays a career: good pirates scan first.
 
+### 6.5 The people who stay: the bar owner and who runs the station (Mark)
+
+Mark (1 November 2026): *"What about the Bar Owner and who runs the station?"* Travellers are the witnesses; the people who stay are where what you did lands. Every station has two, made from the seed, there whenever you dock:
+
+- **Behind the bar:** the station's memory. Everyone passes through the bar, so the owner hears everything, and the travelling characters tell them. They introduce you to their regulars ("Odile's in most afternoons"), keep messages, serve you or don't. The kind follows the government, as the bar's does: a landlord in a saloon, a club secretary in a corporate state, a tea room's supervisor in a dictatorship (who tells the police), a shebeen keeper in an anarchy (who is also the fence: the back room's door is theirs).
+- **Who runs the station:** the authority, with levers: clearance, berth fees, repairs first or last, a bounty on you, or a welcome. A Co-operative harbourmaster where there's law; a company manager at a Wexley-Yorozu station; a lord's steward on a feudal world; in an anarchy, whoever holds it (a boss, a collective, a smuggler-queen), who may welcome you for what others punish.
+- **How it joins up:** shoot a trader in Leesti's lanes, and at Diso the bar has heard, and at Lave the harbourmaster charges you double for a berth. The law forgets in two jumps; the people who stay don't.
+- **Later, a player's:** when stations can be run by players ([player-run stations](player-stations.md)), the station's runner is the slot a player or guild takes over.
+
 ---
 
 ## 7. Worked example: the Titanoboa's supply line
