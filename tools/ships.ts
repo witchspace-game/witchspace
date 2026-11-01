@@ -102,13 +102,14 @@ const AT_WORK: Record<string, { heading: string; html: string }> = {
       <p>It's all the same on every phone: the freighter you pass is the one every commander there sees. <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
   },
   bullsnake: {
-    heading: 'The Titan’s supply line',
-    html: `<p>Bullsnakes run ore from a moon into the Titan's maw, and fly in from neighbouring systems with what each stage of her build needs, in Wexley-Yorozu colours and usually under escort. Every commander sees the same ones, at the same moment. <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
+    heading: 'Ore hauler and tug',
+    html: `<p>Bullsnakes run ore from a moon into the Titan's maw. They're her tugs too: they fetch food and materials from the local station, ferry cargo and prisoners between the Titan and the surface, make repairs, and move her modules to set her up for the job. Every commander sees the same ones, at the same moment.</p>
+    <p>They stay in the system: traders carry every good between the stars. The one exception is a module that has to travel. With an engine module and a fuel module stacked on its docking ring, and a Bullsnake docked in as its bridge, it flies to another system on its own. <a href="/design/ship-the-titanoboa/">The Titanoboa</a> · <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
   },
 };
 
 const ROLE: Record<string, string> = {
-  multirole: 'Multirole', pirate: 'Pirate', police: 'Police', marshal: 'Co-operative Marshals', miner: 'Ore hauler', freighter: 'Constructor', station: 'Station',
+  multirole: 'Multirole', pirate: 'Pirate', police: 'Police', marshal: 'Co-operative Marshals', miner: 'Ore hauler and tug', freighter: 'Constructor', station: 'Station',
 };
 
 /** The first sentence, for a share card's line. */
