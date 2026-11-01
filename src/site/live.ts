@@ -1,8 +1,4 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { shipById } from '../content/ships';
 import { COMMODITIES } from '../economy/commodities';
 import { activeEvent, EVENT_KINDS, newsAt, type WorldEvent } from '../economy/events';
@@ -12,13 +8,15 @@ import { COMPANIES } from '../game/companies';
 import { cargoName, destinationOf } from '../game/contracts';
 import { cargoWords, voyages, type Voyage } from '../game/traffic';
 import { stageInfo, STAGES, yardsNear } from '../game/yards';
-import { GLOW, MAX_PIXEL_RATIO } from '../render/look';
+import { MAX_PIXEL_RATIO } from '../render/look';
 import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 import { escapeHtml } from '../ui/escape';
 import { boardAt, LAVE } from './board';
+import { easer, inkable, lightUp, onPaper } from './ink';
 import { systemUrl } from './systemNow';
 import { chartedWhat, clipTitle, commanderLines, EMPTY, featuredClip, flyingLine, parseFeed, type CommanderLine, type Feed } from './feed';
+import { glow } from './glow';
 
 // The home page's live galaxy: the news around Lave, the nearest shipyard, a
 // market in crisis, the ticker under the hero, and the Falcon turning. All
@@ -263,19 +261,34 @@ if (ticker) {
 const canvas = $('now-falcon') as HTMLCanvasElement | null;
 if (canvas) {
   try {
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    // On paper she's an ink drawing until you reach for her card (or, on a phone, she's in view): then she lights.
+    const paper = onPaper();
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: paper });
     renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#0c0f15');
+    if (!paper) scene.background = new THREE.Color('#0c0f15');
     const camera = new THREE.PerspectiveCamera(30, 1, 1, 5000);
     const model = buildShip(shipById('falcon')!);
     scene.add(model.root);
-    const composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
-    bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
-    composer.addPass(bloom);
-    composer.addPass(new OutputPass());
+    const inked = paper ? inkable(model) : null;
+    const lit = easer(0.8);
+    let litTarget = 0;
+    const card = canvas.closest<HTMLElement>('.now-card');
+    if (paper && card) {
+      card.addEventListener('pointerenter', () => (litTarget = 1));
+      card.addEventListener('pointerleave', () => (litTarget = 0));
+      if (matchMedia('(pointer: coarse)').matches)
+        new IntersectionObserver(([e]) => (litTarget = e.isIntersecting ? 1 : 0), { threshold: 0.9 }).observe(card);
+    }
+    const paint = (dt: number) => {
+      if (inked) {
+        const t = lit.step(litTarget, dt);
+        lightUp(renderer, bloom, inked, t);
+        card?.classList.toggle('lit', t > 0.5);
+      }
+      composer.render();
+    };
+    const { composer, bloom } = glow(renderer, scene, camera);
     const size = () => {
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
@@ -291,15 +304,18 @@ if (canvas) {
     new ResizeObserver(size).observe(canvas);
     size();
     model.root.rotation.set(0.25, -0.8, 0);
-    composer.render(); // one frame now, so she's there before the card scrolls into view
+    paint(0); // one frame now, so she's there before the card scrolls into view
     let visible = false;
     new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let last = performance.now();
     const frame = (t: number) => {
       requestAnimationFrame(frame);
+      const dt = Math.min(0.1, (t - last) / 1000);
+      last = t;
       if (!visible || document.hidden) return;
       model.root.rotation.set(0.25, still ? -0.8 : t / 3000, 0);
-      composer.render();
+      paint(dt);
     };
     requestAnimationFrame(frame);
   } catch {

@@ -1,0 +1,306 @@
+/* The paper look, a mock-up (Mark, 1 Nov 2026: "a traditional really clean paper or white background with
+   traditional dark copy… we can have dark sections"). Paper by day, space by night: the pages are printed
+   matter, a manual you read, and space is a window cut into them, where the glow lives. Only with
+   html.paper (?look=paper), so the site is unchanged until it's agreed. */
+
+html.paper {
+  --bg: #f4f1ea;
+  --bg-2: #ebe6dc;
+  --surface: #faf8f3;
+  --surface-2: #efeae0;
+  --border: rgba(27, 30, 37, 0.13);
+  --border-strong: rgba(27, 30, 37, 0.24);
+  --fg: #16181d;
+  --muted: #5b616c;
+  --ink: #16181d;
+  --accent: #0b7a55;
+  --accent-2: #0d6987;
+  --gradient: var(--ink);
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Inter Tight', var(--font);
+  --serif: 'Source Serif 4', Georgia, serif;
+  --amber: #9a5a00;
+  --violet: #5b41c4;
+  --danger: #b3261e;
+  --radius: 6px;
+}
+
+/* Space: the hero, the films, the closing call and the footer, the windows where the game shows. */
+html.paper .hero,
+html.paper #screens,
+html.paper .cta-inner,
+html.paper .site-footer,
+html.paper body.home:not(.scrolled) .site-header,
+html.paper .press-hero,
+html.paper .share-sheet,
+html.paper .notice,
+html.paper .cs-nudge,
+html.paper .preview,
+html.paper .editor-3d,
+html.paper .editor-view,
+html.paper .papers,
+html.paper body.edition-body,
+html.paper body.build-body,
+html.paper body.press-item {
+  --bg: #05070d;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
+  --fg: #eef2f6;
+  --muted: #9aa6b6;
+  --accent: #3dffb0;
+  --accent-2: #4ad7ff;
+  color: var(--fg);
+}
+
+html.paper body { background: var(--bg); color: var(--fg); font-family: var(--serif); font-size: 18px; line-height: 1.6; }
+html.paper body::before { display: none; }
+
+/* Type: a sans for headings and the things you press, a serif for reading, and spaced capitals for labels. */
+html.paper h1, html.paper h2, html.paper h3 { font-family: var(--display); font-weight: 600; letter-spacing: -0.012em; }
+html.paper :is(.section-head h2, .section > h2:not([class])) { font-size: clamp(30px, 4.4vw, 52px); line-height: 1.05; }
+html.paper :is(.center, .cs-head) .kicker { justify-content: center; }
+/* Labels in spaced capitals, like the wordmark: the one piece of type that's unmistakably ours. */
+html.paper .kicker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  color: var(--muted);
+}
+html.paper .kicker::before { content: ''; width: 28px; height: 1px; background: currentColor; }
+html.paper .lede { color: var(--fg); opacity: 0.82; }
+html.paper .site-header, html.paper .button, html.paper .eyebrow, html.paper .ticker, html.paper .card .more,
+html.paper .card-cta, html.paper .key, html.paper .rungs, html.paper .page-share, html.paper .site-footer,
+html.paper .compare-label, html.paper .ship-stats, html.paper .ship-light, html.paper .now-card .big, html.paper .caption {
+  font-family: var(--font);
+}
+html.paper a { color: var(--accent); }
+html.paper a:hover { color: var(--fg); }
+
+/* The header: paper, with a hairline; over the home page's hero it stays clear until you scroll. */
+html.paper .site-header { background: rgba(244, 241, 234, 0.86); border-bottom-color: var(--border); }
+html.paper body.home .site-header { background: transparent; border-bottom-color: transparent; }
+html.paper body.home.scrolled .site-header { background: rgba(244, 241, 234, 0.86); border-bottom-color: var(--border); }
+html.paper .brand, html.paper .brand:hover { color: var(--fg); }
+html.paper .brand { font-family: var(--display); letter-spacing: 0.32em; }
+html.paper .brand-mark { stroke: currentColor; filter: none; }
+html.paper .site-header .brand-mark { color: var(--fg); }
+
+/* Buttons: solid ink, square-shouldered, no glow. In space they're the game's green, still flat. */
+html.paper .button { border-radius: 4px; background: transparent; border-color: var(--border-strong); box-shadow: none; backdrop-filter: none; }
+html.paper .button:hover { background: var(--surface-2); border-color: var(--fg); transform: none; }
+/* The call to action is the game's green everywhere, flat: the brand's colour, not a generic black pill. */
+html.paper .button.primary, html.paper a.button.primary { background: #3dffb0; color: #04140d; box-shadow: none; }
+html.paper .button.primary:hover, html.paper a.button.primary:hover { background: #1fe89a; color: #04140d; box-shadow: none; }
+html.paper a.button { color: var(--fg); }
+html.paper .button.ghost { background: transparent; }
+
+/* --- Home ---------------------------------------------------------------------------------------- */
+
+html.paper .hero { background: #05070d; }
+html.paper .hero-glow { background: linear-gradient(180deg, rgba(5, 7, 13, 0) 75%, #05070d 100%); }
+html.paper .hero h1 { font-family: var(--display); font-weight: 600; letter-spacing: -0.025em; }
+html.paper .gradient { background: none; color: var(--accent); }
+html.paper .hero-lede { font-family: var(--serif); color: #c9d2de; }
+html.paper .eyebrow { border-radius: 4px; font-family: var(--display); font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+html.paper .eyebrow .dot { box-shadow: none; }
+html.paper .ticker, html.paper .ticker:hover { border-radius: 4px; background: rgba(12, 15, 21, 0.6); color: var(--muted); }
+html.paper .ticker-label { font-family: var(--display); font-weight: 600; letter-spacing: 0.26em; }
+html.paper .ship-name { font-family: var(--display); font-weight: 600; letter-spacing: 0.26em; }
+
+/* Right now in the galaxy: a printed bulletin, ruled, with the Falcon drawn in ink until you reach for her. */
+html.paper .now-grid { gap: 0; border-top: 2px solid var(--ink); border-left: 1px solid var(--border); }
+html.paper .now-card { border: 0; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; padding: 22px 22px 24px; }
+html.paper .now-card h3 { font-family: var(--display); font-weight: 600; font-size: 11.5px; letter-spacing: 0.22em; color: var(--muted); }
+html.paper .now-card .big { font-family: var(--display); font-weight: 600; letter-spacing: -0.02em; }
+html.paper .now-card .muted { color: var(--muted); }
+/* The news fills two rows, not three, and the latest flight runs the full width beneath: no blank under the news. */
+@media (min-width: 901px) {
+  html.paper .now-card.news { grid-row: span 2; }
+  html.paper .now-card.flight { grid-column: 1 / -1; }
+  html.paper .now-card.flight .flight-pic { flex-basis: 40%; }
+}
+html.paper .now-card .bar { border-radius: 0; height: 4px; background: var(--border); }
+html.paper .now-card .bar i { background: var(--ink); }
+html.paper .now-card .up { color: #b3261e; }
+html.paper .now-card .flying { color: var(--accent); }
+html.paper .now-card .flight-pic { border-radius: 0; }
+html.paper .now-card.falcon { background: transparent; border-color: var(--border); transition: background 0.6s; }
+html.paper .now-card.falcon canvas { -webkit-mask-image: none; mask-image: none; }
+html.paper .now-card.falcon .big, html.paper .now-card.falcon .card-cta { color: var(--fg); transition: color 0.6s; }
+html.paper .now-card.falcon.lit { background: #04060b; }
+html.paper .now-card.falcon.lit h3, html.paper .now-card.falcon.lit .muted { color: #9aa6b6; }
+html.paper .now-card.falcon.lit .big, html.paper .now-card.falcon.lit .card-cta { color: #ff6b8e; }
+html.paper .live-dot { background: #b3261e; box-shadow: none; }
+html.paper .caption { font-family: var(--serif); font-style: italic; }
+
+/* The four careers: columns of a printed table, not cards. */
+html.paper .ladders { gap: 0; border-top: 2px solid var(--ink); }
+html.paper .ladder { border: 0; border-right: 1px solid var(--border); border-radius: 0; background: transparent; padding: 22px 20px; }
+html.paper .ladder:last-child { border-right: 0; }
+html.paper .ladder .verb { font-family: var(--display); font-weight: 600; color: var(--fg); font-size: 30px; letter-spacing: -0.03em; }
+html.paper .rungs li { border-radius: 0; background: transparent; border-bottom: 1px solid var(--border); padding-left: 26px; }
+html.paper .rungs li.top { background: transparent; border-bottom: 1px solid var(--ink); }
+html.paper .rungs li.in::before, html.paper .key .in::before { background: var(--ink); border-color: var(--ink); box-shadow: none; }
+html.paper .rungs li.building::before, html.paper .key .building::before { border-color: var(--ink); }
+html.paper .rungs li em { font-family: var(--display); font-weight: 600; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; }
+
+/* The films: a full-width band of space. */
+html.paper #screens { max-width: none; padding-left: max(var(--gutter), calc(50% - 600px + var(--gutter))); padding-right: max(var(--gutter), calc(50% - 600px + var(--gutter))); background: #05070d; }
+html.paper #screens .lede { color: #c9d2de; opacity: 1; }
+html.paper .compare, html.paper .trailer { border-radius: 4px; box-shadow: none; }
+html.paper .compare-label { border-radius: 3px; font-family: var(--display); font-weight: 600; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; }
+
+html.paper .together .roadmap li, html.paper .card, html.paper .tile { border-radius: var(--radius); background: var(--surface); box-shadow: none; }
+html.paper .tile:hover, html.paper .card.link:hover { border-color: var(--fg); transform: none; }
+
+/* The closing call: a window of deep space with one line in it. */
+html.paper .cta-inner { border-radius: 4px; border: 0; background: radial-gradient(70% 140% at 50% 0%, rgba(61, 255, 176, 0.14), transparent 70%), #05070d; }
+html.paper .cta p { font-family: var(--serif); font-style: italic; }
+
+html.paper .site-footer { background: #05070d; border-top: 0; }
+html.paper .site-footer h2 { font-family: var(--display); font-weight: 600; letter-spacing: 0.26em; }
+html.paper .site-footer .brand-mark { color: var(--accent); }
+
+/* --- A ship's page ------------------------------------------------------------------------------- */
+
+/* Her plate: a sheet of drafting paper with a fine grid; when she's lit the sheet goes dark behind her. */
+html.paper body:not(.edition-body, .build-body, .press-item) .ship-view { border-radius: 4px; border-color: var(--border-strong); transition: border-color 1s; }
+html.paper .ship-page .ship-view { background: repeating-linear-gradient(0deg, transparent 0 23px, rgba(27, 30, 37, 0.06) 23px 24px), repeating-linear-gradient(90deg, transparent 0 23px, rgba(27, 30, 37, 0.06) 23px 24px), #fbf9f4; }
+html.paper .ship-view .fallback { stroke: var(--ink); }
+html.paper .ship-view.lit { border-color: #05070d; }
+/* Space behind her, fading in as she's lit (under the canvas, which comes after it). */
+html.paper .ship-page .ship-view::before { content: ''; position: absolute; inset: 0; background: #04060b; opacity: 0; transition: opacity 1.2s ease; pointer-events: none; }
+html.paper .ship-page .ship-view.lit::before { opacity: 1; }
+html.paper .ship-light {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: rgba(251, 249, 244, 0.9);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.6s, color 0.6s, border-color 0.6s;
+}
+html.paper .ship-view.lit .ship-light { background: rgba(5, 7, 13, 0.7); color: #eef2f6; border-color: rgba(255, 255, 255, 0.2); }
+html.paper .ship-page .ship-view::after {
+  content: 'FIG. 1';
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  font: 600 11px var(--display);
+  letter-spacing: 0.26em;
+  color: var(--muted);
+  pointer-events: none;
+  transition: opacity 0.8s;
+}
+html.paper .ship-page .ship-view.lit::after { opacity: 0; }
+html.paper .ship-copy h1 { font-family: var(--display); font-weight: 600; letter-spacing: -0.015em; }
+html.paper .ship-stats { gap: 0; border-top: 2px solid var(--ink); }
+html.paper .ship-stats div { border: 0; border-bottom: 1px solid var(--border); border-radius: 0; background: transparent; padding: 10px 2px; }
+html.paper .ship-stats dt { font-family: var(--display); font-weight: 600; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; }
+html.paper .ship-stats dd { font-family: var(--display); font-size: 22px; letter-spacing: -0.01em; }
+html.paper .ship-columns .card { background: transparent; border: 0; border-top: 2px solid var(--ink); border-radius: 0; padding: 18px 0 0; }
+html.paper .ship-columns .card h3 { font-size: 22px; }
+
+/* --- Your callsign ------------------------------------------------------------------------------- */
+
+/* The card is a metal card on a desk: it keeps its own dark face, and casts a real shadow on the paper. */
+html.paper .cs-card { box-shadow: 0 28px 50px -18px rgba(22, 24, 29, 0.45), 0 2px 6px rgba(22, 24, 29, 0.12); }
+html.paper .cs-head h1 { font-size: clamp(30px, 3.6vw, 44px); }
+html.paper .cs-lede, html.paper .cs-hint { font-family: var(--serif); }
+html.paper .cs-scene-pick { opacity: 1; border-radius: 3px; border: 2px solid transparent; }
+html.paper .cs-scene-pick[aria-pressed='true'] { border-color: var(--ink); }
+html.paper .cs-tabs button { font-family: var(--display); font-weight: 600; letter-spacing: 0.04em; }
+html.paper .cs-tabs button[aria-pressed='true'] { border-bottom: 2px solid var(--ink); }
+html.paper .cs-email input { border-radius: 4px; background: var(--surface); color: var(--fg); }
+html.paper .cs-note.warn { color: #8a4b00; }
+html.paper .cs-actions .button:disabled { background: transparent; color: var(--muted); border: 1px solid var(--border-strong); opacity: 1; }
+html.paper .cs-earn-section .cs-earn-head { font: 600 12px var(--display); letter-spacing: 0.26em; color: var(--muted); border-top: 2px solid var(--ink); padding-top: 18px; }
+html.paper .cs-earn-note p, html.paper .cs-earn-section > p { font-family: var(--serif); }
+
+/* --- Showrooms at night: a numbered edition's page, the configurator, and a film or picture's own page ------------------------- */
+
+html.paper body:is(.edition-body, .build-body, .press-item) { background: #05070d; font-family: var(--font); font-size: 17px; }
+html.paper body:is(.edition-body, .build-body, .press-item) .site-header { background: rgba(5, 7, 13, 0.86); border-bottom-color: var(--border); }
+html.paper body:is(.edition-body, .build-body, .press-item) .site-header .brand, html.paper body:is(.edition-body, .build-body, .press-item) .site-header .brand:hover { color: var(--fg); }
+html.paper body:is(.edition-body, .build-body, .press-item) .lede { color: var(--muted); opacity: 1; }
+html.paper body:is(.edition-body, .build-body, .press-item) .card { background: var(--surface); }
+html.paper body:is(.edition-body, .build-body, .press-item) main a:not(.button) { color: var(--accent); }
+html.paper body:is(.edition-body, .build-body, .press-item) a.button:not(.primary) { color: var(--fg); }
+html.paper .build-bar { background: rgba(5, 7, 13, 0.92); }
+
+/* --- Jobs and the companies: each company's colour, deepened so it reads on paper ------------------ */
+
+html.paper :is(.offer-what .co, .offer-fit, .motto, .job .meta, .job .apply, .standing-ladder b, .terms .last, .firm-ads h3 a:hover) { color: color-mix(in oklab, var(--c) 55%, #16181d); opacity: 1; }
+html.paper .firm-mark { color: color-mix(in oklab, var(--c) 55%, #16181d); border-color: color-mix(in oklab, var(--c) 70%, #16181d); }
+html.paper .offer { background: var(--surface); border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0 4px 4px 0; }
+html.paper .offer .risk { background: rgba(154, 90, 0, 0.1); }
+html.paper .offer .risk.high { background: rgba(179, 38, 30, 0.1); }
+html.paper .terms { background: var(--surface-2); }
+html.paper .board .chip[data-filter-company][aria-pressed='true'] { color: #16181d; }
+
+/* --- Tags and skills: their colours, deepened --------------------------------------------------------- */
+
+html.paper .skill.writing { color: #8a3aa3; }
+html.paper .skill.code { color: #3550b0; }
+html.paper .tag.building { background: rgba(11, 122, 85, 0.08); }
+
+/* --- Text boxes: paper, not holes in it ------------------------------------------------------------ */
+
+html.paper :is(.idea-form input, .idea-form textarea, .submit-step input, .submit-step textarea, .submit-step select, .editor-tools select, .cs-email input) { background: #fffdf8; color: var(--fg); border-radius: 4px; }
+
+/* --- The phone's menu: paper too ----------------------------------------------------------------------- */
+
+html.paper .site-menu { background: rgba(244, 241, 234, 0.98); }
+
+/* --- Odds and ends: light text written for the dark ------------------------------------------------ */
+
+html.paper .ticks li { color: var(--fg); }
+html.paper .ticks li::before { filter: saturate(0.6) brightness(0.7); }
+html.paper .terms { color: #4b515c; }
+
+/* The fleet's cards: each ship an ink drawing on the paper, not a glow. */
+html.paper .ship-svg path { stroke: var(--ink); filter: none; }
+html.paper .ship-svg path.detail { stroke: #6a707c; opacity: 1; }
+html.paper .ship-card:hover .ship-svg path { filter: none; stroke: color-mix(in oklab, var(--ship) 45%, var(--ink)); }
+/* A viewer anywhere but a ship's own page is a window of space. */
+html.paper .ship-view:not(.ship-page .ship-view) { background: #04060b; border-color: #04060b; }
+html.paper body:is(.edition-body, .build-body, .press-item) .ship-view::after, html.paper body:is(.edition-body, .build-body, .press-item) .ship-view::before { display: none; }
+
+/* --- The galaxy's charts: printed in ink, like a chart in the manual --------------------------------- */
+
+html.paper .sys-map { background: #fbf9f4; border-color: var(--border-strong); border-radius: 4px; }
+html.paper .sys-map figcaption { font-family: var(--serif); font-style: italic; }
+html.paper .sys-chart circle { fill: var(--ink); }
+html.paper .sys-chart circle.reach { fill: #0d6987; }
+html.paper .sys-chart circle.here { fill: #0b7a55; filter: none; }
+html.paper .sys-chart circle.jump { fill: none; stroke: rgba(11, 122, 85, 0.6); }
+html.paper .sys-chart line { stroke: rgba(13, 105, 135, 0.55); }
+html.paper .sys-chart text { fill: #4b515c; font-family: var(--display); }
+html.paper .sys-chart text.here, html.paper .sys-chart a[aria-current] text { fill: var(--ink); font-weight: 700; }
+html.paper .sys-chart a:hover text { fill: var(--ink); }
+html.paper .sys-chart a:hover circle { fill: #0b7a55; }
+html.paper .galaxy-chart circle { fill: #3d424c; }
+/* Headlines that link (the news to its system's page) read as headlines, in ink; the link shows on hover. */
+html.paper .now-card .headline a { color: var(--fg); text-decoration: none; }
+html.paper .now-card .headline a:hover { text-decoration: underline; }
+html.paper .site-menu a:not(.button) { color: var(--fg); font-family: var(--display); font-weight: 500; }
+
+/* --- An owner's manual: printed, her colour deepened to read as ink on the page -------------------- */
+
+html.paper .manual-page .man-cover h1 { color: var(--fg); text-shadow: none; }
+html.paper :is(.manual-page .man-cover .kicker, .manual h3, .man-table td:last-child) { color: color-mix(in oklab, var(--hull) 45%, #16181d); }
+html.paper .manual-page .man-cover { border-bottom-color: var(--ink); }
+/* Sections on the same paper sit closer: the dark site's big gaps read as blank paper here (Marketing). */
+html.paper .section { padding-top: clamp(40px, 6vw, 72px); padding-bottom: clamp(40px, 6vw, 72px); }
+html.paper .section + .section:not(#screens) { padding-top: clamp(16px, 3vw, 32px); }

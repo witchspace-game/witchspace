@@ -1,7 +1,8 @@
 import type { ShipDef } from '../content/types';
 import { API as SPACE } from '../net/account';
 import { escapeHtml } from '../ui/escape';
-import { viewer } from './viewer';
+import { onPaper } from './ink';
+import { viewer, type Viewer } from './viewer';
 
 // A ship's page: the ship turning in neo-vector (drag to turn it), and the
 // ideas board's suggestions that mention it. The page itself is built from
@@ -12,10 +13,35 @@ const canvas = view.querySelector<HTMLCanvasElement>('.ship-canvas')!;
 const def = JSON.parse(document.querySelector('#ship-def')!.textContent!) as ShipDef;
 
 try {
-  viewer(canvas).show(def);
+  const v = viewer(canvas, { ink: true });
+  v.show(def);
   view.classList.add('live'); // the drawing gives way to the live model
+  if (onPaper()) lightSwitch(v);
 } catch {
   // No WebGL: the drawing stays.
+}
+
+// On paper she's first a drawing, as in her manual; a moment after she's in view she catches light and
+// flies, and the switch takes her back to the drawing and out again.
+function lightSwitch(v: Viewer) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'ship-light';
+  view.append(button);
+  const set = (on: boolean) => {
+    v.light(on);
+    view.classList.toggle('lit', on);
+    button.textContent = on ? 'The drawing' : 'Light her up';
+    button.setAttribute('aria-pressed', String(on));
+  };
+  set(false);
+  button.addEventListener('click', () => set(!view.classList.contains('lit')));
+  const seen = new IntersectionObserver(([e]) => {
+    if (!e.isIntersecting) return;
+    seen.disconnect();
+    setTimeout(() => set(true), 1600);
+  }, { threshold: 0.6 });
+  seen.observe(view);
 }
 
 // --- Its special editions: how many are left, from the server ---------------------------------

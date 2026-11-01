@@ -3,6 +3,7 @@
 // vote from it; Cloudflare Turnstile checks posters are human.
 
 import { escapeHtml } from '../ui/escape';
+import { onPaper } from './onPaper';
 
 const API = import.meta.env.DEV ? 'http://127.0.0.1:8787/ideas' : 'https://space.witchspace.org.uk/ideas';
 /** Turnstile's public site key; empty skips the check (local development). */
@@ -143,7 +144,7 @@ if (TURNSTILE_SITE_KEY) {
   (window as unknown as Record<string, unknown>).onTurnstileLoad = () => {
     widget = turnstile?.render(document.querySelector('#turnstile')!, {
       sitekey: TURNSTILE_SITE_KEY,
-      theme: 'dark',
+      theme: onPaper() ? 'light' : 'dark',
       callback: (t: string) => (turnstileToken = t),
       'expired-callback': () => (turnstileToken = ''),
     });

@@ -1,12 +1,9 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ships } from '../content/ships';
-import { GLOW, MAX_PIXEL_RATIO, STARS } from '../render/look';
+import { MAX_PIXEL_RATIO, STARS } from '../render/look';
 import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
+import { glow } from './glow';
 
 // The home page hero: the game's own ships, flying in one after another and
 // turning slowly, in neo-vector style.
@@ -71,12 +68,7 @@ function show(i: number) {
 }
 show(index);
 
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
-bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
-composer.addPass(bloom);
-composer.addPass(new OutputPass());
+const { composer } = glow(renderer, scene, camera);
 
 // Where the model goes: the clear space beside the headline if there's room,
 // otherwise above it, measured from the page itself, so it never meets the

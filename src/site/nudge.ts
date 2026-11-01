@@ -35,11 +35,7 @@ function offer() {
   } catch {
     // Storage blocked: it may come again on another visit, and that's all.
   }
-  // The callsign in the game's own type, as on the card.
-  const font = document.createElement('link');
-  font.rel = 'stylesheet';
-  font.href = 'https://fonts.googleapis.com/css2?family=Rajdhani:wght@600&display=swap';
-  document.head.append(font);
+  // The callsign in the game's own type, as on the card: Rajdhani, served with the site's fonts (fonts.css).
   const el = document.createElement('aside');
   el.className = 'cs-nudge';
   el.setAttribute('aria-label', 'Claim your callsign');

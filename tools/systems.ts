@@ -179,6 +179,8 @@ function galaxyChart(famous: string[]): string {
 /** `famous`: the systems with words of their own, labelled on the chart so it says "click me". */
 export function galaxyHub(famous: string[]) {
   const sorted = [...SYSTEMS].sort((x, y) => x.name.localeCompare(y.name));
+  // Grouped by first letter, with a row to jump between them: 256 names in one column is two dozen screens on a phone (Marketing).
+  const letters = [...new Set(sorted.map((s) => s.name[0]))];
   return {
     title: 'The galaxy right now: 256 star systems | Witchspace',
     description: 'Every star system in Witchspace’s first galaxy: its government, economy and people, and what’s happening there right now. Fly free in your browser.',
@@ -190,8 +192,16 @@ export function galaxyHub(famous: string[]) {
     <p class="muted">This is the first of eight galaxies. Choose any world on the chart.</p>
   </div>
   <figure class="sys-map wide">${galaxyChart(famous)}</figure>
-  <h2>Every system, A to Z</h2>
-  <ul class="galaxy-list">${sorted.map((s) => `<li><a href="${systemUrl(s.name)}">${esc(s.name)}</a> <small>${esc(kindOf(s))}</small></li>`).join('')}</ul>
+  <h2 id="a-to-z">Every system, A to Z</h2>
+  <nav class="galaxy-letters" aria-label="Jump to a letter">${letters.map((l) => `<a href="#letter-${l}">${l}</a>`).join('')}</nav>
+  ${letters
+    .map(
+      (l) => `<section class="galaxy-letter" id="letter-${l}"><h3>${l}</h3><ul class="galaxy-list">${sorted
+        .filter((s) => s.name[0] === l)
+        .map((s) => `<li><a href="${systemUrl(s.name)}">${esc(s.name)}</a> <small>${esc(kindOf(s))}</small></li>`)
+        .join('')}</ul></section>`,
+    )
+    .join('\n  ')}
 </section>`,
     list: sorted,
   };

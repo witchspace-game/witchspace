@@ -70,6 +70,7 @@ A parking spot for good ideas that aren't designed yet. When one is picked up, i
 - **The ejected science pod.** A Titanoboa's science module can eject its containment pod if something goes wrong; it drifts towards the planet on a clock, and commanders choose: recover it for the Science Division, destroy it for the colony, return it quietly to Wexley-Yorozu, or sell what's inside. *See design/ship-the-titanoboa.md.* (Mark, 25 October 2026)
 - **Witchspace MCP server.** Tools for AI assistants to validate, preview and balance-check content. *Designed: see design/mcp-server.md.*
 - **In-browser ship editor.** Design a ship visually and export a valid ship file.
+- **The website on paper: paper by day, space by night.** The site's pages become printed matter: a warm paper background, near-black type, a serif to read and a mono for labels, like an owner's manual. Dark, glowing sections stay only where you look into space (the hero, the films, the closing call). On paper a ship is an ink line drawing, her hidden edges hidden, and she catches light and glows when you reach for her, so the glow keeps meaning "you're in space". A mock-up is behind `?look=paper` on the site. (Mark, 1 November 2026: "a traditional really clean paper or white background with traditional dark copy works much better and is much easier on the eyes")
 
 ## Play anywhere
 
