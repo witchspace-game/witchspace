@@ -36,6 +36,7 @@ export function inkable(model: ShipModel): (t: number) => void {
     // Darkened as it looks, not as it's stored, so the paper fades with the plate behind her (2.2: the screen's curve).
     flat.color.copy(PAPER_FILL).multiplyScalar((1 - t) ** 2.2);
     if (fill && own) fill.material = t >= 1 ? own : flat;
+    model.root.userData.lights = t; // the law's lights and band (livery.ts) come on as she's lit; a drawing has none
   };
 }
 
