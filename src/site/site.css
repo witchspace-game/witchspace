@@ -1884,3 +1884,52 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 @media (max-width: 600px) {
   .galaxy-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
 }
+
+/* --- The careers as a deck of callsign cards (tools/careerDeck.ts, src/site/careerDeck.ts) ---------- */
+
+.careers { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
+.deck { position: relative; aspect-ratio: 1.75; perspective: 1400px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.deck-card {
+  position: absolute; left: 0; top: 50%; width: 72%; aspect-ratio: 1200 / 630; padding: 0; border: 0; border-radius: 4.5% / 8.6%; overflow: hidden; cursor: pointer;
+  container-type: inline-size; color: #eef3fa; text-align: left; font: inherit;
+  background: linear-gradient(90deg, rgba(3, 5, 10, 0.86) 0%, rgba(3, 5, 10, 0.45) 45%, rgba(3, 5, 10, 0.1) 100%), var(--scene) center / cover no-repeat, #04060b;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent), 0 0 28px -8px color-mix(in srgb, var(--c) 55%, transparent);
+  transform-origin: 100% 50%; transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.75s, filter 0.75s;
+}
+/* The front card large; the others behind it to the right, each smaller, more tilted and dimmer. */
+.deck-card[data-pos='0'] { z-index: 4; transform: translateY(-50%); }
+.deck-card[data-pos='1'] { z-index: 3; transform: translate(12%, -50%) scale(0.88) rotate(3deg); filter: brightness(0.8); }
+.deck-card[data-pos='2'] { z-index: 2; transform: translate(23%, -50%) scale(0.77) rotate(6deg); filter: brightness(0.62); }
+.deck-card[data-pos='3'] { z-index: 1; transform: translate(33%, -50%) scale(0.67) rotate(9deg); filter: brightness(0.46); }
+.deck-card:focus-visible { outline: 2px solid var(--c); outline-offset: 4px; }
+.deck-brand { position: absolute; left: 6%; top: 10%; display: flex; align-items: center; gap: 1.1cqw; font: 700 1.7cqw var(--display); letter-spacing: 0.34em; color: rgba(238, 243, 250, 0.9); }
+.deck-brand svg { width: 2.8cqw; height: 2.8cqw; fill: none; stroke: var(--c); stroke-width: 2.2; stroke-linejoin: round; }
+.deck-ship { position: absolute; right: 7%; top: 18%; width: 38%; height: auto; overflow: visible; }
+.deck-ship path { fill: none; stroke: var(--c); stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 1.5px var(--c)) drop-shadow(0 0 5px var(--c)); }
+.deck-ship path.detail { opacity: 0.8; }
+.deck-copy { position: absolute; left: 6%; bottom: 13%; display: flex; flex-direction: column; }
+.deck-cmdr { color: rgba(185, 198, 216, 0.8); font: 600 1.3cqw var(--font); letter-spacing: 0.32em; }
+.deck-name { margin: 0.4cqw 0 1cqw; color: rgba(238, 243, 250, 0.55); font: 600 5.4cqw/1.05 'Rajdhani', var(--display); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px dashed rgba(255, 255, 255, 0.22); }
+.deck-sub { color: rgba(205, 214, 228, 0.85); font: 500 1.8cqw var(--font); }
+/* Without the script the four sit fanned and every ladder shows; with it, only the front career's. */
+.deck:not(.live) + .careers-side .ladders { grid-template-columns: 1fr 1fr; }
+.careers-side .ladders { grid-template-columns: 1fr; }
+.careers-side .ladder[hidden] { display: none; }
+@media (max-width: 860px) {
+  .careers { grid-template-columns: minmax(0, 1fr); }
+  .deck { aspect-ratio: 1.6; }
+  .deck-card { width: 74%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .deck-card { transition: none; }
+}
+
+/* Founding members until launch: one thin line over the header (src/site/founding.ts). */
+.founding-strip { position: relative; z-index: 11; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 7px 44px; background: #3dffb0; color: #04140d; font: 500 14px/1.35 var(--font); text-align: center; }
+.founding-strip[hidden] { display: none; }
+html .founding-strip a[href], html .founding-strip a[href]:hover { color: #04140d; text-decoration: none; }
+.founding-strip a:hover b { text-decoration: underline; }
+.founding-close { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; }
+body.home .founding-strip { position: fixed; top: 0; left: 0; right: 0; }
+body.home:has(.founding-strip:not([hidden])) .site-header { top: var(--strip, 34px); }
+body.home:has(.founding-strip:not([hidden])) main { margin-top: var(--strip, 34px); }

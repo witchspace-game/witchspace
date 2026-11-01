@@ -1,4 +1,4 @@
-<!-- {"path": "/", "title": "Witchspace: a love letter to Elite", "description": "A free, open-source space game in your browser. Trade, fight, explore and build in eight galaxies of glowing vector space, a love letter to Elite (1984).", "scripts": ["/src/site/hero.ts", "/src/site/home.ts", "/src/site/live.ts", "/src/site/youtube.ts"], "bodyClass": "home"} -->
+<!-- {"path": "/", "title": "Witchspace: a love letter to Elite", "description": "A free, open-source space game in your browser. Trade, fight, explore and build in eight galaxies of glowing vector space, a love letter to Elite (1984).", "scripts": ["/src/site/hero.ts", "/src/site/careerDeck.ts", "/src/site/home.ts", "/src/site/live.ts", "/src/site/youtube.ts"], "bodyClass": "home"} -->
 <section class="hero">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="hero-glow" aria-hidden="true"></div>
@@ -85,19 +85,24 @@
     <h2>Trade, fight, explore, or build?</h2>
     <p class="lede">Every commander starts the same way: 100 credits and a Cobra at Lave. Where you go from there is up to you.</p>
   </div>
-  <div class="ladders">
-    <div class="ladder"><p class="verb">Trade</p><h3>Trader to trading house</h3><p>Buy low, sell high, read the news, and work the markets from the dock.</p>
-      <ol class="rungs"><li class="in">Hauler</li><li class="in">Company contractor</li><li class="building">Merchant <em>being built</em></li><li class="planned top">Trading house <em>planned</em></li></ol></div>
-    <div class="ladder"><p class="verb">Fight</p><h3>Harmless to Elite</h3><p>Hunt pirates for bounties, or join the Marshals and fly a Lancer of your own.</p>
-      <ol class="rungs"><li class="in">Harmless</li><li class="in">Dangerous</li><li class="planned">Marshal <em>planned</em></li><li class="in top">Elite</li></ol></div>
-    <div class="ladder"><p class="verb">Explore</p><h3>Tourist to Voyager</h3><p>Survey worlds, follow trails, and put your callsign on the chart.</p>
-      <ol class="rungs"><li class="in">Tourist</li><li class="in">Surveyor</li><li class="in">First discoverer</li><li class="in top">Voyager</li></ol></div>
-    <div class="ladder"><p class="verb">Build</p><h3>Contributor to station charter</h3><p>Supply the yards, design ships and stories, and earn a station of your own.</p>
-      <ol class="rungs"><li class="in">Contributor</li><li class="building">Credited designer <em>being built</em></li><li class="planned">Guild <em>planned</em></li><li class="planned top">Station charter <em>planned</em></li></ol></div>
-  </div>
-  <div class="ladder-foot">
-    <div class="key"><span class="in">In the game</span><span class="building">Being built</span><span>Planned</span></div>
-    <div><a class="button primary" href="/play/">Start your career</a> <a class="button ghost" href="/jobs/">Who's hiring</a></div>
+  <div class="careers">
+    <!-- careers:deck -->
+    <div class="careers-side">
+      <div class="ladders">
+        <div class="ladder" data-career="trade"><p class="verb">Trade</p><h3>Trader to trading house</h3><p>Buy low, sell high, read the news, and work the markets from the dock.</p>
+          <ol class="rungs"><li class="in">Hauler</li><li class="in">Company contractor</li><li class="building">Merchant <em>being built</em></li><li class="planned top">Trading house <em>planned</em></li></ol></div>
+        <div class="ladder" data-career="fight"><p class="verb">Fight</p><h3>Harmless to Elite</h3><p>Hunt pirates for bounties, or join the Marshals and fly a Lancer of your own.</p>
+          <ol class="rungs"><li class="in">Harmless</li><li class="in">Dangerous</li><li class="in">Elite</li><li class="planned top">Marshal <em>planned</em></li></ol></div>
+        <div class="ladder" data-career="explore"><p class="verb">Explore</p><h3>Tourist to Voyager</h3><p>Survey worlds, follow trails, and put your callsign on the chart.</p>
+          <ol class="rungs"><li class="in">Tourist</li><li class="in">Surveyor</li><li class="in">First discoverer</li><li class="in top">Voyager</li></ol></div>
+        <div class="ladder" data-career="build"><p class="verb">Build</p><h3>Contributor to station charter</h3><p>Supply the yards, design ships and stories, and earn a station of your own.</p>
+          <ol class="rungs"><li class="in">Contributor</li><li class="building">Credited designer <em>being built</em></li><li class="planned">Guild <em>planned</em></li><li class="planned top">Station charter <em>planned</em></li></ol></div>
+      </div>
+      <div class="ladder-foot">
+        <div class="key"><span class="in">In the game</span><span class="building">Being built</span><span>Planned</span></div>
+        <div><a class="button primary" id="career-cta" href="/callsign/?career=trade">Make this card yours</a> <a class="button ghost" href="/jobs/">Who's hiring</a></div>
+      </div>
+    </div>
   </div>
 </section>
 

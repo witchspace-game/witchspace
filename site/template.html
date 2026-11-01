@@ -36,6 +36,11 @@
   </head>
   <body class="{{bodyClass}}">
     <a class="skip" href="#main">Skip to content</a>
+    <!-- Founding members until launch (src/site/founding.ts shows it, until it's dismissed or launch passes). -->
+    <div class="founding-strip" id="founding-strip" hidden>
+      <a href="/callsign/?from=strip">Founding members until 3 November: <b>claim your callsign</b> →</a>
+      <button type="button" class="founding-close" aria-label="Dismiss">×</button>
+    </div>
     <header class="site-header">
       <a class="brand" href="/" aria-label="Witchspace home">
         <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M4 18 L12 9 L20 9 L28 18 L18 23 L14 23 Z M12 9 L14 23 M20 9 L18 23" /></svg>

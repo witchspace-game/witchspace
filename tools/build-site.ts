@@ -13,6 +13,7 @@ import { companiesHub, companyPage, jobsPage, loadJobs } from './jobs';
 import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
 import { buildPage, editionPage, groupShips, manualPage, papersPage, shipPage, shipsIndex } from './ships';
 import { galaxyHub, SYSTEMS, systemPage } from './systems';
+import { careerDeck } from './careerDeck';
 import { systemUrl } from '../src/site/systemNow';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
 import { CAREERS, careerLine } from '../src/site/callsignWords';
@@ -141,7 +142,7 @@ function render(page: Page): string {
   }).join('\n        ');
   // Every page can be shared (src/site/share.ts), so every page loads it; and every page may offer the callsign
   // card once, on a computer, as a visitor leaves (src/site/nudge.ts).
-  const scripts = [...new Set([...(page.scripts ?? []), '/src/site/share.ts', '/src/site/nav.ts', '/src/site/analytics.ts', '/src/site/nudge.ts'])].map((src) => `    <script type="module" src="${src}"></script>`).join('\n');
+  const scripts = [...new Set([...(page.scripts ?? []), '/src/site/share.ts', '/src/site/nav.ts', '/src/site/analytics.ts', '/src/site/nudge.ts', '/src/site/founding.ts'])].map((src) => `    <script type="module" src="${src}"></script>`).join('\n');
   return template
     .replaceAll('{{title}}', escapeAttr(page.title))
     .replaceAll('{{description}}', escapeAttr(page.description))
@@ -178,6 +179,7 @@ function write(page: Page) {
 // --- Hand-written pages ---------------------------------------------------------
 
 const docs = loadDocs(root);
+const fleet = loadShips(root);
 
 for (const name of readdirSync(join(root, 'site/pages'))) {
   const html = readFileSync(join(root, 'site/pages', name), 'utf8');
@@ -191,6 +193,7 @@ for (const name of readdirSync(join(root, 'site/pages'))) {
     .replace('<!-- roadmap:compact -->', roadmapCompactHtml(docs))
     .replace('<!-- help:skills -->', helpSkillsHtml(docs))
     .replace('<!-- economy:currencies -->', currencyExamplesHtml())
+    .replace('<!-- careers:deck -->', () => careerDeck(fleet.find((sh) => sh.id === 'cobra-mk3')!))
     // {{media:<id>:large}} and the like: a press item's link at a given size.
     .replace(/\{\{media:([\w-]+):(large|og|direct|video|embed)\}\}/g, (_, id: string, size: 'large' | 'og' | 'direct' | 'video' | 'embed') => links(media, media.items.find((i) => i.id === id)!)[size]!);
   write({ ...meta, content });
