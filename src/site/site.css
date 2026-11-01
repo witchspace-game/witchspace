@@ -1884,3 +1884,83 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 @media (max-width: 600px) {
   .galaxy-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
 }
+
+/* --- The careers as a deck of callsign cards (tools/careerDeck.ts, src/site/careerDeck.ts) ---------- */
+
+.careers { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
+.deck-wrap { max-width: 480px; }
+/* A real card's shape (85.6 × 54 mm, as a bank card), not the share picture's 1200 × 630, which reads as too wide for a card in the hand (Mark). */
+.deck { position: relative; aspect-ratio: 85.6 / 54; perspective: 1200px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.deck-card {
+  position: absolute; inset: 0; width: 100%; padding: 0; border: 0; border-radius: 4.5% / 8.6%; overflow: hidden; cursor: pointer;
+  container-type: inline-size; color: #eef3fa; text-align: left; font: inherit; backface-visibility: hidden;
+  background: linear-gradient(90deg, rgba(3, 5, 10, 0.86) 0%, rgba(3, 5, 10, 0.45) 45%, rgba(3, 5, 10, 0.1) 100%), var(--scene) 50% 100% / var(--crop, cover) no-repeat, #04060b;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent), 0 0 28px -8px color-mix(in srgb, var(--c) 55%, transparent);
+  /* Waiting, edge on to the right; it turns in to the front, and the one it replaces turns away to the left. */
+  /* Fully opaque through the turn: the edge-on moment does the hiding (visibility flips only once she's edge on). */
+  transform: rotateY(90deg); visibility: hidden; pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.5, 0, 0.75, 0), visibility 0s 0.3s;
+}
+.deck-card[data-pos='0'] { transform: none; visibility: visible; pointer-events: auto; transition: transform 0.32s cubic-bezier(0.25, 1, 0.5, 1) 0.3s, visibility 0s 0.3s; }
+.deck-card.leaving { transform: rotateY(-90deg); visibility: visible; }
+.deck-card.waiting { transition: none; }
+.deck-card:focus-visible { outline: 2px solid var(--c); outline-offset: 4px; }
+.deck-brand { position: absolute; left: 6%; top: 9%; display: flex; align-items: center; gap: 1.1cqw; font: 700 1.9cqw var(--display); letter-spacing: 0.34em; color: rgba(238, 243, 250, 0.9); }
+.deck-brand svg { width: 2.8cqw; height: 2.8cqw; fill: none; stroke: var(--c); stroke-width: 2.2; stroke-linejoin: round; }
+.deck-ship { position: absolute; right: 6%; top: 20%; width: 42%; height: auto; overflow: visible; }
+.deck-ship path { fill: none; stroke: var(--c); stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 1.5px var(--c)) drop-shadow(0 0 5px var(--c)); }
+.deck-ship path.detail { opacity: 0.8; }
+.deck-copy { position: absolute; left: 6%; bottom: 13%; display: flex; flex-direction: column; }
+.deck-cmdr { color: rgba(185, 198, 216, 0.8); font: 600 1.5cqw var(--font); letter-spacing: 0.32em; }
+.deck-name { margin: 0.4cqw 0 1cqw; color: rgba(238, 243, 250, 0.55); font: 600 6cqw/1.05 'Rajdhani', var(--display); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px dashed rgba(255, 255, 255, 0.22); }
+.deck-sub { color: rgba(205, 214, 228, 0.85); font: 500 2.1cqw var(--font); }
+.deck-row { display: flex; justify-content: center; gap: 4px 22px; flex-wrap: wrap; margin-top: 18px; }
+.deck-row button { padding: 4px 0; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font: 600 12px var(--display); letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer; }
+.deck-row button:hover { color: var(--fg); }
+.deck-row button[aria-current='true'] { color: color-mix(in oklab, var(--c) 80%, var(--fg)); border-bottom-color: var(--c); }
+/* Without the script the four sit fanned and every ladder shows; with it, only the front career's. */
+.careers-side .ladders { grid-template-columns: 1fr; }
+.careers-side .ladders { display: grid; }
+.careers-side .ladder { grid-area: 1 / 1; }
+.careers-side .ladder[hidden] { display: block; visibility: hidden; }
+@media (max-width: 860px) {
+  .careers { grid-template-columns: minmax(0, 1fr); }
+  .deck-wrap { max-width: none; }
+}
+/* Reduced motion: a plain crossfade, no turning. */
+@media (prefers-reduced-motion: reduce) {
+  .deck-card, .deck-card.leaving, .deck-card[data-pos='0'] { transform: none; visibility: visible; transition: opacity 0.35s; }
+  .deck-card { opacity: 0; }
+  .deck-card[data-pos='0'] { opacity: 1; }
+}
+
+/* Founding members until launch: one thin line over the header (src/site/founding.ts). */
+.founding-strip { position: relative; z-index: 11; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 7px 44px; background: var(--bg-2); border-bottom: 1px solid var(--border); color: var(--muted); font: 500 14px/1.35 var(--font); text-align: center; }
+.founding-strip[hidden] { display: none; }
+html .founding-strip a[href], html .founding-strip a[href]:hover { color: var(--muted); text-decoration: none; }
+.founding-strip b { color: var(--accent); font-weight: 600; }
+@media (max-width: 480px) { .founding-strip { padding: 7px 40px 7px 12px; font-size: 13px; } .strip-date { display: none; } }
+.founding-strip a:hover b { text-decoration: underline; }
+.founding-close { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
+body.home .founding-strip { position: fixed; top: 0; left: 0; right: 0; }
+body.home:has(.founding-strip:not([hidden])) .site-header { top: var(--strip, 34px); }
+body.home:has(.founding-strip:not([hidden])) main { margin-top: var(--strip, 34px); }
+
+/* A clip, played over the home page (src/site/clipModal.ts): always a window of space, whatever the page. */
+.clip-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(3, 5, 10, 0); transition: background 0.2s; }
+.clip-modal.shown { background: rgba(3, 5, 10, 0.82); }
+html.clip-open { overflow: hidden; }
+.clip-box { position: relative; width: min(960px, 100%); max-height: calc(100svh - 32px); display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; background: #05070d; color: #eef2f6; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6); outline: none; }
+.clip-box.upright { width: min(420px, 100%); }
+.clip-box video { display: block; width: 100%; min-height: 0; flex: 1 1 auto; max-height: calc(100svh - 170px); background: #000; object-fit: contain; }
+.clip-close { position: absolute; top: 10px; right: 10px; z-index: 1; display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgba(5, 7, 13, 0.7); color: #eef2f6; cursor: pointer; }
+.clip-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.clip-foot { padding: 14px 16px 16px; }
+.clip-title { margin: 0 0 10px; font: 600 17px var(--font); color: #eef2f6; }
+.clip-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.clip-modal .button.ghost { color: #eef2f6; border-color: rgba(255, 255, 255, 0.2); background: transparent; }
+.clip-modal .button.primary { background: #3dffb0; color: #04140d; }
+.clip-heart svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.clip-heart[aria-pressed='true'] svg { fill: #ff6b8e; stroke: #ff6b8e; }
+.clip-invite { margin: 12px 0 0; color: #9aa6b6; font: 14px var(--font); }
+.clip-invite a { color: #3dffb0; }

@@ -304,3 +304,8 @@ html.paper .manual-page .man-cover { border-bottom-color: var(--ink); }
 /* Sections on the same paper sit closer: the dark site's big gaps read as blank paper here (Marketing). */
 html.paper .section { padding-top: clamp(40px, 6vw, 72px); padding-bottom: clamp(40px, 6vw, 72px); }
 html.paper .section + .section:not(#screens) { padding-top: clamp(16px, 3vw, 32px); }
+
+/* The deck on paper: dark cards, windows into space, lying on the desk with a paper shadow. */
+html.paper .deck-card { box-shadow: 0 22px 36px -16px rgba(22, 24, 29, 0.5), 0 2px 5px rgba(22, 24, 29, 0.15); }
+html.paper .careers-side .ladders { border-top: 2px solid var(--ink); }
+html.paper .careers-side .ladder { border-right: 0; }
