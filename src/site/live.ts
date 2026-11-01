@@ -17,6 +17,7 @@ import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 import { escapeHtml } from '../ui/escape';
 import { boardAt, LAVE } from './board';
+import { systemUrl } from './systemNow';
 import { chartedWhat, clipTitle, commanderLines, EMPTY, featuredClip, flyingLine, parseFeed, type CommanderLine, type Feed } from './feed';
 
 // The home page's live galaxy: the news around Lave, the nearest shipyard, a
@@ -65,7 +66,7 @@ interface Line {
 function commanderLine(c: CommanderLine, now: number): Line {
   if (c.kind === 'clip')
     return { key: `clip:${c.id}`, t: c.t, tag: 'Commander', cmdr: true, title: c.title, note: `Clip shared ${ago(now, c.t)}${c.hearts ? ` · ♥ ${c.hearts}` : ''}`, href: `/clip/${c.id}`, pic: clipCard(c.id) };
-  return { key: `first:${c.t}:${c.callsign}:${c.where.galaxy}:${c.where.index}`, t: c.t, tag: 'Commander', cmdr: true, title: `CMDR ${c.callsign} charted ${c.where.name} first`, note: `${chartedWhat(c)} · ${where(c.where)} · ${ago(now, c.t)}` };
+  return { key: `first:${c.t}:${c.callsign}:${c.where.galaxy}:${c.where.index}`, t: c.t, tag: 'Commander', cmdr: true, ...(c.where.galaxy === 0 ? { href: systemUrl(c.where.name) } : {}), title: `CMDR ${c.callsign} charted ${c.where.name} first`, note: `${chartedWhat(c)} · ${where(c.where)} · ${ago(now, c.t)}` };
 }
 
 /** The shortage among these worlds that's pushed a price furthest over the usual, if any is over 5%. */
@@ -106,15 +107,15 @@ function render() {
       ? [{ key: `job:${posted.id}`, t: posted.posted, tag: 'Contracts', title: `${COMPANIES[posted.company].name}: ${posted.survey ? `a moon survey at ${destinationOf(posted).name}` : `${posted.qty} t ${cargoName(posted).toLowerCase()} to ${destinationOf(posted).name}`}`, note: `Posted at Lave ${ago(now, posted.posted)} · ${posted.pay.toLocaleString('en-GB')} Cr`, href: '/jobs/' }]
       : []),
     ...cmdrs.slice(0, 2).map((c) => commanderLine(c, now)),
-    ...ongoing.slice(0, 3).map((n) => ({ key: news(n.event, n.where), t: n.event.start, tag: 'News', title: EVENT_KINDS[n.event.type].headline(n.where.name), note: `${ly(n.where)} · began ${ago(now, n.event.start)} · wanted: ${EVENT_KINDS[n.event.type].wanted}` })),
+    ...ongoing.slice(0, 3).map((n) => ({ key: news(n.event, n.where), t: n.event.start, tag: 'News', href: systemUrl(n.where.name), title: EVENT_KINDS[n.event.type].headline(n.where.name), note: `${ly(n.where)} · began ${ago(now, n.event.start)} · wanted: ${EVENT_KINDS[n.event.type].wanted}` })),
   ].sort((a, b) => b.t - a.t);
   for (const t of trouble.filter((t) => distanceLy(lave, t.s) > RANGE)) {
     if (lines.length >= 5) break;
-    lines.push({ key: news(t.e, t.s), t: t.e.start, tag: 'News', title: EVENT_KINDS[t.e.type].headline(t.s.name), note: `${ly(t.s)}, beyond the news at Lave · began ${ago(now, t.e.start)}` });
+    lines.push({ key: news(t.e, t.s), t: t.e.start, tag: 'News', href: systemUrl(t.s.name), title: EVENT_KINDS[t.e.type].headline(t.s.name), note: `${ly(t.s)}, beyond the news at Lave · began ${ago(now, t.e.start)}` });
   }
   for (const n of heard.filter((n) => now > n.event.end)) {
     if (lines.length >= 5) break;
-    lines.push({ key: news(n.event, n.where), t: n.event.end, tag: 'News', title: EVENT_KINDS[n.event.type].headline(n.where.name), note: `${ly(n.where)} · eased ${ago(now, n.event.end)}`, over: true });
+    lines.push({ key: news(n.event, n.where), t: n.event.end, tag: 'News', href: systemUrl(n.where.name), title: EVENT_KINDS[n.event.type].headline(n.where.name), note: `${ly(n.where)} · eased ${ago(now, n.event.end)}`, over: true });
   }
   $('now-news')!.innerHTML = lines
     .map((l) => {
@@ -159,11 +160,12 @@ function render() {
   // A market in crisis: the worst shortage within reach of Lave right now, or anywhere if there's none.
   const crisis = worst(trouble.filter((t) => distanceLy(lave, t.s) <= RANGE), now) ?? worst(trouble, now);
   if (crisis) {
-    $('now-crisis')!.textContent = `${crisis.good} at ${crisis.where.name}`;
+    $('now-crisis')!.innerHTML = `${escapeHtml(crisis.good)} at ${place(crisis.where)}`;
     $('now-crisis-pct')!.textContent = `+${Math.round(crisis.pct * 100)}%`;
     $('now-crisis-note')!.textContent = 'on the usual price, while the trouble lasts';
     $('now-crisis-meta')!.textContent = `${EVENT_KINDS[crisis.e.type].name} · ${ly(crisis.where)}`;
     $('now-crisis-cta')!.textContent = `Fly ${crisis.good.toLowerCase()} to ${crisis.where.name} →`;
+    ($('now-crisis-cta') as HTMLAnchorElement).href = `/play/?system=${crisis.where.name.toLowerCase()}`;
   }
 
   // The nearest shipyard, and how far along: in news range if there is one, or the nearest anywhere.
@@ -172,7 +174,7 @@ function render() {
   if (yards.length) {
     const { yard, where } = yards[0];
     const done = Math.min(1, (now - yard.start) / (yard.end - yard.start));
-    $('now-yard')!.textContent = where.name;
+    $('now-yard')!.innerHTML = place(where);
     $('now-yard-line')!.textContent = `Wexley-Yorozu's Titan: ${stageInfo(yard.stage).news}.`;
     $('now-yard-bar')!.style.width = `${Math.round(done * 100)}%`;
     $('now-yard-meta')!.textContent = `${ly(where)} · stage ${STAGES.findIndex((s) => s.stage === yard.stage) + 1} of ${STAGES.length} · opens in about ${Math.max(1, Math.ceil((yard.end - now) / 86400000))} days${near.length > 1 ? ` · ${near.length - 1} more within ${RANGE} LY` : ''}`;
@@ -185,7 +187,7 @@ function render() {
   const titan = yards.length ? voyages(yards[0].where, now, now + 30 * 60_000).find((v) => v.to === 'titan') : undefined;
   const run = $('now-titan')!;
   run.hidden = !titan;
-  if (titan) run.innerHTML = `Next for the Titan at ${escapeHtml(yards[0].where.name)}: the Wexley-Yorozu ${escapeHtml(hullName(titan.hull))} <b>${escapeHtml(titan.name)}</b> with ${escapeHtml(cargoWords(titan.cargo))}, ${inMin(titan.at, now)}${titan.escorts ? `, ${titan.escorts} Viper${titan.escorts > 1 ? 's' : ''} alongside` : ''}.`;
+  if (titan) run.innerHTML = `Next for the Titan at ${place(yards[0].where)}: the Wexley-Yorozu ${escapeHtml(hullName(titan.hull))} <b>${escapeHtml(titan.name)}</b> with ${escapeHtml(cargoWords(titan.cargo))}, ${inMin(titan.at, now)}${titan.escorts ? `, ${titan.escorts} Viper${titan.escorts > 1 ? 's' : ''} alongside` : ''}.`;
 
   // The ticker under the hero: a line at a time from all of the above.
   const first = ongoing[0];
@@ -202,13 +204,15 @@ function render() {
 }
 
 const hullName = (id: string) => shipById(id)?.name ?? id;
+/** A system's name, linked to its page (the first galaxy has pages). */
+const place = (s: StarSystem) => (s.galaxy === 0 ? `<a href="${systemUrl(s.name)}">${escapeHtml(s.name)}</a>` : escapeHtml(s.name));
 const inMin = (t: number, now: number) => `in ${Math.max(1, Math.round((t - now) / 60_000))}\u00a0min`;
 
 /** One line of the arrivals board: when, who and for whom, from where, with what. */
 function arrival(v: Voyage, now: number): string {
   const firm = v.company ? COMPANIES[v.company].name : 'Independent';
   const why = v.relief ? ` · relief for the ${EVENT_KINDS[v.relief].name.toLowerCase()}` : '';
-  return `<li><time>${inMin(v.at, now).slice(3)}</time><span><b>${escapeHtml(v.name)}</b> <small>${escapeHtml(firm)} ${escapeHtml(hullName(v.hull))}</small></span><small>from ${escapeHtml(galaxy(0)[v.other].name)} with ${escapeHtml(cargoWords(v.cargo))}${why}${v.escorts ? ` · ${v.escorts} escort${v.escorts > 1 ? 's' : ''}` : ''}</small></li>`;
+  return `<li><time>${inMin(v.at, now).slice(3)}</time><span><b>${escapeHtml(v.name)}</b> <small>${escapeHtml(firm)} ${escapeHtml(hullName(v.hull))}</small></span><small>from ${place(galaxy(0)[v.other])} with ${escapeHtml(cargoWords(v.cargo))}${why}${v.escorts ? ` · ${v.escorts} escort${v.escorts > 1 ? 's' : ''}` : ''}</small></li>`;
 }
 
 /** Fetch what commanders have done; on any failure keep what we had (nothing, at first). */

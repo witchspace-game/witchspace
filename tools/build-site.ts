@@ -12,6 +12,8 @@ import { currencyExamplesHtml } from './economy';
 import { companiesHub, companyPage, jobsPage, loadJobs } from './jobs';
 import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
 import { buildPage, editionPage, groupShips, manualPage, papersPage, shipPage, shipsIndex } from './ships';
+import { galaxyHub, SYSTEMS, systemPage } from './systems';
+import { systemUrl } from '../src/site/systemNow';
 import { COMPANIES, COMPANY_IDS } from '../src/game/companies';
 import { CAREERS, careerLine } from '../src/site/callsignWords';
 
@@ -80,6 +82,7 @@ const PAGE_CARDS: Record<string, NonNullable<Page['card']>> = {
   '/economy/': { ship: 'falcon', kicker: 'Trade · the galaxy’s money', title: 'Money and markets', sub: 'Living markets, real-time Bitcoin, a currency for every system, company coins and liquidity pools. All in-game.' },
   '/shared-space/': { ship: 'viper', kicker: 'Multiplayer · in beta', title: 'Shared space', sub: 'The other ship on your scanner might be a person. Fly with other commanders, live, in your browser.' },
   '/privacy/': { ship: 'coriolis', kicker: 'Privacy', sub: 'What Witchspace keeps about you, why, and how to delete it.' },
+  '/galaxy/': { ship: 'coriolis', kicker: 'The first of eight galaxies', title: 'The galaxy, right now', sub: '256 star systems, worked out from one seed and one clock, the same for every commander.' },
   '/callsign/': { ship: 'cobra-mk3', kicker: 'Trade · Fight · Explore · Build', title: 'Every pilot needs a callsign.', sub: 'Claim yours, and build the card that carries it. Free, in your browser.' },
 };
 
@@ -101,7 +104,7 @@ const GAME = {
 };
 
 /** Names for breadcrumbs, by URL section. */
-const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', jobs: 'Jobs', companies: 'Companies', submit: 'Hand in a design', connect: 'Connect your AI assistant', 'ship-editor': 'Ship editor', review: 'Review submissions', 'ship-preview': 'Ship preview', 'shared-space': 'Shared space', economy: 'Money and markets', callsign: 'Claim your callsign' };
+const SECTION_NAMES: Record<string, string> = { ships: 'Ships', roadmap: 'Roadmap', design: 'Design', press: 'Press kit', ideas: 'Ideas', about: 'About', 'get-involved': 'Get involved', privacy: 'Privacy', jobs: 'Jobs', companies: 'Companies', submit: 'Hand in a design', connect: 'Connect your AI assistant', 'ship-editor': 'Ship editor', review: 'Review submissions', 'ship-preview': 'Ship preview', 'shared-space': 'Shared space', economy: 'Money and markets', callsign: 'Claim your callsign', galaxy: 'The galaxy' };
 /** Sections without an index page of their own: their breadcrumb points here instead. */
 const SECTION_URLS: Record<string, string> = {};
 
@@ -282,6 +285,39 @@ for (const s of ships) {
 const yardNames = Object.fromEntries(ships.filter(ownable).map((s) => [s.id, s.name]));
 // Kept out of search, like the manuals and the papers: a tool, not a page to land on.
 for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/build/`, ...buildPage(s, yardNames), head: '    <meta name="robots" content="noindex, follow" />\n', scripts: ['/src/site/build.ts'], bodyClass: 'ships-page build-body' });
+
+// --- The galaxy: a hub, and a page for every star system in the first (tools/systems.ts) -------
+
+/** Marketing's words for the systems people already know, by name. */
+const SYSTEM_INTROS: Record<string, string> = JSON.parse(readFileSync(join(root, 'site/systems.json'), 'utf8'));
+const hub = galaxyHub(Object.keys(SYSTEM_INTROS));
+write({
+  path: '/galaxy/',
+  ...hub,
+  bodyClass: 'galaxy-body',
+  schema: [
+    {
+      '@type': 'CollectionPage',
+      name: 'The galaxy, right now',
+      url: `${SITE}/galaxy/`,
+      about: { '@type': 'VideoGame', name: 'Witchspace', url: `${SITE}/` },
+      mainEntity: { '@type': 'ItemList', numberOfItems: hub.list.length, itemListElement: hub.list.map((sys, i) => ({ '@type': 'ListItem', position: i + 1, url: SITE + systemUrl(sys.name), name: sys.name })) },
+    },
+  ],
+});
+// Written now, stamped with the time: each page's "right now" in its HTML, which its script then keeps current.
+const builtAt = Date.now();
+const hullName = (id: string) => ships.find((sh) => sh.id === id)?.name ?? id;
+for (const sys of SYSTEMS)
+  write({
+    path: systemUrl(sys.name),
+    ...systemPage(sys, builtAt, hullName, SYSTEM_INTROS[sys.name]),
+    // One card for the whole galaxy for now (Marketing: the famous dozen may get their own later).
+    image: `${SITE}/share/galaxy.jpg`,
+    scripts: ['/src/site/system.ts'],
+    bodyClass: 'galaxy-body',
+    schema: [{ '@type': 'WebPage', name: sys.name, url: SITE + systemUrl(sys.name), about: { '@type': 'VideoGame', name: 'Witchspace', url: `${SITE}/` }, isPartOf: { '@type': 'CollectionPage', name: 'The galaxy, right now', url: `${SITE}/galaxy/` } }],
+  });
 
 // --- Design documents, the roadmap and the library (tools/docs.ts) --------------
 
@@ -465,13 +501,16 @@ function sourcesOf(path: string): string[] {
       return ['site/jobs.json'];
     case 'companies':
       return ['site/jobs.json', 'docs/companies.md'];
+    case 'galaxy':
+      return ['src/galaxy/generate.ts', 'src/galaxy/stationNames.ts', 'tools/systems.ts', 'site/systems.json'];
   }
   return [];
 }
-const SECTIONS = ['pages', 'ships', 'companies', 'design', 'press'] as const;
+const SECTIONS = ['pages', 'ships', 'galaxy', 'companies', 'design', 'press'] as const;
 const sectionOf = (path: string): (typeof SECTIONS)[number] => {
   const first = path.split('/')[1];
   if (first === 'ships') return 'ships';
+  if (first === 'galaxy') return 'galaxy';
   if (first === 'companies' || first === 'jobs') return 'companies';
   if (first === 'design' || first === 'roadmap') return 'design';
   if (first === 'press') return 'press';
