@@ -265,6 +265,19 @@ Mark (1 November 2026): *"What about the Bar Owner and who runs the station?"* T
 - **How it joins up:** shoot a trader in Leesti's lanes, and at Diso the bar has heard, and at Lave the harbourmaster charges you double for a berth. The law forgets in two jumps; the people who stay don't.
 - **Later, a player's:** when stations can be run by players ([player-run stations](player-stations.md)), the station's runner is the slot a player or guild takes over.
 
+### 6.6 Other commanders, remembered (Mark)
+
+Mark (1 November 2026), of the characters remembering real commanders as well as you: *"that sounds interesting."* The galaxy's people talk about the commanders who've been through, not just you. The gossip is the multiplayer world, heard even by those who never meet another player.
+
+- **The bar has heard.** *"A commander called Kestrel came through on Tuesday, answered the Mutual's call at the witchpoint. Odile's still buying her drinks."* *"Steer clear of the Riedquat lane. Some commander in a Mamba's been taking Mutual ships apart."*
+- **Only what the server saw.** Gossip comes from shared space, where the server referees what happened, so it can't be faked: a character or trader destroyed, a distress call answered, a convoy saved, a bounty claimed, a first discovery ([live feed](live-feed.md) already gathers some of this). Never from free text a player typed.
+- **It travels at the speed of news.** Told first at the station where it happened, then a jump further each few hours, fading after some days. Your reputation spreads across the chart like ripples, so a commander can outrun their past, for a while.
+- **Your transponder decides whether they know your name.** Fly dark (0) and the gossip is about "a ship with no transponder": the deed is remembered, but not who did it. Pirates have a real choice: be feared by name, or stay nobody.
+- **Heard in solo too.** A solo commander, signed in, hears the gossip about real commanders, so the galaxy feels lived in even before you ever meet one. Their own deeds in solo stay in their own world (section 5).
+- **Characters react to it.** A trader hails you coldly because she's heard; a harbourmaster has a bounty notice with your callsign on it two systems away; the shebeen keeper buys you a drink for the same thing.
+- **Written lines, real names:** the words are written for each kind of deed and each kind of speaker; only the callsign, ship, place and day are real. Callsigns are already checked when they're claimed.
+- **Cost:** a few rows a day per busy system on the server, which already sees every event. Nothing for quiet systems.
+
 ---
 
 ## 7. Worked example: the Titanoboa's supply line
