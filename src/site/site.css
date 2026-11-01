@@ -462,6 +462,8 @@ body.home.scrolled .site-header { background: rgba(5, 7, 13, 0.72); border-botto
 .doc del { color: var(--muted); }
 .doc .back { display: inline-block; margin-bottom: 24px; font-size: 15px; font-weight: 500; text-decoration: none; }
 ol.doc { padding-left: 1.2em; }
+.doc pre { max-width: 100%; overflow-x: auto; }
+.doc :not(pre) > code { overflow-wrap: anywhere; }
 
 /* --- Footer -------------------------------------------------------------- */
 
@@ -1130,7 +1132,8 @@ button.button { cursor: pointer; }
 .pillar-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; margin-bottom: 16px; }
 .pillar-head h2 { margin: 0; font-size: 28px; }
 .pillar-head p { margin: 0; }
-.road-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.road-items { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 14px; }
+.road-item { min-width: 0; overflow-wrap: anywhere; }
 .road-item .tag { align-self: flex-start; margin-bottom: 12px; }
 .road-item.built { opacity: 0.72; }
 .road-item.building { border-color: rgba(61, 255, 176, 0.28); }
@@ -1182,7 +1185,7 @@ button.button { cursor: pointer; }
 .help-skill li a:hover { color: var(--accent); }
 
 @media (max-width: 640px) {
-  .road-items { grid-template-columns: 1fr; }
+  .road-items { grid-template-columns: minmax(0, 1fr); }
   .help-skill li { flex-direction: column; }
   .help-skill li a { max-width: none; text-align: left; }
 }
@@ -1873,4 +1876,11 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 /* On a phone, Safari zooms into any text box under 16px and leaves the page zoomed (Game dev found it in the game). */
 @media (pointer: coarse) {
   .share-link input, .idea-form input, .idea-form textarea, .submit-step input:not([type='radio']):not([type='file']), .submit-step textarea, .submit-step select, .editor-tools select, #file { font-size: 16px; }
+}
+.galaxy-letters { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 20px; }
+.galaxy-letters a { display: grid; place-items: center; min-width: 34px; height: 34px; border: 1px solid var(--border); border-radius: 6px; text-decoration: none; font-weight: 600; }
+.galaxy-letter { scroll-margin-top: 80px; }
+.galaxy-letter h3 { margin: 24px 0 6px; font-size: 20px; }
+@media (max-width: 600px) {
+  .galaxy-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
 }

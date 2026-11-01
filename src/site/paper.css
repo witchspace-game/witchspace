@@ -301,3 +301,6 @@ html.paper .site-menu a:not(.button) { color: var(--fg); font-family: var(--disp
 html.paper .manual-page .man-cover h1 { color: var(--fg); text-shadow: none; }
 html.paper :is(.manual-page .man-cover .kicker, .manual h3, .man-table td:last-child) { color: color-mix(in oklab, var(--hull) 45%, #16181d); }
 html.paper .manual-page .man-cover { border-bottom-color: var(--ink); }
+/* Sections on the same paper sit closer: the dark site's big gaps read as blank paper here (Marketing). */
+html.paper .section { padding-top: clamp(40px, 6vw, 72px); padding-bottom: clamp(40px, 6vw, 72px); }
+html.paper .section + .section:not(#screens) { padding-top: clamp(16px, 3vw, 32px); }

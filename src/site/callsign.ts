@@ -149,7 +149,7 @@ function drawCard() {
   num.textContent = memberNumber(member);
   $('cs-card-mark').textContent = markNow();
   card.dataset.finish = finishNow();
-  $('cs-line').textContent = careerLine(career);
+  $('cs-line').textContent = careerLine(career).replace(/\.$/, ''); // a label, so no full stop (the share line keeps it)
   const stage = document.querySelector<HTMLElement>('.callsign-hero')!;
   stage.style.setProperty('--role', career.colour);
   stage.style.setProperty('--role-rgb', rgbOf(career.colour));
