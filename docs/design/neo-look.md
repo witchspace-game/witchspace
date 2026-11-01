@@ -27,6 +27,8 @@ Mark: *"The look of the Neo world is our 'signature' look. Lets get this right a
 
 **Every number is in [`src/render/look.ts`](../../src/render/look.ts)**, and nowhere else: the glow (strength, threshold, the five weights, the phone's lighter glow), the pixel ratio, anti-aliasing by screen, the brightness cap, the grain, a ship's lines and fill, the stars, the planet and its air, and the sun. The game reads them, and so do the site's pages, so the game and the site glow alike.
 
+**Paper by day** *(Mark, 1 November 2026)*: the site's light look draws a ship as an ink drawing on paper until she's lit, and then she's exactly herself in the glow. Its numbers are look.ts's `PAPER` (paper, space, the two inks, how much heavier ink is drawn, when the glow starts), and the drawing is [`src/render/ink.ts`](../../src/render/ink.ts), tested to give her back exactly at full light. It isn't the Neo look; what it lights up to is.
+
 **Screens differ, on purpose:**
 - **A computer at 1×:** 4× anti-aliasing for the image the glow is made from, so long shallow lines don't break into crawling dashes (#351). Free at that size.
 - **A Retina screen:** no anti-aliasing there (its steps are half the size, and it cost nearly half the frame rate).

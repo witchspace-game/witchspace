@@ -1215,7 +1215,9 @@ async function openSharedClip(id: string, fromGame = false) {
     });
   // The video its sharer shared plays first (Mark); the rebuilt fight is a tap away. A clip shared before
   // videos went up, or whose video hasn't, opens on the rebuilt fight as before.
-  if (clip.video) showClipView({ title: clip.title, video: clip.video, hearts: clip.hearts, mine: clip.mine, heart: (on) => heartClip(id, on), report: () => reportClip(id), outside, closed });
+  // A visitor who isn't signed in is asked, quietly, after it has played, whether they'd like a callsign of their own.
+  const invite = !fromGame && !currentAccount() ? clip.by : null;
+  if (clip.video) showClipView({ title: clip.title, video: clip.video, hearts: clip.hearts, mine: clip.mine, heart: (on) => heartClip(id, on), report: () => reportClip(id), outside, closed, invite });
   else outside();
 }
 frame();
