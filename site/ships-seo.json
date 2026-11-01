@@ -44,8 +44,8 @@
     "description": "Wexley-Yorozu’s 2,500 m constructor eats a moon and leaves a station behind, stage by stage over days. Watch one rise. Fly free in your browser."
   },
   "/ships/bullsnake/": {
-    "title": "Bullsnake: the Titan’s ore hauler",
-    "description": "Short, square and slow, with tractor booms where the guns should be. Bullsnakes feed the Titan’s furnaces with ore from the moon. Fly free in your browser."
+    "title": "Bullsnake: the Titan’s ore hauler and tug",
+    "description": "Short, square and slow, with tractor booms where the guns should be. Bullsnakes feed the Titan moon ore, and they’re her tugs too. Fly free in your browser."
   },
   "/ships/coriolis/": {
     "title": "Coriolis Station: matching the spin",

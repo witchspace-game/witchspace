@@ -103,8 +103,8 @@ const AT_WORK: Record<string, { heading: string; html: string }> = {
   },
   bullsnake: {
     heading: 'Ore hauler and tug',
-    html: `<p>Bullsnakes run ore from a moon into the Titan's maw. They're her tugs too: they fetch food and materials from the local station, ferry cargo and prisoners between the Titan and the surface, make repairs, and move her modules to set her up for the job. Every commander sees the same ones, at the same moment.</p>
-    <p>They stay in the system: traders carry every good between the stars. The one exception is a module that has to travel. With an engine module and a fuel module stacked on its docking ring, and a Bullsnake docked in as its bridge, it flies to another system on its own. <a href="/design/ship-the-titanoboa/">The Titanoboa</a> · <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
+    html: `<p>Bullsnakes run ore from a moon into the Titan's maw: every commander sees the same ones, at the same moment. They're her tugs too, and the plan gives them more of her work: fetching food and materials from the local station, ferrying cargo (and one day prisoners) between the Titan and the surface, making repairs, and moving her modules to set her up for the job.</p>
+    <p>They stay in the system: traders carry every good between the stars. The one exception will be a module that has to travel: with an engine module and a fuel module stacked on its docking ring, and a Bullsnake docked in as its bridge, it flies to another system on its own. <a href="/design/ship-the-titanoboa/">The Titanoboa</a> · <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
   },
 };
 
