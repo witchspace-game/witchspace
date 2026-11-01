@@ -104,7 +104,7 @@ const AT_WORK: Record<string, { heading: string; html: string }> = {
   bullsnake: {
     heading: 'Ore hauler and tug',
     html: `<p>Bullsnakes run ore from a moon into the Titan's maw: every commander sees the same ones, at the same moment. They're her tugs too, and the plan gives them more of her work: fetching food and materials from the local station, ferrying cargo (and one day prisoners) between the Titan and the surface, making repairs, and moving her modules to set her up for the job.</p>
-    <p>They stay in the system: traders carry every good between the stars. The exception will be modules that have to travel. Any combination of them, stacked on their docking rings with an engine module and a fuel module, can be flown through witchspace by a Bullsnake docked in as the bridge. Each carries a crew of about five, a pilot, an engineer and three hands, who can as easily take a Titan apart where she sits and put her back together for a new job. <a href="/design/ship-the-titanoboa/">The Titanoboa</a> · <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
+    <p>They stay in the system: traders carry every good between the stars. The exception will be modules that have to travel. Stack any combination of them on their docking rings, add an engine module and a fuel module, dock a Bullsnake in as the bridge, and she flies the whole stack through hyperspace. A Bullsnake carries a crew of about five: a pilot, an engineer and three hands. The same crew can take a Titan apart where she sits and put her back together for a new job. <a href="/design/ship-the-titanoboa/">The Titanoboa</a> · <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
   },
 };
 
