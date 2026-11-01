@@ -2181,3 +2181,11 @@ body.keyboard-window .kb-note { margin: 12px 0 0; color: var(--dim); font-size: 
 /* On a phone, Safari zooms the page in when you tap a box with text under 16px, and leaves it zoomed:
    the rename at the station and the exchange's price looked broken (Mark). 16px stops it. */
 body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']), body.touch select, body.touch textarea { font-size: 16px; }
+
+/* 1984 mode on a phone held upright: the pixel font at full size filled the screen with the title card,
+   squeezing out the ship and the name, and the ship arrows landed on the card ("‹bra Mk III"). */
+@media (max-width: 500px) and (orientation: portrait) {
+  body.retro .panel[data-screen='title'] { font-size: 8px; line-height: 1.7; }
+  body.retro .panel[data-screen='title'] h2 { font-size: 16px; }
+  body.retro .panel[data-screen='title'] .desc, body.retro .panel[data-screen='title'] .install p { font-size: 8px; line-height: 1.7; }
+}
