@@ -301,14 +301,108 @@ function modulesCard(s: ShipFile, modules: Map<string, ModuleFile>): string {
     .filter((m): m is ModuleFile => m !== undefined)
     .map((m) => {
       const count = s.modules!.filter((id) => id === m.id).length;
-      return `<li><strong>${esc(m.name)}${count > 1 ? ` ×${count}` : ''}</strong> <span class="muted small">${m.length} m · ${esc(m.zone)} · designed by ${esc(m.designer)}</span><br>${esc(m.description)} <a class="small" href="${REPO}content/modules/${esc(m.id)}.json">File</a></li>`;
+      return `<li><strong><a href="${modulePath(m.id)}">${esc(m.name)}</a>${count > 1 ? ` ×${count}` : ''}</strong> <span class="muted small">${m.length} m · ${esc(m.zone)} · designed by ${esc(m.designer)}</span><br>${esc(m.description)} <a class="small" href="/submit/?module=${esc(m.id)}&amp;as=improve">Improve it</a></li>`;
     })
     .join('');
+  // Sections that aren't in the Standard line-up but are fitted when the job needs them.
+  const extra = [...modules.values()].filter((m) => !s.modules!.includes(m.id)).sort(byZone);
   return `<div class="card ship-modules">
       <h3>Built from modules</h3>
-      <p>Fore to aft: ${s.modules.map((id) => esc(modules.get(id)?.name ?? id)).join(' → ')}. Every module couples the same way, so the line-up changes with the job, and anyone can design a new one to <a href="/design/ship-the-titanoboa/#designing-a-module-the-standard">the standard</a>.</p>
+      <p>Fore to aft: ${s.modules.map((id) => esc(modules.get(id)?.name ?? id)).join(' → ')}. Every module couples the same way, so the line-up changes with the job. Every one is open for anyone to improve, and anyone can design a new one to <a href="/design/ship-the-titanoboa/#designing-a-module-the-standard">the standard</a>.</p>
       <ul>${rows}</ul>
+      ${extra.length ? `<p class="small">Fitted when the job needs them: ${extra.map((m) => `<a href="${modulePath(m.id)}">${esc(m.name)}</a>`).join(', ')}.</p>` : ''}
     </div>`;
+}
+
+const MODULE_ZONES = ['intake', 'industry', 'logistics', 'crew', 'fabrication', 'add-on', 'power'];
+const byZone = (a: ModuleFile, b: ModuleFile) => MODULE_ZONES.indexOf(a.zone) - MODULE_ZONES.indexOf(b.zone);
+export const modulePath = (id: string) => `/ships/titanoboa/modules/${encodeURIComponent(id)}/`;
+
+/** What each zone is for, in the module standard's words (docs/design/ship-the-titanoboa.md). */
+const ZONE_WORDS: Record<string, string> = {
+  intake: 'Intake: the prow, facing the moon.',
+  industry: 'Industry: the hot, dirty work, where nobody lives.',
+  logistics: 'Logistics: storage, and the tugs’ pads.',
+  crew: 'Crew: where the workers live, shielded both ways.',
+  fabrication: 'Fabrication: where station sections are made.',
+  'add-on': 'Add-on: fitted for the job, and often left with the station.',
+  power: 'Power: the stern, where its heat and shadow fall on nobody.',
+};
+
+/** One Titanoboa module's own page: the section turning, what it does, and how to improve it (Mark: every module open to the community). */
+export function modulePage(m: ModuleFile & ModuleBody, titan: ShipFile, all: ModuleFile[]) {
+  const order = [...all].sort(byZone);
+  const i = order.findIndex((o) => o.id === m.id);
+  const prev = order[(i - 1 + order.length) % order.length];
+  const next = order[(i + 1) % order.length];
+  const inStandard = titan.modules?.filter((id) => id === m.id).length ?? 0;
+  const c = m.credits ?? {};
+  const ends = [m.couples.fore && 'fore', m.couples.aft && 'aft'].filter(Boolean).join(' and ');
+  const asShip = { id: m.id, name: m.name, geometry: m.geometry, style: titan.style } as ShipFile;
+  const def = JSON.stringify({ id: m.id, name: m.name, role: titan.role, geometry: m.geometry, style: titan.style ?? {} }).replace(/</g, '\\u003c');
+  const label = `Titanoboa ${m.name}`;
+  return {
+    card: { ship: 'titanoboa', kicker: 'Titanoboa module', title: m.name, sub: firstSentence(m.description) },
+    schema: [
+      {
+        '@type': 'CreativeWork',
+        name: label,
+        description: m.description,
+        creator: (c.authors ?? ['Witchspace contributors']).map((name) => ({ '@type': 'Organization', name })),
+        license: 'https://creativecommons.org/licenses/by-sa/4.0/',
+        isPartOf: { '@type': 'CreativeWork', name: 'Titanoboa', url: 'https://witchspace.org.uk/ships/titanoboa/' },
+      },
+    ],
+    title: `${m.name}: a Titanoboa module · Witchspace`,
+    description: `The Titanoboa's ${m.name.toLowerCase()} module: ${m.description} Open for anyone to improve, in Witchspace, the free space game you play in your browser.`.slice(0, 300),
+    content: `<section class="section ship-page module-page">
+  <a class="back" href="/ships/titanoboa/">← The Titanoboa</a>
+  <div class="ship-hero">
+    <div class="ship-view" data-ship="${esc(m.id)}">
+      ${shipSvg(asShip, 'ship-svg fallback')}
+      <canvas class="ship-canvas" aria-label="The ${esc(m.name)} module, turning: drag to rotate"></canvas>
+    </div>
+    <div class="ship-copy">
+      <p class="kicker">Titanoboa module · ${esc(m.zone)}</p>
+      <h1>${esc(m.name)}</h1>
+      <p class="lede">${esc(m.description)}</p>
+      <dl class="ship-stats">
+        <div><dt>Length</dt><dd>${m.length} m</dd></div>
+        <div><dt>Couples</dt><dd>${ends ? `${ends[0].toUpperCase()}${ends.slice(1)}` : 'Neither end'}</dd></div>
+        <div><dt>In the Standard</dt><dd>${inStandard ? (inStandard > 1 ? `×${inStandard}` : 'Yes') : 'When the job needs it'}</dd></div>
+        <div><dt>Designed by</dt><dd>${esc(m.designer)}</dd></div>
+      </dl>
+      <p class="muted small">${esc(ZONE_WORDS[m.zone] ?? m.zone)}</p>
+      <p class="ship-share"><a class="button primary small" href="/submit/?module=${esc(m.id)}&amp;as=improve">Improve this module</a> <button type="button" class="button ghost small" data-share data-share-url="${modulePath(m.id)}" data-share-title="${esc(label)}">Share</button></p>
+    </div>
+  </div>
+  <script type="application/json" id="ship-def">${def}</script>
+
+  <div class="ship-columns">
+    <div class="card">
+      <h3>Make it better</h3>
+      <p>Every section of the Titan is open. Redraw this one: a clearer shape, a better reason for where it sits, something it’s missing. Start from its file on the hand-in page, check it against the standard as you go, and send it. No GitHub needed. If it’s accepted, it goes into the game under your callsign.</p>
+      <p><a class="button primary small" href="/submit/?module=${esc(m.id)}&amp;as=improve">Improve the ${esc(m.name.toLowerCase())}</a> <a class="button ghost small" href="/ideas/?about=${encodeURIComponent(label)}">Suggest an idea instead</a></p>
+      <ul class="ship-ideas" data-ship-name="${esc(label)}"><li class="muted">Looking for ideas about the ${esc(m.name.toLowerCase())}…</li></ul>
+      <p class="muted small">Drawn by ${esc((c.authors ?? []).join(', ') || m.designer)}${c.aiAssisted ? ', with AI assistance' : ''}. Licence: ${esc(c.license ?? 'CC-BY-SA-4.0')}. <a href="${REPO}content/modules/${esc(m.id)}.json">The file on GitHub</a>.</p>
+    </div>
+    <div class="card">
+      <h3>Or design a new one</h3>
+      <p>The Titan is whatever the job needs, put together from sections on one coupling. Suggest a module nobody has drawn yet. Take a prison module: bolt enough of them together, with accommodation, a gym and a science station of the kind Wexley-Yorozu won’t discuss, and you have a prison Titan. Her Bullsnake tugs would ferry the prisoners down to the surface and back.</p>
+      <p><a class="button ghost small" href="/submit/?module=${esc(m.id)}&amp;as=new">Start a new module from this one</a> <a class="button ghost small" href="/design/ship-the-titanoboa/#designing-a-module-the-standard">The standard</a></p>
+    </div>
+  </div>
+
+  <nav class="module-nav" aria-label="The other modules"><a href="${modulePath(prev.id)}">← ${esc(prev.name)}</a><a href="/ships/titanoboa/">All of the Titan</a><a href="${modulePath(next.id)}">${esc(next.name)} →</a></nav>
+</section>`,
+  };
+}
+
+/** A module file's drawing and credits, beyond what the ship page lists. */
+export interface ModuleBody {
+  couples: { fore: boolean; aft: boolean };
+  geometry: ShipFile['geometry'];
+  credits?: ShipFile['credits'];
 }
 
 /**

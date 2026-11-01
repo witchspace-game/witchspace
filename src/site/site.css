@@ -1964,3 +1964,7 @@ html.clip-open { overflow: hidden; }
 .clip-heart[aria-pressed='true'] svg { fill: #ff6b8e; stroke: #ff6b8e; }
 .clip-invite { margin: 12px 0 0; color: #9aa6b6; font: 14px var(--font); }
 .clip-invite a { color: #3dffb0; }
+
+/* A Titanoboa module's page: the next and previous sections along the Titan. */
+.module-nav { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--border); font-size: 0.95rem; }
+.module-nav a:nth-child(2) { color: var(--muted); }

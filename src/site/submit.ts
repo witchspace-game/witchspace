@@ -370,6 +370,9 @@ const startWith = new URLSearchParams(location.search).get('module');
 if (startWith && cores.some((c) => c.id === startWith)) {
   core.value = startWith;
   core.dispatchEvent(new Event('change'));
+  // From a module's own page: "Improve this module" starts the improvement straight away.
+  const as = new URLSearchParams(location.search).get('as');
+  if (as === 'improve' || as === 'new') document.querySelector<HTMLButtonElement>(`[data-start="${as}"]`)?.click();
 }
 account.render();
 void refresh().then(() => {
