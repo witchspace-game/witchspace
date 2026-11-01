@@ -57,7 +57,7 @@ export const TITAN_ESCORT = [0.9, 0.8, 0.65, 0.5, 0.4, 0.35, 0.3, 0.25];
 /** Goods worth guarding: a company run carrying these may have an escort. */
 export const VALUABLE = new Set(['luxuries', 'computers', 'platinum', 'gold', 'alien', 'firearms']);
 /** What each traffic hull can carry, in tonnes (its ship file's cargo; traffic.test.ts checks they agree). */
-export const HOLD: Record<string, number> = { 'cobra-mk3': 20, bullsnake: 60 };
+export const HOLD: Record<string, number> = { 'cobra-mk3': 20 };
 /** The ships of one convoy dock (or launch) this far apart, so they don't fly through each other. */
 export const CONVOY_GAP_MS = 25_000;
 /** How far back to look for a convoy whose later ships are still to come: longer than any convoy. */
@@ -135,7 +135,8 @@ const goodName = (id: string) => COMMODITIES.find((c) => c.id === id)?.name ?? i
 function voyageFor(s: StarSystem, leg: 'in' | 'out', to: 'station' | 'titan', k: number, cargo: Consignment[], company: CompanyId | null, name: string): Voyage {
   const salt = leg === 'in' ? 0 : 1;
   const lanes = lanesFrom(s);
-  const hull = company === 'wy' && (to === 'titan' || hash(s, 91_300 + salt, k) < 0.5) ? 'bullsnake' : 'cobra-mk3';
+  // Traders move every good between systems, the Titan's included; Bullsnakes are tugs and never leave the system (Mark, 1 November 2026).
+  const hull = 'cobra-mk3';
   const t = to === 'titan' ? 2 : 0;
   const chance = to === 'titan' ? TITAN_ESCORT[s.government] : company && cargo.some((c) => VALUABLE.has(c.id)) ? 0.35 : 0;
   const escorts = hash(s, 91_700 + salt + t, k) < chance ? (hash(s, 91_800 + salt + t, k) < 0.35 ? 2 : 1) : 0;
@@ -236,7 +237,7 @@ export function voyages(s: StarSystem, from: number, to: number, lost: { id: str
   return out.sort((a, b) => a.at - b.at);
 }
 
-/** Wexley-Yorozu's freighters for a yard's build: what the stage needs, in from the nearest worlds. */
+/** Wexley-Yorozu's traders for a yard's build: what the stage needs, in from the nearest worlds. */
 export function titanVoyages(s: StarSystem, from: number, to: number): Voyage[] {
   const out: Voyage[] = [];
   const phase = hash(s, 92_000, 0) * TITAN_WINDOW_MS;

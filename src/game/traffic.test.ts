@@ -31,11 +31,12 @@ describe('traffic', () => {
   });
 
   it('carries the market’s own deliveries, and drops a ship whose deliveries were all lost', () => {
-    const all = voyages(lave, t0, t0 + HOUR);
+    // A ship sailing alone (most loads are a convoy now Wexley-Yorozu's traders fly Cobras, not Bullsnakes).
+    const all = voyages(lave, t0, t0 + 6 * HOUR);
     const inbound = all.find((v) => v.leg === 'in' && v.to === 'station' && !v.relief && !/:c\d+$/.test(v.id) && !all.some((x) => x.id === `${v.id}:c1`))!;
     expect(inbound.cargo.length).toBeGreaterThan(0);
     const lost = inbound.cargo.map((c) => ({ id: c.id, t: c.t }));
-    expect(voyages(lave, t0, t0 + HOUR, lost).some((v) => v.id === inbound.id)).toBe(false);
+    expect(voyages(lave, t0, t0 + 6 * HOUR, lost).some((v) => v.id === inbound.id)).toBe(false);
   });
 
   it('comes from, or goes to, a system a jump away', () => {
@@ -49,7 +50,7 @@ describe('traffic', () => {
     expect(Math.sign(x)).toBe(Math.sign(o.x - lave.x) || Math.sign(x));
   });
 
-  it('supplies a yard’s build with Wexley-Yorozu freighters bound for the Titan', () => {
+  it('supplies a yard’s build with Wexley-Yorozu traders bound for the Titan (traders, not Bullsnakes: Mark)', () => {
     const yard = yardsOf(0, t0)[0];
     const at = g[yard.system];
     const runs = titanVoyages(at, t0, t0 + HOUR);
@@ -57,7 +58,7 @@ describe('traffic', () => {
     for (const v of runs) {
       expect(v.to).toBe('titan');
       expect(v.company).toBe('wy');
-      expect(v.hull).toBe('bullsnake');
+      expect(v.hull).toBe('cobra-mk3');
     }
   });
 
@@ -89,7 +90,7 @@ describe('traffic', () => {
   });
 
   it('introduces itself when hailed', () => {
-    const v = { id: 'x', leg: 'in' as const, to: 'titan' as const, at: 0, cargo: [{ id: 'alloys', t: 0, qty: 30 }, { id: 'computers', t: 0, qty: 5 }], company: 'wy' as const, hull: 'bullsnake', name: 'Patience', other: 7, escorts: 0 };
+    const v = { id: 'x', leg: 'in' as const, to: 'titan' as const, at: 0, cargo: [{ id: 'alloys', t: 0, qty: 30 }, { id: 'computers', t: 0, qty: 5 }], company: 'wy' as const, hull: 'cobra-mk3', name: 'Patience', other: 7, escorts: 0 };
     expect(voyageHail(v, 'Diso')).toBe('Patience, in from Diso with alloys and computers for the Titan.');
     expect(voyageHail({ ...v, to: 'station', leg: 'out', company: null }, 'Leesti')).toBe('Patience, outbound for Leesti with alloys and computers.');
   });

@@ -166,6 +166,19 @@ Every section deserves proper attention from the community, so each module stand
 - **Wexley-Yorozu puts the line-up together for the job at hand.** A job is an order in the catalogue (a station, a refinery, a station moved) that names the modules it needs, and the yard couples those and nothing else. A new kind of job is a new order; a new module makes new orders possible.
 - **So a new section can be designed, and the work comes with it.** A **detention module**, for one: a block of cells for the Co-operative Marshals' captures ([law, debt and capture](law-and-travel.md)). Wexley-Yorozu builds a prison where the Marshals ask for one, the module can stay behind as the prison satellite a station keeps ([stations and worlds](stations-and-worlds.md)), and towing one between stars is escort work nobody else wants.
 
+- **A whole prison Titan, if one is needed** *(Mark, 1 November 2026)*. The community suggests new modules, prison modules among them, and Wexley-Yorozu can bolt enough together to make a Titan that is a prison: accommodation, a gym complex, and science stations where inmates may be used for experiments. Bullsnakes ferry prisoners between it and the surface.
+
+### What the Bullsnakes do *(Mark, 1 November 2026)*
+
+Bullsnakes are tugs, and they work inside one system. They:
+
+- ferry materials, and prisoners, between a Titan and the surface;
+- fetch food and materials from the local stations to the Titan;
+- move modules, reconfiguring a Titan for its current role or roles, and tow a failed section clear;
+- do repairs.
+
+**Traders move every good between systems, not Bullsnakes.** What comes to a yard from another world comes in a trader's hold (the game's Titan runs are Wexley-Yorozu traders, `game/traffic.ts`).
+
 It only works if anyone can design a module without GitHub, from a web page or a conversation with an AI assistant, so that comes with it.
 
 ## 3. Modules sent where they're needed
