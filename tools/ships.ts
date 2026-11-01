@@ -206,6 +206,9 @@ export function shipSvg(s: ShipFile, cls = 'ship-svg'): string {
 </svg>`;
 }
 
+/** The ship every commander is given: her list price is real (the yards charge it for a second), but nobody pays it to start (Game dev). */
+const STARTER = 'cobra-mk3';
+
 const STAT_LABELS: [string, string, (n: number) => string][] = [
   ['maxSpeed', 'Top speed', (n) => (n ? `${n} m/s` : 'None')],
   ['hull', 'Hull', (n) => n.toLocaleString('en-GB')],
@@ -315,7 +318,7 @@ function modulesCard(s: ShipFile, modules: Map<string, ModuleFile>): string {
 export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map(), preview = false, editions: EditionCard[] = [], manual = false) {
   const c = s.credits ?? {};
   const stats = STAT_LABELS.filter(([k]) => s.stats?.[k] !== undefined)
-    .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${esc(f(s.stats![k]))}</dd></div>`)
+    .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${esc(f(s.stats![k]))}${k === 'price' && s.id === STARTER ? '<small>Every commander starts in one</small>' : ''}</dd></div>`)
     .join('');
   const design = DESIGN[s.id];
   const authors = (c.authors ?? []).join(', ') || 'Witchspace contributors';
