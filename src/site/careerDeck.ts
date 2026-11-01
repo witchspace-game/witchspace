@@ -1,30 +1,47 @@
-// The home page's careers as a deck of callsign cards (tools/careerDeck.ts makes them): one at the front, the
-// others fanned behind. It turns by itself every few seconds, pausing while you're over it, holding it or
-// using the keyboard on it; tap a card behind to bring it forward, or swipe the front one on a phone. Beside
-// it, the front career's ladder, and "Make this card yours" goes to /callsign/ with that career chosen.
+// The home page's careers as a callsign card (tools/careerDeck.ts makes the four), one at a time (Mark: "a single
+// card with the other cards rotating into the front most position"). Every few seconds the card turns over to
+// the next career, pausing while you're over it, holding it or using the keyboard on it; the row beneath turns
+// to any of the four, and on a phone you can swipe it. Beside it, that career's ladder, and "Make this card
+// yours" goes to /callsign/ with that career chosen.
 
 const deck = document.getElementById('career-deck');
 const cta = document.getElementById('career-cta') as HTMLAnchorElement | null;
 if (deck) {
   const cards = [...deck.querySelectorAll<HTMLButtonElement>('.deck-card')];
+  const row = [...document.querySelectorAll<HTMLButtonElement>('.deck-row button')];
   const ladders = [...document.querySelectorAll<HTMLElement>('.careers .ladder[data-career]')];
   const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const TURN_MS = 6000;
+  /** How long the old card takes to turn edge on (site.css: the new one starts turning in then). */
+  const HALF_MS = 300;
   let front = 0;
 
   const show = (i: number) => {
-    front = (i + cards.length) % cards.length;
+    const next = (i + cards.length) % cards.length;
+    if (next !== front) {
+      // The old card turns away; once it's edge on, it goes back to wait, unseen.
+      const old = cards[front];
+      old.classList.add('leaving');
+      setTimeout(() => {
+        old.classList.add('waiting');
+        old.classList.remove('leaving');
+        requestAnimationFrame(() => requestAnimationFrame(() => old.classList.remove('waiting')));
+      }, HALF_MS + 20);
+    }
+    front = next;
     cards.forEach((card, k) => {
-      const pos = (k - front + cards.length) % cards.length;
-      card.dataset.pos = String(pos);
-      card.tabIndex = pos === 0 ? 0 : -1;
-      card.setAttribute('aria-pressed', String(pos === 0));
+      card.dataset.pos = k === front ? '0' : '1';
+      card.tabIndex = k === front ? 0 : -1;
+      card.setAttribute('aria-hidden', String(k !== front));
     });
     const career = cards[front].dataset.career!;
+    row.forEach((b) => b.setAttribute('aria-current', String(b.dataset.career === career)));
     ladders.forEach((l) => (l.hidden = l.dataset.career !== career));
     if (cta) cta.href = `/callsign/?career=${career}`;
   };
-  deck.classList.add('live'); // without the script, every ladder shows and the cards sit fanned
+  deck.classList.add('live'); // without the script, every ladder shows
+  // Which way it turns, while Mark chooses: about the upright (the default) or top over bottom (?turn=x).
+  if (new URLSearchParams(location.search).get('turn') === 'x') deck.dataset.turn = 'x';
   show(0);
 
   // Turning by itself, unless something has your attention.
@@ -38,18 +55,24 @@ if (deck) {
     held = on;
     if (!on) schedule();
   };
-  deck.addEventListener('pointerenter', () => hold(true));
-  deck.addEventListener('pointerleave', () => hold(false));
+  for (const el of [deck, ...row]) {
+    el.addEventListener('pointerenter', () => hold(true));
+    el.addEventListener('pointerleave', () => hold(false));
+  }
   deck.addEventListener('focusin', () => hold(true));
   deck.addEventListener('focusout', () => hold(false));
   schedule();
 
-  // A card behind comes forward; the front card is the one to make yours.
-  cards.forEach((card, k) =>
+  row.forEach((b) =>
+    b.addEventListener('click', () => {
+      show(cards.findIndex((c) => c.dataset.career === b.dataset.career));
+      schedule();
+    }),
+  );
+  // The card itself is the one to make yours.
+  cards.forEach((card) =>
     card.addEventListener('click', () => {
-      if (moved) return;
-      if (k === front) location.href = cta?.href ?? `/callsign/?career=${card.dataset.career}`;
-      else show(k);
+      if (!moved) location.href = cta?.href ?? `/callsign/?career=${card.dataset.career}`;
     }),
   );
   deck.addEventListener('keydown', (e) => {
@@ -60,13 +83,12 @@ if (deck) {
     }
   });
 
-  // Swiping the front card: she tilts as you drag, as the card on /callsign/ does, and a long enough drag turns the deck.
+  // Swiping: the card tilts as you drag, as the card on /callsign/ does, and a long enough drag turns it.
   let startX = 0;
   let dx = 0;
   let dragging = false;
   let moved = false;
   deck.addEventListener('pointerdown', (e) => {
-    if (!(e.target as HTMLElement).closest('.deck-card[data-pos="0"]')) return;
     dragging = true;
     moved = false;
     startX = e.clientX;
@@ -79,7 +101,7 @@ if (deck) {
     if (Math.abs(dx) > 6) moved = true;
     const card = cards[front];
     card.style.transition = 'none';
-    card.style.transform = `translate(${dx * 0.6}px, -50%) rotateY(${Math.max(-25, Math.min(25, dx / 6))}deg) rotate(${dx / 40}deg)`;
+    card.style.transform = `translateX(${dx * 0.5}px) rotateY(${Math.max(-30, Math.min(30, dx / 5))}deg)`;
   });
   window.addEventListener('pointerup', () => {
     if (!dragging) return;

@@ -1887,23 +1887,25 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 
 /* --- The careers as a deck of callsign cards (tools/careerDeck.ts, src/site/careerDeck.ts) ---------- */
 
-.careers { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
-.deck { position: relative; aspect-ratio: 1.55; perspective: 1400px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.careers { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: clamp(28px, 5vw, 64px); align-items: center; }
+.deck-wrap { max-width: 520px; }
+.deck { position: relative; aspect-ratio: 1200 / 630; perspective: 1600px; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .deck-card {
-  position: absolute; left: 0; top: 54%; width: 80%; aspect-ratio: 1200 / 630; padding: 0; border: 0; border-radius: 4.5% / 8.6%; overflow: hidden; cursor: pointer;
-  container-type: inline-size; color: #eef3fa; text-align: left; font: inherit;
+  position: absolute; inset: 0; width: 100%; padding: 0; border: 0; border-radius: 4.5% / 8.6%; overflow: hidden; cursor: pointer;
+  container-type: inline-size; color: #eef3fa; text-align: left; font: inherit; backface-visibility: hidden;
   background: linear-gradient(90deg, rgba(3, 5, 10, 0.86) 0%, rgba(3, 5, 10, 0.45) 45%, rgba(3, 5, 10, 0.1) 100%), var(--scene) center / cover no-repeat, #04060b;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent), 0 0 28px -8px color-mix(in srgb, var(--c) 55%, transparent);
-  transform-origin: 100% 50%; transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.75s, filter 0.75s;
+  /* Waiting, edge on to the right; it turns in to the front, and the one it replaces turns away to the left. */
+  transform: rotateY(90deg); opacity: 0; pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.5, 0, 0.75, 0), opacity 0.3s;
 }
-/* The front card large; the others behind it to the right, each smaller, more tilted and dimmer. */
-.deck-card[data-pos='0'] { z-index: 4; transform: translateY(-50%); }
-.deck-card[data-pos='1'] { z-index: 3; transform: translate(8%, -60%) scale(0.92) rotate(3deg); filter: brightness(0.85); }
-.deck-card[data-pos='2'] { z-index: 2; transform: translate(16%, -70%) scale(0.84) rotate(6deg); filter: brightness(0.7); }
-.deck-card[data-pos='3'] { z-index: 1; transform: translate(24%, -80%) scale(0.76) rotate(9deg); filter: brightness(0.56); }
-/* Each card's career on its right-hand edge, the part that shows when it's behind. */
-.deck-tab { position: absolute; right: 2.2%; top: 50%; transform: translateY(-50%) rotate(180deg); writing-mode: vertical-rl; color: var(--c); font: 700 2.2cqw var(--display); letter-spacing: 0.3em; text-transform: uppercase; opacity: 0; transition: opacity 0.5s; }
-.deck-card:not([data-pos='0']) .deck-tab, .deck:not(.live) .deck-tab { opacity: 1; }
+.deck-card[data-pos='0'] { transform: rotateY(-5deg) rotateX(2deg); opacity: 1; pointer-events: auto; transition: transform 0.32s cubic-bezier(0.25, 1, 0.5, 1) 0.3s, opacity 0.2s 0.3s; }
+.deck-card.leaving { transform: rotateY(-90deg); opacity: 1; }
+.deck-card.waiting { transition: none; }
+/* Or top over bottom, like a flip-card (?turn=x on the page, to compare): the swipe on a phone is sideways, so this turn doesn't fight the finger. */
+.deck[data-turn='x'] .deck-card { transform: rotateX(-90deg); }
+.deck[data-turn='x'] .deck-card[data-pos='0'] { transform: rotateY(-5deg) rotateX(2deg); }
+.deck[data-turn='x'] .deck-card.leaving { transform: rotateX(90deg); }
 .deck-card:focus-visible { outline: 2px solid var(--c); outline-offset: 4px; }
 .deck-brand { position: absolute; left: 6%; top: 10%; display: flex; align-items: center; gap: 1.1cqw; font: 700 1.7cqw var(--display); letter-spacing: 0.34em; color: rgba(238, 243, 250, 0.9); }
 .deck-brand svg { width: 2.8cqw; height: 2.8cqw; fill: none; stroke: var(--c); stroke-width: 2.2; stroke-linejoin: round; }
@@ -1914,20 +1916,20 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .deck-cmdr { color: rgba(185, 198, 216, 0.8); font: 600 1.3cqw var(--font); letter-spacing: 0.32em; }
 .deck-name { margin: 0.4cqw 0 1cqw; color: rgba(238, 243, 250, 0.55); font: 600 5.4cqw/1.05 'Rajdhani', var(--display); letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px dashed rgba(255, 255, 255, 0.22); }
 .deck-sub { color: rgba(205, 214, 228, 0.85); font: 500 1.8cqw var(--font); }
+.deck-row { display: flex; justify-content: center; gap: 4px 22px; flex-wrap: wrap; margin-top: 18px; }
+.deck-row button { padding: 4px 0; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--muted); font: 600 12px var(--display); letter-spacing: 0.24em; text-transform: uppercase; cursor: pointer; }
+.deck-row button:hover { color: var(--fg); }
+.deck-row button[aria-current='true'] { color: color-mix(in oklab, var(--c) 80%, var(--fg)); border-bottom-color: var(--c); }
 /* Without the script the four sit fanned and every ladder shows; with it, only the front career's. */
-.deck:not(.live) + .careers-side .ladders { grid-template-columns: 1fr 1fr; }
 .careers-side .ladders { grid-template-columns: 1fr; }
 .careers-side .ladder[hidden] { display: none; }
 @media (max-width: 860px) {
   .careers { grid-template-columns: minmax(0, 1fr); }
-  .deck { aspect-ratio: 1.5; }
-  .deck-card { width: 76%; }
-  .deck-card[data-pos='1'] { transform: translate(7%, -60%) scale(0.92) rotate(2deg); }
-  .deck-card[data-pos='2'] { transform: translate(13%, -69%) scale(0.84) rotate(4deg); }
-  .deck-card[data-pos='3'] { transform: translate(19%, -78%) scale(0.76) rotate(6deg); }
+  .deck-wrap { max-width: none; }
 }
+/* Reduced motion: a plain crossfade, no turning. */
 @media (prefers-reduced-motion: reduce) {
-  .deck-card { transition: none; }
+  .deck-card, .deck-card.leaving, .deck-card[data-pos='0'] { transform: none; transition: opacity 0.35s; }
 }
 
 /* Founding members until launch: one thin line over the header (src/site/founding.ts). */
