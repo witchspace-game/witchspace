@@ -96,6 +96,15 @@ Mark: "it's relatively hard to communicate back to a radio message." The first p
 - **A tiny squawk** *(Mark)* as a card arrives, and only then (routine chatter stays silent): a click of the key and a breath of filtered static, police a clean chirp, pirates a rougher crackle, a Mayday twice. Under the game's sound settings.
 - **Still to come** from the redesign above: conversations grouped by voice, chatter folding away, the fight summary; and quick phrases with other commanders (stage 2) can use the same cards.
 
+### Still needs work *(Mark, 1 November 2026)*
+
+Mark: *"I do think the Comms Array needs some work as I did ask for some subtle animation cues and subtle use of color to help identify which messages come from who and how urgent they are etc."* What's built is a start (an accent edge per voice on cards and log lines, an entrance played once), but it doesn't yet do the job: who's speaking and how urgent it is should be clear at a glance, everywhere a message appears.
+
+- **Urgency as its own signal,** separate from who's speaking: three levels, and nothing else. *Needs you now* (a pirate's ultimatum, a police countdown, a Mayday): the card, its motion and its squawk. *Worth knowing* (a company offer, a contract running late): the accent and one gentle entrance. *Background* (traffic, greetings, news): no motion, folded away.
+- **Who, at a glance,** on the comms array's messages as well as the radio: the voice's accent and its small mark on every row, the text plain.
+- **The rest of the redesign above:** conversations grouped by voice, chatter folding away, and the fight summary.
+- **Pictures first:** a mock-up of the radio and the comms array, busy system and quiet, shown to Mark before it's built.
+
 **Over to the community** *(Mark)*. These are starting points, not the answer. If you have a better idea for the radio and the comms array, or improvements to any of this, we'd love it: a sketch, a mock-up, a prototype or a paragraph. Post it in [Discussions](https://github.com/witchspace-game/witchspace/discussions/categories/ideas) or on the [ideas board](https://witchspace.org.uk/ideas/?about=The%20radio%20and%20comms), and the best answer gets built, credited to you.
 
 ## The comms array
