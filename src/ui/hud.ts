@@ -90,6 +90,24 @@ let sticky = false; // shown with no time limit (game over): nothing replaces it
 let queue: { text: string; seconds: number }[] = [];
 let queueTimer = 0;
 
+// In a fight, news that can wait (a survey finished) waits: it's handed back for the radio's
+// summary when the fight's over (src/ui/radio.ts), so nothing calm takes the middle of the screen
+// while the police are deciding whether to shoot you (Mark, 1 November 2026).
+let holding = false;
+let held: string[] = [];
+export function holdFlashes(on: boolean): string[] {
+  holding = on;
+  const out = held;
+  held = [];
+  return on ? [] : out;
+}
+/** A message that can wait out a fight. */
+export function flashLater(text: string, seconds = 2.5) {
+  if (!holding) return flash(text, seconds);
+  const short = text.split(' · ').slice(0, 2).join(' · ');
+  held = [...held.filter((h) => topic(h) !== topic(short)), short].slice(-4);
+}
+
 export function flash(text: string, seconds = 2.5) {
   const now = performance.now() / 1000;
   const up = !banner.hidden;

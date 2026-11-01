@@ -877,17 +877,32 @@ body.retro #job .job-next, body.retro #job .job-list small { font-size: 8px; }
    entrance per voice, once; then still (Mark). */
 #radio-cards { position: fixed; left: 16px; top: 22vh; z-index: 12; display: flex; flex-direction: column; gap: 8px; width: min(400px, 34vw); }
 body:not([data-state='flying']) #radio-cards { display: none; }
-.rcard { --who: var(--fg); position: relative; padding: 10px 12px; border: 1px solid var(--edge); border-left: 3px solid var(--who); border-radius: 8px; background: rgba(2, 10, 8, 0.94); box-shadow: -2px 0 10px -4px var(--who); animation: rcard-in 0.35s ease-out; }
-.rcard.r-station { --who: #ffb347; } .rcard.r-police { --who: #4aa8ff; } .rcard.r-pirate { --who: #ff9a3d; }
-.rcard.r-mayday { --who: #ff8fa3; } .rcard.r-company { --who: var(--accent); } .rcard.r-news { --who: #c9b3ff; }
+.rcard { --who: var(--fg); position: relative; overflow: hidden; padding: 10px 12px 12px; border: 1px solid var(--edge); border-left: 3px solid var(--who); border-radius: 8px; background: rgba(2, 10, 8, 0.94); box-shadow: -2px 0 10px -4px var(--who); animation: rcard-in 0.35s ease-out; }
+.rcard.r-station { --who: #ffb347; } .rcard.r-police { --who: #4aa8ff; } .rcard.r-pirate { --who: #ff5f57; }
+.rcard.r-mayday { --who: #ff8fa3; } .rcard.r-company { --who: var(--accent); } .rcard.r-news { --who: #c9b3ff; } .rcard.r-beacon { --who: #ffd98a; }
+.rcard.r-summary { --who: var(--fg); }
 .rcard[style*='--who'] { border-left-color: var(--who); }
 .rcard-text { margin: 0 0 8px; font-size: 13px; line-height: 1.35; }
 .rcard-text b { font-weight: 600; margin-right: 4px; }
 .rcard-answers { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .rcard-answers button { min-height: 32px; padding: 4px 12px; font-size: 12.5px; }
 .rcard-answers button.primary { border-color: var(--who); color: var(--fg); }
-.rcard-answers kbd { margin-left: 4px; font: inherit; font-size: 10px; color: var(--dim); }
-.rcard-dismiss { margin-left: auto; min-width: 32px; padding: 4px 8px !important; color: var(--dim); border-color: transparent !important; background: none; }
+.rcard-answers kbd { display: none; margin-left: 4px; font: inherit; font-size: 10px; color: var(--dim); }
+/* Only the first card says Enter: that's the one it answers. */
+.rcard.first button.primary kbd { display: inline; }
+/* Urgency is weight and motion, never colour: a time bar in plain white drains along the bottom, and in its
+   last seconds the card pulses and squawks again (Mark: the police hail you forget in a fight). */
+.rcard-time { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--fg); opacity: 0.55; animation: rcard-time linear forwards; transform-origin: left; }
+@keyframes rcard-time { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.rcard.ending { border-color: var(--fg); animation: rcard-ending 0.8s ease-in-out infinite; }
+.rcard.ending .rcard-time { opacity: 1; }
+@keyframes rcard-ending { 50% { box-shadow: -2px 0 18px -1px var(--who), 0 0 0 1px var(--fg); } }
+.rcard-more { margin: 0; padding: 4px 2px; font-size: 12px; color: var(--fg); text-shadow: 0 1px 2px #000; }
+/* Each voice's mark: the shape says what kind of voice, the colour which one (src/ui/radio.ts MARKS). */
+.rmark { width: 14px; height: 14px; flex: none; vertical-align: -2px; margin-right: 6px; fill: none; stroke: var(--who, var(--accent-of, var(--dim))); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.rcard-dismiss { position: absolute; top: 2px; right: 2px; min-width: 32px; min-height: 32px; padding: 4px 8px !important; color: var(--dim); border-color: transparent !important; background: none; }
+.rcard-text { padding-right: 28px; }
+.rcard-left { margin-left: auto; }
 @keyframes rcard-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 /* The voice, felt more than seen: once each, except a Mayday's slow heartbeat on its edge. */
 .rcard.r-police { animation: rcard-in 0.35s ease-out, rcard-pulse 1.6s ease-in-out 0.35s 1; }
@@ -896,10 +911,12 @@ body:not([data-state='flying']) #radio-cards { display: none; }
 @keyframes rcard-pulse { 50% { box-shadow: -2px 0 16px -2px var(--who); } }
 @keyframes rcard-flicker { 50% { opacity: 0.7; transform: translateX(1px); } }
 @keyframes rcard-beat { 0%, 100% { box-shadow: -2px 0 10px -4px var(--who); } 15% { box-shadow: -2px 0 16px -1px var(--who); } 30% { box-shadow: -2px 0 10px -4px var(--who); } 45% { box-shadow: -2px 0 14px -2px var(--who); } }
-@media (prefers-reduced-motion: reduce) { .rcard { animation: none !important; } }
-body.touch #radio-cards { left: max(10px, env(safe-area-inset-left)); top: calc(max(8px, env(safe-area-inset-top)) + 46px); width: min(88vw, 400px); }
+@media (prefers-reduced-motion: reduce) { .rcard, .rcard-time { animation: none !important; } .rcard.ending { box-shadow: 0 0 0 1px var(--fg); } }
+/* On a phone, one card, kept clear of the crosshair: the rest wait behind it ("+1 waiting"). */
+body.touch #radio-cards { left: max(10px, env(safe-area-inset-left)); top: calc(max(8px, env(safe-area-inset-top)) + 46px); width: min(40vw, 380px); }
 body.touch #job:not([hidden]) ~ #radio-cards { top: calc(max(8px, env(safe-area-inset-top)) + 90px); }
-body.touch .rcard-answers button { min-height: 40px; padding: 6px 14px; font-size: 13px; }
+body.touch .rcard-answers button { min-height: 44px; padding: 6px 14px; font-size: 13px; }
+body.touch .rcard-dismiss { min-width: 44px; min-height: 44px; }
 /* Upright, clear of the camera, back and Jump buttons on the right. */
 @media (orientation: portrait) { body.touch #radio-cards { width: calc(100vw - 110px - env(safe-area-inset-right)); } }
 body.retro .rcard { border-radius: 0; box-shadow: none; animation: none; }
@@ -915,9 +932,30 @@ body:not([data-state='flying']) #radio { display: none; }
 /* Each line carries its voice as an accent on its edge, the name plain (Mark: "more of an accent color and subtle animations"). */
 #radio .radio-list li { --accent-of: var(--who, var(--dim)); padding-left: 8px; border-left: 2px solid var(--accent-of); box-shadow: -3px 0 8px -6px var(--accent-of); }
 #radio .radio-list b { color: var(--fg); font-weight: 600; }
+/* One row per voice: its mark, its name, its latest line, how many unread (src/ui/radio.ts row). */
+#radio .rrow { display: flex; align-items: center; gap: 4px; width: 100%; min-height: 0; padding: 1px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; letter-spacing: 0; text-transform: none; }
+#radio .rrow b { flex: none; margin-right: 4px; }
+#radio .rrow-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#radio .rrow-count { flex: none; min-width: 16px; padding: 0 5px; border-radius: 8px; background: var(--fg); color: #000; font-size: 10.5px; font-weight: 700; text-align: center; }
+#radio .rrow-more, #radio .rrow-card { flex: none; color: var(--dim); font-size: 11px; }
+#radio.open .rrow { cursor: pointer; min-height: 30px; }
+#radio .rthread { border-left: 0 !important; box-shadow: none !important; }
+#radio .rthread ol { list-style: none; margin: 2px 0 6px 22px; padding: 0; }
+#radio .rthread li { border: 0; box-shadow: none; padding: 0; font-size: 12px; line-height: 1.4; }
+#radio .rthread li + li { margin-top: 3px; }
+/* Background: dim, no motion, folded into one line. */
+#radio li.u-background { --accent-of: rgba(111, 168, 148, 0.35); border-left-width: 1px; box-shadow: none; color: var(--dim); }
+#radio li.u-background b { color: var(--dim); }
+#radio li.u-background.fresh { animation: none; }
+/* The pill's marks: who's waiting to be read. */
+#radio .radio-marks { display: none; }
+body.touch #radio .radio-marks:not(:empty) { display: inline-flex; gap: 2px; }
+#radio .radio-marks .rmark { margin: 0; width: 12px; height: 12px; }
+#radio .radio-marks .r-police { --who: #4aa8ff; } #radio .radio-marks .r-pirate { --who: #ff5f57; } #radio .radio-marks .r-mayday { --who: #ff8fa3; }
+#radio .radio-marks .r-news { --who: #c9b3ff; } #radio .radio-marks .r-station { --who: #ffb347; } #radio .radio-marks .r-beacon { --who: #ffd98a; }
 #radio li.r-station { --accent-of: var(--who, #ffb347); }
 #radio li.r-police { --accent-of: var(--who, #4aa8ff); }
-#radio li.r-pirate { --accent-of: var(--who, #ff9a3d); }
+#radio li.r-pirate { --accent-of: var(--who, #ff5f57); }
 #radio li.r-mayday { --accent-of: var(--who, #ff8fa3); }
 #radio li.r-news { --accent-of: var(--who, #c9b3ff); }
 #radio li.r-beacon { --accent-of: var(--who, #ffd98a); }
@@ -930,7 +968,7 @@ body:not([data-state='flying']) #radio { display: none; }
 @keyframes rline-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: none; } }
 @keyframes rline-pulse { 50% { box-shadow: -3px 0 12px -4px var(--accent-of); } }
 @media (prefers-reduced-motion: reduce) { #radio li.fresh { animation: none !important; } }
-#radio .radio-list button { margin-left: 8px; padding: 1px 8px; font-size: 11px; min-height: 0; border-color: var(--accent); color: var(--accent); }
+#radio .radio-list button[data-radio] { margin-left: 8px; padding: 1px 8px; font-size: 11px; min-height: 0; border-color: var(--accent); color: var(--accent); }
 #radio .radio-done { margin-left: 8px; color: var(--dim); font-size: 11px; }
 #radio .radio-close { display: none; position: absolute; top: 4px; right: 4px; min-height: 0; padding: 0 6px; font-size: 12px; }
 #radio.open .radio-close { display: block; }
@@ -948,7 +986,7 @@ body.touch #radio.ticker .radio-ticker { display: inline; }
 body.touch #radio .radio-panel { display: none; }
 body.touch #radio.open .radio-panel { display: block; margin-top: 6px; width: min(78vw, 520px); }
 body.touch #radio.open .radio-list { max-height: 52vh; font-size: 12px; }
-body.touch #radio .radio-list button { min-height: 32px; padding: 4px 12px; font-size: 12px; }
+body.touch #radio .radio-list button[data-radio] { min-height: 40px; padding: 4px 12px; font-size: 12px; }
 body.touch #radio .radio-close { min-height: 32px; min-width: 32px; }
 body.retro #radio .radio-list, body.retro #radio .radio-pill { border-radius: 0; font-size: 9px; }
 body.retro #radio .radio-list time { font-size: 8px; }

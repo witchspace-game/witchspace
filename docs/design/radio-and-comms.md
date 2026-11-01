@@ -105,6 +105,18 @@ Mark: *"I do think the Comms Array needs some work as I did ask for some subtle 
 - **The rest of the redesign above:** conversations grouped by voice, chatter folding away, and the fight summary.
 - **Pictures first:** a mock-up of the radio and the comms array, busy system and quiet, shown to Mark before it's built.
 
+#### Built *(1 November 2026, from the pictures)*
+
+Played first, in Mark's scenario (running dark, a dogfight with pirates, into the station's space, a police hail forgotten in the fight): the hail's card was fine, but when it ran out the game went quiet (one fading line, while a "Survey complete" banner took the middle of the screen), nothing said there was a way out, and on a phone two cards covered half the screen beside the crosshair. Built:
+
+- **Colour says who; weight and motion say how urgent.** Each voice has a mark (station a diamond, police a shield, pirates a cross, a company a square in its livery, a ship a circle, a Mayday a ring, news lines, the beacon a star) on its cards, rows and the phone's Radio pill. Pirates are red now, not the station's orange.
+- **Three levels.** *Now*: a card, with a white time bar draining along its foot; in its last 5 seconds it pulses and squawks again. *Worth knowing*: a row with a bright edge and an unread count. *Background* (traffic, other ships): dim, silent, folded into one row, gone after three minutes.
+- **The police first.** Cards are ordered police, Mayday, pirate, then the rest; Enter answers the first, and only that card says Enter. A pirate's threat and price go once it opens fire.
+- **Conversations, not a list:** the log is one row per voice, its latest line and how many you haven't read; open the radio and tap a row for that voice's conversation, with its answers.
+- **Calmer in a fight:** news that can wait (a survey finished) waits, and when the fight's over one card sums up what you missed: *While you were fighting · Hexon: Running late · News: Famine at Diso · Survey complete · Lave*.
+- **On a phone, one card,** clear of the crosshair, with "+1 waiting" under it and 44 px buttons.
+- **The police's last word stays:** see [law and travel](law-and-travel.md) (the airspace refuge).
+
 **Over to the community** *(Mark)*. These are starting points, not the answer. If you have a better idea for the radio and the comms array, or improvements to any of this, we'd love it: a sketch, a mock-up, a prototype or a paragraph. Post it in [Discussions](https://github.com/witchspace-game/witchspace/discussions/categories/ideas) or on the [ideas board](https://witchspace.org.uk/ideas/?about=The%20radio%20and%20comms), and the best answer gets built, credited to you.
 
 ## The comms array

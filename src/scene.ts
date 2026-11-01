@@ -161,6 +161,11 @@ export const flight = {
   hullChecked: false,
   /** You ignored a hail, or fired on police, while dark: they're after you, whoever you are. */
   defiedPolice: false,
+  /** When a pirate last fired on you: while they're at it, the police deal with them first and the hail waits. */
+  pirateFireAt: -Infinity,
+  /** The radio cards of the police hail, and of "the police are firing on you" (src/ui/radio.ts settle). */
+  hailCard: 0,
+  defiedCard: 0,
   /** Who last hit you, and when (the kill cam's "killed by"). */
   lastHitBy: null as { npc: NpcShip; at: number } | null,
   /** A Viper detailed to fly with you, and until when. */

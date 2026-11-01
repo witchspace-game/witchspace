@@ -28,7 +28,7 @@ import { laserSound, remoteVoices, shotSound, VOICE_RANGE, voiceOf } from './sou
 import { EVADE_LASERS, evading, wispShot } from './wisp';
 import { maybeFireNpcMissile, updateMissiles } from './missiles';
 import { Drifter, drifters } from './adrift';
-import { DISTRESS_SHIELDING, distressCall, radio } from './comms';
+import { DISTRESS_SHIELDING, distressCall, pirateOpenedFire, radio } from './comms';
 import { HIDDEN_BEYOND, HIDDEN_BEYOND_DARK, coverTargets, exploring, inClutter, playerVisibleAt } from './explore';
 import { MAX_POLICE, SCAN_RANGE, SCAN_TIME, becomeFugitive, becomeOffender, damagePlayer, dark, destroyNpc, identified, inSafeZone, isFugitive, pirateFired, playerHitNpc, playerRammedNpc, spawnViper, PATROLS_BY_GOVERNMENT } from './law';
 import * as THREE from 'three';
@@ -285,6 +285,10 @@ export function updateCombat(dt: number, input: { fire: boolean } | null) {
     if (escorting && npcs.includes(escorting)) npc.patrol.centre.copy(escorting.obj.position);
     if (shot && npc.target === player) npc.firedOnPlayer = true;
     if (shot && npc.role === 'pirate') pirateFired(npc);
+    if (shot && npc.role === 'pirate' && npc.target === player) {
+      flight.pirateFireAt = flight.elapsed;
+      pirateOpenedFire(npc);
+    }
     // Keep ships from flying through the station, except traders docking down the slot.
     const fromStation = npc.obj.position.clone().sub(station.root.position);
     if (fromStation.length() < 120 && legs.get(npc) !== 'docking') npc.obj.position.copy(station.root.position).add(fromStation.setLength(120));

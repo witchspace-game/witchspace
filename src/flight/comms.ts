@@ -20,7 +20,7 @@ import { escapeHtml } from '../ui/escape';
 import { onTap } from '../ui/touch';
 import { COMPANY_SHORT, jobStrip, routeWork, workInReach, type JobStep } from '../game/jobs';
 import { distressReward, hailReply, newsInReach, pirateAnswer, pirateThreat, RADIO_RANGE, tollFor, type HailContext, type Speaker } from '../game/radio';
-import { say, setRadioFight, type RadioAction, type RadioKind, type RadioOpts } from '../ui/radio';
+import { say, setRadioFight, settle, type RadioAction, type RadioKind, type RadioOpts } from '../ui/radio';
 import { $, cmdr, currentSystem, game, modern } from '../core';
 import { flight, sharedSpace, npcs, ofRole, planetPos, player, station } from '../scene';
 import { plotCourse } from '../ui/contracts';
@@ -195,15 +195,16 @@ document.addEventListener(
 /** A working comms array: the companies reach you anywhere, and you hear further. */
 export const hasArray = () => modern() && isWorking(cmdr(), 'comms-array');
 
-export function radio(kind: RadioKind, from: string, text: string, o: RadioOpts = {}) {
+export function radio(kind: RadioKind, from: string, text: string, o: RadioOpts = {}): number {
   const line = o.line ?? `${from} · ${text}`;
   if (!modern()) {
     if (o.flash) flash(line, o.flash);
-    return;
+    return 0;
   }
-  say({ kind, from, text, colour: o.colour, action: o.action, answers: o.answers });
+  const id = say({ kind, from, text, colour: o.colour, action: o.action, answers: o.answers, urgency: o.urgency });
   // A card carries the words itself; flash only what has no card.
   if (o.urgent && o.flash && !o.answers?.length && !o.action) flash(line, o.flash);
+  return id;
 }
 
 const companyVoice = (id: CompanyId) => ({ from: COMPANIES[id].name, colour: COMPANIES[id].colour });
@@ -338,7 +339,7 @@ function answerPirate(p: NpcShip): RadioAction[] {
         const toll = tollFor(hold);
         if (hold <= 0) return { kind: 'pirate', from: p.def.name, text: "Nothing in your hold worth the trouble. We'll take the ship." };
         if (cmdr().credits < toll) return { kind: 'pirate', from: p.def.name, text: `${toll} Cr. You haven't got it, have you? Then we'll take the cargo.` };
-        radio('pirate', p.def.name, `${toll} Cr and we never saw you.`, { answers: [payOff(p, toll), noDeal(p)], flash: 4, urgent: true });
+        cardOf(p, radio('pirate', p.def.name, `${toll} Cr and we never saw you.`, { answers: [payOff(p, toll), noDeal(p)], flash: 4, urgent: true }));
         return null;
       },
     },
@@ -377,6 +378,15 @@ export function answerSurrender(): RadioAction {
   } };
 }
 
+// A pirate's threat and price are cards until it opens fire: then talking's over, and the
+// card makes room for the ones that matter in a fight (the police, a Mayday).
+const pirateCards = new WeakMap<NpcShip, number[]>();
+const cardOf = (p: NpcShip, id: number) => id && pirateCards.set(p, [...(pirateCards.get(p) ?? []), id]);
+export function pirateOpenedFire(p: NpcShip) {
+  for (const id of pirateCards.get(p) ?? []) settle(id, 'Fighting');
+  pirateCards.delete(p);
+}
+
 // Pirates say something before they open fire, if you're in range to hear.
 const threatened = new WeakSet<NpcShip>();
 let lastThreat = -Infinity;
@@ -386,7 +396,7 @@ export function pirateThreats() {
     threatened.add(p);
     if (flight.elapsed - lastThreat < 20 || !main.npcIdentified(p) || p.obj.position.distanceTo(player.obj.position) > RADIO_RANGE) continue;
     lastThreat = flight.elapsed;
-    radio('pirate', p.def.name, pirateThreat(hailContext(serialOf(p) * 1000 + (minute() % 1000), p)), { answers: answerPirate(p) });
+    cardOf(p, radio('pirate', p.def.name, pirateThreat(hailContext(serialOf(p) * 1000 + (minute() % 1000), p)), { answers: answerPirate(p) }));
   }
   // Paid-off pirates, gone over the horizon.
   for (const p of ofRole('pirate')) if (p.paid && p.obj.position.distanceTo(player.obj.position) > 25000) removeNpc(p);

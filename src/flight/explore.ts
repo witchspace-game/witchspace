@@ -14,7 +14,7 @@ import { buildYard } from '../render/yard';
 import { stageLabel, yardAt } from '../game/yards';
 import { lineUpFor } from '../game/commissions';
 import { buildShip, disposeShip } from '../render/shipModel';
-import { flash } from '../ui/hud';
+import { flash, flashLater } from '../ui/hud';
 import { type Marker } from '../ui/indicators';
 import { claimFirsts, firstsIn } from '../net/firsts';
 import { type StarSystem } from '../galaxy/generate';
@@ -160,7 +160,7 @@ export function updateExplore(dt: number): boolean {
       saveCommander(c);
       sfx.beep();
       const grade = done.grade ? ` · ${done.grade === 'Candidate' ? 'terraforming CANDIDATE: Wexley-Yorozu will want this' : done.grade.toLowerCase()}` : '';
-      flash(`Survey complete · ${done.name}${grade} · data worth ${dataValue(exploreOf(c).data[exploreOf(c).data.length - 1], here)} Cr here, more further away`, 4);
+      flashLater(`Survey complete · ${done.name}${grade} · data worth ${dataValue(exploreOf(c).data[exploreOf(c).data.length - 1], here)} Cr here, more further away`, 4);
       survey = null;
       if (done.id === 'planet') {
         const hidden = flight.scenePois.filter((p) => !p.revealed);
