@@ -11,7 +11,7 @@ import { docPanel, helpSkillsHtml, helpWantedHtml, libraryHtml, loadDocs, PILLAR
 import { currencyExamplesHtml } from './economy';
 import { companiesHub, companyPage, jobsPage, loadJobs } from './jobs';
 import { drawerButtons, editionsFor, loadModules, loadShips, manualFor, ownable } from './shipFiles';
-import { buildPage, editionPage, groupShips, manualPage, papersPage, shipPage, shipsIndex } from './ships';
+import { buildPage, editionPage, groupShips, manualPage, modulePage, modulePath, papersPage, shipPage, shipsIndex, type ModuleBody, type ModuleFile } from './ships';
 import { galaxyHub, SYSTEMS, systemPage } from './systems';
 import { careerDeck } from './careerDeck';
 import { systemUrl } from '../src/site/systemNow';
@@ -273,6 +273,11 @@ const FILMS_OF: Record<string, { name: string; url: string; embedUrl?: string }[
 const withFilms = (id: string, p: ReturnType<typeof shipPage>) =>
   FILMS_OF[id] ? { ...p, schema: p.schema.map((o, i) => (i === 0 ? { ...o, subjectOf: FILMS_OF[id].map((f) => ({ '@type': 'VideoObject', ...f })) } : o)) } : p;
 for (const s of ships) write({ ...forSearch(`/ships/${s.id}/`, s.name, withFilms(s.id, shipPage(s, shipModules, false, editionsFor(s), ownable(s)))), scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
+// Every module of the Titan has its own page, open to improve (Mark).
+const titan = ships.find((s) => s.id === 'titanoboa');
+if (titan)
+  for (const m of shipModules.values())
+    write({ ...forSearch(modulePath(m.id), m.name, modulePage(m as ModuleFile & ModuleBody, titan, [...shipModules.values()])), parent: { name: titan.name, path: '/ships/titanoboa/' }, scripts: ['/src/site/ship.ts'], bodyClass: 'ships-page' });
 // Owner's manuals: one for every ship the yard sells, shown only to her owner.
 const cobra = ships.find((s) => s.id === 'cobra-mk3')!;
 const drawer = drawerButtons(root);

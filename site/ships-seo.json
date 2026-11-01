@@ -41,14 +41,46 @@
   },
   "/ships/titanoboa/": {
     "title": "Titanoboa: the ship that builds stations",
-    "description": "Wexley-Yorozu’s 2,500 m constructor eats a moon and leaves a station behind, stage by stage over days. Watch one rise. Fly free in your browser."
+    "description": "Wexley-Yorozu’s 2.2 km constructor eats a moon and leaves a station behind, stage by stage over days. Watch one rise. Fly free in your browser."
   },
   "/ships/bullsnake/": {
-    "title": "Bullsnake: the Titan’s ore hauler",
-    "description": "Short, square and slow, with tractor booms where the guns should be. Bullsnakes feed the Titan’s furnaces with ore from the moon. Fly free in your browser."
+    "title": "Bullsnake: the Titan’s ore hauler and tug",
+    "description": "Short, square and slow, with tractor booms where the guns should be. Bullsnakes feed the Titan moon ore, and they’re her tugs too. Fly free in your browser."
   },
   "/ships/coriolis/": {
     "title": "Coriolis Station: matching the spin",
     "description": "A slowly turning station with one docking slot. Match its spin, line up, keep your nerve, or let the docking computer do it. Fly free in your browser."
+  },
+  "/ships/titanoboa/modules/maw/": {
+    "title": "Maw: the Titanoboa module that eats a moon",
+    "description": "The intake: a wide mouth that takes in a moon a little at a time, from haulers that never land. Open for anyone to redraw. Free in your browser."
+  },
+  "/ships/titanoboa/modules/furnace/": {
+    "title": "Furnace: the Titanoboa’s crucible",
+    "description": "Smelting, refining and the exotic materials. Wexley-Yorozu recommends you do not stand near it. Open for anyone to redraw. Free in your browser."
+  },
+  "/ships/titanoboa/modules/hold/": {
+    "title": "Hold: the Titanoboa’s stores and tug pads",
+    "description": "Four cells for refined metal and imported goods, and a pad on each side for three Bullsnake tugs. Open for anyone to redraw. Free in your browser."
+  },
+  "/ships/titanoboa/modules/habitat/": {
+    "title": "Habitat: the wheel where the Titanoboa’s crew live",
+    "description": "A wheel on three spokes, turning for gravity. A few thousand workers live here, under the company mark. Open for anyone to redraw. Free in your browser."
+  },
+  "/ships/titanoboa/modules/fabricator/": {
+    "title": "Fabricator: where the Titanoboa makes stations",
+    "description": "An open cradle where station sections are made. They leave by the sides, and so, occasionally, does the crew. Open for anyone to redraw. Free in your browser."
+  },
+  "/ships/titanoboa/modules/science/": {
+    "title": "Science: the Titanoboa’s sealed research pod",
+    "description": "A sealed pod on a mast, at arm’s length from everyone, for whatever the explorers found living here. Ejectable. Open for anyone to redraw. Free in your browser."
+  },
+  "/ships/titanoboa/modules/reactor/": {
+    "title": "Reactor: the Titanoboa’s shielded core",
+    "description": "A compact core behind a shadow shield, so everyone else lives in its shade, and four vanes shedding its heat. Open for anyone to redraw. Free in your browser."
+  },
+  "/ships/titanoboa/modules/drive/": {
+    "title": "Drive: the module that moves a whole station",
+    "description": "A block and three bells: fitted to move a station, or stacked with a fuel module to fly modules between the stars. Open for anyone to redraw. Free in your browser."
   }
 }
