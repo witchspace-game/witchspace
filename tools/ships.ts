@@ -104,7 +104,7 @@ const AT_WORK: Record<string, { heading: string; html: string }> = {
   bullsnake: {
     heading: 'Ore hauler and tug',
     html: `<p>Bullsnakes run ore from a moon into the Titan's maw: every commander sees the same ones, at the same moment. They're her tugs too, and the plan gives them more of her work: fetching food and materials from the local station, ferrying cargo (and one day prisoners) between the Titan and the surface, making repairs, and moving her modules to set her up for the job.</p>
-    <p>They stay in the system: traders carry every good between the stars. The exception will be modules that have to travel. Stack any combination of them on their docking rings, add an engine module and a fuel module, dock a Bullsnake in as the bridge, and she flies the whole stack through hyperspace. A Bullsnake carries a crew of about five: a pilot, an engineer and three hands. The same crew can take a Titan apart where she sits and put her back together for a new job. <a href="/design/ship-the-titanoboa/">The Titanoboa</a> · <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
+    <p>They stay in the system: traders carry every good between the stars. The exception will be modules that have to travel. Stack any combination of them on their docking rings, add a drive and a fuel module, dock a Bullsnake in as the bridge, and she flies the whole stack through hyperspace. A Bullsnake carries a crew of about five: a pilot, an engineer and three hands. The same crew can take a Titan apart where she sits and put her back together for a new job. <a href="/design/ship-the-titanoboa/">The Titanoboa</a> · <a href="/design/the-world/">How the galaxy flies</a>.</p>`,
   },
 };
 
@@ -351,7 +351,7 @@ const WHY: Record<string, string> = {
   fabricator: 'Beside the habitat, where most of its workers live. Material from the hold reaches it along the spine, through the habitat’s hub, and finished sections leave by its open sides.',
   science: 'Past the fabricator, at the far end from the crew: one find to a pod, at arm’s length, and an ejected pod endangers nobody.',
   reactor: 'At the stern. Its shadow shield faces forward, so everything ahead of it is in its shade, its radiators point where nothing else is, and its power runs forward along the spine.',
-  drive: 'At the very stern, behind the reactor, and only when a station has to be moved. It couples fore only, so nothing can go behind it.',
+  drive: 'At the very stern, behind the reactor, when a station has to be moved; or at the back of a stack of modules, with a fuel module, for a Bullsnake to fly between the stars. It couples fore only, so nothing can go behind it.',
 };
 
 /** One Titanoboa module's own page: the section turning, what it does, and how to improve it (Mark: every module open to the community). */
@@ -421,7 +421,7 @@ export function modulePage(m: ModuleFile & ModuleBody, titan: ShipFile, all: Mod
     </div>
     <div class="card">
       <h3>Or design a new one</h3>
-      <p>The Titanoboa is whatever the job needs: sections on one coupling, lined up for the work. Mining, building, hauling, or work the company would rather you didn’t ask about. A prison module is wanted. Bolt enough of them together, with accommodation, a gym complex and science stations where the inmates may be put to use in experiments (the science pods can be ejected if anything gets out), and you have a prison Titanoboa, her Bullsnake tugs ferrying inmates down to the surface and back. Wexley-Yorozu calls it rehabilitation. For the long haul between stars, a module is stacked on its docking ring with an engine module and a fuel module, thrown away when it runs dry; dock a Bullsnake in its ring as the bridge, and she flies the whole stack to another system. Draw the module you think she’s missing: if it’s built, your commander is paid 5,000 Cr the first time it’s fitted.</p>
+      <p>The Titanoboa is whatever the job needs: sections on one coupling, lined up for the work. Mining, building, hauling, or work the company would rather you didn’t ask about. A prison module is wanted. Bolt enough of them together, with accommodation, a gym complex and science stations where the inmates may be put to use in experiments (the science pods can be ejected if anything gets out), and you have a prison Titanoboa, her Bullsnake tugs ferrying inmates down to the surface and back. Wexley-Yorozu calls it rehabilitation. For the long haul between stars, a module is stacked on its docking ring with a <a href="/ships/titanoboa/modules/drive/">drive module</a> and a fuel module, thrown away when it runs dry (the fuel module is still wanted); dock a Bullsnake in its ring as the bridge, and she flies the whole stack to another system. Draw the module you think she’s missing: if it’s built, your commander is paid 5,000 Cr the first time it’s fitted.</p>
       <p class="muted small">Pay goes to a commander with an account and a callsign, and arrives the next time they dock in a Modern game.</p>
       <p><a class="button ghost small" href="/submit/?module=${esc(m.id)}&amp;as=new">Start a new module from this one</a> <a class="button ghost small" href="/design/ship-the-titanoboa/#designing-a-module-the-standard">The standard</a></p>
     </div>

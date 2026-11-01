@@ -81,6 +81,6 @@
   },
   "/ships/titanoboa/modules/drive/": {
     "title": "Drive: the module that moves a whole station",
-    "description": "A block and three bells, fitted only when a station has to be moved. She never hurries. Open for anyone to redraw. Free in your browser."
+    "description": "A block and three bells: fitted to move a station, or stacked with a fuel module to fly modules between the stars. Open for anyone to redraw. Free in your browser."
   }
 }
