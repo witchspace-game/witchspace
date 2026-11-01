@@ -1,13 +1,10 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import type { ShipDef } from '../content/types';
-import { GLOW, MAX_PIXEL_RATIO } from '../render/look';
+import { MAX_PIXEL_RATIO } from '../render/look';
 import { buildPainted, disposeShip, type Look, type ShipModel } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
-import { easer, inkable, onPaper, SPACE } from './ink';
+import { easer, inkable, lightUp, onPaper, SPACE } from './ink';
+import { glow } from './glow';
 
 // A ship turning in neo-vector on a canvas: drag to turn it; left alone, it
 // turns slowly by itself. The ship pages show their ship in one; the submit
@@ -36,12 +33,7 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
   let litTarget = paper ? 0 : 1;
   let inked: ((t: number) => void) | null = null;
   const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 50000);
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
-  bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
-  composer.addPass(bloom);
-  composer.addPass(new OutputPass());
+  const { composer, bloom } = glow(renderer, scene, camera);
 
   const resize = () => {
     const w = canvas.clientWidth;
@@ -79,12 +71,7 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
     const dist = (model.radius * 1.2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1, camera.aspect);
     camera.position.set(0, 0, dist);
     camera.lookAt(0, 0, 0);
-    if (paper) {
-      const t = lit.value;
-      inked?.(t);
-      bloom.strength = GLOW.strength * t;
-      renderer.setClearColor(0x000000, t); // the plate's own dark shows through
-    }
+    if (inked) lightUp(renderer, bloom, inked, lit.value);
     composer.render();
   };
   const frame = (now: number) => {

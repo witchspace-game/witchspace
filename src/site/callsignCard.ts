@@ -1,14 +1,10 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { shipById } from '../content/ships';
 import { applyLivery } from '../render/livery';
 import { buildPainted, disposeShip, type Look, type ShipModel } from '../render/shipModel';
-import { GLOW } from '../render/look';
 import { applyParts, setLineResolution } from '../render/wire';
+import { glow } from './glow';
 
 // The callsign card's ship: the role's ship in neo-vector, on the right of the card and clear of the words,
 // as on the site's share cards (tools/share-card.ts), in front of the card's scene. She's drawn with her glow on
@@ -61,12 +57,7 @@ export function cardShip(canvas: HTMLCanvasElement): CardShip {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
   const camera = new THREE.PerspectiveCamera(30, CARD_W / CARD_H, 1, 100000);
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
-  bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
-  composer.addPass(bloom);
-  composer.addPass(new OutputPass());
+  const { composer } = glow(renderer, scene, camera);
   const blend = new ShaderPass(BLEND);
   composer.addPass(blend);
   // Black until a scene has loaded.

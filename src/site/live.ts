@@ -1,8 +1,4 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { shipById } from '../content/ships';
 import { COMMODITIES } from '../economy/commodities';
 import { activeEvent, EVENT_KINDS, newsAt, type WorldEvent } from '../economy/events';
@@ -12,14 +8,15 @@ import { COMPANIES } from '../game/companies';
 import { cargoName, destinationOf } from '../game/contracts';
 import { cargoWords, voyages, type Voyage } from '../game/traffic';
 import { stageInfo, STAGES, yardsNear } from '../game/yards';
-import { GLOW, MAX_PIXEL_RATIO } from '../render/look';
+import { MAX_PIXEL_RATIO } from '../render/look';
 import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 import { escapeHtml } from '../ui/escape';
 import { boardAt, LAVE } from './board';
-import { easer, inkable, onPaper } from './ink';
+import { easer, inkable, lightUp, onPaper } from './ink';
 import { systemUrl } from './systemNow';
 import { chartedWhat, clipTitle, commanderLines, EMPTY, featuredClip, flyingLine, parseFeed, type CommanderLine, type Feed } from './feed';
+import { glow } from './glow';
 
 // The home page's live galaxy: the news around Lave, the nearest shipyard, a
 // market in crisis, the ticker under the hero, and the Falcon turning. All
@@ -286,19 +283,12 @@ if (canvas) {
     const paint = (dt: number) => {
       if (inked) {
         const t = lit.step(litTarget, dt);
-        inked(t);
-        bloom.strength = GLOW.strength * t;
-        renderer.setClearColor(0x000000, t); // the plate's own dark shows through
+        lightUp(renderer, bloom, inked, t);
         card?.classList.toggle('lit', t > 0.5);
       }
       composer.render();
     };
-    const composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
-    bloom.compositeMaterial.uniforms['bloomFactors'].value = [...GLOW.factors];
-    composer.addPass(bloom);
-    composer.addPass(new OutputPass());
+    const { composer, bloom } = glow(renderer, scene, camera);
     const size = () => {
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
