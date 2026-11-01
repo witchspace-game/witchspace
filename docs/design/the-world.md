@@ -255,7 +255,7 @@ What characters add is **doubt**. Today a trader is a target: shoot one and the 
 - **Personalities follow the government.** Anarchies draw smugglers, salvagers and people hiding; feudal worlds a lord's couriers; dictatorships state haulers and informers; corporate states company men; democracies Mutual captains, surveyors and pilgrims.
 - **Not only traders:** explorers surveying, builders and tugs at the yards, miners in the fields, all taking part in Witchspace on the same rules as players.
 - **The cost of crossing one is personal and lasting:** they remember, their friends remember, and it counts in an anarchy, where there's no law but there are still people. Piracy stays a career: good pirates scan first.
-- **Fair, so it isn't arbitrary:** the scanner's card always says who a ship is before you fire. A first offence is a warning, not an enemy for life ("Mutual ship. You'll want to look before you shoot."). The costs mustn't stack into something punishing with the law's own fines.
+- **Fair, so it isn't arbitrary:** the scanner's card always says who a ship is before you fire, unless she's flying dark. **Firing on a dark ship is the attacker's risk** (Mark): whoever she turns out to be, a character, a Mutual captain or a commander, the consequences stand. Characters fly dark too where it suits them (a smuggler in an anarchy), so a dark ship is the biggest doubt of all. A first offence is a warning, not an enemy for life ("Mutual ship. You'll want to look before you shoot."). The costs mustn't stack into something punishing with the law's own fines.
 - **Modern rules only.** Classic keeps 1984's galaxy, untouched.
 - **People in the margins, not a cast:** a hail, a line at the bar, an empty chair. No quest markers, no reputation bars, no grind. It costs you a friend, not a quest.
 
@@ -286,7 +286,7 @@ Mark (1 November 2026), of the characters remembering real commanders as well as
 - **Kind on balance.** Rescues, convoys saved and first discoveries are told more often than kills, so the bars aren't a wall of shame and infamy isn't a prize. A repeat offender becomes "that Mamba again", not a famous name.
 - **No pronouns for real commanders:** their callsign, or "they". Characters keep their own.
 - **Never invent a commander.** When there's no news, characters talk about each other, or the bar is quiet. Silence is honest.
-- **Keep my name out of the bars:** a setting for commanders who don't want to be retold, besides flying dark; and one line on the callsign page saying what may be retold.
+- **Flying dark is the way out, and it's a choice with a risk** (Mark: *"Running dark carries a risk right so it's a CMDR's choice. If a pirate fires on a ship that is Dark then that's their risk."*). There's no other opt-out: what you do in shared space with your transponder on may be retold by your callsign, and the callsign page says so once. Deleting your account takes you out of all of it.
 - **Stored by account, shown by callsign.** The callsign is filled in when the line is shown, so a changed or removed callsign, or a deleted account, leaves all the gossip at once.
 - **Characters are labelled.** Anywhere real commanders are marked "Commander" (the live feed), a character carries "Character", never the commander mark.
 - **On the site,** drawn in the browser like the live feed, not in the pages search engines read. A commander's callsign card shows only the lines they choose.
