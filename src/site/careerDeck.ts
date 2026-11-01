@@ -15,9 +15,6 @@ if (deck) {
   /** How long the old card takes to turn edge on (site.css: the new one starts turning in then). */
   const HALF_MS = 300;
   let front = 0;
-  // Which way it turns, while Mark chooses: about the upright (the default), top over bottom (?turn=x), or a slide (?turn=slide).
-  const turnStyle = new URLSearchParams(location.search).get('turn') ?? '';
-  if (turnStyle === 'x' || turnStyle === 'slide') deck.dataset.turn = turnStyle;
 
   const show = (i: number) => {
     const next = (i + cards.length) % cards.length;
@@ -29,7 +26,7 @@ if (deck) {
         old.classList.add('waiting');
         old.classList.remove('leaving');
         requestAnimationFrame(() => requestAnimationFrame(() => old.classList.remove('waiting')));
-      }, (turnStyle === 'slide' ? 450 : HALF_MS) + 20);
+      }, HALF_MS + 20);
     }
     front = next;
     cards.forEach((card, k) => {
@@ -44,7 +41,7 @@ if (deck) {
       row.forEach((b) => b.setAttribute('aria-current', String(b.dataset.career === career)));
       ladders.forEach((l) => (l.hidden = l.dataset.career !== career));
       if (cta) cta.href = `/callsign/?career=${career}`;
-    }, first ? 0 : turnStyle === 'slide' ? 150 : HALF_MS);
+    }, first ? 0 : HALF_MS);
     first = false;
   };
   let labelTimer = 0;
