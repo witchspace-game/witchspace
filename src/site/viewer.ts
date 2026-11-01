@@ -7,6 +7,7 @@ import type { ShipDef } from '../content/types';
 import { GLOW, MAX_PIXEL_RATIO } from '../render/look';
 import { buildPainted, disposeShip, type Look, type ShipModel } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
+import { easer, inkable, onPaper, SPACE } from './ink';
 
 // A ship turning in neo-vector on a canvas: drag to turn it; left alone, it
 // turns slowly by itself. The ship pages show their ship in one; the submit
@@ -18,15 +19,22 @@ export interface Viewer {
   show(def: ShipDef, look?: Look | null): void;
   /** The ship as she is now, drawn afresh at this size, for a picture of her (a certificate saved as an image). */
   snapshot(width: number, height: number): HTMLCanvasElement;
+  /** On paper: show her as a drawing (false) or lit, in neo-vector (true). Off paper she's always lit. */
+  light(on: boolean): void;
 }
 
 export function viewer(canvas: HTMLCanvasElement): Viewer {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Opaque, in the frame's own colour: over a see-through canvas the glow pools into a wash.
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  // On paper she starts as an ink drawing on a see-through canvas, and the space behind her fades in as she's lit.
+  const paper = onPaper();
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: paper });
   renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color('#04060b');
+  if (!paper) scene.background = new THREE.Color(SPACE);
+  const lit = easer(1.2);
+  let litTarget = paper ? 0 : 1;
+  let inked: ((t: number) => void) | null = null;
   const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 50000);
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
@@ -71,6 +79,12 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
     const dist = (model.radius * 1.2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / Math.min(1, camera.aspect);
     camera.position.set(0, 0, dist);
     camera.lookAt(0, 0, 0);
+    if (paper) {
+      const t = lit.value;
+      inked?.(t);
+      bloom.strength = GLOW.strength * t;
+      renderer.setClearColor(0x000000, t); // the plate's own dark shows through
+    }
     composer.render();
   };
   const frame = (now: number) => {
@@ -79,6 +93,7 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
     last = now;
     if (!model || !visible || document.hidden) return;
     spin.idle += dt;
+    if (paper) lit.step(litTarget, dt);
     if (!spin.dragging && spin.idle > 1.5 && !reducedMotion) spin.y += dt * 0.25;
     draw();
   };
@@ -92,6 +107,7 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
         disposeShip(model);
       }
       model = next;
+      if (paper) inked = inkable(model);
       scene.add(model.root);
     },
     snapshot(width, height) {
@@ -112,6 +128,9 @@ export function viewer(canvas: HTMLCanvasElement): Viewer {
       resize();
       draw();
       return out;
+    },
+    light(on) {
+      if (paper) litTarget = on ? 1 : 0;
     },
   };
 }

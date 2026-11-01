@@ -17,6 +17,7 @@ import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';
 import { escapeHtml } from '../ui/escape';
 import { boardAt, LAVE } from './board';
+import { easer, inkable, onPaper } from './ink';
 import { systemUrl } from './systemNow';
 import { chartedWhat, clipTitle, commanderLines, EMPTY, featuredClip, flyingLine, parseFeed, type CommanderLine, type Feed } from './feed';
 
@@ -263,13 +264,35 @@ if (ticker) {
 const canvas = $('now-falcon') as HTMLCanvasElement | null;
 if (canvas) {
   try {
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    // On paper she's an ink drawing until you reach for her card (or, on a phone, she's in view): then she lights.
+    const paper = onPaper();
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: paper });
     renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#0c0f15');
+    if (!paper) scene.background = new THREE.Color('#0c0f15');
     const camera = new THREE.PerspectiveCamera(30, 1, 1, 5000);
     const model = buildShip(shipById('falcon')!);
     scene.add(model.root);
+    const inked = paper ? inkable(model) : null;
+    const lit = easer(0.8);
+    let litTarget = 0;
+    const card = canvas.closest<HTMLElement>('.now-card');
+    if (paper && card) {
+      card.addEventListener('pointerenter', () => (litTarget = 1));
+      card.addEventListener('pointerleave', () => (litTarget = 0));
+      if (matchMedia('(pointer: coarse)').matches)
+        new IntersectionObserver(([e]) => (litTarget = e.isIntersecting ? 1 : 0), { threshold: 0.9 }).observe(card);
+    }
+    const paint = (dt: number) => {
+      if (inked) {
+        const t = lit.step(litTarget, dt);
+        inked(t);
+        bloom.strength = GLOW.strength * t;
+        renderer.setClearColor(0x000000, t); // the plate's own dark shows through
+        card?.classList.toggle('lit', t > 0.5);
+      }
+      composer.render();
+    };
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
     const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), GLOW.strength, GLOW.radius, GLOW.threshold);
@@ -291,15 +314,18 @@ if (canvas) {
     new ResizeObserver(size).observe(canvas);
     size();
     model.root.rotation.set(0.25, -0.8, 0);
-    composer.render(); // one frame now, so she's there before the card scrolls into view
+    paint(0); // one frame now, so she's there before the card scrolls into view
     let visible = false;
     new IntersectionObserver(([e]) => (visible = e.isIntersecting)).observe(canvas);
     const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let last = performance.now();
     const frame = (t: number) => {
       requestAnimationFrame(frame);
+      const dt = Math.min(0.1, (t - last) / 1000);
+      last = t;
       if (!visible || document.hidden) return;
       model.root.rotation.set(0.25, still ? -0.8 : t / 3000, 0);
-      composer.render();
+      paint(dt);
     };
     requestAnimationFrame(frame);
   } catch {
