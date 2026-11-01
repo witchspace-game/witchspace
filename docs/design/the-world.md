@@ -268,6 +268,15 @@ Mark (1 November 2026): *"What about the Bar Owner and who runs the station?"* T
 - **How it joins up:** shoot a trader in Leesti's lanes, and at Diso the bar has heard, and at Lave the harbourmaster charges you double for a berth. The law forgets in two jumps; the people who stay don't.
 - **Later, a player's:** when stations can be run by players ([player-run stations](player-stations.md)), the station's runner is the slot a player or guild takes over.
 
+### 6.5b Ships' names (Mark)
+
+Built (1 November 2026): each system gives its lane ships names in turn from its own seeded shuffle, so no two share a name within the half hour, and a convoy's followers are her sisters (*Night Shift*, *Night Shift II*, *III*). Mark: *"Can't we use the seed and or maths to generate ship names"*; *"you could always use latin numerals"*; *"we could use female names or male names as well. A bit like British ships are all female but russian ships are male."* Proposed:
+
+- **Names made from the seed,** as Elite made its planets' names: a company's own style from two short word lists, a few dozen per system, so a port's regulars are still recognisable.
+- **Each company names its own way:** Hexon and Wexley-Yorozu number their classes (*Hexon Meridian IV*, *Keystone VII*); Vorg's are blunt working names; the Mutual's are homely; independents' wry.
+- **Ships named after people,** as fishing boats are named for a wife, a daughter, a father: *Ada May*, *Old Tom*, *Margaret Reyes*. Women's and men's names both, mostly on the Mutual's and independents' own ships.
+- **She, or he:** in English a ship is *she*; in Russian the word for a ship is masculine, and a ship is *he*. A world's culture can keep its own: most crews say *she*, and a few systems' crews say *he*, in their hails. A detail only a careful listener notices.
+
 ### 6.6 Other commanders, remembered (Mark)
 
 Mark (1 November 2026), of the characters remembering real commanders as well as you: *"that sounds interesting."* The galaxy's people talk about the commanders who've been through, not just you. The gossip is the multiplayer world, heard even by those who never meet another player.
