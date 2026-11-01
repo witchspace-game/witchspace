@@ -12,7 +12,7 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { cleanName } from './protocol';
-import { CARD_H, CARD_W, cardId, CHARACTER_NUMBERS, checkCard, finishFor, isCharacterNumber, isFounding, MAX_CARD_BYTES, nextMember, type SaveFacts } from './card';
+import { CARD_H, CARD_W, CAREERS, cardId, CHARACTER_NUMBERS, checkCard, finishFor, isCharacterNumber, isFounding, MAX_CARD_BYTES, nextMember, type SaveFacts } from './card';
 import { jpegSize } from './clipCheck';
 import { emailKey } from './emailKey';
 import { costOf, dayOf, JOIN_SHARE, MAX_REPORT_SECONDS, refusal, SPACE_BUDGET, stopAll, type SpaceDay } from './spaceBudget';
@@ -576,6 +576,23 @@ export class Accounts extends DurableObject<AccountsEnv> {
 
   private cardRow(account: string) {
     return this.sql.exec('SELECT id, v, choices, finish FROM cards WHERE account = ?', account).toArray()[0];
+  }
+
+  /**
+   * Who shared a clip, as its page names them: their callsign now (a rename or a moderated callsign shows
+   * at once), and the career on their card, if they've made one. Nothing else about the account.
+   */
+  sharerOf(account: string): { callsign: string; career: (typeof CAREERS)[number] | null } | null {
+    const callsign = this.sql.exec('SELECT callsign FROM accounts WHERE id = ?', account).toArray()[0]?.callsign as string | null | undefined;
+    if (!callsign) return null;
+    let career: (typeof CAREERS)[number] | null = null;
+    try {
+      const c = JSON.parse((this.cardRow(account)?.choices as string | undefined) ?? '{}').career;
+      if (CAREERS.includes(c)) career = c;
+    } catch {
+      // no card, or an unreadable one: no career
+    }
+    return { callsign, career };
   }
 
   /** GET /me/card: your card's choices, so the page can rebuild it for editing. */

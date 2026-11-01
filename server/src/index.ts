@@ -231,7 +231,10 @@ async function clipRoute(request: Request, env: Env, id: string | undefined, act
   }
   if (id && !action && request.method === 'GET') {
     const c = await clips.get(id, voter);
-    return c ? reply(c) : reply({ error: 'No such clip' }, 404);
+    if (!c) return reply({ error: 'No such clip' }, 404);
+    // Its sharer by callsign and career (Marketing: "CMDR {callsign} flew this"), never the account itself.
+    const { account: sharer, ...clip } = c;
+    return reply({ ...clip, by: sharer ? await accountsOf(env).sharerOf(sharer) : null });
   }
   if (id && action === 'heart' && request.method === 'POST') {
     const body = (await request.json().catch(() => null)) as { on?: unknown } | null;

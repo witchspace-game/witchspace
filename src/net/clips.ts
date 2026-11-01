@@ -33,6 +33,8 @@ export interface SharedClip {
   video: { url: string; upright: boolean } | null;
   /** The track, gzipped (ready for readTrack). */
   track: Blob;
+  /** Who shared it, by their callsign now, and the career on their card, if they've signed in and made one. */
+  by?: { callsign: string; career: string | null } | null;
 }
 
 // Clips already shared from this browser, by moment, so sharing again reuses the link.

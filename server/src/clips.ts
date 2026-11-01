@@ -181,7 +181,8 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     if (!r) return null;
     const mine = voterOk(voter) && this.sql.exec('SELECT 1 FROM hearts WHERE clip = ? AND voter = ?', id, voter).toArray().length > 0;
     const video = (r.video as number) > 0 ? { url: `${SPACE}/clip-video/${id}.mp4?v=${r.video as number}`, upright: r.upright === 1 } : null;
-    return { id, title: r.title as string, system: r.system as string, focus: (r.focus as string | null) ?? null, seconds: r.seconds as number, created: r.created as number, hearts: r.hearts as number, mine, video, track: b64(new Uint8Array(r.track as ArrayBuffer)) };
+    // `account` is for the Worker to name the sharer by (accounts.sharerOf); it never leaves the server.
+    return { id, title: r.title as string, system: r.system as string, focus: (r.focus as string | null) ?? null, seconds: r.seconds as number, created: r.created as number, hearts: r.hearts as number, mine, video, track: b64(new Uint8Array(r.track as ArrayBuffer)), account: (r.account as string | null) ?? null };
   }
 
   /** Give or take back a heart. */
