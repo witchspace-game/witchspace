@@ -179,6 +179,12 @@ Bullsnakes are tugs, and they work inside one system. They:
 
 **A Bullsnake can fly a module between systems** *(Mark, 1 November 2026)*. Bullsnakes are built to engineer modules, repair them and ferry them short distances, and every module has a **universal docking ring**. For a long trip a module is made into a stack: an **engine module**, a **disposable fuel module**, and a Bullsnake docked into the ring. Docked, the Bullsnake is the bridge: it controls the engine module and navigates the whole stack to the system it's needed in. That's how a module crosses between stars (a science pod sent out, an atmosphere processor hauled through Vorg space); it isn't trade, and goods still go by trader.
 
+**Any combination, or in place** *(Mark, 1 November 2026)*: "The Bullsnake would have a crew, probably an engineer and a pilot +3. The idea is the Bullsnake could pilot any combination of any modules through hyper space or it could manipulate modules in situ to reconfigure an existing Titan!"
+
+- **A crew of about five:** a pilot, an engineer and three more.
+- **Any stack:** docked in a ring, a Bullsnake can fly any combination of modules through hyperspace, not only one module with its engine and fuel.
+- **Or in situ:** she reconfigures a Titan where it sits, moving its modules for its next role.
+
 **Traders move every good between systems, not Bullsnakes.** What comes to a yard from another world comes in a trader's hold (the game's Titan runs are Wexley-Yorozu traders, `game/traffic.ts`).
 
 It only works if anyone can design a module without GitHub, from a web page or a conversation with an AI assistant, so that comes with it.
