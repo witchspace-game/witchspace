@@ -49,7 +49,7 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 ### The rules
 
 1. **One coupling.** A coupling is a **140 m square**. Every module ends, at each coupled end, in a 35 m half-neck of that square, standing on a flat face at least as big. An end with nothing coupled to it is a clean face: no coupling sticking out into space. Two coupled modules show a 70 m neck with a seam in the middle: that's where they come apart. Any module fits any other, and a station can take the same coupling ([section 3](#3-modules-sent-where-theyre-needed)).
-2. **It arrives in pieces, and has no engine** (Mark). Modules are moved by Bullsnake teams, so the Titanoboa never travels whole: its modules come through a Wexley-Yorozu rift, are coupled in orbit by the moon, and when the station opens it comes apart again and the modules go on to the next job. Small station-keeping thrusters hold it in orbit; they're not worth a line. The one exception is the rare job of **moving a station**, which needs a **drive module** fitted at the stern for the purpose ([the trading companies](../companies.md#the-fleet-the-titanoboa-and-the-yards)).
+2. **It arrives in pieces, and has no engine** (Mark). Modules are moved by Bullsnake teams, so the Titanoboa never travels whole: its modules come through a Wexley-Yorozu rift, are coupled in orbit by the moon, and when the station opens it comes apart again and the modules go on to the next job. Small station-keeping thrusters hold it in orbit; they're not worth a line. The one exception is the rare job of **moving a station**, which needs a **drive module** fitted at the stern for the purpose ([the trading companies](../companies.md#the-fleet-the-titanoboa-and-the-yards)). The same Drive, stacked with a fuel module and flown by a docked Bullsnake, takes modules between the stars ([what the Bullsnakes do](#what-the-bullsnakes-do-mark-1-november-2026)).
 3. **The order follows the work, the crew and the traffic** (see [the anatomy](#the-anatomy-why-each-section-sits-where-it-does)): maw, furnaces, hold, habitat, fabricator, add-ons such as science, reactor.
 4. **One true scale.** Modules are 160 to 520 m long; a Bullsnake, the tug that moves them, is 70 m. A Standard line-up is about 2.2 km and grows with the job; with science she reaches the 2.5 km the lore gives her.
 5. **One shape per module,** in a few dozen lines. If you have to explain what a module is, it isn't finished.
@@ -65,7 +65,7 @@ Third draft, 25 October 2026, drawn in the game's renderer, every module checked
 | **Habitat** | 160 m | A six-sided wheel, 680 m across and flat on top, on three spokes in an inverted Y, turning for gravity | Quarters for a few thousand workers. The company mark sits on top of the wheel, where everyone flying past sees it. |
 | **Science** (add-on) | 220 m | A six-sided hub with one to three sealed pods, each on a 300 m mast leaving a face square-on, in a Y (the habitat's spokes, turned over); each pod sits on a clamp, so it can be ejected and replaced | Research on whatever explorers found living in the system: one find to a pod, kept at arm's length from the crew and from each other. |
 | **Reactor** | 300 m | A compact eight-sided core behind a broad shadow shield, with four flat radiator vanes in an X, 880 m tip to tip | Power for the whole ship. The one you don't want to go wrong. |
-| **Drive** (optional, stern only) | 300 m | A tapering block and three flared bells | Fitted only to move a station, slowly. She never hurries. |
+| **Drive** (optional, stern only) | 300 m | A tapering block and three flared bells | Moves a station, slowly; or, stacked with a fuel module and flown by a docked Bullsnake, takes modules between the stars. She never hurries. |
 
 **Line-ups**, front to back:
 
@@ -166,11 +166,34 @@ Every section deserves proper attention from the community, so each module stand
 - **Wexley-Yorozu puts the line-up together for the job at hand.** A job is an order in the catalogue (a station, a refinery, a station moved) that names the modules it needs, and the yard couples those and nothing else. A new kind of job is a new order; a new module makes new orders possible.
 - **So a new section can be designed, and the work comes with it.** A **detention module**, for one: a block of cells for the Co-operative Marshals' captures ([law, debt and capture](law-and-travel.md)). Wexley-Yorozu builds a prison where the Marshals ask for one, the module can stay behind as the prison satellite a station keeps ([stations and worlds](stations-and-worlds.md)), and towing one between stars is escort work nobody else wants.
 
+- **A whole prison Titan, if one is needed** *(Mark, 1 November 2026)*. The community suggests new modules, prison modules among them, and Wexley-Yorozu can bolt enough together to make a Titan that is a prison: accommodation, a gym complex, and science stations where inmates may be used for experiments. Bullsnakes ferry prisoners between it and the surface.
+
+### What the Bullsnakes do *(Mark, 1 November 2026)*
+
+Bullsnakes are tugs, and they work inside one system. They:
+
+- ferry materials, and prisoners, between a Titan and the surface;
+- fetch food and materials from the local stations to the Titan;
+- move modules, reconfiguring a Titan for its current role or roles, and tow a failed section clear;
+- do repairs.
+
+**A Bullsnake can fly a module between systems** *(Mark, 1 November 2026)*. Bullsnakes are built to engineer modules, repair them and ferry them short distances, and every module has a **universal docking ring**. For a long trip a module is made into a stack: the **Drive module** ("the drive is the engine", Mark), a **fuel module**, and a Bullsnake docked into the ring. Docked, the Bullsnake is the bridge: it controls the Drive and navigates the whole stack to the system it's needed in. That's how a module crosses between stars (a science pod sent out, an atmosphere processor hauled through Vorg space); it isn't trade, and goods still go by trader.
+
+**Fuel in cells** *(Mark, 1 November 2026)*: "Fuel would be in modules so that if a fuel cell was damaged it would eject it and a new one could be fitted." So the fuel module is built of separate cells, each on a clamp like a science pod: a damaged cell is ejected clear of the stack and a fresh one fitted. **Recharged, not thrown away** (Mark: "Fuel cells would need to be recharged somehow. Hydrogen Fuel is available from the local stations Market right?"): the cells are recharged or replaced with **Hydrogen Fuel Cells** bought at the local station's market (a Modern good, made from water, `economy/commodities.ts`), and a Bullsnake fetches them, station to Titan, which is already her job. **A round trip** (Mark: "So empty cells go from Titan to Station and Full cells go from Station back to Titan?"): Bullsnakes take empty cells from the Titan to the station to be recharged and bring full ones back, a swap rather than new cells each time, and a tug run you can watch both ways. So a yard sending a stack buys hydrogen, and the market can feel it. (The player's own refuel is still a fixed price a light year, `FUEL_PRICE`; tying it to the hydrogen market is a separate question.)
+
+**Any combination, or in place** *(Mark, 1 November 2026)*: "The Bullsnake would have a crew, probably an engineer and a pilot +3. The idea is the Bullsnake could pilot any combination of any modules through hyper space or it could manipulate modules in situ to reconfigure an existing Titan!"
+
+- **A crew of about five:** a pilot, an engineer and three more.
+- **Any stack:** docked in a ring, a Bullsnake can fly any combination of modules through hyperspace, not only one module with the Drive and fuel.
+- **Or in situ:** she reconfigures a Titan where it sits, moving its modules for its next role.
+
+**Traders move every good between systems, not Bullsnakes.** What comes to a yard from another world comes in a trader's hold (the game's Titan runs are Wexley-Yorozu traders, `game/traffic.ts`).
+
 It only works if anyone can design a module without GitHub, from a web page or a conversation with an AI assistant, so that comes with it.
 
 ## 3. Modules sent where they're needed
 
-*(Mark, 25 October 2026.)* Because every module couples the same way, Wexley-Yorozu doesn't need a new ship for a new job; it sends a module. When explorers find something living in a system ([exploration](exploration.md)), the Science Division wants it studied where it was found, so a **science module** is built at another yard and sent out. Modules have no engines of their own (Mark): **Bullsnakes**, Wexley-Yorozu's slow construction tugs, bring it. A Bullsnake is 70 m and a module is hundreds of metres, so they work as a team: three or four clamp on with their tractor booms (the arms where a fighter's guns would be), bring it in slowly, line it up on the Titanoboa working there, hold it while it couples, then let go and scatter. Only the Titanoboa has a drive, because only the whole factory travels. From then on the yard you visit has a pod on a mast that wasn't there last week, and the news says why.
+*(Mark, 25 October 2026.)* Because every module couples the same way, Wexley-Yorozu doesn't need a new ship for a new job; it sends a module. When explorers find something living in a system ([exploration](exploration.md)), the Science Division wants it studied where it was found, so a **science module** is built at another yard and sent out. Modules have no engines of their own (Mark): **Bullsnakes**, Wexley-Yorozu's slow construction tugs, bring it. A Bullsnake is 70 m and a module is hundreds of metres, so they work as a team: three or four clamp on with their tractor booms (the arms where a fighter's guns would be), bring it in slowly, line it up on the Titanoboa working there, hold it while it couples, then let go and scatter. Between systems the module travels as a stack (below, [what the Bullsnakes do](#what-the-bullsnakes-do-mark-1-november-2026)): the Drive and a fuel module, with a Bullsnake docked in its ring to fly it. From then on the yard you visit has a pod on a mast that wasn't there last week, and the news says why.
 
 **And it can stay.** The station the Titanoboa builds takes the same coupling. When the Titanoboa leaves, a module can be left behind on the station: the science pod stays with the colony it was sent to study, a furnace stays where the ore is good, a habitat stays where the workers do. So stations grow by modules too, and a station's shape tells its story: what was found here, and what the company decided to keep.
 

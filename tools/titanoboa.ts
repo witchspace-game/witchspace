@@ -215,7 +215,7 @@ const SPECS: Record<string, Spec> = {
     zone: 'power',
     length: 300,
     couples: { fore: true, aft: false },
-    description: 'A block and three bells, fitted only when a station has to be moved. She never hurries.',
+    description: 'A block and three bells: fitted to move a station, or stacked with a fuel module to fly modules between the stars. She never hurries.',
     body: (h, top, bottom) => {
       const join = bottom + 110;
       h.solid(6, [[top, 150, 115], [join, 190, 145]]);
