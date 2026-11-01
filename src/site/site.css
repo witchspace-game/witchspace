@@ -1903,10 +1903,10 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .deck-card[data-pos='0'] { transform: none; visibility: visible; pointer-events: auto; transition: transform 0.32s cubic-bezier(0.25, 1, 0.5, 1) 0.3s, visibility 0s 0.3s; }
 .deck-card.leaving { transform: rotateY(-90deg); visibility: visible; }
 .deck-card.waiting { transition: none; }
-/* Or no 3D at all (?turn=slide): the next card slides in from the right over the old one as it fades. */
-.deck[data-turn='slide'] .deck-card { transform: translateX(8%); opacity: 0; visibility: visible; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s; }
-.deck[data-turn='slide'] .deck-card[data-pos='0'] { transform: none; opacity: 1; transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s; }
-.deck[data-turn='slide'] .deck-card.leaving { transform: translateX(-4%); opacity: 0; }
+/* Or no 3D at all (?turn=slide): the next card slides in over the old one, which waits beneath, solid, until it's covered. */
+.deck[data-turn='slide'] .deck-card { transform: translateX(6%); opacity: 0; visibility: visible; z-index: 1; transition: none; }
+.deck[data-turn='slide'] .deck-card[data-pos='0'] { transform: none; opacity: 1; z-index: 3; transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s; }
+.deck[data-turn='slide'] .deck-card.leaving { transform: none; opacity: 1; z-index: 2; }
 /* Or top over bottom, like a flip-card (?turn=x on the page, to compare): the swipe on a phone is sideways, so this turn doesn't fight the finger. */
 .deck[data-turn='x'] .deck-card { transform: rotateX(-90deg); }
 .deck[data-turn='x'] .deck-card[data-pos='0'] { transform: none; }
@@ -1927,7 +1927,9 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .deck-row button[aria-current='true'] { color: color-mix(in oklab, var(--c) 80%, var(--fg)); border-bottom-color: var(--c); }
 /* Without the script the four sit fanned and every ladder shows; with it, only the front career's. */
 .careers-side .ladders { grid-template-columns: 1fr; }
-.careers-side .ladder[hidden] { display: none; }
+.careers-side .ladders { display: grid; }
+.careers-side .ladder { grid-area: 1 / 1; }
+.careers-side .ladder[hidden] { display: block; visibility: hidden; }
 @media (max-width: 860px) {
   .careers { grid-template-columns: minmax(0, 1fr); }
   .deck-wrap { max-width: none; }

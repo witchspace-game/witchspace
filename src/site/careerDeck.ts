@@ -29,7 +29,7 @@ if (deck) {
         old.classList.add('waiting');
         old.classList.remove('leaving');
         requestAnimationFrame(() => requestAnimationFrame(() => old.classList.remove('waiting')));
-      }, HALF_MS + 20);
+      }, (turnStyle === 'slide' ? 450 : HALF_MS) + 20);
     }
     front = next;
     cards.forEach((card, k) => {
@@ -44,7 +44,7 @@ if (deck) {
       row.forEach((b) => b.setAttribute('aria-current', String(b.dataset.career === career)));
       ladders.forEach((l) => (l.hidden = l.dataset.career !== career));
       if (cta) cta.href = `/callsign/?career=${career}`;
-    }, first ? 0 : turnStyle === 'slide' ? 120 : HALF_MS);
+    }, first ? 0 : turnStyle === 'slide' ? 150 : HALF_MS);
     first = false;
   };
   let labelTimer = 0;
