@@ -19,6 +19,8 @@ const GOVERNMENT_NOUN = ['anarchy', 'feudal world', 'multi-government', 'dictato
 const a = (word: string) => (/^[aeiou]/.test(word) ? `an ${word}` : `a ${word}`);
 export const kindOf = (s: StarSystem) => `${ECONOMIES[s.economy].toLowerCase()} ${GOVERNMENT_NOUN[s.government]}`;
 
+/** About how wide a letter is on the chart, in chart units (its labels are 1.6 units high). */
+const LETTER = 0.95;
 const ly = (d: number) => `${d.toFixed(1)} LY`;
 const byDistance = (s: StarSystem) =>
   SYSTEMS.filter((o) => o !== s)
@@ -36,10 +38,24 @@ function localChart(s: StarSystem, near: { o: StarSystem; d: number }[]): string
   const reach = new Set(near.filter((n) => n.d <= LANE_LY).map((n) => n.o));
   // 7 LY is 17.5 chart units across (distanceLy halves the height, as we've already done here).
   const jump = (LANE_LY / 0.4).toFixed(1);
+  // Labels: hers first, then the ones in reach, then the rest nearest first; any that would overlap one
+  // already placed, or run off the frame, are left off (the dot stays, and its name shows on hover).
+  const boxes: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  const labelled = new Set<StarSystem>();
+  for (const o of [...inView].sort((p, q) => rank(p) - rank(q) || distanceLy(s, p) - distanceLy(s, q))) {
+    const p = at(o);
+    const box = { x0: p.x - 0.6, x1: p.x + 1.3 + o.name.length * LETTER, y0: p.y - 1.1, y1: p.y + 1.1 };
+    if (box.x1 > c.x + R - 0.5 || boxes.some((b) => box.x0 < b.x1 && b.x0 < box.x1 && box.y0 < b.y1 && b.y0 < box.y1)) continue;
+    boxes.push(box);
+    labelled.add(o);
+  }
+  function rank(o: StarSystem) {
+    return o === s ? 0 : reach.has(o) ? 1 : 2;
+  }
   const dot = (o: StarSystem) => {
     const p = at(o);
     const here = o === s;
-    return `<a href="${systemUrl(o.name)}"${here ? ' aria-current="page"' : ''}><circle cx="${p.x}" cy="${p.y}" r="${here ? 0.9 : 0.55}" class="${here ? 'here' : reach.has(o) ? 'reach' : ''}"/><text x="${p.x + 1.3}" y="${p.y + 0.55}">${esc(o.name)}</text></a>`;
+    return `<a href="${systemUrl(o.name)}"${here ? ' aria-current="page"' : ''}><title>${esc(o.name)}</title><circle cx="${p.x}" cy="${p.y}" r="${here ? 0.9 : 0.55}" class="${here ? 'here' : reach.has(o) ? 'reach' : ''}"/>${labelled.has(o) ? `<text x="${p.x + 1.3}" y="${p.y + 0.55}">${esc(o.name)}</text>` : ''}</a>`;
   };
   return `<svg class="sys-chart" viewBox="${c.x - R} ${c.y - R} ${R * 2} ${R * 2}" role="img" aria-label="${esc(s.name)} and the systems around it, with a circle showing a ${LANE_LY} light-year jump">
       <circle class="jump" cx="${c.x}" cy="${c.y}" r="${jump}"/>
@@ -68,7 +84,8 @@ export function systemPage(s: StarSystem, now: number, hullName: (id: string) =>
   const station = stationName(s);
   const kind = kindOf(s);
   const people = `home to ${s.population} billion ${s.species}`;
-  let description = `${s.name} is ${a(kind)} at tech level ${s.techLevel}, ${people}. Its news, prices and traffic right now. Fly free in your browser.`;
+  // The people are the most clickable part ("2 billion Harmless Rodents"): kept unless they push it past 155 characters (Marketing).
+  let description = `${s.name} is ${a(kind)} at tech level ${s.techLevel}, ${people}. Its news, prices and traffic now. Fly free in your browser.`;
   if (description.length > 155) description = `${s.name} is ${a(kind)} at tech level ${s.techLevel}. Its news, prices and traffic right now. Fly free in your browser.`;
   const facts: [string, string][] = [
     ['Government', GOVERNMENTS[s.government]],
@@ -92,9 +109,9 @@ export function systemPage(s: StarSystem, now: number, hullName: (id: string) =>
     <div class="sys-copy">
       <p class="kicker">${esc(GOVERNMENTS[s.government])} · ${esc(ECONOMIES[s.economy])} · Tech level ${s.techLevel}</p>
       <h1>${esc(s.name)}</h1>
-      <p class="lede">${esc(s.name)} is ${a(kind)}, ${esc(people)}. Its station is ${esc(station.name)}${station.honours ? `, named for ${esc(station.honours)}` : ''}.</p>
-      ${intro ? `<p class="lede">${intro}</p>` : ''}
-      <p>${situation(s, near)}</p>
+      <p class="lede">${esc(s.name)} is ${a(kind)}, ${esc(people)}.${intro ? '' : ` Its station is ${esc(station.name)}${station.honours ? `, named for ${esc(station.honours)}` : ''}.`}</p>
+      ${intro ? `<p class="lede sys-intro">${esc(intro).replace(/\[([^\]]+)\]\((\/[^)\s]*)\)/g, '<a href="$2">$1</a>')}</p>` : ''}
+      ${intro ? '' : `<p>${situation(s, near)}</p>`}
       <dl class="ship-stats">${facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>
       <p class="sys-play"><a class="button primary" href="/play/?system=${s.name.toLowerCase()}">Fly there free</a> <span class="muted small">The game opens its chart on ${esc(s.name)}: plot a course from where you are.</span></p>
     </div>
@@ -117,19 +134,50 @@ export function systemPage(s: StarSystem, now: number, hullName: (id: string) =>
   };
 }
 
+/** Labels for the hub's chart, 3 units high: each where it doesn't cover another label or a dot (Lave first). */
+function hubLabels(named: StarSystem[]): string {
+  const W = 1.85; // a letter's width at this size
+  const placed: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  const hits = (b: { x0: number; x1: number; y0: number; y1: number }, own: StarSystem) =>
+    b.x0 < -3 || b.x1 > 259 || b.y0 < -3 || b.y1 > 131 ||
+    placed.some((o) => b.x0 < o.x1 && o.x0 < b.x1 && b.y0 < o.y1 && o.y0 < b.y1) ||
+    SYSTEMS.some((o) => o !== own && at(o).x > b.x0 - 1 && at(o).x < b.x1 + 1 && at(o).y > b.y0 - 1 && at(o).y < b.y1 + 1);
+  return [...named]
+    .sort((p, q) => Number(q === LAVE) - Number(p === LAVE))
+    .map((s) => {
+      const p = at(s);
+      const w = s.name.length * W;
+      const tries = [
+        { x: p.x + 2, y: p.y + 1.1, anchor: 'start' },
+        { x: p.x - 2, y: p.y + 1.1, anchor: 'end' },
+        { x: p.x, y: p.y - 2.2, anchor: 'middle' },
+        { x: p.x, y: p.y + 4.4, anchor: 'middle' },
+      ];
+      const box = (t: (typeof tries)[number]) => {
+        const x0 = t.anchor === 'start' ? t.x : t.anchor === 'end' ? t.x - w : t.x - w / 2;
+        return { x0, x1: x0 + w, y0: t.y - 2.6, y1: t.y + 0.6 };
+      };
+      const t = tries.find((c) => !hits(box(c), s)) ?? tries[0];
+      placed.push(box(t));
+      return `<text x="${t.x}" y="${t.y}" text-anchor="${t.anchor}"${s === LAVE ? ' class="here"' : ''}>${esc(s.name)}</text>`;
+    })
+    .join('');
+}
+
 /** The whole first galaxy, every system a link, Lave marked. */
-function galaxyChart(): string {
+function galaxyChart(famous: string[]): string {
   const dot = (s: StarSystem) => {
     const p = at(s);
     return `<a href="${systemUrl(s.name)}"><circle cx="${p.x}" cy="${p.y}" r="${s === LAVE ? 1.6 : 1}"${s === LAVE ? ' class="here"' : ''}/><title>${esc(s.name)}: ${esc(a(kindOf(s)))}</title></a>`;
   };
   return `<svg class="sys-chart galaxy-chart" viewBox="-4 -4 264 136" role="img" aria-label="The first galaxy's 256 star systems; Lave, where every commander starts, is marked">
       ${SYSTEMS.map(dot).join('')}
-      <text x="${at(LAVE).x + 2.4}" y="${at(LAVE).y + 1.2}">Lave</text>
+      ${hubLabels(SYSTEMS.filter((s) => s === LAVE || famous.includes(s.name)))}
     </svg>`;
 }
 
-export function galaxyHub() {
+/** `famous`: the systems with words of their own, labelled on the chart so it says "click me". */
+export function galaxyHub(famous: string[]) {
   const sorted = [...SYSTEMS].sort((x, y) => x.name.localeCompare(y.name));
   return {
     title: 'The galaxy right now: 256 star systems | Witchspace',
@@ -141,7 +189,7 @@ export function galaxyHub() {
     <p class="lede">256 star systems, all worked out from one seed and one clock: the trick that fitted eight galaxies into 22KB in 1984, taken from places to time. Every page shows what’s happening there now, exactly as the game sees it, because both calculate it the same way.</p>
     <p class="muted">This is the first of eight galaxies. Choose any world on the chart.</p>
   </div>
-  <figure class="sys-map wide">${galaxyChart()}</figure>
+  <figure class="sys-map wide">${galaxyChart(famous)}</figure>
   <h2>Every system, A to Z</h2>
   <ul class="galaxy-list">${sorted.map((s) => `<li><a href="${systemUrl(s.name)}">${esc(s.name)}</a> <small>${esc(kindOf(s))}</small></li>`).join('')}</ul>
 </section>`,

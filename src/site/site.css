@@ -1838,6 +1838,7 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 .sys-chart circle.jump { fill: none; stroke: rgba(61, 255, 176, 0.35); stroke-width: 0.15; stroke-dasharray: 0.6 0.6; }
 .sys-chart line { stroke: rgba(74, 215, 255, 0.4); stroke-width: 0.12; }
 .sys-chart text { fill: #95a3b8; }
+.sys-chart text.here { fill: var(--accent); }
 .sys-chart a:hover text, .sys-chart a[aria-current] text { fill: var(--fg); }
 .sys-chart a:hover circle { fill: var(--fg); }
 .galaxy-chart { font-size: 3px; }

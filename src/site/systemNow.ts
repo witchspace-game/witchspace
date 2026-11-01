@@ -32,8 +32,11 @@ export function systemNowHtml(s: StarSystem, now: number, hullName: (id: string)
       <div><h3>Cheap today</h3>${n.market.cheapToday.length ? `<ul>${n.market.cheapToday.map(price).join('')}</ul>` : '<p class="muted">Nothing unusually cheap.</p>'}</div>
       <p class="muted small">Usually buys in ${list(n.market.imports)}; usually sells ${list(n.market.exports)}.</p>
     </div>`;
-  const ships = n.timetable.length
-    ? `<ol class="sys-traffic">${n.timetable
+  // One line per ship's name: the traffic's names come from a small pool, so the same one can come up
+  // twice in half an hour, which reads as one ship in two places (asked of Game dev, traffic.ts).
+  const due = n.timetable.filter((v, i, all) => all.findIndex((w) => w.ship === v.ship) === i);
+  const ships = due.length
+    ? `<ol class="sys-traffic">${due
         .map(
           (v) =>
             `<li><time>${escapeHtml(v.in)}</time><span><b>${escapeHtml(v.ship)}</b> <small>${escapeHtml(v.company === 'independent' ? 'Independent' : v.company)} ${escapeHtml(v.hull)}</small></span><small>${'arriving' in v ? `in from ${link(v.from)}` : `out to ${link(v.to)}`}${'for' in v ? ` for ${escapeHtml(String(v.for))}` : ''} with ${escapeHtml(v.cargo)}${v.escorts ? ` · ${v.escorts} escort${v.escorts > 1 ? 's' : ''}` : ''}</small></li>`,

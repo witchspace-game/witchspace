@@ -288,7 +288,9 @@ for (const s of ships.filter(ownable)) write({ path: `/ships/${s.id}/build/`, ..
 
 // --- The galaxy: a hub, and a page for every star system in the first (tools/systems.ts) -------
 
-const hub = galaxyHub();
+/** Marketing's words for the systems people already know, by name. */
+const SYSTEM_INTROS: Record<string, string> = JSON.parse(readFileSync(join(root, 'site/systems.json'), 'utf8'));
+const hub = galaxyHub(Object.keys(SYSTEM_INTROS));
 write({
   path: '/galaxy/',
   ...hub,
@@ -309,7 +311,7 @@ const hullName = (id: string) => ships.find((sh) => sh.id === id)?.name ?? id;
 for (const sys of SYSTEMS)
   write({
     path: systemUrl(sys.name),
-    ...systemPage(sys, builtAt, hullName),
+    ...systemPage(sys, builtAt, hullName, SYSTEM_INTROS[sys.name]),
     // One card for the whole galaxy for now (Marketing: the famous dozen may get their own later).
     image: `${SITE}/share/galaxy.jpg`,
     scripts: ['/src/site/system.ts'],
@@ -500,7 +502,7 @@ function sourcesOf(path: string): string[] {
     case 'companies':
       return ['site/jobs.json', 'docs/companies.md'];
     case 'galaxy':
-      return ['src/galaxy/generate.ts', 'src/galaxy/stationNames.ts', 'tools/systems.ts'];
+      return ['src/galaxy/generate.ts', 'src/galaxy/stationNames.ts', 'tools/systems.ts', 'site/systems.json'];
   }
   return [];
 }
