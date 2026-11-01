@@ -17,8 +17,7 @@ const INK_FINE = new THREE.Color('#6a707c');
 const INK_WEIGHT = 0.35;
 const PAPER_FILL = new THREE.Color(PAPER);
 
-/** True when the page is on paper (the mock-up's `?look=paper`). */
-export const onPaper = () => document.documentElement.classList.contains('paper');
+export { onPaper } from './onPaper';
 
 /** Blends a ship between an ink drawing (0) and herself, glowing (1). */
 export function inkable(model: ShipModel): (t: number) => void {

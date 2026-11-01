@@ -20,11 +20,12 @@ export interface Viewer {
   light(on: boolean): void;
 }
 
-export function viewer(canvas: HTMLCanvasElement): Viewer {
+/** `ink`: on paper, start her as a drawing (a ship's own page); everywhere else she's in space, lit. */
+export function viewer(canvas: HTMLCanvasElement, { ink = false }: { ink?: boolean } = {}): Viewer {
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   // Opaque, in the frame's own colour: over a see-through canvas the glow pools into a wash.
   // On paper she starts as an ink drawing on a see-through canvas, and the space behind her fades in as she's lit.
-  const paper = onPaper();
+  const paper = ink && onPaper();
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: paper });
   renderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
   const scene = new THREE.Scene();

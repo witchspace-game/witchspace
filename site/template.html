@@ -5,10 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{{title}}</title>
     <meta name="description" content="{{description}}" />
-    <meta name="theme-color" content="#05070d" />
-    <meta name="color-scheme" content="dark" />
-    <!-- Space before the stylesheet arrives, so a reload never flashes a white page. -->
-    <style>html { background: #05070d; color: #eaf0f6; }</style>
+    <meta name="theme-color" content="#f4f1ea" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#05070d" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <!-- Paper by day, space by night (Mark, 1 Nov 2026): the page is paper when the phone or computer is in
+         light mode, and space in dark mode. ?look=paper or ?look=space chooses for the visit (?look=auto undoes it).
+         Decided before anything is drawn, and painted at once, so a reload never flashes the wrong colour. -->
+    <script>
+      try {
+        const look = new URLSearchParams(location.search).get('look');
+        if (look) sessionStorage.setItem('witchspace.look', look);
+        const chosen = sessionStorage.getItem('witchspace.look');
+        const dark = matchMedia('(prefers-color-scheme: dark)');
+        const set = () => document.documentElement.classList.toggle('paper', chosen === 'paper' || (chosen !== 'space' && !dark.matches));
+        set();
+        dark.addEventListener('change', set);
+      } catch {}
+    </script>
+    <style>html { background: #05070d; color: #eaf0f6; color-scheme: dark; } html.paper { background: #f4f1ea; color: #16181d; color-scheme: light; }</style>
     <meta property="og:title" content="{{title}}" />
     <meta property="og:description" content="{{description}}" />
     <meta property="og:type" content="website" />
@@ -27,21 +41,9 @@
     <link rel="canonical" href="{{url}}" />
 {{head}}
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="preload" href="/fonts/inter-400-600.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/src/site/fonts.css" />
     <link rel="stylesheet" href="/src/site/site.css" />
-    <!-- The paper look, a mock-up (Mark, 1 Nov 2026): ?look=paper turns it on for the visit, ?look=auto follows light and dark mode, ?look=space turns it off. -->
-    <script>
-      try {
-        const look = new URLSearchParams(location.search).get('look');
-        if (look) sessionStorage.setItem('witchspace.look', look);
-        // auto: paper by day, space by night, as the phone or computer is set (light or dark mode).
-        const chosen = sessionStorage.getItem('witchspace.look');
-        if (chosen === 'paper' || (chosen === 'auto' && !matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('paper');
-      } catch {}
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/src/site/paper.css" />
   </head>
   <body class="{{bodyClass}}">

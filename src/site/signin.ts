@@ -1,5 +1,6 @@
 import { currentAccount, requestLink, setCallsign, signInWithCode, signOut } from '../net/account';
 import { escapeHtml } from '../ui/escape';
+import { onPaper } from './onPaper';
 
 // Signing in on a site page with the game's account: email a code, type it in,
 // choose a callsign if there isn't one. /submit/ and /connect/ both use it.
@@ -110,7 +111,7 @@ export function signInBox(
     if (!el || !TURNSTILE_SITE_KEY) return;
     const draw = () => {
       turnstileToken = '';
-      turnstile?.render(el, { sitekey: TURNSTILE_SITE_KEY, theme: 'dark', size: 'flexible', callback: (t: string) => (turnstileToken = t) });
+      turnstile?.render(el, { sitekey: TURNSTILE_SITE_KEY, theme: onPaper() ? 'light' : 'dark', size: 'flexible', callback: (t: string) => (turnstileToken = t) });
     };
     if (typeof turnstile !== 'undefined' && typeof turnstile.render === 'function') return draw();
     (window as unknown as Record<string, unknown>).onSignInTurnstile = draw;

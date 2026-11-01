@@ -11,6 +11,7 @@ import type { Look } from '../render/shipModel';
 import { cardShip, CARD_H, CARD_W, type CardShip } from './callsignCard';
 import { openShare } from './share';
 import { careerById, careerLine, CAREERS, claimLine, cleanCallsign, finishFor, LAUNCH, memberNumber, parseCheck, rgbOf, SCENES, sceneUrl, scenesFor, variants, verdictWords, type Career, type Check, type Finish } from './callsignWords';
+import { onPaper } from './onPaper';
 
 // Claim your callsign (/callsign/, docs/design/callsign-card.md, Mark): make your card (a name, what you do,
 // a scene from the game behind her, one of your own ships in her own paint, dragged round to the angle you
@@ -407,7 +408,7 @@ function fail(e: unknown) {
 function mountTurnstile() {
   const el = $('cs-turnstile');
   if (!TURNSTILE_SITE_KEY || widget !== undefined) return;
-  const draw = () => (widget = turnstile?.render(el, { sitekey: TURNSTILE_SITE_KEY, theme: 'dark', size: 'flexible', callback: (t: string) => (turnstileToken = t) }));
+  const draw = () => (widget = turnstile?.render(el, { sitekey: TURNSTILE_SITE_KEY, theme: onPaper() ? 'light' : 'dark', size: 'flexible', callback: (t: string) => (turnstileToken = t) }));
   if (typeof turnstile !== 'undefined') return void draw();
   (window as unknown as Record<string, unknown>).onCallsignTurnstile = draw;
   const s = document.createElement('script');

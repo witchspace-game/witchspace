@@ -13,7 +13,7 @@ const canvas = view.querySelector<HTMLCanvasElement>('.ship-canvas')!;
 const def = JSON.parse(document.querySelector('#ship-def')!.textContent!) as ShipDef;
 
 try {
-  const v = viewer(canvas);
+  const v = viewer(canvas, { ink: true });
   v.show(def);
   view.classList.add('live'); // the drawing gives way to the live model
   if (onPaper()) lightSwitch(v);
