@@ -80,6 +80,13 @@ Mark: *"we really need to work on the UI and UX on the trading side. The trading
 - **The candles are folded away.** On a phone, the chart, the order book and the trades sit under one "Show" line beneath the trade form (so you needn't scroll past them to trade), and most players never open it. The candles are one of the exchange's best sights: they should be on show by default, at least a small chart beside the price, without pushing the trade form out of reach.
 - **The trade computer is awkward.** A wide table squeezed onto a phone (columns cut off at the edge), behind a button on the exchange, separate from the goods you'd buy. It should read as answers, not a spreadsheet: "Buy Luxuries here, sell at Riedquat: +2,100 Cr a load", one tap to buy and one to set course, its markets linking to the chart (done).
 - **To do first:** sit with the exchange on a phone and a computer, list what's awkward screen by screen, and show Mark pictures of a reworked layout before building it.
+- **Built (1 November 2026, from pictures Mark approved: "they look much better"):**
+  - **On a phone, a good is a screen of its own,** with "‹ All goods" back to the list. From the top: its price, its candles (always on show), the best place to sell it, then the trade form. Only the order book and trades fold away.
+  - **"Best place to sell"** on every good: where it's worth most as you know the markets, about how much, how far, how lawless, how old the news, and the profit on a full load, with Set course. If you carry some, it's the best market for what you carry.
+  - **The trade computer reads as answers:** one card per run, "Computers → Riedquat +475 Cr", with Buy (it fills the form with the full load; you still confirm) and Set course. A "Safe systems only" filter leaves out anarchies and feudal worlds. On a computer it shares the column beside the chart with the order book, so you see the candles of the run you pick.
+  - **The list names each cheap good's best run:** "Riedquat +475 a load".
+  - **It opens on the good with the best run** when you dock at a new station with an empty hold.
+  - **Plainer words:** "Your buying moves it +17%", not "Price impact"; the quick amounts in tonnes ("5 t", "10 t", "15 t", "Full"), not percentages.
 
 ## 1b. Learning the exchange pays
 

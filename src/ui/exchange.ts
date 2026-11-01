@@ -20,7 +20,7 @@ import { activeEvent, eventsAt, EVENT_KINDS, newsAt, newsDelay, type NewsItem } 
 import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
 import { BROKER_FEE, cancelOrder, collect, describeFill, placeOrder, sendOrder, type OrderState } from '../economy/orders';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
-import { bestKnownElsewhere, bestOutlets, bestRoutes, checkSentOrders, knownAt, marketsForOrders } from '../economy/routes';
+import { bestKnownElsewhere, bestOutlets, bestRoutes, checkSentOrders, knownAt, marketsForOrders, type Route } from '../economy/routes';
 import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
 import { btcValue, buyAt, buyBitcoin, cancelBtcOrder, formatBtc, formatSats, isFresh, ordersOf, placeBtcOrder, satsOf, sellAt, sellBitcoin, FEE } from '../economy/bitcoin';
 import { btcCandles, btcQuote, checkBtcOrders, heardCandles, heardQuote } from '../net/bitcoin';
@@ -106,7 +106,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <button class="ex-routes-toggle" title="Every market within a tank of fuel, as you know it, and the best runs from here">Trade computer ›</button>
         <button class="ex-backroom-toggle" hidden>Back room ›</button>
         <div class="ex-pairs-list"></div>
-        <button class="ex-more-toggle" aria-expanded="false">Chart, order book and trades <span>Show ▾</span></button>
+        <button class="ex-more-toggle" aria-expanded="false">Order book and trades <span>Show ▾</span></button>
       </aside>
       <header class="ex-head"></header>
       <section class="ex-chart">
@@ -119,7 +119,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div class="ex-canvas"></div>
       </section>
       <section class="ex-book" aria-label="Order book">
-        <h4>Order book</h4>
+        <div class="ex-panes" role="tablist"><button data-pane="runs" role="tab">Trade computer</button><button data-pane="book" role="tab" class="active">Order book</button></div>
         <div class="ex-book-head"><span>Price (Cr)</span><span class="ex-book-unit">Size</span><span>Total</span></div>
         <div class="ex-asks"></div>
         <div class="ex-mid"></div>
@@ -261,6 +261,18 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   // here, what sells well here, then everything else (docs/design/trading.md).
   let restOpen = false;
 
+  /** Every profitable run from here for a full load, best first: the trade computer's, and each good's
+   *  "best place to sell" (Mark, 1 November 2026: the computer should read as answers, beside the goods).
+   *  Worked out again every ten seconds, or when your credits, hold or the station change. */
+  let runsCache = { key: '', list: [] as Route[] };
+  function runs(ctx: TradeContext): Route[] {
+    const c = ctx.commander;
+    const key = `${ctx.system.galaxy}:${ctx.system.index}:${Math.floor(ctx.now / 10_000)}:${c.credits}:${JSON.stringify(c.cargo)}`;
+    if (runsCache.key !== key) runsCache = { key, list: bestRoutes(ctx, Infinity) };
+    return runsCache.list;
+  }
+  const runFor = (ctx: TradeContext, id: string) => runs(ctx).find((r) => r.id === id);
+
   /** A price in credits, in the local money too: "≈ 2,350 LVR". Credits are what's paid. */
   function inLocal(ctx: TradeContext, credits: number): string {
     const m = deps.localMoney?.(ctx.system);
@@ -296,6 +308,11 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       return `<svg class="ex-spark" viewBox="0 0 36 14" aria-hidden="true"><polyline points="${pts.map((p, k) => `${k * 6},${(13 - ((p - lo) / span) * 12).toFixed(1)}`).join(' ')}" class="${up ? 'up' : 'down'}"/></svg>`;
     };
     const there = (r: Row) => (r.best && r.best.price > r.q.price * 1.05 ? `<span class="up">${fmt(r.best.price)}</span> at ${r.best.dest.name} · ${age(r.best.age)} old` : '');
+    /** Its best run, as the trade computer has it: "Riedquat +475 a load". */
+    const run = (r: Row) => {
+      const best = away ? undefined : runFor(ctx, r.id);
+      return best ? `${best.dest.name} <span class="up">+${fmt(best.profit, 0)}</span> a load` : '';
+    };
     const row = (r: Row, quick: 'buy' | 'sell' | '', sub: string) => {
       const illegal = r.q.commodity.legality === 'illegal' ? '<em title="Illegal goods">Illegal</em>' : '';
       const hot = r.held && stolenQty(ctx.commander, r.id) ? ' hot' : '';
@@ -327,7 +344,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         away ? `In storage at ${ctx.system.name}` : 'Your hold',
         hold.map((r) => row(r, r.off ? '' : 'sell', [`${r.held.toLocaleString()} ${u(r)} ${away ? 'in storage' : 'aboard'}`, there(r)].filter(Boolean).join(' · '))).join(''),
       ) +
-      section(away ? `Cheap at ${ctx.system.name}` : 'Cheap here', cheap.map((r) => row(r, 'buy', there(r) || (r.order?.side === 'sell' ? `in a glut ${away ? 'there' : 'here'}` : `made ${away ? 'there' : 'here'}`))).join('')) +
+      section(away ? `Cheap at ${ctx.system.name}` : 'Cheap here', cheap.map((r) => row(r, 'buy', run(r) || there(r) || (r.order?.side === 'sell' ? `in a glut ${away ? 'there' : 'here'}` : `made ${away ? 'there' : 'here'}`))).join('')) +
       section(away ? `Sells well at ${ctx.system.name}` : 'Sells well here', wanted.map((r) => row(r, '', r.order?.side === 'buy' ? `short · station buying ${r.order.qty.toLocaleString()} ${u(r)}` : `wanted ${away ? 'there' : 'here'}`)).join('')) +
       `<button class="ex-rest-toggle" aria-expanded="${restOpen}">${restOpen ? '▾' : '▸'} All other goods (${rest.length})</button>` +
       (restOpen ? rest.map((r) => row(r, '', r.off ? `not traded ${away ? 'there' : 'here'}` : '')).join('') : '');
@@ -390,9 +407,33 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div><dt>${remote() ? 'In storage there' : 'In your hold'}</dt><dd>${(remote() ? storedThere(ctx, selected) : held).toLocaleString()} ${u}${stolenQty(ctx.commander, selected) ? ` <em class="ex-hot">${stolenQty(ctx.commander, selected).toLocaleString()} stolen</em>` : ''}</dd></div>
       </dl>
       <p class="ex-why">${why(ctx, c, balance, order, touched ? event : null)}</p>`;
+    bestSlot.innerHTML = remote() ? '' : bestPlace(ctx, c);
+    if (!phone.matches) $('.ex-head').append(bestSlot); // on a phone it sits under the candles (placeForPhone)
+  }
+
+  /** Where this good is worth most, as you know the markets: for what you carry, or for a full load bought here. */
+  function bestPlace(ctx: TradeContext, c: Commodity): string {
+    if (!tradesHere(ctx, c.id)) return '';
+    const held = ctx.commander.cargo[c.id] ?? 0;
+    const outlet = held ? bestOutlets(ctx).find((o) => o.id === c.id && o.dest && o.proceeds > o.here) : undefined;
+    const run = held ? undefined : runFor(ctx, c.id);
+    const go = outlet ?? run;
+    if (!go?.dest) return `<p class="ex-best none">Nowhere within ${FUEL_CAPACITY} LY pays more for ${c.name.toLowerCase()}, as far as you know.</p>`;
+    const dest = go.dest;
+    const each = outlet ? outlet.proceeds / held : run!.proceeds / run!.qty;
+    const gain = outlet ? `+${fmt(outlet.proceeds - outlet.here, 0)} Cr on selling here` : `+${fmt(run!.profit, 0)} Cr a load`;
+    const course = ctx.commander.target === dest.index ? '<span class="ex-on-course">On course</span>' : `<button data-course="${dest.index}">Set course</button>`;
+    return `<div class="ex-best">
+      <span class="ex-best-label">${outlet ? `Best place to sell your ${held.toLocaleString()} ${unitLabel(c)}` : 'Best place to sell'}</span>
+      <span class="ex-best-where"><button type="button" class="sys-link" data-system="${dest.index}" title="Show ${dest.name} on the chart">${dest.name}</button> about ${fmt(each)} · ${go.ly.toFixed(1)} LY${go.ly > ctx.commander.fuel ? ' · refuel first' : ''}${risk(dest)}</span>
+      <b class="ex-best-gain up">${gain}</b>
+      <span class="ex-best-age">As of the news ${age(go.age)} old: prices will have moved.</span>
+      <span class="ex-best-actions">${course}<button class="ex-runs-open">Other runs ›</button></span>
+    </div>`;
   }
 
   function renderBtcHead(ctx: TradeContext) {
+    bestSlot.innerHTML = '';
     const q = heardQuote();
     const day = heardCandles('1h', 48)?.slice(-24);
     const open = day?.[0]?.o;
@@ -572,7 +613,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   function renderBtcBook() {
     const q = heardQuote();
-    $('.ex-book h4').textContent = 'The broker';
+    $('.ex-book [data-pane="book"]').textContent = 'The broker';
     $('.ex-book-head').hidden = true;
     $('.ex-asks').innerHTML = `<div class="ex-quote"><span>Limit order fee</span><b class="num">${pctFee(FEE.limit)}</b></div>`;
     $('.ex-mid').innerHTML = `<b>${q ? fmt(q.price) : '…'}</b><span>Live · you trade at this price</span>`;
@@ -581,7 +622,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   }
 
   function renderBook(ctx: TradeContext) {
-    $('.ex-book h4').textContent = 'Order book';
+    $('.ex-book [data-pane="book"]').textContent = 'Order book';
     $('.ex-book-head').hidden = false;
     const state = marketState(ctx);
     // As many levels as fit: the book grows with the screen.
@@ -627,6 +668,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       : `Market order <span>fills now, at the live price</span>`;
     const max = maxQty(ctx);
     if (qty() > max) setQty(max, ctx);
+    root.querySelectorAll<HTMLButtonElement>('[data-pct]').forEach((b) => (b.textContent = `${b.dataset.pct}%`));
     const buying = side === 'buy';
     $('.ex-qty-unit').textContent = buying ? 'Cr' : 'sats';
     $('.ex-qty span').textContent = buying ? 'Spend' : 'Sell';
@@ -695,6 +737,11 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const max = maxQty(ctx);
     if (qty() > max) setQty(max, ctx);
     $('.ex-qty-unit').textContent = u;
+    // The quick amounts in tonnes, not percentages (Mark): "5 t", "10 t", "15 t", "Full".
+    root.querySelectorAll<HTMLButtonElement>('[data-pct]').forEach((b) => {
+      const p = Number(b.dataset.pct);
+      b.textContent = p === 100 ? (side === 'sell' ? 'All' : orderType === 'limit' ? 'Most' : 'Full') : max >= 4 ? `${Math.floor((max * p) / 100).toLocaleString()} ${u}` : `${p}%`;
+    });
     const held = ctx.commander.cargo[selected] ?? 0;
     $('.ex-avail').innerHTML =
       remote()
@@ -739,7 +786,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const impact = avg && best ? (side === 'buy' ? avg / best - 1 : 1 - avg / best) : 0;
     $('.ex-est').innerHTML = `
       <div><dt>Average price</dt><dd>${avg ? `${fmt(avg, 2)} Cr` : '-'}</dd></div>
-      <div><dt>Price impact</dt><dd class="${impact > 0.02 ? 'warn' : ''}">${avg ? pct(impact).replace('+', '') : '-'}</dd></div>
+      <div><dt title="How far your own trade walks the station's price: it's dearer for each tonne you buy, and cheaper for each you sell">Your ${side === 'buy' ? 'buying' : 'selling'} moves it</dt><dd class="${impact > 0.02 ? 'warn' : ''}">${avg ? `${side === 'buy' ? '+' : '−'}${(impact * 100).toFixed(impact < 0.1 ? 1 : 0)}%` : '-'}</dd></div>
       <div><dt>${side === 'buy' ? 'Total cost' : 'You receive'}</dt><dd><b>${total ? `${fmt(total)} Cr` : '-'}</b>${total && inLocal(ctx, total) ? `<small class="ex-local">${inLocal(ctx, total)}</small>` : ''}</dd></div>`;
 
     const submit = $<HTMLButtonElement>('.ex-submit');
@@ -883,65 +930,83 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   function setBackOpen(open: boolean) {
     backOpen = open;
     $('.ex-back').hidden = !open;
-    $('.ex').hidden = open || routesOpen;
+    applyPanes();
   }
 
   // --- Trade computer ----------------------------------------------------------------
 
-  let routesOpen = false;
+  // Answers, not a spreadsheet (Mark, 1 November 2026: "The trading computer feels awkward"): each run is
+  // a card with its profit first and its two buttons on it. On a computer it sits beside the chart,
+  // sharing the column with the order book, so you see the candles of the run you pick; on a phone it
+  // has the screen to itself.
+  let routesOpen = false; // on a phone: the trade computer has the screen
+  let pane: 'runs' | 'book' = 'runs'; // on a computer: what the column beside the chart shows
+  let safeOnly = false;
+  const safe = (s: StarSystem) => s.government > 1;
+
+  /** On a computer, the column beside the chart shows the runs (not for Bitcoin, or a market you're only viewing). */
+  const runsShown = () => (phone.matches ? routesOpen : pane === 'runs' && !isBtc() && !remote());
 
   function renderRoutes(ctx: TradeContext) {
-    if (!routesOpen) return;
+    if (!runsShown()) return;
     const c = ctx.commander;
-    const course = c.target;
-    // Lawless worlds pay a danger premium; say so, so the best runs are a real choice.
-    const risk = (s: StarSystem) =>
-      s.government <= 1 ? `<em class="ex-risk high">${GOVERNMENTS[s.government]} · pirates</em>` : s.government <= 3 ? `<em class="ex-risk">${GOVERNMENTS[s.government]}</em>` : '';
-    const place = (s: StarSystem, ly: number, reachable = true) =>
-      `<b><button type="button" class="sys-link" data-system="${s.index}" title="Show ${s.name} on the chart">${s.name}</button></b><small>${ly.toFixed(1)} LY${reachable ? '' : ' · refuel first'}</small>${risk(s)}`;
     const courseButton = (s: StarSystem) =>
-      s.index === course ? '<span class="ex-on-course">On course</span>' : `<button data-course="${s.index}">Set course</button>`;
-    const routes = bestRoutes(ctx);
-    const outlets = bestOutlets(ctx).filter((o) => o.dest && o.proceeds > o.here);
-    const rows = routes
+      s.index === c.target ? '<span class="ex-on-course">On course</span>' : `<button data-course="${s.index}">Set course</button>`;
+    const where = (s: StarSystem) => `<button type="button" class="sys-link" data-system="${s.index}" title="Show ${s.name} on the chart">${s.name}</button>`;
+    const meta = (s: StarSystem, ly: number, ago: number) =>
+      `${ly.toFixed(1)} LY${ly > c.fuel ? ' · refuel first' : ''}${risk(s)} · news ${age(ago)} old`;
+    const list = runs(ctx).filter((r) => !safeOnly || safe(r.dest)).slice(0, 12);
+    const outlets = bestOutlets(ctx).filter((o) => o.dest && o.proceeds > o.here && (!safeOnly || safe(o.dest)));
+    const cards = list
       .map((r) => {
         const good = commodityById(r.id)!;
         const u = unitLabel(good);
-        return `<tr><td><b>${good.name}</b><small>${ticker(r.id)}</small></td>
-          <td class="num">${fmt(r.cost / r.qty)}</td><td>${place(r.dest, r.ly, r.reachable)}</td><td class="num">${fmt(r.proceeds / r.qty)}<small class="ex-age">${age(r.age)} old</small></td>
-          <td class="num">${r.qty.toLocaleString()} ${u}</td><td class="num up">+${fmt(r.profit)}</td>
-          <td class="ex-back-actions"><button data-route-buy="${r.id}">Buy</button>${courseButton(r.dest)}</td></tr>`;
+        return `<div class="ex-run-card${r.id === selected ? ' active' : ''}">
+          <div class="ex-run-top"><span><button class="ex-run-good" data-route-open="${r.id}" title="Open ${good.name}: its chart and the trade form">${good.name}</button> → ${where(r.dest)}</span><b class="up">+${fmt(r.profit, 0)} Cr</b></div>
+          <div class="ex-run-line">Buy ${r.qty.toLocaleString()} ${u} here at ${fmt(r.cost / r.qty)} · sell about ${fmt(r.proceeds / r.qty)}</div>
+          <div class="ex-run-meta">${meta(r.dest, r.ly, r.age)}</div>
+          <div class="ex-run-actions"><button class="ex-run-buy" data-route-buy="${r.id}" data-n="${r.qty}">Buy ${r.qty.toLocaleString()} ${u}</button>${courseButton(r.dest)}</div>
+        </div>`;
       })
       .join('');
     const held = outlets
       .map((o) => {
         const good = commodityById(o.id)!;
-        return `<tr><td><b>${good.name}</b><small>${o.held.toLocaleString()} ${unitLabel(good)}</small></td>
-          <td>${place(o.dest!, o.ly, o.ly <= c.fuel)}</td><td class="num">${fmt(o.proceeds)}<small class="ex-age">${age(o.age)} old</small></td><td class="num">${fmt(o.here)}</td><td class="num up">+${fmt(o.proceeds - o.here)}</td>
-          <td class="ex-back-actions">${courseButton(o.dest!)}</td></tr>`;
+        return `<div class="ex-run-card">
+          <div class="ex-run-top"><span><button class="ex-run-good" data-route-open="${o.id}">${good.name}</button> <small>${o.held.toLocaleString()} ${unitLabel(good)} aboard</small> → ${where(o.dest!)}</span><b class="up">+${fmt(o.proceeds - o.here, 0)} Cr</b></div>
+          <div class="ex-run-line">About ${fmt(o.proceeds, 0)} Cr there, ${fmt(o.here, 0)} Cr here</div>
+          <div class="ex-run-meta">${meta(o.dest!, o.ly, o.age)}</div>
+          <div class="ex-run-actions">${courseButton(o.dest!)}</div>
+        </div>`;
       })
       .join('');
+    const tab = (p: typeof pane, label: string) => `<button data-pane="${p}" role="tab" class="${pane === p ? 'active' : ''}">${label}</button>`;
     $('.ex-routes').innerHTML = `
-      <header><button class="ex-routes-close">‹ Exchange</button><h3>Trade computer</h3>
-        <span>Every market within ${FUEL_CAPACITY} LY, as you know it: what you saw there yourself, or the latest report, which travels at the speed of news. Prices may have moved since, and will while you travel.</span></header>
-      <h4>Best runs from ${ctx.system.name}</h4>
-      ${
-        routes.length
-          ? `<table><thead><tr><th>Goods</th><th class="num">Buy here</th><th>Sell at</th><th class="num">Price there (as known)</th><th class="num">A full load</th><th class="num">Profit</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-             <p class="ex-note">A full load is as much as your credits, hold and the stock here allow. Prices include how much your own buying and selling moves them. The further away, the older the news.</p>`
-          : '<p class="ex-empty">Nothing here sells for more within range. Try the news, or another station.</p>'
-      }
-      ${
-        held
-          ? `<h4>Your hold: better markets</h4><table><thead><tr><th>Goods</th><th>Best market</th><th class="num">It fetches there</th><th class="num">Here</th><th class="num">Gain</th><th></th></tr></thead><tbody>${held}</tbody></table>`
-          : ''
-      }`;
+      <div class="ex-panes" role="tablist">${tab('runs', 'Trade computer')}${tab('book', 'Order book')}</div>
+      <header class="ex-routes-head"><button class="ex-routes-close">‹ Exchange</button><h3>Trade computer</h3></header>
+      <p class="ex-routes-intro">The best runs from ${ctx.system.name} for a full load, as you know the markets within ${FUEL_CAPACITY} LY. Prices may have moved since the news.</p>
+      <div class="ex-filter" role="group" aria-label="Which runs"><button data-safe="0" class="${safeOnly ? '' : 'active'}">All</button><button data-safe="1" class="${safeOnly ? 'active' : ''}" title="Leave out anarchies and feudal worlds, where pirates rule">Safe systems only</button></div>
+      ${cards ? `<div class="ex-runs">${cards}</div>` : `<p class="ex-empty">${safeOnly ? 'No run to a safe system pays from here. Try All.' : 'Nothing here sells for more within range. Try the news, or another station.'}</p>`}
+      ${held ? `<h4>Your hold: better markets</h4><div class="ex-runs">${held}</div>` : ''}
+      <p class="ex-note">A full load is as much as your credits, hold and the stock here allow. Profits include how much your own buying and selling moves the price. The further away, the older the news.</p>`;
+  }
+
+  /** Which of the exchange's screens are on show. */
+  function applyPanes() {
+    const shown = runsShown();
+    const ex = root.querySelector<HTMLElement>('.ex')!;
+    ex.classList.toggle('runs', shown && !phone.matches);
+    $('.ex-routes').hidden = !shown;
+    $('.ex-book').hidden = shown && !phone.matches;
+    ex.hidden = backOpen || (phone.matches && routesOpen);
+    root.querySelectorAll<HTMLButtonElement>('.ex-book [data-pane]').forEach((b) => b.classList.toggle('active', b.dataset.pane === (shown ? 'runs' : 'book')));
+    $('.ex-book [data-pane="runs"]').hidden = isBtc() || remote();
   }
 
   function setRoutesOpen(open: boolean) {
-    routesOpen = open;
-    $('.ex-routes').hidden = !open;
-    $('.ex').hidden = open || backOpen;
+    if (phone.matches) routesOpen = open;
+    else pane = open ? 'runs' : 'book';
+    applyPanes();
     if (open) renderRoutes(view());
   }
 
@@ -964,10 +1029,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     }
     if (isBtc() && remote()) selected = 'food'; // one price everywhere: Bitcoin is traded where you are
     renderBackRoom(ctx);
-    renderRoutes(ctx);
-    inline.remove(); // the list is drawn afresh: keep the trade form out of its way
     renderPairs(ctx);
     placeForPhone();
+    applyPanes();
+    renderRoutes(ctx);
     root.querySelector('.ex')!.classList.toggle('btc', isBtc());
     $('.ex-feed').hidden = isBtc();
     if (isBtc()) {
@@ -986,28 +1051,49 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     renderTrades(ctx);
   }
 
-  // A phone (docs/design/flight-hud-and-touch.md, "The Market on a phone"): the list
-  // first, and the good you tap opens in place beneath it with its news and the trade form; its
-  // chart, order book and trades fold away under one line there, so you needn't scroll to the
-  // bottom of the list for them (Mark). A computer keeps the full exchange.
+  // A phone (docs/design/flight-hud-and-touch.md, "The Market on a phone"): the list first, and the
+  // good you tap opens as a screen of its own, with "‹ All goods" to go back (Mark, 1 November 2026: the
+  // candles were folded away and nobody saw them). From the top: its price, its candles, the best place to
+  // sell it, the trade form; only the order book and trades fold away. A computer keeps the full exchange.
   const phone = window.matchMedia('(max-width: 700px) and (orientation: portrait), (max-height: 500px)'); // a phone either way up
+  let phoneOpen = false; // a good has the screen, not the list
+  let openedAt = ''; // the station the exchange last opened at
   const inline = document.createElement('div');
   inline.className = 'ex-inline';
+  const bestSlot = document.createElement('div');
+  bestSlot.className = 'ex-best-slot';
+  const backToList = document.createElement('button');
+  backToList.className = 'ex-phone-back';
+  backToList.textContent = '‹ All goods';
   const head = $('.ex-head');
   const form = $('.ex-form');
-  const more = [$('.ex-more-toggle'), $('.ex-chart'), $('.ex-book'), $('.ex-trades')];
+  const more = [$('.ex-more-toggle'), $('.ex-book'), $('.ex-trades')];
   function placeForPhone() {
-    const ex = root.querySelector('.ex')!;
+    const ex = root.querySelector<HTMLElement>('.ex')!;
+    root.classList.toggle('ex-phone', phone.matches);
     if (phone.matches) {
-      inline.append(head, form, ...more);
-      const active = root.querySelector('.ex-pairs-list .ex-pair.active');
-      if (active) active.after(inline);
-      else $('.ex-pairs-list').append(inline); // the good on screen is folded away in "All other goods"
-    } else if (inline.firstChild) {
-      $('.ex-pairs').append(more[0]);
-      ex.append(...inline.childNodes);
-      inline.remove();
+      if (!inline.firstChild) inline.append(backToList, head, $('.ex-chart'), bestSlot, form, ...more);
+      if (inline.parentNode !== ex) ex.append(inline);
+      if ($('.ex-routes').parentNode !== root) root.insertBefore($('.ex-routes'), $('.ex-back'));
+      ex.classList.toggle('good-open', phoneOpen);
+    } else {
+      if (inline.firstChild) {
+        $('.ex-pairs').append(more[0]);
+        ex.append(...[...inline.childNodes].filter((n) => n !== backToList && n !== bestSlot));
+        inline.replaceChildren();
+        inline.remove();
+      }
+      if ($('.ex-routes').parentNode !== ex) ex.append($('.ex-routes'));
+      ex.classList.remove('good-open');
     }
+  }
+  /** On a phone: open a good's own screen, or go back to the list. */
+  function openOnPhone(open: boolean) {
+    phoneOpen = open;
+    chartKey = ''; // it had no width while the list was on show: fit it now it has
+    render();
+    if (open) root.closest('.panel')?.scrollTo({ top: 0 });
+    else root.querySelector('.ex-pairs-list .ex-pair.active')?.scrollIntoView({ block: 'center' });
   }
   phone.addEventListener('change', placeForPhone);
 
@@ -1030,24 +1116,41 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const el = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!el) return;
     el.blur();
-    if (el.classList.contains('ex-routes-toggle')) {
+    if (el.classList.contains('ex-routes-toggle') || el.classList.contains('ex-runs-open')) {
       setRoutesOpen(true);
       return;
     } else if (el.classList.contains('ex-routes-close')) {
       setRoutesOpen(false);
       return;
+    } else if (el.classList.contains('ex-phone-back')) {
+      openOnPhone(false);
+      return;
+    } else if (el.dataset.pane) {
+      setRoutesOpen(el.dataset.pane === 'runs');
+      return;
+    } else if (el.dataset.safe) {
+      safeOnly = el.dataset.safe === '1';
+      renderRoutes(view());
+      return;
     } else if (el.dataset.course) {
       const ctx = view();
       deps.setCourse(systemAt(ctx.system.galaxy, Number(el.dataset.course)));
-      renderRoutes(view());
+      render();
       return;
-    } else if (el.dataset.routeBuy) {
-      selected = el.dataset.routeBuy;
-      side = 'buy';
-      setRoutesOpen(false);
+    } else if (el.dataset.routeBuy || el.dataset.routeOpen) {
+      // A run: its good on screen, with its candles. "Buy" also fills the form with the full load; you still confirm.
+      selected = (el.dataset.routeBuy ?? el.dataset.routeOpen)!;
+      side = el.dataset.routeBuy || !(view().commander.cargo[selected] ?? 0) ? 'buy' : 'sell';
+      orderType = 'market';
       message = '';
       qtyInput.value = '';
-      render();
+      slider.value = '0';
+      if (phone.matches) {
+        routesOpen = false;
+        openOnPhone(true);
+      } else render();
+      if (el.dataset.n) setQty(Number(el.dataset.n));
+      renderForm(view());
       return;
     } else if (el.classList.contains('ex-backroom-toggle')) {
       backMessage = '';
@@ -1081,13 +1184,15 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       const open = root.querySelector('.ex')!.classList.toggle('more-open');
       el.setAttribute('aria-expanded', String(open));
       el.querySelector('span')!.textContent = open ? 'Hide ▴' : 'Show ▾';
-      if (open) {
-        chartKey = ''; // drawn while folded away, it had no width: fit it now it has
-        render();
-      }
+      if (open) render(); // the book was drawn folded away: draw it again now it has room
       return;
     } else if (el.dataset.id) {
       selected = el.dataset.id;
+      if (phone.matches && !phoneOpen) {
+        phoneOpen = true;
+        chartKey = '';
+        requestAnimationFrame(() => root.closest('.panel')?.scrollTo({ top: 0 }));
+      }
       if (isBtc()) refreshBtc();
       if (orderType === 'limit') queueMicrotask(() => suggestPrice(view()));
       message = '';
@@ -1229,10 +1334,17 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       clearInterval(timer);
       timer = 0;
     },
-    /** Open on something you're carrying, if anything. */
+    /** Open on something you're carrying, if anything; at a new station with an empty hold, on the good with
+     *  the best run from here (Mark: it opened on whatever came first, worth buying or not). */
     selectHeld(cargo: Record<string, number>) {
       const held = Object.keys(cargo).find((id) => cargo[id] > 0);
+      const ctx = deps.context();
+      const here = `${ctx.system.galaxy}:${ctx.system.index}`;
+      const arrived = here !== openedAt;
+      openedAt = here;
+      if (arrived) phoneOpen = false; // a new station: its list first
       if (held && !cargo[selected]) selected = held;
+      else if (!held && arrived) selected = runs(ctx)[0]?.id ?? selected;
     },
   };
 }
@@ -1243,6 +1355,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 const offset = (t: number) => new Date(t).getTimezoneOffset() * 60;
 const toChartTime = (t: number) => (Math.floor(t / 1000) - offset(t)) as UTCTimestamp;
 const fromChartTime = (t: UTCTimestamp) => (t + offset(t * 1000)) * 1000;
+
+/** Lawless worlds pay a danger premium; say so, so the best runs are a real choice. */
+const risk = (s: StarSystem) =>
+  s.government <= 1 ? ` <em class="ex-risk high">${GOVERNMENTS[s.government]} · pirates</em>` : s.government <= 3 ? ` <em class="ex-risk">${GOVERNMENTS[s.government]}</em>` : '';
 
 const UP = '#2ebd85';
 const DOWN = '#f6465d';
