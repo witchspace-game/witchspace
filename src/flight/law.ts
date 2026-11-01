@@ -13,6 +13,7 @@ import { POLICE_LASER } from '../game/weapons';
 import { COMPANIES } from '../game/companies';
 import { Explosion } from '../render/explosion';
 import { flash } from '../ui/hud';
+import { settle } from '../ui/radio';
 import { commodityById } from '../economy/commodities';
 import { marketState } from '../economy/trade';
 import { loseDelivery } from '../economy/market';
@@ -58,7 +59,7 @@ export function legalLabel() {
   return label;
 }
 
-export function spawnViper(fromSlot: boolean) {
+export function spawnViper(fromSlot: boolean): NpcShip {
   const i = ofRole('police').length;
   const npc = new NpcShip(shipById('viper')!, 'police', POLICE_LASER, {
     centre: station.root.position.clone(),
@@ -78,6 +79,7 @@ export function spawnViper(fromSlot: boolean) {
   npc.ecm = Math.random() < 0.6;
   space.scene.add(npc.obj);
   npcs.push(npc);
+  return npc;
 }
 
 // Fitted equipment is only at risk once the hull is badly hurt, and never
@@ -371,12 +373,21 @@ const pirateFiredAt = new WeakMap<NpcShip, number>();
 let stationGunCooldown = 0;
 let policeScrambledAt = -Infinity;
 
+/**
+ * The station's airspace: as far as its police can see. A refuge (Mark, 1 November 2026: "if you
+ * are under attack from pirates and you cross into stations airspace the police vipers should help
+ * you"): pirate fire anywhere in it brings the Vipers out, not only inside the 5 km safe zone.
+ */
+const inAirspace = (at: THREE.Vector3) =>
+  at.distanceTo(station.root.position) < POLICE_SEE || ofRole('police').some((p) => !p.hostile && p.obj.position.distanceTo(at) < POLICE_SEE);
+
 export function pirateFired(npc: NpcShip) {
-  if (!modern() || !hasLaw(currentSystem()) || !inSafeZone(npc.obj.position)) return;
+  if (!modern() || !hasLaw(currentSystem()) || !inAirspace(npc.obj.position)) return;
   pirateFiredAt.set(npc, flight.elapsed);
   if (flight.elapsed - policeScrambledAt < 30) return; // one scramble at a time
   policeScrambledAt = flight.elapsed;
-  for (let k = 0; k < 2 && ofRole('police').length < MAX_POLICE; k++) spawnViper(true);
+  // Sent where the shooting is, not to circle the station.
+  for (let k = 0; k < 2 && ofRole('police').length < MAX_POLICE; k++) spawnViper(true).patrol.centre.copy(npc.obj.position);
   radio('police', `${currentSystem().name} police`, 'Pirate fire on the approach · police launching', { flash: 2 });
 }
 
@@ -407,6 +418,7 @@ export function reportedBy(npc: NpcShip) {
 // and let a Viper read your hull. Ignore them and they come after you.
 
 const HAIL_TIME = 15; // seconds to answer a police hail
+const UNDER_FIRE = 6; // seconds after a pirate's last shot at you that the police still hold their hail
 const HAIL_SLOW = 0.2; // fraction of top speed: slow enough for a Viper to read your hull
 const SUSPECT_TIME = 180; // seconds after a crime that switching on near the law makes you the suspect
 
@@ -468,6 +480,9 @@ export function toggleTransponder() {
   flight.switchOnWhenClear = false;
   showTransponder();
   if (flight.transponderOff) return flash(hasLaw(currentSystem()) ? 'Transponder off · running dark' : 'Transponder off · nobody here cares', 2);
+  // Switched on: the hail's card, and the police's last warning, are answered.
+  settle(flight.hailCard, 'Switched on');
+  settle(flight.defiedCard, 'Switched on');
   // Back on where the law can see, soon after a crime nobody pinned on you: you're the suspect.
   const watched =
     player.obj.position.distanceTo(station.root.position) < STATION_SPACE ||
@@ -518,14 +533,26 @@ export function updateHail() {
     box.hidden = true;
     return;
   }
+  // Pirates after you: the police deal with them first, and ask about the transponder once they've gone.
+  const underFire =
+    flight.elapsed - flight.pirateFireAt < UNDER_FIRE ||
+    ofRole('pirate').some((p) => p.hostile && p.target === player && p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
+  if (underFire && flight.hail && !(transponderBroken() && !flight.transponderOff)) {
+    flight.hail = null;
+    settle(flight.hailCard, 'Later');
+    box.hidden = true;
+    radio('police', `${currentSystem().name} police`, "Deal with those pirates, Commander. We'll talk after.", { urgency: 'worth' });
+    return;
+  }
   if (!flight.hail) {
+    if (underFire) return;
     const by = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
     if (!by) return;
     flight.hail = { by, until: flight.elapsed + HAIL_TIME };
     sfx.beep();
     // One hail (Mark got two): in Modern the radio card is it, with the seconds left on it; Classic keeps the banner.
     const deadline = Date.now() + HAIL_TIME * 1000;
-    radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, answers: transponderBroken() && !flight.transponderOff ? answerPolice() : answerPolice().map((a) => ({ ...a, until: deadline, clock: true })) });
+    flight.hailCard = radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, answers: transponderBroken() && !flight.transponderOff ? answerPolice() : answerPolice().map((a) => ({ ...a, until: deadline, clock: true })) });
   }
   // The Viper that hailed you comes to look.
   flight.hail.by.patrol.centre.copy(player.obj.position);
@@ -546,7 +573,16 @@ export function updateHail() {
     flight.defiedPolice = true;
     box.hidden = true;
     sfx.beep();
-    radio('police', `${currentSystem().name} police`, 'No answer · police are treating you as hostile', { flash: 3, urgent: true, line: 'No answer · police are treating you as hostile' });
+    // Not a line that fades: a card that stays while they're after you, with the way out on it.
+    const name = `${currentSystem().name} police`;
+    if (flight.transponderOff)
+      flight.defiedCard = radio('police', name, `No answer: ${name} are treating you as hostile. Switch on and they'll stand down.`, {
+        flash: 3,
+        urgent: true,
+        line: 'No answer · police are treating you as hostile',
+        answers: [{ label: "Switch on · you'll be an Offender", done: 'Switched on', until: Date.now() + 10 * 60_000, run: () => (flight.transponderOff && toggleTransponder(), null) }],
+      });
+    else radio('police', name, 'No answer · police are treating you as hostile', { flash: 3, urgent: true, line: 'No answer · police are treating you as hostile' });
     return;
   }
   // In Modern the card carries the hail; the banner stays for a broken transponder, whose clock waits while you hold still.
