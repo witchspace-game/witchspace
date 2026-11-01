@@ -206,6 +206,9 @@ export function shipSvg(s: ShipFile, cls = 'ship-svg'): string {
 </svg>`;
 }
 
+/** The ship every commander is given: her list price is real (the yards charge it for a second), but nobody pays it to start (Game dev). */
+const STARTER = 'cobra-mk3';
+
 const STAT_LABELS: [string, string, (n: number) => string][] = [
   ['maxSpeed', 'Top speed', (n) => (n ? `${n} m/s` : 'None')],
   ['hull', 'Hull', (n) => n.toLocaleString('en-GB')],
@@ -315,11 +318,11 @@ function modulesCard(s: ShipFile, modules: Map<string, ModuleFile>): string {
 export function shipPage(s: ShipFile, modules: Map<string, ModuleFile> = new Map(), preview = false, editions: EditionCard[] = [], manual = false) {
   const c = s.credits ?? {};
   const stats = STAT_LABELS.filter(([k]) => s.stats?.[k] !== undefined)
-    .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${esc(f(s.stats![k]))}</dd></div>`)
+    .map(([k, label, f]) => `<div><dt>${label}</dt><dd>${esc(f(s.stats![k]))}${k === 'price' && s.id === STARTER ? '<small>Every commander starts in one</small>' : ''}</dd></div>`)
     .join('');
   const design = DESIGN[s.id];
   const authors = (c.authors ?? []).join(', ') || 'Witchspace contributors';
-  const def = JSON.stringify({ id: s.id, name: s.name, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
+  const def = JSON.stringify({ id: s.id, name: s.name, role: s.role, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
   return {
     card: { ship: s.id, kicker: roleLine(s) || 'Ship', sub: firstSentence(s.description ?? '') },
     schema: [
@@ -485,7 +488,7 @@ export function buildPage(s: ShipFile, names: Record<string, string>) {
  * page sends you to name one in the configurator and share her, not to reserve one, and shows no price.
  */
 export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) {
-  const def = JSON.stringify({ id: s.id, name: s.name, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
+  const def = JSON.stringify({ id: s.id, name: s.name, role: s.role, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
   const look = JSON.stringify({ colour: e.colour, glow: e.glowLevel, trim: e.trimColour, ...(e.lights ? { lights: true } : {}) });
   const no = (n: number) => String(n).padStart(3, '0');
   const maker = s.manufacturer && s.manufacturer !== 'None' ? s.manufacturer : 'The yard';
@@ -560,7 +563,7 @@ export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) 
  * This is the frame; src/site/papers.ts fills it in.
  */
 export function papersPage(s: ShipFile, e: EditionCard) {
-  const def = JSON.stringify({ id: s.id, name: s.name, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
+  const def = JSON.stringify({ id: s.id, name: s.name, role: s.role, geometry: s.geometry, style: s.style ?? {}, insignia: s.insignia }).replace(/</g, '\\u003c');
   const look = JSON.stringify({ colour: e.colour, glow: e.glowLevel, trim: e.trimColour, ...(e.lights ? { lights: true } : {}) });
   const maker = s.manufacturer && s.manufacturer !== 'None' ? s.manufacturer : 'The yard';
   const paper = JSON.stringify({ ship: s.id, edition: e.id, name: e.name, limit: e.limit, maker }).replace(/</g, '\\u003c');
