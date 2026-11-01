@@ -85,7 +85,7 @@ import { newsLine } from './game/newsLines';
 import { answerAdvert, answerChart, boardSeen, initContracts, markInbox, payCommissions, plotCourse, recruiter, showWantedChart } from './ui/contracts';
 import { booth, closeBooth, cobraIndex, shipIndex, showShip, showroom, updateShowroom } from './ui/showroom';
 import { boardShip, checkSignedOver, checkSiteSpec, showOwnShip } from './ui/shipyard';
-import { markDocked } from './ui/money';
+import { initMoney, markDocked } from './ui/money';
 import { initSaloon } from './ui/saloon';
 import { initMarket, renderMarket } from './ui/market';
 import { initStation, renderDocked, resetBoughtHere, showFittings, wantedOnLaunch } from './ui/station';
@@ -119,6 +119,7 @@ initMissiles({ launchSound, damagePlayer, destroyNpc, playerHitNpc, laserDirecti
 initMarshals({ damagePlayer, spillCargo, die, keepMoment });
 initTraffic({ rateKill, reportedBy, explodeMissile, spillCargo, rollAssistApplies, npcIdentified: (npc) => npcIdentified(npc), radio, keepMoment, keepCombat });
 initStation({ setDockTab, updateDockHead, canSettle: (c) => canSettle(c), legalLabel, bringHome, myFirsts, explorerTips, showLog, settlementMessage, refreshFlightLog });
+initMoney(() => updateDockHead());
 initMarket({ exploring: () => exploring(), noticeTrades: () => noticeTrades(), updateDockHead: () => updateDockHead() });
 initSaloon({ setDockTab });
 initContracts({ showNewGame, enterDocked, setDockTab, checkSiteSpec, checkSignedOver, updateDockHead, renderDocked, toggleGalaxyMap });

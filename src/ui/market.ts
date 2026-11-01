@@ -49,7 +49,7 @@ export function renderNews() {
     cmdr().difficulty === 'modern'
       ? moneyNews(here, now, (w) => newsDelay(w, here), btcNow())
           .slice(0, 3)
-          .map((n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(n.text, n.where)}</b><small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · stablecoins and Bitcoin are the ways out</small></li>`)
+          .map((n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(n.text, n.where)}</b><small>${escapeHtml(n.where === here ? 'Here' : `${n.distance.toFixed(1)} LY away`)} · Bitcoin is the way out</small></li>`)
           .join('')
       : '';
   // Wexley-Yorozu yards in the region: news, not a market event (Modern).
