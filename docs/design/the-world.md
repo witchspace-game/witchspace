@@ -255,6 +255,9 @@ What characters add is **doubt**. Today a trader is a target: shoot one and the 
 - **Personalities follow the government.** Anarchies draw smugglers, salvagers and people hiding; feudal worlds a lord's couriers; dictatorships state haulers and informers; corporate states company men; democracies Mutual captains, surveyors and pilgrims.
 - **Not only traders:** explorers surveying, builders and tugs at the yards, miners in the fields, all taking part in Witchspace on the same rules as players.
 - **The cost of crossing one is personal and lasting:** they remember, their friends remember, and it counts in an anarchy, where there's no law but there are still people. Piracy stays a career: good pirates scan first.
+- **Fair, so it isn't arbitrary:** the scanner's card always says who a ship is before you fire. A first offence is a warning, not an enemy for life ("Mutual ship. You'll want to look before you shoot."). The costs mustn't stack into something punishing with the law's own fines.
+- **Modern rules only.** Classic keeps 1984's galaxy, untouched.
+- **People in the margins, not a cast:** a hail, a line at the bar, an empty chair. No quest markers, no reputation bars, no grind. It costs you a friend, not a quest.
 
 ### 6.5 The people who stay: the bar owner and who runs the station (Mark)
 
@@ -269,7 +272,7 @@ Mark (1 November 2026): *"What about the Bar Owner and who runs the station?"* T
 
 Mark (1 November 2026), of the characters remembering real commanders as well as you: *"that sounds interesting."* The galaxy's people talk about the commanders who've been through, not just you. The gossip is the multiplayer world, heard even by those who never meet another player.
 
-- **The bar has heard.** *"A commander called Kestrel came through on Tuesday, answered the Mutual's call at the witchpoint. Odile's still buying her drinks."* *"Steer clear of the Riedquat lane. Some commander in a Mamba's been taking Mutual ships apart."*
+- **The bar has heard.** *"A commander called Kestrel came through on Tuesday, answered the Mutual's call at the witchpoint. Odile's still buying them drinks."* *"Steer clear of the Riedquat lane. Some commander in a Mamba's been taking Mutual ships apart."*
 - **Only what the server saw.** Gossip comes from shared space, where the server referees what happened, so it can't be faked: a character or trader destroyed, a distress call answered, a convoy saved, a bounty claimed, a first discovery ([live feed](live-feed.md) already gathers some of this). Never from free text a player typed.
 - **It travels at the speed of news.** Told first at the station where it happened, then a jump further each few hours, fading after some days. Your reputation spreads across the chart like ripples, so a commander can outrun their past, for a while.
 - **Your transponder decides whether they know your name.** Fly dark (0) and the gossip is about "a ship with no transponder": the deed is remembered, but not who did it. Pirates have a real choice: be feared by name, or stay nobody.
@@ -277,6 +280,18 @@ Mark (1 November 2026), of the characters remembering real commanders as well as
 - **Characters react to it.** A trader hails you coldly because she's heard; a harbourmaster has a bounty notice with your callsign on it two systems away; the shebeen keeper buys you a drink for the same thing.
 - **Written lines, real names:** the words are written for each kind of deed and each kind of speaker; only the callsign, ship, place and day are real. Callsigns are already checked when they're claimed.
 - **Cost:** a few rows a day per busy system on the server, which already sees every event. Nothing for quiet systems.
+
+**Rules, from the website and marketing sessions (1 November 2026):**
+- **Name the doers, never player victims.** "Kestrel was shot down at Lave again" shames them and tells griefers where they fly. Good deeds and crimes name who did them; a player who was attacked is never named.
+- **Kind on balance.** Rescues, convoys saved and first discoveries are told more often than kills, so the bars aren't a wall of shame and infamy isn't a prize. A repeat offender becomes "that Mamba again", not a famous name.
+- **No pronouns for real commanders:** their callsign, or "they". Characters keep their own.
+- **Never invent a commander.** When there's no news, characters talk about each other, or the bar is quiet. Silence is honest.
+- **Keep my name out of the bars:** a setting for commanders who don't want to be retold, besides flying dark; and one line on the callsign page saying what may be retold.
+- **Stored by account, shown by callsign.** The callsign is filled in when the line is shown, so a changed or removed callsign, or a deleted account, leaves all the gossip at once.
+- **Characters are labelled.** Anywhere real commanders are marked "Commander" (the live feed), a character carries "Character", never the commander mark.
+- **On the site,** drawn in the browser like the live feed, not in the pages search engines read. A commander's callsign card shows only the lines they choose.
+- **Clips illustrate, never prove.** The flight recorder runs on the phone, so it isn't evidence; but a server-seen deed can link the clip its own commander shared.
+- **Players write the lines,** credited, as the Saloon's lines are: the community is the galaxy's voice, without anyone putting words about another player in a bar.
 
 ---
 

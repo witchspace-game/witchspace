@@ -25,7 +25,7 @@ She's the second character after [Bond](the-world.md#61-worked-example-cmdr-bond
 
 - **Captain Odile Venn**, member **002** ([callsign card](callsign-card.md)); callsign VENN, held.
 - **The Carriers' Mutual** ([the companies](../companies.md#the-carriers-mutual)): one member, one ship, one vote. She has voted against everything for thirty years and turned up to every vote.
-- **Her ship:** a Cobra Mk III called *Second Wind*, older than most of the commanders who pass her, in trader green with the Mutual's white band and the carrick bend on her nose. (The Mutual's own hauler, the Garter, isn't designed yet. When the community designs it, she might retire into one.)
+- **Her ship:** a Cobra Mk III called *Second Wind*, older than most of the commanders who pass her, in plain trader green like every other Cobra in the lanes: you find out who she is by looking (the scanner's card, a hail), never at a glance ([the doubt](the-world.md#64-a-handful-in-every-system-the-doubt-mark)). (The Mutual's own hauler, the Garter, isn't designed yet. When the community designs it, she might retire into one.)
 - **Her temperament:** glad, in the Saloon's terms ([trading](trading.md)), and dry with it. She counts everything, forgives most things and forgets nothing. She doesn't lie, which makes her the most useful person in the Saloon and the least exciting.
 - **What she wants:** to keep the run going. Not to get rich; she could have been, twice.
 
@@ -47,7 +47,7 @@ Her loads come from the real markets, like every voyage ([the world, as built](t
 ## Meeting her
 
 - **In space:** she's in the traffic like any ship, on her lane. Hail her (L) and she answers in her own words, not the timetable's. A first hail: *"Venn, Second Wind, Mutual. Food for Leesti, if you're asking, and you are."*
-- **On the arrivals board:** the Station screen says when she's due: *"Expected: Odile Venn's Second Wind, in from Leesti about 14:20."* A character you can't find is a character nobody meets.
+- **On the arrivals board:** the Station screen, and the site's "Arrivals at Lave" board on the home page, say when she's due: *"Expected: Odile Venn's Second Wind, in from Leesti about 14:20."* A character you can't find is a character nobody meets.
 - **In the Saloon,** on her port days, she's one of the regulars ([saloon.ts](../../src/game/saloon.ts)), always at the same table. Buy her a drink and she talks.
 - **On the chart,** once you've met her, her ship is marked where she is now (the chart already shows contracts and news).
 
@@ -68,7 +68,7 @@ A short record per commander, as the [Falcons](legends-the-falcon.md) will keep:
 | **Trusted** (answered her call, or flew a leg with her) | Asks you along on the Riedquat run, and tells you why (below) |
 | **Crossed** (fired on her, or took her cargo) | Won't drink with you. Other Mutual captains hear of it: for a while, your distress calls go unanswered by the Mutual |
 
-Crossing her is a choice the game lets you make. It costs you a friend, not a quest.
+Crossing her is a choice the game lets you make. It costs you a friend, not a quest. A first shot is forgiven with a warning, *"Mutual ship. You'll want to look before you shoot,"* since a new commander may not yet know to scan first.
 
 ## The Riedquat run
 
@@ -87,7 +87,8 @@ Meridian has an empty chair, as every Mutual station does. It's the first one. S
 She's a Mutual member, so she's insured. Destroy *Second Wind* and Odile survives in her escape pod. A day later she's back on her run in the same ship, repaired, and she remembers exactly who did it. The news reports the loss. She never dies for good: a character the galaxy loses to one commander is lost to all of them.
 
 - **In solo:** her loss is yours, in your own world.
-- **In shared space:** the server saw it, so it's everyone's: one commander's crime keeps her off the lanes for the whole system for a day, and the news names the culprit ([the world, exceptions](the-world.md#5-what-players-change-exceptions)).
+- **In shared space:** the server saw it, so the bars name the culprit ([other commanders, remembered](the-world.md#66-other-commanders-remembered-mark)). But she's back much sooner, or another Mutual captain flies her leg, so one griefer can't take the first-hour character away from everyone.
+- **Labelled:** wherever she appears beside real commanders (the live feed, her callsign card), she's marked "Character". She's in Modern rules only.
 
 ## How it works
 
@@ -111,7 +112,7 @@ The method is [the world's](the-world.md#3-the-method), with a plan on top:
 ## Open questions for Mark
 
 1. **Her:** is Odile Venn the right name, and *Second Wind* the right ship?
-2. **The lore:** the Mutual founded at Meridian Station, Riedquat. Is that the story, or should the founding bar stay unnamed?
+2. **The lore:** the Mutual founded at Meridian Station, Riedquat (marketing: keep it named; it gives the Mutual a place)?
 3. **The twenty-eighth founder:** does Odile know who she was, and is that hers to tell, or Bond's (who knows what Hexon keeps on file)?
-4. **Trade with her in space:** a "deck sale" (hail her within a kilometre and buy a few tonnes of her load at her price, without docking)? It would be new to Elite's rules, and it's what makes her a trader you can deal with rather than just meet.
+4. **Trade with her in space,** a "deck sale" (hail her within a kilometre and buy a few tonnes of her load without docking): marketing suggests a later idea, as it's new to Elite's rules and she doesn't need it to land.
 5. **How often:** an hour at each stop, every few hours, is easy to meet. Rarer makes her special; commoner makes her part of the furniture.
