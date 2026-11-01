@@ -381,14 +381,14 @@ export function modulePage(m: ModuleFile & ModuleBody, titan: ShipFile, all: Mod
   <div class="ship-columns">
     <div class="card">
       <h3>Make it better</h3>
-      <p>Every section of the Titan is open. Redraw this one: a clearer shape, a better reason for where it sits, something it’s missing. Start from its file on the hand-in page, check it against the standard as you go, and send it. No GitHub needed. If it’s accepted, it goes into the game under your callsign.</p>
+      <p>Every section of the Titanoboa is open. Redraw this one: a clearer shape, a better reason for where it sits, something it’s missing. Start from its file on the hand-in page, check it against the standard as you go, and send it. No GitHub needed. If it’s accepted, it goes into the game under your callsign, and the first time it’s fitted Wexley-Yorozu pays your commander 2,000 Cr.</p>
       <p><a class="button primary small" href="/submit/?module=${esc(m.id)}&amp;as=improve">Improve the ${esc(m.name.toLowerCase())}</a> <a class="button ghost small" href="/ideas/?about=${encodeURIComponent(label)}">Suggest an idea instead</a></p>
       <ul class="ship-ideas" data-ship-name="${esc(label)}"><li class="muted">Looking for ideas about the ${esc(m.name.toLowerCase())}…</li></ul>
       <p class="muted small">Drawn by ${esc((c.authors ?? []).join(', ') || m.designer)}${c.aiAssisted ? ', with AI assistance' : ''}. Licence: ${esc(c.license ?? 'CC-BY-SA-4.0')}. <a href="${REPO}content/modules/${esc(m.id)}.json">The file on GitHub</a>.</p>
     </div>
     <div class="card">
       <h3>Or design a new one</h3>
-      <p>The Titan is whatever the job needs, put together from sections on one coupling. Suggest a module nobody has drawn yet. Take a prison module: bolt enough of them together, with accommodation, a gym and a science station of the kind Wexley-Yorozu won’t discuss, and you have a prison Titan. Her Bullsnake tugs would ferry the prisoners down to the surface and back.</p>
+      <p>The Titanoboa is whatever the job needs: sections on one coupling, lined up for the work. Mining, building, hauling, or work the company would rather you didn’t ask about. A prison module is on the drawing board. Couple enough of them to a habitat and a science module (its sealed pods can be ejected if anything gets out) and you have a prison Titanoboa with a research wing, her Bullsnake tugs ferrying inmates down to the surface and back. Wexley-Yorozu calls it rehabilitation. Draw the module you think she’s missing: if it’s built, your commander is paid 5,000 Cr.</p>
       <p><a class="button ghost small" href="/submit/?module=${esc(m.id)}&amp;as=new">Start a new module from this one</a> <a class="button ghost small" href="/design/ship-the-titanoboa/#designing-a-module-the-standard">The standard</a></p>
     </div>
   </div>
