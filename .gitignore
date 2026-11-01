@@ -58,6 +58,7 @@ CLAUDE.local.md
 /shared-space/
 /callsign/
 /economy/
+/galaxy/
 /public/sitemap*.xml
 
 # The look check's fresh pictures and differences (tools/look-check.mjs)
