@@ -1868,3 +1868,8 @@ button.link { padding: 0; border: 0; background: none; color: var(--accent); fon
 @media (max-width: 800px) {
   .sys-hero, .sys-cols, .sys-market { grid-template-columns: 1fr; }
 }
+
+/* On a phone, Safari zooms into any text box under 16px and leaves the page zoomed (Game dev found it in the game). */
+@media (pointer: coarse) {
+  .share-link input, .idea-form input, .idea-form textarea, .submit-step input:not([type='radio']):not([type='file']), .submit-step textarea, .submit-step select, .editor-tools select, #file { font-size: 16px; }
+}
