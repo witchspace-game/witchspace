@@ -15,6 +15,9 @@ if (deck) {
   /** How long the old card takes to turn edge on (site.css: the new one starts turning in then). */
   const HALF_MS = 300;
   let front = 0;
+  // Which way it turns, while Mark chooses: about the upright (the default), top over bottom (?turn=x), or a slide (?turn=slide).
+  const turnStyle = new URLSearchParams(location.search).get('turn') ?? '';
+  if (turnStyle === 'x' || turnStyle === 'slide') deck.dataset.turn = turnStyle;
 
   const show = (i: number) => {
     const next = (i + cards.length) % cards.length;
@@ -34,14 +37,19 @@ if (deck) {
       card.tabIndex = k === front ? 0 : -1;
       card.setAttribute('aria-hidden', String(k !== front));
     });
+    // The row, the ladder and the button change with the card: at the halfway point, when she's edge on.
     const career = cards[front].dataset.career!;
-    row.forEach((b) => b.setAttribute('aria-current', String(b.dataset.career === career)));
-    ladders.forEach((l) => (l.hidden = l.dataset.career !== career));
-    if (cta) cta.href = `/callsign/?career=${career}`;
+    clearTimeout(labelTimer);
+    labelTimer = window.setTimeout(() => {
+      row.forEach((b) => b.setAttribute('aria-current', String(b.dataset.career === career)));
+      ladders.forEach((l) => (l.hidden = l.dataset.career !== career));
+      if (cta) cta.href = `/callsign/?career=${career}`;
+    }, first ? 0 : turnStyle === 'slide' ? 120 : HALF_MS);
+    first = false;
   };
+  let labelTimer = 0;
+  let first = true;
   deck.classList.add('live'); // without the script, every ladder shows
-  // Which way it turns, while Mark chooses: about the upright (the default) or top over bottom (?turn=x).
-  if (new URLSearchParams(location.search).get('turn') === 'x') deck.dataset.turn = 'x';
   show(0);
 
   // Turning by itself, unless something has your attention.
