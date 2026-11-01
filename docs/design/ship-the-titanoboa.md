@@ -179,6 +179,8 @@ Bullsnakes are tugs, and they work inside one system. They:
 
 **A Bullsnake can fly a module between systems** *(Mark, 1 November 2026)*. Bullsnakes are built to engineer modules, repair them and ferry them short distances, and every module has a **universal docking ring**. For a long trip a module is made into a stack: the **Drive module** ("the drive is the engine", Mark), a **disposable fuel module**, and a Bullsnake docked into the ring. Docked, the Bullsnake is the bridge: it controls the Drive and navigates the whole stack to the system it's needed in. That's how a module crosses between stars (a science pod sent out, an atmosphere processor hauled through Vorg space); it isn't trade, and goods still go by trader.
 
+**Fuel in cells** *(Mark, 1 November 2026)*: "Fuel would be in modules so that if a fuel cell was damaged it would eject it and a new one could be fitted." So the fuel module is built of separate cells, each on a clamp like a science pod: a damaged cell is ejected clear of the stack and a fresh one fitted. *Open question for Mark:* is the fuel module still thrown away when it runs dry, or refuelled and reused cell by cell?
+
 **Any combination, or in place** *(Mark, 1 November 2026)*: "The Bullsnake would have a crew, probably an engineer and a pilot +3. The idea is the Bullsnake could pilot any combination of any modules through hyper space or it could manipulate modules in situ to reconfigure an existing Titan!"
 
 - **A crew of about five:** a pilot, an engineer and three more.
