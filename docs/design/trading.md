@@ -12,6 +12,7 @@ stages:
   - The news cycle: overshoot and aftermath | proposed
   - Limit orders (Bitcoin first); Ma Reyes's lessons; a Merchant rank | building
   - Working the market: cornering, planted rumours | proposed
+  - The exchange's UI and UX, reworked - the trade computer, the candles on show | proposed
 help:
   - Write a saloon regular: who they are, how they feel, what they know | writing
   - Playtest the trader's screen and tell us what confused you | playtest
@@ -71,6 +72,14 @@ The charts stay: they're one of the best things in the game. What changes is eve
 **On a phone:** the lists first; tap a good and its chart opens full width, with buy and sell under it.
 
 The **back room** (the black market) stays a separate door, as now.
+
+## 1a. The exchange needs work *(Mark, 1 November 2026)*
+
+Mark: *"we really need to work on the UI and UX on the trading side. The trading computer feels awkward and we dont see the trading candles by default which was a really cool part of the trading screen."*
+
+- **The candles are folded away.** On a phone, the chart, the order book and the trades sit under one "Show" line beneath the trade form (so you needn't scroll past them to trade), and most players never open it. The candles are one of the exchange's best sights: they should be on show by default, at least a small chart beside the price, without pushing the trade form out of reach.
+- **The trade computer is awkward.** A wide table squeezed onto a phone (columns cut off at the edge), behind a button on the exchange, separate from the goods you'd buy. It should read as answers, not a spreadsheet: "Buy Luxuries here, sell at Riedquat: +2,100 Cr a load", one tap to buy and one to set course, its markets linking to the chart (done).
+- **To do first:** sit with the exchange on a phone and a computer, list what's awkward screen by screen, and show Mark pictures of a reworked layout before building it.
 
 ## 1b. Learning the exchange pays
 

@@ -82,7 +82,7 @@ import './style.css';
 import { renderControlsCard, showControlsCardOnce, toggleControlsCard } from './ui/manual';
 import { initKeyboard } from './ui/keyboard';
 import { newsLine } from './game/newsLines';
-import { answerAdvert, boardSeen, initContracts, markInbox, payCommissions, plotCourse, recruiter } from './ui/contracts';
+import { answerAdvert, answerChart, boardSeen, initContracts, markInbox, payCommissions, plotCourse, recruiter, showWantedChart } from './ui/contracts';
 import { booth, closeBooth, cobraIndex, shipIndex, showShip, showroom, updateShowroom } from './ui/showroom';
 import { boardShip, checkSignedOver, checkSiteSpec, showOwnShip } from './ui/shipyard';
 import { markDocked } from './ui/money';
@@ -398,6 +398,7 @@ function enterDocked(newShip = false) {
   // meant docking again). Fuel is cheap; the chore was the cost. Classic keeps 1984's pump.
   const refuelled = modern() ? autoRefuel(cmdr()) : null;
   if (refuelled) setTimeout(() => flash(refuelled, 3), newShip ? 7500 : 900);
+  showWantedChart(); // a system's page on the site asked for the chart on it
   markInbox(cmdr());
   renderDocked();
   setState('docked');
@@ -1185,6 +1186,7 @@ initRadio();
 setDockTab('station');
 showTitle();
 answerAdvert();
+answerChart();
 
 // A shared clip's link (witchspace.org.uk/clip/<id>, or /play/?clip=<id>): straight
 // into the kill cam on it, with its hearts; closing it leaves you at the title

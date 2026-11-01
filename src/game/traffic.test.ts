@@ -145,3 +145,32 @@ describe('holds (Mark: a Cobra carrying 22 t and 15 t and more)', () => {
   });
 });
 
+
+describe('names', () => {
+  // Marketing (1 November 2026): "Yours Truly" in and out of Riedquat in the same three minutes.
+  it('no two ships in a system share a name within half an hour', () => {
+    const t0 = Date.UTC(2026, 10, 1, 12);
+    for (const s of galaxy(0).slice(0, 80)) {
+      const list = voyages(s, t0, t0 + 3 * 3600_000);
+      for (const v of list) {
+        const near = list.filter((o) => o !== v && Math.abs(o.at - v.at) < 30 * 60_000 && o.name === v.name);
+        expect(near.map((o) => `${s.name}: ${o.name}`)).toEqual([]);
+      }
+    }
+  });
+
+  it("a convoy's followers are her sisters", () => {
+    const t0 = Date.UTC(2026, 10, 1, 12);
+    const v = galaxy(0).flatMap((s) => voyages(s, t0, t0 + 3600_000)).find((x) => x.id.endsWith(':c1'))!;
+    expect(v.name).toMatch(/ II$/);
+  });
+
+  it('anarchies have more independents than company space', () => {
+    const t0 = Date.UTC(2026, 10, 1, 12);
+    const share = (g: number) => {
+      const list = galaxy(0).filter((s) => s.government === g).flatMap((s) => voyages(s, t0, t0 + 3600_000)).filter((v) => !v.id.includes(':c') && v.to === 'station' && !v.relief);
+      return list.filter((v) => !v.company).length / list.length;
+    };
+    expect(share(0)).toBeGreaterThan(share(7));
+  });
+});

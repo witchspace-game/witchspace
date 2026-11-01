@@ -84,6 +84,35 @@ export const NAMES = [
   'Grey Area', 'Hard Bargain', 'In Credit', 'Just So', 'Lucky Break', 'Moonlighter', 'Northern Star', 'Odd Job',
 ];
 
+// A ship's name, in turn (Marketing, 1 November 2026: "Yours Truly" in and out of Riedquat in the same
+// three minutes, "Night Shift" twice). Names picked at random repeat within the half hour, and one name in
+// two places reads as one ship in two places. So each system takes its lane ships' names in turn from its
+// own shuffle of NAMES: a name comes round again only after 20 windows (80 minutes at the busiest, three
+// hours in an anarchy). A convoy's followers are her sisters (Night Shift II, III); the Titan's freighters
+// and the relief ships have names of their own, so they never meet a lane ship's.
+const TITAN_NAMES = ['Groundwork', 'Load Bearing', 'Foundation', 'Keystone', 'Plumb Line', 'Cornerstone', 'Scaffold', 'Spirit Level', 'Ballast', 'Bedrock', 'Lintel', 'Footing'];
+const RELIEF_NAMES = ['Good Neighbour', 'Answered Call', 'Helping Hand', 'Open Door', 'Full Larder', 'Mercy Run', 'Kind Heart', 'Lifeline', 'Warm Welcome', 'Common Good', 'Soft Landing', 'Fair Share'];
+const shuffles = new Map<string, string[]>();
+function namesOf(s: StarSystem): string[] {
+  const key = `${s.galaxy}:${s.index}`;
+  let out = shuffles.get(key);
+  if (!out) {
+    out = [...NAMES];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(hash(s, 91_900, i) * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    shuffles.set(key, out);
+  }
+  return out;
+}
+const inTurn = (list: string[], slot: number) => list[((slot % list.length) + list.length) % list.length];
+const SISTERS = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];
+const sister = (name: string, i: number) => (i < SISTERS.length ? name + SISTERS[i] : `${name} ${i + 1}`);
+
+/** Of a system's lane ships, the share flying for no company: independents, most of all where there's no law. */
+const INDEPENDENT = [0.45, 0.35, 0.25, 0.2, 0.2, 0.2, 0.2, 0.2];
+
 const neighbours = new Map<string, number[]>();
 /** Systems within a jump, nearest first; the nearest few if none are. */
 export function lanesFrom(s: StarSystem): number[] {
@@ -103,7 +132,7 @@ export function lanesFrom(s: StarSystem): number[] {
 
 const goodName = (id: string) => COMMODITIES.find((c) => c.id === id)?.name ?? id;
 
-function voyageFor(s: StarSystem, leg: 'in' | 'out', to: 'station' | 'titan', k: number, cargo: Consignment[], company: CompanyId | null): Voyage {
+function voyageFor(s: StarSystem, leg: 'in' | 'out', to: 'station' | 'titan', k: number, cargo: Consignment[], company: CompanyId | null, name: string): Voyage {
   const salt = leg === 'in' ? 0 : 1;
   const lanes = lanesFrom(s);
   const hull = company === 'wy' && (to === 'titan' || hash(s, 91_300 + salt, k) < 0.5) ? 'bullsnake' : 'cobra-mk3';
@@ -118,7 +147,7 @@ function voyageFor(s: StarSystem, leg: 'in' | 'out', to: 'station' | 'titan', k:
     cargo,
     company,
     hull,
-    name: NAMES[Math.floor(hash(s, 91_100 + salt + (to === 'titan' ? 2 : 0), k) * NAMES.length)],
+    name,
     other: lanes[Math.floor(hash(s, 91_200 + salt + (to === 'titan' ? 2 : 0), k) * lanes.length)],
     escorts,
   };
@@ -157,7 +186,7 @@ export function packHolds(cargo: Consignment[], hold: number): Consignment[][] {
 }
 
 /** A voyage too big for her hold becomes a convoy: the same company and lane, a ship every CONVOY_GAP_MS. */
-function convoy(s: StarSystem, v: Voyage, k: number): Voyage[] {
+function convoy(v: Voyage): Voyage[] {
   const loads = packHolds(v.cargo, HOLD[v.hull] ?? 20);
   if (loads.length <= 1) return [v];
   return loads.map((cargo, i) => ({
@@ -165,7 +194,7 @@ function convoy(s: StarSystem, v: Voyage, k: number): Voyage[] {
     id: i ? `${v.id}:c${i}` : v.id,
     at: v.at + i * CONVOY_GAP_MS,
     cargo,
-    name: i ? NAMES[Math.floor(hash(s, 91_600 + i, k) * NAMES.length)] : v.name,
+    name: sister(v.name, i),
   }));
 }
 
@@ -199,8 +228,9 @@ export function voyages(s: StarSystem, from: number, to: number, lost: { id: str
   for (const [key, cargo] of groups) {
     const [leg, k] = key.split(':') as ['in' | 'out', string];
     const kn = Number(k);
-    const company = hash(s, 91_400 + (leg === 'in' ? 0 : 1), kn) < 0.8 ? pickCompany(s, hash(s, 91_500 + (leg === 'in' ? 0 : 1), kn)) : null;
-    for (const v of convoy(s, voyageFor(s, leg, 'station', kn, cargo.sort((a, b) => a.t - b.t), company), kn)) if (v.at >= from && v.at <= to) out.push(v);
+    const company = hash(s, 91_400 + (leg === 'in' ? 0 : 1), kn) >= INDEPENDENT[s.government] ? pickCompany(s, hash(s, 91_500 + (leg === 'in' ? 0 : 1), kn)) : null;
+    const name = inTurn(namesOf(s), kn * 2 + (leg === 'in' ? 0 : 1));
+    for (const v of convoy(voyageFor(s, leg, 'station', kn, cargo.sort((a, b) => a.t - b.t), company, name))) if (v.at >= from && v.at <= to) out.push(v);
   }
   out.push(...titanVoyages(s, from, to), ...reliefVoyages(s, from, to));
   return out.sort((a, b) => a.at - b.at);
@@ -217,7 +247,7 @@ export function titanVoyages(s: StarSystem, from: number, to: number): Voyage[] 
     const needs = yard ? TITAN_NEEDS[yard.stage] : [];
     if (!needs.length) continue;
     const id = needs[Math.floor(hash(s, 92_200, k) * needs.length)];
-    for (const v of convoy(s, voyageFor(s, 'in', 'titan', k, [{ id, t: at, qty: 20 + Math.floor(hash(s, 92_300, k) * 30) }], 'wy'), k)) if (v.at >= from && v.at <= to) out.push(v);
+    for (const v of convoy(voyageFor(s, 'in', 'titan', k, [{ id, t: at, qty: 20 + Math.floor(hash(s, 92_300, k) * 30) }], 'wy', inTurn(TITAN_NAMES, k)))) if (v.at >= from && v.at <= to) out.push(v);
   }
   return out;
 }
@@ -237,8 +267,8 @@ export function reliefVoyages(s: StarSystem, from: number, to: number): Voyage[]
     if (!e || !short.length) continue;
     const id = short[Math.floor(hash(s, 93_200, k) * short.length)];
     const company = hash(s, 93_300, k) < 0.5 ? 'mutual' : pickCompany(s, hash(s, 93_400, k));
-    const v = voyageFor(s, 'in', 'station', 1_000_000 + k, [{ id, t: at, qty: 15 + Math.floor(hash(s, 93_500, k) * 25) }], company);
-    for (const c of convoy(s, v, k)) if (c.at >= from && c.at <= to) out.push({ ...c, id: `${c.id}:relief`, relief: e.type });
+    const v = voyageFor(s, 'in', 'station', 1_000_000 + k, [{ id, t: at, qty: 15 + Math.floor(hash(s, 93_500, k) * 25) }], company, inTurn(RELIEF_NAMES, k));
+    for (const c of convoy(v)) if (c.at >= from && c.at <= to) out.push({ ...c, id: `${c.id}:relief`, relief: e.type });
   }
   return out;
 }

@@ -240,6 +240,59 @@ where(t) = plan evaluated at t
 
 Mark: "Some of those Characters will be from the saloon, but they have their own ships and fly around the systems doing what they do." Today's regulars (`saloon.ts`) are made for each station and hour. A **named regular** is a character: the same person in the same Saloon on their days there, and out on their route the rest of the week. You might drink with a smuggler on Monday and pass her ship, running dark, on Thursday.
 
+### 6.3 The first trader: Odile Venn
+
+Mark (31 October 2026): *"do we have any character NPCs trading as well?"* The first is designed: [Odile Venn](character-odile-venn.md), a Carriers' Mutual captain on a run round Lave, Leesti and Diso, in the traffic like any ship, with a daily detour to Riedquat that nobody pays her for. She's the first character to be built, before Bond: every new commander meets her in their first hour.
+
+### 6.4 A handful in every system: the doubt (Mark)
+
+Mark (1 November 2026): *"If a player decides to attack a Cobra trader before waiting to see who it is then they would think twice about doing it if there were consequences."* And: *"Each system would have a handful of characters that are trading for their own reasons. Lawful systems and anarchy would attract different personalities and or we should have explorers and builders all actually taking part in 'Witchspace'."*
+
+What characters add is **doubt**. Today a trader is a target: shoot one and the law forgets in two jumps, and in an anarchy nothing happens at all. If any Cobra might be someone who remembers, with friends who remember, every trader is a decision, and commanders look before they shoot. So:
+
+- **Characters look like everyone else.** The same hull and the same green as the traffic around them; you find out who she is by looking (the scanner's card, a hail), never at a glance.
+- **Many, not few.** A handful in every system, made from the seed like the Saloon's regulars (a name, a home, a run, a temperament, a reason, a memory), and a few written by hand with whole stories (Odile Venn, Bond).
+- **Personalities follow the government.** Anarchies draw smugglers, salvagers and people hiding; feudal worlds a lord's couriers; dictatorships state haulers and informers; corporate states company men; democracies Mutual captains, surveyors and pilgrims.
+- **Not only traders:** explorers surveying, builders and tugs at the yards, miners in the fields, all taking part in Witchspace on the same rules as players.
+- **The cost of crossing one is personal and lasting:** they remember, their friends remember, and it counts in an anarchy, where there's no law but there are still people. Piracy stays a career: good pirates scan first.
+- **Fair, so it isn't arbitrary:** the scanner's card always says who a ship is before you fire, unless she's flying dark. **Firing on a dark ship is the attacker's risk** (Mark): whoever she turns out to be, a character, a Mutual captain or a commander, the consequences stand. Characters fly dark too where it suits them (a smuggler in an anarchy), so a dark ship is the biggest doubt of all. **Hail first** (Mark: *"the pirate could always hail the cmdr like they do now"*): a dark ship can still be hailed, and how she answers, or doesn't, is the pirate's clue. A careful pirate asks; a careless one finds out. A first offence is a warning, not an enemy for life ("Mutual ship. You'll want to look before you shoot."). The costs mustn't stack into something punishing with the law's own fines.
+- **Modern rules only.** Classic keeps 1984's galaxy, untouched.
+- **People in the margins, not a cast:** a hail, a line at the bar, an empty chair. No quest markers, no reputation bars, no grind. It costs you a friend, not a quest.
+
+### 6.5 The people who stay: the bar owner and who runs the station (Mark)
+
+Mark (1 November 2026): *"What about the Bar Owner and who runs the station?"* Travellers are the witnesses; the people who stay are where what you did lands. Every station has two, made from the seed, there whenever you dock:
+
+- **Behind the bar:** the station's memory. Everyone passes through the bar, so the owner hears everything, and the travelling characters tell them. They introduce you to their regulars ("Odile's in most afternoons"), keep messages, serve you or don't. The kind follows the government, as the bar's does: a landlord in a saloon, a club secretary in a corporate state, a tea room's supervisor in a dictatorship (who tells the police), a shebeen keeper in an anarchy (who is also the fence: the back room's door is theirs).
+- **Who runs the station:** the authority, with levers: clearance, berth fees, repairs first or last, a bounty on you, or a welcome. A Co-operative harbourmaster where there's law; a company manager at a Wexley-Yorozu station; a lord's steward on a feudal world; in an anarchy, whoever holds it (a boss, a collective, a smuggler-queen), who may welcome you for what others punish.
+- **How it joins up:** shoot a trader in Leesti's lanes, and at Diso the bar has heard, and at Lave the harbourmaster charges you double for a berth. The law forgets in two jumps; the people who stay don't.
+- **Later, a player's:** when stations can be run by players ([player-run stations](player-stations.md)), the station's runner is the slot a player or guild takes over.
+
+### 6.6 Other commanders, remembered (Mark)
+
+Mark (1 November 2026), of the characters remembering real commanders as well as you: *"that sounds interesting."* The galaxy's people talk about the commanders who've been through, not just you. The gossip is the multiplayer world, heard even by those who never meet another player.
+
+- **The bar has heard.** *"A commander called Kestrel came through on Tuesday, answered the Mutual's call at the witchpoint. Odile's still buying them drinks."* *"Steer clear of the Riedquat lane. Some commander in a Mamba's been taking Mutual ships apart."*
+- **Only what the server saw.** Gossip comes from shared space, where the server referees what happened, so it can't be faked: a character or trader destroyed, a distress call answered, a convoy saved, a bounty claimed, a first discovery ([live feed](live-feed.md) already gathers some of this). Never from free text a player typed.
+- **It travels at the speed of news.** Told first at the station where it happened, then a jump further each few hours, fading after some days. Your reputation spreads across the chart like ripples, so a commander can outrun their past, for a while.
+- **Your transponder decides whether they know your name.** Fly dark (0) and the gossip is about "a ship with no transponder": the deed is remembered, but not who did it. Pirates have a real choice: be feared by name, or stay nobody.
+- **Heard in solo too.** A solo commander, signed in, hears the gossip about real commanders, so the galaxy feels lived in even before you ever meet one. Their own deeds in solo stay in their own world (section 5).
+- **Characters react to it.** A trader hails you coldly because she's heard; a harbourmaster has a bounty notice with your callsign on it two systems away; the shebeen keeper buys you a drink for the same thing.
+- **Written lines, real names:** the words are written for each kind of deed and each kind of speaker; only the callsign, ship, place and day are real. Callsigns are already checked when they're claimed.
+- **Cost:** a few rows a day per busy system on the server, which already sees every event. Nothing for quiet systems.
+
+**Rules, from the website and marketing sessions (1 November 2026):**
+- **Name the doers, never player victims.** "Kestrel was shot down at Lave again" shames them and tells griefers where they fly. Good deeds and crimes name who did them; a player who was attacked is never named.
+- **Kind on balance.** Rescues, convoys saved and first discoveries are told more often than kills, so the bars aren't a wall of shame and infamy isn't a prize. A repeat offender becomes "that Mamba again", not a famous name.
+- **No pronouns for real commanders:** their callsign, or "they". Characters keep their own.
+- **Never invent a commander.** When there's no news, characters talk about each other, or the bar is quiet. Silence is honest.
+- **Flying dark is the way out, and it's a choice with a risk** (Mark: *"Running dark carries a risk right so it's a CMDR's choice. If a pirate fires on a ship that is Dark then that's their risk."*). There's no other opt-out: what you do in shared space with your transponder on may be retold by your callsign, and the callsign page says so once. Deleting your account takes you out of all of it.
+- **Stored by account, shown by callsign.** The callsign is filled in when the line is shown, so a changed or removed callsign, or a deleted account, leaves all the gossip at once.
+- **Characters are labelled.** Anywhere real commanders are marked "Commander" (the live feed), a character carries "Character", never the commander mark.
+- **On the site,** drawn in the browser like the live feed, not in the pages search engines read. A commander's callsign card shows only the lines they choose.
+- **Clips illustrate, never prove.** The flight recorder runs on the phone, so it isn't evidence; but a server-seen deed can link the clip its own commander shared.
+- **Players write the lines,** credited, as the Saloon's lines are: the community is the galaxy's voice, without anyone putting words about another player in a bar.
+
 ---
 
 ## 7. Worked example: the Titanoboa's supply line
@@ -292,4 +345,4 @@ Steps 1 to 4 need no server, so they can start straight after Show HN.
 2. **Solo changes:** stay in your own world (recommended), or count for everyone when you're signed in?
 3. **How busy:** how many convoys in a quiet system, and in a busy one? Too many and the lanes feel like a motorway; too few and nobody meets one.
 4. **Bond's world:** which agricultural system does he retire to?
-5. **The second character:** a Saloon regular with a ship (Mark's first idea), a Marshal, a smuggler, or a Mutual captain? Mark (31 October 2026) asked for characters who trade: a named trader on a regular run, in the traffic like any convoy but someone you can get to know, would put a face in the crowd.
+5. ~~**The second character:**~~ **A trader** (Mark, 31 October 2026: "do we have any character NPCs trading as well?"): [Odile Venn](character-odile-venn.md), a Mutual captain on a regular run. Her own open questions are in her design.

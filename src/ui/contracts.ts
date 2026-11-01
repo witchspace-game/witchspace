@@ -13,7 +13,7 @@ import { commissionsDue, payCommission } from '../game/commissions';
 import { stationName } from '../galaxy/stationNames';
 import { flash } from './hud';
 import { isMapOpen, showSystem } from './galaxyMap';
-import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
+import { distanceLy, galaxy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
 import { commodityById } from '../economy/commodities';
 import { setCausedEvents } from '../economy/events';
 import { escapeHtml } from './escape';
@@ -70,6 +70,44 @@ export function answerAdvert() {
   main.setDockTab('contracts');
   void main.checkSiteSpec(true);
   void main.checkSignedOver();
+}
+
+// From a system's page on witchspace.org.uk (/galaxy/ra/, "Plot a course"): /play/?system=ra, with
+// &galaxy=2 beyond the first. The chart opens on it as you're docked; a new commander sees it after
+// their first docking. Picking it on the chart plots the course, as ever.
+let chartWanted: StarSystem | null = null;
+
+export function answerChart() {
+  const url = new URL(location.href);
+  const name = url.searchParams.get('system')?.toLowerCase();
+  const g = Number(url.searchParams.get('galaxy') ?? 1) - 1;
+  url.searchParams.delete('system');
+  url.searchParams.delete('galaxy');
+  if (!name) return;
+  history.replaceState(null, '', url.pathname + url.search + url.hash);
+  if (!/^[a-z]{1,16}$/.test(name) || !Number.isInteger(g) || g < 0 || g > 7) return;
+  chartWanted = galaxy(g).find((s) => s.name.toLowerCase() === name) ?? null;
+  if (!chartWanted) return;
+  if (game.commander) return showWantedChart(); // already docked, from a company's advert
+  const saved = loadCommander();
+  if (!saved) return main.showNewGame();
+  game.commander = saved;
+  setCausedEvents(saved.caused);
+  main.enterDocked();
+}
+
+/** On docking: the chart on the system a link asked for, once. */
+export function showWantedChart() {
+  const s = chartWanted;
+  if (!s || !game.commander) return;
+  chartWanted = null;
+  const here = currentSystem();
+  if (s.galaxy !== here.galaxy) return flash(`${s.name} is in galaxy ${s.galaxy + 1}: you're in galaxy ${here.galaxy + 1}`, 5);
+  setTimeout(() => {
+    if (game.state !== 'docked') return;
+    if (!isMapOpen()) main.toggleGalaxyMap();
+    showSystem(s);
+  }, 300);
 }
 
 /** Wexley-Yorozu's commissions for modules you designed, paid when you dock after one is first fitted. */
