@@ -244,6 +244,18 @@ Mark: "Some of those Characters will be from the saloon, but they have their own
 
 Mark (31 October 2026): *"do we have any character NPCs trading as well?"* The first is designed: [Odile Venn](character-odile-venn.md), a Carriers' Mutual captain on a run round Lave, Leesti and Diso, in the traffic like any ship, with a daily detour to Riedquat that nobody pays her for. She's the first character to be built, before Bond: every new commander meets her in their first hour.
 
+### 6.4 A handful in every system: the doubt (Mark)
+
+Mark (1 November 2026): *"If a player decides to attack a Cobra trader before waiting to see who it is then they would think twice about doing it if there were consequences."* And: *"Each system would have a handful of characters that are trading for their own reasons. Lawful systems and anarchy would attract different personalities and or we should have explorers and builders all actually taking part in 'Witchspace'."*
+
+What characters add is **doubt**. Today a trader is a target: shoot one and the law forgets in two jumps, and in an anarchy nothing happens at all. If any Cobra might be someone who remembers, with friends who remember, every trader is a decision, and commanders look before they shoot. So:
+
+- **Characters look like everyone else.** The same hull and the same green as the traffic around them; you find out who she is by looking (the scanner's card, a hail), never at a glance.
+- **Many, not few.** A handful in every system, made from the seed like the Saloon's regulars (a name, a home, a run, a temperament, a reason, a memory), and a few written by hand with whole stories (Odile Venn, Bond).
+- **Personalities follow the government.** Anarchies draw smugglers, salvagers and people hiding; feudal worlds a lord's couriers; dictatorships state haulers and informers; corporate states company men; democracies Mutual captains, surveyors and pilgrims.
+- **Not only traders:** explorers surveying, builders and tugs at the yards, miners in the fields, all taking part in Witchspace on the same rules as players.
+- **The cost of crossing one is personal and lasting:** they remember, their friends remember, and it counts in an anarchy, where there's no law but there are still people. Piracy stays a career: good pirates scan first.
+
 ---
 
 ## 7. Worked example: the Titanoboa's supply line
