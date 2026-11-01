@@ -68,3 +68,22 @@ export const PLANET = {
 
 /** The sun: brighter than anything else (values over 1 feed the glow), so it blazes. */
 export const SUN = [4, 3.1, 1.8] as const;
+
+/**
+ * Paper by day (Mark, 1 November 2026: "a traditional really clean paper or white background with
+ * traditional dark copy"): the site's light look, where a ship is an ink drawing until she's lit, and
+ * then exactly herself in the glow above (src/render/ink.ts). Not the Neo look: what it lights up to is.
+ */
+export const PAPER = {
+  /** The paper. */
+  paper: '#f4f1ea',
+  /** The space a lit plate shows behind her. */
+  space: '#04060b',
+  /** A hull's outline, and her finer detail lines. */
+  ink: '#1b1e25',
+  inkFine: '#6a707c',
+  /** Ink is drawn this much heavier than the glowing line, which looks wider than it is. */
+  inkWeight: 0.35,
+  /** The glow waits until she's this far lit (the space behind her half there), or it greys the paper. */
+  glowFrom: 0.4,
+} as const;
