@@ -179,6 +179,7 @@ export function openShareSheet(m: ShareMedia) {
     const go = async () => {
       put.disabled = true;
       put.textContent = 'Putting it up…';
+      msg.textContent = ''; // not the last try's failure, under this one
       const r = await m.replay!.put();
       if (open?.el !== el) return;
       if ('url' in r) toPage(r.url, r.title || m.title);

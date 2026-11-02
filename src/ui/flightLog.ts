@@ -15,20 +15,51 @@ const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)
 // (Safari loads a little at a time, so a revoked URL stops it dead).
 const logUrls: string[] = [];
 const replayUrls: string[] = [];
+/** What each object URL holds, so a picture that won't load can be tried again. */
+const urlBlobs = new Map<string, Blob>();
 const urlIn = (pool: string[]) => (b: Blob) => {
   const u = URL.createObjectURL(b);
   pool.push(u);
+  urlBlobs.set(u, b);
   return u;
 };
+// A thumbnail that won't load (the "?" in Mark's screenshot). An iPhone can fail on a picture straight from
+// the flight log's database, so try it again from memory; a clip with no still has nothing to show, so no broken icon.
+document.addEventListener(
+  'error',
+  (e) => {
+    const img = e.target;
+    if (!(img instanceof HTMLImageElement)) return;
+    const blob = urlBlobs.get(img.src);
+    if (!blob) return;
+    urlBlobs.delete(img.src);
+    if (!blob.type.startsWith('image/')) return img.remove();
+    void blob
+      .arrayBuffer()
+      .then((bytes) => (img.src = URL.createObjectURL(new Blob([bytes], { type: blob.type }))))
+      .catch(() => img.remove());
+  },
+  true,
+);
 const url = urlIn(logUrls);
 const replayUrl = urlIn(replayUrls);
 const revoke = (pool: string[]) => {
-  while (pool.length) URL.revokeObjectURL(pool.pop()!);
+  while (pool.length) {
+    const u = pool.pop()!;
+    urlBlobs.delete(u);
+    URL.revokeObjectURL(u);
+  }
 };
 
 const media = (m: LoggedMoment) => (m.video ?? m.photo)!;
 const extension = (b: Blob) => ({ 'video/mp4': 'mp4', 'image/png': 'png' })[b.type] ?? 'jpg';
-const fileName = (m: LoggedMoment) => `witchspace-${m.system.toLowerCase()}-${new Date(m.created).toISOString().slice(0, 16).replace(/[-:T]/g, '')}.${extension(media(m))}`;
+/** When a moment was made, as its file's name has it: in the player's own time. */
+const stamp = (t: number) => {
+  const d = new Date(t);
+  const two = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())}${two(d.getHours())}${two(d.getMinutes())}`;
+};
+const fileName = (m: LoggedMoment) => `witchspace-${m.system.toLowerCase()}-${stamp(m.created)}.${extension(media(m))}`;
 const megabytes = (bytes: number) => `${Math.max(1, Math.round(bytes / 1048576))} MB`;
 
 /** Plays one of your public clips in the game, over the flight log (set by the game). */
@@ -117,6 +148,12 @@ export function openMore(m: LoggedMoment, onChange: () => void) {
         return outsideView?.(m);
       }
       if (act === 'save') {
+        // On a phone, Save Video is in its share sheet; a download would leave the game for a blank file page (Mark's screenshot).
+        const file = new File([media(m)], fileName(m), { type: media(m).type });
+        if (matchMedia('(pointer: coarse)').matches && navigator.canShare?.({ files: [file] })) {
+          await navigator.share({ files: [file], title: m.title }).catch(() => undefined);
+          return;
+        }
         const a = document.createElement('a');
         a.href = url(media(m));
         a.download = fileName(m);

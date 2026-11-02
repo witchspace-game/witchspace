@@ -166,7 +166,11 @@ export function updateContextButton() {
   else if (flight.countdown !== null) next = ['KeyH', 'Cancel jump'];
   else if (hop && distanceLy(here, hop) <= c.fuel + 1e-9) next = ['KeyH', `Hyper · ${hop.name}`];
   if (contextButton.dataset.key !== next[0]) contextButton.dataset.key = next[0];
-  if (contextButton.textContent !== next[1]) contextButton.textContent = next[1];
+  if (contextButton.textContent !== next[1]) {
+    contextButton.textContent = next[1];
+    // "Hyper · Rabedira" is wide: the view button moves over for it.
+    contextButton.closest<HTMLElement>('#touch')?.style.setProperty('--view-shift', `${Math.max(0, contextButton.offsetWidth + 18 - 112)}px`);
+  }
 }
 
 const SURRENDER_TIME = 5; // seconds holding still before the police take you in
