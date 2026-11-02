@@ -6,7 +6,7 @@ summary: The approach rings are the station's guidance beam drawn by your ship, 
 card: coriolis
 stages:
   - The beam and the pulse - come in, hold, launching, seen only when lined up | built
-  - Taking turns - every ship, not only you, waits for the slot | proposed
+  - Taking turns - every ship, not only you, waits for the slot | built
   - Who owns the station - the pulse in the owner's colour | proposed
 ---
 
@@ -36,7 +36,7 @@ The rings stay amber, as now. 1984 mode has none, as now.
 - **The beam:** seen within 5 km of the mouth and 25° of the slot's axis, fading over the last 8°. **Broadcast** by every station of tech level 5 and up with a government: Lave (tech 5), where every commander learns to dock, keeps its rings; the 36 most backward worlds and the anarchies don't broadcast. **A docking computer** draws them anywhere within 5 km.
 - **The pulse**, one ring every quarter-second at the rings' own brightness: **clear**, inwards in the owner's colour; **hold**, the mouth ring red, for 6 seconds before a timetabled launch and after one until she's 4 km out or 15 seconds have passed; **launching**, outwards in red while a ship is in the slot lane heading out (police and militia launches count too). Red only where there's danger (Mark: "should the hold have red rings for danger?").
 - **The owner's colour:** a world's own station in a brighter amber; Hexon's ice in a Corporate State; the Mutual's blue at Meridian Station (seen there only with a docking computer: Riedquat is an anarchy).
-- **Not yet:** taking turns for every ship (step 2), company stations and W-Y's second stations, and the owner on the label and card (step 3).
+- **Not yet:** company stations and W-Y's second stations, and the owner on the label and card (step 3).
 
 ## The pulse: traffic control, in one moving ring
 
@@ -56,7 +56,7 @@ Roll assist stays as it is (Mark, 2 November 2026: "I think we just leave it for
 
 Built so far (`flight/traffic.ts`, traffic control): the slot is yours while you're committed and for 15 seconds after you launch; traders don't launch then, and incoming ones wait off to one side. Police launch whenever they must.
 
-Proposed: every ship takes turns, not only you. A timetabled launch waits while anyone is docking, an arrival waits while anyone launches, and the pulse shows which. Nothing is ever in the slot both ways at once.
+Every ship takes turns, not only you *(built, 2 November 2026, `flight/traffic.ts`)*. A timetabled launch waits, five seconds at a time, while the slot is yours or a ship is docking or within 1.5 km of the mouth on her way in; an arrival waits off to one side while a ship is on her way out within 1.5 km. Nothing is ever in the slot both ways at once: four minutes of Lave's traffic, watched second by second, had 38 seconds of launches, 44 of arrivals, and none of both. The pulse shows it: launching while a timetabled ship is on her way out (or police or militia come down the lane), hold before and after.
 
 ## Who owns the station
 

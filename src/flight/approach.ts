@@ -14,7 +14,7 @@ import { BEAM_RANGE, broadcasts, inBeam, ownerColour } from '../game/approach';
 import { APPROACH } from '../render/look';
 import { cmdr, currentSystem, game, modern } from '../core';
 import { npcs, player, station } from '../scene';
-import { launchDueWithin, onSlotAxis } from './traffic';
+import { launchDueWithin, launchingShip, onSlotAxis } from './traffic';
 import { inSlot } from './law';
 
 export type ApproachState = 'clear' | 'hold' | 'launching';
@@ -45,7 +45,8 @@ export function updateApproach(dt: number) {
   const out = onSlotAxis(100).sub(mouth).normalize();
 
   // Launching: a ship by the mouth, heading out. Remember her, to hold until she's clear.
-  const launching = npcs.find((n) => n.obj.position.distanceTo(mouth) < LAUNCH_ZONE && inSlot(n.obj.position) && n.ship.forward().dot(out) > 0.8);
+  // A timetabled ship on her way out, or police or militia coming down the lane.
+  const launching = launchingShip() ?? npcs.find((n) => n.obj.position.distanceTo(mouth) < LAUNCH_ZONE && inSlot(n.obj.position) && n.ship.forward().dot(out) > 0.8);
   if (launching) lastLaunch = { npc: launching, at: clock };
   const stillClearing = lastLaunch && npcs.includes(lastLaunch.npc) && lastLaunch.npc.obj.position.distanceTo(station.root.position) < CLEAR_DISTANCE && clock - lastLaunch.at < CLEAR_AFTER;
   state = launching ? 'launching' : stillClearing || launchDueWithin(HOLD_BEFORE) ? 'hold' : 'clear';

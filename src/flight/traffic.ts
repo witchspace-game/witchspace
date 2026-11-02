@@ -212,8 +212,28 @@ let trafficList: Voyage[] = [];
 /** A timetabled ship due to launch from the station within `ms` (flight/approach.ts holds the slot for her). */
 export const launchDueWithin = (ms: number) => {
   const now = Date.now();
-  return trafficList.some((v) => v.leg === 'out' && v.to === 'station' && v.at > now && v.at - now < ms && !trafficDone.has(v.id));
+  return trafficList.some((v) => {
+    const at = v.at + (launchWait.get(v.id) ?? 0);
+    return v.leg === 'out' && v.to === 'station' && at > now && at - now < ms && !trafficDone.has(v.id) && !trafficShips.has(v.id);
+  });
 };
+
+// Taking turns: how long each timetabled launch has waited for the slot, this visit.
+const launchWait = new Map<string, number>();
+/** A launch waits this long at a time for a busy slot, and goes only if it can start within this window. */
+const LAUNCH_WAIT = 5_000;
+const LAUNCH_WINDOW = 1_500;
+/** A ship this close to the mouth on her way in is committed to the slot. */
+const COMMITTED = 1500;
+/** Someone's coming in through the slot: docking, or on her last approach. */
+const someoneDocking = () =>
+  npcs.some((n) => {
+    const leg = legs.get(n);
+    return leg === 'docking' || (leg === 'inbound' && !holding.has(n) && n.obj.position.distanceTo(onSlotAxis(0)) < COMMITTED);
+  });
+/** A ship going out through the slot: a launch on her way clear (flight/approach.ts shows it). */
+export const launchingShip = () => npcs.find((n) => legs.get(n) === 'outbound' && n.obj.position.distanceTo(onSlotAxis(0)) < COMMITTED) ?? null;
+const someoneLaunching = () => launchingShip() !== null;
 let trafficListAt = -Infinity;
 let trafficCheck = 0;
 /** The visit's first ships are just there when you arrive; after that, a ship that appears near you arrives with a streak. */
@@ -279,6 +299,7 @@ export function resetTraffic() {
   lanePaths.clear();
   trafficShips = new Map();
   trafficDone = new Set();
+  launchWait.clear();
   trafficListAt = -Infinity;
   trafficCheck = 0;
   trafficSettled = false;
@@ -338,7 +359,13 @@ function syncTraffic(dt: number) {
     lanePaths.set(v.id, path);
     const length = path.getLength();
     const flight = (length / cruiseOf(v.hull)) * 1000;
-    const start = v.leg === 'in' ? v.at - flight : v.at;
+    // Taking turns (station-approach.md, step 2): a ship due out of the slot waits while it's yours, or anyone's coming in.
+    const waited = launchWait.get(v.id) ?? 0;
+    const start = v.leg === 'in' ? v.at - flight : v.at + waited;
+    if (v.leg === 'out' && v.to === 'station' && now >= start && now < start + LAUNCH_WINDOW && (slotReserved() || someoneDocking())) {
+      launchWait.set(v.id, waited + LAUNCH_WAIT);
+      continue;
+    }
     if (now < start || now >= start + flight) continue;
     // A character flies in her own colour (Odile Venn: game/odile.ts).
     const hull = shipById(v.hull)!;
@@ -569,7 +596,8 @@ const holdPoint = () => station.toWorld(new THREE.Vector3(1500, 0, SLOT.z + 2500
 /** Spawn and retire traffic. Traders dock or leave; pirates turn up by chance. */
 export function updateTraffic(dt: number) {
   const sys = currentSystem();
-  const reserved = slotReserved();
+  // Arrivals wait off to one side while the slot is yours, or a ship is on her way out of it.
+  const reserved = slotReserved() || someoneLaunching();
   for (const npc of [...npcs]) {
     const leg = legs.get(npc);
     if (!leg || npc.mode !== 'travel') continue;
