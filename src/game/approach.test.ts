@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { systemAt, galaxy } from '../galaxy/generate';
 import { COMPANIES } from './companies';
 import { APPROACH } from '../render/look';
-import { broadcasts, inBeam, ownerColour } from './approach';
+import { broadcasts, inBeam, ownerColour, slotState } from './approach';
 
 describe('the approach beam (station-approach.md)', () => {
   const mouth = new THREE.Vector3(0, 0, 0);
@@ -25,6 +25,14 @@ describe('the approach beam (station-approach.md)', () => {
     expect(g.filter((s) => s.government === 0).every((s) => !broadcasts(s))).toBe(true);
     expect(g.filter((s) => s.techLevel < 5).every((s) => !broadcasts(s))).toBe(true);
     expect(broadcasts(g[7])).toBe(true); // Lave, where everyone learns to dock
+  });
+
+  it('never says come in while anyone is going out, or clearing, or about to launch', () => {
+    expect(slotState(true, false, false)).toBe('launching');
+    expect(slotState(true, true, true)).toBe('launching');
+    expect(slotState(false, true, false)).toBe('hold');
+    expect(slotState(false, false, true)).toBe('hold');
+    expect(slotState(false, false, false)).toBe('clear');
   });
 
   it('pulses in its owner’s colour: the world’s amber, Hexon in a Corporate State, the Mutual at Meridian', () => {

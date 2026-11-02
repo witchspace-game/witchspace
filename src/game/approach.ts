@@ -6,6 +6,11 @@ import type { StarSystem } from '../galaxy/generate';
 import { COMPANIES } from './companies';
 import { APPROACH } from '../render/look';
 
+export type ApproachState = 'clear' | 'hold' | 'launching';
+
+/** What the slot's doing: a ship (or you) on the way out; hold while one clears or is about to go; otherwise clear to come in. */
+export const slotState = (goingOut: boolean, clearing: boolean, launchDue: boolean): ApproachState => (goingOut ? 'launching' : clearing || launchDue ? 'hold' : 'clear');
+
 /** The beam's reach, and how far off its axis it can be seen (fading over the last few degrees). */
 export const BEAM_RANGE = 5000;
 const BEAM_CONE = THREE.MathUtils.degToRad(25);

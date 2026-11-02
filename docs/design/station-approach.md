@@ -35,6 +35,7 @@ The rings stay amber, as now. 1984 mode has none, as now.
 
 - **The beam:** seen within 5 km of the mouth and 25° of the slot's axis, fading over the last 8°. **Broadcast** by every station of tech level 5 and up with a government: Lave (tech 5), where every commander learns to dock, keeps its rings; the 36 most backward worlds and the anarchies don't broadcast. **A docking computer** draws them anywhere within 5 km.
 - **The pulse**, one ring every quarter-second at the rings' own brightness: **clear**, inwards in the owner's colour; **hold**, the mouth ring red, for 6 seconds before a timetabled launch and after one until she's 4 km out or 15 seconds have passed; **launching**, outwards in red while a ship is in the slot lane heading out (police and militia launches count too). Red only where there's danger (Mark: "should the hold have red rings for danger?").
+- **Your own launch reads the same** (Mark: the rings ran inwards as he launched): outwards in red while you're within 1.5 km for your first 15 seconds, then hold until you're 4 km out or 20 seconds have passed.
 - **The owner's colour:** a world's own station in a brighter amber; Hexon's ice in a Corporate State; the Mutual's blue at Meridian Station (seen there only with a docking computer: Riedquat is an anarchy).
 - **Not yet:** company stations and W-Y's second stations, and the owner on the label and card (step 3).
 
