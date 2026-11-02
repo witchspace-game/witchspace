@@ -74,45 +74,74 @@ function db(): Promise<IDBDatabase> {
   opening ??= new Promise((resolve, reject) => {
     const req = indexedDB.open(DB, 1);
     req.onupgradeneeded = () => req.result.createObjectStore(STORE, { keyPath: 'id' });
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      // A phone can drop the connection while the game's in the background: the next use opens a new one.
+      req.result.onclose = () => (opening = null);
+      resolve(req.result);
+    };
+    req.onerror = () => {
+      opening = null;
+      reject(req.error);
+    };
   });
   return opening;
 }
 
-async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
-  const d = await db();
+function once<T>(d: IDBDatabase, mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
-    const req = fn(d.transaction(STORE, mode).objectStore(STORE));
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    const tx = d.transaction(STORE, mode);
+    const req = fn(tx.objectStore(STORE));
+    // Done when the transaction is, not the request: running out of space shows only as the transaction failing.
+    tx.oncomplete = () => resolve(req.result);
+    tx.onabort = () => reject(tx.error ?? req.error);
+    tx.onerror = () => reject(tx.error ?? req.error);
   });
 }
+
+/** One try, and one more on a new connection: a connection the phone dropped fails however often it's used. */
+async function run<T>(mode: IDBTransactionMode, fn: (s: IDBObjectStore) => IDBRequest<T>): Promise<T> {
+  try {
+    return await once(await db(), mode, fn);
+  } catch {
+    (await opening?.catch(() => null))?.close();
+    opening = null;
+    return once(await db(), mode, fn);
+  }
+}
+
+async function readMoments(): Promise<LoggedMoment[]> {
+  const all = await run<LoggedMoment[]>('readonly', (s) => s.getAll());
+  const now = Date.now();
+  const expired = all.filter((m) => !m.saved && now - m.created > EXPIRES);
+  for (const m of expired) await deleteMoment(m.id);
+  return all.filter((m) => !expired.includes(m)).sort((a, b) => b.created - a.created);
+}
+
+/** The last read failed: the log may not really be empty (Mark, 2 November 2026: an empty log, and told it was full). */
+export let momentsUnreadable = false;
 
 /** Newest first, with expired unkept moments cleared. */
 export async function listMoments(): Promise<LoggedMoment[]> {
   try {
-    const all = await run<LoggedMoment[]>('readonly', (s) => s.getAll());
-    const now = Date.now();
-    const expired = all.filter((m) => !m.saved && now - m.created > EXPIRES);
-    for (const m of expired) await deleteMoment(m.id);
-    return all.filter((m) => !expired.includes(m)).sort((a, b) => b.created - a.created);
+    const all = await readMoments();
+    momentsUnreadable = false;
+    return all;
   } catch {
-    return []; // private browsing, storage blocked: the log is just empty
+    momentsUnreadable = true;
+    return []; // private browsing, storage blocked: nothing to show
   }
 }
 
-/** Add a moment, making room if the log is full. Returns false if it couldn't be stored. */
-export async function addMoment(m: LoggedMoment): Promise<boolean> {
+/** Add a moment, making room if the log is full. `full` only when it really is; `failed` when the device wouldn't store it. */
+export async function addMoment(m: LoggedMoment): Promise<'stored' | 'full' | 'failed'> {
   try {
-    await db();
-    const room = makeRoom(await listMoments(), momentBytes(m), Date.now());
-    if (!room) return false; // everything is kept: no room
+    const room = makeRoom(await readMoments(), momentBytes(m), Date.now());
+    if (!room) return 'full'; // everything is starred: no room
     for (const id of room) await deleteMoment(id);
     await run('readwrite', (s) => s.put(m));
-    return true;
+    return 'stored';
   } catch {
-    return false;
+    return 'failed';
   }
 }
 

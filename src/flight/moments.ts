@@ -337,8 +337,9 @@ export async function logMoment({ events, ctx }: MomentMeta, media: Pick<LoggedM
     saved: false,
     trip: game.flightFrom,
   };
-  if (!(await addMoment(m))) {
-    flash('Your moments are full · let one go, or unstar one, in the flight log', 3);
+  const stored = await addMoment(m);
+  if (stored !== 'stored') {
+    flash(stored === 'full' ? 'Your moments are full · let one go, or unstar one, in the flight log' : 'This device wouldn’t save that · close the game and open it again', 3);
     return null;
   }
   // Every clip keeps its fight's track (the last minute, as numbers), so any
@@ -485,7 +486,7 @@ let lastRecon: LoggedMoment | null = null;
 killCam.onVideo = async (v) => {
   const when = Date.now();
   const m: LoggedMoment = { id: `${when}-recon`, created: when, title: v.title, description: v.description, tags: ['witchspace', 'reconstruction', 'killcam'], events: [], system: v.system, seconds: v.seconds, video: v.video, poster: v.poster, saved: false, ...(v.track ? { track: await trackBlob(v.track) } : {}) };
-  lastRecon = (await addMoment(m)) ? m : null;
+  lastRecon = (await addMoment(m)) === 'stored' ? m : null;
   if (game.state === 'docked') refreshFlightLog();
 };
 // Sharing it shares that moment, with its page when it's your own fight.

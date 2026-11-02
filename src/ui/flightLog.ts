@@ -1,7 +1,7 @@
 // The flight log, full screen from the button beside the galaxy map, and the replay player (the death replay
 // too): watch, share, keep or delete the clips and photos the ship kept.
 
-import { addMoment, BUDGET, byTrip, clearUnkept, deleteMoment, listMoments, momentBytes, setSaved, type LoggedMoment } from '../game/flightLog';
+import { addMoment, BUDGET, byTrip, clearUnkept, deleteMoment, listMoments, momentBytes, momentsUnreadable, setSaved, type LoggedMoment } from '../game/flightLog';
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
 import { isTall, uprightCut } from './upright';
@@ -97,7 +97,7 @@ async function makeUpright(m: LoggedMoment, onProgress: (f: number) => void, onC
   if (!cut) return null;
   const when = Date.now();
   const made: LoggedMoment = { ...m, id: `${when}-upright`, created: when, tags: [...m.tags, 'upright'], video: cut.video, poster: cut.poster, seconds: cut.seconds, photo: undefined, track: undefined, saved: false };
-  await addMoment(made).catch(() => false);
+  await addMoment(made);
   onChange?.();
   return { blob: cut.video, poster: cut.poster ?? undefined, title: m.title, name: fileName(made).replace(/\.mp4$/, '-upright.mp4'), replay: pageFor(m, cut.video) };
 }
@@ -480,6 +480,7 @@ export async function renderFlightLog(opts: {
   else if (opts.intro)
     head = `<div class="log-intro"><p><strong>${how}</strong></p><p class="small">Everything stays on this device unless you share it. What you don't star clears after a week.</p>
       <p class="log-intro-actions"><button type="button" class="primary" data-intro="on">Keep it on</button><button type="button" data-intro="off">Turn it off</button></p></div>`;
+  else if (momentsUnreadable) head = '<p class="meta">This device wouldn’t open your moments just now. Close the game and open it again.</p>';
   else if (!moments.length) head = `<p class="meta">${opts.enabled ? how : 'The flight recorder is off. Photos (P) still come here.'}</p>`;
   else head = '';
   // The recorder: its switch, how full this device is, and clearing out.
