@@ -6,7 +6,7 @@ import { music, sfx } from '../audio/sound';
 import { boomAt } from '../audio/spatial';
 import { shipById } from '../content/ships';
 import type { ShipDef } from '../content/types';
-import { VENN } from '../game/odile';
+import { VENN, vennAway } from '../game/odile';
 import { saveCommander, type Commander } from '../game/commander';
 import { systemKey } from '../game/law';
 import { NpcShip, type NpcRole } from '../game/npc';
@@ -326,6 +326,7 @@ function syncTraffic(dt: number) {
     if (trafficShips.size >= MAX_VOYAGES) break;
     if (trafficShips.has(v.id) || trafficDone.has(v.id)) continue;
     if (v.to === 'titan' && cmdr().yardLosses?.some((l) => l.voyage === v.id)) continue; // lost on an earlier visit
+    if (v.character && vennAway(cmdr().venn, now)) continue; // Second Wind is being repaired
     const path = lanePaths.get(v.id) ?? lanePath(v); // none yet for the Titan until her yard is in the scene
     if (!path) continue;
     lanePaths.set(v.id, path);

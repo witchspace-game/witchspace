@@ -26,6 +26,7 @@ import { gimbalRide, updateCombat } from './combat';
 import { npcColour, updateAimDisplay, updateCombatHud, updateMarkers } from './hud';
 import { holdForSurrender, updateRadio, updateSurrender } from './beacon';
 import * as THREE from 'three';
+import { updateVenn } from './odile';
 
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
@@ -196,6 +197,7 @@ export function updateSpace(dt: number) {
   updateCaseRaid(dt);
   updateResponses();
   updateStationDefence(dt);
+  updateVenn(dt);
   updateHail();
   updateMissileButton();
   for (let i = explosions.length - 1; i >= 0; i--) if (!explosions[i].update(dt)) explosions.splice(i, 1);

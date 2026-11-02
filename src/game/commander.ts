@@ -228,6 +228,7 @@ import type { CompanyId } from './companies';
 import type { BtcOrder, BtcTrade } from '../economy/bitcoin';
 import type { Heard } from './saloon';
 import type { YardLoss } from './yards';
+import type { VennMemory } from './odile';
 
 /** A ship's finish from the yard. */
 /**
@@ -364,6 +365,8 @@ export interface Commander {
   yardLosses?: YardLoss[];
   /** A station that won't let you dock, until when: you fired on it (flight/law.ts). */
   dockingBan?: { galaxy: number; system: number; until: number };
+  /** What Odile Venn remembers of you (game/odile.ts). */
+  venn?: VennMemory;
   /** Missiles on the rails. */
   missiles: number;
   /** The laser fitted to each mount, if any. */

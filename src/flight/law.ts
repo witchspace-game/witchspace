@@ -31,6 +31,7 @@ import * as THREE from 'three';
 
 import type { LoggedMoment } from '../game/flightLog';
 import type { MomentEvent } from '../game/moments';
+import { vennLost, vennShot } from './odile';
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
   setAutopilot: (on: boolean, message?: string | undefined) => void;
@@ -223,6 +224,7 @@ export function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
     }
   }
   if (legs.get(npc) === 'titan') titanSupplyLost(npc);
+  vennLost(npc, killer === player.obj);
   // A trader that called for help, and didn't get it.
   if (distresses.some((d) => d.trader === npc && d.heard) && game.state === 'flying') radio('mayday', traderName(npc), 'Signal lost', { colour: traderColour(npc) });
   removeNpc(npc);
@@ -317,6 +319,7 @@ export function playerHitNpc(npc: NpcShip, damage: number) {
   alertSecurity(npc, player);
   youFiredOnTheApproach(npc);
   youFiredInTheSlot(npc);
+  vennShot(npc);
   if (npc.militia) {
     // The doorstep, not the law: no crime, but the militia remembers (youFiredOnTheApproach).
   } else if (npc.guard) {
