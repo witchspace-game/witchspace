@@ -106,6 +106,10 @@ export class NpcShip {
   company?: CompanyId;
   /** Company security (a police Viper in company colours): guards a yard or escorts a freighter. Not the law: it fights pirates and whoever attacks the company's ships. */
   guard?: boolean;
+  /** A station's militia (anarchies; flight/law.ts): guards the station's doorstep, not the law. Also `guard`. */
+  militia?: boolean;
+  /** A station's doorstep bounty on this ship: paid by the station to whoever destroys it. */
+  doorstep?: number;
   /** Credits paid for destroying this ship (pirates). */
   bounty = 0;
   /** Missiles left, and whether an ECM is fitted to destroy incoming ones. */

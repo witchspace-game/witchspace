@@ -21,7 +21,7 @@ import { clearanceRefused, lockedDown, updateClearance, updateJob } from './comm
 import { commanderColour, updateSharedSpace } from './sharedSpace';
 import { checkCombatComputer, flySurvey, stopCombatComputer, stopSurveyPilot, updateRouteAutopilot, updateTravel } from './travel';
 import { HIDDEN_BEYOND, YARD_COLOUR, bumpCover, exploring, inClutter, updateExplore } from './explore';
-import { damagePlayer, darkRefused, updateHail, updateResponses, updateStationDefence } from './law';
+import { damagePlayer, darkRefused, dockingBanned, updateHail, updateResponses, updateStationDefence } from './law';
 import { gimbalRide, updateCombat } from './combat';
 import { npcColour, updateAimDisplay, updateCombatHud, updateMarkers } from './hud';
 import { holdForSurrender, updateRadio, updateSurrender } from './beacon';
@@ -323,6 +323,11 @@ export function updateSpace(dt: number) {
       sfx.thud();
       setAutopilot(false);
       flash('Docking refused · unidentified ship · switch on your transponder (0)', 3);
+    } else if (contact?.kind === 'docked' && dockingBanned()) {
+      station.turnAway(player);
+      sfx.thud();
+      setAutopilot(false);
+      flash(`Docking refused · you fired on this station · ${dockingBanned()} min`, 3);
     } else if (contact?.kind === 'docked' && clearanceRefused()) {
       station.turnAway(player);
       sfx.thud();

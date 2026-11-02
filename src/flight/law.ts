@@ -12,6 +12,8 @@ import { combatRating, killPoints, pointsNote, rightOn, type Foe } from '../game
 import { POLICE_LASER } from '../game/weapons';
 import { COMPANIES } from '../game/companies';
 import { Explosion } from '../render/explosion';
+import { applyCompanyBand } from '../render/livery';
+import { stationName } from '../galaxy/stationNames';
 import { flash } from '../ui/hud';
 import { settle } from '../ui/radio';
 import { commodityById } from '../economy/commodities';
@@ -231,8 +233,9 @@ export function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   const rated = rateKill(npc);
   const note = rated ? ` · ${rated}` : '';
   if (npc.role === 'pirate') {
-    c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
-    flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr${note}`, 2.5);
+    const paid = npc.bounty + (npc.doorstep ?? 0);
+    c.credits = Math.round((c.credits + paid) * 10) / 10;
+    flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr${npc.doorstep ? ` + ${npc.doorstep} Cr from the station` : ''}${note}`, 2.5);
     void main.keepCombat({ kind: 'kill', text: `${npc.def.name} destroyed · bounty ${npc.bounty} Cr`, subject: npc.def.name }, 20, 4);
   } else {
     flash(`${npc.def.name} destroyed${note}`, 1.5);
@@ -311,7 +314,10 @@ export function playerHitNpc(npc: NpcShip, damage: number) {
     return;
   }
   alertSecurity(npc, player);
-  if (npc.guard) {
+  youFiredOnTheApproach(npc);
+  if (npc.militia) {
+    // The doorstep, not the law: no crime, but the militia remembers (youFiredOnTheApproach).
+  } else if (npc.guard) {
     if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on company security · you are an OFFENDER');
   } else if (npc.role === 'police' || npc.role === 'marshal') becomeFugitive();
   else if (npc.role === 'trader') {
@@ -409,13 +415,102 @@ const inAirspace = (at: THREE.Vector3) =>
   at.distanceTo(station.root.position) < POLICE_SEE || ofRole('police').some((p) => !p.hostile && p.obj.position.distanceTo(at) < POLICE_SEE);
 
 export function pirateFired(npc: NpcShip) {
-  if (!modern() || !hasLaw(currentSystem()) || !inAirspace(npc.obj.position)) return;
+  if (!modern() || !inAirspace(npc.obj.position)) return;
+  if (!hasLaw(currentSystem())) return defendDoorstep(npc);
   pirateFiredAt.set(npc, flight.elapsed);
   if (flight.elapsed - policeScrambledAt < 30) return; // one scramble at a time
   policeScrambledAt = flight.elapsed;
   // Sent where the shooting is, not to circle the station.
   for (let k = 0; k < 2 && ofRole('police').length < MAX_POLICE; k++) spawnViper(true).patrol.centre.copy(npc.obj.position);
   radio('police', `${currentSystem().name} police`, 'Pirate fire on the approach · police launching', { flash: 2 });
+}
+
+// --- The station's own flight (Mark, 2 November 2026; law-and-travel.md) -------------------
+// An anarchy has no police, but its station still defends its doorstep: a militia of mixed hulls in
+// the station's colours, paid from docking fees. It fights whoever fires on ships in the station's
+// airspace, pirates or you, and makes nobody a Fugitive. Fire on the station itself, anywhere, and
+// it won't let you dock for a while.
+
+const MILITIA_HULLS = ['cobra-mk3', 'sidewinder', 'sidewinder'];
+const MILITIA_COLOUR = '#4ad7ff';
+/** The station's price on a pirate firing on its approach, paid to whoever destroys it. */
+export const DOORSTEP_BOUNTY = 150;
+/** How long a station refuses you after you fire on it. */
+export const DOCKING_BAN = 20 * 60_000;
+let militiaScrambledAt = -Infinity;
+let campHailedAt = -Infinity;
+let doorstepCalledAt = -Infinity;
+
+const militia = () => npcs.filter((n) => n.militia);
+const stationCalled = () => stationName(currentSystem()).name;
+
+function spawnMilitia(i: number): NpcShip {
+  const npc = new NpcShip(shipById(MILITIA_HULLS[i % MILITIA_HULLS.length])!, 'police', POLICE_LASER, {
+    centre: station.root.position.clone(),
+    radius: 1100 + i * 400,
+    height: [180, -220, 60][i % 3],
+    rate: (i % 2 ? -1 : 1) * 0.15,
+    angle: i * 2.1,
+  });
+  npc.guard = true;
+  npc.militia = true;
+  applyCompanyBand(npc.model, MILITIA_COLOUR);
+  station.placeForLaunch(npc.ship);
+  npc.ship.speed = 120;
+  space.scene.add(npc.obj);
+  npcs.push(npc);
+  return npc;
+}
+
+/** The militia after `culprit`: launched if they aren't out, and every one of them told who it is. */
+function militiaAfter(culprit: NpcShip['attacker']) {
+  if (militia().length < MILITIA_HULLS.length && flight.elapsed - militiaScrambledAt > 30) {
+    militiaScrambledAt = flight.elapsed;
+    for (let i = militia().length; i < MILITIA_HULLS.length; i++) spawnMilitia(i);
+    radio('police', `${stationCalled()} militia`, 'Militia launching', { colour: MILITIA_COLOUR, flash: 2 });
+  }
+  for (const g of militia()) {
+    g.attacker = culprit;
+    g.attackedAgo = 0;
+  }
+}
+
+/** A pirate firing on an anarchy station's approach: the militia, and a price on it. */
+function defendDoorstep(npc: NpcShip) {
+  militiaAfter(npc.ship);
+  if (npc.doorstep) return;
+  npc.doorstep = DOORSTEP_BOUNTY;
+  if (flight.elapsed - doorstepCalledAt < 60) return; // one call for a pack
+  doorstepCalledAt = flight.elapsed;
+  radio('station', stationCalled(), `${DOORSTEP_BOUNTY} Cr to whoever drives off the ${npc.def.name} on our approach.`, { colour: MILITIA_COLOUR, flash: 2.5 });
+}
+
+/** You fired on a ship in an anarchy station's airspace: you're hailed, and the militia comes for you. */
+export function youFiredOnTheApproach(npc: NpcShip) {
+  if (!modern() || hasLaw(currentSystem()) || npc.role === 'pirate' || !inAirspace(npc.obj.position)) return;
+  if (flight.elapsed - campHailedAt > 60) {
+    campHailedAt = flight.elapsed;
+    radio('station', stationCalled(), `${player.def.name}, you're firing on our approach. Move off, or be moved.`, { colour: MILITIA_COLOUR, flash: 3, urgent: true });
+  }
+  militiaAfter(player);
+}
+
+/** Fire on a station and it won't have you for a while: this one, now. */
+export function refuseDocking() {
+  const c = cmdr();
+  const sys = currentSystem();
+  c.dockingBan = { galaxy: sys.galaxy, system: sys.index, until: Date.now() + DOCKING_BAN };
+  saveCommander(c);
+  radio('station', stationCalled(), "You fired on this station. You won't be docking here for twenty minutes.", { flash: 4, urgent: true });
+  if (!hasLaw(sys)) militiaAfter(player);
+}
+
+/** Minutes left on this station's refusal, or 0. */
+export function dockingBanned(): number {
+  const b = game.commander ? cmdr().dockingBan : undefined;
+  const sys = currentSystem();
+  if (!b || b.galaxy !== sys.galaxy || b.system !== sys.index) return 0;
+  return Math.max(0, Math.ceil((b.until - Date.now()) / 60_000));
 }
 
 export function updateStationDefence(dt: number) {

@@ -182,7 +182,7 @@ What the room needs to know, kept by the server, not claimed:
 
 | Problem | Answer | Step |
 |---|---|---|
-| **Spawn camping** at a station | The 5 km safe zone with the station's guns run by the server; a commander killed near a station relaunches with a short protection window (no damage, can't fire) | 5 |
+| **Spawn camping** at a station | The station's own flight (police, or the militia in an anarchy), its doorstep bounty that other commanders can answer, and docking refused to anyone who fires on it ([the station's own flight](law-and-travel.md#the-stations-own-flight-mark-2-november-2026), Mark, 2 November 2026) | 5 |
 | **Ganking newcomers** | Protected starter systems; no points two ranks down; repeat kills count less; a warrant and the Marshals for killing a clean commander in lawful space | 5 |
 | **Alts** (second accounts to feed kills, bounties or gifts) | One inbox, one account: name+tag@ and Gmail's dots sign in to the account that inbox already has (#326; maintainers excepted). The sign-in network as a reason to refuse anything that pays, never to block an account (below). Repeat-kill halving; new accounts can't post bounties or broadcast | built / 4–9 |
 | **Cheating clients** | The server already referees moves, lasers, missiles and collisions. Step 4 takes rank, legal status and the ship off the browser. Turn rates are the next movement check | 3–4 |

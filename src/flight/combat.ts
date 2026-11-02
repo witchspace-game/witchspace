@@ -30,7 +30,7 @@ import { maybeFireNpcMissile, updateMissiles } from './missiles';
 import { Drifter, drifters } from './adrift';
 import { DISTRESS_SHIELDING, distressCall, pirateOpenedFire, radio } from './comms';
 import { HIDDEN_BEYOND, HIDDEN_BEYOND_DARK, coverTargets, exploring, inClutter, playerVisibleAt } from './explore';
-import { MAX_POLICE, SCAN_RANGE, SCAN_TIME, becomeFugitive, becomeOffender, damagePlayer, dark, destroyNpc, identified, inSafeZone, isFugitive, pirateFired, playerHitNpc, playerRammedNpc, spawnViper, PATROLS_BY_GOVERNMENT } from './law';
+import { MAX_POLICE, SCAN_RANGE, SCAN_TIME, becomeFugitive, dockingBanned, refuseDocking, becomeOffender, damagePlayer, dark, destroyNpc, identified, inSafeZone, isFugitive, pirateFired, playerHitNpc, playerRammedNpc, spawnViper, PATROLS_BY_GOVERNMENT } from './law';
 import * as THREE from 'three';
 import { flyableOf } from '../content/flyable';
 
@@ -210,9 +210,17 @@ function firePlayerLaser() {
  * hit brings a warning and makes you an Offender; keep firing after that and
  * it's a serious crime: you're a Fugitive and the police launch at once.
  */
-function playerHitStation() {
-  if (!hasLaw(currentSystem())) return;
+export function playerHitStation() {
   const sinceWarning = flight.elapsed - stationWarnedAt;
+  // No law in an anarchy, but the station still won't be shot at (Mark, 2 November 2026): one warning, then no docking.
+  if (!hasLaw(currentSystem())) {
+    if (!modern() || dockingBanned()) return;
+    if (sinceWarning > STATION_WARNING_MEMORY) {
+      stationWarnedAt = flight.elapsed;
+      flash("Cease fire, Commander · fire again and you won't dock here", 3);
+    } else if (sinceWarning > STATION_GRACE) refuseDocking();
+    return;
+  }
   if (!isFugitive() && sinceWarning > STATION_WARNING_MEMORY) {
     stationWarnedAt = flight.elapsed;
     recordCrime(cmdr(), 'offender');
@@ -224,6 +232,7 @@ function playerHitStation() {
     becomeFugitive(true);
     flash('Station under attack · Police launching', 2.5);
   }
+  if (modern() && !dockingBanned()) refuseDocking();
   if (ofRole('police').length < MAX_POLICE && flight.reinforceTimer > 1) flight.reinforceTimer = 0.5;
 }
 

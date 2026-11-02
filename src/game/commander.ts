@@ -362,6 +362,8 @@ export interface Commander {
   adrift?: AdriftCase[];
   /** Titan supply ships lost on the way in (Modern, solo): your view of those yards falls behind (game/yards.ts). */
   yardLosses?: YardLoss[];
+  /** A station that won't let you dock, until when: you fired on it (flight/law.ts). */
+  dockingBan?: { galaxy: number; system: number; until: number };
   /** Missiles on the rails. */
   missiles: number;
   /** The laser fitted to each mount, if any. */

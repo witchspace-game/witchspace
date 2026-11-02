@@ -38,6 +38,7 @@ const main = {} as {
   transponderOnToDock: () => boolean;
   toggleTransponder: () => void;
   darkRefused: () => boolean;
+  dockingBanned: () => number;
   npcIdentified: (npc: NpcShip) => boolean;
   updateContextButton: () => void;
   toggleSurrender: () => void;
@@ -61,12 +62,13 @@ export function updateClearance() {
   const name = stationName(currentSystem()).name;
   // Running dark into a lawful station: switch on to dock, if that's safe.
   if (main.darkRefused() && !lockedDown() && !clearanceRefused() && !main.transponderOnToDock()) return;
-  if (lockedDown()) radio('station', name, 'Lockdown: containment breach · docking suspended', { flash: 4, urgent: true });
+  if (main.dockingBanned()) radio('station', name, `You fired on this station. No docking for ${main.dockingBanned()} min.`, { flash: 4, urgent: true });
+  else if (lockedDown()) radio('station', name, 'Lockdown: containment breach · docking suspended', { flash: 4, urgent: true });
   else if (clearanceRefused()) radio('station', name, 'Docking refused: you are a Fugitive · U to surrender', { flash: 4, urgent: true, answers: [answerSurrender()] });
   else if (main.darkRefused()) radio('station', name, 'Unidentified ship: switch on your transponder to dock', { flash: 4, urgent: true });
   else if (checksClearance(currentSystem())) radio('station', name, 'Transponder checked · Docking clearance granted', { flash: 2.5 });
   else radio('station', name, 'No questions asked', { flash: 2.5 });
-  if (!lockedDown() && !clearanceRefused()) setTimeout(() => game.state === 'flying' && offerRouteWork(), 3000);
+  if (!lockedDown() && !clearanceRefused() && !main.dockingBanned()) setTimeout(() => game.state === 'flying' && offerRouteWork(), 3000);
 }
 
 // --- What you're doing, and what's next (docs/design/flight-hud-and-touch.md) -------
@@ -230,6 +232,7 @@ const hailsOf = new WeakMap<NpcShip, number>();
 export function speakerOf(npc: NpcShip): { who: Speaker; kind: RadioKind; from: string; colour?: string } {
   if (!main.npcIdentified(npc)) return { who: npc.def.id === 'falcon' ? 'falcon' : npc.role === 'trader' ? 'trader' : 'pirate', kind: 'ship', from: `Unidentified ${npc.def.name}`, colour: UNIDENTIFIED_HEX };
   if (npc.def.id === 'falcon') return { who: 'falcon', kind: 'pirate', from: 'Falcon' };
+  if (npc.militia) return { who: 'security', kind: 'police', from: `${stationName(currentSystem()).name} militia`, colour: '#4ad7ff' };
   if (npc.guard && npc.company) return { who: 'security', kind: 'police', from: `${COMPANIES[npc.company].name} ${escortOf.has(npc) ? 'escort' : 'yard security'}`, colour: COMPANIES[npc.company].colour };
   switch (npc.role) {
     case 'police':
