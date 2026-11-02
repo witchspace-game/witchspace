@@ -33,6 +33,7 @@ import { HIDDEN_BEYOND, HIDDEN_BEYOND_DARK, coverTargets, exploring, inClutter, 
 import { MAX_POLICE, SCAN_RANGE, SCAN_TIME, becomeFugitive, dockingBanned, refuseDocking, becomeOffender, damagePlayer, dark, destroyNpc, identified, inSafeZone, isFugitive, pirateFired, playerHitNpc, playerRammedNpc, spawnViper, PATROLS_BY_GOVERNMENT } from './law';
 import * as THREE from 'three';
 import { flyableOf } from '../content/flyable';
+import { vennUnderFire } from './odile';
 
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
@@ -294,6 +295,7 @@ export function updateCombat(dt: number, input: { fire: boolean } | null) {
     if (escorting && npcs.includes(escorting)) npc.patrol.centre.copy(escorting.obj.position);
     if (shot && npc.target === player) npc.firedOnPlayer = true;
     if (shot && npc.role === 'pirate') pirateFired(npc);
+    if (shot && npc.role === 'pirate') vennUnderFire(npc);
     if (shot && npc.role === 'pirate' && npc.target === player) {
       flight.pirateFireAt = flight.elapsed;
       pirateOpenedFire(npc);

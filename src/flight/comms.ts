@@ -29,6 +29,7 @@ import { tradeContext } from '../ui/market';
 import { BOUNTIES, MAX_PIRATES, addNpc, escortOf, flyForCompany, legs, onSlotAxis, randomCargo, removeNpc, voyageOf } from './traffic';
 import { sightedNpc } from './missiles';
 import * as THREE from 'three';
+import { vennHailed } from './odile';
 
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
@@ -285,6 +286,7 @@ export function hailTarget() {
     if (npc.paid) return radio('pirate', sp.from, "We had a deal. Don't push it.");
     const voyage = voyageOf.get(npc);
     if (voyage?.character === 'venn' && main.npcIdentified(npc) && !ctx.wronged) {
+      vennHailed(npc);
       const g = galaxy(currentSystem().galaxy);
       const said = asked === 1 ? vennHail(voyage, currentSystem().name, g[voyage.other].name, cargoWords(voyage.cargo)) : `Still Venn, still busy. Buy me a drink at ${stationName(currentSystem()).name} if you want to talk.`;
       return radio(sp.kind, sp.from, said, { colour: sp.colour });

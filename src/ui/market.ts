@@ -20,6 +20,7 @@ import { player } from '../scene';
 import { ago, attackNews } from '../game/newsLines';
 import { linkSystem } from './contracts';
 import { btcNow } from './money';
+import { LOST_FOR, vennAway } from '../game/odile';
 
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as { exploring(): boolean; noticeTrades(): boolean; updateDockHead(): void };
@@ -72,8 +73,11 @@ export function renderNews() {
         )
         .join('')
     : '';
-  $('#news-list').innerHTML = (attacks || money || yards || items.length)
-    ? attacks + money + yards + items
+  // Odile Venn lost, in your world (game/odile.ts): the Mutual says so, and when she'll be back.
+  const v = cmdr().venn;
+  const venn = main.exploring() && vennAway(v, now) ? `<li><b>Mutual captain Odile Venn picked up from her escape pod; Second Wind under repair</b><small>Carriers' Mutual · back on her run by ${new Date(v!.lostAt! + LOST_FOR).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tomorrow</small></li>` : '';
+  $('#news-list').innerHTML = (attacks || money || yards || venn || items.length)
+    ? attacks + venn + money + yards + items
         .map((n) => {
           const kind = EVENT_KINDS[n.event.type];
           const local = n.where === here;

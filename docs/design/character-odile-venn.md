@@ -6,7 +6,7 @@ summary: The galaxy's first trading character - a Carriers' Mutual captain on a 
 card: cobra-mk3
 stages:
   - On the timetable - her run, her hail, the arrivals board, her Saloon on port days | built
-  - Her memory of you - honest prices, a drink, the Riedquat run, and what happens if you cross her | proposed
+  - Her memory of you - honest prices, a drink, the Riedquat run, and what happens if you cross her | built
   - In shared space - flown by the system's server, the same captain for everyone | proposed
 help:
   - Write her lines - hails, Saloon talk, the Riedquat chapter | writing
@@ -51,7 +51,20 @@ Her loads come from the real markets, like every voyage ([the world, as built](t
 - **Her hail:** *"Venn, Second Wind, Mutual. Food and textiles for Leesti, if you're asking, and you are."* Outbound: *"… for Diso. Mind how you go."* Hail her again: *"Still Venn, still busy. Buy me a drink at Waypoint Orbital if you want to talk."*
 - **The arrivals line** on the Station screen: *"Expected: Odile Venn's Second Wind, in from Leesti about 14:20"* (up to four hours ahead), or, in port, *"In port: Odile Venn's Second Wind, in from Leesti · in the saloon until about 15:05"* with **Find her**.
 - **In the saloon** on her port days, first at the table, in her colour: *"at the table by the empty chair, counting something."* A drink (5 Cr) and she tells you the one good it would have paid most to bring from where she's just been, at the price she saw when she left and the price here: *"Food was 7 at Leesti when I left. 10.8 here. Do with that what you like."* Always true.
-- **Not yet:** the site's "Arrivals at Lave" board (Website's), her chart marker once met, the distress call, flying with her, and her memory of you (step 2).
+- **Not yet:** the site's "Arrivals at Lave" board (Website's) and her chart marker once met.
+
+## As built (step 2, 2 November 2026)
+
+Drawn first and approved: <https://claude.ai/artifact/DB5GEfMeLAbegGHBEp6MwK>.
+
+- **What she remembers** (`commander.venn`): drinks, hails, legs flown with her, calls answered, shots, when you crossed her, when Second Wind was lost, and whether she's told you about Meridian.
+- **Stranger:** one true price for a drink, as in step 1. **Known** (two drinks, or a hail): your name and two prices. **Trusted** (a call answered, or a leg flown alongside): a drink already waiting, two prices, and, when her Riedquat run is within twelve hours, the invitation (*"The company would be nice"*, **Fly it with her** plots the course, **Not tonight**). **Crossed** (a second shot on one leg, or her ship destroyed): *"No."* for a week, and the Mutual's fuel tender refuses you (*"Not for you, Commander. Not this week. Captain Venn sends her regards."*).
+- **Her distress call:** when a pirate fires on her, *"Mutual, Mutual, this is Venn, Second Wind. Two Sidewinders on me. Anyone near."* If you're within 8 km when the last of them is off her: *"That's one I owe you, Jameson."*
+- **Flying with her:** within 3 km of her on her way in, *"Keeping me company, Jameson? Suit yourself."* after 20 seconds; a minute alongside before she docks and it counts as a leg: *"Thanks for the company."* Following her round her run is how a curious commander earns her trust; it doesn't give away her routes, which are in her ledgers, not her course (Mark asked whether you could follow her through hyperspace to find them).
+- **A shot at her:** the first on a leg is forgiven, *"Mutual ship. You'll want to look before you shoot."*; a second crosses her.
+- **Her loss:** her escape pod gets clear, Second Wind is away a day (out of the traffic, the saloon and the arrivals line), and the station news says so. By your hand, and you've crossed her.
+- **The compartment holds her ledgers** (Mark, 2 November 2026: *"painkillers is boring. Maybe she does the research always has the most profitable routes?"*): thirty years of every price she's seen. At Meridian, trusted, she tells the founders' story, changes the subject about the twenty-eighth, and, asked about the compartment: *"My ledgers ... Hexon would give more for them than for Second Wind,"* then gives you one route. From then on, trusted, she gives you the ledgers' route each time: the legal good that pays most per tonne from here to a world within a jump, worked out from the real markets (*"From the ledgers: Luxuries, 84.7 here, 189.4 at Riedquat. Go before Hexon notices."*).
+- **Not yet:** shared space (step 3), and her loss in the news beyond your own station.
 
 ## Meeting her
 
@@ -115,7 +128,7 @@ The method is [the world's](the-world.md#3-the-method), with a plan on top:
 | Step | What | Size | Worker deploy |
 |---|---|---|---|
 | 1 | **On the timetable:** her run, her hail, the arrivals board, the Saloon on port days *(built, 2 November 2026: `game/odile.ts`)* | Medium | No |
-| 2 | **Her memory:** honest prices, the distress call, flying with her, the Riedquat chapter, crossing her, her loss and return | Medium | No |
+| 2 | **Her memory:** honest prices, the distress call, flying with her, the Riedquat chapter, crossing her, her loss and return *(built, 2 November 2026: `game/odile.ts`, `flight/odile.ts`)* | Medium | No |
 | 3 | **In shared space:** flown by the system's server; her loss is everyone's | Small, after [the world's](the-world.md#9-steps) step 7 | Yes |
 
 ## Open questions for Mark

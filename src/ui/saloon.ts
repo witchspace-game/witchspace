@@ -7,9 +7,10 @@ import { sfx } from '../audio/sound';
 import { saveCommander } from '../game/commander';
 import { stationName } from '../galaxy/stationNames';
 import { systemAt, type StarSystem } from '../galaxy/generate';
-import { VENN, vennAtStation, vennPrices } from '../game/odile';
+import { VENN, freshMemory, vennAtStation, vennAway, vennPrices, vennRoute, vennSightings, vennStanding, vennVisits } from '../game/odile';
+import { linkSystem, plotCourse } from './contracts';
+import { flash } from './hud';
 import { escapeHtml } from './escape';
-import { linkSystem } from './contracts';
 import { record, regularsAt, slotOf, talk, venue } from '../game/saloon';
 import { hasBackRoom } from '../economy/blackmarket';
 import { $, cmdr, currentSystem, type DockTab } from '../core';
@@ -61,25 +62,69 @@ export function renderSaloon() {
 const vennDrink = (n: number) => `venn@${n}`;
 const VENN_DRINK = 5;
 
-/** Odile Venn, on her port days: always at the same table (game/odile.ts). Buy her a drink and she tells you what she saw. */
+/** Odile Venn, on her port days: always at the same table (game/odile.ts). What she says depends on what she remembers of you. */
 function vennCard(here: StarSystem, now: number, drinks: string[]): string {
+  const c = cmdr();
   const due = vennAtStation(here, now);
-  if (!due?.inPort) return '';
-  const drunk = drinks.includes(vennDrink(due.visit.n));
-  const p = drunk ? vennPrices(here, due.visit, now) : null;
+  if (!due?.inPort || vennAway(c.venn, now)) return '';
+  const m = c.venn ?? freshMemory();
+  const standing = vennStanding(m, now);
   const from = systemAt(here.galaxy, due.visit.from);
-  const said = p
-    ? `${p.good} ${p.good.endsWith('s') ? 'were' : 'was'} ${p.there} at ${from.name} when I left. ${p.here} here. Do with that what you like.`
-    : drunk
-      ? 'Nothing worth your while today. That happens.'
-      : '';
-  return `<li class="regular regular-venn">
-    <strong>${escapeHtml(VENN.name)}</strong> <small>Carriers' Mutual captain, ${escapeHtml(VENN.ship)}</small>
-    <p class="regular-look">at the table by the empty chair, counting something</p>
-    ${said ? `<p class="regular-says">“${linkSystem(said, from)}”</p>` : ''}
-    ${drunk ? '' : `<p class="regular-actions"><button data-venn ${cmdr().credits < VENN_DRINK ? 'disabled' : ''}>Buy her a drink · ${VENN_DRINK} Cr</button></p>`}
-  </li>`;
+  const head = `<strong>${escapeHtml(VENN.name)}</strong> <small>Carriers' Mutual captain, ${escapeHtml(VENN.ship)}</small>`;
+  const card = (look: string, said: string, actions = '', cls = '') =>
+    `<li class="regular regular-venn ${cls}">${head}<p class="regular-look">${escapeHtml(look)}</p>${said ? `<p class="regular-says">${said}</p>` : ''}${actions ? `<p class="regular-actions">${actions}</p>` : ''}</li>`;
+  const quote = (text: string, where: StarSystem) => `“${linkSystem(text, where)}”`;
+  const were = (good: string) => (good.endsWith('s') ? 'were' : 'was');
+
+  if (standing === 'crossed') return card("doesn't look up", '“No.”', `<button disabled>Buy her a drink · ${VENN_DRINK} Cr</button>`, 'regular-crossed');
+
+  // Meridian, after the Riedquat run: why she bothers, and what the compartment holds.
+  if (here.galaxy === 0 && here.index === MERIDIAN && standing === 'trusted') {
+    const story =
+      '“Twenty-eight captains met in this bar, when Riedquat still grew wheat. Hale &amp; Ostrander had pulled out and left them with nothing. They agreed three things: share the risk, share the work, come when called. My father was one of them. The Mutual went where the law was. I never did.”';
+    const route = vennRoute(here, now);
+    const answers = [
+      asked.has('founder') ? '<p class="regular-says">“Another time.” She changes the subject.</p>' : '',
+      asked.has('ledger')
+        ? `<p class="regular-says">“My ledgers. Thirty years of every price I've seen, and where it went next. Hexon would give more for them than for Second Wind.”${route ? ` Then, quieter: ${quote(`You've earned one. ${route.good} here at ${route.buy}, sold at ${systemAt(0, route.to).name} for ${route.sell}. Tonight.`, systemAt(0, route.to))}` : ''}</p>`
+        : '',
+    ].join('');
+    const ask = [!asked.has('founder') ? '<button data-venn-ask="founder">Who was the twenty-eighth?</button>' : '', !asked.has('ledger') ? `<button data-venn-ask="ledger">What's in the compartment?</button>` : ''].join('');
+    return `<li class="regular regular-venn">${head}<p class="regular-look">beside an empty chair nobody sits in</p><p class="regular-says">${story}</p>${answers}${ask ? `<p class="regular-actions">${ask}</p>` : ''}</li>`;
+  }
+
+  if (standing === 'trusted') {
+    // The ledgers' route, once she's told you about them; otherwise the invitation, if Riedquat's tonight.
+    const route = m.riedquat ? vennRoute(here, now) : null;
+    if (route) return card('already has a drink waiting for you', quote(`From the ledgers: ${route.good}, ${route.buy} here, ${route.sell} at ${systemAt(0, route.to).name}. Go before Hexon notices.`, systemAt(0, route.to)));
+    const riedquat = vennVisits(now, now + 12 * 3600_000).find((v) => v.system === MERIDIAN);
+    if (riedquat && !declined.has(riedquat.n))
+      return card(
+        'already has a drink waiting for you',
+        `“I go out to Riedquat ${riedquat.from === here.index ? 'from here' : `after ${escapeHtml(systemAt(0, riedquat.from).name)}`} tonight. Food, at cost. The crew out there's new and doesn't know me. The company would be nice.”`,
+        `<button data-venn-fly="${riedquat.n}">Fly it with her</button><button data-venn-decline="${riedquat.n}">Not tonight</button>`,
+      );
+    const two = vennSightings(here, due.visit, now).slice(0, 2);
+    return card('already has a drink waiting for you', two.length ? quote(`${c.name}. ${two.map((p) => `${p.good} ${were(p.good)} ${p.there} at ${from.name}, ${p.here} here`).join('; ')}.`, from) : '');
+  }
+
+  const drunk = drinks.includes(vennDrink(due.visit.n));
+  const buy = `<button data-venn ${c.credits < VENN_DRINK ? 'disabled' : ''}>Buy her a drink · ${VENN_DRINK} Cr</button>`;
+  if (standing === 'known') {
+    const two = drunk ? vennSightings(here, due.visit, now).slice(0, 2) : [];
+    const said = !drunk ? '' : two.length ? quote(`${c.name}. ${two.map((p) => `${p.good} ${were(p.good)} ${p.there} at ${from.name} when I left, ${p.here} here`).join('. ')}.`, from) : '“Nothing worth your while today. That happens.”';
+    return card('pushes the other chair out with her foot', said, drunk ? '' : buy);
+  }
+  const p = drunk ? vennPrices(here, due.visit, now) : null;
+  const said = p ? quote(`${p.good} ${were(p.good)} ${p.there} at ${from.name} when I left. ${p.here} here. Do with that what you like.`, from) : drunk ? '“Nothing worth your while today. That happens.”' : '';
+  return card('at the table by the empty chair, counting something', said, drunk ? '' : buy);
 }
+
+/** Meridian Station, Riedquat: where the Mutual began. */
+const MERIDIAN = 46;
+/** What you've asked her at Meridian, and the Riedquat runs you've said no to, this session. */
+const asked = new Set<string>();
+const declined = new Set<number>();
 
 $('#saloon').addEventListener('click', (e) => {
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
@@ -95,11 +140,26 @@ $('#saloon').addEventListener('click', (e) => {
     document.querySelector<HTMLButtonElement>('#exchange .ex-backroom-toggle')?.click();
     return;
   }
+  if (b.dataset.vennAsk) {
+    asked.add(b.dataset.vennAsk);
+    if (b.dataset.vennAsk === 'ledger') (c.venn ??= freshMemory()).riedquat = true;
+    saveCommander(c);
+    renderSaloon();
+    return;
+  }
+  if (b.dataset.vennFly || b.dataset.vennDecline) {
+    if (b.dataset.vennFly) flash(plotCourse(c, MERIDIAN), 3);
+    declined.add(Number(b.dataset.vennFly ?? b.dataset.vennDecline));
+    saveCommander(c);
+    renderSaloon();
+    return;
+  }
   if (b.dataset.venn !== undefined) {
     const due = vennAtStation(here, now);
     if (!due?.inPort || c.credits < VENN_DRINK) return;
     c.credits = Math.round((c.credits - VENN_DRINK) * 10) / 10;
     s.drinks = [...s.drinks, vennDrink(due.visit.n)].slice(-40);
+    (c.venn ??= freshMemory()).drinks++;
     saveCommander(c);
     sfx.beep();
     renderSaloon();

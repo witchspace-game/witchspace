@@ -23,6 +23,7 @@ import { MAX_POLICE, STATION_SPACE, becomeOffender, dockingBanned, identified, i
 
 import type { State } from '../core';
 import type { Settlement } from '../game/law';
+import { vennStanding } from '../game/odile';
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
   setState: (next: State) => void;
@@ -106,6 +107,8 @@ export function sendBeacon(call: BeaconCall) {
     case 'dock-for-fuel':
       return radio('station', stationName(here).name, `Come in and fill up, Commander: ${FUEL_PRICE} Cr a light year at the pump.`);
     case 'tender': {
+      // Crossed Odile Venn, and the Mutual heard (character-odile-venn.md): no tender for a while.
+      if (vennStanding(c.venn, Date.now()) === 'crossed') return radio('company', "Carriers' Mutual", "Not for you, Commander. Not this week. Captain Venn sends her regards.", { colour: COMPANIES.mutual.colour, flash: 4, urgent: true });
       const paid = Math.min(c.credits, out.cost);
       c.credits = Math.round((c.credits - paid) * 10) / 10;
       c.fuel = Math.min(fuelCapacity(c), Math.round((c.fuel + out.ly) * 10) / 10);

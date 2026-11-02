@@ -13,7 +13,7 @@
 import { COMMODITIES } from '../economy/commodities';
 import { freshMarket, priceAt } from '../economy/market';
 import { hash } from '../economy/seed';
-import { systemAt, type StarSystem } from '../galaxy/generate';
+import { distanceLy, galaxy, systemAt, type StarSystem } from '../galaxy/generate';
 import type { Consignment, Voyage } from './traffic';
 
 export const VENN = { name: 'Odile Venn', ship: 'Second Wind', hull: 'cobra-mk3', colour: '#ffb3d1', hold: 35 };
@@ -120,20 +120,80 @@ export function vennHail(v: Voyage, here: string, other: string, words: string):
 
 /**
  * Honest prices, carried by hand: what she saw where she's just come from, as of when she left, set
- * against here. The good it would have paid most to bring. She's never wrong about what she saw.
+ * against here. The goods it would have paid most to bring, best first. She's never wrong about what she saw.
  */
-export function vennPrices(here: StarSystem, visit: Visit, now: number): { good: string; there: number; here: number; from: number } | null {
+export function vennSightings(here: StarSystem, visit: Visit, now: number): { good: string; there: number; here: number; from: number }[] {
   const from = systemAt(0, visit.from);
   const left = visit.docks - 15 * 60_000;
-  let best: { good: string; there: number; here: number; from: number; gain: number } | null = null;
+  return COMMODITIES.filter((c) => c.legality !== 'illegal')
+    .map((c) => {
+      const there = priceAt(from, freshMarket(from, left), c.id, left);
+      const now_ = priceAt(here, freshMarket(here, now), c.id, now);
+      return { good: c.name, there: Math.round(there * 10) / 10, here: Math.round(now_ * 10) / 10, from: visit.from, gain: now_ / there };
+    })
+    .sort((a, b) => b.gain - a.gain)
+    .map(({ gain: _gain, ...p }) => p);
+}
+
+/** The one good it would have paid most to bring from her last stop. */
+export const vennPrices = (here: StarSystem, visit: Visit, now: number) => vennSightings(here, visit, now)[0] ?? null;
+
+// --- Her memory of you (step 2) -------------------------------------------------------------
+
+/** What she remembers of you: a few counters in your save. */
+export interface VennMemory {
+  drinks: number;
+  hails: number;
+  /** Legs flown alongside her, jump-in to dock. */
+  legs: number;
+  /** Her distress calls you answered. */
+  saved: number;
+  shots: number;
+  /** When you last crossed her (fired on her again, or destroyed her). */
+  crossedAt?: number;
+  /** When Second Wind was last lost, in your world: she's back a day later. */
+  lostAt?: number;
+  /** She told you about Meridian, and the ledgers. */
+  riedquat?: boolean;
+}
+
+export const freshMemory = (): VennMemory => ({ drinks: 0, hails: 0, legs: 0, saved: 0, shots: 0 });
+
+export type VennStanding = 'stranger' | 'known' | 'trusted' | 'crossed';
+
+/** How long she won't drink with you, or the Mutual tender you, after you've crossed her. She forgives most things; she forgets nothing. */
+export const CROSSED_FOR = 7 * DAY;
+/** How long Second Wind is away after she's lost: repaired, and back on her run. */
+export const LOST_FOR = DAY;
+
+export function vennStanding(m: VennMemory | undefined, now: number): VennStanding {
+  if (!m) return 'stranger';
+  if (m.crossedAt !== undefined && now - m.crossedAt < CROSSED_FOR) return 'crossed';
+  if (m.saved > 0 || m.legs > 0) return 'trusted';
+  if (m.drinks >= 2 || m.hails > 0) return 'known';
+  return 'stranger';
+}
+
+/** Away being repaired, in your world: not in the traffic, not in the saloon. */
+export const vennAway = (m: VennMemory | undefined, now: number) => m?.lostAt !== undefined && now - m.lostAt < LOST_FOR;
+
+/**
+ * Her best route from here, from the ledgers: the legal good that pays most per tonne to buy here
+ * and sell at a world within a jump. Worked out from the real markets, so it really is the best, now.
+ */
+export function vennRoute(here: StarSystem, now: number): { good: string; buy: number; to: number; sell: number } | null {
+  let best: { good: string; buy: number; to: number; sell: number; gain: number } | null = null;
+  const near = galaxy(here.galaxy).filter((s) => s !== here && distanceLy(here, s) <= 7);
+  const hereMarket = freshMarket(here, now);
   for (const c of COMMODITIES) {
-    if (c.legality === 'illegal') continue;
-    const there = priceAt(from, freshMarket(from, left), c.id, left);
-    const now_ = priceAt(here, freshMarket(here, now), c.id, now);
-    const gain = now_ / there;
-    if (!best || gain > best.gain) best = { good: c.name, there: Math.round(there * 10) / 10, here: Math.round(now_ * 10) / 10, from: visit.from, gain };
+    if (c.legality === 'illegal' || c.unit !== 't') continue;
+    const buy = priceAt(here, hereMarket, c.id, now);
+    for (const s of near) {
+      const sell = priceAt(s, freshMarket(s, now), c.id, now);
+      if (!best || sell - buy > best.gain) best = { good: c.name, buy: Math.round(buy * 10) / 10, to: s.index, sell: Math.round(sell * 10) / 10, gain: sell - buy };
+    }
   }
-  return best;
+  return best && best.gain > 0 ? { good: best.good, buy: best.buy, to: best.to, sell: best.sell } : null;
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

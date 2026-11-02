@@ -51,12 +51,15 @@ Proposed: every ship takes turns, not only you. A timetabled launch waits while 
 
 ## Who owns the station
 
-- **Most stations are their world's own:** plain amber pulse (or a brighter amber).
-- **A company's station pulses in its colour:** Hexon ice, the Mutual blue, Vorg and Wexley-Yorozu in shades moved clear of amber (Vorg's orange redder, so it isn't the pirates'; Wexley-Yorozu's yellow towards lemon or white-gold) so they read at a glance.
-- **The owner by name** goes in text: the target label and the station card. Marks belong in flat screens, not on a hull at range.
-- **On the site** (Website): a small chip in the company's colour on the galaxy and system pages. Ship pages and press shots stay amber.
+Mark asked whether owners are tied to money, and whether Wexley-Yorozu builds stations for others. Suggested (2 November 2026), and Mark said yes:
 
-**Open: who owns which.** Suggested: Hexon in Corporate States, Vorg a few lawless systems, the Mutual at Meridian Station, Riedquat (where it was founded), and Wexley-Yorozu the stations its Titans build.
+- **A system's main station belongs to its world.** Its government runs it and issues the world's money, so its pulse is plain amber. Most stations.
+- **The exceptions follow the politics.** In a **Corporate State** the company is the government: Hexon runs the station, and its pulse is Hexon's ice (their money is "pegged to the credit" already). In an **anarchy** there's no government, so a station is whoever holds it: mostly nobody (amber), sometimes Vorg, and **Meridian Station at Riedquat is the Mutual's**, where it was founded.
+- **Second stations come from Wexley-Yorozu's Titans**, kept and run privately (Mark, 31 October 2026: *"these second stations should just be kept and operated by W-Y"*, [company stations](companies-and-contracts.md#company-stations-mark-31-october-2026)). **W-Y is the builder, not the only owner:** a yard can build to order for Hexon, Vorg or the Mutual, chosen by who works that system, and the station opens in its client's colour; the news says so ("The yard at Teen is building for Hexon").
+- **Two stations in one system** tell themselves apart by their pulse: the world's amber, the company's in its colour. Docking at a company station needs good standing with its owner (open since 31 October).
+- **Money:** a company station trades in credits only, since companies don't issue a world's money.
+- **The colours:** Hexon ice, the Mutual blue, Vorg and Wexley-Yorozu in shades moved clear of amber (Vorg's orange redder, so it isn't the pirates'; W-Y's yellow towards lemon or white-gold) so they read at a glance.
+- **The owner by name** goes in text: the target label and the station card. Marks belong in flat screens, not on a hull at range. **On the site** (Website): a small chip in the company's colour on the galaxy and system pages; ship pages and press shots stay amber.
 
 **Not used:** recoloured hulls (they read as threats: orange as pirates, blue as police, cyan as militia), bands round the hull (hidden as the station turns), a coloured slot alone (too loud).
 

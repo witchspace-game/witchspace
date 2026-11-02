@@ -28,7 +28,7 @@ import { plotCourse, renderContracts } from './contracts';
 import { openBooth, showroomModels } from './showroom';
 import { hasShipyard, renderShipyard, showOwnShip } from './shipyard';
 import { renderSaloon } from './saloon';
-import { VENN, vennAtStation } from '../game/odile';
+import { VENN, vennAtStation, vennAway } from '../game/odile';
 import { venue } from '../game/saloon';
 import { renderMarket, renderNews } from './market';
 import type { DockTab } from '../core';
@@ -172,7 +172,7 @@ $('#tab-station .ship-actions .booth-open').addEventListener('click', () => {
 function renderArrivals(here: StarSystem) {
   const row = $('#arrivals');
   const now = Date.now();
-  const due = cmdr().difficulty === 'modern' ? vennAtStation(here, now) : null;
+  const due = cmdr().difficulty === 'modern' && !vennAway(cmdr().venn, now) ? vennAtStation(here, now) : null;
   row.hidden = !due || (!due.inPort && due.visit.docks - now > ARRIVALS_AHEAD);
   if (row.hidden || !due) return;
   const from = systemAt(here.galaxy, due.visit.from).name;
