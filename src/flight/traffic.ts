@@ -5,6 +5,8 @@
 import { music, sfx } from '../audio/sound';
 import { boomAt } from '../audio/spatial';
 import { shipById } from '../content/ships';
+import type { ShipDef } from '../content/types';
+import { VENN } from '../game/odile';
 import { saveCommander, type Commander } from '../game/commander';
 import { systemKey } from '../game/law';
 import { NpcShip, type NpcRole } from '../game/npc';
@@ -146,9 +148,9 @@ export function randomCargo(): Record<string, number> {
   return cargo;
 }
 
-export function addNpc(def: string, role: NpcRole, at: THREE.Vector3, patrolCentre = station.root.position) {
+export function addNpc(def: string | ShipDef, role: NpcRole, at: THREE.Vector3, patrolCentre = station.root.position) {
   const laser = role === 'pirate' ? PIRATE_LASER : role === 'trader' ? TRADER_LASER : role === 'marshal' ? MARSHAL_LASER : POLICE_LASER;
-  const npc = new NpcShip(shipById(def)!, role, laser, {
+  const npc = new NpcShip(typeof def === 'string' ? shipById(def)! : def, role, laser, {
     centre: patrolCentre.clone(),
     radius: 1200 + Math.random() * 600,
     height: (Math.random() - 0.5) * 600,
@@ -331,14 +333,16 @@ function syncTraffic(dt: number) {
     const flight = (length / cruiseOf(v.hull)) * 1000;
     const start = v.leg === 'in' ? v.at - flight : v.at;
     if (now < start || now >= start + flight) continue;
-    const npc = addNpc(v.hull, 'trader', path.getPointAt((now - start) / flight));
+    // A character flies in her own colour (Odile Venn: game/odile.ts).
+    const hull = shipById(v.hull)!;
+    const npc = addNpc(v.character ? { ...hull, style: { ...hull.style, lineColor: VENN.colour } } : hull, 'trader', path.getPointAt((now - start) / flight));
     if (v.company) {
       npc.company = v.company;
-      applyCompanyBand(npc.model, COMPANIES[v.company].colour);
+      if (!v.character) applyCompanyBand(npc.model, COMPANIES[v.company].colour);
     }
     npc.cargo = {};
     for (const c of v.cargo) npc.cargo[c.id] = (npc.cargo[c.id] ?? 0) + c.qty;
-    if (v.leg === 'in' && v.to === 'station') {
+    if (v.leg === 'in' && v.to === 'station' && !v.character) {
       deliveries.set(npc, v.cargo);
       for (const c of v.cargo) carried.add(`${c.id}:${c.t}`);
     }

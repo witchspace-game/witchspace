@@ -6,7 +6,8 @@
 import { sfx } from '../audio/sound';
 import { saveCommander } from '../game/commander';
 import { stationName } from '../galaxy/stationNames';
-import { systemAt } from '../galaxy/generate';
+import { systemAt, type StarSystem } from '../galaxy/generate';
+import { VENN, vennAtStation, vennPrices } from '../game/odile';
 import { escapeHtml } from './escape';
 import { linkSystem } from './contracts';
 import { record, regularsAt, slotOf, talk, venue } from '../game/saloon';
@@ -47,12 +48,37 @@ export function renderSaloon() {
       </li>`;
     })
     .join('');
+  const venn = vennCard(here, now, s.drinks);
   const back = hasBackRoom(c, here) ? `<button type="button" class="saloon-back">A door at the back ›</button>` : '';
   $('#saloon').innerHTML = `
     <h3>${escapeHtml(v.name)} <small>the ${v.kind} at ${escapeHtml(stationName(here).name)}</small></h3>
     <p class="meta">Regulars come and go every couple of hours. What they tell you might be worth a fortune, or nothing at all: nobody here wears a label.</p>
-    <ul class="regulars">${cards}</ul>
+    <ul class="regulars">${venn}${cards}</ul>
     ${back}`;
+}
+
+/** The drink you bought her on this visit of hers. */
+const vennDrink = (n: number) => `venn@${n}`;
+const VENN_DRINK = 5;
+
+/** Odile Venn, on her port days: always at the same table (game/odile.ts). Buy her a drink and she tells you what she saw. */
+function vennCard(here: StarSystem, now: number, drinks: string[]): string {
+  const due = vennAtStation(here, now);
+  if (!due?.inPort) return '';
+  const drunk = drinks.includes(vennDrink(due.visit.n));
+  const p = drunk ? vennPrices(here, due.visit, now) : null;
+  const from = systemAt(here.galaxy, due.visit.from);
+  const said = p
+    ? `${p.good} ${p.good.endsWith('s') ? 'were' : 'was'} ${p.there} at ${from.name} when I left. ${p.here} here. Do with that what you like.`
+    : drunk
+      ? 'Nothing worth your while today. That happens.'
+      : '';
+  return `<li class="regular regular-venn">
+    <strong>${escapeHtml(VENN.name)}</strong> <small>Carriers' Mutual captain, ${escapeHtml(VENN.ship)}</small>
+    <p class="regular-look">at the table by the empty chair, counting something</p>
+    ${said ? `<p class="regular-says">“${linkSystem(said, from)}”</p>` : ''}
+    ${drunk ? '' : `<p class="regular-actions"><button data-venn ${cmdr().credits < VENN_DRINK ? 'disabled' : ''}>Buy her a drink · ${VENN_DRINK} Cr</button></p>`}
+  </li>`;
 }
 
 $('#saloon').addEventListener('click', (e) => {
@@ -67,6 +93,16 @@ $('#saloon').addEventListener('click', (e) => {
     // The back room: through the exchange's own door.
     main.setDockTab('market');
     document.querySelector<HTMLButtonElement>('#exchange .ex-backroom-toggle')?.click();
+    return;
+  }
+  if (b.dataset.venn !== undefined) {
+    const due = vennAtStation(here, now);
+    if (!due?.inPort || c.credits < VENN_DRINK) return;
+    c.credits = Math.round((c.credits - VENN_DRINK) * 10) / 10;
+    s.drinks = [...s.drinks, vennDrink(due.visit.n)].slice(-40);
+    saveCommander(c);
+    sfx.beep();
+    renderSaloon();
     return;
   }
   const r = regularsAt(here, now).find((x) => x.id === (b.dataset.drink ?? b.dataset.pay));

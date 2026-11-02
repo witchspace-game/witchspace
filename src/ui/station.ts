@@ -28,6 +28,8 @@ import { plotCourse, renderContracts } from './contracts';
 import { openBooth, showroomModels } from './showroom';
 import { hasShipyard, renderShipyard, showOwnShip } from './shipyard';
 import { renderSaloon } from './saloon';
+import { VENN, vennAtStation } from '../game/odile';
+import { venue } from '../game/saloon';
 import { renderMarket, renderNews } from './market';
 import type { DockTab } from '../core';
 import type { SurveyData } from '../game/explore';
@@ -166,6 +168,24 @@ $('#tab-station .ship-actions .booth-open').addEventListener('click', () => {
   openBooth();
 });
 
+/** Odile Venn on the arrivals board (game/odile.ts): in port, and where to find her, or when she's due. */
+function renderArrivals(here: StarSystem) {
+  const row = $('#arrivals');
+  const now = Date.now();
+  const due = cmdr().difficulty === 'modern' ? vennAtStation(here, now) : null;
+  row.hidden = !due || (!due.inPort && due.visit.docks - now > ARRIVALS_AHEAD);
+  if (row.hidden || !due) return;
+  const from = systemAt(here.galaxy, due.visit.from).name;
+  const clock = (t: number) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const who = `${VENN.name}'s ${VENN.ship}`;
+  row.innerHTML = due.inPort
+    ? `<span>In port: <b>${escapeHtml(who)}</b>, in from ${escapeHtml(from)} · in the ${escapeHtml(venue(here).kind)} until about ${clock(due.visit.launches)}</span><button type="button" class="arrivals-saloon">Find her</button>`
+    : `<span>Expected: <b>${escapeHtml(who)}</b>, in from ${escapeHtml(from)} about ${clock(due.visit.docks)}</span>`;
+  row.querySelector('.arrivals-saloon')?.addEventListener('click', () => document.querySelector<HTMLButtonElement>('.tabs [data-tab="saloon"]')?.click());
+}
+/** How far ahead the board lists her. */
+const ARRIVALS_AHEAD = 4 * 3600_000;
+
 export function renderDocked() {
   // The saloon is Modern's: Classic stations are as they were in 1984.
   document.querySelector<HTMLElement>('.tabs [data-tab="saloon"]')!.hidden = cmdr().difficulty === 'classic';
@@ -247,6 +267,8 @@ export function renderDocked() {
     renderDocked();
   });
   $('#fuel').append(refuel);
+
+  renderArrivals(here);
 
   // Survey data: sold here, for more the further it's come.
   const dataRow = $('#data-row');

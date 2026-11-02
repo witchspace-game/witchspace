@@ -1653,6 +1653,9 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .regular { padding: 10px 12px; border-left: 2px solid var(--edge); background: rgba(61, 255, 176, 0.04); line-height: 1.35; }
 .regular small { color: var(--dim); }
 .regular-look { margin: 4px 0 0; color: var(--dim); font-style: italic; }
+/* Odile Venn (game/odile.ts): in her pale rose, the one regular who isn't a stranger for long. */
+.regular-venn { border-left-color: #ffb3d1; background: rgba(255, 179, 209, 0.06); }
+.regular-venn strong { color: #ffb3d1; }
 .regular-record { margin: 4px 0 0; color: var(--amber); font-size: 13px; }
 .regular-says { margin: 8px 0 0; font-size: 15px; }
 .regular-actions { margin: 8px 0 0; }

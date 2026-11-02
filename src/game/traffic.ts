@@ -19,6 +19,7 @@ import { COMMODITIES, UNITS_PER_TONNE } from '../economy/commodities';
 import { hash } from '../economy/seed';
 import { pickCompany, type CompanyId } from './companies';
 import { yardAt, type YardStage } from './yards';
+import { vennVoyages } from './odile';
 
 export interface Consignment {
   id: string;
@@ -46,6 +47,8 @@ export interface Voyage {
   other: number;
   /** Company security flying alongside: the Titan's runs, more in dangerous systems, and valuable cargo. */
   escorts: number;
+  /** A character's ship, not the market's (game/odile.ts): her own words, her own colour, and her cargo isn't a delivery. */
+  character?: 'venn';
 }
 
 /** One ship carries the trades of this long, by government (anarchy 0 .. corporate 7): busier worlds, more ships. */
@@ -233,7 +236,7 @@ export function voyages(s: StarSystem, from: number, to: number, lost: { id: str
     const name = inTurn(namesOf(s), kn * 2 + (leg === 'in' ? 0 : 1));
     for (const v of convoy(voyageFor(s, leg, 'station', kn, cargo.sort((a, b) => a.t - b.t), company, name))) if (v.at >= from && v.at <= to) out.push(v);
   }
-  out.push(...titanVoyages(s, from, to), ...reliefVoyages(s, from, to));
+  out.push(...titanVoyages(s, from, to), ...reliefVoyages(s, from, to), ...vennVoyages(s, from, to));
   return out.sort((a, b) => a.at - b.at);
 }
 

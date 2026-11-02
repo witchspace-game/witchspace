@@ -5,7 +5,7 @@ pillar: trade
 summary: The galaxy's first trading character - a Carriers' Mutual captain on a run round Lave, Leesti and Diso, in the traffic like any ship but someone you get to know, with a detour to Riedquat that nobody pays her for.
 card: cobra-mk3
 stages:
-  - On the timetable - her run, her hail, the arrivals board, her Saloon on port days | proposed
+  - On the timetable - her run, her hail, the arrivals board, her Saloon on port days | built
   - Her memory of you - honest prices, a drink, the Riedquat run, and what happens if you cross her | proposed
   - In shared space - flown by the system's server, the same captain for everyone | proposed
 help:
@@ -25,7 +25,7 @@ She's the second character after [Bond](the-world.md#61-worked-example-cmdr-bond
 
 - **Captain Odile Venn**, member **002** ([callsign card](callsign-card.md)); callsign VENN, held.
 - **The Carriers' Mutual** ([the companies](../companies.md#the-carriers-mutual)): one member, one ship, one vote. She has voted against everything for thirty years and turned up to every vote.
-- **Her ship:** a Cobra Mk III called *Second Wind*, older than most of the commanders who pass her, in plain trader green like every other Cobra in the lanes: you find out who she is by looking (the scanner's card, a hail), never at a glance ([the doubt](the-world.md#64-a-handful-in-every-system-the-doubt-mark)). (The Mutual's own hauler, the Garter, isn't designed yet. When the community designs it, she might retire into one.)
+- **Her ship:** a Cobra Mk III called *Second Wind*, older than most of the commanders who pass her, in **pale rose**, a colour no other ship in the lanes flies, so you can tell her across the lane (Mark, 2 November 2026: "She should have a ship thats a bit different so she is identifiable"; "Looks great in Pale Rose"). No name on the hull (Mark: "I dont think we need to be rendering ship names on the hulls"): the colour, the scanner's card and her hail say who she is. Fitted with the **large cargo bay** (35 t), as a working trader's Cobra would be (Mark: "She would have a Cobra if she is primarily a trader with an extended cargo bay"), and a **shielded compartment** she won't talk about (Mark: "if she is a bit of a smuggler she would have one of those sheilded compartments lol"): what's in it is [the Riedquat run](#the-riedquat-run)'s secret. A new hull, the Mutual's Garter, was drawn and set aside: she's a trader, so she flies the trader's ship.
 - **Her temperament:** glad, in the Saloon's terms ([trading](trading.md)), and dry with it. She counts everything, forgives most things and forgets nothing. She doesn't lie, which makes her the most useful person in the Saloon and the least exciting.
 - **What she wants:** to keep the run going. Not to get rich; she could have been, twice.
 
@@ -43,6 +43,15 @@ A triangle in the first chart a new commander sees, each leg within one tank of 
 Her loads come from the real markets, like every voyage ([the world, as built](the-world.md#as-built-30-october-2026)): what she delivers is a delivery the station is waiting for, and it fits in her 20 tonnes.
 
 **Her week, by the clock.** About an hour at each stop: a few minutes in on her lane, three quarters of an hour in port (when she's in the Saloon), a few minutes out to her jump point. So the triangle takes about three hours, and each of her systems sees her every few hours, at any time of day. The exact times drift a little from day to day (from the seed), so she's a regular, not a train.
+
+## As built (step 1, 2 November 2026)
+
+- **Her day** (`game/odile.ts`): twenty-five stops of just under an hour, the triangle Lave, Leesti, Diso eight times, with Riedquat after one Diso a day (a different one each day, from the seed). She docks three to seven minutes into a stop and launches six minutes before its end, so each of Lave, Leesti and Diso sees her every three hours or so. Every phone works out the same day from the clock.
+- **In the traffic:** one more voyage, in to dock and out again, in her pale rose, named "Odile Venn · Second Wind" on the radio. Her loads are hers (food and textiles from Lave, machinery and computers from Leesti, whatever Diso has spare, food to Riedquat and home light), up to her 35 t; they aren't the market's deliveries, so shooting her doesn't take goods off a station's board.
+- **Her hail:** *"Venn, Second Wind, Mutual. Food and textiles for Leesti, if you're asking, and you are."* Outbound: *"… for Diso. Mind how you go."* Hail her again: *"Still Venn, still busy. Buy me a drink at Waypoint Orbital if you want to talk."*
+- **The arrivals line** on the Station screen: *"Expected: Odile Venn's Second Wind, in from Leesti about 14:20"* (up to four hours ahead), or, in port, *"In port: Odile Venn's Second Wind, in from Leesti · in the saloon until about 15:05"* with **Find her**.
+- **In the saloon** on her port days, first at the table, in her colour: *"at the table by the empty chair, counting something."* A drink (5 Cr) and she tells you the one good it would have paid most to bring from where she's just been, at the price she saw when she left and the price here: *"Food was 7 at Leesti when I left. 10.8 here. Do with that what you like."* Always true.
+- **Not yet:** the site's "Arrivals at Lave" board (Website's), her chart marker once met, the distress call, flying with her, and her memory of you (step 2).
 
 ## Meeting her
 
@@ -105,14 +114,14 @@ The method is [the world's](the-world.md#3-the-method), with a plan on top:
 
 | Step | What | Size | Worker deploy |
 |---|---|---|---|
-| 1 | **On the timetable:** her run, her hail, the arrivals board, the Saloon on port days | Medium | No |
+| 1 | **On the timetable:** her run, her hail, the arrivals board, the Saloon on port days *(built, 2 November 2026: `game/odile.ts`)* | Medium | No |
 | 2 | **Her memory:** honest prices, the distress call, flying with her, the Riedquat chapter, crossing her, her loss and return | Medium | No |
 | 3 | **In shared space:** flown by the system's server; her loss is everyone's | Small, after [the world's](the-world.md#9-steps) step 7 | Yes |
 
 ## Open questions for Mark
 
-1. **Her:** is Odile Venn the right name, and *Second Wind* the right ship?
+1. ~~**Her:**~~ **Odile Venn, *Second Wind*, a pale rose Cobra** (Mark, 2 November 2026).
 2. **The lore:** the Mutual founded at Meridian Station, Riedquat (marketing: keep it named; it gives the Mutual a place)?
 3. **The twenty-eighth founder:** does Odile know who she was, and is that hers to tell, or Bond's (who knows what Hexon keeps on file)?
 4. **Trade with her in space,** a "deck sale" (hail her within a kilometre and buy a few tonnes of her load without docking): marketing suggests a later idea, as it's new to Elite's rules and she doesn't need it to land.
-5. **How often:** an hour at each stop, every few hours, is easy to meet. Rarer makes her special; commoner makes her part of the furniture.
+5. ~~**How often:**~~ **Every few hours** (Mark, 2 November 2026).
