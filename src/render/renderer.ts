@@ -6,7 +6,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { LensPass } from './lens';
 import { BRIGHTEST, GLOW, GRAIN, MAX_PIXEL_RATIO, samplesFor, STARS } from './look';
-import { showRatioReadout, testRatio } from './ratioTest';
+import { perfTest, showRatioReadout, testRatio } from './ratioTest';
 import { ORIGINAL_PIXELS, RETRO_DOT, registerParts, setLineResolution, setRetroParts } from './wire';
 
 // 1984 mode: white lines on black with hard pixels, letterboxed to 4:3. The
@@ -129,6 +129,7 @@ export function render(scene: THREE.Scene) {
     retroRenderer.render(scene, camera);
   } else {
     renderPass.scene = scene;
+    bloom.enabled = !perfTest.noGlow;
     composer.render();
   }
 }

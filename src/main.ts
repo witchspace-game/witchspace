@@ -106,6 +106,7 @@ import { beaconOpen, breakSurrender, initBeacon, sendBeacon, toggleBeacon, toggl
 import { hitFeedback, initFlying, releaseBank, rollAssistApplies, setAutopilot, setView, updateSpace, viewDirection } from './flight/flying';
 import { classicRules, die, initMoments, keepByHand, keepCombat, keepMoment, killCam, logMoment, momentContext, noticeTrades, recordTrack, recorder, recorderIntroduced, recorderWatch, refreshFlightLog, track, trackBeam, trackBoom, viewCanvas, watchSurroundings } from './flight/moments';
 import { syncClock } from './net/clock';
+import { perfTest } from './render/ratioTest';
 initMoments({ setState, showTitle, enterDocked, setFlightLog, planetColour, handleKey });
 initFlying({ dock, recordTrack, die });
 initBeacon({ setState, enterDocked, setAutopilot, settlementMessage });
@@ -1087,6 +1088,7 @@ function hangarCovered(t: number): boolean {
 }
 
 function frame(now?: number) {
+  const workStarted = performance.now();
   const t = now ?? performance.now();
   const resting = !game.inSpace && game.state === 'docked' && !booth && !killCam.active && hangarCovered(t);
   if (t - lastDrawn < (resting ? RESTING_FRAME : MIN_FRAME) - 1) {
@@ -1130,6 +1132,7 @@ function frame(now?: number) {
     game.photoPending = false;
     snapPhoto();
   }
+  perfTest.frameMs += (performance.now() - workStarted - perfTest.frameMs) * 0.1;
   requestAnimationFrame(frame);
 }
 
