@@ -89,6 +89,8 @@ export class FlightRecorder<M> {
   private recorded = 0; // seconds recorded at this quality
   private slowFor = 0;
   private bitmapBusy = false;
+  /** The latest frame taken as an image: the flight log's still comes from it, since this way never draws on `frame`. */
+  private still: ImageBitmap | null = null;
   /** Whether this browser can record at all (decided once, asynchronously). */
   ready: Promise<boolean>;
 
@@ -176,36 +178,46 @@ export class FlightRecorder<M> {
     if (!this.encoder || this.encoder.state !== 'configured') return;
     if (this.encoder.encodeQueueSize > 4) return; // falling behind: drop a frame rather than lag the game
     const timing = { timestamp: Math.round(this.mediaTime * 1e6), duration: Math.round(1e6 / FPS) };
-    const started = performance.now();
     const send = (frame: VideoFrame) => {
       if (this.rested) this.frames = 0; // waking: a keyframe, so the cut to the new scene is clean
       this.rested = false;
       // A whole picture every two seconds (a clip starts on one): every second spent too much of the budget on them.
-      if (this.encoder?.state === 'configured') this.encoder.encode(frame, { keyFrame: this.frames++ % (FPS * 2) === 0 });
+      if (this.encoder?.state === 'configured') {
+        this.encoder.encode(frame, { keyFrame: this.frames++ % (FPS * 2) === 0 });
+        perfTest.clipFrames++;
+      }
       frame.close();
     };
-    // How the picture leaves the canvas. An iPhone held the whole game to 16 fps on `copy` (Mark, 2 November 2026): measured on the phone, in the ?ratio test.
+    // How the picture leaves the canvas. An iPhone held the whole game to 16 fps on `copy`, and ran at 51 on `bitmap`, with the work of a frame down from 57 ms to 5
+    // (Mark, 2 November 2026, flying in landscape at 3×, measured in the ?ratio test). The canvas is snapshotted here, so the blank-after-the-task rule above is met.
     if (perfTest.capture === 'direct') send(new VideoFrame(canvas, timing));
     else if (perfTest.capture === 'bitmap') {
       if (this.bitmapBusy) return;
       this.bitmapBusy = true;
       void createImageBitmap(canvas, { resizeWidth: width, resizeHeight: height, resizeQuality: 'low' })
         .then((bitmap) => {
+          // The phone turned while this one was on its way: it's the old shape, so it's dropped.
+          if (bitmap.width !== this.config?.width || bitmap.height !== this.config?.height) return bitmap.close();
+          this.still?.close();
+          this.still = bitmap;
           send(new VideoFrame(bitmap, timing));
-          bitmap.close();
         })
-        .catch(() => undefined)
+        // A device that can't do it goes back to the slow way: slower play, but it still records, and steps down to SD if it has to.
+        .catch(() => (perfTest.capture = 'copy'))
         .finally(() => (this.bitmapBusy = false));
     } else {
+      this.still?.close();
+      this.still = null;
       this.frame!.getContext('2d')!.drawImage(canvas, 0, 0, width, height);
       send(new VideoFrame(this.frame!, timing));
     }
-    perfTest.captureMs += (performance.now() - started - perfTest.captureMs) * 0.1;
     void this.finishDue();
   }
 
   private start(width: number, height: number) {
     this.encoder?.close();
+    this.still?.close();
+    this.still = null;
     this.chunks = [];
     this.frames = 0;
     this.frame = new OffscreenCanvas(width, height);
@@ -270,7 +282,7 @@ export class FlightRecorder<M> {
       });
     }
     return new Promise((resolve) => {
-      this.pending.push({ start: Math.max(0, now - before), end: now + after, meta, poster: poster(this.frame), done: resolve });
+      this.pending.push({ start: Math.max(0, now - before), end: now + after, meta, poster: poster(this.still ?? this.frame), done: resolve });
       if (after <= 0) void this.finishDue(true);
     });
   }
@@ -309,7 +321,7 @@ export class FlightRecorder<M> {
 }
 
 /** A still of the moment, for the flight log: from the recorder's own copy of the latest frame (the game's canvas is blank between frames). */
-function poster(frame: OffscreenCanvas | null): Promise<Blob | null> {
+function poster(frame: OffscreenCanvas | ImageBitmap | null): Promise<Blob | null> {
   if (!frame) return Promise.resolve(null);
   const w = 480;
   const h = Math.round((w * frame.height) / frame.width);
