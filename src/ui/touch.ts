@@ -126,6 +126,10 @@ export function onTap(el: HTMLElement, action: () => void) {
 /** Close the touch drawer (on launch, so flight starts with a clean screen). */
 export let closeDrawer = () => {};
 
+/** Aims before the "Drag to aim" hint goes for good. */
+const AIMS_KEY = 'witchspace-aims';
+const AIMS_TO_LEARN = 5;
+
 export function initTouch() {
   if (!isTouch) return;
   document.body.classList.add('touch');
@@ -191,6 +195,23 @@ export function initTouch() {
     pad.classList.remove('active', 'rolling');
   };
   pad.addEventListener('pointerup', endAim);
+  // The hint runs into the scanner on a phone: once you've aimed a few times, it goes (Mark's screenshot).
+  let aims = 0;
+  try {
+    aims = Number(localStorage.getItem(AIMS_KEY)) || 0;
+  } catch {
+    /* shown again next time */
+  }
+  pad.classList.toggle('learned', aims >= AIMS_TO_LEARN);
+  pad.addEventListener('pointerup', () => {
+    if (++aims > AIMS_TO_LEARN) return;
+    pad.classList.toggle('learned', aims >= AIMS_TO_LEARN);
+    try {
+      localStorage.setItem(AIMS_KEY, String(aims));
+    } catch {
+      /* shown again next time */
+    }
+  });
   pad.addEventListener('pointercancel', endAim);
   label.textContent = 'Drag to aim · hold to roll';
 

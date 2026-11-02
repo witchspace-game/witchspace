@@ -110,6 +110,17 @@ describe('holds (Mark: a Cobra carrying 22 t and 15 t and more)', () => {
     for (const [hull, hold] of Object.entries(HOLD)) expect(JSON.parse(readFileSync(`content/ships/${hull}.json`, 'utf8')).stats.cargo).toBe(hold);
   });
 
+  it('escorts a convoy once, not once for each ship (Mark: 8 Vipers to 2 Cobras)', () => {
+    for (const s of galaxy(0).slice(0, 100)) {
+      const groups = new Map<string, number>();
+      for (const v of voyages(s, t0, t0 + 3 * 3600_000)) {
+        const k = v.id.replace(/:c\d+$/, '');
+        groups.set(k, (groups.get(k) ?? 0) + v.escorts);
+      }
+      for (const n of groups.values()) expect(n).toBeLessThanOrEqual(2);
+    }
+  });
+
   it('never loads a ship past her hold', () => {
     for (const s of galaxy(0).slice(0, 40))
       for (const v of voyages(s, t0, t0 + 3 * 3600_000)) expect(tonnes(v.cargo)).toBeLessThanOrEqual((v.character ? VENN.hold : HOLD[v.hull]) + 1e-9); // Odile Venn has the large cargo bay

@@ -515,12 +515,14 @@ export class KillCam {
       this.el.querySelector<HTMLElement>('.killcam-head')?.getBoundingClientRect().bottom ?? 0,
     );
     for (const el of this.labels.values()) el.hidden = true;
+    // Never over the controls (Mark's screenshot: "Sidewinder · pirate" across the buttons).
+    const floor = this.el.querySelector<HTMLElement>('.killcam-bar')?.getBoundingClientRect().top ?? innerHeight;
     for (const p of placed) {
       const el = this.labels.get(p.id)!;
       el.hidden = false;
       el.classList.toggle('killer', p.killer);
       el.style.opacity = p.alpha.toFixed(2);
-      el.style.transform = `translate(${Math.round(p.x)}px, ${Math.round(p.y)}px)`;
+      el.style.transform = `translate(${Math.round(p.x)}px, ${Math.round(Math.min(p.y, floor - p.h - 4))}px)`;
     }
   }
 

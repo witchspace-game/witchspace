@@ -37,6 +37,8 @@ Mark: *"The look of the Neo world is our 'signature' look. Lets get this right a
 
 ## How it changes: never by accident
 
+**Crispness on a phone** *(Mark, 2 November 2026: "the stars looked a bit blurry")*: an iPhone's screen is 3×, and the game draws at 2× (`MAX_PIXEL_RATIO`) and lets the phone stretch it by 1.5, which softens everything, for the battery. The stars went from 1.2 to 0.8, because at 1.2 the brighter ones caught the glow and wore a halo. Whether 3× is worth 2.25 times the pixels can only be judged on the phone: `/play/?ratio=3`, `?ratio=2` and `?ratio=off` switch it on one device, with a frame-rate readout (`render/ratioTest.ts`). Undecided until Mark has tried it. Also open: small gaps in the lines of the rectangle round the slot (moving it 1.5 m off the hull didn't cure them).
+
 **The look check** (`node tools/look-check.mjs`, with the dev server running) draws fixed scenes with the game's own code, the clock stopped and the stars seeded, and compares them with the reference pictures in `tools/look/reference/`:
 - **the fleet:** every role colour, and a Dark Edition's deep violet;
 - **a planet's edge** against the stars;

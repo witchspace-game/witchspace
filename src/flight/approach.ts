@@ -10,19 +10,19 @@
 
 import * as THREE from 'three';
 import { hasEquipment } from '../game/commander';
-import { BEAM_RANGE, broadcasts, inBeam, ownerColour } from '../game/approach';
+import { BEAM_RANGE, broadcasts, inBeam, ownerColour, slotState } from '../game/approach';
 import { APPROACH } from '../render/look';
+import type { ApproachState } from '../game/approach';
 import { cmdr, currentSystem, game, modern } from '../core';
 import { npcs, player, station } from '../scene';
-import { launchDueWithin, launchingShip, onSlotAxis } from './traffic';
+import { launchDueWithin, launchingShip, onSlotAxis, youJustLaunched } from './traffic';
 import { inSlot } from './law';
-
-export type ApproachState = 'clear' | 'hold' | 'launching';
 
 /** Hold this long before a timetabled launch, and after one until she's this far out or this long gone. */
 const HOLD_BEFORE = 6_000;
 const CLEAR_DISTANCE = 4000;
 const CLEAR_AFTER = 15;
+const HOLD_AFTER_YOU = 5;
 /** A ship this close to the mouth, heading out, is launching. */
 const LAUNCH_ZONE = 1500;
 /** Seconds per ring as the pulse steps along. */
@@ -49,7 +49,11 @@ export function updateApproach(dt: number) {
   const launching = launchingShip() ?? npcs.find((n) => n.obj.position.distanceTo(mouth) < LAUNCH_ZONE && inSlot(n.obj.position) && n.ship.forward().dot(out) > 0.8);
   if (launching) lastLaunch = { npc: launching, at: clock };
   const stillClearing = lastLaunch && npcs.includes(lastLaunch.npc) && lastLaunch.npc.obj.position.distanceTo(station.root.position) < CLEAR_DISTANCE && clock - lastLaunch.at < CLEAR_AFTER;
-  state = launching ? 'launching' : stillClearing || launchDueWithin(HOLD_BEFORE) ? 'hold' : 'clear';
+  // Your own launch reads the same as anyone's (Mark: the rings ran inwards as he launched).
+  const youOut = youJustLaunched() && player.obj.position.distanceTo(mouth) < LAUNCH_ZONE;
+  // A few seconds' hold after it, however slowly you left: never straight from out to in.
+  const youClearing = youJustLaunched(HOLD_AFTER_YOU) && player.obj.position.distanceTo(station.root.position) < CLEAR_DISTANCE;
+  state = slotState(Boolean(launching) || youOut, Boolean(stillClearing) || youClearing, launchDueWithin(HOLD_BEFORE));
 
   // Seen only in the beam, from a station that broadcasts one; a docking computer draws them anywhere in range.
   if (!modern()) return station.showApproach(1, -1, null); // Classic: as it always was

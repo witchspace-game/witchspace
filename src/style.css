@@ -776,6 +776,7 @@ body:not(.touch) #touch { display: none; }
 body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
 #touch > * { pointer-events: auto; }
 #touch .aim-pad { position: absolute; left: 0; top: 0; bottom: 0; width: 58%; }
+#touch .aim-pad.learned span, body.touch #touch .aim-pad.learned span { display: none; }
 #touch .aim-pad span {
   position: absolute; left: 24px; bottom: 28px; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
   color: var(--dim); opacity: 0.6; transition: opacity 0.3s;
@@ -828,12 +829,12 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
 #touch .photo-button { position: absolute; right: 52px; top: max(8px, env(safe-area-inset-top)); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
 /* Below the top edge, beside the next step: on an iPhone a downward slide from the top edge pulls
    down Notification Centre, and a web page can't stop it (Mark). */
-#touch .view-button { touch-action: none; -webkit-user-select: none; user-select: none; position: absolute; right: 112px; top: calc(max(8px, env(safe-area-inset-top)) + 56px); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
+#touch .view-button { touch-action: none; -webkit-user-select: none; user-select: none; position: absolute; right: calc(112px + var(--view-shift, 0px)); top: calc(max(8px, env(safe-area-inset-top)) + 56px); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
 #touch .view-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; transition: transform 0.2s ease-out; }
 #touch .view-button.away { border-color: var(--amber); color: var(--amber); }
 /* Opens to the left of the big Dock/Jump button, never over it (Mark). */
 /* Centred on the button, so a glance is one short slide from under the thumb: up, down or across. */
-#touch .view-picker { position: absolute; right: 21px; top: calc(max(8px, env(safe-area-inset-top)) + 1px); display: grid; grid-template-columns: repeat(3, 66px); grid-template-rows: repeat(3, 42px); gap: 6px; padding: 8px; border: 1px solid var(--edge); border-radius: 12px; background: rgba(2, 10, 8, 0.92); z-index: 6; }
+#touch .view-picker { position: absolute; right: calc(21px + var(--view-shift, 0px)); top: calc(max(8px, env(safe-area-inset-top)) + 1px); display: grid; grid-template-columns: repeat(3, 66px); grid-template-rows: repeat(3, 42px); gap: 6px; padding: 8px; border: 1px solid var(--edge); border-radius: 12px; background: rgba(2, 10, 8, 0.92); z-index: 6; }
 #touch .view-picker[hidden] { display: none; }
 #touch .view-picker button { min-height: 0; padding: 0; font-size: 13px; letter-spacing: 0.06em; }
 #touch .view-picker [data-view='front'] { grid-area: 1 / 2; }

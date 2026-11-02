@@ -12,11 +12,11 @@ import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 const SECONDS = 60; // what the buffer holds: the longest clip (a whole fight)
 const CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42e028', 'avc1.42001f'];
 
-// Adaptive quality (Mark): every device starts in HD. Copying and encoding the
-// view is real work, so if the game's frame rate sags while recording (under
+// Adaptive quality (Mark): every session starts in HD. Copying and encoding the
+// view is real work, so if the game's frame rate sags badly while recording (under
 // SLOW_FPS for STRUGGLE seconds), the recorder steps down to SD: about 60% less
-// work, and still sharp on a phone's screen. The device remembers, and the
-// flight log offers to try HD again.
+// work. For this session only (Mark, 2 November 2026: one busy moment left every clip
+// after it at 480p for good, "the quality was bad"); the flight log offers to try HD again.
 export type Quality = 'hd' | 'sd';
 /** A computer's screen shows far more than 720p (Mark: "check the flight recorder on desktop is recording at full quality"). */
 const COMPUTER = typeof matchMedia !== 'undefined' && !matchMedia('(pointer: coarse)').matches;
@@ -27,20 +27,18 @@ const QUALITY: Record<Quality, { height: number; fps: number; bitrate: number }>
   hd: COMPUTER ? { height: 1080, fps: 30, bitrate: 6_000_000 } : { height: 720, fps: 30, bitrate: 3_000_000 },
   sd: { height: 480, fps: 24, bitrate: 1_600_000 },
 };
-const SLOW_FPS = 40;
+const SLOW_FPS = 30; // what it records at: a dip above this costs a clip nothing
 const STRUGGLE = 4; // seconds
 const WARM_UP = 5; // seconds of recording before judging (the first frames are always slow)
-const QUALITY_KEY = 'witchspace-recorder-quality';
 // H.264 needs even dimensions: 480 × 16/9 is 853.3, and Safari refuses 853 (so
 // iPhones said they couldn't record). Ask for the size we'll really encode.
 const probeWidth = (q: Quality) => Math.round((QUALITY[q].height * 16) / 9) & ~1;
-const remembered = (): Quality => {
-  try {
-    return localStorage.getItem(QUALITY_KEY) === 'sd' ? 'sd' : 'hd';
-  } catch {
-    return 'hd';
-  }
-};
+// Devices told to remember SD before it stopped being remembered get HD back.
+try {
+  localStorage.removeItem('witchspace-recorder-quality');
+} catch {
+  /* storage blocked: nothing there to clear */
+}
 
 interface Chunk {
   chunk: EncodedVideoChunk;
@@ -83,7 +81,7 @@ export class FlightRecorder<M> {
   /** Why it can't record, if it can't: for the message the player sees. */
   why = '';
   /** HD or SD, as this device manages (see QUALITY). */
-  quality: Quality = remembered();
+  quality: Quality = 'hd';
   /** HD isn't possible here at all (no encoder for it): SD it is, and no offer to try HD again. */
   hdUnsupported = false;
   private smooth = 1 / 60; // the game's frame time, smoothed
@@ -132,11 +130,6 @@ export class FlightRecorder<M> {
     this.quality = q;
     this.recorded = 0;
     this.slowFor = 0;
-    try {
-      localStorage.setItem(QUALITY_KEY, q);
-    } catch {
-      /* storage blocked: decided again next time */
-    }
   }
 
   /** Watch the game's frame rate while recording in HD; if it sags, step down to SD (between clips, never in one). */

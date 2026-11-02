@@ -199,6 +199,8 @@ function convoy(v: Voyage): Voyage[] {
     at: v.at + i * CONVOY_GAP_MS,
     cargo,
     name: sister(v.name, i),
+    // One escort for the convoy, not one for each ship (Mark counted 8 Vipers to 2 Cobras): they fly with the lead.
+    escorts: i ? 0 : v.escorts,
   }));
 }
 

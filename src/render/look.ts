@@ -51,7 +51,8 @@ export const SHIP = {
 /** The stars: points at infinity, faint and blue-white, a few brighter, never glowing as much as a ship. */
 export const STARS = {
   count: 2500,
-  size: 1.2,
+  /** Small enough to stay points (Mark, 2 November 2026: "the stars looked a bit blurry"): at 1.2 the brighter ones caught the glow and wore a halo. */
+  size: 0.8,
   distance: 8000,
   /** Hue between these (blue to violet), at this saturation; lightness mostly faint, a few up to 0.53. */
   hue: [0.55, 0.7],

@@ -32,6 +32,8 @@ export function npcColour(npc: NpcShip) {
   // Unknown until the hull is read; but once it has fired on you, whoever it is, it's hostile.
   if (!npcIdentified(npc)) return npc.firedOnPlayer ? '#ff4d6d' : UNIDENTIFIED_HEX;
   if (npc.hostile) return '#ff4d6d';
+  if (npc.militia) return '#4ad7ff';
+  if (npc.guard && npc.company) return COMPANIES[npc.company].colour; // company security isn't the police
   return npc.role === 'police' ? '#4aa8ff' : npc.role === 'marshal' ? '#ffd98a' : npc.role === 'pirate' ? '#ff9a3d' : '#9ef0c0';
 }
 

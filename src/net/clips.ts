@@ -49,6 +49,9 @@ const sharedLinks = (): Record<string, string> => {
 };
 export const sharedLink = (moment: string): string | null => sharedLinks()[moment] ?? null;
 
+/** How long to wait for the server before saying so: a track is under 400 KB. */
+const SHARE_TIMEOUT = 20_000;
+
 /** Share a moment's track. Resolves with the clip's link and title, or the reason it couldn't. */
 export async function shareTrack(moment: string, track: Blob, seconds: number, kills = 0): Promise<{ url: string; title: string } | { error: string }> {
   const session = sessionToken();
@@ -56,9 +59,12 @@ export async function shareTrack(moment: string, track: Blob, seconds: number, k
     method: 'POST',
     headers: headers({ 'Content-Type': 'application/octet-stream', ...(session ? { Authorization: `Bearer ${session}` } : {}) }),
     body: track,
+    signal: AbortSignal.timeout?.(SHARE_TIMEOUT),
   }).catch(() => null);
-  const out = (await res?.json().catch(() => null)) as { url?: string; title?: string; error?: string } | null;
-  if (!res?.ok || !out?.url) return { error: out?.error ?? "Couldn't reach witchspace.org.uk" };
+  // Say which it was: no answer at all is the connection; an answer without a reason is ours.
+  if (!res) return { error: "Couldn't reach witchspace.org.uk. Check your connection and try again." };
+  const out = (await res.json().catch(() => null)) as { url?: string; title?: string; error?: string } | null;
+  if (!res.ok || !out?.url) return { error: out?.error ?? `witchspace.org.uk couldn't take it (error ${res.status}). Try again in a moment.` };
   try {
     localStorage.setItem(SHARED_KEY, JSON.stringify({ ...sharedLinks(), [moment]: out.url }));
   } catch {

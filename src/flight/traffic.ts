@@ -590,6 +590,8 @@ const slotReserved = () =>
   game.state === 'flying' &&
   player.obj.position.distanceTo(station.root.position) < SLOT_CLEAR &&
   (flight.autopilot || main.rollAssistApplies() || flight.elapsed - launchedAt < LAUNCH_CLEAR);
+/** You launched a moment ago: the slot's still yours, on your way out (flight/approach.ts shows it). */
+export const youJustLaunched = (extra = 0) => flight.elapsed - launchedAt < LAUNCH_CLEAR + extra;
 const holding = new WeakSet<NpcShip>();
 const holdPoint = () => station.toWorld(new THREE.Vector3(1500, 0, SLOT.z + 2500));
 

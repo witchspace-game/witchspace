@@ -6,6 +6,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { LensPass } from './lens';
 import { BRIGHTEST, GLOW, GRAIN, MAX_PIXEL_RATIO, samplesFor, STARS } from './look';
+import { showRatioReadout, testRatio } from './ratioTest';
 import { ORIGINAL_PIXELS, RETRO_DOT, registerParts, setLineResolution, setRetroParts } from './wire';
 
 // 1984 mode: white lines on black with hard pixels, letterboxed to 4:3. The
@@ -38,7 +39,8 @@ const neoCanvas = document.querySelector<HTMLCanvasElement>('#neo')!;
 const retroCanvas = document.querySelector<HTMLCanvasElement>('#retro')!;
 
 const neoRenderer = new THREE.WebGLRenderer({ canvas: neoCanvas, antialias: true });
-neoRenderer.setPixelRatio(Math.min(devicePixelRatio, MAX_PIXEL_RATIO));
+neoRenderer.setPixelRatio(Math.min(devicePixelRatio, testRatio ?? MAX_PIXEL_RATIO));
+showRatioReadout();
 const retroRenderer = new THREE.WebGLRenderer({ canvas: retroCanvas, antialias: false });
 retroRenderer.setPixelRatio(1);
 // Ships coming through a witchspace rift are clipped at its mouth.
