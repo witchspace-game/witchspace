@@ -323,6 +323,7 @@ function syncTraffic(dt: number) {
   for (const v of trafficList) {
     if (trafficShips.size >= MAX_VOYAGES) break;
     if (trafficShips.has(v.id) || trafficDone.has(v.id)) continue;
+    if (v.to === 'titan' && cmdr().yardLosses?.some((l) => l.voyage === v.id)) continue; // lost on an earlier visit
     const path = lanePaths.get(v.id) ?? lanePath(v); // none yet for the Titan until her yard is in the scene
     if (!path) continue;
     lanePaths.set(v.id, path);

@@ -227,6 +227,7 @@ import type { WorldEvent } from '../economy/events';
 import type { CompanyId } from './companies';
 import type { BtcOrder, BtcTrade } from '../economy/bitcoin';
 import type { Heard } from './saloon';
+import type { YardLoss } from './yards';
 
 /** A ship's finish from the yard. */
 /**
@@ -359,6 +360,8 @@ export interface Commander {
   compartment?: { company: CompanyId; tonnes: number };
   /** Special cargo adrift where your ship was lost, waiting to be recovered. */
   adrift?: AdriftCase[];
+  /** Titan supply ships lost on the way in (Modern, solo): your view of those yards falls behind (game/yards.ts). */
+  yardLosses?: YardLoss[];
   /** Missiles on the rails. */
   missiles: number;
   /** The laser fitted to each mount, if any. */

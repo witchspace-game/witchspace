@@ -139,6 +139,9 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .docked .sys-link:hover { color: var(--accent); }
 #news-list li.over { opacity: 0.6; }
 #news-list li.quiet { border-left-color: var(--edge); background: none; color: var(--dim); }
+#news-list .yard-bar { display: flex; height: 6px; margin-top: 6px; border-radius: 3px; overflow: hidden; background: rgba(61, 255, 176, 0.12); }
+#news-list .yard-bar span { background: var(--accent); }
+#news-list .yard-bar .lost { background: repeating-linear-gradient(90deg, var(--amber) 0 3px, transparent 3px 6px); }
 #news-list b { display: block; font-weight: 600; font-size: 15px; }
 #news-list small { display: block; margin-top: 2px; color: var(--dim); font-size: 12px; line-height: 1.35; }
 body.retro #news-list b { font-size: 12px; }

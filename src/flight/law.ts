@@ -20,7 +20,8 @@ import { loseDelivery } from '../economy/market';
 import { $, cmdr, currentSystem, game, modern } from '../core';
 import { beams, explosions, HULL_READ, flight, npcs, ofRole, player, space, station } from '../scene';
 import { tradeContext } from '../ui/market';
-import { FALCON_DISABLES, alertSecurity, deliveries, fightOn, pirateLost, removeNpc } from './traffic';
+import { FALCON_DISABLES, alertSecurity, deliveries, fightOn, legs, pirateLost, removeNpc, voyageOf } from './traffic';
+import { behindLabel, keepLosses, yardAt, yardSeen } from '../game/yards';
 import { bastionDestroyed, carrier, scheduleMarshals } from './marshals';
 import { spillCargo, spillSpecial } from './adrift';
 import { CLEARANCE_RANGE, answerPolice, distresses, radio, speakerOf, traderColour, traderName } from './comms';
@@ -162,6 +163,31 @@ export function becomeOffender(message: string, unknown = !identified()) {
 }
 
 /** A ship blows up. If the player did it, the law and the combat rating take note. */
+/**
+ * One of the Titan's supply ships lost on her way in (Modern): the yard's build
+ * falls behind, in your save, and the yard says so (docs/design/the-world.md, step 5).
+ */
+function titanSupplyLost(npc: NpcShip) {
+  const v = voyageOf.get(npc);
+  if (!v || !game.commander || !modern()) return;
+  const c = cmdr();
+  const sys = currentSystem();
+  const now = Date.now();
+  const yard = yardAt(sys, now) ?? yardSeen(sys, now, c.yardLosses);
+  if (!yard) return;
+  const tonnes = v.cargo.reduce((t, x) => t + x.qty, 0);
+  c.yardLosses = [...keepLosses(c.yardLosses ?? [], now), { galaxy: sys.galaxy, system: sys.index, build: yard.build, at: now, tonnes, ship: v.name, voyage: v.id }];
+  saveCommander(c);
+  const seen = yardSeen(sys, now, c.yardLosses);
+  if (seen && flight.yardScene) flight.yardScene.yard = seen;
+  const week = c.yardLosses.filter((l) => l.galaxy === sys.galaxy && l.system === sys.index && l.build === yard.build && l.at > now - 7 * 86_400_000).length;
+  const goods = v.cargo.map((x) => commodityById(x.id)?.name.toLowerCase()).filter(Boolean)[0] ?? 'cargo';
+  const late = behindLabel(seen?.behind ?? 0);
+  const nth = ['', '', 'second', 'third', 'fourth', 'fifth'][week] ?? `${week}th`;
+  const count = week > 1 ? ` That's the ${nth} this week:` : '';
+  radio('company', 'Wexley-Yorozu yard', `We've lost the ${v.name} and her ${goods}.${count}${count ? ' the' : ' The'} build is ${late || 'falling behind'}.`, { colour: COMPANIES.wy.colour, flash: 3 });
+}
+
 export function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   main.trackBoom(npc);
   const velocity = npc.ship.forward().multiplyScalar(npc.ship.speed);
@@ -193,6 +219,7 @@ export function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
       setTimeout(() => flash(`Delivery lost · ${goods} won't reach ${currentSystem().name}`, 3), 1600);
     }
   }
+  if (legs.get(npc) === 'titan') titanSupplyLost(npc);
   // A trader that called for help, and didn't get it.
   if (distresses.some((d) => d.trader === npc && d.heard) && game.state === 'flying') radio('mayday', traderName(npc), 'Signal lost', { colour: traderColour(npc) });
   removeNpc(npc);

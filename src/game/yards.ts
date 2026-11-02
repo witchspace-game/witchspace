@@ -98,12 +98,7 @@ function buildAt(g: number, slot: number, t: number): Yard | null {
   if (into >= BUILD_TIME) return null;
   const s = siteOf(g, slot, build);
   if (!s) return null;
-  let left = into;
-  let stage = STAGES[0];
-  for (stage of STAGES) {
-    if (left < stage.days * DAY) break;
-    left -= stage.days * DAY;
-  }
+  const { stage, progress } = stageAt(into);
   const start = EPOCH + offset(g, slot) + build * CYCLE;
   const moons = worldOf(s).moons.length;
   return {
@@ -114,9 +109,20 @@ function buildAt(g: number, slot: number, t: number): Yard | null {
     build,
     start,
     end: start + BUILD_TIME,
-    stage: stage.stage,
-    progress: Math.min(1, left / (stage.days * DAY)),
+    stage,
+    progress,
   };
+}
+
+/** Where a build stands `into` ms after it started. */
+function stageAt(into: number): { stage: YardStage; progress: number } {
+  let left = Math.max(0, into);
+  let stage = STAGES[0];
+  for (stage of STAGES) {
+    if (left < stage.days * DAY) break;
+    left -= stage.days * DAY;
+  }
+  return { stage: stage.stage, progress: Math.min(1, left / (stage.days * DAY)) };
 }
 
 /** The yards at work in a galaxy at time `t`. */
@@ -131,6 +137,88 @@ export function yardsOf(g: number, t: number): Yard[] {
 
 /** The yard at a system at time `t`, if there is one. */
 export const yardAt = (s: StarSystem, t: number): Yard | null => yardsOf(s.galaxy, t).find((y) => y.system === s.index) ?? null;
+
+// --- Falling behind (docs/design/the-world.md, step 5) ---------------------------------
+//
+// A Wexley-Yorozu trader bound for the Titan, lost on the way, puts the stage
+// she was supplying behind. Solo, the losses are kept in your save, so only your
+// view of the yard falls behind; everyone else's stays on the clock.
+
+/** A Titan supply ship that never arrived. */
+export interface YardLoss {
+  galaxy: number;
+  system: number;
+  /** Which build she was supplying. */
+  build: number;
+  /** When she was lost. */
+  at: number;
+  tonnes: number;
+  ship: string;
+  /** Her voyage, so she doesn't fly again. */
+  voyage: string;
+}
+
+/** Time lost per tonne that never arrived: a Cobra's 20 t is about two hours. */
+export const BEHIND_PER_TONNE = 6 * 60_000;
+/** Below this a yard isn't worth calling behind. */
+const BEHIND_SHOWN = 30 * 60_000;
+
+/**
+ * A build as it stands with its losses: each loss sets back the stage it was
+ * supplying, no stage by more than its own length (a build can stall, never
+ * stop), and the whole build by no more than the constructor's passage to the
+ * next site, so the next build still starts on time.
+ */
+export function withLosses(y: Yard, losses: readonly YardLoss[], t: number): Yard & { behind: number } {
+  let behind = 0;
+  const per = new Map<YardStage, number>();
+  for (const l of losses.filter((l) => l.galaxy === y.galaxy && l.system === y.system && l.build === y.build && l.at <= t).sort((a, b) => a.at - b.at)) {
+    const { stage } = stageAt(l.at - y.start - behind);
+    const room = stageInfo(stage).days * DAY - (per.get(stage) ?? 0);
+    const add = Math.max(0, Math.min(l.tonnes * BEHIND_PER_TONNE, room, TRANSIT_TIME - behind));
+    per.set(stage, (per.get(stage) ?? 0) + add);
+    behind += add;
+  }
+  return behind ? { ...y, ...stageAt(t - y.start - behind), end: y.end + behind, behind } : { ...y, behind };
+}
+
+/** The yard at a system at `t` with your losses: behind, and perhaps still at work after the clock's build has ended. */
+export function yardSeen(s: StarSystem, t: number, losses: readonly YardLoss[] = []): (Yard & { behind: number }) | null {
+  const y = yardAt(s, t);
+  if (y) return withLosses(y, losses, t);
+  const last = losses.filter((l) => l.galaxy === s.galaxy && l.system === s.index).sort((a, b) => b.at - a.at)[0];
+  const then = last && yardAt(s, last.at);
+  if (!then || then.build !== last.build) return null;
+  const late = withLosses(then, losses, t);
+  return t < late.end ? late : null;
+}
+
+/** "6 h behind", or nothing while it's near enough on time. */
+export function behindLabel(behind: number): string {
+  if (behind < BEHIND_SHOWN) return '';
+  const h = Math.round(behind / 3_600_000);
+  return h >= 24 ? `${Math.floor(h / 24)} d ${h % 24} h behind` : `${Math.max(1, h)} h behind`;
+}
+
+const WORK: Record<YardStage, string> = { refining: 'the refining', spine: 'the spine', frame: 'the frame', plating: 'the plating', 'spin-up': 'the spin-up', finished: 'the handover' };
+const COUNT = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+
+/** The yard in the news: on schedule, or behind and why. */
+export function yardNews(y: Yard & { behind?: number }, losses: readonly YardLoss[] = [], now: number): string {
+  if (!behindLabel(y.behind ?? 0)) return stageInfo(y.stage).news;
+  const n = losses.filter((l) => l.galaxy === y.galaxy && l.system === y.system && l.build === y.build && l.at > now - 7 * DAY).length;
+  if (!n) return `${WORK[y.stage]} is ${behindLabel(y.behind ?? 0)}`;
+  return `${WORK[y.stage]} has fallen behind, ${COUNT[n] ?? n} supply ship${n === 1 ? '' : 's'} lost this week`;
+}
+
+/** How far through the whole build, and how much of it was lost: shares of the build, for a bar. */
+export function buildBar(y: Yard & { behind?: number }, t: number): { done: number; lost: number } {
+  const done = Math.max(0, Math.min(1, (t - y.start - (y.behind ?? 0)) / BUILD_TIME));
+  return { done, lost: Math.min(1 - done, (y.behind ?? 0) / BUILD_TIME) };
+}
+
+/** Losses worth keeping: any whose build could still be running. */
+export const keepLosses = (losses: readonly YardLoss[], now: number): YardLoss[] => losses.filter((l) => l.at > now - CYCLE);
 
 /** The Titanoboa's modules, fore to aft: a station's worth of work. */
 export const STANDARD_LINE_UP = ['maw', 'furnace', 'furnace', 'hold', 'habitat', 'fabricator', 'reactor'];
@@ -204,11 +292,18 @@ export function buildsFrom(g: number, t: number, limit: number): Yard[] {
 export const stageInfo = (stage: YardStage) => STAGES.find((s) => s.stage === stage)!;
 
 /** For the HUD: "Station: frame". */
-export const stageLabel = (y: Yard) => `Station: ${stageInfo(y.stage).name}`;
+export const stageLabel = (y: Yard & { behind?: number }) => [`Station: ${stageInfo(y.stage).name}`, behindLabel(y.behind ?? 0)].filter(Boolean).join(' · ');
 
 /** Yards within news range of a system, nearest first. */
-export function yardsNear(here: StarSystem, t: number, range = 25): { yard: Yard; where: StarSystem; distance: number }[] {
-  return yardsOf(here.galaxy, t)
+export function yardsNear(here: StarSystem, t: number, range = 25, losses: readonly YardLoss[] = []): { yard: Yard & { behind?: number }; where: StarSystem; distance: number }[] {
+  const yards: (Yard & { behind?: number })[] = yardsOf(here.galaxy, t).map((y) => withLosses(y, losses, t));
+  // A build your losses kept going past the clock's end.
+  for (const i of new Set(losses.filter((l) => l.galaxy === here.galaxy).map((l) => l.system))) {
+    if (yards.some((y) => y.system === i)) continue;
+    const late = yardSeen(systemAt(here.galaxy, i), t, losses);
+    if (late) yards.push(late);
+  }
+  return yards
     .map((yard) => {
       const where = systemAt(here.galaxy, yard.system);
       return { yard, where, distance: distanceLy(here, where) };

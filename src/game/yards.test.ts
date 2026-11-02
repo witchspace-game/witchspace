@@ -4,7 +4,7 @@ import { shipById } from '../content/ships';
 import { checkGeometry } from '../content/geometry';
 import { wyWorks } from './contracts';
 import { worldOf } from './explore';
-import { BUILD_TIME, STAGES, TRANSIT_TIME, stageLabel, stationAtStage, stationSpin, yardAt, yardSites, yardsNear, yardsOf, YARDS_PER_GALAXY } from './yards';
+import { BUILD_TIME, STAGES, TRANSIT_TIME, behindLabel, buildBar, keepLosses, stageLabel, stationAtStage, stationSpin, withLosses, yardAt, yardNews, yardSeen, yardSites, yardsNear, yardsOf, YARDS_PER_GALAXY, type Yard, type YardLoss } from './yards';
 
 const DAY = 86_400_000;
 const now = Date.UTC(2026, 9, 23, 12);
@@ -76,7 +76,7 @@ describe('a build', () => {
   it('news reaches nearby systems', () => {
     const y = yardsOf(0, now)[0];
     const there = systemAt(0, y.system);
-    expect(yardsNear(there, now)[0]).toMatchObject({ yard: y, distance: 0 });
+    expect(yardsNear(there, now)[0]).toMatchObject({ yard: { ...y, behind: 0 }, distance: 0 });
   });
 });
 
@@ -116,5 +116,66 @@ describe('the station in its stages', () => {
     expect(stationSpin({ ...y, stage: 'plating', progress: 0.5 }, 0.25)).toBe(0);
     expect(stationSpin({ ...y, stage: 'spin-up', progress: 0.5 }, 0.25)).toBeCloseTo(0.125);
     expect(stationSpin({ ...y, stage: 'finished', progress: 0 }, 0.25)).toBe(0.25);
+  });
+});
+
+describe('losses slow the build (the-world.md step 5, Mark)', () => {
+  const H = 3_600_000;
+  // A build under way, found from the clock, and a moment a day into its frame.
+  const yard = yardsOf(0, Date.UTC(2026, 10, 2))[0] as Yard;
+  const s = systemAt(0, yard.system);
+  const frameStart = yard.start + 3 * 86_400_000; // refining 1 d + spine 2 d
+  const loss = (at: number, tonnes = 20, build = yard.build): YardLoss => ({ galaxy: 0, system: yard.system, build, at, tonnes, ship: 'Keystone', voyage: `v${at}` });
+
+  it('puts the build about two hours behind for a Cobra-load lost', () => {
+    const t = frameStart + 12 * H;
+    const y = withLosses(yard, [loss(frameStart + H)], t);
+    expect(y.behind).toBe(2 * H);
+    expect(behindLabel(y.behind)).toBe('2 h behind');
+    expect(stageLabel(y)).toBe('Station: frame · 2 h behind');
+    // Further back through the stage than the clock says.
+    expect(y.progress).toBeLessThan(yardAt(s, t)!.progress);
+  });
+
+  it("ignores another build's losses, another system's, and losses still to come", () => {
+    const t = frameStart + 12 * H;
+    expect(withLosses(yard, [loss(frameStart + H, 20, yard.build - 1)], t).behind).toBe(0);
+    expect(withLosses(yard, [{ ...loss(frameStart + H), system: yard.system + 1 }], t).behind).toBe(0);
+    expect(withLosses(yard, [loss(t + H)], t).behind).toBe(0);
+  });
+
+  it('never sets a stage back by more than its own length, nor the build by more than the passage to the next site', () => {
+    const many = Array.from({ length: 200 }, (_, i) => loss(frameStart + i * 60_000, 50));
+    const y = withLosses(yard, many, frameStart + 10 * 86_400_000);
+    expect(y.behind).toBeLessThanOrEqual(TRANSIT_TIME);
+    expect(y.behind).toBeGreaterThan(0);
+    expect(y.end).toBe(yard.end + y.behind);
+  });
+
+  it('keeps a late build going after the clock says it ended, then lets it finish', () => {
+    const losses = [loss(frameStart + H, 50), loss(frameStart + 2 * H, 50), loss(frameStart + 3 * H, 50)];
+    const behind = withLosses(yard, losses, frameStart + 4 * H).behind;
+    expect(yardSeen(s, yard.end + behind / 2, losses)?.stage).toBe('finished');
+    expect(yardSeen(s, yard.end + behind + 1, losses)).toBeNull();
+    // Nobody else's view changes.
+    expect(yardAt(s, frameStart + 12 * H)?.stage).toBe('frame');
+  });
+
+  it('says so in the news, with a bar of the time lost', () => {
+    const t = frameStart + 12 * H;
+    const losses = [loss(frameStart + H), loss(frameStart + 2 * H), loss(frameStart + 3 * H)];
+    const y = withLosses(yard, losses, t);
+    expect(yardNews(y, losses, t)).toBe('the frame has fallen behind, three supply ships lost this week');
+    expect(yardNews(withLosses(yardAt(s, t)!, [], t), [], t)).toBe(STAGES[2].news);
+    const bar = buildBar(y, t);
+    expect(bar.lost).toBeCloseTo((6 * H) / BUILD_TIME);
+    const near = yardsNear(s, t, 1, losses).find((n) => n.yard.system === yard.system);
+    expect(near?.yard.behind).toBe(6 * H);
+  });
+
+  it('forgets losses once their build is long over', () => {
+    const now = yard.end + 30 * 86_400_000;
+    expect(keepLosses([loss(frameStart)], now)).toEqual([]);
+    expect(keepLosses([loss(frameStart)], frameStart + H)).toHaveLength(1);
   });
 });

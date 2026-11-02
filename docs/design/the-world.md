@@ -55,7 +55,8 @@ How the first steps work in the game (Modern rules; Classic keeps 1984's traffic
 - **Relief:** while an event leaves a world short (famine, drought, plague), ships bring what's missing about every 7 minutes, half of them the Carriers' Mutual.
 - **Hail one and it says who it is:** "Dry Dock, in from Atriso with alloys for the Titan."
 - **Company security (Mark: "is there no protection for the Titan or are they paying for protection anywhere?"):** Vipers in company colours. Two or three guard each yard's Titan (more in lawless space), and a lost guard is replaced from her hold after three minutes. Escorts fly alongside most of the Titan's runs (nine in ten in an anarchy, one in four in a corporate state) and a third of company runs carrying valuable cargo. They fight pirates and whoever fires on the company's ships, and answer to the company, not the law: firing on them makes you an offender, not a fugitive. Hail one: "Wexley-Yorozu yard security".
-- **Not yet:** losses don't slow the yard (step 5's exceptions), and in shared space each phone flies its own copy once a ship is close.
+- **Losses slow the build, solo** (Mark, 2 November 2026: "It should slow the build shouldn't it!"; built the same day, `withLosses` and `yardSeen` in `game/yards.ts`). A Titan trader lost on her way in, to anyone, puts the stage she was supplying behind: 6 minutes a tonne, so a Cobra's 20 t is about 2 hours. No stage falls behind by more than its own length, and no build by more than the Titan's 2-day passage to the next site, so the next build still starts on time. The losses are kept in your save, so only your view of the yard falls behind. The yard radios it ("We've lost the *Keystone* and her alloys. That's the third this week: the build is 6 h behind."), its label says "6 h behind", and the station news says "the frame has fallen behind, three supply ships lost this week", with a bar of the build and, hatched, the time lost. A lost trader doesn't fly again.
+- **Not yet:** shared space (losses there counting for everyone, kept by the server and shown on the website), Bullsnake runs counting (see [the supply line](#next-for-the-supply-line)), and in shared space each phone still flies its own copy once a ship is close.
 
 ## 1. Where we are
 
@@ -128,7 +129,7 @@ That's a random arrival process with its dice taken from a hash, so the same for
 
 ### 3.5 Players' actions are exceptions
 
-*Not built yet (step 5). Today a lost convoy only takes its cargo from the market: the Titanoboa's build doesn't slow, and nothing about it reaches the news. This section is how it would work.*
+*Solo half built, 2 November 2026 ([as built](#as-built-30-october-2026)): your losses, kept in your save, put your view of the yard behind. The server half (shared space, everyone's) is still to come.*
 
 ```
 world(t) = f(seed, t)  +  exceptions
@@ -142,7 +143,7 @@ The server keeps the exceptions; each is a row. Consequences are arithmetic on t
 progress(t) = scheduled deliveries before t − deliveries lost
 ```
 
-Once this is built, losing enough of the Titanoboa's convoys would put the station behind, the news would say so, and its stage would take longer. Nothing was running to make that happen.
+Lose enough of the Titanoboa's convoys and the station falls behind, the news says so, and its stage takes longer (solo, built; shared space, to come). Nothing was running to make that happen.
 
 ### 3.6 A formula far away, a real ship up close
 
@@ -196,7 +197,7 @@ Every working ship needs a silhouette: freighters, liners, tugs, mining ships. *
 
 ## 5. What players change: exceptions
 
-*Not built yet (2 November 2026). Losses, blockades and rescues don't change the build, the news or anyone else's world yet; this is the design.*
+*Mark, 2 November 2026: the recommended split, solo changes yours and shared-space changes everyone's. Built so far: the Titan's lost supply ships, solo. Not built: shared space, blockades and rescues changing the build, and anything in anyone else's world.*
 
 Exceptions are what makes the world respond. The question is whose world they change.
 
@@ -337,7 +338,7 @@ A yard at Onrira (`yards.ts`) is building a station. Today, Bullsnakes run ore f
 | 2 | **Traffic from the economy:** rates from events' shortfalls; famine convoys, refugee liners, medical ships | Medium | No |
 | 3 | **The Titanoboa's supply line:** needs by stage, routes, progress from deliveries | Medium | No |
 | 4 | **Up close, a real ship:** the hand-over to an NPC and back; escort and piracy | Medium | No |
-| 5 | **Exceptions** (not built yet): in your save in solo; on the server from shared space | Small | Yes |
+| 5 | **Exceptions** (solo: the Titan's losses built 2 November 2026; shared space to come): in your save in solo; on the server from shared space | Small | Yes |
 | 6 | **The first character, Bond:** his Saloon, his plan, his memory of you, his rare flights | Medium | Yes |
 | 7 | **Characters in shared space:** flown by the system's server | Medium | Yes |
 | 8 | **Working hulls from the community:** freighters, liners, tugs, through the MCP server | Ongoing | No |
@@ -350,12 +351,13 @@ Steps 1 to 4 need no server, so they can start straight after Show HN.
 
 - **Escort contracts (Mark likes this one):** Wexley-Yorozu hires commanders at the station to bring a named freighter in safely: "Bring the *Steady Hand* in from Atriso, 300 Cr." The freighter is already on the timetable; the contract just puts you beside her.
 - **Protection money, in anarchies:** where there's no law, Wexley-Yorozu quietly pays the local pirates to leave its freighters alone, and pirates there pass them by, until the payments stop. A Saloon regular might let it slip. A story can grow from it.
-- **Losses slow the build** (step 5's exceptions; not built yet).
+- **Losses slow the build** (step 5's exceptions): built for solo, 2 November 2026. Shared space next: the server keeps the losses and the website shows the yard behind.
+- **Bullsnake runs count too** *(proposed, 2 November 2026)*: once the Bullsnakes fly as ships in the system (today they're the yard's scenery), a lost hydrogen run from the station or ore run from the moon slows the build as well. Tugs are slow and close to home, so the yard's security guards them: raiding one is riskier than picking off a trader on the lanes.
 
 ## 10. Open questions for Mark
 
 1. ~~**The order:**~~ **Traffic and the Titan first** (Mark, 30 Oct 2026: "Traffic and Titan (which I prefer rather than Titanoboa) and traffic"), then Bond. Mark prefers the name **Titan** to Titanoboa; renaming her across the game, site and docs is its own change.
-2. **Solo changes:** stay in your own world (recommended), or count for everyone when you're signed in?
+2. ~~**Solo changes:**~~ **Stay in your own world; shared-space changes are everyone's** (Mark, 2 November 2026: "yes, do it your way").
 3. **How busy:** how many convoys in a quiet system, and in a busy one? Too many and the lanes feel like a motorway; too few and nobody meets one.
 4. **Bond's world:** which agricultural system does he retire to?
 5. ~~**The second character:**~~ **A trader** (Mark, 31 October 2026: "do we have any character NPCs trading as well?"): [Odile Venn](character-odile-venn.md), a Mutual captain on a regular run. Her own open questions are in her design.
