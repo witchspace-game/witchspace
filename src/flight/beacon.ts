@@ -19,7 +19,7 @@ import { flight, sharedSpace, npcs, ofRole, player, station } from '../scene';
 import { MAX_PIRATES, PIRATE_CHANCE, fightOn } from './traffic';
 import { CLEARANCE_RANGE, FIGHT_RANGE, answerSurrender, arrayNews, arrayOffers, clearanceRefused, distresses, hasArray, lockedDown, pirateThreats, radio, spawnDistress, updateDistress } from './comms';
 import { exploring } from './explore';
-import { MAX_POLICE, STATION_SPACE, becomeOffender, identified, isFugitive, responses, spawnViper } from './law';
+import { MAX_POLICE, STATION_SPACE, becomeOffender, dockingBanned, identified, isFugitive, responses, spawnViper } from './law';
 
 import type { State } from '../core';
 import type { Settlement } from '../game/law';
@@ -68,7 +68,7 @@ export function sendBeacon(call: BeaconCall) {
     hull: player.hull / player.def.stats.hull,
     fuel: c.fuel,
     nearestLy: distanceLy(here, nearest),
-    canDock: !clearanceRefused() && !lockedDown(),
+    canDock: !clearanceRefused() && !lockedDown() && !dockingBanned(),
     system: `${here.galaxy}:${here.index}`,
   });
   if (out.kind === 'wait') return flash(`Beacon recharging · ${out.seconds} s`, 1.5);

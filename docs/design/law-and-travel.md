@@ -244,7 +244,21 @@ After Mark was shot down by pirates at Raoror while his docking computer flew hi
 - **Under fire, the docking computer hands you the stick:** "Under fire · docking computer off · you have control", so you can fight, run or fly yourself in. Everywhere, anarchies included. *(Built, Modern rules.)*
 - **In a lawful system, a pirate that fires within the station's 5 km safe zone brings its police out at once** (two Vipers from the slot, up to the usual four), and **inside 2 km the station's own guns fire on it** until it stops shooting. A station kill earns you nothing. *(Built, Modern rules.)*
 - **The station's airspace is a refuge** *(Mark, 1 November 2026: "if you are under attack from pirates and you cross into stations airspace the police vipers should help you. Its a good option for pilots who are overwhelmed by pirates")*. Played first: inside 5 km it worked, dark or not, but between 5 and 8 km the police could see you and hail you for running dark without counting the pirates' fire, and ignoring the hail in the fight set them on you too. *(Built, Modern rules, 1 November 2026.)* The airspace is as far as the police can see (8 km from the station, or from a patrol): pirate fire anywhere in it brings two Vipers from the slot, sent to where the shooting is. While pirates are after you the transponder hail waits ("Deal with those pirates, Commander. We'll talk after.") and comes once they've gone. And if a hail does run out, the police's warning is a card that stays, with the way out on it: *Switch on · you'll be an Offender*, and they stand down.
-- **Anarchies stay lawless:** nobody comes, and the docking computer there is a risk worth knowing about. Raoror, where it happened, is an anarchy.
+- **Anarchies stay lawless:** no police, no crimes, and the docking computer there is a risk worth knowing about. Raoror, where it happened, is an anarchy. But the station still defends its own doorstep: see the next section.
+
+### The station's own flight *(Mark, 2 November 2026)*
+
+Mark, on commanders camping outside a station: "Camping outside a station would attract the stations attention. They wouldnt allow it for long so we need to devise a solution", and "Wouldnt the station have ships to defend it rather than Guns? Surely CMDR's could defend the station and or we have a small defence fleet for exactly this reason?" Drawn and approved the same day: <https://claude.ai/artifact/5daU2xVenhvWJ8VQKswrx5>.
+
+A station that lets ships be shot coming out of its slot loses its trade, so every station defends its doorstep out of self-interest, law or no law.
+
+- **Every station has a defence flight.** With law, its police Vipers. In an anarchy, the **station militia**: two or three mixed hulls (Cobras, Sidewinders) in the station's colours, paid from docking fees. The militia guards the doorstep, not the law: it stays in the station's airspace, fights whoever fires on ships there (pirates or you), and makes nobody a Fugitive.
+- **A camper, step by step:** fire on a ship near the station and you're hailed ("You're blocking the approach. Move off, or be moved."); the flight launches; the station puts a **doorstep bounty** on you, paid to whoever drives you off or destroys you; fire on the station itself and you're **refused docking** there for 20 minutes (and a Fugitive where there's law).
+- **Commanders defend it.** The doorstep bounty goes out to every ship nearby, so in shared space other commanders can answer it. **Defence shifts** on the contracts board, mostly in anarchies: fly the approach with the militia for an hour, paid for the hour and for each attacker seen off. In solo, the militia and computer bounty hunters answer.
+- **The guns cover only the slot:** the real defence is ships you can see and fight.
+- **Launching after a death,** the flight is already out, covering you: this answers the spawn camping problem in [shared space](shared-space.md).
+
+*Stage 1 built (2 November 2026, Modern rules, `flight/law.ts`): in an anarchy, pirate fire on the approach brings the militia (a Cobra and two Sidewinders in the station's cyan) and a 150 Cr doorstep bounty on each pirate, paid on top of its own; your fire on a ship there brings the hail and the militia after you. Fire on any station twice and it refuses you docking for 20 minutes (where there's law you're a Fugitive too). Firing on the militia is no crime. Still to build: defence shifts (stage 2), the guns narrowed to the slot, and other commanders answering the bounty in shared space.*
 
 ### Protected starter systems
 
