@@ -99,7 +99,7 @@ import { distresses, hailTarget, initComms, messageIds, radio, radioMessages, sp
 import { initSharedSpace, toggleSharedSpace, updateSharedButton } from './flight/sharedSpace';
 import { announceEvent, hyperspace, inSystemJump, initTravel, stopCombatComputer, toggleCombatComputer, toggleGalacticJump, toggleHyperspace, toggleSurveyPilot } from './flight/travel';
 import { arrivalNote, bringHome, buildExploreScene, explorerTips, exploring, firstsLine, initExplore, myFirsts, showLog, survey } from './flight/explore';
-import { becomeFugitive, becomeOffender, canSettle, damagePlayer, dark, darkRefused, destroyNpc, dockingBanned, forgetResponses, identified, initLaw, isFugitive, legalLabel, playerHitNpc, rateKill, reportedBy, spawnViper, toggleTransponder, transponderBroken, transponderOnToDock, PATROLS_BY_GOVERNMENT } from './flight/law';
+import { becomeFugitive, becomeOffender, canSettle, damagePlayer, dark, darkRefused, destroyNpc, dockingBanned, inSlot, forgetResponses, identified, initLaw, isFugitive, legalLabel, playerHitNpc, rateKill, reportedBy, spawnViper, toggleTransponder, transponderBroken, transponderOnToDock, PATROLS_BY_GOVERNMENT } from './flight/law';
 import { initCombat, laserDirection, playerHitStation } from './flight/combat';
 import { npcIdentified } from './flight/hud';
 import { beaconOpen, breakSurrender, initBeacon, sendBeacon, toggleBeacon, toggleSurrender, updateContextButton } from './flight/beacon';
@@ -109,7 +109,7 @@ initMoments({ setState, showTitle, enterDocked, setFlightLog, planetColour, hand
 initFlying({ dock, recordTrack, die });
 initBeacon({ setState, enterDocked, setAutopilot, settlementMessage });
 initCombat({ viewDirection, hitFeedback, breakSurrender, trackBeam, die });
-initLaw({ setAutopilot, noteCardMoment, trackBoom, keepCombat });
+initLaw({ setAutopilot, noteCardMoment, trackBoom, keepCombat, die: () => die() });
 initExplore({ planetColour, dark: () => dark(), noteCardMoment, keepMoment });
 initTravel({ setState, buildSystemScene, arrivalNote, forgetResponses, reportedBy, setView, setAutopilot, hitFeedback, toggleGalaxyMap });
 initSharedSpace({ becomeFugitive, becomeOffender, rateKill, hitFeedback, die });
@@ -1149,7 +1149,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).get('demo') === 
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, destroyNpc, playerHitStation, dockingBanned, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier, setAutopilot,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, destroyNpc, playerHitStation, dockingBanned, inSlot, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier, setAutopilot,
       get carrier() { return carrier; },
       get locked() { return flight.locked; },
       get distresses() { return distresses; },

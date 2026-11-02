@@ -22,7 +22,7 @@ import { loseDelivery } from '../economy/market';
 import { $, cmdr, currentSystem, game, modern } from '../core';
 import { beams, explosions, HULL_READ, flight, npcs, ofRole, player, space, station } from '../scene';
 import { tradeContext } from '../ui/market';
-import { FALCON_DISABLES, alertSecurity, deliveries, fightOn, legs, pirateLost, removeNpc, voyageOf } from './traffic';
+import { FALCON_DISABLES, alertSecurity, deliveries, fightOn, legs, onSlotAxis, pirateLost, removeNpc, voyageOf } from './traffic';
 import { behindLabel, keepLosses, yardAt, yardSeen } from '../game/yards';
 import { bastionDestroyed, carrier, scheduleMarshals } from './marshals';
 import { spillCargo, spillSpecial } from './adrift';
@@ -37,6 +37,7 @@ const main = {} as {
   noteCardMoment: (career: "fight" | "explore") => void;
   trackBoom: (npc: NpcShip) => void;
   keepCombat: (event: MomentEvent, before: number, after: number) => Promise<LoggedMoment | null>;
+  die: () => void;
 };
 export const initLaw = (hooks: typeof main) => Object.assign(main, hooks);
 
@@ -315,6 +316,7 @@ export function playerHitNpc(npc: NpcShip, damage: number) {
   }
   alertSecurity(npc, player);
   youFiredOnTheApproach(npc);
+  youFiredInTheSlot(npc);
   if (npc.militia) {
     // The doorstep, not the law: no crime, but the militia remembers (youFiredOnTheApproach).
   } else if (npc.guard) {
@@ -396,9 +398,12 @@ export function updateResponses() {
 }
 
 // The station defends its approach (Mark): in a lawful system under Modern rules, a pirate that
-// fires within the safe zone brings the station's police out at once, and inside its guns' reach
-// the station fires on it. Anarchies have no law: nobody comes, as there.
-const STATION_GUNS = 2000; // metres
+// fires within the safe zone brings the station's police out at once (an anarchy's militia: below),
+// and in every system the station's guns cover its slot (inSlot).
+const STATION_GUNS = 2000; // metres: the guns' reach
+const SLOT_LANE = 1500; // metres out from the mouth that the guns cover
+const SLOT_WIDTH = 500; // metres either side of the approach line
+let youFiredInSlotAt = -Infinity;
 const STATION_GUN_INTERVAL = 0.5; // seconds between shots
 const STATION_GUN_DAMAGE = 18;
 const FIRED_RECENTLY = 5; // seconds a pirate stays a target after its last shot
@@ -416,8 +421,8 @@ const inAirspace = (at: THREE.Vector3) =>
 
 export function pirateFired(npc: NpcShip) {
   if (!modern() || !inAirspace(npc.obj.position)) return;
-  if (!hasLaw(currentSystem())) return defendDoorstep(npc);
   pirateFiredAt.set(npc, flight.elapsed);
+  if (!hasLaw(currentSystem())) return defendDoorstep(npc);
   if (flight.elapsed - policeScrambledAt < 30) return; // one scramble at a time
   policeScrambledAt = flight.elapsed;
   // Sent where the shooting is, not to circle the station.
@@ -513,15 +518,37 @@ export function dockingBanned(): number {
   return Math.max(0, Math.ceil((b.until - Date.now()) / 60_000));
 }
 
+/**
+ * The slot: the approach line out from the station's mouth, and a little either side. The guns cover
+ * only this (Mark, 2 November 2026: the station's real defence is ships you can see and fight), but
+ * in every system, anarchies too: nobody shoots a ship that's docking or launching.
+ */
+export function inSlot(at: THREE.Vector3): boolean {
+  const mouth = onSlotAxis(0);
+  const axis = onSlotAxis(SLOT_LANE).sub(mouth);
+  const along = THREE.MathUtils.clamp(at.clone().sub(mouth).dot(axis) / axis.lengthSq(), 0, 1);
+  return at.distanceTo(mouth.addScaledVector(axis, along)) < SLOT_WIDTH;
+}
+
+/** You fired on a ship in the slot: the guns are on you for a few seconds. */
+export function youFiredInTheSlot(npc: NpcShip) {
+  if (modern() && npc.role !== 'pirate' && inSlot(npc.obj.position)) youFiredInSlotAt = flight.elapsed;
+}
+
 export function updateStationDefence(dt: number) {
   stationGunCooldown -= dt;
-  if (stationGunCooldown > 0 || !modern() || !hasLaw(currentSystem())) return;
-  const target = npcs.find((n) => n.role === 'pirate' && flight.elapsed - (pirateFiredAt.get(n) ?? -Infinity) < FIRED_RECENTLY && n.obj.position.distanceTo(station.root.position) < STATION_GUNS);
-  if (!target) return;
+  if (stationGunCooldown > 0 || !modern()) return;
+  const firing = (n: NpcShip) => n.role === 'pirate' && flight.elapsed - (pirateFiredAt.get(n) ?? -Infinity) < FIRED_RECENTLY && inSlot(n.obj.position);
+  const target = npcs.find(firing);
+  const you = !target && game.state === 'flying' && flight.elapsed - youFiredInSlotAt < FIRED_RECENTLY && player.obj.position.distanceTo(station.root.position) < STATION_GUNS;
+  if (!target && !you) return;
   stationGunCooldown = STATION_GUN_INTERVAL;
-  const from = station.root.position.clone().add(target.obj.position.clone().sub(station.root.position).setLength(95));
-  beams.fire(from, target.obj.position.clone(), POLICE_LASER.color);
-  if (target.hit(STATION_GUN_DAMAGE)) destroyNpc(target, station.root);
+  const at = target ? target.obj.position : player.obj.position;
+  const from = station.root.position.clone().add(at.clone().sub(station.root.position).setLength(95));
+  beams.fire(from, at.clone(), POLICE_LASER.color);
+  if (target) {
+    if (target.hit(STATION_GUN_DAMAGE)) destroyNpc(target, station.root);
+  } else if (damagePlayer(STATION_GUN_DAMAGE)) main.die();
 }
 
 /** A trader you attacked, getting away: it reports you (in the system where it happened). */
