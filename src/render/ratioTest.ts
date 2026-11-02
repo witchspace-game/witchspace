@@ -27,8 +27,11 @@ export const testRatio = chosen();
 /** How the recorder takes the picture from the canvas: through a 2D canvas, straight into a video frame, or an image made in the background. */
 export type Capture = 'copy' | 'direct' | 'bitmap';
 
-/** What the test buttons have switched off, to see what each costs on the phone itself. */
-export const perfTest = { noRecorder: false, noGlow: false, frameMs: 0, capture: 'copy' as Capture, captureMs: 0 };
+/** Computers keep the copy (under 0.2 ms on a Mac); touch devices take the image in the background, as an iPhone needs. */
+const COMPUTER = typeof matchMedia !== 'undefined' && !matchMedia('(pointer: coarse)').matches;
+
+/** How it's running, and what the test buttons have switched off, to see what each costs on the phone itself. */
+export const perfTest = { noRecorder: false, noGlow: false, frameMs: 0, capture: (COMPUTER ? 'copy' : 'bitmap') as Capture, clipFrames: 0 };
 
 /**
  * A readout while testing: the ratio, frames a second, and milliseconds of the game's own work a frame;
@@ -38,7 +41,7 @@ export const perfTest = { noRecorder: false, noGlow: false, frameMs: 0, capture:
 export function showRatioReadout() {
   if (testRatio === null) return;
   const box = document.createElement('div');
-  box.style.cssText = 'position:fixed;left:max(8px,env(safe-area-inset-left));top:30%;z-index:9999;display:grid;gap:4px;width:130px;font:12px monospace;color:#3dffb0';
+  box.style.cssText = 'position:fixed;left:max(8px,env(safe-area-inset-left));top:50%;transform:translateY(-50%);z-index:9999;display:grid;gap:4px;width:130px;font:12px monospace;color:#3dffb0';
   const read = document.createElement('div');
   read.style.cssText = 'padding:3px 6px;background:rgba(0,0,0,.75);line-height:1.3';
   box.append(read);
@@ -80,17 +83,19 @@ export function showRatioReadout() {
   way.onclick = (e) => {
     e.stopPropagation();
     perfTest.capture = ways[(ways.indexOf(perfTest.capture) + 1) % ways.length];
-    perfTest.captureMs = 0;
     way.textContent = `Way: ${perfTest.capture}`;
   };
   box.append(way);
   document.body.append(box);
   let frames = 0;
   let since = performance.now();
+  let clipFrames = 0;
   const tick = (now: number) => {
     frames++;
     if (now - since >= 1000) {
-      read.textContent = `${testRatio}× · ${Math.round((frames * 1000) / (now - since))} fps\nwork ${perfTest.frameMs.toFixed(0)} ms\nrec ${perfTest.captureMs.toFixed(1)} ms`;
+      const clip = Math.round(((perfTest.clipFrames - clipFrames) * 1000) / (now - since));
+      clipFrames = perfTest.clipFrames;
+      read.textContent = `${testRatio}× · ${Math.round((frames * 1000) / (now - since))} fps\nwork ${perfTest.frameMs.toFixed(0)} ms\nclip ${clip} fps`;
       read.style.whiteSpace = 'pre';
       frames = 0;
       since = now;
