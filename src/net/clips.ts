@@ -1,6 +1,7 @@
-// Clip pages (docs/design/flight-recorder.md, "Clip pages"): share a moment's
-// flight track so a link replays it, and the page's hearts and reports. The
-// track only: never the video. Talks to the game's server (server/src/clips.ts).
+// Clip pages (docs/design/flight-recorder.md, "Clip pages"): share a moment, and
+// the page's hearts and reports. The page plays the video its sharer shared (the
+// MP4, kept in R2), and keeps the flight track too, so your own fight can be
+// watched from outside. Talks to the game's server (server/src/clips.ts).
 
 import { API, sessionToken } from './account';
 
