@@ -208,6 +208,12 @@ const MAX_VOYAGES = 8; // ships on their lanes at once, at most (5 until convoys
 let trafficShips = new Map<string, NpcShip>(); // voyage id → its ship, this visit
 let trafficDone = new Set<string>(); // voyages flown, docked or lost, this visit
 let trafficList: Voyage[] = [];
+
+/** A timetabled ship due to launch from the station within `ms` (flight/approach.ts holds the slot for her). */
+export const launchDueWithin = (ms: number) => {
+  const now = Date.now();
+  return trafficList.some((v) => v.leg === 'out' && v.to === 'station' && v.at > now && v.at - now < ms && !trafficDone.has(v.id));
+};
 let trafficListAt = -Infinity;
 let trafficCheck = 0;
 /** The visit's first ships are just there when you arrive; after that, a ship that appears near you arrives with a streak. */

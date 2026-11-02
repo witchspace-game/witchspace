@@ -87,3 +87,23 @@ export const PAPER = {
   /** The glow waits until she's this far lit (the space behind her half there), or it greys the paper. */
   glowFrom: 0.4,
 } as const;
+
+/**
+ * The approach rings (docs/design/station-approach.md, Mark, 2 November 2026): the station's guidance
+ * beam, drawn by your ship, eight slot-shaped rings out from the mouth. Amber, fading outwards; one
+ * ring at a time lit as the pulse, at the rings' own brightness ("Subtle cue's rather than in your
+ * face!"): in the owner's colour for come in, red for keep out (Mark: "should the hold have red rings
+ * for danger?").
+ */
+export const APPROACH = {
+  colour: '#ffb347',
+  /** The first ring's brightness, and how much dimmer each ring further out is. */
+  brightness: 0.9,
+  fade: 0.09,
+  width: 1.2,
+  /** The lit ring: its own colour at this much of the ring's brightness. */
+  pulse: 1.15,
+  /** A station of its world's own pulses in a brighter amber. */
+  world: '#ffd08a',
+  danger: '#ff4d6d',
+} as const;
