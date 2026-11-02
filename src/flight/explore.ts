@@ -11,7 +11,7 @@ import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powe
 import { COMPANIES } from '../game/companies';
 import { advanceTrail, bodiesOf, SIGNAL_REACH, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, salvageCargo, SURVEY, trailPoisOf, worldOf, type Poi, type SurveyData } from '../game/explore';
 import { buildYard } from '../render/yard';
-import { stageLabel, yardAt } from '../game/yards';
+import { stageLabel, yardSeen } from '../game/yards';
 import { lineUpFor } from '../game/commissions';
 import { buildShip, disposeShip } from '../render/shipModel';
 import { flash, flashLater } from '../ui/hud';
@@ -91,7 +91,7 @@ export function buildExploreScene(sys: StarSystem) {
   });
   if (!c || c.difficulty !== 'modern') return;
   // The yard first, so signals can keep clear of it.
-  const yard = yardAt(sys, Date.now());
+  const yard = yardSeen(sys, Date.now(), c.yardLosses);
   const quarry = yard && flight.sceneBodies.find((b) => b.body.id === `moon${yard.moon}`);
   if (yard && quarry) {
     const defs = { titan: withLineUp(shipById('titanoboa')!, lineUpFor(yard)), hauler: shipById('bullsnake')!, station: shipById('coriolis')! };
@@ -378,6 +378,6 @@ export function arrivalNote(sys: StarSystem): string {
   const first = recordVisit(cmdr(), sys);
   noteExplorerRank(before);
   const world = describeWorld(worldOf(sys));
-  const yard = exploring() && yardAt(sys, Date.now()) ? 'A Wexley-Yorozu yard is building here' : '';
+  const yard = exploring() && yardSeen(sys, Date.now(), cmdr().yardLosses) ? 'A Wexley-Yorozu yard is building here' : '';
   return [world, yard, first ? 'First visit' : ''].filter(Boolean).join(' · ');
 }

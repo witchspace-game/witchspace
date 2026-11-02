@@ -7,7 +7,7 @@ import { recordCrime } from '../game/law';
 import { mountExchange } from './exchange';
 import { currencyOf, fairRate, moneyNews, poolRate } from '../economy/currencies';
 import { poolHere } from '../economy/money';
-import { stageInfo, stageLabel, yardsNear } from '../game/yards';
+import { behindLabel, buildBar, stageLabel, yardNews, yardsNear, type Yard } from '../game/yards';
 import { firstFittingsAt } from '../game/commissions';
 import { isRetro } from '../render/renderer';
 import { flash } from './hud';
@@ -24,6 +24,13 @@ import { btcNow } from './money';
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as { exploring(): boolean; noticeTrades(): boolean; updateDockHead(): void };
 export const initMarket = (hooks: typeof main) => Object.assign(main, hooks);
+
+/** A behind yard's bar: the build so far, and hatched, the time lost (Mark's yes on the pictures, 2 November 2026). */
+function behindBar(y: Yard & { behind?: number }, now: number): string {
+  if (!behindLabel(y.behind ?? 0)) return '';
+  const { done, lost } = buildBar(y, now);
+  return `<span class="yard-bar" role="img" aria-label="${Math.round(done * 100)}% built, ${escapeHtml(behindLabel(y.behind ?? 0))}"><span style="width:${(done * 100).toFixed(1)}%"></span><span class="lost" style="width:${(lost * 100).toFixed(1)}%"></span></span>`;
+}
 
 export function tradeContext(): TradeContext {
   return { commander: cmdr(), system: currentSystem(), capacity: cargoCapacity(cmdr(), player.def.stats.cargo), now: Date.now() };
@@ -54,11 +61,11 @@ export function renderNews() {
       : '';
   // Wexley-Yorozu yards in the region: news, not a market event (Modern).
   const yards = main.exploring()
-    ? yardsNear(here, now)
+    ? yardsNear(here, now, 25, cmdr().yardLosses)
         .slice(0, 3)
         .map(
-          (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Wexley-Yorozu yard at ${n.where.name}: ${stageInfo(n.yard.stage).news}`, n.where)}</b>
-        <small>${escapeHtml(n.where === here ? 'Here, by the moon' : `${n.distance.toFixed(1)} LY away`)} · ${escapeHtml(stageLabel(n.yard))}</small></li>${firstFittingsAt(n.yard)
+          (n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(`Wexley-Yorozu yard at ${n.where.name}: ${yardNews(n.yard, cmdr().yardLosses, now)}`, n.where)}</b>
+        <small>${escapeHtml(n.where === here ? 'Here, by the moon' : `${n.distance.toFixed(1)} LY away`)} · ${escapeHtml(stageLabel(n.yard))}</small>${behindBar(n.yard, now)}</li>${firstFittingsAt(n.yard)
           .map((x) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(x.kind === 'design' ? `Wexley-Yorozu fits CMDR ${x.to}'s new ${x.module.name.toLowerCase()} at ${n.where.name}` : `Wexley-Yorozu fits CMDR ${x.to}'s improved ${x.module.name.toLowerCase()} at ${n.where.name}`, n.where)}</b>
         <small>${x.kind === 'design' ? 'The first Titanoboa to carry it' : `Designed by CMDR ${escapeHtml(x.module.designer)}, revised by CMDR ${escapeHtml(x.to)}`}</small></li>`)
           .join('')}`,
