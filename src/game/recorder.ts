@@ -8,6 +8,7 @@
 // H.264 aren't available, the recorder simply isn't there.
 
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
+import { perfTest } from '../render/ratioTest';
 
 const SECONDS = 60; // what the buffer holds: the longest clip (a whole fight)
 const CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42e028', 'avc1.42001f'];
@@ -156,7 +157,7 @@ export class FlightRecorder<M> {
    * still being finished, so the buffer holds the last minute worth having, not a minute of black.
    */
   capture(canvas: HTMLCanvasElement, dt: number, resting = false) {
-    if (!this.available || !this.enabled() || canvas.width < 2 || canvas.height < 2) return;
+    if (!this.available || !this.enabled() || perfTest.noRecorder || canvas.width < 2 || canvas.height < 2) return;
     if (resting && !this.pending.length) {
       this.rested = true;
       return;
