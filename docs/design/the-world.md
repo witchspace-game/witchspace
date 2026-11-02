@@ -128,6 +128,8 @@ That's a random arrival process with its dice taken from a hash, so the same for
 
 ### 3.5 Players' actions are exceptions
 
+*Not built yet (step 5). Today a lost convoy only takes its cargo from the market: the Titanoboa's build doesn't slow, and nothing about it reaches the news. This section is how it would work.*
+
 ```
 world(t) = f(seed, t)  +  exceptions
 exceptions = [ convoy 1234 destroyed at 14:02 by CMDR X,
@@ -140,7 +142,7 @@ The server keeps the exceptions; each is a row. Consequences are arithmetic on t
 progress(t) = scheduled deliveries before t − deliveries lost
 ```
 
-Lose enough of the Titanoboa's convoys and the station falls behind, the news says so, and its stage takes longer. Nothing was running to make that happen.
+Once this is built, losing enough of the Titanoboa's convoys would put the station behind, the news would say so, and its stage would take longer. Nothing was running to make that happen.
 
 ### 3.6 A formula far away, a real ship up close
 
@@ -193,6 +195,8 @@ Every working ship needs a silhouette: freighters, liners, tugs, mining ships. *
 ---
 
 ## 5. What players change: exceptions
+
+*Not built yet (2 November 2026). Losses, blockades and rescues don't change the build, the news or anyone else's world yet; this is the design.*
 
 Exceptions are what makes the world respond. The question is whose world they change.
 
@@ -333,7 +337,7 @@ A yard at Onrira (`yards.ts`) is building a station. Today, Bullsnakes run ore f
 | 2 | **Traffic from the economy:** rates from events' shortfalls; famine convoys, refugee liners, medical ships | Medium | No |
 | 3 | **The Titanoboa's supply line:** needs by stage, routes, progress from deliveries | Medium | No |
 | 4 | **Up close, a real ship:** the hand-over to an NPC and back; escort and piracy | Medium | No |
-| 5 | **Exceptions:** in your save in solo; on the server from shared space | Small | Yes |
+| 5 | **Exceptions** (not built yet): in your save in solo; on the server from shared space | Small | Yes |
 | 6 | **The first character, Bond:** his Saloon, his plan, his memory of you, his rare flights | Medium | Yes |
 | 7 | **Characters in shared space:** flown by the system's server | Medium | Yes |
 | 8 | **Working hulls from the community:** freighters, liners, tugs, through the MCP server | Ongoing | No |
@@ -346,7 +350,7 @@ Steps 1 to 4 need no server, so they can start straight after Show HN.
 
 - **Escort contracts (Mark likes this one):** Wexley-Yorozu hires commanders at the station to bring a named freighter in safely: "Bring the *Steady Hand* in from Atriso, 300 Cr." The freighter is already on the timetable; the contract just puts you beside her.
 - **Protection money, in anarchies:** where there's no law, Wexley-Yorozu quietly pays the local pirates to leave its freighters alone, and pirates there pass them by, until the payments stop. A Saloon regular might let it slip. A story can grow from it.
-- **Losses slow the build** (step 5's exceptions).
+- **Losses slow the build** (step 5's exceptions; not built yet).
 
 ## 10. Open questions for Mark
 
