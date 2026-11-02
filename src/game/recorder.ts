@@ -88,6 +88,7 @@ export class FlightRecorder<M> {
   private smooth = 1 / 60; // the game's frame time, smoothed
   private recorded = 0; // seconds recorded at this quality
   private slowFor = 0;
+  private bitmapBusy = false;
   /** Whether this browser can record at all (decided once, asynchronously). */
   ready: Promise<boolean>;
 
@@ -174,14 +175,32 @@ export class FlightRecorder<M> {
     if (!this.encoder || this.encoder.state === 'closed' || this.config?.width !== width || this.config?.height !== height) this.start(width, height);
     if (!this.encoder || this.encoder.state !== 'configured') return;
     if (this.encoder.encodeQueueSize > 4) return; // falling behind: drop a frame rather than lag the game
-    const g = this.frame!.getContext('2d')!;
-    g.drawImage(canvas, 0, 0, width, height);
-    const frame = new VideoFrame(this.frame!, { timestamp: Math.round(this.mediaTime * 1e6), duration: Math.round(1e6 / FPS) });
-    if (this.rested) this.frames = 0; // waking: a keyframe, so the cut to the new scene is clean
-    this.rested = false;
-    // A whole picture every two seconds (a clip starts on one): every second spent too much of the budget on them.
-    this.encoder.encode(frame, { keyFrame: this.frames++ % (FPS * 2) === 0 });
-    frame.close();
+    const timing = { timestamp: Math.round(this.mediaTime * 1e6), duration: Math.round(1e6 / FPS) };
+    const started = performance.now();
+    const send = (frame: VideoFrame) => {
+      if (this.rested) this.frames = 0; // waking: a keyframe, so the cut to the new scene is clean
+      this.rested = false;
+      // A whole picture every two seconds (a clip starts on one): every second spent too much of the budget on them.
+      if (this.encoder?.state === 'configured') this.encoder.encode(frame, { keyFrame: this.frames++ % (FPS * 2) === 0 });
+      frame.close();
+    };
+    // How the picture leaves the canvas. An iPhone held the whole game to 16 fps on `copy` (Mark, 2 November 2026): measured on the phone, in the ?ratio test.
+    if (perfTest.capture === 'direct') send(new VideoFrame(canvas, timing));
+    else if (perfTest.capture === 'bitmap') {
+      if (this.bitmapBusy) return;
+      this.bitmapBusy = true;
+      void createImageBitmap(canvas, { resizeWidth: width, resizeHeight: height, resizeQuality: 'low' })
+        .then((bitmap) => {
+          send(new VideoFrame(bitmap, timing));
+          bitmap.close();
+        })
+        .catch(() => undefined)
+        .finally(() => (this.bitmapBusy = false));
+    } else {
+      this.frame!.getContext('2d')!.drawImage(canvas, 0, 0, width, height);
+      send(new VideoFrame(this.frame!, timing));
+    }
+    perfTest.captureMs += (performance.now() - started - perfTest.captureMs) * 0.1;
     void this.finishDue();
   }
 
