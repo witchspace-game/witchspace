@@ -5,6 +5,7 @@ import { activeEvent, EVENT_KINDS } from '../economy/events';
 import { cargoWords, CONVOY_GAP_MS, HOLD, laneDirection, lanesFrom, packHolds, reliefVoyages, titanVoyages, voyageHail, voyages, WINDOW_MS } from './traffic';
 import { readFileSync } from 'node:fs';
 import { COMMODITIES, UNITS_PER_TONNE } from '../economy/commodities';
+import { VENN } from './odile';
 
 const g = galaxy(0);
 const lave = g.find((s) => s.name.toLowerCase() === 'lave')!;
@@ -33,7 +34,7 @@ describe('traffic', () => {
   it('carries the market’s own deliveries, and drops a ship whose deliveries were all lost', () => {
     // A ship sailing alone (most loads are a convoy now Wexley-Yorozu's traders fly Cobras, not Bullsnakes).
     const all = voyages(lave, t0, t0 + 6 * HOUR);
-    const inbound = all.find((v) => v.leg === 'in' && v.to === 'station' && !v.relief && !/:c\d+$/.test(v.id) && !all.some((x) => x.id === `${v.id}:c1`))!;
+    const inbound = all.find((v) => v.leg === 'in' && v.to === 'station' && !v.relief && !v.character && !/:c\d+$/.test(v.id) && !all.some((x) => x.id === `${v.id}:c1`))!;
     expect(inbound.cargo.length).toBeGreaterThan(0);
     const lost = inbound.cargo.map((c) => ({ id: c.id, t: c.t }));
     expect(voyages(lave, t0, t0 + 6 * HOUR, lost).some((v) => v.id === inbound.id)).toBe(false);
@@ -111,7 +112,7 @@ describe('holds (Mark: a Cobra carrying 22 t and 15 t and more)', () => {
 
   it('never loads a ship past her hold', () => {
     for (const s of galaxy(0).slice(0, 40))
-      for (const v of voyages(s, t0, t0 + 3 * 3600_000)) expect(tonnes(v.cargo)).toBeLessThanOrEqual(HOLD[v.hull] + 1e-9);
+      for (const v of voyages(s, t0, t0 + 3 * 3600_000)) expect(tonnes(v.cargo)).toBeLessThanOrEqual((v.character ? VENN.hold : HOLD[v.hull]) + 1e-9); // Odile Venn has the large cargo bay
   });
 
   it('delivers the same goods, split into a convoy', () => {

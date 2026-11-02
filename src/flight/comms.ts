@@ -9,7 +9,8 @@ import { isTouch, setTouchSpeed } from '../game/input';
 import { NpcShip } from '../game/npc';
 import { addStanding, board, BOARD_SLOT, cannotReserve, cargoName, COLLECT_JUMPS, destinationOf, reserve, reservedTonnes, type Contract } from '../game/contracts';
 import { COMPANIES, type CompanyId } from '../game/companies';
-import { voyageHail } from '../game/traffic';
+import { cargoWords, voyageHail } from '../game/traffic';
+import { VENN, vennHail } from '../game/odile';
 import { UNIDENTIFIED_HEX } from '../render/shipModel';
 import { stationName } from '../galaxy/stationNames';
 import { flash } from '../ui/hud';
@@ -283,6 +284,11 @@ export function hailTarget() {
     const ctx = hailContext(serialOf(npc) * 1000 + asked, npc);
     if (npc.paid) return radio('pirate', sp.from, "We had a deal. Don't push it.");
     const voyage = voyageOf.get(npc);
+    if (voyage?.character === 'venn' && main.npcIdentified(npc) && !ctx.wronged) {
+      const g = galaxy(currentSystem().galaxy);
+      const said = asked === 1 ? vennHail(voyage, currentSystem().name, g[voyage.other].name, cargoWords(voyage.cargo)) : `Still Venn, still busy. Buy me a drink at ${stationName(currentSystem()).name} if you want to talk.`;
+      return radio(sp.kind, sp.from, said, { colour: sp.colour });
+    }
     if (voyage && asked === 1 && main.npcIdentified(npc) && !ctx.scared && !ctx.wronged)
       return radio(sp.kind, sp.from, voyageHail(voyage, galaxy(currentSystem().galaxy)[voyage.other].name), { colour: sp.colour });
     if (sp.who === 'pirate' && main.npcIdentified(npc)) {
@@ -495,8 +501,8 @@ const DISTRESS_PIRATE_RANGE = 6000; // metres: pirates further than this from th
 /** Damage a trader under attack takes while it calls for help: about a minute and a half against one pirate. */
 export const DISTRESS_SHIELDING = 0.4;
 
-export const traderName = (t: NpcShip) => `${t.company ? `${COMPANIES[t.company].name} ` : ''}${t.def.name}${voyageOf.get(t) ? ` ${voyageOf.get(t)!.name}` : ''}`;
-export const traderColour = (t: NpcShip) => (t.company ? COMPANIES[t.company].colour : '#9ef0c0');
+export const traderName = (t: NpcShip) => voyageOf.get(t)?.character === 'venn' ? `${VENN.name} · ${VENN.ship}` : `${t.company ? `${COMPANIES[t.company].name} ` : ''}${t.def.name}${voyageOf.get(t) ? ` ${voyageOf.get(t)!.name}` : ''}`;
+export const traderColour = (t: NpcShip) => voyageOf.get(t)?.character === 'venn' ? VENN.colour : (t.company ? COMPANIES[t.company].colour : '#9ef0c0');
 
 export function distressCall(trader: NpcShip, pirate: NpcShip) {
   if (!modern()) return;
