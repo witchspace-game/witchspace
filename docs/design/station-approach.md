@@ -1,11 +1,11 @@
 ---
 title: The station approach, its lights and its owner
-status: proposed
+status: building
 pillar: trade
 summary: The approach rings are the station's guidance beam drawn by your ship, with a quiet pulse in the owner's colour that says come in, hold, or a ship is launching; ships take turns in the slot; and a docking computer is worth most where stations broadcast nothing.
 card: coriolis
 stages:
-  - The beam and the pulse - come in, hold, launching, seen only when lined up | proposed
+  - The beam and the pulse - come in, hold, launching, seen only when lined up | built
   - Taking turns - every ship, not only you, waits for the slot | proposed
   - Who owns the station - the pulse in the owner's colour | proposed
 ---
@@ -24,18 +24,27 @@ That explains the rest:
 
 - **You see them only when you're lined up**, within about 25° of the slot's axis and 5 km of the station, because that's where the beam is. They fade in as you line up, which is itself the cue that you have.
 - **The kill cam and photos from outside don't show them**: they were only ever on your screen.
-- **High-tech stations broadcast; low-tech stations and anarchies don't.** There, flying by hand, you get no rings: the slot and your own judgement.
+- **Stations broadcast, except the most backward worlds and anarchies.** There, flying by hand, you get no rings: the slot and your own judgement.
 - **A docking computer doesn't need the beam.** It measures the slot with its own sensors, so it draws the rings anywhere, at any angle, and at a station with no beam it's the only guidance you'll get. Mark: "So owning a docking computer would be more helpful when visiting low tech stations." It's worth most where docking is hardest, and classic Elite's docking computer worked at every station too.
 
 The rings stay amber, as now. 1984 mode has none, as now.
+
+## As built (step 1, 2 November 2026)
+
+`game/approach.ts` (the rules) and `flight/approach.ts` (drawing them); the numbers in `render/look.ts` (`APPROACH`). Modern rules; Classic keeps the rings as they were.
+
+- **The beam:** seen within 5 km of the mouth and 25° of the slot's axis, fading over the last 8°. **Broadcast** by every station of tech level 5 and up with a government: Lave (tech 5), where every commander learns to dock, keeps its rings; the 36 most backward worlds and the anarchies don't broadcast. **A docking computer** draws them anywhere within 5 km.
+- **The pulse**, one ring every quarter-second at the rings' own brightness: **clear**, inwards in the owner's colour; **hold**, the mouth ring red, for 6 seconds before a timetabled launch and after one until she's 4 km out or 15 seconds have passed; **launching**, outwards in red while a ship is in the slot lane heading out (police and militia launches count too). Red only where there's danger (Mark: "should the hold have red rings for danger?").
+- **The owner's colour:** a world's own station in a brighter amber; Hexon's ice in a Corporate State; the Mutual's blue at Meridian Station (seen there only with a docking computer: Riedquat is an anarchy).
+- **Not yet:** taking turns for every ship (step 2), company stations and W-Y's second stations, and the owner on the label and card (step 3).
 
 ## The pulse: traffic control, in one moving ring
 
 One ring at a time is lit, stepping along the corridor about four times a second, at the rings' own brightness: a quiet cue, never a flash.
 
 1. **Clear: the pulse runs inwards.** Come in.
-2. **Hold: the pulse stops, the rings steady.** A ship is about to launch, or one has just come out. Never straight from in to out (Mark: "It should never suddenly switch from docking to launching without something in between").
-3. **Launching: the pulse runs outwards** while a ship comes out of the slot.
+2. **Hold: the pulse stops, the rings steady, the mouth ring red.** A ship is about to launch, or one has just come out. Never straight from in to out (Mark: "It should never suddenly switch from docking to launching without something in between").
+3. **Launching: the pulse runs outwards, in red,** while a ship comes out of the slot.
 4. **Hold again** until she's 4 km out or 15 seconds have passed.
 5. **Clear** again.
 

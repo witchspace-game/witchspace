@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { ShipDef } from '../content/types';
 import { buildShip, type ShipModel } from '../render/shipModel';
 import { neoLines, registerParts } from '../render/wire';
+import { APPROACH } from '../render/look';
+import type { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js';
 import type { PlayerShip } from './playerShip';
 
 import { SLOT } from '../content/slot';
@@ -37,7 +39,11 @@ export class Station {
     this.root.add(this.buildGlidePath());
   }
 
-  /** Neo-vector only: a fading corridor of slot-shaped rings to fly down. */
+  /** The approach rings, mouth first, and each one's own colour. */
+  private readonly rings: LineSegments2[] = [];
+  private readonly ringColours: THREE.Color[] = [];
+
+  /** Neo-vector only: a fading corridor of slot-shaped rings to fly down (look.ts APPROACH). */
   private buildGlidePath(): THREE.Object3D {
     const g = new THREE.Group();
     for (let k = 1; k <= 8; k++) {
@@ -48,11 +54,26 @@ export class Station {
       const c = [[-w, h], [w, h], [w, -h], [-w, -h]];
       const pos: number[] = [];
       for (let i = 0; i < 4; i++) pos.push(c[i][0], c[i][1], z, c[(i + 1) % 4][0], c[(i + 1) % 4][1], z);
-      const line = neoLines(pos, new THREE.Color('#ffb347').multiplyScalar(0.9 - k * 0.09), 1.2);
+      const colour = new THREE.Color(APPROACH.colour).multiplyScalar(APPROACH.brightness - k * APPROACH.fade);
+      const line = neoLines(pos, colour.clone(), APPROACH.width);
+      this.rings.push(line);
+      this.ringColours.push(colour);
       g.add(line);
     }
     registerParts({ neo: [g], retro: [] });
     return g;
+  }
+
+  /**
+   * The rings as your ship draws them (flight/approach.ts): `seen` 0..1 (in the beam, or not), and one
+   * ring lit (`lit`, mouth first, -1 for none) in `colour`. Seen at 0, they're gone.
+   */
+  showApproach(seen: number, lit: number, colour: THREE.Color | null) {
+    this.rings.forEach((ring, i) => {
+      const c = ring.material.color.copy(this.ringColours[i]);
+      if (i === lit && colour) c.copy(colour).multiplyScalar((this.ringColours[i].r / new THREE.Color(APPROACH.colour).r) * APPROACH.pulse);
+      c.multiplyScalar(seen);
+    });
   }
 
   update(dt: number) {
