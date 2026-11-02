@@ -105,6 +105,7 @@ import { npcIdentified } from './flight/hud';
 import { beaconOpen, breakSurrender, initBeacon, sendBeacon, toggleBeacon, toggleSurrender, updateContextButton } from './flight/beacon';
 import { hitFeedback, initFlying, releaseBank, rollAssistApplies, setAutopilot, setView, updateSpace, viewDirection } from './flight/flying';
 import { classicRules, die, initMoments, keepByHand, keepCombat, keepMoment, killCam, logMoment, momentContext, noticeTrades, recordTrack, recorder, recorderIntroduced, recorderWatch, refreshFlightLog, track, trackBeam, trackBoom, viewCanvas, watchSurroundings } from './flight/moments';
+import { syncClock } from './net/clock';
 initMoments({ setState, showTitle, enterDocked, setFlightLog, planetColour, handleKey });
 initFlying({ dock, recordTrack, die });
 initBeacon({ setState, enterDocked, setAutopilot, settlementMessage });
@@ -1179,6 +1180,8 @@ if (import.meta.env.DEV) {
   });
 }
 
+// One clock for everyone: a device set wrong runs on the site's time (net/clock.ts).
+void syncClock();
 setRetro(false);
 updateModeLabel();
 initTouch();
