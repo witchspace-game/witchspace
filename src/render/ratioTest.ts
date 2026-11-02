@@ -24,8 +24,11 @@ function chosen(): number | null {
 /** The ratio under test, or null in normal play. */
 export const testRatio = chosen();
 
+/** How the recorder takes the picture from the canvas: through a 2D canvas, straight into a video frame, or an image made in the background. */
+export type Capture = 'copy' | 'direct' | 'bitmap';
+
 /** What the test buttons have switched off, to see what each costs on the phone itself. */
-export const perfTest = { noRecorder: false, noGlow: false, frameMs: 0 };
+export const perfTest = { noRecorder: false, noGlow: false, frameMs: 0, capture: 'copy' as Capture, captureMs: 0 };
 
 /**
  * A readout while testing: the ratio, frames a second, and milliseconds of the game's own work a frame;
@@ -67,13 +70,27 @@ export function showRatioReadout() {
   toggle('Shadows', () => (rules.add(shadow), css()), () => (rules.delete(shadow), css()));
   toggle('Glow', () => (perfTest.noGlow = true), () => (perfTest.noGlow = false));
   toggle('Rec', () => (perfTest.noRecorder = true), () => (perfTest.noRecorder = false));
+  // Which way the recorder takes the picture: tap to try the next.
+  const ways: Capture[] = ['copy', 'direct', 'bitmap'];
+  const way = document.createElement('button');
+  way.type = 'button';
+  way.style.cssText = 'min-height:34px;padding:0 6px;font:12px monospace;text-align:left;border:1px solid #ffb347;background:rgba(0,0,0,.75);color:#ffb347';
+  way.textContent = `Way: ${perfTest.capture}`;
+  way.addEventListener('pointerdown', (e) => e.stopPropagation());
+  way.onclick = (e) => {
+    e.stopPropagation();
+    perfTest.capture = ways[(ways.indexOf(perfTest.capture) + 1) % ways.length];
+    perfTest.captureMs = 0;
+    way.textContent = `Way: ${perfTest.capture}`;
+  };
+  box.append(way);
   document.body.append(box);
   let frames = 0;
   let since = performance.now();
   const tick = (now: number) => {
     frames++;
     if (now - since >= 1000) {
-      read.textContent = `${testRatio}× · ${Math.round((frames * 1000) / (now - since))} fps\nwork ${perfTest.frameMs.toFixed(0)} ms`;
+      read.textContent = `${testRatio}× · ${Math.round((frames * 1000) / (now - since))} fps\nwork ${perfTest.frameMs.toFixed(0)} ms\nrec ${perfTest.captureMs.toFixed(1)} ms`;
       read.style.whiteSpace = 'pre';
       frames = 0;
       since = now;
