@@ -1,13 +1,13 @@
 // Your wallet of system currencies, and changing money at a station
 // (docs/design/system-currencies.md). Balances take no hold space and survive
 // the ship, like Bitcoin. Swaps go through the station's pool for its own money;
-// a stablecoin (fully backed or algorithmic) is also taken at any station, at
-// its rate. Every swap goes in the ledger, so the server can check it too.
+// any other system's money can be changed for credits too, at its fair rate less
+// a fee. Every swap goes in the ledger, so the server can check it too.
 
 import type { Commander } from '../game/commander';
 import { record } from '../game/ledger';
 import type { StarSystem } from '../galaxy/generate';
-import { BTC_REF, companyKey, companyValue, currencyOf, fairRate, isCompanyKey, OFFICIAL_LIMIT, poolNow, positionNow, quoteBuy, quoteSell, STATIONS_WIDE_FEE, stableValue, walletHome, walletKey, type Pool, type Position } from './currencies';
+import { BTC_REF, companyKey, companyValue, currencyOf, fairRate, isCompanyKey, OFFICIAL_LIMIT, poolNow, positionNow, quoteBuy, quoteSell, STATIONS_WIDE_FEE, awayValue, walletHome, walletKey, type Pool, type Position } from './currencies';
 
 export interface FxState {
   pools: Record<string, Pool>;
@@ -82,15 +82,15 @@ export function sellLocal(c: Commander, s: StarSystem, units: number, now: numbe
   return { ok: true, message: `Changed ${fmt(units)} ${cur.ticker} for ${fmt(credits)} Cr` };
 }
 
-/** Cash a stablecoin from another system here, at its rate: the way out of a failing money. */
-export function cashStable(c: Commander, here: StarSystem, key: string, units: number, now: number, btc = BTC_REF): FxResult {
+/** Change another system's money for credits here, at its fair rate less the fee for changing it away from home. */
+export function changeAway(c: Commander, here: StarSystem, key: string, units: number, now: number, btc = BTC_REF): FxResult {
   const home = walletHome(key);
   const cur = currencyOf(home);
   const w = walletOf(c);
-  if (!cur?.stable) return { ok: false, message: 'Only stablecoins are taken away from home' };
+  if (!cur || isCompanyKey(key)) return { ok: false, message: 'Not a money that can be changed here' };
   units = Math.min(units, w[key] ?? 0);
   if (!(units > 0)) return { ok: false, message: `You have no ${cur.ticker}` };
-  const credits = tenth(stableValue(home, units, now, btc));
+  const credits = tenth(awayValue(home, units, now, btc));
   w[key] -= units;
   if (w[key] < 1e-6) delete w[key];
   c.credits = tenth(c.credits + credits);
@@ -104,7 +104,37 @@ export function valueOf(key: string, units: number, now: number, btc = BTC_REF):
   return units / fairRate(walletHome(key), now, btc);
 }
 
-// --- Company stablecoins --------------------------------------------------------------
+/**
+ * Company stablecoins and providing liquidity are hidden for now (Mark, 31 October
+ * 2026): anything a commander still holds in them is paid back in credits, at what
+ * it's worth today. Returns what was paid, or 0.
+ */
+export function settleHidden(c: Commander, here: StarSystem, now: number, btc = BTC_REF): number {
+  let paid = 0;
+  const w = walletOf(c);
+  for (const key of Object.keys(w).filter(isCompanyKey)) {
+    const credits = tenth(w[key] * companyValue(btc));
+    record(c, { t: now, k: 'fx', d: credits, g: key, q: -w[key], s: [here.galaxy, here.index] });
+    delete w[key];
+    paid += credits;
+  }
+  const lp = c.fx?.lp;
+  for (const [key, p] of Object.entries(lp ?? {})) {
+    // As withdrawing and then changing the money half for credits, so the ledger reads the same as if you had.
+    const home = walletHome(key);
+    const pos = positionNow(home, p, now, btc);
+    const credits = tenth(pos.credits + pos.fees);
+    const local = tenth(pos.local / fairRate(home, now, btc));
+    record(c, { t: now, k: 'lp', d: credits, g: key, q: pos.local, s: [here.galaxy, here.index] });
+    record(c, { t: now, k: 'fx', d: local, g: key, q: -pos.local, s: [here.galaxy, here.index] });
+    delete lp![key];
+    paid += credits + local;
+  }
+  if (paid) c.credits = tenth(c.credits + paid);
+  return paid;
+}
+
+// --- Company stablecoins (hidden for now) --------------------------------------------------------------
 
 /** Mint a company's coins: a credit each, and the network's fee. */
 export function mintCompany(c: Commander, company: string, credits: number, now: number, here: StarSystem): FxResult {
@@ -132,7 +162,7 @@ export function redeemCompany(c: Commander, company: string, coins: number, now:
   return { ok: true, message: `Redeemed ${fmt(coins)} coins for ${fmt(credits)} Cr` };
 }
 
-// --- Providing liquidity --------------------------------------------------------------
+// --- Providing liquidity (hidden for now) --------------------------------------------------------------
 
 /** Put credits and the matching local money into this station's pool. One position per station. */
 export function addLiquidity(c: Commander, s: StarSystem, credits: number, now: number, btc = BTC_REF): FxResult {

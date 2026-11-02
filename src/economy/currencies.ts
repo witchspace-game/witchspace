@@ -1,17 +1,17 @@
-// System currencies, stage one (docs/design/system-currencies.md): every system
-// but an anarchy has its own money, generated from its seed, and runs it the way
-// its government would. Each station keeps a liquidity pool between its money
-// and the credit (local × credits = k, as Uniswap does), so a big swap moves the
-// rate, and the pool drifts back to the fair rate as other traders arbitrage.
-// Stablecoins (Corporate States' fully backed coins, Feudal worlds' algorithmic
-// ones) are taken at any station at their rate: the way out when a system's
-// money fails, until an algorithmic peg breaks. Each money's supply follows what
-// its world makes (section 3): when a war or a strike cuts output, the same money
-// chases fewer goods and a floating one weakens; in a boom it strengthens.
-// Virtual only, Modern only.
+// System currencies (docs/design/system-currencies.md): every system but an
+// anarchy has its own money, generated from its seed, and runs it the way its
+// government would. Three monies (Mark, 31 October 2026): the credit, backed by
+// force; a system's money, backed by work; Bitcoin, backed by maths. Each
+// station keeps a pool between its money and the credit (local × credits = k),
+// so a big swap moves the rate and it drifts back to the fair rate. Each money
+// follows what its world makes: when a war or a strike cuts output, the same
+// money chases fewer goods and a floating one weakens; in a boom it strengthens.
+// Company stablecoins, providing liquidity and Bitcoin-backed reserves are
+// hidden for now (their code stays below, and anything held is paid back in
+// credits: economy/money.ts). Virtual only, Modern only.
 
 import { distanceLy, systemAt, systemsWithin, type StarSystem } from '../galaxy/generate';
-import { outputAt } from './events';
+import { EVENT_KINDS, eventsAt, outputAt } from './events';
 import { hash } from './seed';
 
 export type Policy = 'none' | 'feudal' | 'basket' | 'printing' | 'official' | 'scarce' | 'inflation' | 'reserve';
@@ -21,8 +21,8 @@ const POLICY: Policy[] = ['none', 'feudal', 'basket', 'printing', 'official', 's
 
 export const POLICY_TEXT: Record<Policy, { name: string; line: string }> = {
   none: { name: 'No currency', line: 'Nobody issues money here: prices are in credits, or whatever you bring.' },
-  reserve: { name: 'Stablecoin, backed by reserves', line: 'Pegged 1:1 to the credit, backed by reserves the system publishes, partly in Bitcoin. Safe while the reserves cover every coin; taken at any station.' },
-  feudal: { name: 'Algorithmic stablecoin', line: 'Pegged to the credit by an algorithm that mints or burns to hold the peg, with no reserves behind it. Taken at any station, while it holds. When it breaks, it spirals, and re-pegs lower: the loss stays.' },
+  reserve: { name: 'Pegged to the credit', line: 'Held at one credit by the government’s reserves. Safe and dull.' },
+  feudal: { name: 'Held by a rule', line: 'Held at one credit by a rule that mints and burns, with nothing behind it. Works until it doesn’t, and when it breaks it settles lower.' },
   inflation: { name: 'Managed inflation', line: 'A central bank lets it lose about two per cent a month, steadily. Fine to spend, poor to save.' },
   printing: { name: 'Printed to order', line: 'The government prints what it spends, faster in a crisis. Spend it, don’t save it.' },
   official: { name: 'Official rate', line: 'The state fixes the rate, and limits how much each visitor may change.' },
@@ -38,7 +38,7 @@ export interface Currency {
   ticker: string;
   name: string;
   policy: Policy;
-  /** Taken at any station at its rate: the stablecoins. */
+  /** Pegged to the credit (Corporate States, Feudal worlds). */
   stable: boolean;
   /** Units a credit buys at the start: 1 for the pegged ones. */
   base: number;
@@ -170,11 +170,9 @@ export function fairRate(s: StarSystem, t: number, btc = BTC_REF): number {
   // Fewer goods for the same money: a floating money weakens while output is down, and strengthens in a boom.
   const goods = 1 / Math.sqrt(outputAt(s, t));
   switch (c.policy) {
-    case 'reserve': {
-      // Holds 1:1 while the reserves cover every coin; short, and holders run for the door.
-      const b = backing(s, btc);
-      return (b >= 1 ? 1 : Math.pow(1 / b, 1.4)) + smooth(s, 70, t, DAY) * 0.002;
-    }
+    case 'reserve':
+      // Holds 1:1. (Reserves partly in Bitcoin, and runs when they fall short, are hidden for now: backing() below.)
+      return 1 + smooth(s, 70, t, DAY) * 0.002;
     case 'feudal':
       // While it holds, steady; when it breaks, the coin falls to an eighth of its value, and re-pegs lower.
       return scarred(s, t, 0.15, 8.3, 0.85) * (1 + smooth(s, 71, t, DAY) * 0.004);
@@ -262,8 +260,11 @@ export function quoteSell(p: Pool, units: number): number {
   return p.credits - k / (p.local + units * (1 - POOL_FEE));
 }
 
-/** A stablecoin taken away from home: its rate, less the network's fee, no slippage. */
-export const stableValue = (home: StarSystem, units: number, t: number, btc = BTC_REF) => (units / fairRate(home, t, btc)) * (1 - STATIONS_WIDE_FEE);
+/** What changing a money away from home costs: dearer than its own station's pool. */
+export const AWAY_FEE = 0.02;
+
+/** A money changed away from home: its fair rate, less the fee, no slippage. */
+export const awayValue = (home: StarSystem, units: number, t: number, btc = BTC_REF) => (units / fairRate(home, t, btc)) * (1 - AWAY_FEE);
 
 // --- News -----------------------------------------------------------------------------
 
@@ -279,22 +280,74 @@ export interface MoneyNews {
  */
 export function moneyNews(here: StarSystem, now: number, delay: (where: StarSystem) => number, btc = BTC_REF): MoneyNews[] {
   const out: MoneyNews[] = [];
-  // The companies' coins are everywhere: a slip is news everywhere.
-  if (companyValue(btc) < 1) out.push({ where: here, distance: 0, text: `Company stablecoins slip to ${companyValue(btc).toFixed(2)} Cr as Bitcoin's fall outruns their backing` });
   for (const s of [here, ...systemsWithin(here, 15)]) {
     const c = currencyOf(s);
     if (!c) continue;
     const then = now - delay(s);
     if (c.policy === 'feudal' && crisis(s, then, 0.15) > 0.3)
-      out.push({ where: s, distance: distanceLy(here, s), text: `${c.name} (${c.ticker}) breaks its peg: one now buys ${(1 / fairRate(s, then)).toFixed(2)} Cr` });
-    else if (c.policy === 'reserve' && backing(s, btc) < 1)
-      out.push({ where: s, distance: distanceLy(here, s), text: `Run on the ${c.name}: ${s.name}'s reserves cover ${Math.round(backing(s, btc) * 100)}% of its coins` });
+      out.push({ where: s, distance: distanceLy(here, s), text: `${c.name} (${c.ticker}) breaks its peg: one now buys ${(1 / fairRate(s, then, btc)).toFixed(2)} Cr` });
     else if (c.policy === 'printing' && crisis(s, then, 0.12) > 0.3) out.push({ where: s, distance: distanceLy(here, s), text: `Presses running at ${s.name}: the ${c.name} is losing value by the hour` });
   }
   return out.sort((a, b) => a.distance - b.distance);
 }
 
-// --- Company stablecoins ---------------------------------------------------------------
+// --- Why it's moving ---------------------------------------------------------------------
+
+export interface MoneyReason {
+  /** Which way it pushes the money against the credit: up, down, or holding. */
+  dir: 1 | -1 | 0;
+  text: string;
+}
+
+/** A money's value against the credit this week: +2 is 2% stronger. */
+export const weekChange = (s: StarSystem, t: number, btc = BTC_REF) => (fairRate(s, t - WEEK, btc) / fairRate(s, t, btc) - 1) * 100;
+
+/**
+ * Why a system's money is moving, in plain words: what happened to its world this
+ * week (a war, a strike, a boom), then how its government runs it.
+ */
+export function moneyReasons(s: StarSystem, t: number, btc = BTC_REF): MoneyReason[] {
+  const c = currencyOf(s);
+  if (!c) return [];
+  const out: MoneyReason[] = [];
+  const floats = c.policy === 'inflation' || c.policy === 'printing' || c.policy === 'scarce' || c.policy === 'basket';
+  for (const e of eventsAt(s, t - WEEK, t).filter((e) => e.start <= t && EVENT_KINDS[e.type].output !== 0).slice(-2)) {
+    const kind = EVENT_KINDS[e.type];
+    const over = t > e.end ? ' (over now)' : '';
+    const less = kind.output < 0;
+    if (floats) out.push({ dir: less ? -1 : 1, text: `${kind.name}${over}: ${less ? 'less made here, so each' : 'more made here, so each'} ${c.ticker} buys ${less ? 'less' : 'more'}.` });
+    else if (c.stable) out.push({ dir: 0, text: `${kind.name}${over}: the peg holds; the issuer ${less ? 'burns' : 'mints'} ${c.ticker} to keep it.` });
+    else out.push({ dir: 0, text: `${kind.name}${over}: the state holds its rate regardless.` });
+  }
+  switch (c.policy) {
+    case 'printing':
+      out.push(crisis(s, t, 0.12) > 0.05 ? { dir: -1, text: 'The presses are running day and night.' } : { dir: -1, text: 'The government prints what it spends.' });
+      break;
+    case 'inflation':
+      out.push({ dir: -1, text: 'The central bank lets it slip a little each month.' });
+      break;
+    case 'scarce': {
+      const away = btc / BTC_REF - 1;
+      out.push({ dir: Math.abs(away) < 0.02 ? 0 : away > 0 ? 1 : -1, text: 'It moves with Bitcoin.' });
+      break;
+    }
+    case 'basket':
+      out.push({ dir: 0, text: `It follows its neighbours: ${neighbours(s).map((n) => n.name).join(', ')}.` });
+      break;
+    case 'official':
+      out.push({ dir: 0, text: 'The state fixes the rate.' });
+      break;
+    case 'reserve':
+      out.push({ dir: 0, text: 'Held at one credit by the government’s reserves.' });
+      break;
+    case 'feudal':
+      out.push(crisis(s, t, 0.15) > 0.05 ? { dir: -1, text: 'The peg has broken: the rule is minting to defend it, which only makes it worse.' } : { dir: 0, text: 'Held at one credit by its rule, for now.' });
+      break;
+  }
+  return out;
+}
+
+// --- Company stablecoins (hidden for now) ----------------------------------------------
 // The big companies issue coins of their own, backed by Bitcoin locked up at half
 // as much again as the coins are worth (as DAI is): no bank needed, taken at any
 // station. Minted at a credit each; redeemed at a credit while the Bitcoin covers
@@ -312,7 +365,7 @@ export const companyValue = (btc = BTC_REF) => Math.min(1, companyBacking(btc));
 export const companyKey = (company: string) => `co:${company}`;
 export const isCompanyKey = (key: string) => key.startsWith('co:');
 
-// --- Providing liquidity -----------------------------------------------------------------
+// --- Providing liquidity (hidden for now) ----------------------------------------------
 // Add both currencies to a station's pool, in step with its rate, and share in its
 // fees. The real risk comes with it: if the rate moves, you come out holding more of
 // whichever side fell (impermanent loss), worked out by the constant-product rule.

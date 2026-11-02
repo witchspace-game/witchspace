@@ -3,9 +3,8 @@
 // its places menu and the wallet.
 
 import { sfx } from '../audio/sound';
-import { companyValue, currencyOf, fairRate, isCompanyKey, walletHome } from '../economy/currencies';
+import { currencyOf, walletHome, walletKey, weekChange } from '../economy/currencies';
 import { valueOf, walletOf } from '../economy/money';
-import { COMPANIES, type CompanyId } from '../game/companies';
 import { stationName } from '../galaxy/stationNames';
 import { escapeHtml } from './escape';
 import { btcValue, formatBtc, satsOf } from '../economy/bitcoin';
@@ -86,7 +85,13 @@ export function updateDockHead() {
       return `<button type="button" data-place="${b.dataset.tab}" aria-pressed="${b.dataset.tab === game.dockTab}">${escapeHtml(tabName(b))}${badge ? ` <b class="tab-badge">${escapeHtml(badge)}</b>` : ''}</button>`;
     })
     .join('');
-  if (game.commander) $('.wallet-button').textContent = `${Math.floor(cmdr().credits).toLocaleString()} Cr`;
+  if (game.commander) {
+    // The station's own money beside your credits, where you hold some (wide screens; a phone shows credits only).
+    const c = cmdr();
+    const cur = c.difficulty === 'modern' ? currencyOf(currentSystem()) : null;
+    const local = cur ? (walletOf(c)[walletKey(currentSystem())] ?? 0) : 0;
+    $('.wallet-button').innerHTML = `${Math.floor(c.credits).toLocaleString()} Cr${local >= 0.01 ? `<span class="wallet-local"> · ${local.toLocaleString(undefined, { maximumFractionDigits: local < 10 ? 2 : 0 })} ${cur!.ticker}</span>` : ''}`;
+  }
   if (!$('#wallet-sheet').hidden) renderWallet();
 }
 
@@ -114,42 +119,39 @@ $('#dock-places').addEventListener('click', (e) => {
   setDockTab(b.dataset.place as DockTab);
 });
 
-/** The wallet: everything you hold, in one place, and the station's money in a line. */
+/** The wallet: everything you hold, each in credits, and where to change it. */
 function renderWallet() {
   const c = cmdr();
-  const here = currentSystem();
   const now = Date.now();
   const btc = btcNow();
   const fmtN = (n: number, d = n < 10 ? 2 : 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: n < 10 && n > 0 ? Math.min(d, 2) : 0 });
-  const rows: string[] = [`<li><strong>${c.credits.toLocaleString(undefined, { maximumFractionDigits: 1 })} Cr</strong><span>Credits: good at every station</span></li>`];
-  const sats = satsOf(c);
-  if (sats) rows.push(`<li><strong>${formatBtc(sats)}</strong><span>Bitcoin, at the real price · ${btcValue(c) ? `about ${fmtN(btcValue(c), 0)} Cr now` : 'its price comes in with the news'}</span></li>`);
   const modern = c.difficulty === 'modern';
+  const here = currentSystem();
+  let total = c.credits;
+  const row = (kind: string, amount: string, line: string) => `<li class="w-${kind}"><strong>${amount}</strong><span>${line}</span></li>`;
+  const rows = [row('credits', `${fmtN(c.credits, 1)} Cr`, modern ? 'Credits: good at every station. Fines come out of these.' : 'Credits: good at every station.')];
+  const sats = satsOf(c);
+  if (sats) {
+    total += btcValue(c);
+    rows.push(row('btc', formatBtc(sats), `Bitcoin: ${btcValue(c) ? `about ${fmtN(btcValue(c), 0)} Cr now` : 'its price comes in with the news'}. Nobody can take it.`));
+  }
   if (modern)
-    for (const [key, units] of Object.entries(walletOf(c)).filter(([, u]) => u > 1e-6)) {
-      if (isCompanyKey(key)) {
-        const co = COMPANIES[key.slice(3) as CompanyId];
-        rows.push(`<li><strong>${fmtN(units)} ${escapeHtml(co?.name.split(' ')[0] ?? key)} coins</strong><span>Bitcoin-backed · about ${fmtN(units * companyValue(btc), 0)} Cr</span></li>`);
-        continue;
-      }
+    for (const [key, units] of Object.entries(walletOf(c)).filter(([k, u]) => u > 1e-6 && !k.startsWith('co:'))) {
       const home = walletHome(key);
       const hc = currencyOf(home)!;
-      rows.push(`<li><strong>${fmtN(units)} ${hc.ticker}</strong><span>${escapeHtml(hc.name)}, ${escapeHtml(home.name)}’s own money · about ${fmtN(valueOf(key, units, now, btc), 0)} Cr</span></li>`);
+      const value = valueOf(key, units, now, btc);
+      total += value;
+      const atHome = key === walletKey(here);
+      const change = atHome ? weekChange(home, now, btc) : 0;
+      const move = atHome ? (Math.abs(change) < 0.05 ? ' Steady this week.' : ` ${change > 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(1)}% this week.`) : ` Change it here, or for less at ${escapeHtml(home.name)}.`;
+      rows.push(row(atHome ? 'here' : 'local', `${fmtN(units)} ${hc.ticker}`, `${escapeHtml(hc.name)}, ${escapeHtml(home.name)}’s money: about ${fmtN(value, 0)} Cr.${move}`));
     }
-  const cur = modern ? currencyOf(here) : null;
-  let station = '';
-  if (modern && cur) {
-    const fair = fairRate(here, now, btc);
-    const week = fairRate(here, now - 7 * 86_400_000, btc);
-    const change = (week / fair - 1) * 100;
-    station = `<p class="wallet-line">${escapeHtml(here.name)}’s money, the ${escapeHtml(cur.name)}: 1 Cr ≈ ${fmtN(fair, 2)} ${cur.ticker}, ${Math.abs(change) < 1 ? 'steady this week' : `${change > 0 ? 'up' : 'down'} ${Math.abs(change).toFixed(0)}% this week`}.</p>
-      <div class="wallet-actions"><button type="button" class="primary" data-wallet="money">Change money here</button><button type="button" data-wallet="money">More about it</button></div>`;
-  } else if (modern) station = `<p class="wallet-line">No money is issued at ${escapeHtml(here.name)}: credits do.</p><div class="wallet-actions"><button type="button" data-wallet="money">Money, stablecoins and company coins</button></div>`;
-  $('#wallet-sheet').innerHTML = `<p class="wallet-title">Your wallet</p><ul class="wallet-list">${rows.join('')}</ul>${station}${modern && !sats ? '<p class="wallet-line">Bitcoin trades on the Market.</p>' : ''}`;
+  const actions = modern ? `<div class="wallet-actions"><button type="button" class="primary" data-wallet="money">Change money</button><button type="button" data-wallet="market">Bitcoin market</button></div>` : '';
+  $('#wallet-sheet').innerHTML = `<p class="wallet-title">Your wallet${rows.length > 1 ? ` <span>about ${fmtN(total, 0)} Cr in all</span>` : ''}</p><ul class="wallet-list">${rows.join('')}</ul>${actions}`;
   $('#wallet-sheet').querySelectorAll<HTMLButtonElement>('[data-wallet]').forEach((b) =>
     b.addEventListener('click', () => {
       sfx.beep();
-      setDockTab('money');
+      setDockTab(b.dataset.wallet as DockTab);
     }),
   );
 }

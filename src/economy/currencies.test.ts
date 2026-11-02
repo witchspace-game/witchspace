@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy } from '../galaxy/generate';
-import { backing, BTC_REF, companyValue, crisis, currencyOf, fairRate, poolNow, poolRate, positionNow, quoteBuy, quoteSell, reserveShare, mintedToday, stableValue, supplyOf } from './currencies';
+import { BTC_REF, companyValue, crisis, currencyOf, fairRate, poolNow, poolRate, positionNow, quoteBuy, quoteSell, mintedToday, awayValue, moneyReasons, weekChange, supplyOf } from './currencies';
 import { activeEvent, EVENT_KINDS, outputAt } from './events';
 
 const g0 = galaxy(0);
@@ -69,19 +69,18 @@ describe('a station’s pool', () => {
     expect(quoteSell({ ...p, local: p.local - units, credits: p.credits + 1000 }, units)).toBeGreaterThan(990);
   });
 
-  it('takes a stablecoin anywhere at its rate, less the network’s fee', () => {
-    expect(stableValue(byGov(7), 1000, T)).toBeCloseTo(997, -1);
+  it('changes any money away from home at its fair rate, less 2%', () => {
+    expect(awayValue(byGov(7), 1000, T)).toBeCloseTo(980, -1);
+    const dem = byGov(6);
+    expect(awayValue(dem, 1000, T)).toBeCloseTo((1000 / fairRate(dem, T)) * 0.98, 6);
   });
 });
 
 describe('tied to the real Bitcoin price', () => {
-  it('holds a Corporate peg while its reserves cover it, and lets it slip when a crash leaves them short', () => {
+  it('holds a Corporate peg whatever Bitcoin does (reserve runs are hidden for now)', () => {
     const corp = byGov(7);
-    expect(fairRate(corp, T, BTC_REF * 1.5)).toBeCloseTo(1, 2); // over-backed: still 1:1
-    const crash = BTC_REF * 0.3;
-    expect(backing(corp, crash)).toBeLessThan(1);
-    expect(fairRate(corp, T, crash)).toBeGreaterThan(1 / backing(corp, crash)); // the run makes it worse than the shortfall
-    expect(reserveShare(corp)).toBeGreaterThan(0.09);
+    expect(fairRate(corp, T, BTC_REF * 1.5)).toBeCloseTo(1, 2);
+    expect(fairRate(corp, T, BTC_REF * 0.3)).toBeCloseTo(1, 2);
   });
 
   it('moves a Confederacy’s money with Bitcoin', () => {
@@ -145,5 +144,24 @@ describe('money follows what a world makes', () => {
   it('strengthens a floating money in a boom', () => {
     const { s, t, e } = find('printing', false);
     expect(fairRate(s, t) / fairRate(s, e.end + 3600_000)).toBeLessThan(1);
+  });
+});
+
+describe('why a money is moving', () => {
+  it('always gives its government’s reason, pointing the way the money goes', () => {
+    for (let g = 1; g < 8; g++) {
+      const s = byGov(g);
+      const reasons = moneyReasons(s, T);
+      expect(reasons.length).toBeGreaterThan(0);
+      expect(reasons.length).toBeLessThanOrEqual(3);
+      for (const r of reasons) expect(r.text).toMatch(/\.$/);
+    }
+    expect(moneyReasons(byGov(3), T).at(-1)!.dir).toBe(-1); // a Dictatorship prints
+    expect(moneyReasons(byGov(4), T).at(-1)!.dir).toBe(0); // a Communist rate is fixed
+  });
+
+  it('measures the week against the credit: a fixed rate never moves, a printed one moves', () => {
+    expect(weekChange(byGov(4), T)).toBeCloseTo(0, 6);
+    expect(Math.abs(weekChange(byGov(3), T))).toBeGreaterThan(0.01);
   });
 });

@@ -2,15 +2,17 @@
 title: System currencies
 status: building
 pillar: trade
-summary: A currency for every system, modelled on real crypto: government monetary policies, liquidity pools, pegs and crises, and a ledger anyone can verify. Virtual only.
+summary: A money for every system, run the way its government runs it and backed by the work its people do, beside the credit and Bitcoin. Pegs and crises, why it's moving in plain words, and a ledger anyone can verify. Virtual only.
 card: coriolis
 stages:
   - Bitcoin on the exchange, priced from the real market; it can't be taken from you | built
   - Bitcoin limit orders, filled against the real price, even while you're away | built
-  - Single-player system currencies: policies, a pool per station, stablecoins, the Money tab | built
-  - Bitcoin-backed reserves, Confederacies on Bitcoin, company stablecoins, liquidity provision, money news | built
+  - Single-player system currencies: policies, a pool per station, the Money tab | built
+  - Confederacies on Bitcoin, money news | built
+  - Three monies: the Money tab made plain, why it's moving, one wallet; company stablecoins and liquidity hidden | built
+  - Backing a world: credits into its treasury, a stake that follows how it does | proposed
   - Shared galaxy: a ledger anyone can check, order books | proposed
-  - Later: crises driven by players, currency futures, stablecoins pegged to the credit | proposed
+  - Later: crises driven by players, the Meridian Compact | proposed
 help:
   - Model a currency crisis for one government type | design
 ---
@@ -18,6 +20,18 @@ help:
 # Design: system currencies
 
 *Status: **agreed direction**, for the shared galaxy under Modern rules. It expands section 4 of [economy and exchanges](economy-and-exchanges.md) from optional station scrip to a currency for every system. Single-player Modern may use a simpler version; Classic keeps plain credits, as in 1984. Numbers are starting points for playtesting.*
+
+## Three monies (Mark, 31 October 2026)
+
+The machinery here was built before the reasons a player would need it (Mark: the currencies were "overcooked"). So, three monies, each with one reason to hold it:
+
+| Money | Backed by | Why you'd hold it |
+|---|---|---|
+| **The credit** | Force: the Co-operative, its police and the Marshals | Taken everywhere and steady; it's also the money that can be taken from you |
+| **A world's own money** | Work: what its people make | It rises and falls with how the place is doing |
+| **Bitcoin** | Maths | The same everywhere, and nobody can take it |
+
+**Hidden for now** (code kept): company stablecoins, providing liquidity, and Bitcoin in Corporate States' reserves (so no runs). Anything a commander held is paid back in credits on docking. Stablecoins as a separate idea, and the Meridian Compact, wait for later. Sections 4 to 6b below describe the fuller design; [section 9e](#9e-three-monies-as-built-marks-yes-on-the-pictures-1-november-2026) is what's built now.
 
 ## The idea
 
@@ -316,6 +330,23 @@ The ledger keeps the double-entry, append-only and invariant rules already in th
 - **Minting and burning from production.** World events move a world's output (a boom +25%, a war −30%). A floating money weakens while output is down and strengthens in a boom (by 1 ÷ √output); pegged money holds and its issuer mints or burns instead. The supply in circulation (productivity × output × rate) and the day's minting or burning are published on the Money tab.
 - **The server counts goods by the tonne**, not only precious goods, so a sale of goods never had is flagged.
 - **Not yet (the shared galaxy):** order books for currencies, fees and fines burned in local money, supply shocks caused by players, the Compact.
+
+## 9e. Three monies, as built *(Mark's yes on the pictures, 1 November 2026)*
+
+- **The Money tab, made plain.** The money and its government in one line; the rate at the station, the week's move and a little line of the last eight days; **why it's moving**, in two or three plain lines (this week's strikes, wars, blockades or booms, then how its government runs it), each with ▲, ▼ or =; one box and one button to change it; what you hold. Gone: the pool, the fair rate, money in circulation, minted today, liquidity, company coins.
+- **Any world's money, changed anywhere.** At its own station through the pool; anywhere else at its fair rate less 2%. (Pegged money no longer has its own rule.)
+- **One wallet.** The wallet button shows your credits (and the station's own money beside them on a wide screen); it opens credits, Bitcoin and every world's money you hold, each with its worth in credits and a total, and Change money and Bitcoin market.
+- **Corporate pegs hold at one credit** whatever Bitcoin does; Feudal pegs can still break.
+- **Paid back:** company coins and pool positions, in credits, on docking, through the ledger as ordinary entries.
+
+## Backing a world (Mark, 31 October 2026, after launch)
+
+Mark: give each world a money players can back. A commander who believes in a place (a find on its moon, friends who fly there, or keeping it out of the companies' hands) puts credits into its **treasury** and holds its money in return.
+
+- **The stake follows the world, not the crowd.** Its worth follows how the world is doing (trade, safety, growth), so trading there, escorting its convoys and clearing its pirates are how backers help it. Buying in alone doesn't lift it, so it can't become a pyramid.
+- **The treasury pays for the place**, and later keeps its relay (its shared-space server) running; backers get a say in naming.
+- **Fair rules:** selling back draws on the treasury; a cap per commander (2,000 Cr in the pictures); credits come from play only.
+- **On screen** it's "Back Lave" and "your stake", never the words people use for real-money schemes. Drawn on the money pictures (After launch · Back Lave).
 
 ## 10. Building it in stages
 

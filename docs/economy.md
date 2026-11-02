@@ -12,8 +12,8 @@
 | **Cargo** | The hold (or station storage) | Yes, with the ship | Each station's market |
 | **Bitcoin** | The commander, no hold space | No: it can't be taken from you | The real Bitcoin market |
 | **System currencies** | The wallet, no hold space | No, but they can lose their value | Their government's policy |
-| **Company stablecoins** | The wallet | No | Pegged to the credit; Bitcoin backs them |
-| **Liquidity positions** | One per station's pool | No, but impermanent loss | The pool's rate, plus fees |
+
+**Three monies** (Mark, 31 October 2026): the credit, backed by force; a system's money, backed by work; Bitcoin, backed by maths. Company stablecoins and providing liquidity are hidden for now (section 3).
 
 ## 1. Credits and the markets
 
@@ -52,8 +52,8 @@
 
 | Government | Policy | What happens |
 |---|---|---|
-| Corporate State | **Reserve** | Pegged 1:1, backed by reserves: 10–45% in Bitcoin (from the seed), the rest in credits. If Bitcoin falls so far that the reserves don't cover the coin, it slips below its peg until Bitcoin recovers. The news reports a run. |
-| Feudal | **Algorithmic peg** | A stablecoin until it breaks: some months the peg fails and the coin falls to an eighth. |
+| Corporate State | **Pegged to the credit** | Held 1:1 by the government's reserves. (Reserves partly in Bitcoin, and runs when they fall short, are hidden for now: `backing()` is kept but unused.) |
+| Feudal | **Held by a rule** | Pegged 1:1 until it breaks: some months the peg fails and the money falls to an eighth. |
 | Democracy | **Inflation** | Loses about 2% a month. |
 | Dictatorship | **Printing** | Loses about 3% a week, and faster when the presses run in a crisis. |
 | Communist | **Official rate** | A fixed rate, and each visitor can change only 2,000 Cr a visit. |
@@ -64,33 +64,33 @@
 
 - **Output.** World events move a world's output: a boom raises it by 25%; a famine, strike, plague, war, blockade or Thargoid incursion cuts it, by 5% to 30% (`output` in `src/economy/events.ts`, `outputAt`).
 - **Floating money follows.** For inflating, printed and Bitcoin money, the same money chases fewer goods when output is down, so each unit buys less: the rate moves by 1 ÷ √output. A war's 30% cut weakens it by about a fifth, and a boom strengthens it by about a tenth. It recovers when the event ends. Pegged money holds its peg, official rates stay fixed, and basket money follows its neighbours.
-- **Supply is published.** The money in circulation is the world's productivity × 1,000 × its output × its rate (`supplyOf`). The issuer mints as output grows and burns as it falls, and a printing press or a broken peg mints far more. The Money tab shows the supply, what was minted or burned in the last day, and any change in output.
+- **Supply** is the world's productivity × 1,000 × its output × its rate (`supplyOf`). The issuer mints as output grows and burns as it falls, and a printing press or a broken peg mints far more. It is worked out but no longer shown.
+
+### The Money tab
+
+Plain, one money at a time (Mark's yes on the pictures, 1 November 2026):
+
+- **The money and its government**, in one line ("Printed to order. Spend it, don't save it.").
+- **The rate** at the station's pool, this week's move against the credit (`weekChange`) and a line of the last eight days.
+- **Why it's moving** (`moneyReasons`): up to two of this week's world events that move output (a strike, a blockade, a boom; "over now" if they've ended), then how its government runs it. Each has an arrow: ▲ stronger, ▼ weaker, = holding.
+- **Change**: credits to the local money or back, one box and one button, the 0.3% fee in a line.
+- **What you hold** of it, and **other systems' money you hold**, each with a button to change it here.
 
 **Crises leave scars.** When a peg breaks or the presses run, the money recovers over a few days, but only partly: it re-pegs lower (`scarred()`). Buying the bottom is a bet, not a sure thing.
 
 ### The pools
 
 - **Every station has a pool for its own money**: constant product (local × credits = k), with a 0.3% fee. A big swap moves the rate against you, and the rate drifts back to fair over about an hour as other traders arbitrage.
-- **Pool depth** grows with the square root of the population (40,000 × √population). A stablecoin's pool is 6× deeper, because anyone can redeem it at the peg.
-- **Stablecoins** (Corporate and Feudal money) are taken at any station at their rate, less 0.3%. That's the way out when a system's money fails.
+- **Pool depth** grows with the square root of the population (40,000 × √population), 6× deeper for pegged money.
+- **Away from home**, any system's money can be changed for credits at its fair rate, less 2% (`changeAway`, `AWAY_FEE`): dearer than its own station's pool.
 
-### Company stablecoins
+### Hidden for now: company stablecoins and providing liquidity
 
-- **Hexon Holdings, Vorg Industries, Carriers' Mutual and Wexley-Yorozu** each issue a coin, held in the wallet as `co:<company>`.
-- **Backed by Bitcoin locked up at 150%** of the coins' value, like DAI.
-- **Mint** at a credit each, less 0.3%. **Redeem** at any station.
-- **Worth one credit** while the collateral covers it. That holds unless Bitcoin falls by a third from 80,000 Cr (to about 53,000); below that, each coin is worth what its collateral is.
-
-### Providing liquidity
-
-- **Put credits and the same value of local money into a station's pool**, one position per station (`addLiquidity`). You need the matching local money in your wallet.
-- **You earn a share of the pool's fees.** The yield is higher at smaller stations: 8% + 30% ÷ √population a year. In galaxy one that's 20% to 42%, about 24% at a typical station.
-- **Impermanent loss is real.** If the rate moves, you come out holding more of whichever side fell. The Money tab shows what the position is worth now against simply holding.
-- **Withdraw any time** (`withdrawLiquidity`).
+Dropped with the three monies (Mark, 31 October 2026); the code stays in `currencies.ts` and `money.ts`, unused. On docking, anything a commander still holds is paid back in credits at today's worth (`settleHidden`): company coins at their redemption value, and a pool position as if withdrawn and its local half changed at the fair rate. Both go in the ledger as ordinary `lp` and `fx` entries.
 
 ### The wallet
 
-Balances are kept by issuing system (`"galaxy:index"`) or by company (`"co:hexon"`). They take no hold space and they survive the ship.
+The wallet button shows your credits, and on a wide screen the station's own money beside them. It opens everything you hold, each with its worth in credits and a total: credits, Bitcoin and each system's money, with Change money and Bitcoin market. Balances are kept by issuing system (`"galaxy:index"`). They take no hold space and they survive the ship.
 
 ## 4. Honest money: the ledger and the server's checks
 
@@ -125,7 +125,7 @@ Balances are kept by issuing system (`"galaxy:index"`) or by company (`"co:hexon
 | Markets, prices, bounds | `src/economy/market.ts`, `src/economy/commodities.ts` |
 | Limit and remote orders | `src/economy/orders.ts` |
 | Bitcoin | `src/economy/bitcoin.ts`, `server/src/btc.ts`, `server/src/shipsLog.ts` |
-| System currencies, pools, company coins, liquidity, supply | `src/economy/currencies.ts`, `src/economy/money.ts` |
+| System currencies, pools, why they move, the wallet (and the hidden company coins and liquidity) | `src/economy/currencies.ts`, `src/economy/money.ts` |
 | World events and output | `src/economy/events.ts` |
 | The ledger and its checks | `src/game/ledger.ts`, `server/src/ledger.ts` |
 | The shipyard | `src/game/shipyard.ts` |
