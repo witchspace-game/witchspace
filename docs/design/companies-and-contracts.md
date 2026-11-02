@@ -293,7 +293,7 @@ A finished yard station isn't a second public station. Mark: *"these second stat
 2. **The original station is the players', upgraded.** The system's first station stays open to everyone, and the company's investment shows there: tech level up, more traffic and traders, more contracts and goods. *"That's the price of doing business."* Opening-day news and premiums happen here.
 3. **When it stops paying, it's abandoned.** The company station goes dark, with salvage crews working it, and the system keeps its upgraded original station.
 
-Not decided yet: Contractor standing with Wexley-Yorozu clearing you to dock at its private stations, and a community reviving an abandoned company station ([player-run stations](player-stations.md)).
+Decided (Mark, 2 November 2026): commanders don't dock at company stations; only the company's own ships and private ships do, and the station shows itself through what it does to the world's station ([the station approach](station-approach.md#who-owns-the-station)). Docking there is kept for story arcs later. Not decided yet: a community reviving an abandoned company station ([player-run stations](player-stations.md)).
 
 ### Attacking a yard *(proposed, October 2026)*
 
