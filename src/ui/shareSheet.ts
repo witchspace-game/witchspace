@@ -8,18 +8,17 @@
 //   sheet at once (iOS only allows it straight from a tap). Dismissing it
 //   does nothing: there is no fallback to downloading on a phone.
 // - On a desktop, the main button saves the file, as you'd expect there.
-// - The links (X, Bluesky, Facebook...) share the game with the clip's title;
-//   or, for a clip with a flight track, a page of its own that replays it
-//   (docs/design/flight-recorder.md, "Clip pages"): the track goes up only
-//   after the player says yes, once, and never the video.
+// - A clip with a flight track can also go up as a page of its own that plays
+//   it (docs/design/flight-recorder.md, "Clip pages"), only after the player says
+//   yes, once. Its link then goes to the phone's share sheet, or on a computer to
+//   the links (X, Bluesky, Facebook...). Mark, 2 November 2026: the sheet was "weird
+//   and confusing", so one main button, one link, and no buttons that share only the game.
 
 import { signedIn } from '../net/account';
 import { toggleAccountPanel } from './accountPanel';
 import { escapeHtml } from './escape';
 import { copyText, destinations, ICONS } from './shareLinks';
 import { isWide } from './upright';
-
-const GAME = 'https://witchspace.org.uk/play';
 
 export interface ShareMedia {
   /** The video or photo. */
@@ -89,7 +88,6 @@ export function openShareSheet(m: ShareMedia) {
     urls.push(u);
     return u;
   };
-  const text = `${m.title} · Witchspace, free in your browser`;
   // A phone with a share sheet shares the file; anything else saves it.
   const main = phone && canShareFile ? 'share' : 'save';
   const what = video ? 'video' : 'photo';
@@ -107,30 +105,31 @@ export function openShareSheet(m: ShareMedia) {
         }
         <figcaption><strong>${escapeHtml(m.title)}</strong><span>witchspace.org.uk</span></figcaption>
       </figure>
-      ${
-        // A guest shares anonymously; their own callsign is theirs to claim by email, while nobody else has it (Mark).
-        signedIn()
-          ? ''
-          : '<p class="ws-share-who">Shared as <b>A commander</b>. <button type="button" class="ws-share-claim">Claim your callsign</button> to put your name on it: free, with your email, while it’s still free to take.</p>'
-      }
       <button type="button" class="ws-share-main primary">${main === 'share' ? `${ICONS.share}Share ${what}…` : `Save ${what}`}</button>
       <p class="ws-share-hint">${
         main === 'share'
-          ? `Instagram, TikTok, WhatsApp and the rest. <b>Save ${video ? 'Video' : 'Image'}</b> keeps it in Photos.`
+          ? `Instagram, TikTok, WhatsApp, or <b>Save ${video ? 'Video' : 'Image'}</b> to Photos.`
           : canShareFile
             ? `Saves the ${what} to this computer. <button type="button" class="ws-share-more">Or share it…</button>`
             : `Saves the ${what} to this computer, ready to post.`
       }</p>
-      <button type="button" class="ws-share-upright" hidden>Make an upright version <span>for Shorts, Reels and TikTok</span></button>
       <div class="ws-share-replay" hidden>
-        <button type="button" class="ws-share-put">${ICONS.link}Share a link that plays it</button>
+        <button type="button" class="ws-share-put">${ICONS.link}Share a link</button>
+        <button type="button" class="ws-share-copylink" hidden>Copy the link</button>
         <div class="ws-share-consent" hidden>
           <p>Put this ${video ? 'video' : 'moment'} on witchspace.org.uk? Anyone with the link can watch it, and watch the fight rebuilt from outside from your flight track. You can take it down from your flight log.</p>
           <p class="ws-share-consent-actions"><button type="button" class="primary" data-consent="yes">Put it up</button><button type="button" data-consent="no">Not now</button></p>
         </div>
       </div>
-      <p class="ws-share-or">Or share the game, with its title</p>
-      <div class="ws-share-links"></div>
+      <div class="ws-share-page" hidden>
+        <p class="ws-share-or">Share the link: it plays this video</p>
+        <div class="ws-share-links"></div>
+      </div>
+      <button type="button" class="ws-share-upright" hidden>Make it upright, for Reels, Shorts and TikTok</button>
+      ${
+        // A guest shares anonymously; their own callsign is theirs to claim by email, while nobody else has it (Mark).
+        signedIn() ? '' : '<p class="ws-share-who">Shared as <b>A commander</b>. <button type="button" class="ws-share-claim">Claim your callsign</button> to put your name on it.</p>'
+      }
       <p class="ws-share-msg" aria-live="polite"></p>
     </div>`;
   document.body.append(el);
@@ -143,30 +142,39 @@ export function openShareSheet(m: ShareMedia) {
     });
 
   const msg = el.querySelector<HTMLElement>('.ws-share-msg')!;
-  // The links: the game with the clip's title, or the clip's own page once it has one.
-  let linkUrl = GAME;
-  let linkText = text;
-  const links = el.querySelector<HTMLElement>('.ws-share-links')!;
-  const drawLinks = () => {
+  const put = el.querySelector<HTMLButtonElement>('.ws-share-put')!;
+  // The clip's page is up: its link goes to the phone's share sheet, or on a computer to the links.
+  const toPage = (url: string, title: string) => {
+    const text = `${title} · on Witchspace`;
+    if (phone && 'share' in navigator) {
+      const copy = el.querySelector<HTMLButtonElement>('.ws-share-copylink')!;
+      el.querySelector<HTMLElement>('.ws-share-replay')!.hidden = false;
+      put.hidden = false;
+      put.disabled = false;
+      put.innerHTML = `${ICONS.link}Share the link…`;
+      // A tap of its own: iOS won't open its sheet at the end of an upload.
+      put.onclick = () => void navigator.share({ url, title: text }).catch((e) => (e as DOMException)?.name !== 'AbortError' && (msg.textContent = 'Your phone wouldn’t open its share sheet. Tap again.'));
+      copy.hidden = false;
+      copy.onclick = async () => {
+        await copyText(url);
+        copy.textContent = 'Copied ✓';
+      };
+      return;
+    }
+    el.querySelector<HTMLElement>('.ws-share-replay')!.hidden = true;
+    el.querySelector<HTMLElement>('.ws-share-page')!.hidden = false;
+    const links = el.querySelector<HTMLElement>('.ws-share-links')!;
     links.innerHTML =
-      destinations(linkUrl, linkText)
+      destinations(url, text)
         .filter(([key]) => key !== 'email')
         .map(([key, label, href]) => `<a href="${href}" target="_blank" rel="noopener" aria-label="${label}">${ICONS[key]}<span>${label}</span></a>`)
         .join('') + `<button type="button" class="ws-share-copy" aria-label="Copy link">${ICONS.link}<span>Copy link</span></button>`;
     const copy = links.querySelector<HTMLButtonElement>('.ws-share-copy')!;
     copy.onclick = async () => {
-      await copyText(linkUrl === GAME ? `${linkText} ${GAME}` : linkUrl);
+      await copyText(url);
       copy.querySelector('span')!.textContent = 'Copied ✓';
     };
   };
-  const toPage = (url: string, title: string) => {
-    linkUrl = url;
-    linkText = `${title} · on Witchspace`;
-    el.querySelector('.ws-share-replay')!.setAttribute('hidden', '');
-    el.querySelector('.ws-share-or')!.textContent = 'Share the link: it plays this video';
-    drawLinks();
-  };
-  drawLinks();
   if (m.replay?.shared) {
     toPage(m.replay.shared, m.title);
     m.replay.attach?.(m.replay.shared); // this version is the one the page plays now
@@ -174,7 +182,6 @@ export function openShareSheet(m: ShareMedia) {
   else if (m.replay) {
     const box = el.querySelector<HTMLElement>('.ws-share-replay')!;
     const consent = box.querySelector<HTMLElement>('.ws-share-consent')!;
-    const put = box.querySelector<HTMLButtonElement>('.ws-share-put')!;
     box.hidden = false;
     const go = async () => {
       put.disabled = true;
@@ -185,7 +192,7 @@ export function openShareSheet(m: ShareMedia) {
       if ('url' in r) toPage(r.url, r.title || m.title);
       else {
         put.disabled = false;
-        put.innerHTML = `${ICONS.link}Share a link that plays it`;
+        put.innerHTML = `${ICONS.link}Share a link`;
         msg.textContent = r.error;
       }
     };
@@ -227,13 +234,13 @@ export function openShareSheet(m: ShareMedia) {
   if (video && m.upright) void isWide(m.blob).then((wide) => open?.el === el && (up.hidden = !wide));
   up.onclick = async () => {
     up.disabled = true;
-    const label = up.innerHTML;
+    const label = up.textContent;
     const result = await m.upright!((f) => (up.textContent = `Making the upright version · ${Math.round(f * 100)}%`)).catch(() => null);
     if (open?.el !== el) return; // closed meanwhile
     if (result) openShareSheet(result);
     else {
       up.disabled = false;
-      up.innerHTML = label;
+      up.textContent = label;
       msg.textContent = "This browser can't make video, so there's no upright version here.";
     }
   };
