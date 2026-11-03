@@ -115,7 +115,6 @@ export function openShareSheet(m: ShareMedia) {
       }</p>
       <div class="ws-share-replay" hidden>
         <button type="button" class="ws-share-put">${ICONS.link}Share a link</button>
-        <button type="button" class="ws-share-copylink" hidden>Copy the link</button>
         <div class="ws-share-consent" hidden>
           <p>Put this ${video ? 'video' : 'moment'} on witchspace.org.uk? Anyone with the link can watch it, and watch the fight rebuilt from outside from your flight track. You can take it down from your flight log.</p>
           <p class="ws-share-consent-actions"><button type="button" class="primary" data-consent="yes">Put it up</button><button type="button" data-consent="no">Not now</button></p>
@@ -124,6 +123,7 @@ export function openShareSheet(m: ShareMedia) {
       <div class="ws-share-page" hidden>
         <p class="ws-share-or">Share the link: it plays this video</p>
         <div class="ws-share-links"></div>
+        <button type="button" class="ws-share-more-apps" hidden>Other apps…</button>
       </div>
       <button type="button" class="ws-share-upright" hidden>Make it upright, for Reels, Shorts and TikTok</button>
       ${
@@ -143,37 +143,37 @@ export function openShareSheet(m: ShareMedia) {
 
   const msg = el.querySelector<HTMLElement>('.ws-share-msg')!;
   const put = el.querySelector<HTMLButtonElement>('.ws-share-put')!;
-  // The clip's page is up: its link goes to the phone's share sheet, or on a computer to the links.
+  // The clip's page is up: its link goes to the places to post it, on a phone as on a computer (Mark,
+  // 3 November 2026: he wanted "the lovely share box we had where i could choose facebook or x"), each
+  // a tap of its own, so iOS opens them after the upload. The phone's own sheet stays, for anything else.
   const toPage = (url: string, title: string) => {
     const text = `${title} · on Witchspace`;
-    if (phone && 'share' in navigator) {
-      const copy = el.querySelector<HTMLButtonElement>('.ws-share-copylink')!;
-      el.querySelector<HTMLElement>('.ws-share-replay')!.hidden = false;
-      put.hidden = false;
-      put.disabled = false;
-      put.innerHTML = `${ICONS.link}Share the link…`;
-      // A tap of its own: iOS won't open its sheet at the end of an upload.
-      put.onclick = () => void navigator.share({ url, title: text }).catch((e) => (e as DOMException)?.name !== 'AbortError' && (msg.textContent = 'Your phone wouldn’t open its share sheet. Tap again.'));
-      copy.hidden = false;
-      copy.onclick = async () => {
-        await copyText(url);
-        copy.textContent = 'Copied ✓';
-      };
-      return;
-    }
     el.querySelector<HTMLElement>('.ws-share-replay')!.hidden = true;
     el.querySelector<HTMLElement>('.ws-share-page')!.hidden = false;
     const links = el.querySelector<HTMLElement>('.ws-share-links')!;
     links.innerHTML =
       destinations(url, text)
         .filter(([key]) => key !== 'email')
-        .map(([key, label, href]) => `<a href="${href}" target="_blank" rel="noopener" aria-label="${label}">${ICONS[key]}<span>${label}</span></a>`)
+        .map(([key, label, href]) => `<a href="${href}" target="_blank" rel="noopener" data-to="${key}" aria-label="${label}">${ICONS[key]}<span>${label}</span></a>`)
         .join('') + `<button type="button" class="ws-share-copy" aria-label="Copy link">${ICONS.link}<span>Copy link</span></button>`;
     const copy = links.querySelector<HTMLButtonElement>('.ws-share-copy')!;
     copy.onclick = async () => {
       await copyText(url);
       copy.querySelector('span')!.textContent = 'Copied ✓';
     };
+    // Facebook's app opens to its feed and drops the link it's given (Mark: "just took me to facebook and
+    // that was it"), so on a phone the link is copied first, ready to paste into the post.
+    if (phone) {
+      links.querySelector<HTMLAnchorElement>('[data-to="facebook"]')!.addEventListener('click', () => {
+        void copyText(url);
+        msg.textContent = 'Link copied: paste it into your Facebook post.';
+      });
+      const more = el.querySelector<HTMLButtonElement>('.ws-share-more-apps')!;
+      if ('share' in navigator) {
+        more.hidden = false;
+        more.onclick = () => void navigator.share({ url, title: text }).catch((e) => (e as DOMException)?.name !== 'AbortError' && (msg.textContent = 'Your phone wouldn’t open its share sheet. Tap again.'));
+      }
+    }
   };
   if (m.replay?.shared) {
     toPage(m.replay.shared, m.title);
