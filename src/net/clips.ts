@@ -52,17 +52,30 @@ export const sharedLink = (moment: string): string | null => sharedLinks()[momen
 /** How long to wait for the server before saying so: a track is under 400 KB. */
 const SHARE_TIMEOUT = 20_000;
 
+/**
+ * A moment's file, read into memory before it's sent. An iPhone can fail to send a file straight
+ * out of the flight log's storage, and says only "Load failed" (Mark's iPhone, 2 November 2026:
+ * "Couldn't reach witchspace.org.uk" every time, though the server was up). Null if it can't be read.
+ */
+export const readBytes = (blob: Blob): Promise<ArrayBuffer | null> => blob.arrayBuffer().catch(() => null);
+
+/** Why a request got no answer, in the phone's own words, so the next report says which. */
+const why = (e: unknown) => (e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError') ? 'timed out' : e instanceof Error && e.message ? e.message : 'no answer');
+
 /** Share a moment's track. Resolves with the clip's link and title, or the reason it couldn't. */
 export async function shareTrack(moment: string, track: Blob, seconds: number, kills = 0): Promise<{ url: string; title: string } | { error: string }> {
+  const bytes = await readBytes(track);
+  if (!bytes) return { error: 'This device couldn’t read that moment back. Close the game, open it again and try once more.' };
   const session = sessionToken();
+  let failed = '';
   const res = await fetch(`${API}/clips?seconds=${Math.round(seconds)}&kills=${kills}`, {
     method: 'POST',
     headers: headers({ 'Content-Type': 'application/octet-stream', ...(session ? { Authorization: `Bearer ${session}` } : {}) }),
-    body: track,
+    body: bytes,
     signal: AbortSignal.timeout?.(SHARE_TIMEOUT),
-  }).catch(() => null);
+  }).catch((e: unknown) => ((failed = why(e)), null));
   // Say which it was: no answer at all is the connection; an answer without a reason is ours.
-  if (!res) return { error: "Couldn't reach witchspace.org.uk. Check your connection and try again." };
+  if (!res) return { error: `Couldn't reach witchspace.org.uk (${failed}). Check your connection and try again.` };
   const out = (await res.json().catch(() => null)) as { url?: string; title?: string; error?: string } | null;
   if (!res.ok || !out?.url) return { error: out?.error ?? `witchspace.org.uk couldn't take it (error ${res.status}). Try again in a moment.` };
   try {
@@ -130,13 +143,17 @@ export async function takeDownClip(id: string, down = true): Promise<{ ok: true 
 
 /** Put up a clip's card for link previews (ui/clipCard.ts): yours only, by account or this browser. */
 export async function putCard(id: string, jpeg: Blob): Promise<boolean> {
-  const res = await fetch(`${API}/clips/${id}/card`, { method: 'POST', headers: { ...mineHeaders(), 'Content-Type': 'image/jpeg' }, body: jpeg }).catch(() => null);
+  const bytes = await readBytes(jpeg);
+  if (!bytes) return false;
+  const res = await fetch(`${API}/clips/${id}/card`, { method: 'POST', headers: { ...mineHeaders(), 'Content-Type': 'image/jpeg' }, body: bytes }).catch(() => null);
   return Boolean(res?.ok);
 }
 
 /** Put up the video the sharer is sharing, beside the clip (theirs only); `kills` is the game's count, for its title. */
 export async function putVideo(id: string, video: Blob, upright: boolean, kills: number): Promise<boolean> {
-  const res = await fetch(`${API}/clips/${id}/video?upright=${upright ? 1 : 0}&kills=${kills}`, { method: 'POST', headers: { ...mineHeaders(), 'Content-Type': 'video/mp4' }, body: video }).catch(() => null);
+  const bytes = await readBytes(video);
+  if (!bytes) return false;
+  const res = await fetch(`${API}/clips/${id}/video?upright=${upright ? 1 : 0}&kills=${kills}`, { method: 'POST', headers: { ...mineHeaders(), 'Content-Type': 'video/mp4' }, body: bytes }).catch(() => null);
   return Boolean(res?.ok);
 }
 

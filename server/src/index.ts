@@ -64,7 +64,15 @@ export default {
     const card = url.pathname.match(/^\/clip-card\/([a-z0-9]{8,12})(\.jpg)?$/);
     if (card) return card[2] ? clipsOf(env).cardPicture(card[1]) : clipsOf(env).card(card[1]);
     const clip = url.pathname.match(/^\/clips(?:\/(mine|[a-z0-9]{8,12})(?:\/(heart|report|admin|takedown|putback|card|video))?)?$/);
-    if (clip) return clipRoute(request, env, clip[1], clip[2]);
+    // A crash here would go back without CORS, which a browser reports as no answer at all (Mark's
+    // iPhone, 2 November 2026: "Couldn't reach"); say it was ours, with its number, instead.
+    if (clip)
+      return clipRoute(request, env, clip[1], clip[2]).catch((e: unknown) => {
+        console.error('clips', clip[0], request.method, e);
+        const origin = request.headers.get('Origin') ?? '';
+        const headers = ORIGINS.some((o) => o.test(origin)) ? cors(origin) : {};
+        return new Response(JSON.stringify({ error: 'witchspace.org.uk had a problem with that (error 500). Try again in a moment.' }), { status: 500, headers: { ...headers, 'Content-Type': 'application/json' } });
+      });
     // The live Bitcoin price, for the exchange (server/src/btc.ts): our pages only.
     if (isBtc(url.pathname)) {
       const origin = request.headers.get('Origin') ?? '';
