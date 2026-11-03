@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { BUDGET, byTrip, EXPIRES, makeRoom, MAX, type LoggedMoment } from './flightLog';
 
 const MB = 1024 * 1024;
@@ -52,5 +52,104 @@ describe('the log, trip by trip', () => {
     const old = moment(1, 100); // from before trips were kept
     const trips = byTrip([old, c, a, b]);
     expect(trips.map((t) => t.moments.map((m) => m.id))).toEqual([[b.id, a.id], [c.id], [old.id]]);
+  });
+});
+
+describe('the flight log when the device misbehaves', () => {
+  /** Just enough of IndexedDB: one store, connections that can be dropped, and writes that can be refused at commit. */
+  function fakeIdb() {
+    const rows = new Map<string, { id: string }>();
+    const state = { dead: new Set<object>(), opens: 0, refuseWrites: false, refuseAll: false, latest: null as null | object };
+    const later = (f: () => void) => setTimeout(f, 0);
+    const open = () => {
+      const req: Record<string, unknown> = {};
+      state.opens++;
+      const conn: Record<string, unknown> = {
+        close() {},
+        createObjectStore() {},
+        transaction(_: string, mode: string) {
+          if (state.refuseAll || state.dead.has(conn)) throw new Error('Connection to Indexed Database server lost');
+          const tx: Record<string, unknown> = { error: null };
+          const act = (result: () => unknown) => {
+            const r: Record<string, unknown> = {};
+            later(() => {
+              if (mode === 'readwrite' && state.refuseWrites) {
+                tx.error = new Error('QuotaExceededError');
+                return (tx.onabort as () => void)();
+              }
+              r.result = result();
+              (tx.oncomplete as () => void)();
+            });
+            return r;
+          };
+          tx.objectStore = () => ({
+            getAll: () => act(() => [...rows.values()]),
+            put: (m: { id: string }) => act(() => rows.set(m.id, m)),
+            delete: (id: string) => act(() => rows.delete(id)),
+            get: (id: string) => act(() => rows.get(id)),
+          });
+          return tx;
+        },
+      };
+      state.latest = conn;
+      later(() => {
+        req.result = conn;
+        (req.onsuccess as () => void)();
+      });
+      return req;
+    };
+    return { api: { open }, rows, state };
+  }
+  const moment = (id: string) => ({ id, created: Date.now(), title: id, description: '', tags: [], events: [], system: 'Lave', seconds: 0, photo: new Blob(['x']), poster: null, saved: false }) as LoggedMoment;
+
+  /** A fresh copy of the module, so each test opens its own connection. */
+  async function fresh() {
+    vi.resetModules();
+    const fake = fakeIdb();
+    vi.stubGlobal('indexedDB', fake.api);
+    return { fake, log: await import('./flightLog') };
+  }
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('stores and lists a moment', async () => {
+    const { log } = await fresh();
+    expect(await log.addMoment(moment('a'))).toBe('stored');
+    expect((await log.listMoments()).map((m) => m.id)).toEqual(['a']);
+    expect(log.momentsUnreadable).toBe(false);
+  });
+
+  it('opens a new connection when the phone has dropped the old one, and nothing is lost', async () => {
+    const { fake, log } = await fresh();
+    await log.addMoment(moment('a'));
+    fake.state.dead.add(fake.state.latest!);
+    expect((await log.listMoments()).map((m) => m.id)).toEqual(['a']);
+    expect(await log.addMoment(moment('b'))).toBe('stored');
+    expect(fake.state.opens).toBe(2);
+    expect(log.momentsUnreadable).toBe(false);
+  });
+
+  it('says failed, not full, when the device refuses to store, and unreadable, not empty', async () => {
+    const { fake, log } = await fresh();
+    await log.addMoment(moment('a'));
+    fake.state.refuseAll = true;
+    expect(await log.addMoment(moment('b'))).toBe('failed');
+    expect(await log.listMoments()).toEqual([]);
+    expect(log.momentsUnreadable).toBe(true);
+    fake.state.refuseAll = false;
+    expect((await log.listMoments()).map((m) => m.id)).toEqual(['a']);
+    expect(log.momentsUnreadable).toBe(false);
+  });
+
+  it('counts a write as failed when it fails at commit, as running out of space does', async () => {
+    const { fake, log } = await fresh();
+    fake.state.refuseWrites = true;
+    expect(await log.addMoment(moment('a'))).toBe('failed');
+    expect(fake.rows.size).toBe(0);
+  });
+
+  it('says full only when every moment is starred and there is no room', async () => {
+    const { log } = await fresh();
+    for (let i = 0; i < log.MAX; i++) expect(await log.addMoment({ ...moment(`m${i}`), saved: true })).toBe('stored');
+    expect(await log.addMoment(moment('over'))).toBe('full');
   });
 });
