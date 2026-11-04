@@ -181,13 +181,18 @@ function crowd(ships: TrackData['ships'], n: number, names: Map<string, string>)
   return `${count(n)} ${many}`;
 }
 
+/** A fight's length as a pilot would say it: "41 seconds", "2 minutes", "1 min 5 s". */
+export const howLong = (s: number) => (s < 60 ? `${s} seconds` : s % 60 === 0 ? `${s / 60} minute${s === 60 ? '' : 's'}` : `${Math.floor(s / 60)} min ${s % 60} s`);
+
 /** The end of every clip's line: what Witchspace is, and that it's free. */
-export const CLIP_LINE_END = 'Watch it from outside, then fly it yourself: Witchspace is free in your browser.';
+export const CLIP_LINE_END = 'Fly it yourself: Witchspace is free in your browser.';
 
 /**
  * A line for a clip's link preview, written from what happened in the fight (Mark, 4 November 2026: "Will
  * it write cool descriptions for the shares or just title etc?"). Every word written here, from the checked
  * track: your ship, who you fought, how many went down and how fast. Under the title, so it doesn't repeat it.
+ * Only computer-flown ships are in a track, so another commander is never named. The ending doesn't
+ * promote the replay from outside (Marketing: the kill cam is on hold for marketing).
  */
 export function describeLine(d: TrackData, names: Map<string, string>, claimedKills = 0): string {
   const system = d.scene.system;
@@ -207,13 +212,13 @@ export function describeLine(d: TrackData, names: Map<string, string>, claimedKi
     const by = killerOf(d);
     const killer = by !== undefined ? d.ships.find((s) => s.id === by) : undefined;
     const them = killer ? crowd([killer], 1, names) : null;
-    const took = kills ? ` Took ${count(kills)} with ${kills === 1 ? 'it' : 'them'} first.` : '';
-    line = `${yours ? capital(an(yours)) : 'A ship'} lost at ${system}${them ? `, to ${them}` : ''}.${took}`;
+    const took = kills ? `, after taking ${count(kills)} down first` : '';
+    line = `${yours ? capital(an(yours)) : 'A ship'} lost at ${system}${them ? ` to ${them}` : ''}${took}.`;
   } else if (kills > 1) {
-    line = `${capital(crowd(mine.length === kills ? mine : [], kills, names))} down${fight ? ` in ${fight} seconds` : ''} at ${system}${flying}.`;
+    line = `${capital(crowd(mine.length === kills ? mine : [], kills, names))} down${fight ? ` in ${howLong(fight)}` : ''} at ${system}${flying}.`;
   } else if (kills === 1) {
     const them = crowd(mine.length ? mine : [], 1, names);
-    line = yours ? `${capital(an(yours))} against ${them} at ${system}. One of them went home.` : `${capital(them)} down at ${system}.`;
+    line = yours ? `${capital(an(yours))} against ${them} at ${system}. Only one of them flew home.` : `${capital(them)} down at ${system}.`;
   } else {
     const other = focusOf(d, d.samples[0].t, d.samples[d.samples.length - 1].t);
     const ship = other !== undefined ? d.ships.find((s) => s.id === other) : undefined;

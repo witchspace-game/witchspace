@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { packTrack, SAMPLE_RATE, TrackRecorder, unpackTrack, type TrackData } from '../../src/game/track';
-import { checkTrack, describeLine } from './clipCheck';
+import { checkTrack, describeLine, howLong } from './clipCheck';
 
 const SHIPS = new Map([
   ['cobra-mk3', 'Cobra Mk III'],
@@ -128,7 +128,7 @@ describe('a fight with kills is called that, as the flight log calls it', () => 
 });
 
 describe("a clip's line for link previews is written from the fight", () => {
-  const line = (d: TrackData, claimed = 0) => describeLine(d, SHIPS, claimed).replace(/ Watch it from outside.*$/, '');
+  const line = (d: TrackData, claimed = 0) => describeLine(d, SHIPS, claimed).replace(/ Fly it yourself.*$/, '');
   function pirates(n: number): TrackData {
     const d = fight();
     for (let k = 0; k < n; k++) {
@@ -147,13 +147,16 @@ describe("a clip's line for link previews is written from the fight", () => {
     expect(line(pirates(3))).toBe('Three pirates down in 4 seconds at Lave, flying a Cobra Mk III.');
   });
   it('leaves the ending open for one kill', () => {
-    expect(line(pirates(1))).toBe('A Cobra Mk III against a pirate Mamba at Lave. One of them went home.');
+    expect(line(pirates(1))).toBe('A Cobra Mk III against a pirate Mamba at Lave. Only one of them flew home.');
   });
   it('says who won when you lost, and what you took with you', () => {
     const d = pirates(2);
     d.events.push({ t: 9.5, kind: 'beam', from: 2, a: [0, 0, 0], b: [0, 0, 0], color: '#ff0000', hit: 1 });
     d.events.push({ t: 9.6, kind: 'death', by: 2 });
-    expect(line(d)).toBe('A Cobra Mk III lost at Lave, to a pirate Mamba. Took two with them first.');
+    expect(line(d)).toBe('A Cobra Mk III lost at Lave to a pirate Mamba, after taking two down first.');
+  });
+  it('says a long fight in minutes', () => {
+    expect([howLong(41), howLong(60), howLong(120), howLong(65)]).toEqual(['41 seconds', '1 minute', '2 minutes', '1 min 5 s']);
   });
   it('always ends by saying what Witchspace is', () => {
     expect(describeLine(fight(), SHIPS)).toMatch(/Witchspace is free in your browser\.$/);
