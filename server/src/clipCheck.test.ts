@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { packTrack, SAMPLE_RATE, TrackRecorder, unpackTrack, type TrackData } from '../../src/game/track';
-import { checkTrack } from './clipCheck';
+import { checkTrack, describeLine } from './clipCheck';
 
 const SHIPS = new Map([
   ['cobra-mk3', 'Cobra Mk III'],
@@ -124,5 +124,38 @@ describe('a fight with kills is called that, as the flight log calls it', () => 
     const c = check(kills(1, 2));
     if (typeof c === 'string') throw new Error(c);
     expect(c.title).toBe('CMDR Kestrel: Mamba down at Lave');
+  });
+});
+
+describe("a clip's line for link previews is written from the fight", () => {
+  const line = (d: TrackData, claimed = 0) => describeLine(d, SHIPS, claimed).replace(/ Watch it from outside.*$/, '');
+  function pirates(n: number): TrackData {
+    const d = fight();
+    for (let k = 0; k < n; k++) {
+      const id = 10 + k;
+      d.ships.push({ id, def: 'mamba', role: 'pirate', label: 'x' });
+      d.events.push({ t: 6.5 + k * 1.5, kind: 'beam', from: 1, a: [0, 0, 0], b: [500, 30, 0], color: '#3dffb0', hit: id });
+      d.events.push({ t: 6.6 + k * 1.5, kind: 'boom', id, p: [500, 30, 0] });
+    }
+    return d;
+  }
+
+  it('says what was fought, with no kills', () => {
+    expect(line(fight())).toBe('A Cobra Mk III and a pirate Mamba, trading fire at Lave.');
+  });
+  it('gives several kills by what they were, and how fast', () => {
+    expect(line(pirates(3))).toBe('Three pirates down in 4 seconds at Lave, flying a Cobra Mk III.');
+  });
+  it('leaves the ending open for one kill', () => {
+    expect(line(pirates(1))).toBe('A Cobra Mk III against a pirate Mamba at Lave. One of them went home.');
+  });
+  it('says who won when you lost, and what you took with you', () => {
+    const d = pirates(2);
+    d.events.push({ t: 9.5, kind: 'beam', from: 2, a: [0, 0, 0], b: [0, 0, 0], color: '#ff0000', hit: 1 });
+    d.events.push({ t: 9.6, kind: 'death', by: 2 });
+    expect(line(d)).toBe('A Cobra Mk III lost at Lave, to a pirate Mamba. Took two with them first.');
+  });
+  it('always ends by saying what Witchspace is', () => {
+    expect(describeLine(fight(), SHIPS)).toMatch(/Witchspace is free in your browser\.$/);
   });
 });

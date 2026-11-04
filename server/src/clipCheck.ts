@@ -29,6 +29,8 @@ export interface CheckedClip {
   /** The ship type the clip is about (the killer, or the ship you fought), for its card. */
   focusDef: string | null;
   seconds: number;
+  /** Its line for link previews (describeLine). */
+  line: string;
 }
 
 /** What the player's own ship is called on the page: the signed-in callsign, or no name at all. */
@@ -100,7 +102,7 @@ export function checkTrack(bytes: Uint8Array, ships: Map<string, string>, callsi
 
   const seconds = Math.min(60, Math.max(3, finite(wantSeconds) ? wantSeconds : 20));
   const { title, focusDef } = describeClip(clean, commanderLabel(callsign), ships, seconds, claimedKills);
-  return { packed: packTrack(clean), title, system, focusDef, seconds };
+  return { packed: packTrack(clean), title, system, focusDef, seconds, line: describeLine(clean, ships, claimedKills) };
 }
 
 /**
@@ -160,6 +162,64 @@ export function describeClip(d: TrackData, who: string, ships: Map<string, strin
           ? `${who}: fighting ${them} at ${system}`
           : `${who} at ${system}`;
   return { title, focusDef: otherShip?.def ?? null };
+}
+
+const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const count = (n: number) => WORDS[n] ?? String(n);
+const capital = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const an = (name: string) => `${/^[AEIOU]/.test(name) ? 'an' : 'a'} ${name}`;
+/** Ships by what they were, as a pilot would say it: "three pirates", "two police ships", "four ships". */
+function crowd(ships: TrackData['ships'], n: number, names: Map<string, string>): string {
+  const roles = new Set(ships.map((s) => s.role));
+  const role = roles.size === 1 ? [...roles][0] : null;
+  if (n === 1) {
+    const s = ships[0];
+    const name = s ? names.get(s.def) : undefined;
+    return s?.role === 'pirate' && name ? `a pirate ${name}` : name ? an(name) : 'a ship';
+  }
+  const many = role === 'pirate' ? 'pirates' : role === 'police' ? 'police ships' : role === 'marshal' ? 'Marshals' : role === 'trader' ? 'traders' : 'ships';
+  return `${count(n)} ${many}`;
+}
+
+/** The end of every clip's line: what Witchspace is, and that it's free. */
+export const CLIP_LINE_END = 'Watch it from outside, then fly it yourself: Witchspace is free in your browser.';
+
+/**
+ * A line for a clip's link preview, written from what happened in the fight (Mark, 4 November 2026: "Will
+ * it write cool descriptions for the shares or just title etc?"). Every word written here, from the checked
+ * track: your ship, who you fought, how many went down and how fast. Under the title, so it doesn't repeat it.
+ */
+export function describeLine(d: TrackData, names: Map<string, string>, claimedKills = 0): string {
+  const system = d.scene.system;
+  const youShip = d.ships.find((s) => s.id === d.scene.you);
+  const yours = youShip ? names.get(youShip.def) : undefined;
+  const flying = yours ? `, flying ${an(yours)}` : '';
+  const mine = killsIn(d);
+  const claimed = Number.isFinite(claimedKills) ? Math.floor(claimedKills) : 0;
+  const kills = Math.max(mine.length, Math.min(claimed, boomsIn(d)));
+  // The fight's length: from your first shot, or the first at you, to the last ship going up.
+  const firstShot = d.events.find((e) => e.kind === 'beam' && (e.from === d.scene.you || e.hit === d.scene.you))?.t;
+  const lastBoom = [...d.events].reverse().find((e) => e.kind === 'boom' && e.id !== d.scene.you)?.t;
+  const fight = firstShot !== undefined && lastBoom !== undefined && lastBoom - firstShot >= 2 ? Math.round(lastBoom - firstShot) : null;
+  const death = d.events.find((e) => e.kind === 'death');
+  let line: string;
+  if (death) {
+    const by = killerOf(d);
+    const killer = by !== undefined ? d.ships.find((s) => s.id === by) : undefined;
+    const them = killer ? crowd([killer], 1, names) : null;
+    const took = kills ? ` Took ${count(kills)} with ${kills === 1 ? 'it' : 'them'} first.` : '';
+    line = `${yours ? capital(an(yours)) : 'A ship'} lost at ${system}${them ? `, to ${them}` : ''}.${took}`;
+  } else if (kills > 1) {
+    line = `${capital(crowd(mine.length === kills ? mine : [], kills, names))} down${fight ? ` in ${fight} seconds` : ''} at ${system}${flying}.`;
+  } else if (kills === 1) {
+    const them = crowd(mine.length ? mine : [], 1, names);
+    line = yours ? `${capital(an(yours))} against ${them} at ${system}. One of them went home.` : `${capital(them)} down at ${system}.`;
+  } else {
+    const other = focusOf(d, d.samples[0].t, d.samples[d.samples.length - 1].t);
+    const ship = other !== undefined ? d.ships.find((s) => s.id === other) : undefined;
+    line = ship && yours ? `${capital(an(yours))} and ${crowd([ship], 1, names)}, trading fire at ${system}.` : `Flying ${yours ? an(yours) : 'out'} at ${system}.`;
+  }
+  return `${line} ${CLIP_LINE_END}`;
 }
 
 /** A baseline or progressive JPEG's width and height, from its frame header; null if it isn't one. */
