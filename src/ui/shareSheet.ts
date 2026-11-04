@@ -161,18 +161,19 @@ export function openShareSheet(m: ShareMedia) {
       await copyText(url);
       copy.querySelector('span')!.textContent = 'Copied ✓';
     };
-    // Facebook's app opens to its feed and drops the link it's given (Mark: "just took me to facebook and
-    // that was it"), so on a phone the link is copied first, ready to paste into the post.
-    if (phone) {
-      links.querySelector<HTMLAnchorElement>('[data-to="facebook"]')!.addEventListener('click', () => {
-        void copyText(url);
-        msg.textContent = 'Link copied: paste it into your Facebook post.';
+    // Facebook's app can't take its own share link from another app: it showed its feed (Mark: "just took
+    // me to facebook and that was it"), then a black screen (4 November 2026). Its panel in the phone's own
+    // share sheet does take a link, so on a phone Facebook goes there, with only the link, to tap Facebook.
+    if (phone && 'share' in navigator) {
+      const sheet = () => void navigator.share({ url }).catch((e) => (e as DOMException)?.name !== 'AbortError' && (msg.textContent = 'Your phone wouldn’t open its share sheet. Tap again.'));
+      links.querySelector<HTMLAnchorElement>('[data-to="facebook"]')!.addEventListener('click', (e) => {
+        e.preventDefault();
+        msg.textContent = 'Choose Facebook in the list: your link goes into the post.';
+        sheet();
       });
       const more = el.querySelector<HTMLButtonElement>('.ws-share-more-apps')!;
-      if ('share' in navigator) {
-        more.hidden = false;
-        more.onclick = () => void navigator.share({ url, title: text }).catch((e) => (e as DOMException)?.name !== 'AbortError' && (msg.textContent = 'Your phone wouldn’t open its share sheet. Tap again.'));
-      }
+      more.hidden = false;
+      more.onclick = () => void navigator.share({ url, title: text }).catch((e) => (e as DOMException)?.name !== 'AbortError' && (msg.textContent = 'Your phone wouldn’t open its share sheet. Tap again.'));
     }
   };
   if (m.replay?.shared) {
