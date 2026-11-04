@@ -2215,8 +2215,8 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
 .ws-share-hint { margin: 8px 2px 0; color: var(--dim); font-size: 13px; line-height: 1.4; }
 .ws-share-hint b { color: var(--fg); font-weight: 600; }
 .ws-share-more { min-height: 0; padding: 0; border: 0; background: none; color: var(--accent); font-size: 13px; text-decoration: underline; cursor: pointer; }
-.ws-share-upright, .ws-share-copylink { display: block; width: 100%; min-height: 40px; margin-top: 6px; padding: 4px; border: 0; background: none; color: var(--accent); font-size: 14px; text-transform: none; letter-spacing: 0; cursor: pointer; }
-.ws-share-upright[hidden], .ws-share-copylink[hidden], .ws-share-page[hidden] { display: none; }
+.ws-share-upright, .ws-share-more-apps { display: block; width: 100%; min-height: 40px; margin-top: 6px; padding: 4px; border: 0; background: none; color: var(--accent); font-size: 14px; text-transform: none; letter-spacing: 0; cursor: pointer; }
+.ws-share-upright[hidden], .ws-share-more-apps[hidden], .ws-share-page[hidden] { display: none; }
 .ws-share-replay { margin-top: 12px; }
 .ws-share-replay[hidden], .ws-share-consent[hidden], .ws-share-put[hidden] { display: none; }
 .ws-share-put { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-size: 15px; }
