@@ -9,7 +9,7 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { json, networkOf } from './http';
-import { checkTrack, describeClip, jpegSize, MAX_TRACK_BYTES } from './clipCheck';
+import { checkTrack, CLIP_LINE_END, describeClip, describeLine, jpegSize, MAX_TRACK_BYTES } from './clipCheck';
 import { unpackTrack } from '../../src/game/track';
 import { FEED_EACH, type ClipEvent } from './feed';
 import data from './mcp-data.json';
@@ -74,7 +74,8 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     // Each clip's card for link previews (from 29 October 2026): a frame of the flight, drawn by the sharer's game,
     // and its version, which goes in the picture's address so X and the rest fetch a new one fresh.
     // And its video (from 29 October 2026, Mark: the link plays your own video first): its version, and whether it's upright.
-    for (const col of ['sharer TEXT', 'withdrawn INTEGER NOT NULL DEFAULT 0', 'card BLOB', 'card_v INTEGER NOT NULL DEFAULT 0', 'video INTEGER NOT NULL DEFAULT 0', 'upright INTEGER NOT NULL DEFAULT 0']) {
+    // And its line for link previews, written from the fight (from 4 November 2026): older clips get theirs when first asked.
+    for (const col of ['sharer TEXT', 'withdrawn INTEGER NOT NULL DEFAULT 0', 'card BLOB', 'card_v INTEGER NOT NULL DEFAULT 0', 'video INTEGER NOT NULL DEFAULT 0', 'upright INTEGER NOT NULL DEFAULT 0', 'line TEXT']) {
       try {
         this.sql.exec(`ALTER TABLE clips ADD COLUMN ${col}`);
       } catch {
@@ -141,6 +142,7 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
       if (d && you) {
         const { title } = describeClip(d, you.label, SHIP_NAMES, r.seconds as number, claimedKills);
         if (title !== r.title) this.sql.exec('UPDATE clips SET title = ? WHERE id = ?', title, id);
+        this.sql.exec('UPDATE clips SET line = ? WHERE id = ?', describeLine(d, SHIP_NAMES, claimedKills), id);
       }
     }
     return { ok: true, video: r.video as number, status: 200 };
@@ -169,7 +171,7 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     const c = checkTrack(packed, SHIP_NAMES, account?.callsign ?? null, seconds, claimedKills);
     if (typeof c === 'string') return { error: c, status: 400 };
     const id = crypto.randomUUID().replace(/-/g, '').slice(0, 10);
-    this.sql.exec('INSERT INTO clips (id, created, title, system, focus, seconds, track, account, sharer) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', id, Date.now(), c.title, c.system, c.focusDef, c.seconds, await gzip(c.packed), account?.id ?? null, voter);
+    this.sql.exec('INSERT INTO clips (id, created, title, system, focus, seconds, track, account, sharer, line) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', id, Date.now(), c.title, c.system, c.focusDef, c.seconds, await gzip(c.packed), account?.id ?? null, voter, c.line);
     this.note(voter, net, 'share');
     return { id, url: `${SITE}/clip/${id}`, title: c.title, status: 200 };
   }
@@ -253,14 +255,26 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     return { ok: true, status: 200 };
   }
 
+  /** A clip's line for link previews: kept, or written now from its track (a clip from before 4 November 2026). */
+  private async line(id: string, system: string): Promise<string> {
+    const r = this.sql.exec('SELECT line, track FROM clips WHERE id = ?', id).toArray()[0];
+    if (r?.line) return r.line as string;
+    const packed = r ? await gunzip(r.track as ArrayBuffer) : null;
+    const d = packed ? unpackTrack(packed) : null;
+    if (!d) return `Replayed from the flight recorder at ${system}. ${CLIP_LINE_END}`;
+    const line = describeLine(d, SHIP_NAMES);
+    this.sql.exec('UPDATE clips SET line = ? WHERE id = ?', line, id);
+    return line;
+  }
+
   /** The small page link previewers see: the title, and the card of the ship involved. */
-  card(id: string): Response {
+  async card(id: string): Promise<Response> {
     const c = this.get(id, null);
     const url = `${SITE}/clip/${id}`;
     const title = c ? c.title : 'Witchspace';
     const v = c ? (this.sql.exec('SELECT card_v FROM clips WHERE id = ? AND card IS NOT NULL', id).toArray()[0]?.card_v as number | undefined) : undefined;
     const image = v ? cardImage(id, v) : FALLBACK_CARD;
-    const desc = c ? `Replayed from the flight recorder at ${c.system}. Watch it from outside, then fly it yourself: Witchspace is free in your browser.` : 'A free, open-source space game in your browser.';
+    const desc = c ? await this.line(id, c.system) : 'A free, open-source space game in your browser.';
     const html = `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><title>${esc(title)}</title>
 <meta name="description" content="${esc(desc)}"><link rel="canonical" href="${url}">
 <meta property="og:type" content="video.other"><meta property="og:site_name" content="Witchspace"><meta property="og:title" content="${esc(title)}">
