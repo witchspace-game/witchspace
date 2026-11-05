@@ -13,7 +13,8 @@ const MAX_POSES = 96;
 const MAX_SHIPS = 160;
 const MAX_EVENTS = 6000;
 const FAR = 1e7; // metres from the track's origin: anything further is nonsense
-const ROLES = new Set(['you', 'pirate', 'police', 'marshal', 'trader', 'missile', 'station']);
+// 'commander': another commander in shared space, never named (a callsign only with their yes, docs/design/flight-recorder.md).
+const ROLES = new Set(['you', 'pirate', 'police', 'marshal', 'trader', 'commander', 'missile', 'station']);
 // A colour as the game writes one: #3dffb0, or rgb(127,178,255) (three.js's getStyle).
 const HEX = /^(#[0-9a-fA-F]{3,8}|rgb\(\d{1,3}, ?\d{1,3}, ?\d{1,3}\))$/;
 const SYSTEM = /^[A-Za-z][A-Za-z' -]{0,23}$/;
@@ -91,7 +92,7 @@ export function checkTrack(bytes: Uint8Array, ships: Map<string, string>, callsi
   // Every word on the page is written here, from the checked numbers.
   const system = scene.system as string;
   const label = (def: string, role: string) =>
-    role === 'you' ? commanderLabel(callsign) : role === 'missile' ? 'Missile' : role === 'station' ? `${system} station` : `${ships.get(def)} · ${role}`;
+    role === 'you' ? commanderLabel(callsign) : role === 'commander' ? 'A commander' : role === 'missile' ? 'Missile' : role === 'station' ? `${system} station` : `${ships.get(def)} · ${role}`;
   const clean: TrackData = {
     v: TRACK_VERSION,
     scene: { system, when: scene.when as number, you: d.scene.you, ...(planet ? { planet: { p: planet.p as [number, number, number], r: planet.r as number, color: planet.color as string } } : {}), ...(scene.sun ? { sun: scene.sun as [number, number, number] } : {}) },
@@ -147,7 +148,7 @@ export function describeClip(d: TrackData, who: string, ships: Map<string, strin
   const other = death ? killerOf(d) : focusOf(d, Math.max(0, end - seconds), end);
   const otherShip = other !== undefined ? d.ships.find((s) => s.id === other) : undefined;
   const name = (def: string) => (def === 'falcon' ? 'the Falcon' : `a ${ships.get(def)}`);
-  const them = otherShip ? name(otherShip.def) : null;
+  const them = otherShip ? (otherShip.role === 'commander' ? 'another commander' : name(otherShip.def)) : null;
   const mine = killsIn(d);
   const claimed = Number.isFinite(claimedKills) ? Math.floor(claimedKills) : 0;
   const count = Math.max(mine.length, Math.min(claimed, boomsIn(d)));
@@ -157,7 +158,7 @@ export function describeClip(d: TrackData, who: string, ships: Map<string, strin
     : kills.length > 1
       ? `${who}: ${kills.length} kills in one fight at ${system}`
       : kills.length === 1
-        ? `${who}: ${(kills.first && ships.get(kills.first.def)) ?? 'A ship'} down at ${system}`
+        ? `${who}: ${kills.first?.role === 'commander' ? 'Another commander' : ((kills.first && ships.get(kills.first.def)) ?? 'A ship')} down at ${system}`
         : them
           ? `${who}: fighting ${them} at ${system}`
           : `${who} at ${system}`;
@@ -175,9 +176,10 @@ function crowd(ships: TrackData['ships'], n: number, names: Map<string, string>)
   if (n === 1) {
     const s = ships[0];
     const name = s ? names.get(s.def) : undefined;
+    if (s?.role === 'commander') return 'another commander';
     return s?.role === 'pirate' && name ? `a pirate ${name}` : name ? an(name) : 'a ship';
   }
-  const many = role === 'pirate' ? 'pirates' : role === 'police' ? 'police ships' : role === 'marshal' ? 'Marshals' : role === 'trader' ? 'traders' : 'ships';
+  const many = role === 'pirate' ? 'pirates' : role === 'police' ? 'police ships' : role === 'marshal' ? 'Marshals' : role === 'trader' ? 'traders' : role === 'commander' ? 'commanders' : 'ships';
   return `${count(n)} ${many}`;
 }
 
@@ -191,7 +193,7 @@ export const CLIP_LINE_END = 'Fly it yourself: Witchspace is free in your browse
  * A line for a clip's link preview, written from what happened in the fight (Mark, 4 November 2026: "Will
  * it write cool descriptions for the shares or just title etc?"). Every word written here, from the checked
  * track: your ship, who you fought, how many went down and how fast. Under the title, so it doesn't repeat it.
- * Only computer-flown ships are in a track, so another commander is never named. The ending doesn't
+ * Another commander in a track is only ever "another commander": never named. The ending doesn't
  * promote the replay from outside (Marketing: the kill cam is on hold for marketing).
  */
 export function describeLine(d: TrackData, names: Map<string, string>, claimedKills = 0): string {

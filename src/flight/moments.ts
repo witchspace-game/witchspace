@@ -34,6 +34,7 @@ import { spillCargo, spillSpecial } from './adrift';
 import { npcIdentified } from './hud';
 import { deathCam, hitFeedback, setAutopilot, setView } from './flying';
 import * as THREE from 'three';
+import { remoteUnidentified } from './sharedSpace';
 
 import type { State } from '../core';
 import type { StarSystem } from '../galaxy/generate';
@@ -91,6 +92,14 @@ export function recordTrack() {
     track.ship({ id, def: 'missile', role: 'missile', label: 'Missile' });
     poses.push(poseOf(id, m.model.root));
   }
+  // Other commanders, in their own paint but never by name: "A commander" (Mark, 5 November 2026).
+  for (const r of sharedSpace.remotes.values()) {
+    if (r.position.distanceTo(here) > TRACK_RANGE) continue;
+    const id = trackId(r);
+    const look = r.paint ? { colour: r.paint.c, glow: r.paint.g ?? 1, trim: r.paint.t ?? null, ...(r.paint.l === 1 ? { lights: true } : {}) } : undefined;
+    track.ship({ id, def: r.ship, role: 'commander', label: 'A commander', ...(look ? { look } : {}) });
+    poses.push({ id, p: r.position.toArray(), q: r.quaternion.toArray() as Pose['q'], ...(remoteUnidentified(r) ? { unknown: true } : {}) });
+  }
   if (station.root.position.distanceTo(here) < TRACK_RANGE) {
     const id = trackId(station);
     track.ship({ id, def: 'coriolis', role: 'station', label: `${currentSystem().name} station` });
@@ -106,6 +115,11 @@ export function trackBeam(from: object, a: THREE.Vector3, b: THREE.Vector3, colo
 
 export function trackBoom(npc: NpcShip) {
   if (!classicRules()) track.event({ t: flight.elapsed, kind: 'boom', id: trackId(npc), p: npc.obj.position.toArray() });
+}
+
+/** Another commander's ship going up, for the track. */
+export function trackCommanderBoom(r: object, at: THREE.Vector3) {
+  if (!classicRules()) track.event({ t: flight.elapsed, kind: 'boom', id: trackId(r), p: at.toArray() });
 }
 
 function trackScene() {

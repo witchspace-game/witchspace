@@ -24,6 +24,8 @@ import * as THREE from 'three';
 import { editionById, editionNo } from '../content/editions';
 import { flyableOf } from '../content/flyable';
 import type { NpcShip } from '../game/npc';
+import type { MomentEvent } from '../game/moments';
+import type { LoggedMoment } from '../game/flightLog';
 
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
@@ -32,6 +34,9 @@ const main = {} as {
   rateKill: (npc: NpcShip | "crime") => string;
   hitFeedback: (strength: number) => void;
   die: () => void;
+  keepCombat: (event: MomentEvent, before: number, after: number) => Promise<LoggedMoment | null>;
+  trackBeam: (from: object, a: THREE.Vector3, b: THREE.Vector3, color: string, hit: object | null) => void;
+  trackCommanderBoom: (r: object, at: THREE.Vector3) => void;
 };
 export const initSharedSpace = (hooks: typeof main) => Object.assign(main, hooks);
 
@@ -51,7 +56,7 @@ function shipLabel(r: Remote): string {
   return r.ship === 'cobra-mk3' ? '' : ` · ${flyableOf(r.ship).name}`;
 }
 /** A commander running dark, too far off for a hull read: we can see them, not say who they are. */
-const remoteUnidentified = (r: Remote) => r.dark && r.position.distanceTo(player.obj.position) > HULL_READ;
+export const remoteUnidentified = (r: Remote) => r.dark && r.position.distanceTo(player.obj.position) > HULL_READ;
 export const commanderColour = (r: Remote) => (sharedSpace.isHostile(r) ? '#ff4d6d' : remoteUnidentified(r) ? UNIDENTIFIED_HEX : COMMANDER_COLOUR);
 const BUMP_SEPARATION = 40; // metres each ship moves apart after a collision
 const remoteModels = new Map<string, { model: ShipModel; fireCooldown: number; unidentified: boolean }>();
@@ -176,6 +181,7 @@ function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
     boomAt(r.position, 2.2, 1600, 1.6);
     m.model.root.visible = false; // gone; the server tells us when they leave
   }
+  main.trackCommanderBoom(r, r.position);
   // A collision is an accident: no kill, and no crime.
   if (!byMe || collision) {
     flash(collision ? `Commander ${r.name} was destroyed in a collision` : `Commander ${r.name} has been destroyed`, 2.5);
@@ -185,6 +191,8 @@ function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
   flash(`Commander ${r.name} destroyed · ${main.rateKill('crime')}`, 2.5);
   main.becomeFugitive(true); // killing a clean commander is a serious crime: no rating
   saveCommander(c);
+  // Kept, as a pirate kill is: probably the best fight the game can make. Never by name: "A commander".
+  void main.keepCombat({ kind: 'kill', text: 'Shot down another commander', subject: 'Another commander' }, 20, 4);
 }
 
 export function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
@@ -231,6 +239,7 @@ export function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
       const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(r.quaternion);
       const origin = r.position.clone().addScaledVector(fwd, 20);
       beams.fire(origin, origin.clone().addScaledVector(fwd, 2000), COMMANDER_COLOUR);
+      main.trackBeam(r, origin, origin.clone().addScaledVector(fwd, 2000), COMMANDER_COLOUR, null);
       // A commander in a Fer-de-lance is heard by her guns (other commanders' lasers stay silent for now).
       if (voiceOf(shipById(r.ship)) === 'grand') grandShot('pulse', origin);
     }

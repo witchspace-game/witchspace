@@ -29,6 +29,17 @@ describe('moments', () => {
     expect(momentTags([kill('Mamba')], ctx)).toEqual(expect.arrayContaining(['witchspace', 'flight recorder', 'dogfight', 'mamba', 'riedquat']));
   });
 
+  it('never puts Elite in the metadata (Marketing: the tribute belongs in a post)', () => {
+    expect(momentDescription([kill('Mamba')], ctx)).not.toMatch(/elite/i);
+    expect(momentTags([kill('Mamba')], ctx).join(' ')).not.toMatch(/elite/i);
+  });
+
+  it('keeps another commander unnamed, and out of the tags', () => {
+    const shot: MomentEvent = { kind: 'kill', text: 'Shot down another commander', subject: 'Another commander' };
+    expect(momentTitle([shot], ctx)).toBe('CMDR Jameson: Another commander down at Riedquat');
+    expect(momentTags([shot], ctx)).not.toContain('another commander');
+  });
+
   it('names photos as photos', () => {
     const photo: MomentEvent = { kind: 'photo', text: 'Photo' };
     expect(momentTitle([photo], ctx)).toBe('CMDR Jameson: A photo from Riedquat');
