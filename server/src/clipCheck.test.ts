@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { packTrack, SAMPLE_RATE, TrackRecorder, unpackTrack, type TrackData } from '../../src/game/track';
-import { checkTrack, describeLine, howLong } from './clipCheck';
+import { checkTrack, describeLine, howLong, killsInTitle } from './clipCheck';
 
 const SHIPS = new Map([
   ['cobra-mk3', 'Cobra Mk III'],
@@ -168,6 +168,9 @@ describe("a clip's line for link previews is written from the fight", () => {
     if (typeof c === 'string') throw new Error(c);
     expect(c.title).toBe('CMDR Kestrel: Another commander down at Lave');
     expect(JSON.stringify(c)).not.toMatch(/Someone/);
+  });
+  it("reads a title's kills, so an older clip's line agrees with it", () => {
+    expect([killsInTitle('CMDR Jameson: 3 kills in one fight at Xeaqu'), killsInTitle('CMDR Jameson: Sidewinder down at Begeabi')]).toEqual([3, 0]);
   });
   it('always ends by saying what Witchspace is', () => {
     expect(describeLine(fight(), SHIPS)).toMatch(/Witchspace is free in your browser\.$/);

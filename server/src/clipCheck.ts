@@ -186,6 +186,9 @@ function crowd(ships: TrackData['ships'], n: number, names: Map<string, string>)
 /** A fight's length as a pilot would say it: "41 seconds", "2 minutes", "1 min 5 s". */
 export const howLong = (s: number) => (s < 60 ? `${s} seconds` : s % 60 === 0 ? `${s / 60} minute${s === 60 ? '' : 's'}` : `${Math.floor(s / 60)} min ${s % 60} s`);
 
+/** The kills a clip's title counts ("3 kills in one fight at Xeaqu"), for a clip whose line is written later: 0 if it doesn't say. */
+export const killsInTitle = (title: string) => Number(/(\d+) kills in one fight/.exec(title)?.[1] ?? 0);
+
 /** The end of every clip's line: what Witchspace is, and that it's free. */
 export const CLIP_LINE_END = 'Fly it yourself: Witchspace is free in your browser.';
 
