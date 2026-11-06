@@ -131,12 +131,19 @@ export function updateAimDisplay() {
   }
   wasCaptured = captured;
   mousePrompt.hidden = !wantsMouseCapture();
+  const rect = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
+  // Project a direction onto whichever canvas is showing (1984's is boxed to 4:3 in the middle).
+  const onScreen = (dir: THREE.Vector3) => {
+    const p = camera.position.clone().addScaledVector(dir, 1000).project(camera);
+    return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
+  };
+  // The crosshair sits where the view looks: on the nose, where fixed lasers fire and the ship rolls
+  // about. It was drawn at 42% of the screen's height, above all three (maniacminer on Stardot, 6 November 2026).
+  const c = onScreen(camera.getWorldDirection(new THREE.Vector3()));
+  crosshair.style.left = `${c.x}px`;
+  crosshair.style.top = `${c.y}px`;
   reticle.hidden = !captured || controlScheme() !== 'mouse' || flight.view !== 'front';
   if (reticle.hidden) return;
-  // Project the aim direction onto whichever canvas is showing.
-  const p = camera.position.clone().addScaledVector(aim.dir, 1000).project(camera);
-  const rect = $(isRetro() ? '#retro' : '#neo').getBoundingClientRect();
-  const x = rect.left + ((p.x + 1) / 2) * rect.width;
-  const y = rect.top + ((1 - p.y) / 2) * rect.height;
-  reticle.style.transform = `translate(${x}px, ${y}px)`;
+  const r = onScreen(aim.dir);
+  reticle.style.transform = `translate(${r.x}px, ${r.y}px)`;
 }

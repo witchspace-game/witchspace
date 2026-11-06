@@ -277,8 +277,8 @@ body.retro #reticle { border-radius: 0; box-shadow: none; border-color: #fff; }
 
 .crosshair {
   position: fixed;
-  left: 50%;
-  top: 42%;
+  left: 50%; /* placed on the nose each frame (src/flight/hud.ts updateAimDisplay) */
+  top: 50%;
   width: 36px;
   height: 36px;
   transform: translate(-50%, -50%);
