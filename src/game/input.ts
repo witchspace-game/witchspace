@@ -205,10 +205,13 @@ addEventListener(
   'wheel',
   (e) => {
     if (!flying) return;
+    e.preventDefault(); // never the page's own scroll in flight
+    // Keyboard only and the BBC keys ignore scrolling: a brush of the trackpad flew one pilot into a
+    // planet (maniacminer, Stardot t=33815).
+    if (scheme !== 'mouse') return;
     const scale = e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1; // lines / pages -> pixels
     wheel += e.deltaY * scale;
     swipeRoll = clamp1(swipeRoll - e.deltaX * scale * SWIPE_ROLL);
-    e.preventDefault();
   },
   { passive: false },
 );

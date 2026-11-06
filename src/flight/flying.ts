@@ -155,6 +155,8 @@ export const deathCam = { centre: new THREE.Vector3(), offset: new THREE.Vector3
 // Classic rules leave it all to you, as in 1984.
 const ROLL_ASSIST_RANGE = 2500; // metres
 const ROLL_ASSIST_HEADING = THREE.MathUtils.degToRad(35);
+const ROLL_ASSIST_CONE = THREE.MathUtils.degToRad(30); // how far off the approach line you can be
+const ROLL_ASSIST_MIN_SPEED = 10; // m/s: stopped or drifting isn't approaching
 const ROLL_ASSIST_GAIN = 3; // holds within ~3° of the slot (tested in simulation)
 const AUTO_LEVEL_GAIN = 2.5; // levels 50° of tilt in about half a second (tested in simulation)
 let rollAssist = false;
@@ -164,10 +166,21 @@ export function releaseBank() {
   bankHeld = false;
 }
 
+/**
+ * Near the station, lined up with the slot and flying in: the roll assist matches the station's spin.
+ * Only while you're actually approaching (maniacminer, Stardot t=33815: stopped in front of it, the
+ * assist kept rolling the ship to follow the spin, so the station "orbited" the centre of the screen).
+ */
 export function rollAssistApplies() {
+  const local = station.toLocal(player.obj.position);
+  const toStation = station.root.position.clone().sub(player.obj.position);
   return (
-    player.obj.position.distanceTo(station.root.position) < ROLL_ASSIST_RANGE &&
-    station.headingError(player) < ROLL_ASSIST_HEADING
+    toStation.length() < ROLL_ASSIST_RANGE &&
+    station.headingError(player) < ROLL_ASSIST_HEADING &&
+    local.z > 0 && // in front of the slot's face
+    Math.atan2(Math.hypot(local.x, local.y), local.z) < ROLL_ASSIST_CONE &&
+    player.speed > ROLL_ASSIST_MIN_SPEED &&
+    player.forward().dot(toStation) > 0 // flying towards it, not away
   );
 }
 
@@ -238,7 +251,8 @@ export function updateSpace(dt: number) {
     // assist mustn't undo it the moment you let go (a Stardot pilot found the keys "obstinate").
     if (input.mouseRoll || input.roll !== 0) bankHeld = true;
     if (input.level) bankHeld = false;
-    rollAssist = !flight.autopilot && !flight.surveyPilot && !flight.combatComputer && cmdr().difficulty === 'modern' && input.roll === 0 && rollAssistApplies();
+    // Never with the BBC keys: matching the spin by hand is the 1984 skill (Mark: "roll assist off for BBC keys").
+    rollAssist = !flight.autopilot && !flight.surveyPilot && !flight.combatComputer && cmdr().difficulty === 'modern' && controlScheme() !== 'bbc' && input.roll === 0 && rollAssistApplies();
     if (rollAssist) {
       input.roll = THREE.MathUtils.clamp(-ROLL_ASSIST_GAIN * station.rollError(player), -1, 1);
     } else if (!flight.autopilot && !flight.surveyPilot && !flight.combatComputer && controlScheme() === 'mouse' && input.roll === 0 && !bankHeld) {

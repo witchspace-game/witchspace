@@ -974,7 +974,6 @@ function handleKey(code: string) {
       // The beacon's calls, while its panel is open: 1-4 send, Esc or ` cancel.
       if (beaconOpen && /^Digit[1-4]$/.test(code)) return sendBeacon(BEACON_CALLS[Number(code.slice(5)) - 1].call);
       if (beaconOpen && code === 'Escape') return toggleBeacon(false);
-      if (code === 'Escape' && !$('#controls-card').hidden) return toggleControlsCard(false);
       if (code === 'F1') {
         toggleControlsCard();
       } else if (code === 'KeyH') {
@@ -1037,10 +1036,21 @@ function handleKey(code: string) {
   }
 }
 
+// With mouse aim, the browser takes the first Escape to free the pointer and never passes it on:
+// freeing it closes the card too, so one Escape does both.
+addEventListener('pointerlockchange', () => {
+  if (!document.pointerLockElement && !$('#controls-card').hidden) toggleControlsCard(false);
+});
+
 addEventListener('keydown', (e) => {
   if ((e.target as HTMLElement).closest?.('input, textarea')) return; // typing, not flying
   if (e.code === 'Tab' && isMapOpen()) e.preventDefault(); // Tab switches charts, not focus
   if (e.code === 'Escape' && isReplayOpen()) return closeReplay();
+  // The controls card: one Escape or F1 closes it, docked or flying (maniacminer, Stardot t=33815).
+  if ((e.code === 'Escape' || e.code === 'F1') && !$('#controls-card').hidden) {
+    e.preventDefault();
+    return toggleControlsCard(false);
+  }
   if (e.code === 'KeyP' && e.shiftKey) {
     if (!e.repeat) keepByHand();
     return;

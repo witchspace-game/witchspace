@@ -34,7 +34,6 @@ export function controlRows(scheme: boolean | 'bbc', o: { gimballed: boolean; mo
           ['A / D', 'Roll (< / > too)'],
           ['Space / Shift / ?', 'Throttle up / down'],
           ['F', 'Fire laser'],
-          ['Swipe / scroll', 'Throttle; sideways swipe rolls'],
         ]
   )
     .concat([
@@ -166,9 +165,9 @@ function bbcRows(keyboard: string[][]): string[][] {
     U: [['Q', 'Surrender to the police: the ship stops itself, then 5 seconds (fine, record cleared)']],
     M: [['M (docked)', '1984 mode (in flight, M is the missile)']],
   };
-  const firstKeys = new Set(['W / S', 'A / D', 'Space / Shift / ?', 'F', 'Swipe / scroll']);
+  const firstKeys = new Set(['W / S', 'A / D', 'Space / Shift / ?', 'F']);
   const rest = keyboard
     .filter(([k]) => !firstKeys.has(k))
     .flatMap((row) => moved[row[0]] ?? [row]);
-  return [...flying, ['Swipe / scroll', 'Throttle; sideways swipe rolls'], ...rest];
+  return [...flying, ...rest]; // no scrolling: the keys alone, as in 1984
 }
