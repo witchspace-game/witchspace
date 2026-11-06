@@ -96,21 +96,22 @@ export function momentDescription(events: MomentEvent[], ctx: MomentContext): st
     ...lines,
     '',
     `Rank: ${ctx.rank}.`,
-    'Witchspace is a free, open-source space game in your browser, a love letter to Elite (1984). Play free: https://witchspace.org.uk/play',
+    // Marketing's rule: never Elite in titles, descriptions or tags; the tribute belongs in a post's body.
+    'Witchspace is a free, open-source space game in your browser. Play free: https://witchspace.org.uk/play',
   ].join('\n');
 }
 
 /** Tags: the game's, then what happened. */
 export function momentTags(events: MomentEvent[], ctx: MomentContext): string[] {
   const kinds = new Set(events.map((e) => e.kind));
-  const tags = new Set(['witchspace', 'elite 1984', 'space game', kinds.has('photo') ? 'screenshot' : 'flight recorder', 'browser game']);
+  const tags = new Set(['witchspace', 'space game', kinds.has('photo') ? 'screenshot' : 'flight recorder', 'browser game']);
   if (kinds.has('kill') || kinds.has('death')) ['space combat', 'dogfight'].forEach((t) => tags.add(t));
   if (kinds.has('death')) tags.add('how i died');
   if (kinds.has('marshals')) ['co-operative marshals', 'capital ship'].forEach((t) => tags.add(t));
   if (kinds.has('legend')) ['legend', 'space pirate'].forEach((t) => tags.add(t));
   if (kinds.has('discovery')) ['exploration', 'first discovery'].forEach((t) => tags.add(t));
   if (kinds.has('trade')) ['space trading', 'trade run'].forEach((t) => tags.add(t));
-  for (const e of events) if (e.subject && e.kind !== 'trade') tags.add(e.subject.toLowerCase());
+  for (const e of events) if (e.subject && e.kind !== 'trade' && e.subject !== 'Another commander') tags.add(e.subject.toLowerCase());
   tags.add(ctx.system.toLowerCase());
   return [...tags];
 }

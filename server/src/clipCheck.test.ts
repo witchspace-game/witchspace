@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { packTrack, SAMPLE_RATE, TrackRecorder, unpackTrack, type TrackData } from '../../src/game/track';
-import { checkTrack, describeLine, howLong } from './clipCheck';
+import { checkTrack, describeLine, howLong, killsInTitle } from './clipCheck';
 
 const SHIPS = new Map([
   ['cobra-mk3', 'Cobra Mk III'],
@@ -157,6 +157,20 @@ describe("a clip's line for link previews is written from the fight", () => {
   });
   it('says a long fight in minutes', () => {
     expect([howLong(41), howLong(60), howLong(120), howLong(65)]).toEqual(['41 seconds', '1 minute', '2 minutes', '1 min 5 s']);
+  });
+  it('never names another commander, in the line or the title', () => {
+    const d = fight();
+    d.ships.push({ id: 30, def: 'mamba', role: 'commander', label: 'CMDR Someone' });
+    d.events.push({ t: 6.5, kind: 'beam', from: 1, a: [0, 0, 0], b: [500, 30, 0], color: '#3dffb0', hit: 30 });
+    d.events.push({ t: 6.6, kind: 'boom', id: 30, p: [500, 30, 0] });
+    expect(line(d)).toBe('A Cobra Mk III against another commander at Lave. Only one of them flew home.');
+    const c = checkTrack(packTrack(d), SHIPS, 'Kestrel', 20);
+    if (typeof c === 'string') throw new Error(c);
+    expect(c.title).toBe('CMDR Kestrel: Another commander down at Lave');
+    expect(JSON.stringify(c)).not.toMatch(/Someone/);
+  });
+  it("reads a title's kills, so an older clip's line agrees with it", () => {
+    expect([killsInTitle('CMDR Jameson: 3 kills in one fight at Xeaqu'), killsInTitle('CMDR Jameson: Sidewinder down at Begeabi')]).toEqual([3, 0]);
   });
   it('always ends by saying what Witchspace is', () => {
     expect(describeLine(fight(), SHIPS)).toMatch(/Witchspace is free in your browser\.$/);

@@ -9,7 +9,7 @@
 
 import { DurableObject } from 'cloudflare:workers';
 import { json, networkOf } from './http';
-import { checkTrack, CLIP_LINE_END, describeClip, describeLine, jpegSize, MAX_TRACK_BYTES } from './clipCheck';
+import { checkTrack, CLIP_LINE_END, describeClip, describeLine, jpegSize, killsInTitle, MAX_TRACK_BYTES } from './clipCheck';
 import { unpackTrack } from '../../src/game/track';
 import { FEED_EACH, type ClipEvent } from './feed';
 import data from './mcp-data.json';
@@ -84,6 +84,11 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     }
     this.sql.exec('CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)');
     this.retitle();
+    // Lines written on 5 November 2026 before they read the title's kills ("3 kills" over "Two pirates down"): once, again.
+    if (!this.sql.exec("SELECT 1 FROM meta WHERE key = 'relined-kills'").toArray().length) {
+      this.sql.exec('UPDATE clips SET line = NULL');
+      this.sql.exec("INSERT OR REPLACE INTO meta (key, value) VALUES ('relined-kills', ?)", String(Date.now()));
+    }
   }
 
   /**
@@ -257,12 +262,13 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
 
   /** A clip's line for link previews: kept, or written now from its track (a clip from before 4 November 2026). */
   private async line(id: string, system: string): Promise<string> {
-    const r = this.sql.exec('SELECT line, track FROM clips WHERE id = ?', id).toArray()[0];
+    const r = this.sql.exec('SELECT line, title, track FROM clips WHERE id = ?', id).toArray()[0];
     if (r?.line) return r.line as string;
     const packed = r ? await gunzip(r.track as ArrayBuffer) : null;
     const d = packed ? unpackTrack(packed) : null;
     if (!d) return `Replayed from the flight recorder at ${system}. ${CLIP_LINE_END}`;
-    const line = describeLine(d, SHIP_NAMES);
+    // The title already holds the kills the game reported (a missile's, a ramming): the line says the same.
+    const line = describeLine(d, SHIP_NAMES, killsInTitle(r.title as string));
     this.sql.exec('UPDATE clips SET line = ? WHERE id = ?', line, id);
     return line;
   }

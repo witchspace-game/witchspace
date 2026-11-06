@@ -48,7 +48,7 @@ export const initCombat = (hooks: typeof main) => Object.assign(main, hooks);
 /** How far off a turret's line it will still pick a target. */
 const TURRET_CONE = THREE.MathUtils.degToRad(20);
 
-type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' } | { kind: 'commander' } | { kind: 'cover' };
+type Shot = { kind: 'npc'; npc: NpcShip } | { kind: 'drifter'; drifter: Drifter } | { kind: 'station' } | { kind: 'commander'; remote: object } | { kind: 'cover' };
 
 // Lasers fire straight ahead unless a gimballed mount is fitted, in which
 // case (with mouse aim) they swivel to hit what's under the ring. The ring
@@ -165,7 +165,7 @@ function firePlayerLaser() {
     ...drifters.map((drifter) => ({ value: { kind: 'drifter' as const, drifter }, position: drifter.model.root.position, radius: 7 })),
     { value: { kind: 'station' as const }, position: station.root.position, radius: 90 },
     // Other commanders stop the beam on screen; whether it hurt them is the server's call.
-    ...[...sharedSpace.remotes.values()].map((r) => ({ value: { kind: 'commander' as const }, position: r.position, radius: flyableOf(r.ship).radius })),
+    ...[...sharedSpace.remotes.values()].map((r) => ({ value: { kind: 'commander' as const, remote: r }, position: r.position, radius: flyableOf(r.ship).radius })),
     ...coverTargets({ kind: 'cover' as const }),
   ];
   const hit = rayHit(origin, dir, laser.range, targets);
@@ -184,7 +184,7 @@ function firePlayerLaser() {
   }
   const end = hit ? hit.point : origin.clone().addScaledVector(dir, laser.range);
   for (const muzzle of muzzles()) beams.fire(muzzle, end, laser.color);
-  main.trackBeam(player, origin, end, laser.color, hit?.target.value.kind === 'npc' ? hit.target.value.npc : null);
+  main.trackBeam(player, origin, end, laser.color, hit?.target.value.kind === 'npc' ? hit.target.value.npc : hit?.target.value.kind === 'commander' ? hit.target.value.remote : null);
   shotSound(player.def, laserSound(laser), null);
   if (sharedSpace.connected) sharedSpace.fire(dir, laser.id);
   if (!hit) return;
