@@ -10,6 +10,11 @@ const SPEED_ACCEL = 60; // m/s²
 const ENTRY_Z = 600; // where the final approach begins, on the slot axis
 const LOOKAHEAD = 160; // metres ahead along the axis to aim for (pure pursuit)
 const CONE = 0.3; // how far off-axis (radial / distance) the final approach accepts
+/** Holding for the slot: off to one side of the lane, out past where launches clear the mouth. */
+const HOLD_SIDE = 600;
+const HOLD_Z = 1800;
+/** Already this close in on the final approach, the slot is yours: no holding. */
+const COMMITTED_Z = 700;
 
 type Leg = 'around' | 'entry' | 'final';
 
@@ -32,16 +37,40 @@ export class DockingComputer {
   private readonly aim = new THREE.Object3D();
   private readonly lastAim = new THREE.Quaternion();
   private hasLastAim = false;
+  /** Where it waits for the slot: fixed in space when the wait begins, as the station spins. */
+  private holdSpot: THREE.Vector3 | null = null;
 
   reset() {
     this.leg = 'entry';
     this.angVel.set(0, 0, 0);
     this.hasLastAim = false;
+    this.holdSpot = null;
   }
 
-  update(dt: number, ship: PlayerShip, station: Station) {
+  /**
+   * One step of flying. With `hold` (the rings red: a ship about to launch, launching, or clearing the
+   * mouth), it waits off to one side of the lane, facing the slot, as the traders do, and goes in when
+   * the rings say come in (Mark, 7 November 2026: "it doesn't care what direction the docking rings are
+   * going in"). Returns whether it's holding.
+   */
+  update(dt: number, ship: PlayerShip, station: Station, hold = false): boolean {
     const pos = ship.obj.position;
     const local = station.toLocal(pos);
+    if (hold && !(this.leg === 'final' && local.z < SLOT.z + COMMITTED_Z)) {
+      this.leg = local.z < 250 ? 'around' : 'entry';
+      this.holdSpot ??= station.toWorld(new THREE.Vector3(local.x < 0 ? -HOLD_SIDE : HOLD_SIDE, 0, SLOT.z + HOLD_Z));
+      const spot = this.holdSpot;
+      const there = spot.distanceTo(pos) < 150;
+      this.aim.position.copy(pos);
+      this.aim.up.copy(station.axis('y'));
+      this.aim.lookAt(there ? station.toWorld(new THREE.Vector3(0, 0, SLOT.z)) : spot);
+      this.steer(dt, ship, false);
+      const facing = ship.forward().dot(spot.clone().sub(pos).normalize());
+      const targetSpeed = there ? 0 : THREE.MathUtils.clamp(spot.distanceTo(pos) * 0.35, 20, ship.maxSpeed * 0.75) * THREE.MathUtils.clamp((facing + 0.3) / 1.3, 0.35, 1);
+      ship.speed += THREE.MathUtils.clamp(targetSpeed - ship.speed, -SPEED_ACCEL * dt, SPEED_ACCEL * dt);
+      return true;
+    }
+    this.holdSpot = null;
     const radial = Math.hypot(local.x, local.y);
     const inCone = local.z > SLOT.z + 100 && radial < CONE * (local.z - SLOT.z);
 
@@ -79,6 +108,7 @@ export class DockingComputer {
     }
     targetSpeed *= THREE.MathUtils.clamp((facing + 0.3) / 1.3, 0.35, 1);
     ship.speed += THREE.MathUtils.clamp(targetSpeed - ship.speed, -SPEED_ACCEL * dt, SPEED_ACCEL * dt);
+    return false;
   }
 
   /** Turn towards `this.aim` with eased angular velocity. */

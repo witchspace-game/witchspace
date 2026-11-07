@@ -59,6 +59,8 @@ Built so far (`flight/traffic.ts`, traffic control): the slot is yours while you
 
 Every ship takes turns, not only you *(built, 2 November 2026, `flight/traffic.ts`)*. A timetabled launch waits, five seconds at a time, while the slot is yours or a ship is docking or within 1.5 km of the mouth on her way in; an arrival waits off to one side while a ship is on her way out within 1.5 km. Nothing is ever in the slot both ways at once: four minutes of Lave's traffic, watched second by second, had 38 seconds of launches, 44 of arrivals, and none of both. The pulse shows it: launching while a timetabled ship is on her way out (or police or militia come down the lane), hold before and after.
 
+The docking computer reads the pulse too *(Mark, 7 November 2026: "it doesn't care what direction the docking rings are going in")*. While the rings are red it waits off to one side of the lane, 1.8 km out, facing the slot ("Docking computer · holding for a launch"), and gives up the slot meanwhile, so the launch can go; when they say come in, it goes in. Already on its final 700 m, the slot is its own and it carries on. Classic flies in as it always did.
+
 ## Who owns the station
 
 Mark asked whether owners are tied to money, and whether Wexley-Yorozu builds stations for others. Suggested (2 November 2026), and Mark said yes:
