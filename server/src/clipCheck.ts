@@ -158,7 +158,7 @@ export function describeClip(d: TrackData, who: string, ships: Map<string, strin
     : kills.length > 1
       ? `${who}: ${kills.length} kills in one fight at ${system}`
       : kills.length === 1
-        ? `${who}: ${kills.first?.role === 'commander' ? 'Another commander' : ((kills.first && ships.get(kills.first.def)) ?? 'A ship')} down at ${system}`
+        ? `${who}: ${kills.first?.role === 'commander' ? 'Commander' : ((kills.first && ships.get(kills.first.def)) ?? 'A ship')} down at ${system}`
         : them
           ? `${who}: fighting ${them} at ${system}`
           : `${who} at ${system}`;

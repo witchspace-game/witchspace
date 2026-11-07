@@ -166,7 +166,7 @@ describe("a clip's line for link previews is written from the fight", () => {
     expect(line(d)).toBe('A Cobra Mk III against another commander at Lave. Only one of them flew home.');
     const c = checkTrack(packTrack(d), SHIPS, 'Kestrel', 20);
     if (typeof c === 'string') throw new Error(c);
-    expect(c.title).toBe('CMDR Kestrel: Another commander down at Lave');
+    expect(c.title).toBe('CMDR Kestrel: Commander down at Lave');
     expect(JSON.stringify(c)).not.toMatch(/Someone/);
   });
   it("reads a title's kills, so an older clip's line agrees with it", () => {

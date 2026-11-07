@@ -111,7 +111,7 @@ export function momentTags(events: MomentEvent[], ctx: MomentContext): string[] 
   if (kinds.has('legend')) ['legend', 'space pirate'].forEach((t) => tags.add(t));
   if (kinds.has('discovery')) ['exploration', 'first discovery'].forEach((t) => tags.add(t));
   if (kinds.has('trade')) ['space trading', 'trade run'].forEach((t) => tags.add(t));
-  for (const e of events) if (e.subject && e.kind !== 'trade' && e.subject !== 'Another commander') tags.add(e.subject.toLowerCase());
+  for (const e of events) if (e.subject && e.kind !== 'trade' && e.subject !== 'Commander') tags.add(e.subject.toLowerCase());
   tags.add(ctx.system.toLowerCase());
   return [...tags];
 }
