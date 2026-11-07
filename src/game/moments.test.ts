@@ -35,9 +35,9 @@ describe('moments', () => {
   });
 
   it('keeps another commander unnamed, and out of the tags', () => {
-    const shot: MomentEvent = { kind: 'kill', text: 'Shot down another commander', subject: 'Another commander' };
-    expect(momentTitle([shot], ctx)).toBe('CMDR Jameson: Another commander down at Riedquat');
-    expect(momentTags([shot], ctx)).not.toContain('another commander');
+    const shot: MomentEvent = { kind: 'kill', text: 'Shot down another commander', subject: 'Commander' };
+    expect(momentTitle([shot], ctx)).toBe('CMDR Jameson: Commander down at Riedquat');
+    expect(momentTags([shot], ctx)).not.toContain('commander');
   });
 
   it('names photos as photos', () => {

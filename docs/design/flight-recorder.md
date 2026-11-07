@@ -194,7 +194,7 @@ A clip that people watch becomes part of the galaxy's story.
 
 ### Fighting other commanders *(Mark, 5 November 2026)*
 
-Shooting down another commander in shared space is kept, as a pirate kill is (*Another commander down at Lave*), and other commanders go in the track in their own paint, with their lasers and their ship going up, so a dogfight rebuilt from outside isn't you fighting nothing. Mark's rule for names:
+Shooting down another commander in shared space is kept, as a pirate kill is (*Commander down at Lave*, the title Mark picked on 7 November 2026), and other commanders go in the track in their own paint, with their lasers and their ship going up, so a dogfight rebuilt from outside isn't you fighting nothing. Mark's rule for names:
 
 - **The sharer's callsign** is always shown, on the page and the card, as now. Mark finds anonymous clips "a bit boring", so it's to go in the video too (a tag over your ship, or a title line at the start): *to come, pictures first.*
 - **The other commander is named too** *(changed, Mark, 5 November 2026: "beating someone publicy and sharing it is the whole point of shared space")*: the title, card and page say *CMDR Kestrel vs CMDR Vega at Riedquat*. This replaces "off unless they say yes" for dogfight clips. But only a callsign the server can check gets through: the sharer's game could otherwise put any name it liked on a clip, which is a way to defame someone, so the server checks it against the relay's record of who was in that system at that time. Anything it can't check stays *A commander*, and so do guests. Until that's built, every other commander is *A commander*: *to come, pictures first.* An opt-out ("Don't name me in other commanders' clips") is Marketing's suggestion, not yet Mark's call.

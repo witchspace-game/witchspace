@@ -192,7 +192,7 @@ function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
   main.becomeFugitive(true); // killing a clean commander is a serious crime: no rating
   saveCommander(c);
   // Kept, as a pirate kill is: probably the best fight the game can make. Never by name: "A commander".
-  void main.keepCombat({ kind: 'kill', text: 'Shot down another commander', subject: 'Another commander' }, 20, 4);
+  void main.keepCombat({ kind: 'kill', text: 'Shot down another commander', subject: 'Commander' }, 20, 4);
 }
 
 export function updateSharedSpace(dt: number, input: { fire: boolean } | null) {
