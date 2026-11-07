@@ -271,6 +271,11 @@ function playerHoldValue(): number {
 
 /** L: hail the ship in your sights (or your missile's target); with nothing there, the station. */
 export function hailTarget() {
+  // An answer to your own hail is worth seeing (Mark: the Hail button "doesn't really do anything I can
+  // see", 7 November 2026): in the log, not as background, and on a phone, whose radio is a narrow pill,
+  // in the banner too, whole.
+  const answer = (kind: RadioKind, from: string, text: string, o: RadioOpts = {}) =>
+    radio(kind, from, text, { urgency: 'worth', ...(isTouch ? { urgent: true, flash: 4 } : {}), ...o });
   if (!modern()) return flash('Classic rules: only the station talks to you', 1.5);
   const pos = player.obj.position;
   const npc = (flight.locked && npcs.includes(flight.locked) ? flight.locked : null) ?? sightedNpc(RADIO_RANGE, isTouch ? 14 : 8);
@@ -278,31 +283,31 @@ export function hailTarget() {
   if (npc) {
     const sp = speakerOf(npc);
     const d = npc.obj.position.distanceTo(pos);
-    if (d > RADIO_RANGE) return radio('ship', 'Radio', `No answer from the ${npc.def.name}: ${(d / 1000).toFixed(1)} km, out of radio range`);
+    if (d > RADIO_RANGE) return answer('ship', 'Radio', `No answer from the ${npc.def.name}: ${(d / 1000).toFixed(1)} km, out of radio range`);
     // Ask again and you may get another line; the same ship, asked the same number of times, says the same.
     const asked = (hailsOf.get(npc) ?? 0) + 1;
     hailsOf.set(npc, asked);
     const ctx = hailContext(serialOf(npc) * 1000 + asked, npc);
-    if (npc.paid) return radio('pirate', sp.from, "We had a deal. Don't push it.");
+    if (npc.paid) return answer('pirate', sp.from, "We had a deal. Don't push it.");
     const voyage = voyageOf.get(npc);
     if (voyage?.character === 'venn' && main.npcIdentified(npc) && !ctx.wronged) {
       vennHailed(npc);
       const g = galaxy(currentSystem().galaxy);
       const said = asked === 1 ? vennHail(voyage, currentSystem().name, g[voyage.other].name, cargoWords(voyage.cargo)) : `Still Venn, still busy. Buy me a drink at ${stationName(currentSystem()).name} if you want to talk.`;
-      return radio(sp.kind, sp.from, said, { colour: sp.colour });
+      return answer(sp.kind, sp.from, said, { colour: sp.colour });
     }
     if (voyage && asked === 1 && main.npcIdentified(npc) && !ctx.scared && !ctx.wronged)
-      return radio(sp.kind, sp.from, voyageHail(voyage, galaxy(currentSystem().galaxy)[voyage.other].name), { colour: sp.colour });
+      return answer(sp.kind, sp.from, voyageHail(voyage, galaxy(currentSystem().galaxy)[voyage.other].name), { colour: sp.colour });
     if (sp.who === 'pirate' && main.npcIdentified(npc)) {
       const r = pirateAnswer(ctx, playerHoldValue(), cmdr().credits);
-      return radio('pirate', sp.from, r.text, { colour: sp.colour, answers: r.toll ? [payOff(npc, r.toll), noDeal(npc)] : undefined, flash: r.toll ? 4 : undefined, urgent: Boolean(r.toll) });
+      return answer('pirate', sp.from, r.text, { colour: sp.colour, ...(r.toll ? { answers: [payOff(npc, r.toll), noDeal(npc)], flash: 4, urgent: true } : {}) });
     }
-    return radio(sp.kind, sp.from, hailReply(sp.who, ctx).text, { colour: sp.colour });
+    return answer(sp.kind, sp.from, hailReply(sp.who, ctx).text, { colour: sp.colour });
   }
   const d = pos.distanceTo(station.root.position);
   const name = stationName(currentSystem()).name;
-  if (d > CLEARANCE_RANGE && !hasArray()) return radio('station', 'Radio', `Nothing in your sights, and ${name} is out of range: traffic control answers within ${CLEARANCE_RANGE / 1000} km`);
-  radio('station', name, hailReply('station', hailContext(minute())).text);
+  if (d > CLEARANCE_RANGE && !hasArray()) return answer('station', 'Radio', `Nothing in your sights, and ${name} is out of range: traffic control answers within ${CLEARANCE_RANGE / 1000} km`);
+  answer('station', name, hailReply('station', hailContext(minute())).text);
 }
 
 /** A pirate's price, on the radio: pay it, and the band leaves you be. */
