@@ -3,6 +3,7 @@
 // something early want paying properly, and so do the liars. Their record builds as their tips
 // come true or don't.
 
+import { sharedRecord } from '../net/renowned';
 import { sfx } from '../audio/sound';
 import { saveCommander } from '../game/commander';
 import { stationName } from '../galaxy/stationNames';
@@ -65,9 +66,10 @@ function renownedCard(here: StarSystem, now: number, slot: number, drinks: strin
   const who = renownedOf(here);
   if (!who || c.difficulty !== 'modern') return '';
   const m = c.renowned?.[who.key];
-  const scene = inTheSaloon(here, m, slot, now);
+  const shared = sharedRecord(here.galaxy, here.index);
+  const scene = inTheSaloon(here, m, slot, now, shared);
   if (!scene) return '';
-  const said = saloonScene(who, scene, m, c.name);
+  const said = saloonScene(who, scene, m, c.name, shared, now);
   const drunk = drinks.includes(`renowned@${slot}`);
   const action = said.refuses
     ? `<button disabled>Buy him a drink · ${HIS_DRINK} Cr</button>`
@@ -181,9 +183,10 @@ $('#saloon').addEventListener('click', (e) => {
   if (b.dataset.renowned !== undefined) {
     const who = renownedOf(here);
     const m = who ? c.renowned?.[who.key] : undefined;
-    const scene = who && inTheSaloon(here, m, slot, now);
+    const shared = sharedRecord(here.galaxy, here.index);
+    const scene = who && inTheSaloon(here, m, slot, now, shared);
     if (!who || !scene) return;
-    const said = saloonScene(who, scene, m, c.name);
+    const said = saloonScene(who, scene, m, c.name, shared, now);
     if (said.refuses || (!said.buys && c.credits < HIS_DRINK)) return;
     if (!said.buys) c.credits = Math.round((c.credits - HIS_DRINK) * 10) / 10;
     s.drinks = [...s.drinks, `renowned@${slot}`].slice(-40);

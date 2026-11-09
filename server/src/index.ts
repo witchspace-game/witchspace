@@ -105,7 +105,7 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
     if (url.pathname === '/contact/stop') return accountsOf(env).fetch(request);
     // The ideas board (/ideas…) and accounts (/auth…, /me…, /admin…, /submissions…), called from our pages and tools.
     const ideas = url.pathname === '/ideas' || url.pathname.startsWith('/ideas/');
-    const accounts = ['/auth/', '/me/', '/admin/', '/contact/', '/push/', '/stats/', '/firsts/', '/oauth/request/', '/shipyard/', '/callsign/'].some((p) => url.pathname.startsWith(p)) || url.pathname === '/me' || url.pathname === '/submissions' || url.pathname.startsWith('/submissions/');
+    const accounts = ['/auth/', '/me/', '/admin/', '/contact/', '/push/', '/stats/', '/firsts/', '/renowned/', '/oauth/request/', '/shipyard/', '/callsign/'].some((p) => url.pathname.startsWith(p)) || url.pathname === '/me' || url.pathname === '/submissions' || url.pathname.startsWith('/submissions/');
     if (ideas || accounts) {
       const origin = request.headers.get('Origin') ?? '';
       const allowed = ORIGINS.some((o) => o.test(origin));

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { loadRenowned, sharedRecord } from './net/renowned';
 import { track as countEvent } from '@vercel/analytics';
 import { cycleSoundMode, music, preloadRecording, sfx, unlockAudio } from './audio/sound';
 import { shipById } from './content/ships';
@@ -766,6 +767,7 @@ async function dock() {
   const collected = collect(c, sys, cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c));
   bringHome(held);
   void loadFirsts(sys.galaxy);
+  void loadRenowned(sys.galaxy);
   const news = checkMessages(c, sys, Date.now());
   const update = checkUpdates(c, Date.now());
   const gone = [...collectHeld(c, sys), ...checkAdrift()];
@@ -857,7 +859,10 @@ function toggleGalaxyMap() {
     return;
   }
   const c = cmdr();
-  if (c.difficulty === 'modern') void loadFirsts(currentSystem().galaxy); // fresh names for next time; cached for five minutes
+  if (c.difficulty === 'modern') {
+    void loadFirsts(currentSystem().galaxy); // fresh names for next time; cached for five minutes
+    void loadRenowned(currentSystem().galaxy); // and what other commanders did to the pirates
+  }
   const here = currentSystem();
   openMap({
     current: here,
@@ -881,7 +886,8 @@ function toggleGalaxyMap() {
       const who = c.difficulty === 'modern' ? renownedOf(s) : null;
       if (!who) return null;
       const m = c.renowned?.[who.key];
-      return `${chartLine(who)}${m && (m.outUntil ?? 0) > Date.now() ? ' · out of action' : ''}`;
+      const shared = sharedRecord(s.galaxy, s.index);
+      return m && (m.outUntil ?? 0) > Date.now() && !(shared && shared.out > Date.now()) ? `${chartLine(who)} · out of action` : chartLine(who, shared);
     },
     explored: (s) => {
       const e = exploreOf(c);

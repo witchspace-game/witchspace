@@ -3,6 +3,7 @@
 // ejects in a pod; shoot the pod and he never forgets. Win, and his tally grows. Run (jump or dock
 // once he's coming), and so does his legend.
 
+import { sharedRecord, tellRenowned } from '../net/renowned';
 import * as THREE from 'three';
 import { boomAt } from '../audio/spatial';
 import { sfx } from '../audio/sound';
@@ -30,11 +31,18 @@ let facing: Renowned | null = null;
 
 const POD_TIME = 25; // seconds before his people pick the pod up
 
+/** How it went, for everyone's story (signed in with a callsign; net/renowned.ts). */
+const tell = (who: Renowned, how: 'beaten' | 'won' | 'ran') => {
+  const [g, s] = who.key.split(':').map(Number);
+  if (Number.isInteger(g) && Number.isInteger(s)) void tellRenowned(g, s, how);
+};
+
 /** One of the pirates here is down, by your hand: is anyone going to answer for it? */
 export function pirateKilled(npc: NpcShip) {
   if (!game.commander || renownedNpc.has(npc) || pods.has(npc)) return;
   const now = Date.now();
-  const got = killedHisMan(cmdr(), currentSystem(), now);
+  const here = currentSystem();
+  const got = killedHisMan(cmdr(), here, now, sharedRecord(here.galaxy, here.index));
   if (!got) return;
   saveCommander(cmdr());
   if (got.what === 'warn') {
@@ -63,7 +71,8 @@ export function bringRenowned(who: Renowned) {
   npc.mode = 'attack';
   renownedNpc.set(npc, who);
   facing = who;
-  radio('pirate', who.name, arrival(who, memoryOf(cmdr(), who.key)), { colour: RENOWNED_COLOUR, urgent: true, flash: 5 });
+  const here = currentSystem();
+  radio('pirate', who.name, arrival(who, memoryOf(cmdr(), who.key), sharedRecord(here.galaxy, here.index)), { colour: RENOWNED_COLOUR, urgent: true, flash: 5 });
   return npc;
 }
 
@@ -74,6 +83,7 @@ export function updateRenowned(dt: number) {
     if (facing && game.commander) {
       foughtHim(cmdr(), facing, 'ran', Date.now());
       saveCommander(cmdr());
+      tell(facing, 'ran');
     }
     coming = null;
     facing = null;
@@ -136,6 +146,7 @@ function eject(npc: NpcShip, who: Renowned) {
   c.credits = Math.round((c.credits + npc.bounty) * 10) / 10;
   foughtHim(c, who, 'beaten', Date.now());
   saveCommander(c);
+  tell(who, 'beaten');
   flash(`${who.name} beaten · Bounty ${npc.bounty} Cr${rated ? ` · ${rated}` : ''}`, 3.5);
   void keepCombat({ kind: 'kill', text: `Beat ${who.name}, ${who.by} · bounty ${npc.bounty} Cr`, subject: who.name }, 20, 6);
 }
@@ -159,6 +170,7 @@ export function renownedKilledYou(killer: NpcShip | null) {
   if (!who || !game.commander) return;
   const c = cmdr();
   foughtHim(c, who, 'won', Date.now());
+  tell(who, 'won');
   radio('pirate', who.name, overYourWreck(who, memoryOf(c, who.key).beat), { colour: RENOWNED_COLOUR });
   facing = null;
   renownedNpc.clear();

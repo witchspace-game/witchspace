@@ -200,3 +200,31 @@ export function editionEmail(p: Papers, maker: string, callsign: string | null, 
     text: `${maker.toUpperCase()} · ${p.system.toUpperCase()}\n\n${p.edition} ${p.no}\nBuilt for ${who}\n\n${paras.join('\n\n')}\n\nHer papers: ${link}\n\n${p.edition} · No. ${p.no} of ${p.limit}\n${p.ship} · ${p.finish}\nHeld for ${who} at ${p.yard}, ${p.system}\n\n${maker}, ${p.yard}\nFast ships for people in a hurry.\n\nPlay Witchspace: ${SITE}/play/\n\n${foot}`,
   };
 }
+
+/**
+ * To the maintainer when the ideas board changes (Mark: "I never received a notification from
+ * Witchspace that a user had left feedback or suggestions"): a new idea or bug, one hidden by
+ * reports, or the day's cap reached. Plain, with a link straight to it on the board.
+ */
+export function boardEmail(what: 'idea' | 'bug' | 'hidden' | 'more', title: string, body: string, link: string): { subject: string; html: string; text: string } {
+  const look: Look = { ...LOOKS.signin, eyebrow: 'WITCHSPACE · THE IDEAS BOARD', button: 'Open it on the board' };
+  const subject =
+    what === 'idea' ? `New idea on the board: ${title}` : what === 'bug' ? `Bug reported on the board: ${title}` : what === 'hidden' ? `Hidden after reports: ${title}` : 'More ideas on the board today';
+  const lead =
+    what === 'hidden'
+      ? 'Enough players reported this one that it is hidden until you look at it: unhide it, or leave it hidden.'
+      : what === 'more'
+        ? 'That is today’s twenty emails. Anything else posted today is on the board, newest first.'
+        : 'Replying to this email doesn’t reach the player: answer on the board, with the admin reply.';
+  return {
+    subject,
+    html: frame(look, {
+      preheader: body || lead,
+      title: what === 'more' ? 'More on the board today' : title,
+      body: `${body ? `${esc(body).replace(/\n/g, '<br>')}<br><br>` : ''}<span style="color:#7d8ba0">${esc(lead)}</span>`,
+      link,
+      foot: 'Sent to the maintainer of Witchspace when the ideas board changes.',
+    }),
+    text: `${subject}\n\n${body ? `${body}\n\n` : ''}${lead}\n\n${link}`,
+  };
+}

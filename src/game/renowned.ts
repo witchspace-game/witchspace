@@ -120,6 +120,20 @@ export interface RenownedMemory {
   last?: { how: 'beaten' | 'won' | 'ran'; at: number };
 }
 
+/**
+ * What every commander knows of him: the shared record of signed-in commanders' meetings
+ * (server/src/renowned.ts, GET /renowned/<galaxy>). Fights he lost, won, and commanders who ran;
+ * when he's back if someone put him in a pod; the latest few, newest first, by callsign.
+ */
+export interface SharedRecord {
+  beaten: number;
+  won: number;
+  ran: number;
+  /** Out of action until then, for everyone (0: flying). */
+  out: number;
+  recent: { c: string; how: 'beaten' | 'won' | 'ran'; at: number }[];
+}
+
 export const HOUR = 3600_000;
 /** His people killed within this long count towards calling him out. */
 export const KILL_WINDOW = 24 * HOUR;
@@ -150,12 +164,12 @@ export const flying = (m: RenownedMemory, now: number) => (m.outUntil ?? 0) <= n
  * One of his people killed by you in his system. Returns what happens: a warning on the radio,
  * him coming for you, or nothing yet.
  */
-export function killedHisMan(c: Commander, s: StarSystem, now: number): { who: Renowned; what: 'warn' | 'call' } | null {
+export function killedHisMan(c: Commander, s: StarSystem, now: number, shared?: SharedRecord): { who: Renowned; what: 'warn' | 'call' } | null {
   const who = renownedOf(s);
   if (!who || !eligible(c)) return null;
   const m = memoryOf(c, who.key);
   m.kills = [...m.kills.filter((t) => now - t < KILL_WINDOW), now];
-  if (!flying(m, now)) return null;
+  if (!flying(m, now) || (shared?.out ?? 0) > now) return null; // out of action: someone put him in a pod
   if (m.called && now - m.called < KILL_WINDOW) return null; // he's already been out for you today
   if (m.kills.length >= CALL_AT) {
     m.called = now;
@@ -189,11 +203,13 @@ export const warning = (who: Renowned) => `Easy, Commander. Those were ${who.nam
 export const comingFor = (who: Renowned) => `${who.name} is coming for you · Cobra Mk III ${who.ship} · about ${ARRIVES_IN} seconds · jump, dock or wait for him`;
 
 /** His first word, on arrival: what he knows of you sets the tone. */
-export function arrival(who: Renowned, m: RenownedMemory): string {
+export function arrival(who: Renowned, m: RenownedMemory, shared?: SharedRecord): string {
   if (m.podShot) return `You shot my pod. I've been waiting for this.`;
   if (m.lost > 0) return `Last time you got lucky. My ship's new, my crew's angry, and I've had three days to think about you.`;
   if (m.beat > 0) return `You again. You ran last time${m.ran ? ' too' : ''}. Try to make it interesting.`;
-  return `They call me ${who.by}. You've been killing my people, Commander. That stops now.`;
+  // What everyone knows of him: his tally against other commanders.
+  const tally = shared?.won ? ` I've put down ${shared.won} commander${shared.won === 1 ? '' : 's'}.` : '';
+  return `They call me ${who.by}.${tally} You've been killing my people, Commander. That stops now.`;
 }
 
 /** Beaten: his parting word from the pod. */
@@ -219,15 +235,26 @@ export type SaloonScene = 'wounds' | 'gloating' | 'resting';
  * wounds), for two days after beating you or seeing you run (gloating), and otherwise on some of his
  * off hours, from the seed and the clock, the same for everyone.
  */
-export function inTheSaloon(s: StarSystem, m: RenownedMemory | undefined, slot: number, now: number): SaloonScene | null {
-  if (m && !flying(m, now)) return 'wounds';
+export function inTheSaloon(s: StarSystem, m: RenownedMemory | undefined, slot: number, now: number, shared?: SharedRecord): SaloonScene | null {
+  if ((m && !flying(m, now)) || (shared?.out ?? 0) > now) return 'wounds';
   if (m?.last && m.last.how !== 'beaten' && now - m.last.at < GLOATS_FOR) return 'gloating';
+  const latest = shared?.recent[0];
+  if (latest && latest.how !== 'beaten' && now - latest.at < GLOATS_FOR) return 'gloating';
   return hash(s, SALT + 10, slot) < RESTS ? 'resting' : null;
 }
 
 /** How he looks, and what he says once you've bought him a drink (or he's bought you one). */
-export function saloonScene(who: Renowned, scene: SaloonScene, m: RenownedMemory | undefined, you: string): { look: string; says: string; refuses?: boolean; buys?: boolean } {
+export function saloonScene(who: Renowned, scene: SaloonScene, m: RenownedMemory | undefined, you: string, shared?: SharedRecord, now = Date.now()): { look: string; says: string; refuses?: boolean; buys?: boolean } {
   if (m?.podShot) return { look: 'sees you come in, and puts his glass down very carefully', says: 'You shot at my pod. Get out of my bar.', refuses: true };
+  // Someone else's doing, from the shared record: the bar knows who.
+  const latest = shared?.recent[0];
+  const yours = m?.last && (!latest || m.last.at >= latest.at - 60_000);
+  if (scene === 'wounds' && !yours && latest?.how === 'beaten')
+    return { look: `in bandages, drinking alone; the regulars say CMDR ${latest.c} put him in a pod`, says: `${latest.c} got lucky. They won't twice. Tell them that, if you see them.` };
+  if (scene === 'gloating' && !yours && latest && latest.how !== 'beaten' && now - latest.at < GLOATS_FOR)
+    return latest.how === 'won'
+      ? { look: `telling the bar how CMDR ${latest.c} went up${shared!.won > 1 ? `; that's ${shared!.won} commanders now, chalked behind the bar` : ''}`, says: `You heard about ${latest.c}? Of course you did. Everyone has. Don't be ${latest.c}, ${you}.` }
+      : { look: `laughing about CMDR ${latest.c}, who turned and ran`, says: `${latest.c} ran from me. Sensible. Are you sensible, ${you}?` };
   if (scene === 'wounds') {
     if (m?.last?.how === 'beaten')
       return {
@@ -253,7 +280,27 @@ export function saloonScene(who: Renowned, scene: SaloonScene, m: RenownedMemory
 }
 
 /** Whose patch a system is, for the galaxy chart: worth knowing before you go. */
-export const chartLine = (who: Renowned) => `${who.name}, "${who.by}" · Cobra Mk III ${who.ship}`;
+export const chartLine = (who: Renowned, shared?: SharedRecord, now = Date.now()) =>
+  `${who.name}, "${who.by}" · Cobra Mk III ${who.ship}${shared && shared.out > now ? ` · out of action${shared.recent[0]?.how === 'beaten' ? `, beaten by CMDR ${shared.recent[0].c}` : ''}` : shared?.won ? ` · ${shared.won} commander${shared.won === 1 ? '' : 's'} put down` : ''}`;
+
+/** News from the shared record: other commanders' meetings in this galaxy, latest first (yours are in renownedNews). */
+export function sharedNews(galaxy: number, records: Map<number, SharedRecord>, you: string | null, now: number, systemAt: (g: number, i: number) => StarSystem): { text: string; small: string; where: StarSystem }[] {
+  const out: { text: string; small: string; where: StarSystem; at: number }[] = [];
+  for (const [i, r] of records) {
+    const where = systemAt(galaxy, i);
+    const who = renownedOf(where);
+    const latest = r.recent[0];
+    if (!who || !latest || latest.c === you || now - latest.at > GLOATS_FOR * 2) continue;
+    const text =
+      latest.how === 'beaten'
+        ? `CMDR ${latest.c} puts ${who.name} of ${where.name} in his escape pod`
+        : latest.how === 'won'
+          ? `${who.name} of ${where.name} claims CMDR ${latest.c}'s ship`
+          : `CMDR ${latest.c} runs from ${who.name} at ${where.name}`;
+    out.push({ where, at: latest.at, text, small: `${who.by} · ${r.won} put down, ${r.beaten} beaten, ${r.ran} ran${r.out > now ? ' · out of action' : ''}` });
+  }
+  return out.sort((a, b) => b.at - a.at).slice(0, 3);
+}
 
 /** News, for the station's News tab: his pod picked up, or his boast, from what you know of him. */
 export function renownedNews(c: Commander, galaxyOf: (key: string) => StarSystem | null, now: number): { text: string; small: string; where: StarSystem }[] {

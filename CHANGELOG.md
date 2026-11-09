@@ -12,6 +12,7 @@ reported it.
 
 ## 9 November 2026
 
+- Renowned pirates remember every commander. Put one in his pod and he's out of action for everyone, and the bar knows who did it. When he wins, he tells the next commander. Signed-in commanders only.
 - Renowned pirates in the saloon. Beat one and he's in his home saloon with his arm in a sling. Lose to him and he's buying the rounds, with your ship's name chalked behind the bar. The galaxy chart says whose patch a system is, and the news carries his story. (Mark)
 - Renowned pirates. Most lawless systems have one man the locals talk about, flying a good Cobra. Keep killing his people there and he comes for you himself. He fights from range, hits harder, and pulls out to recharge. You get a warning and about 90 seconds to run. Beat him and he ejects, and he'll remember. (Mark)
 - Important radio messages show for a moment in the middle of the screen, then shrink away into the radio's corner, where they're kept. (Mark)
