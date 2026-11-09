@@ -266,6 +266,8 @@ html.paper .site-menu { background: rgba(244, 241, 234, 0.98); }
 /* --- Odds and ends: light text written for the dark ------------------------------------------------ */
 
 html.paper .ticks li { color: var(--fg); }
+/* An idea's details were set pale for space, and all but vanished on paper. */
+html.paper .idea-text p:not(.muted) { color: var(--muted); }
 html.paper .ticks li::before { filter: saturate(0.6) brightness(0.7); }
 html.paper .terms { color: #4b515c; }
 
