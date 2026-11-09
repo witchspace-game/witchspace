@@ -91,6 +91,8 @@ export const flight = {
   planet: null as THREE.Group | null,
   planetRadius: 5000,
   autopilot: false,
+  /** The docking computer waiting off the lane for a launch: the slot isn't yours meanwhile. */
+  dockHolding: false,
   /** The top of the planet's atmosphere, in metres from its centre. */
   atmosphere: 5000 * ATMOSPHERE_SCALE,
   /** The planet's pull on debris; see updateDrifters. */

@@ -11,7 +11,7 @@ import { camera, isRetro } from '../render/renderer';
 import { heatShip } from '../render/shipModel';
 import { flash, setInterference, toggleScannerRange, updateHud, type Blip } from '../ui/hud';
 import { onTap, updateTouch } from '../ui/touch';
-import { $, cmdr, game } from '../core';
+import { $, cmdr, game, modern } from '../core';
 import { aim, engineSound, dockingComputer, gimbalHold, dust, explosions, flight, missiles, sharedSpace, npcs, planetPos, player, space, station } from '../scene';
 import { updateIdentities, updateLegends } from './traffic';
 import { carrier, riftInterference, updateMarshals } from './marshals';
@@ -27,7 +27,7 @@ import { npcColour, updateAimDisplay, updateCombatHud, updateMarkers } from './h
 import { holdForSurrender, updateRadio, updateSurrender } from './beacon';
 import * as THREE from 'three';
 import { updateVenn } from './odile';
-import { updateApproach } from './approach';
+import { approachState, updateApproach } from './approach';
 
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
@@ -160,6 +160,8 @@ const ROLL_ASSIST_MIN_SPEED = 10; // m/s: stopped or drifting isn't approaching
 const ROLL_ASSIST_GAIN = 3; // holds within ~3° of the slot (tested in simulation)
 const AUTO_LEVEL_GAIN = 2.5; // levels 50° of tilt in about half a second (tested in simulation)
 let rollAssist = false;
+/** The docking computer waiting for the slot, so its banner says so once, and once more when it's clear. */
+let computerHolding = false;
 /** The pilot rolled with the mouse: hold that bank until they tap to level. */
 let bankHeld = false;
 export function releaseBank() {
@@ -189,8 +191,10 @@ export function setAutopilot(on: boolean, message?: string) {
   if (on) {
     flight.surveyPilot = null;
     dockingComputer.reset();
+    computerHolding = flight.dockHolding = false;
     danube.start(!isRetro());
   } else {
+    computerHolding = flight.dockHolding = false;
     danube.stop();
   }
   if (message) flash(message, 2);
@@ -262,8 +266,12 @@ export function updateSpace(dt: number) {
       const steep = Math.abs(player.forward().y);
       input.roll = THREE.MathUtils.clamp(AUTO_LEVEL_GAIN * player.right().y * (1 - steep), -1, 1);
     }
-    if (flight.autopilot) dockingComputer.update(dt, player, station);
-    else if (flight.combatComputer) {
+    if (flight.autopilot) {
+      // Modern: the computer reads the rings, holding while they're red (Classic flies in as it always did).
+      const holding = dockingComputer.update(dt, player, station, modern() && approachState() !== 'clear');
+      if (holding !== computerHolding) flash(holding ? 'Docking computer · holding for a launch' : 'Docking computer · cleared in', 2);
+      computerHolding = flight.dockHolding = holding;
+    } else if (flight.combatComputer) {
       const hit = flight.lastHitBy && npcs.includes(flight.lastHitBy.npc) ? flight.lastHitBy : null;
       const status = { heat: Math.min(1, flight.laserHeat / 100), hitBy: hit?.npc ?? null, hitAgo: hit ? flight.elapsed - hit.at : Infinity };
       if (!flight.combatComputer.fly(dt, player, npcs, flight.locked, { centre: planetPos, radius: flight.planetRadius }, status)) stopCombatComputer('No hostiles · combat computer standing down · you have control');

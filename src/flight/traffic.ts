@@ -589,7 +589,8 @@ let launchedAt = -Infinity;
 const slotReserved = () =>
   game.state === 'flying' &&
   player.obj.position.distanceTo(station.root.position) < SLOT_CLEAR &&
-  (flight.autopilot || main.rollAssistApplies() || flight.elapsed - launchedAt < LAUNCH_CLEAR);
+  // A docking computer waiting for a launch gives the slot up, or the launch would wait for it, and it for the launch.
+  ((flight.autopilot && !flight.dockHolding) || (!flight.dockHolding && main.rollAssistApplies()) || flight.elapsed - launchedAt < LAUNCH_CLEAR);
 /** You launched a moment ago: the slot's still yours, on your way out (flight/approach.ts shows it). */
 export const youJustLaunched = (extra = 0) => flight.elapsed - launchedAt < LAUNCH_CLEAR + extra;
 const holding = new WeakSet<NpcShip>();
