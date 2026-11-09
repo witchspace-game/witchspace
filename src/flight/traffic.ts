@@ -211,6 +211,9 @@ let trafficList: Voyage[] = [];
 
 /** A timetabled ship due to launch from the station within `ms` (flight/approach.ts holds the slot for her). */
 export const launchDueWithin = (ms: number) => {
+  // While the slot is yours, a timetabled launch waits for you, so it isn't due: the rings stay green. Counting
+  // it turned them red, the docking computer gave the slot up, then took it back, every few seconds (Mark).
+  if (slotReserved()) return false;
   const now = Date.now();
   return trafficList.some((v) => {
     const at = v.at + (launchWait.get(v.id) ?? 0);
@@ -591,6 +594,8 @@ const slotReserved = () =>
   player.obj.position.distanceTo(station.root.position) < SLOT_CLEAR &&
   // A docking computer waiting for a launch gives the slot up, or the launch would wait for it, and it for the launch.
   ((flight.autopilot && !flight.dockHolding) || (!flight.dockHolding && main.rollAssistApplies()) || flight.elapsed - launchedAt < LAUNCH_CLEAR);
+/** The slot is yours (flying in on the computer or roll assist, or just launched): nothing else comes out of it. */
+export const slotTaken = () => slotReserved();
 /** You launched a moment ago: the slot's still yours, on your way out (flight/approach.ts shows it). */
 export const youJustLaunched = (extra = 0) => flight.elapsed - launchedAt < LAUNCH_CLEAR + extra;
 const holding = new WeakSet<NpcShip>();
