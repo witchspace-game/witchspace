@@ -1,7 +1,7 @@
 // The flight recorder and its moments (moved from main.ts): the kill cam's track and dying,
 // the recorder, the moments it keeps (fights, firsts and trades) and the kill cam itself.
 
-import { renownedKilledYou } from './renowned';
+import { renownedKilledYou, renownedNpc } from './renowned';
 import { sfx } from '../audio/sound';
 import { shipById } from '../content/ships';
 import { deleteCommander, hasEquipment, removeEquipment, saveCommander, hullOf } from '../game/commander';
@@ -84,7 +84,7 @@ export function recordTrack() {
   for (const npc of npcs) {
     if (npc.obj.position.distanceTo(here) > TRACK_RANGE) continue;
     const id = trackId(npc);
-    track.ship({ id, def: npc.def.id, role: npc.role, label: `${npc.def.name} · ${npc.role}${npc.bounty ? ` · ${npc.bounty} Cr` : ''}` });
+    track.ship({ id, def: npc.def.id, role: npc.role, label: `${renownedNpc.get(npc)?.name ?? npc.def.name} · ${npc.role}${npc.bounty ? ` · ${npc.bounty} Cr` : ''}` });
     poses.push(poseOf(id, npc.obj, npc.dark && !npcIdentified(npc)));
   }
   for (const m of missiles) {
