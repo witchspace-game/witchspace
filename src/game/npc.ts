@@ -44,6 +44,29 @@ const CRUISE = 0.6; // fraction of top speed when travelling
 const SEARCH_RADIUS = 350; // metres: the circle flown round where the target was last seen
 
 /**
+ * How a ship fights. Most pirates joust: runs in close, break off, come round. A renowned pirate
+ * holds back (Mark: "should I run rather than just fight?"): long runs from range with a better
+ * laser, turning away at a kilometre, opening out to two before coming round, and pulling out to
+ * let his shields come back when they're low. Same physics as everyone; he just flies better.
+ */
+export type FightStyle = 'joust' | 'holdBack';
+const HOLD_BACK = {
+  /** Turn away this close, whatever the closing speed. */
+  breakAt: 1000,
+  /** ...or this many seconds from reaching you at the closing speed, when you come at him fast. */
+  breakLead: 2.5,
+  /** Come round only this far out. */
+  comeRound: 2000,
+  /** Close on the target at about this, slower than a jouster: more time with his nose on you. */
+  approach: 90,
+  /** Pull out when shields fall below this share; back in when they're up to `rejoin`. */
+  regroup: 0.3,
+  rejoin: 0.75,
+  /** A little slower than his hull can go: running away from him always works. */
+  topSpeed: 0.92,
+};
+
+/**
  * Pitch, yaw and roll commands that turn a ship towards a world point,
  * banking into turns and levelling out otherwise. Shared by NPCs and the
  * player's combat computer, so both fly the same way.
@@ -129,6 +152,10 @@ export class NpcShip {
   guns?: THREE.Vector3[];
   /** Gimballed lasers swing onto a target this far off the nose (radians); fixed ones need it dead ahead. */
   gimbal?: number;
+  /** How it fights (see FightStyle). */
+  style: FightStyle = 'joust';
+  /** Holding back: pulled out to let the shields recharge, until they're up again. */
+  regrouping = false;
   private cooldown = Math.random();
   private flash = 0;
   private breakTimer = 0;
@@ -253,19 +280,32 @@ export class NpcShip {
       const tStar = THREE.MathUtils.clamp(-rel.dot(relVel) / Math.max(1e-6, relVel.lengthSq()), 0, GUARD_TIME);
       const miss = rel.clone().addScaledVector(relVel, tStar).length();
       const onCollision = closing > 0 && miss < this.radius + TARGET_RADIUS + 50;
-      if (this.mode === 'attack' && (dist < BREAKOFF_RANGE || (closing > 0 && dist / closing < this.breakLead) || onCollision)) this.breakAway(toTarget!);
+      const holdBack = this.style === 'holdBack';
+      if (this.mode === 'attack' && (dist < (holdBack ? HOLD_BACK.breakAt : BREAKOFF_RANGE) || (closing > 0 && dist / closing < (holdBack ? HOLD_BACK.breakLead : this.breakLead)) || onCollision)) this.breakAway(toTarget!);
       else if (this.mode === 'breakoff' && onCollision && this.breakDir.dot(toTarget!) > 0) this.breakAway(toTarget!);
+    }
+
+    // Holding back: shields low, pull out and let them come back; then in again.
+    if (this.style === 'holdBack' && this.target && (this.mode === 'attack' || this.mode === 'breakoff' || this.mode === 'flee')) {
+      const share = this.ship.shields / Math.max(1, this.def.stats.shields);
+      if (!this.regrouping && share < HOLD_BACK.regroup) {
+        this.regrouping = true;
+        this.mode = 'flee';
+      } else if (this.regrouping && share >= HOLD_BACK.rejoin) {
+        this.regrouping = false;
+        this.mode = 'attack';
+      }
     }
 
     if (this.mode === 'attack') {
       steer = this.steerTo(this.target!.obj.position);
       // Close at about APPROACH m/s whatever the target does: catch one running away, ease off head on.
       const away = this.target!.forward().dot(toTarget!) / Math.max(1, dist) * this.target!.speed;
-      speed = dist > 900 ? max : THREE.MathUtils.clamp(away + APPROACH, max * 0.4, max);
+      speed = this.style === 'holdBack' ? (dist > HOLD_BACK.comeRound * 1.5 ? max : THREE.MathUtils.clamp(away + HOLD_BACK.approach, max * 0.35, max)) : dist > 900 ? max : THREE.MathUtils.clamp(away + APPROACH, max * 0.4, max);
     } else if (this.mode === 'breakoff') {
       this.breakTimer -= dt;
       // Come round only once there's room for a proper run.
-      if (this.breakTimer <= 0 && dist > COME_ROUND) {
+      if (this.breakTimer <= 0 && dist > (this.style === 'holdBack' ? HOLD_BACK.comeRound : COME_ROUND)) {
         this.mode = 'attack';
         this.breakLead = BREAK_LEAD[0] + Math.random() * (BREAK_LEAD[1] - BREAK_LEAD[0]);
       }
@@ -296,6 +336,7 @@ export class NpcShip {
     }
 
     this.ship.steer(dt, { ...steer, throttle: 0, speedStep: 0, aimDx: 0, aimDy: 0, fire: false, active: false });
+    if (this.style === 'holdBack') speed = Math.min(speed, max * HOLD_BACK.topSpeed);
     this.ship.speed += THREE.MathUtils.clamp(speed - this.ship.speed, -80 * dt, 80 * dt);
     this.ship.move(dt);
     this.ship.recharge(dt);

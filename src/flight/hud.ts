@@ -1,6 +1,7 @@
 // What the flight display shows (moved from main.ts): markers on the ships about you, their
 // colours and whether you can read who they are, the combat HUD and the mouse-aim reticle.
 
+import { renownedNpc } from './renowned';
 import { controlScheme, isMouseCaptured, isTouch, wantsMouseCapture } from '../game/input';
 import { NpcShip } from '../game/npc';
 import { rayHit } from '../game/weapons';
@@ -103,7 +104,9 @@ export function updateCombatHud() {
     const km = (best.obj.position.distanceTo(player.obj.position) / 1000).toFixed(1);
     const standing = best.role === 'pirate' ? 'WANTED' : best.guard ? 'SECURITY' : best.role === 'police' ? 'POLICE' : best.role === 'marshal' ? 'MARSHALS' : 'CLEAN';
     const owner = best.company ? COMPANIES[best.company].name.toUpperCase() : best.role.toUpperCase();
-    targetInfo.textContent = `${best.def.name} · ${owner} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === flight.locked ? ' · LOCKED' : ''}`;
+    // A renowned pirate is known by name: his, and his ship's (Mark).
+    const known = renownedNpc.get(best);
+    targetInfo.textContent = `${known ? `${known.name} · ${best.def.name} ${known.ship}` : `${best.def.name} · ${owner}`} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === flight.locked ? ' · LOCKED' : ''}`;
     // Close enough, the scanner reads the hold.
     if (best.obj.position.distanceTo(player.obj.position) < CARGO_SCAN_RANGE && best.role !== 'police' && best.role !== 'marshal') {
       const hold = Object.entries(best.cargo)

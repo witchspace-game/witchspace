@@ -50,6 +50,8 @@ import { ATMOSPHERE_SCALE, buildPlanet, disposePlanet } from './render/bodies';
 import { cargoName, collect, deliver, destinationOf, forgive, wyWorks } from './game/contracts';
 import { checkMessages, collectHeld, thanksFrom } from './game/assignments';
 import { checkUpdates } from './game/changelog';
+import { bringRenowned } from './flight/renowned';
+import { renownedOf } from './game/renowned';
 import { clearHeadsUp } from './ui/headsUp';
 import { COMPANIES } from './game/companies';
 import { bodiesOf, exploreOf, isFound, isSurveyed, poisOf, recordVisit, trailsUnderWay } from './game/explore';
@@ -1177,7 +1179,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).get('demo') === 
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, destroyNpc, playerHitStation, dockingBanned, inSlot, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier, setAutopilot,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, destroyNpc, playerHitStation, dockingBanned, inSlot, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnRenowned: () => bringRenowned(renownedOf(currentSystem()) ?? { key: 'dev', name: 'Dace Morrow', by: 'the Undertaker', ship: 'Debt of Honour', origin: '', code: '' }), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier, setAutopilot,
       get carrier() { return carrier; },
       get locked() { return flight.locked; },
       get distresses() { return distresses; },

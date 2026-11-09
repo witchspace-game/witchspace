@@ -5,12 +5,14 @@ played before get the newest section as a message from Witchspace when they next
 dock (src/game/changelog.ts reads this file).
 
 Adding to it: put a line under today's date with any change a player would
-notice. Make a new `## 9 November 2026` heading (day, month in full, year) if
-there isn't one for today. Write one line per change, starting with `- `. Say
-what's different, not how it was done. Credit whoever reported it.
+notice. Make a new heading for today if there isn't one, written like
+`## 9 November 2026` (day, month in full, year). Write one line per change,
+starting with `- `. Say what's different, not how it was done. Credit whoever
+reported it.
 
 ## 9 November 2026
 
+- Renowned pirates. Most lawless systems have one man the locals talk about, flying a good Cobra. Keep killing his people there and he comes for you himself. He fights from range, hits harder, and pulls out to recharge. You get a warning and about 90 seconds to run. Beat him and he ejects, and he'll remember. (Mark)
 - Important radio messages show for a moment in the middle of the screen, then shrink away into the radio's corner, where they're kept. (Mark)
 - The trip computer says what the next leg needs when you arrive: where the next jump goes, how far, and whether to refuel first.
 - Trails are said plainly. A trail step's signal is named "Trail signal" in gold. Finding one says which trail, how many steps you've found and where it leads next. The galaxy chart marks each trail's next system and lists your trails. (Mark)

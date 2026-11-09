@@ -10,7 +10,7 @@ import { VENN, vennAway } from '../game/odile';
 import { saveCommander, type Commander } from '../game/commander';
 import { systemKey } from '../game/law';
 import { NpcShip, type NpcRole } from '../game/npc';
-import { FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, POLICE_LASER, TRADER_LASER } from '../game/weapons';
+import { FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, POLICE_LASER, RENOWNED_LASER, TRADER_LASER } from '../game/weapons';
 import { PlayerShip } from '../game/playerShip';
 import { SLOT } from '../game/station';
 import { addStanding } from '../game/contracts';
@@ -79,7 +79,7 @@ export function pirateLost() {
 }
 /** Pirates about you, or anyone out to get you. */
 export const fightOn = () => npcs.some((n) => n.hostile || (n.role === 'pirate' && n.obj.position.distanceTo(player.obj.position) < FIGHT_NEAR));
-export const BOUNTIES: Record<string, number> = { sidewinder: 50, mamba: 80, falcon: 2000 };
+export const BOUNTIES: Record<string, number> = { sidewinder: 50, mamba: 80, renowned: 400, falcon: 2000 };
 /** The Falcon, the Legend of the lanes: a chance in each pirate encounter, by government (anarchies most). */
 const FALCON_CHANCE = [0.04, 0.03, 0.02, 0.015, 0.01, 0.01, 0.005, 0.005];
 export const TRADE_GOODS = ['food', 'textiles', 'computers', 'machinery', 'liquor', 'luxuries', 'furs', 'minerals', 'alloys'];
@@ -440,6 +440,28 @@ export function spawnPirates(near: THREE.Vector3): false | 'pirates' | 'falcon' 
   return count > 0 ? 'pirates' : false;
 }
 
+/**
+ * A renowned pirate (Mark, 9 November 2026): one man, known in his system, in a good Cobra, who
+ * holds back and fights from range rather than jousting (src/game/npc.ts FightStyle). He comes
+ * alone, in answer to a commander who keeps killing his people (src/game/renowned.ts).
+ */
+export const RENOWNED_COLOUR = '#ff6a3d';
+export function spawnRenowned(at: THREE.Vector3, near: THREE.Vector3) {
+  const npc = addNpc('cobra-mk3', 'pirate', at, at);
+  npc.obj.lookAt(near);
+  npc.ship.speed = npc.ship.maxSpeed * 0.6;
+  npc.style = 'holdBack';
+  npc.laser = RENOWNED_LASER;
+  npc.gimbal = RENOWNED_GIMBAL;
+  npc.bounty = BOUNTIES.renowned;
+  npc.ecm = true;
+  npc.missiles = 2;
+  applyCompanyBand(npc.model, RENOWNED_COLOUR);
+  return npc;
+}
+/** His beam swings onto you this far off his nose: less than the Falcon's 8°. */
+const RENOWNED_GIMBAL = THREE.MathUtils.degToRad(4);
+
 /** The Falcon, a Legend: a lone pirate running dark, unidentified until you're close enough to read her hull. */
 export function spawnFalcon(at: THREE.Vector3, near: THREE.Vector3) {
   const npc = addNpc('falcon', 'pirate', at, at);
@@ -500,7 +522,7 @@ export function updateLegends(dt: number) {
     void main.keepCombat({ kind: 'legend', text: taken ? `The Falcon took ${taken}` : 'Beaten by the Falcon', subject: 'The Falcon' }, 20, 6);
   }
   for (const npc of npcs) {
-    if (!npc.brokeOff || npc.won || fleeing.has(npc)) continue;
+    if (!npc.brokeOff || npc.won || fleeing.has(npc) || npc.style === 'holdBack') continue; // a renowned pirate ejects instead (flight/renowned.ts)
     fleeing.set(npc, FALCON_JUMP_DELAY);
     Object.assign(npc, { mode: 'flee', hostile: false, fights: false, target: player });
     // Her ECM covers her: anything already fired at her goes.

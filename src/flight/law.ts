@@ -27,6 +27,7 @@ import { behindLabel, keepLosses, yardAt, yardSeen } from '../game/yards';
 import { bastionDestroyed, carrier, scheduleMarshals } from './marshals';
 import { spillCargo, spillSpecial } from './adrift';
 import { CLEARANCE_RANGE, answerPolice, distresses, radio, speakerOf, traderColour, traderName } from './comms';
+import { pirateKilled, podDestroyed, renownedNpc } from './renowned';
 import * as THREE from 'three';
 
 import type { LoggedMoment } from '../game/flightLog';
@@ -110,7 +111,7 @@ export function damagePlayer(amount: number, from?: NpcShip): boolean {
   const hullBefore = player.hull;
   let destroyed = player.damage(amount);
   // A Falcon fights to disable: at a third of your hull she stops, and takes her price.
-  if (from?.breaksOffAt !== undefined && player.hull < player.def.stats.hull * FALCON_DISABLES) {
+  if (from?.breaksOffAt !== undefined && !renownedNpc.has(from) && player.hull < player.def.stats.hull * FALCON_DISABLES) {
     player.hull = Math.min(hullBefore, player.def.stats.hull * FALCON_DISABLES);
     destroyed = false;
     from.won = true;
@@ -205,6 +206,8 @@ export function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   space.scene.add(boom.group);
   explosions.push(boom);
   boomAt(npc.obj.position, 2.2, 1600, 1.6);
+  // A renowned pirate's escape pod: no bounty, and he won't forget (flight/renowned.ts).
+  if (podDestroyed(npc, killer === player.obj)) return removeNpc(npc);
   // A pirate carrying your lost case drops it again.
   if (npc.carrying && game.commander) {
     const k = cmdr().adrift?.find((x) => x.contract === npc.carrying);
@@ -236,7 +239,10 @@ export function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   removeNpc(npc);
   if (carrier?.npc === npc) bastionDestroyed(carrier, velocity, killer === player.obj);
   if (killer !== player.obj) return;
-  if (npc.role === 'pirate') pirateLost();
+  if (npc.role === 'pirate') {
+    pirateLost();
+    pirateKilled(npc); // his people: a renowned pirate may answer for them
+  }
 
   const c = cmdr();
   const rated = rateKill(npc);

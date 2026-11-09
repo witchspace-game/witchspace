@@ -1,6 +1,7 @@
 // Flying the ship (moved from main.ts): the four views and glancing, roll assist and the
 // autopilot, hit feedback, and each frame of flight in a system (updateSpace).
 
+import { updateRenowned } from './renowned';
 import { danube, music, sfx } from '../audio/sound';
 import { setListener } from '../audio/spatial';
 import { isWorking, type Mount } from '../game/commander';
@@ -379,6 +380,7 @@ export function updateSpace(dt: number) {
   // A cue ends with its moment: the Falcon gone (jumped, driven off), the Marshals gone.
   if (music.playing === 'falcon' && !npcs.some((n) => n.def.id === 'falcon')) music.stop('falcon');
   if (music.playing === 'marshals' && !carrier) music.stop('marshals');
+  updateRenowned(dt);
   if (game.state === 'flying') {
     updateClearance();
     updateSurrender(dt);

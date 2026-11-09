@@ -2,6 +2,7 @@
 // button ("what's next"), the radio and who's speaking (ui/radio.ts draws it), the comms array's
 // offers and news, and distress calls.
 
+import { renownedNpc } from './renowned';
 import { sfx } from '../audio/sound';
 import { cargoCapacity, cargoTonnes, isWorking, saveCommander } from '../game/commander';
 import { checksClearance, legalStatus } from '../game/law';
@@ -26,7 +27,7 @@ import { $, cmdr, currentSystem, game, modern } from '../core';
 import { flight, sharedSpace, npcs, ofRole, planetPos, player, station } from '../scene';
 import { plotCourse } from '../ui/contracts';
 import { tradeContext } from '../ui/market';
-import { BOUNTIES, MAX_PIRATES, addNpc, escortOf, flyForCompany, legs, onSlotAxis, randomCargo, removeNpc, voyageOf } from './traffic';
+import { BOUNTIES, MAX_PIRATES, RENOWNED_COLOUR, addNpc, escortOf, flyForCompany, legs, onSlotAxis, randomCargo, removeNpc, voyageOf } from './traffic';
 import { sightedNpc } from './missiles';
 import * as THREE from 'three';
 import { vennHailed } from './odile';
@@ -240,6 +241,8 @@ const hailsOf = new WeakMap<NpcShip, number>();
 export function speakerOf(npc: NpcShip): { who: Speaker; kind: RadioKind; from: string; colour?: string } {
   if (!main.npcIdentified(npc)) return { who: npc.def.id === 'falcon' ? 'falcon' : npc.role === 'trader' ? 'trader' : 'pirate', kind: 'ship', from: `Unidentified ${npc.def.name}`, colour: UNIDENTIFIED_HEX };
   if (npc.def.id === 'falcon') return { who: 'falcon', kind: 'pirate', from: 'Falcon' };
+  const renowned = renownedNpc.get(npc);
+  if (renowned) return { who: 'pirate', kind: 'pirate', from: renowned.name, colour: RENOWNED_COLOUR };
   if (npc.militia) return { who: 'security', kind: 'police', from: `${stationName(currentSystem()).name} militia`, colour: '#4ad7ff' };
   if (npc.guard && npc.company) return { who: 'security', kind: 'police', from: `${COMPANIES[npc.company].name} ${escortOf.has(npc) ? 'escort' : 'yard security'}`, colour: COMPANIES[npc.company].colour };
   switch (npc.role) {
