@@ -80,7 +80,7 @@
     "description": "A compact core behind a shadow shield, so everyone else lives in its shade, and four vanes shedding its heat. Open for anyone to redraw. Free in your browser."
   },
   "/ships/titanoboa/modules/drive/": {
-    "title": "Drive: the module that moves a whole station",
+    "title": "Drive: the Titanoboa’s engine, for stations and stars",
     "description": "A block and three bells: fitted to move a station, or stacked with a fuel module to fly modules between the stars. Open for anyone to redraw. Free in your browser."
   }
 }

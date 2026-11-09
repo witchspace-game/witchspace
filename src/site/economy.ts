@@ -1,10 +1,9 @@
-import { BTC_REF, companyValue, fairRate } from '../economy/currencies';
+import { BTC_REF, fairRate } from '../economy/currencies';
 import { systemAt } from '../galaxy/generate';
 import { API } from '../net/account';
 
-// The money page (/economy/): the live Bitcoin price, what a company coin is
-// worth at that price, and today's rates for the example currencies, which the
-// build wrote at its own time (tools/economy.ts).
+// The money page (/economy/): the live Bitcoin price, and today's rates for the
+// example currencies, which the build wrote at its own time (tools/economy.ts).
 
 const fmt = (rate: number) => (rate < 10 ? rate.toFixed(3) : Math.round(rate).toLocaleString('en-GB'));
 
@@ -14,7 +13,6 @@ function show(btc: number) {
     const s = systemAt(Number(row.dataset.galaxy), Number(row.dataset.system));
     row.querySelector('[data-rate]')!.textContent = fmt(fairRate(s, now, btc));
   }
-  document.querySelector('#co-value')!.textContent = `${companyValue(btc).toFixed(3)} Cr`;
 }
 
 show(BTC_REF);
