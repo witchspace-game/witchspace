@@ -32,6 +32,8 @@ interface Options {
   firsts?: (s: StarSystem) => string | null;
   /** Who runs the station, where it matters to you (a Wexley-Yorozu station pays more for data), or null. */
   station?: (s: StarSystem) => string | null;
+  /** The system's renowned pirate, if it has one: whose patch it is. */
+  pirate?: (s: StarSystem) => string | null;
   /** Contracts in hand: where to, in the company's colour, and a line about each. */
   contracts?: { to: StarSystem; colour: string; line: string }[];
   /** Trails under way: where each one's next step is (Mark: "am I actually on a trail or not?"). */
@@ -433,6 +435,8 @@ function renderInfo() {
   const firsts = opts.firsts?.(s);
   if (firsts) rows.push(['Firsts', firsts]);
   for (const t of (opts.trails ?? []).filter((t) => t.at === s)) rows.push(['Trail', t.line]);
+  const pirate = opts.pirate?.(s);
+  if (pirate) rows.push(['Pirates', pirate]);
   const runBy = opts.station?.(s);
   if (runBy) rows.splice(2, 0, ['Run by', runBy]);
   const isTarget = opts.target === s;

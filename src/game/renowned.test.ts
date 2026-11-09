@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy } from '../galaxy/generate';
 import { newCommander } from './commander';
-import { arrival, CALL_AT, flying, foughtHim, HOUR, KILL_WINDOW, killedHisMan, memoryOf, OUT_OF_ACTION, renownedOf, WARN_AT } from './renowned';
+import { arrival, CALL_AT, flying, foughtHim, GLOATS_FOR, HOUR, inTheSaloon, KILL_WINDOW, killedHisMan, memoryOf, OUT_OF_ACTION, renownedNews, renownedOf, saloonScene, WARN_AT } from './renowned';
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 const home = galaxy(0).find((s) => s.government === 0 && renownedOf(s))!;
@@ -62,5 +62,52 @@ describe('renowned pirates', () => {
     expect([m.lost, m.beat, m.ran]).toEqual([1, 1, 1]);
     m.podShot = true;
     expect(arrival(who, m)).toContain('pod');
+  });
+});
+
+describe('a renowned pirate in his saloon', () => {
+  const riedquat = galaxy(0)[46];
+  const who = renownedOf(riedquat)!;
+
+  it('is hand-written for the famous few near Lave', () => {
+    expect(who.name).toBe('Ambrose Hale');
+    expect(who.story).toContain('rose Cobra');
+  });
+
+  it('licks his wounds while out of action, gloats after a win, and is sometimes in on his off hours', () => {
+    const c = veteran();
+    foughtHim(c, who, 'beaten', NOW);
+    const m = memoryOf(c, who.key);
+    expect(inTheSaloon(riedquat, m, 0, NOW + HOUR)).toBe('wounds');
+    expect(saloonScene(who, 'wounds', m, 'Jameson').says).toContain('Fair fight');
+    foughtHim(c, who, 'won', NOW + OUT_OF_ACTION);
+    expect(inTheSaloon(riedquat, m, 0, NOW + OUT_OF_ACTION + HOUR)).toBe('gloating');
+    const gloat = saloonScene(who, 'gloating', m, 'Jameson');
+    expect(gloat.buys).toBe(true);
+    expect(gloat.says).toContain('Jameson');
+    // Long after: only on some of his off hours, the same for everyone.
+    const later = NOW + OUT_OF_ACTION + GLOATS_FOR + HOUR;
+    const slots = Array.from({ length: 200 }, (_, i) => inTheSaloon(riedquat, m, i, later));
+    expect(slots.every((x) => x === null || x === 'resting')).toBe(true);
+    const share = slots.filter(Boolean).length / slots.length;
+    expect(share).toBeGreaterThan(0.15);
+    expect(share).toBeLessThan(0.45);
+  });
+
+  it("won't drink with you if you shot his pod", () => {
+    const c = veteran();
+    const m = memoryOf(c, who.key);
+    m.podShot = true;
+    expect(saloonScene(who, 'resting', m, 'Jameson').refuses).toBe(true);
+  });
+
+  it('makes the news: his pod picked up, or his boast', () => {
+    const c = veteran();
+    const at = (key: string) => galaxy(0)[Number(key.split(':')[1])];
+    foughtHim(c, who, 'beaten', NOW);
+    expect(renownedNews(c, at, NOW + HOUR)[0].text).toContain('escape pod');
+    foughtHim(c, who, 'won', NOW + OUT_OF_ACTION);
+    expect(renownedNews(c, at, NOW + OUT_OF_ACTION + HOUR)[0].text).toContain('claims another Cobra');
+    expect(renownedNews(c, at, NOW + OUT_OF_ACTION + GLOATS_FOR + HOUR)).toHaveLength(0);
   });
 });
