@@ -117,6 +117,15 @@ Played first, in Mark's scenario (running dark, a dogfight with pirates, into th
 - **On a phone, one card,** clear of the crosshair, with "+1 waiting" under it and 44 px buttons.
 - **The police's last word stays:** see [law and travel](law-and-travel.md) (the airspace refuge).
 
+#### Important messages: up, then away into the corner *(Mark, 9 November 2026)*
+
+Mark: *"If they were important, I wanted them to appear on the screen and then animate away, fade away back into the corner, so that we know there's time for the user to read the message. It doesn't have to be up for long, but if it just flashed up quickly, was semi-transparent, and faded away into the corner, it would give the player a quick heads-up on what that message is."*
+
+- **The motion:** an important message (*worth knowing* and up) appears in the middle of the screen, semi-transparent, for a moment. Then it shrinks and drifts into the radio's corner (bottom left on a desktop, the Radio pill on a phone), where it's kept. You see what it said, and where to find it again.
+- **Not for long, and never in the way:** a second or two, clear of the crosshair, and never during a fight (the fight summary covers that).
+- **The ship's computers speak too:** the trip computer and the contract computer use the same heads-up for what you need to do before the next leg. For example, *"Refuel before the next jump: Diso is 6.2 LY, you have 4.1"* or *"Next leg: Leesti, 2 jumps · Hexon delivery due in 3"*. Contracts are confusing, and this is to stop players getting lost in them.
+- **Pictures first**, as before.
+
 **Over to the community** *(Mark)*. These are starting points, not the answer. If you have a better idea for the radio and the comms array, or improvements to any of this, we'd love it: a sketch, a mock-up, a prototype or a paragraph. Post it in [Discussions](https://github.com/witchspace-game/witchspace/discussions/categories/ideas) or on the [ideas board](https://witchspace.org.uk/ideas/?about=The%20radio%20and%20comms), and the best answer gets built, credited to you.
 
 ## The comms array
