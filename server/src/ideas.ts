@@ -147,7 +147,10 @@ export class IdeasBoard extends DurableObject<IdeasEnv> {
     const text = cleanText(body?.body, BODY_MAX);
     const kind: Kind = body?.kind === 'bug' ? 'bug' : 'idea';
     if (title.length < 4) return json({ error: kind === 'bug' ? 'Give the bug a title' : 'Give your idea a title' }, 400);
-    if (this.recent(voter, net, kind === 'bug' ? 'bug' : 'post', 3600_000) >= (kind === 'bug' ? BUGS_PER_HOUR : POSTS_PER_HOUR))
+    // Ideas: 3 an hour. Bugs: up to 10, counting ideas too, so calling an idea a bug gets no more than 10 (and Mark can refile it).
+    const ideas = this.recent(voter, net, 'post', 3600_000);
+    const all = ideas + this.recent(voter, net, 'bug', 3600_000);
+    if (kind === 'bug' ? all >= BUGS_PER_HOUR : ideas >= POSTS_PER_HOUR)
       return json({ error: kind === 'bug' ? 'That’s a lot of bugs for one hour: thank you! Try again a little later' : 'That’s plenty of ideas for one hour: try again later' }, 429);
     if (!(await isHuman(this.env.TURNSTILE_SECRET, body?.turnstile, request))) return json({ error: 'The human check didn’t pass: please try again' }, 403);
     const id = crypto.randomUUID().slice(0, 8);
@@ -192,11 +195,13 @@ export class IdeasBoard extends DurableObject<IdeasEnv> {
     return json({ reported: true });
   }
 
-  /** Set an idea's status, hide or unhide it, or reply to it (all in one call if you like). Needs the admin key. */
+  /** Set an idea's status, hide or unhide it, refile it as an idea or a bug, or reply to it (all in one call if you like). Needs the admin key. */
   private async admin(request: Request, id: string): Promise<Response> {
     const key = request.headers.get('X-Admin-Key');
     if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return json({ error: 'Forbidden' }, 403);
-    const body = (await request.json().catch(() => null)) as { status?: unknown; hidden?: unknown; reply?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as { status?: unknown; hidden?: unknown; reply?: unknown; kind?: unknown } | null;
+    // Refile: a bug that's really an idea, or the other way round.
+    if (body?.kind === 'idea' || body?.kind === 'bug') this.sql.exec('UPDATE ideas SET kind = ? WHERE id = ?', body.kind, id);
     // The reply: plain text, up to 1,000 characters; "" or null takes it away. Either way, it's dated now.
     if (body && 'reply' in body && (typeof body.reply === 'string' || body.reply === null)) {
       const text = cleanText(body.reply, REPLY_MAX);
