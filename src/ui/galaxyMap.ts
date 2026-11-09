@@ -18,6 +18,11 @@ interface Options {
   range: number;
   /** Currently chosen destination, if any. */
   target: StarSystem | null;
+  /**
+   * Where the hyperdrive will take you next, when a course goes in more than one jump: shown apart from the
+   * destination, so you can see which system H jumps to (a player on the ideas board, 31 October 2026).
+   */
+  jump?: () => StarSystem | null;
   onTarget: (s: StarSystem) => void;
   /** News of a system that has reached the current one: a short line, or null. */
   news?: (s: StarSystem) => string | null;
@@ -214,8 +219,11 @@ function view() {
     const oy = a.top + (ah - 128 * scale) / 2;
     return { scale, area: a, toScreen: (s: StarSystem) => [ox + s.x * scale, oy + (s.y / 2) * scale] as const };
   }
-  // Local: about a tank and a half of fuel each way, centred on you, names on everything.
-  const scale = Math.min(aw, ah * 2) / LOCAL_SPAN;
+  // Local: about a tank and a half of fuel each way, centred on you, names on everything. Never so close that
+  // the jump-range circle runs off the top or bottom: on a wide screen it showed only 6 LY up and down, so a
+  // system 6.8 LY away wasn't there (a player on the ideas board, 29 October 2026).
+  const reach = (Math.max(opts!.range, 7) + 0.8) / LY_PER_UNIT; // chart units from you to the circle, and a little more
+  const scale = Math.min(Math.min(aw, ah * 2) / LOCAL_SPAN, aw / (2 * reach), ah / (2 * reach));
   const cx = a.left + aw / 2;
   const cy = a.top + ah / 2;
   return {
@@ -336,6 +344,21 @@ function draw() {
   }
   mark(cur, colours.current, 7, false);
   if (opts.target) mark(opts.target, colours.target, 9, false);
+  // The next jump on a longer course: a line to it from here, and its own smaller mark.
+  const jump = opts.jump?.();
+  if (jump && jump !== opts.target) {
+    const [x0, y0] = toScreen(cur);
+    const [x1, y1] = toScreen(jump);
+    ctx.strokeStyle = colours.target;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    mark(jump, colours.target, 6, false);
+  }
   if (cursor) mark(cursor, colours.cursor, 12, true);
 
   // Names, placed so none is cut off at the edge, hidden by a marker or drawn over another (Mark: "ove"
@@ -395,9 +418,12 @@ function renderInfo() {
   const runBy = opts.station?.(s);
   if (runBy) rows.splice(2, 0, ['Run by', runBy]);
   const isTarget = opts.target === s;
+  const jump = opts.jump?.();
+  const isJump = Boolean(jump && jump !== opts.target && jump === s);
+  if (isTarget && jump && jump !== s) rows.unshift(['Next jump', `${jump.name}, ${distanceLy(opts.current, jump).toFixed(1)} LY`]);
   // Station names are community content, so everything is escaped.
   const contracts = opts.contracts ?? [];
-  info.innerHTML = `<h3>${escapeHtml(s.name)}${isTarget ? ' <em>Destination</em>' : ''}</h3><dl>${rows
+  info.innerHTML = `<h3>${escapeHtml(s.name)}${isTarget ? ' <em>Destination</em>' : isJump ? ' <em>Next jump</em>' : ''}</h3><dl>${rows
     .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd>`)
     .join('')}</dl>${
     contracts.length

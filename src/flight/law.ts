@@ -689,11 +689,30 @@ function showTransponder() {
   }
 }
 
+/** A police ship in sight to hail you: one on patrol rather than one docking or leaving, if there is one. */
+function hailer(): NpcShip | undefined {
+  const seen = ofRole('police').filter((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
+  return seen.find((p) => !legs.get(p)) ?? seen[0];
+}
+
+// When the last hail ran out, if its Vipers left before it did: a new hail soon after keeps that clock.
+let hailDeadline = -Infinity;
+
 /** Each frame in flight: police hail a dark ship they can see. */
 export function updateHail() {
   showTransponder();
   const box = $('#hail');
-  if (flight.hail && !npcs.includes(flight.hail.by)) flight.hail = null; // the Viper's gone; another may ask
+  // The Viper that hailed you docked or left: another in sight carries on with the same hail, card and clock.
+  // Before, each one asked afresh, and by a busy station that was a new hail every few seconds (Mark, 9 November 2026).
+  if (flight.hail && !npcs.includes(flight.hail.by)) {
+    const next = hailer();
+    if (next) flight.hail.by = next;
+    else {
+      hailDeadline = flight.hail.until;
+      flight.hail = null;
+      settle(flight.hailCard, 'The police have gone');
+    }
+  }
   if (!dark() || !hasLaw(currentSystem()) || flight.defiedPolice || (flight.hullChecked && !flight.transponderOff)) {
     flight.hail = null;
     box.hidden = true;
@@ -712,12 +731,16 @@ export function updateHail() {
   }
   if (!flight.hail) {
     if (underFire) return;
-    const by = ofRole('police').find((p) => !p.hostile && p.obj.position.distanceTo(player.obj.position) < POLICE_SEE);
+    const by = hailer();
     if (!by) return;
-    flight.hail = { by, until: flight.elapsed + HAIL_TIME };
+    // Hailed again within a minute of the last running out unanswered: no fresh 15 s.
+    // (The second test keeps a deadline from an earlier flight, whose clock started again, out of it.)
+    const recent = flight.elapsed - hailDeadline < 60 && hailDeadline - flight.elapsed <= HAIL_TIME;
+    const until = recent ? Math.max(hailDeadline, flight.elapsed + 5) : flight.elapsed + HAIL_TIME;
+    flight.hail = { by, until };
     sfx.beep();
     // One hail (Mark got two): in Modern the radio card is it, with the seconds left on it; Classic keeps the banner.
-    const deadline = Date.now() + HAIL_TIME * 1000;
+    const deadline = Date.now() + (until - flight.elapsed) * 1000;
     flight.hailCard = radio('police', `${currentSystem().name} police`, `Unidentified ${player.def.name}, switch on your transponder.`, { flash: 4, urgent: true, line: `Unidentified ${player.def.name}, this is ${currentSystem().name} police. Switch on your transponder.`, answers: transponderBroken() && !flight.transponderOff ? answerPolice() : answerPolice().map((a) => ({ ...a, until: deadline, clock: true })) });
   }
   // The Viper that hailed you comes to look.
