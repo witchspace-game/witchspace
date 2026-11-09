@@ -15,6 +15,7 @@ import { btc, isBtc } from './btc';
 import { ClipBoard, type ClipsEnv } from './clips';
 import { buildFeed, FEED_MAX_AGE, FEED_WINDOW } from './feed';
 import { networkOf } from './http';
+import { noindex, ROBOTS_TXT } from './robots';
 import { cleanPaint, ownPaint } from './paint';
 import { REPORT_EVERY_MS } from './spaceBudget';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
@@ -55,6 +56,14 @@ const MAX_MESSAGES_PER_SECOND = 24;
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const { pathname } = new URL(request.url);
+    if (pathname === '/robots.txt') return noindex(pathname, new Response(ROBOTS_TXT, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'public, max-age=86400' } }));
+    return noindex(pathname, await route(request, env, ctx));
+  },
+} satisfies ExportedHandler<Env>;
+
+async function route(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  {
     const url = new URL(request.url);
     if (url.pathname === '/health') return new Response('ok');
     // Clip pages (server/src/clips.ts): moments shared as tracks. The card is for link previewers, so open to all.
@@ -111,8 +120,8 @@ export default {
     if (!ORIGINS.some((o) => o.test(origin))) return new Response('Forbidden', { status: 403 });
     const room = env.SYSTEMS.get(env.SYSTEMS.idFromName(`${m[1]}:${m[2]}`));
     return room.fetch(request);
-  },
-} satisfies ExportedHandler<Env>;
+  }
+}
 
 const clipsOf = (env: Env) => env.CLIPS.get(env.CLIPS.idFromName('clips'));
 
