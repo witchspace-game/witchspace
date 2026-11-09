@@ -49,6 +49,7 @@ import { deliveriesArrived } from './game/shipyard';
 import { ATMOSPHERE_SCALE, buildPlanet, disposePlanet } from './render/bodies';
 import { cargoName, collect, deliver, destinationOf, forgive, wyWorks } from './game/contracts';
 import { checkMessages, collectHeld, thanksFrom } from './game/assignments';
+import { checkUpdates } from './game/changelog';
 import { COMPANIES } from './game/companies';
 import { bodiesOf, exploreOf, isFound, isSurveyed, poisOf, recordVisit } from './game/explore';
 import { yardsOf } from './game/yards';
@@ -397,6 +398,11 @@ function enterDocked(newShip = false) {
   }
   // The companies may have been in touch while you were away.
   if (checkMessages(cmdr(), currentSystem(), Date.now()).length) saveCommander(cmdr());
+  // An update since you last played: what's new, in your messages (CHANGELOG.md).
+  const wasSeen = cmdr().changesSeen;
+  const update = checkUpdates(cmdr(), Date.now());
+  if (cmdr().changesSeen !== wasSeen) saveCommander(cmdr());
+  if (update) setTimeout(() => flash(`${update.subject}: in your messages`, 5), newShip ? 8500 : 2000);
   // Modern: the station fills your tank as you dock, as far as your credits go (Mark: forgetting
   // meant docking again). Fuel is cheap; the chore was the cost. Classic keeps 1984's pump.
   const refuelled = modern() ? autoRefuel(cmdr()) : null;
@@ -755,6 +761,7 @@ async function dock() {
   bringHome(held);
   void loadFirsts(sys.galaxy);
   const news = checkMessages(c, sys, Date.now());
+  const update = checkUpdates(c, Date.now());
   const gone = [...collectHeld(c, sys), ...checkAdrift()];
   saveCommander(c);
   enterDocked();
@@ -764,9 +771,10 @@ async function dock() {
   else if (delivered.length || collected.length) flash([...delivered, ...specialsDue.map(thanksFrom), ...collected].join(' · '), 6);
   else if (gone.length) flash(gone.join(' · '), 5);
   else if (news.length) flash(`New message from ${COMPANIES[news[0].company].name}: ${news[0].subject}`, 5);
+  else if (update) flash(`${update.subject}: in your messages`, 5);
   else if (smuggling && inspectionChance(c, sys) > 0) flash('Docked · your hold was not inspected this time', 3);
   // The yard's word on a spec from the site, unless the dock had more pressing news.
-  void checkSiteSpec(!settlement && !delivered.length && !collected.length && !gone.length && !news.length);
+  void checkSiteSpec(!settlement && !delivered.length && !collected.length && !gone.length && !news.length && !update);
   void checkSignedOver();
   offerCard();
 }

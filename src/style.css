@@ -1650,6 +1650,7 @@ body.retro .contracts li { font-size: 12px; border-radius: 0; }
 body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size: 8px; }
 .contracts li.special { border-left-color: var(--company, var(--amber)); background: rgba(255, 179, 71, 0.06); }
 .contracts li.message { border-left-color: var(--dim); }
+.contracts li.message.update small { white-space: pre-line; } /* What's new: one change a line */
 /* The saloon (main.ts renderSaloon): the regulars, each a card. */
 .regulars { list-style: none; margin: 8px 0 12px; padding: 0; display: grid; gap: 10px; }
 .regular { padding: 10px 12px; border-left: 2px solid var(--edge); background: rgba(61, 255, 176, 0.04); line-height: 1.35; }

@@ -353,6 +353,8 @@ export interface Commander {
   companyLog?: Partial<Record<CompanyId, CompanyLog>>;
   /** Messages from the companies, newest first. */
   messages?: Message[];
+  /** The newest CHANGELOG.md section you've been sent, by date (game/changelog.ts). */
+  changesSeen?: string;
   /** Favours you owe each company (a lawyer here, a word there): leverage for later. */
   favours?: Partial<Record<CompanyId, number>>;
   /** World events you caused (a case opened, or fallen): yours, and the galaxy's now. */
