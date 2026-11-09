@@ -101,6 +101,21 @@ export const FALCON_LASER: Laser = {
   color: '#ff4d6d',
 };
 
+/**
+ * A renowned pirate's beam laser: further and harder than a pack pirate's pulse (37 a second against
+ * 14), well short of the Falcon's 55. On a little gimbal (src/game/renowned.ts). Tuned in the duel
+ * simulation (tools/simulate-duel.ts).
+ */
+export const RENOWNED_LASER: Laser = {
+  name: 'Beam laser',
+  interval: 0.3,
+  damage: 11,
+  range: 3000,
+  heat: 0,
+  cooling: 0,
+  color: '#ff6a3d',
+};
+
 export const TRADER_LASER: Laser = { ...PIRATE_LASER, interval: 0.8, damage: 5, color: '#ffe08a' };
 
 export interface Target<T> {

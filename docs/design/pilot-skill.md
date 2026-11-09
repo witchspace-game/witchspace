@@ -65,6 +65,18 @@ Built in today's AI (`src/game/npc.ts`), ahead of the skill dial, after the old 
 - **Position beats dodging.** What wins free seconds of fire is getting behind: a Cobra takes about four seconds to turn round. So skill should mostly scale *where* a pilot fights from (the tail, the rear quarter, out of the dark), how well it reads your turn, and when it breaks off, more than how it dodges. The Falcon's own plan is built on this ([how she fights](legends-the-falcon.md#how-she-fights-the-ambusher)).
 - **The test bot needs a human's aim as well as reactions**, or no dodge ever counts.
 
+## Packs that work together *(Mark, 9 November 2026)*
+
+Mark: *"When presented with a 'pack' of pirates they don't work together, which would make it much harder if they did."* Today each pirate in a pack flies its own runs at you, with nothing to do with the others. They come in from wherever they happen to be, often one behind another, so you take them one at a time. Teamwork would make a pack a real threat without making any one pirate better:
+
+- **Split and pincer:** two come in from opposite sides, so turning onto one shows your tail to the other.
+- **Bait and trap:** one makes a run to draw you round while the others wait out of your sights for your tail.
+- **Cover a hurt wingman:** a pirate with low shields pulls out, and the others close in to keep you busy while it recharges.
+- **Timing:** runs staggered a few seconds apart, so there's always one coming in while you're dealing with another.
+- **A leader:** the ace, or a renowned pirate when he's there, calls the moves. Kill him first and the rest go back to flying alone, or scatter.
+
+This is stage 2's "wingmen who split to take you from two sides" (below), raised by Mark from play. It should scale like the rest: lone runs for rookie packs near the start, real teamwork in anarchies and against high ratings.
+
 ## Your combat computer
 
 The ships that hunt you read how you fly, including when a computer is flying for you: rookies fall for any routine, aces learn each one's pattern, and the Falcon reads your kit as she comes in dark. See [combat computer routines](combat-computer-routines.md).

@@ -50,3 +50,60 @@ describe('pirates make attack runs', () => {
     });
   }
 });
+
+// A renowned pirate holds back (Mark, 9 November 2026): long runs from range, never a joust.
+describe('a renowned pirate holds back', () => {
+  function holdBack(cobraSpeed: number) {
+    const cobra = new PlayerShip(shipById('cobra-mk3')!);
+    cobra.speed = cobraSpeed;
+    const pirate = new NpcShip(shipById('cobra-mk3')!, 'pirate', PULSE_LASER, { centre: new THREE.Vector3(), radius: 1000, height: 0, rate: 0.1, angle: 0 });
+    pirate.style = 'holdBack';
+    pirate.obj.position.set(Math.random() * 200 - 100, Math.random() * 200 - 100, 4000);
+    pirate.obj.lookAt(cobra.obj.position);
+    pirate.ship.speed = pirate.ship.maxSpeed * 0.6;
+    pirate.target = cobra;
+    pirate.mode = 'attack';
+    return { cobra, pirate };
+  }
+
+  it('turns away well before a joust, and comes round again', () => {
+    for (let i = 0; i < 15; i++) {
+      const speed = [200, 100, 0][i % 3];
+      const { cobra, pirate } = holdBack(speed);
+      let closest = Infinity;
+      let runs = 0;
+      let was = modeOf(pirate);
+      for (let t = 0; t < 60; t += 1 / 60) {
+        pirate.update(1 / 60);
+        cobra.move(1 / 60);
+        closest = Math.min(closest, pirate.obj.position.distanceTo(cobra.obj.position));
+        if (was === 'attack' && modeOf(pirate) === 'breakoff') runs++;
+        was = modeOf(pirate);
+      }
+      expect(closest, `run ${i}`).toBeGreaterThan(400); // a jouster comes to 150–280 m
+      expect(runs, `run ${i}`).toBeGreaterThanOrEqual(2);
+    }
+  });
+
+  it('pulls out when his shields are low, and comes back when they are up', () => {
+    const { cobra, pirate } = holdBack(100);
+    for (let t = 0; t < 5; t += 1 / 60) pirate.update(1 / 60);
+    pirate.ship.shields = pirate.def.stats.shields * 0.2;
+    pirate.update(1 / 60);
+    expect(pirate.regrouping).toBe(true);
+    expect(modeOf(pirate)).toBe('flee');
+    for (let t = 0; t < 20 && pirate.regrouping; t += 1 / 60) {
+      pirate.update(1 / 60);
+      cobra.move(1 / 60);
+    }
+    expect(pirate.regrouping).toBe(false);
+    expect(modeOf(pirate)).toBe('attack');
+  });
+
+  it('is a little slower than your Cobra, so running from him works', () => {
+    const { pirate } = holdBack(0);
+    pirate.target!.obj.position.set(0, 0, -20000); // far off: he goes flat out
+    for (let t = 0; t < 10; t += 1 / 60) pirate.update(1 / 60);
+    expect(pirate.ship.speed).toBeLessThan(pirate.ship.maxSpeed * 0.95);
+  });
+});

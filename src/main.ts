@@ -92,7 +92,7 @@ import { initSaloon } from './ui/saloon';
 import { initMarket, renderMarket } from './ui/market';
 import { initStation, renderDocked, resetBoughtHere, showFittings, wantedOnLaunch } from './ui/station';
 import { setDockTab, updateDockHead } from './ui/places';
-import { TRADERS_BY_GOVERNMENT, escortOf, forgetDeliveries, initTraffic, legs, markLaunched, pacing, railsOf, resetTraffic, spawnFalcon, spawnPirates, spawnTrader, startEncounters, voyageOf } from './flight/traffic';
+import { TRADERS_BY_GOVERNMENT, escortOf, forgetDeliveries, initTraffic, legs, markLaunched, pacing, railsOf, resetTraffic, spawnFalcon, spawnPirates, spawnRenowned, spawnTrader, startEncounters, voyageOf } from './flight/traffic';
 import { launchSound, remoteVoices, voiceOf } from './flight/sounds';
 import { carrier, clearMarshalTimer, disposeCarrier, initMarshals, scheduleMarshals, summonCarrier } from './flight/marshals';
 import { energyBomb, explodeMissile, fireMissile, initMissiles, launchMissile, netMissiles, playerEcm, toggleLock } from './flight/missiles';
@@ -1177,7 +1177,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).get('demo') === 
 if (import.meta.env.DEV) {
   Object.assign(window, {
     witchspace: {
-      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, destroyNpc, playerHitStation, dockingBanned, inSlot, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier, setAutopilot,
+      player, station, dockingComputer, drifters, explosions, spillCargo, sun, npcs, destroyNpc, playerHitStation, dockingBanned, inSlot, missiles, launchMissile, spawnPirates, recorder, recorderWatch, music, spawnFalcon: () => spawnFalcon(player.obj.position.clone().addScaledVector(player.forward(), 6000), player.obj.position), spawnRenowned: () => spawnRenowned(player.obj.position.clone().addScaledVector(player.forward(), 5000), player.obj.position), spawnTrader, spawnDistress, sendBeacon, hailTarget, playerHitNpc, becomeFugitive, damagePlayer, die, legalStatus, renderDocked, aim, summonCarrier, setAutopilot,
       get carrier() { return carrier; },
       get locked() { return flight.locked; },
       get distresses() { return distresses; },
