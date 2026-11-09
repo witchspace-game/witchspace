@@ -120,14 +120,14 @@ export function nearestWhere(a: StarSystem, ok: (s: StarSystem) => boolean, limi
  * full tank), or null if `b` is here or out of reach. Among equally short
  * routes, the one with the shortest first hop, so fuel lasts.
  */
-export function nextHop(a: StarSystem, b: StarSystem): StarSystem | null {
+export function nextHop(a: StarSystem, b: StarSystem, hop = ROUTE_HOP): StarSystem | null {
   if (a === b) return null;
   const first = new Map<number, StarSystem>([[a.index, a]]);
   let frontier = [a];
   for (let n = 1; n <= 12 && frontier.length; n++) {
     const next: StarSystem[] = [];
     for (const s of frontier) {
-      for (const t of systemsWithin(s, ROUTE_HOP)) {
+      for (const t of systemsWithin(s, hop)) {
         if (first.has(t.index)) continue;
         first.set(t.index, n === 1 ? t : first.get(s.index)!);
         if (t === b) return first.get(t.index)!;
@@ -148,10 +148,10 @@ export const DANGEROUS = (s: StarSystem) => s.government <= 1; // anarchy or feu
 
 /**
  * The route the ship's computer plans from `a` to `b`: the stops after `a`,
- * ending with `b` (each within a full tank), or null if `b` is here or out of
+ * ending with `b` (each within `hop` LY: a full tank, more with long-range tanks), or null if `b` is here or out of
  * reach. The fewest jumps, unless a slightly longer way stays out of danger.
  */
-export function safeRoute(a: StarSystem, b: StarSystem): StarSystem[] | null {
+export function safeRoute(a: StarSystem, b: StarSystem, hop = ROUTE_HOP): StarSystem[] | null {
   if (a === b) return null;
   const cost = new Map<number, number>([[a.index, 0]]);
   const prev = new Map<number, StarSystem>();
@@ -163,7 +163,7 @@ export function safeRoute(a: StarSystem, b: StarSystem): StarSystem[] | null {
     if (done.has(s.index)) continue;
     done.add(s.index);
     if (s === b) break;
-    for (const t of systemsWithin(s, ROUTE_HOP)) {
+    for (const t of systemsWithin(s, hop)) {
       if (done.has(t.index)) continue;
       const c = cost.get(s.index)! + 1 + (t === b ? 0 : STOP_DANGER[t.government]) + distanceLy(s, t) * 0.001; // shorter hops break ties
       if (c < (cost.get(t.index) ?? Infinity)) {

@@ -219,3 +219,27 @@ describe('the safe route', () => {
     expect(safer).toBeGreaterThan(0);
   });
 });
+
+describe('routes as long as your tank', () => {
+  // A player with long-range tanks was routed through a stop to a system in one jump's reach (ideas board, 30 October 2026).
+  const g = galaxy(0);
+  const pair = (() => {
+    for (const a of g) for (const b of g) {
+      const d = distanceLy(a, b);
+      if (d > FUEL_CAPACITY + 0.5 && d <= FUEL_CAPACITY + 2.5) return [a, b] as const;
+    }
+    throw new Error('no pair');
+  })();
+
+  it('goes straight there when the tank reaches', () => {
+    const [a, b] = pair;
+    expect(safeRoute(a, b, FUEL_CAPACITY + 3)).toEqual([b]);
+    expect(nextHop(a, b, FUEL_CAPACITY + 3)).toBe(b);
+  });
+
+  it('still stops on the way with the standard tank', () => {
+    const [a, b] = pair;
+    const route = safeRoute(a, b);
+    expect(route === null || route.length > 1).toBe(true);
+  });
+});
