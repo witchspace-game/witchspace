@@ -4,6 +4,9 @@
 export type Unit = 't' | 'kg' | 'g';
 export type Legality = 'legal' | 'illegal';
 
+/** "Computers are", "food is": every plural good's name ends in s and no mass noun's does (a player on the ideas board, 29 October 2026). */
+export const isPlural = (c: { name: string }) => /s$/i.test(c.name);
+
 export interface Commodity {
   id: string;
   name: string;

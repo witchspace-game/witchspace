@@ -13,7 +13,7 @@ import {
   type Time,
   type UTCTimestamp,
 } from 'lightweight-charts';
-import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
+import { COMMODITIES, commodityById, isPlural, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
 import { abolitionistPrice, backRoomQuotes, fenceQuotes, fenceSell, freeSlaves, hasAbolitionists, hasBackRoom, stingChance, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
 import { cleanQty, FUEL_CAPACITY, stolenQty } from '../game/commander';
 import { activeEvent, eventsAt, EVENT_KINDS, newsAt, newsDelay, type NewsItem } from '../economy/events';
@@ -460,12 +460,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   function why(ctx: TradeContext, c: Commodity, balance: number, order: ReturnType<typeof stationOrder>, event: ReturnType<typeof activeEvent>): string {
     const here = ctx.system.name;
     const at = remote() ? 'there' : 'here';
-    if (!tradesHere(ctx, c.id)) return `${c.name} isn't traded openly at ${here}: it's against the law ${at}.`;
+    const [is, isnt, it, sells, itHas, itsWanted] = isPlural(c) ? ['are', "aren't", 'them', 'sell', 'they have', "they're wanted"] : ['is', "isn't", 'it', 'sells', 'it has', "it's wanted"];
+    if (!tradesHere(ctx, c.id)) return `${c.name} ${isnt} traded openly at ${here}: it's against the law ${at}.`;
     if (event) return `${EVENT_KINDS[event.type].headline(here)}. That's moving ${c.name.toLowerCase()} prices ${at}.`;
     if (order?.side === 'buy') return `${here} is short of ${c.name.toLowerCase()} and the station is buying to restock: a good place to sell.`;
     if (order?.side === 'sell') return `${here} has more ${c.name.toLowerCase()} than it can use: cheap while the glut lasts.`;
-    if (balance > 0.25) return `${c.name} is cheap ${at}: ${here} makes it. Sell it where it's wanted.`;
-    if (balance < -0.25) return `${c.name} sells well ${at}: ${here} doesn't make it, so it has to be brought in.`;
+    if (balance > 0.25) return `${c.name} ${is} cheap ${at}: ${here} makes ${it}. Sell ${it} where ${itsWanted}.`;
+    if (balance < -0.25) return `${c.name} ${sells} well ${at}: ${here} doesn't make ${it}, so ${itHas} to be brought in.`;
     return `${here} makes and uses its own ${c.name.toLowerCase()}, so the price stays close to fair.`;
   }
 

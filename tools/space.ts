@@ -1,6 +1,7 @@
 // Shared space's budget and off switch (server/src/spaceBudget.ts), from the repo root:
 //
 //   npx tsx tools/space.ts              today's use, the budget, and whether it's on
+//   npx tsx tools/space.ts history 30   each day's use and commanders, newest first
 //   npx tsx tools/space.ts budget 10    raise (or lower) the daily budget, in dollars
 //   npx tsx tools/space.ts off          everyone flies solo (within a minute) until it's on again
 //   npx tsx tools/space.ts on
@@ -28,19 +29,21 @@ function adminKey(): string {
   }
 }
 
-const body = command === 'off' ? { off: true } : command === 'on' ? { off: false } : command === 'budget' ? { budget: Number(value) } : undefined;
-if (command && !body) {
-  console.error('Usage: npx tsx tools/space.ts [budget <dollars> | off | on] [--local]');
+const history = command === 'history' ? Math.max(1, Number(value) || 30) : 0;
+const body = command === 'history' ? undefined : command === 'off' ? { off: true } : command === 'on' ? { off: false } : command === 'budget' ? { budget: Number(value) } : undefined;
+if (command && !body && !history) {
+  console.error('Usage: npx tsx tools/space.ts [history [days] | budget <dollars> | off | on] [--local]');
   process.exit(1);
 }
-const res = await fetch(`${API}/admin/space`, {
+const res = await fetch(`${API}/admin/space${history ? `?days=${history}` : ''}`, {
   method: body ? 'POST' : 'GET',
   headers: { 'X-Admin-Key': adminKey(), Origin: ORIGIN, 'Content-Type': 'application/json' },
   body: body ? JSON.stringify(body) : undefined,
 });
-const d = (await res.json()) as { error?: string; day?: string; off?: boolean; budget?: number; cost?: number; busyHours?: number; messages?: number };
+const d = (await res.json()) as { error?: string; day?: string; off?: boolean; budget?: number; cost?: number; busyHours?: number; messages?: number; commanders?: number; history?: { day: string; busyHours: number; cost: number; messages: number; commanders: number }[] };
 if (!res.ok) {
   console.error(d.error ?? `HTTP ${res.status}`);
   process.exit(1);
 }
-console.log(`Shared space ${d.off ? 'OFF' : 'on'} · ${d.day} (UTC) · spent about $${(d.cost ?? 0).toFixed(2)} of $${d.budget} a day${d.busyHours !== undefined ? ` · ${d.busyHours} busy system-hours, ${d.messages} messages` : ''}`);
+console.log(`Shared space ${d.off ? 'OFF' : 'on'} · ${d.day} (UTC) · spent about $${(d.cost ?? 0).toFixed(2)} of $${d.budget} a day${d.busyHours !== undefined ? ` · ${d.busyHours} busy system-hours, ${d.messages} messages` : ''}${d.commanders !== undefined ? ` · ${d.commanders} commanders` : ''}`);
+for (const h of d.history ?? []) console.log(`  ${h.day}  $${h.cost.toFixed(2).padStart(6)}  ${String(h.busyHours).padStart(6)} busy h  ${String(h.messages).padStart(8)} msgs  ${String(h.commanders).padStart(4)} commanders`);

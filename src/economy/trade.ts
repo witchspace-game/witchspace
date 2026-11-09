@@ -1,6 +1,6 @@
 import { cargoTonnes, cleanQty, stolenQty, tidyStolen, type Commander } from '../game/commander';
 import type { StarSystem } from '../galaxy/generate';
-import { commodityById, inSafe, SAFE_LIMIT, UNITS_PER_TONNE } from './commodities';
+import { commodityById, inSafe, isPlural, SAFE_LIMIT, UNITS_PER_TONNE } from './commodities';
 import { record } from '../game/ledger';
 import { stationTrades } from './legality';
 import { checkOrders } from './orders';
@@ -104,7 +104,7 @@ export function maxBuyable(ctx: TradeContext, id: string): number {
 export function buy(ctx: TradeContext, id: string, qty: number): TradeResult {
   const c = commodityById(id);
   if (!c || qty <= 0) return { ok: false, message: 'Nothing to buy' };
-  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} isn't traded openly here` };
+  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} ${isPlural(c) ? "aren't" : "isn't"} traded openly here` };
   const state = marketState(ctx);
   if (quotes(ctx).find((q) => q.commodity.id === id)!.stock < qty) return { ok: false, message: `Not enough ${c.name} in stock` };
   if (inSafe(c, ctx.commander.difficulty === 'classic')) {
@@ -124,7 +124,7 @@ export function sell(ctx: TradeContext, id: string, qty: number): TradeResult {
   const c = commodityById(id);
   const held = ctx.commander.cargo[id] ?? 0;
   if (!c || qty <= 0 || held < qty) return { ok: false, message: 'Nothing to sell' };
-  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} isn't traded openly here` };
+  if (!tradesHere(ctx, id)) return { ok: false, message: `${c.name} ${isPlural(c) ? "aren't" : "isn't"} traded openly here` };
   // Where there's a law, stations won't take stolen goods.
   if (ctx.system.government > 0 && qty > cleanQty(ctx.commander, id)) {
     const hot = stolenQty(ctx.commander, id);
