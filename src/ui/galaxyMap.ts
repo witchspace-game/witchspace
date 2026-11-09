@@ -34,7 +34,12 @@ interface Options {
   station?: (s: StarSystem) => string | null;
   /** Contracts in hand: where to, in the company's colour, and a line about each. */
   contracts?: { to: StarSystem; colour: string; line: string }[];
+  /** Trails under way: where each one's next step is (Mark: "am I actually on a trail or not?"). */
+  trails?: { at: StarSystem; line: string }[];
 }
+
+/** A trail's gold: the beacon's, as on the HUD. */
+const TRAIL_GOLD = '#ffd98a';
 
 const root = document.querySelector<HTMLElement>('#galaxy-map')!;
 const canvas = root.querySelector<HTMLCanvasElement>('canvas')!;
@@ -342,6 +347,18 @@ function draw() {
     ctx.stroke();
     ctx.setLineDash([]);
   }
+  root.querySelector<HTMLElement>('.trail-legend')!.hidden = !opts.trails?.length;
+  // A trail's next step: a dotted gold ring, wider than a contract's (the news has the diamonds).
+  for (const t of opts.trails ?? []) {
+    const [x, y] = toScreen(t.at);
+    ctx.strokeStyle = retro ? '#fff' : TRAIL_GOLD;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([1.5, 3.5]);
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
   mark(cur, colours.current, 7, false);
   if (opts.target) mark(opts.target, colours.target, 9, false);
   // The next jump on a longer course: a line to it from here, and its own smaller mark.
@@ -415,6 +432,7 @@ function renderInfo() {
   if (explored) rows.push(['Explored', explored.line]);
   const firsts = opts.firsts?.(s);
   if (firsts) rows.push(['Firsts', firsts]);
+  for (const t of (opts.trails ?? []).filter((t) => t.at === s)) rows.push(['Trail', t.line]);
   const runBy = opts.station?.(s);
   if (runBy) rows.splice(2, 0, ['Run by', runBy]);
   const isTarget = opts.target === s;
@@ -429,6 +447,12 @@ function renderInfo() {
     contracts.length
       ? `<h4>Your contracts</h4><ul class="map-contracts">${contracts
           .map((k) => `<li><button type="button" data-goto="${k.to.index}" style="--company:${k.colour}">${escapeHtml(k.line)}</button></li>`)
+          .join('')}</ul>`
+      : ''
+  }${
+    opts.trails?.length
+      ? `<h4>Trails</h4><ul class="map-contracts">${opts.trails
+          .map((t) => `<li><button type="button" data-goto="${t.at.index}" style="--company:${TRAIL_GOLD}">${escapeHtml(`${t.line} · next: ${t.at.name}`)}</button></li>`)
           .join('')}</ul>`
       : ''
   }`;

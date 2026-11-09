@@ -126,6 +126,8 @@ Mark: *"If they were important, I wanted them to appear on the screen and then a
 - **The ship's computers speak too:** the trip computer and the contract computer use the same heads-up for what you need to do before the next leg. For example, *"Refuel before the next jump: Diso is 6.2 LY, you have 4.1"* or *"Next leg: Leesti, 2 jumps · Hexon delivery due in 3"*. Contracts are confusing, and this is to stop players getting lost in them.
 - **Pictures first**, as before.
 
+*Built 9 November 2026* (`src/ui/headsUp.ts`): every *worth knowing* line from the radio, outside fights, shows for 1 to 3 seconds (by its length) above the crosshair, semi-transparent, under the banner if a flash is up. Then it shrinks into the Radio pill (phone) or the log (desktop), which glints as it lands. Two at most wait their turn. Reduced motion: it fades where it is. The ship's computers have their own voice (a screen mark, pale green): the **trip computer** on arrival ("Next jump: Diso, 6.2 LY · on the way to Leesti, 3 jumps · 4.1 LY in the tank: refuel first"), **trail** progress, and **explorer rank**.
+
 **Over to the community** *(Mark)*. These are starting points, not the answer. If you have a better idea for the radio and the comms array, or improvements to any of this, we'd love it: a sketch, a mock-up, a prototype or a paragraph. Post it in [Discussions](https://github.com/witchspace-game/witchspace/discussions/categories/ideas) or on the [ideas board](https://witchspace.org.uk/ideas/?about=The%20radio%20and%20comms), and the best answer gets built, credited to you.
 
 ## The comms array

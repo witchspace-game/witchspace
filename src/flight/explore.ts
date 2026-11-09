@@ -9,7 +9,7 @@ import { currentAccount } from '../net/account';
 import { type Target } from '../game/weapons';
 import { blinkBeacon, buildBeacon, buildMoon, buildRings, disposeWorldPart, powerDownBeacon } from '../render/worlds';
 import { COMPANIES } from '../game/companies';
-import { advanceTrail, bodiesOf, SIGNAL_REACH, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, salvageCargo, SURVEY, trailPoisOf, worldOf, type Poi, type SurveyData } from '../game/explore';
+import { advanceTrail, bodiesOf, SIGNAL_REACH, COURIER_POINTS, courierPoiOf, courierRumour, RANK_NEWS, rankReached, trailTip, dataValue, describeWorld, exploreOf, isFound, isSurveyed, poisOf, recordDiscovery, recordSurvey, recordVisit, salvageCargo, SURVEY, TRAIL_END_POINTS, trailById, trailPoisOf, trailProgress, worldOf, type Poi, type SurveyData } from '../game/explore';
 import { buildYard } from '../render/yard';
 import { stageLabel, yardSeen } from '../game/yards';
 import { lineUpFor } from '../game/commissions';
@@ -17,13 +17,14 @@ import { buildShip, disposeShip } from '../render/shipModel';
 import { flash, flashLater } from '../ui/hud';
 import { type Marker } from '../ui/indicators';
 import { claimFirsts, firstsIn } from '../net/firsts';
-import { type StarSystem } from '../galaxy/generate';
+import { systemAt, type StarSystem } from '../galaxy/generate';
 import { escapeHtml } from '../ui/escape';
 import { $, cmdr, currentSystem, game } from '../core';
 import { flight, planetPos, player, space, station, SUN_POS, SUN_RADIUS, type SceneBody, type ScenePoi } from '../scene';
 import { plotCourse } from '../ui/contracts';
 import { renderDocked } from '../ui/station';
 import { spillCargo } from './adrift';
+import { computer } from './comms';
 import * as THREE from 'three';
 
 import type { LoggedMoment } from '../game/flightLog';
@@ -46,6 +47,8 @@ export let survey: { target: SceneBody; progress: number } | null = null;
 export const YARD_COLOUR = COMPANIES.wy.colour;
 const SIGNAL_DETECT = 6000; // metres: close enough to notice a signal without a survey
 const SIGNAL_COLOUR = '#c9b3ff';
+/** A trail's next step: the beacon's gold, so it stands out from an ordinary signal. */
+const TRAIL_COLOUR = '#ffd98a';
 const DEAD_HULL = new THREE.Color(0.16, 0.16, 0.17); // no power, no glow
 export const exploring = () => cmdr().difficulty === 'modern';
 
@@ -248,16 +251,38 @@ function discover(p: ScenePoi) {
   if (p.poi.salvage.length) {
     spillCargo(p.position, new THREE.Vector3(), salvageCargo(p.poi.salvage));
   }
-  // A trail step: the clue points on, and the course is plotted for you.
+  // A trail step: the clue points on. Said plainly, as a trail, by the ship's computer (Mark: "am I
+  // actually on a trail or not?"), and the course plotted only if you haven't one of your own: a
+  // contract's course isn't taken over (a player on the ideas board, 31 October 2026).
+  const fresh = p.poi.trail && trailProgress(c, p.poi.trail.id) <= p.poi.trail.step;
   const next = advanceTrail(c, p.poi);
+  const trail = fresh && p.poi.trail ? trailById(p.poi.trail.id) : undefined;
   let trailNote = '';
-  if (next) trailNote = ` · the trail leads to ${next.name}${next.index !== currentSystem().index ? ` · ${plotCourse(c, next.index)}` : ''}`;
-  else if (p.poi.trail?.last) trailNote = ' · the end of the trail';
+  if (trail && p.poi.trail) {
+    const found = `${p.poi.trail.step + 1} of ${trail.systems.length}`;
+    if (next) {
+      const own = c.target !== null && c.target !== next.index ? systemAt(currentSystem().galaxy, c.courseTo ?? c.target) : null;
+      const plotted = next.index === currentSystem().index || own ? '' : plotCourse(c, next.index);
+      const course =
+        next.index === currentSystem().index ? 'here, in this system' : own ? `course kept to ${own.name}: set ${next.name} on the chart` : plotted.startsWith('Course set') ? 'course set' : plotted.replace(`Course plotted to ${next.name}: `, 'course plotted, ');
+      trailNote = `${trail.title} · ${found} found · next: ${next.name} · ${course}`;
+    } else trailNote = `${trail.title} · complete, all ${trail.systems.length} found · +${TRAIL_END_POINTS} explorer points`;
+  }
+  // Its log, kept: in Messages, to read again docked (the same player: "there's no way to get it back").
+  keepSignalLog(c, p.poi, trail ? `${trail.title}, ${p.poi.trail!.step + 1} of ${trail.systems.length}` : null);
   saveCommander(c);
   sfx.beep();
-  flash(`Discovered: ${p.poi.name}${p.poi.salvage.length ? ' · cargo drifting free' : ''}${trailNote}`, trailNote ? 5 : 3);
-  showPoiLog(p.poi);
-  noteExplorerRank(before);
+  // The log names it, so the flash only says what the log doesn't.
+  if (p.poi.salvage.length) flash('Cargo drifting free', 3);
+  // The trail's line on the log itself, in gold; and when the log goes, the ship's computer says it again
+  // as a heads-up into the radio's corner, so it isn't lost under the log.
+  const voice = p.poi.trail?.step === 0 ? 'Trail found' : 'Trail';
+  const rank = explorerRankNote(before);
+  showLog(p.poi.name, p.poi.log, 14000, trailNote ? `${voice} · ${trailNote}` : undefined, () => {
+    if (game.state !== 'flying') return;
+    if (trailNote) computer(voice, trailNote, 5, TRAIL_COLOUR);
+    if (rank) computer('Explorer rank', rank, 7);
+  });
 }
 
 /**
@@ -313,38 +338,61 @@ export function explorerTips(c: Commander, here: StarSystem): [string, string][]
   return rows;
 }
 
-/** Reaching an explorer rank: say what it opened. */
+/** Reaching an explorer rank (a survey): say so, a little after. */
 function noteExplorerRank(before: number) {
+  const note = explorerRankNote(before);
+  if (note) setTimeout(() => game.state === 'flying' && computer('Explorer rank', note, 7), 4000);
+}
+
+/** Reaching an explorer rank: what to say, and what it opened (said when the log goes, after the trail). */
+function explorerRankNote(before: number): string | null {
   const reached = rankReached(before, exploreOf(cmdr()).points);
-  if (!reached) return;
+  if (!reached) return null;
   const news = RANK_NEWS[reached];
-  setTimeout(() => flash(`Explorer rank: ${reached.toUpperCase()}${news ? ` · ${news}` : ''}`, 7), 4000);
+  return `${reached.toUpperCase()}${news ? ` · ${news}` : ''}`;
+}
+
+/** A signal's log, kept in Messages, where it can be read again (and archived). */
+function keepSignalLog(c: Commander, poi: Poi, trail: string | null) {
+  const sys = currentSystem();
+  const id = `signal:${sys.galaxy}:${sys.index}:${poi.id}`;
+  if (c.messages?.some((m) => m.id === id)) return;
+  c.messages = [{ id, company: 'hexon' as const, from: poi.name, subject: trail ? `Trail: ${trail}` : `Signal log · ${sys.name}`, body: poi.log, at: Date.now() }, ...(c.messages ?? [])].slice(0, 20);
 }
 
 let poiLogTimer = 0;
-function showPoiLog(poi: Poi) {
-  showLog(poi.name, poi.log, 14000);
-}
+let afterLog: (() => void) | undefined;
 
-/** A log, or a longer document, in the panel over the dashboard. */
-export function showLog(title: string, text: string, ms: number) {
+/** A log, or a longer document, in the panel over the dashboard; `then` runs once when it goes. */
+export function showLog(title: string, text: string, ms: number, trail?: string, then?: () => void) {
   const log = $('#poi-log');
+  afterLog?.();
+  afterLog = then;
   log.querySelector('h3')!.textContent = title;
   log.querySelector('p')!.textContent = text;
+  const line = log.querySelector<HTMLElement>('.poi-trail')!;
+  line.textContent = trail ?? '';
+  line.hidden = !trail;
   log.hidden = false;
   clearTimeout(poiLogTimer);
-  poiLogTimer = window.setTimeout(() => (log.hidden = true), ms);
+  poiLogTimer = window.setTimeout(hideLog, ms);
+}
+function hideLog() {
+  clearTimeout(poiLogTimer);
+  $('#poi-log').hidden = true;
+  const then = afterLog;
+  afterLog = undefined;
+  then?.();
 }
 $('#poi-log').addEventListener('click', (e) => {
   if ((e.target as HTMLElement).closest('p:first-of-type')) return; // scrolling a long report
-  clearTimeout(poiLogTimer);
-  $('#poi-log').hidden = true;
+  hideLog();
 });
 addEventListener('keydown', () => {
   const log = $('#poi-log');
   if (!log.hidden) {
     clearTimeout(poiLogTimer);
-    poiLogTimer = window.setTimeout(() => (log.hidden = true), 400); // let the key do its job too
+    poiLogTimer = window.setTimeout(hideLog, 400); // let the key do its job too
   }
 });
 
@@ -365,7 +413,9 @@ export function exploreMarkers(km: (p: THREE.Vector3) => string): Marker[] {
   for (const p of flight.scenePois) {
     if (!p.revealed) continue;
     const found = isFound(cmdr(), currentSystem(), p.poi.id);
-    out.push({ position: p.position, color: SIGNAL_COLOUR, radius: 30, label: found ? `${p.poi.name} ${km(p.position)}` : `Signal ${km(p.position)}` });
+    // A trail's next step is named as one: where its clue said (Mark: which signals are the trail?).
+    const label = found ? p.poi.name : p.poi.trail && p.poi.trail.step > 0 ? `Trail signal · ${trailById(p.poi.trail.id)?.title ?? ''}` : 'Signal';
+    out.push({ position: p.position, color: p.poi.trail && !found && p.poi.trail.step > 0 ? TRAIL_COLOUR : SIGNAL_COLOUR, radius: 30, label: `${label} ${km(p.position)}` });
   }
   // A yard is hard to miss, so it's always named.
   if (flight.yardScene) out.push({ position: flight.yardScene.centre, color: YARD_COLOUR, radius: flight.yardScene.radius, label: `Wexley-Yorozu yard · ${stageLabel(flight.yardScene.yard)} · ${km(flight.yardScene.centre)}` });

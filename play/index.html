@@ -185,7 +185,7 @@
       <p class="small muted"><span class="desk-only">1–4 to send · ` or Esc to cancel</span><span class="touch-only">Fixed calls only: police answer in lawful systems</span></p>
     </section>
     <div id="survey" hidden><span class="survey-label"></span><span class="survey-bar"><i></i></span></div>
-    <section id="poi-log" class="panel" hidden aria-live="polite"><h3></h3><p></p><p class="small muted">Press any key or tap to close</p></section>
+    <section id="poi-log" class="panel" hidden aria-live="polite"><div class="poi-trail" hidden></div><h3></h3><p></p><p class="small muted">Press any key or tap to close</p></section>
     <p id="mouse-prompt" hidden>Click to fly with the mouse</p>
     <p class="keys" id="keys-hint" data-screen="flying"></p>
     <div id="photo-flash" aria-hidden="true"></div>
@@ -297,7 +297,7 @@
       <canvas></canvas>
       <p class="map-title"></p>
       <div class="map-info"></div>
-      <p class="map-keys"><span class="desk-only">Tab galactic / local · F find · Arrows or click to select · Enter or click again to set destination · Drag or scroll the local chart · G or Esc to close</span><span class="touch-only">Tap a system to select it · tap it again to set your destination</span><br><span class="news-key">◆</span> in the news</p>
+      <p class="map-keys"><span class="desk-only">Tab galactic / local · F find · Arrows or click to select · Enter or click again to set destination · Drag or scroll the local chart · G or Esc to close</span><span class="touch-only">Tap a system to select it · tap it again to set your destination</span><br><span class="news-key">◆</span> in the news <span class="trail-legend" hidden><span class="trail-key">◌</span> a trail's next step</span></p>
       <button class="map-close" data-key="KeyG" aria-label="Close the chart">✕</button>
       <button class="map-mode" type="button"></button>
       <!-- Find a system by name, as the original's F key did on the charts. -->

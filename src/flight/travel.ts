@@ -21,7 +21,7 @@ import { aim, gimbalHold, flight, npcs, planetPos, player, sharedSpace, station,
 import { routeTo } from '../ui/contracts';
 import { carrier, scheduleMarshals } from './marshals';
 import { checkAdrift } from './adrift';
-import { distresses, messageIds, radio, radioMessages } from './comms';
+import { computer, distresses, messageIds, radio, radioMessages } from './comms';
 import * as THREE from 'three';
 
 import type { State } from '../core';
@@ -299,7 +299,9 @@ export async function hyperspace() {
     const hop = routeTo(dest, end)?.[0];
     if (hop) {
       c.target = hop.index;
-      routeNote = `Next jump plotted: ${hop.name}${hop === end ? '' : ` (on the way to ${end.name})`}${distanceLy(dest, hop) > c.fuel ? ' · refuel first' : ''}`;
+      const ly = distanceLy(dest, hop);
+      const left = routeTo(dest, end)?.length ?? 1;
+      routeNote = `Next jump: ${hop.name}, ${ly.toFixed(1)} LY${hop === end ? '' : ` · on the way to ${end.name}, ${left} jumps`}${ly > c.fuel ? ` · ${c.fuel.toFixed(1)} LY in the tank: refuel first` : ''}`;
     } else c.courseTo = null;
   }
   c.visits += 1; // Classic markets are set on arrival in a system, as in 1984
@@ -321,7 +323,10 @@ export async function hyperspace() {
   const adriftNotes = checkAdrift();
   // Under Modern rules the companies' notes come over the radio; the route is the ship's computer.
   const contractNotes = modern() ? adriftNotes : [...jumpNotes, ...adriftNotes];
-  if (contractNotes.length || routeNote) setTimeout(() => game.state === 'flying' && flash([routeNote, ...contractNotes].filter(Boolean).join(' · '), 4), 9000);
+  // Modern: the trip computer's heads-up, kept in the radio; Classic: the flash, as before.
+  if (modern() && routeNote) setTimeout(() => game.state === 'flying' && computer('Trip computer', routeNote), 9000);
+  const flashNotes = modern() ? contractNotes : [routeNote, ...contractNotes].filter(Boolean);
+  if (flashNotes.length) setTimeout(() => game.state === 'flying' && flash(flashNotes.join(' · '), 4), modern() ? 9500 : 9000);
   setTimeout(() => game.state === 'flying' && radioMessages(seen), 9000);
   distresses.length = 0;
   flight.escort = null;
