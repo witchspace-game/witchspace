@@ -22,7 +22,7 @@ import { loseDelivery } from '../economy/market';
 import { $, cmdr, currentSystem, game, modern } from '../core';
 import { beams, explosions, HULL_READ, flight, npcs, ofRole, player, space, station } from '../scene';
 import { tradeContext } from '../ui/market';
-import { FALCON_DISABLES, alertSecurity, deliveries, fightOn, legs, onSlotAxis, pirateLost, removeNpc, voyageOf } from './traffic';
+import { FALCON_DISABLES, alertSecurity, deliveries, fightOn, legs, onSlotAxis, pirateLost, removeNpc, slotTaken, voyageOf } from './traffic';
 import { behindLabel, keepLosses, yardAt, yardSeen } from '../game/yards';
 import { bastionDestroyed, carrier, scheduleMarshals } from './marshals';
 import { spillCargo, spillSpecial } from './adrift';
@@ -64,6 +64,9 @@ export function legalLabel() {
   return label;
 }
 
+/** The patrol angle on the far side of `centre` from you, where a ship appearing isn't seen to. */
+const farSide = (centre: THREE.Vector3) => Math.atan2(player.obj.position.z - centre.z, player.obj.position.x - centre.x) + Math.PI;
+
 export function spawnViper(fromSlot: boolean): NpcShip {
   const i = ofRole('police').length;
   const npc = new NpcShip(shipById('viper')!, 'police', POLICE_LASER, {
@@ -73,11 +76,14 @@ export function spawnViper(fromSlot: boolean): NpcShip {
     rate: (i % 2 ? -1 : 1) * 0.14,
     angle: i * 2.1,
   });
-  if (fromSlot) {
+  // Not out of the slot while it's yours: a Viper launching then met a docking computer head-on (Mark, 9 November
+  // 2026). She's already out, on the far side of the station from you.
+  if (fromSlot && !slotTaken()) {
     station.placeForLaunch(npc.ship);
     npc.ship.speed = 120;
   } else {
     const p = npc.patrol;
+    if (fromSlot) p.angle = farSide(p.centre);
     npc.obj.position.set(Math.cos(p.angle) * p.radius, p.height, Math.sin(p.angle) * p.radius).add(p.centre);
     npc.ship.speed = Math.abs(p.rate) * p.radius;
   }
@@ -463,8 +469,16 @@ function spawnMilitia(i: number): NpcShip {
   npc.guard = true;
   npc.militia = true;
   applyCompanyBand(npc.model, MILITIA_COLOUR);
-  station.placeForLaunch(npc.ship);
-  npc.ship.speed = 120;
+  if (!slotTaken()) {
+    station.placeForLaunch(npc.ship);
+    npc.ship.speed = 120;
+  } else {
+    // The slot's yours: already out, on the far side (spawnViper).
+    const p = npc.patrol;
+    p.angle = farSide(p.centre);
+    npc.obj.position.set(Math.cos(p.angle) * p.radius, p.height, Math.sin(p.angle) * p.radius).add(p.centre);
+    npc.ship.speed = Math.abs(p.rate) * p.radius;
+  }
   space.scene.add(npc.obj);
   npcs.push(npc);
   return npc;
