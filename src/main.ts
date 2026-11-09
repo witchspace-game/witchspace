@@ -50,8 +50,9 @@ import { ATMOSPHERE_SCALE, buildPlanet, disposePlanet } from './render/bodies';
 import { cargoName, collect, deliver, destinationOf, forgive, wyWorks } from './game/contracts';
 import { checkMessages, collectHeld, thanksFrom } from './game/assignments';
 import { checkUpdates } from './game/changelog';
+import { clearHeadsUp } from './ui/headsUp';
 import { COMPANIES } from './game/companies';
-import { bodiesOf, exploreOf, isFound, isSurveyed, poisOf, recordVisit } from './game/explore';
+import { bodiesOf, exploreOf, isFound, isSurveyed, poisOf, recordVisit, trailsUnderWay } from './game/explore';
 import { yardsOf } from './game/yards';
 import { camera, isRetro, lens, render, setRetro } from './render/renderer';
 import { disposeShip } from './render/shipModel';
@@ -157,7 +158,10 @@ function setState(next: State) {
     el.hidden = !el.dataset.screen!.split(' ').includes(next);
   });
   layoutForScreen();
-  if (next !== 'flying') $('#dock-aid').hidden = true;
+  if (next !== 'flying') {
+    $('#dock-aid').hidden = true;
+    clearHeadsUp();
+  }
   setFlying(next === 'flying');
   releaseBank();
   if (next === 'flying') {
@@ -866,6 +870,7 @@ function toggleGalaxyMap() {
       const adrift = a.adrift ? ' · adrift: see Contracts when docked' : '';
       return { to, colour: COMPANIES[a.company].colour, line: `${a.qty} t ${cargoName(a)} → ${to.name} · ${left} · ${a.pay.toLocaleString()} Cr · ${COMPANIES[a.company].name}${adrift}` };
     }),
+    trails: c.difficulty === 'modern' ? trailsUnderWay(c, here.galaxy).map((t) => ({ at: systemAt(here.galaxy, t.at), line: `${t.title} · ${t.found} of ${t.of} found` })) : [],
     firsts: (s) => (c.difficulty === 'modern' ? firstsLine(s) : null),
     // Where Wexley-Yorozu runs the station, data sells for more (Mark: "how do I get to a W-Y station?").
     station: (s) => (c.difficulty === 'modern' && wyWorks(s) ? 'Wexley-Yorozu · pays 25% more for survey data' : null),

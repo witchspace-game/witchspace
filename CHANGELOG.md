@@ -11,6 +11,11 @@ what's different, not how it was done. Credit whoever reported it.
 
 ## 9 November 2026
 
+- Important radio messages show for a moment in the middle of the screen, then shrink away into the radio's corner, where they're kept. (Mark)
+- The trip computer says what the next leg needs when you arrive: where the next jump goes, how far, and whether to refuel first.
+- Trails are said plainly. A trail step's signal is named "Trail signal" in gold. Finding one says which trail, how many steps you've found and where it leads next. The galaxy chart marks each trail's next system and lists your trails. (Mark)
+- Finding a trail step no longer replaces a course you've already set, for a contract say. It tells you where the trail goes instead.
+- Every signal's log is kept in your messages, to read again when you're docked. (a player on the ideas board)
 - The job card and the course you plot now take the same route. The card could say one system while the course went to another, which sent you round in circles. (Mark)
 - Running dark past the police now gets one hail and one countdown. If the Viper that hailed you docks, the next one in sight carries the hail on, instead of starting a new 15 seconds.
 - The jump countdown names where you're going.

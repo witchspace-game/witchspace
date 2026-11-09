@@ -393,6 +393,9 @@ body.retro #dash-plate { color: #fff; text-shadow: none; }
   border-color: rgba(201, 179, 255, 0.5);
   z-index: 20;
 }
+/* A trail step's line, above the log: said plainly, in the trail's gold (src/flight/explore.ts discover). */
+#poi-log .poi-trail { margin: 0 0 8px; padding-left: 8px; border-left: 2px solid #ffd98a; color: #ffd98a; font-size: 13px; letter-spacing: 0.04em; }
+body.retro #poi-log .poi-trail { color: #fff; border-color: #fff; }
 #poi-log h3 { margin: 0 0 6px; color: #c9b3ff; font-size: 16px; letter-spacing: 0.1em; text-transform: uppercase; }
 #poi-log p { margin: 0 0 6px; line-height: 1.45; }
 #data-row .read-report { display: block; margin-top: 4px; padding: 0; border: 0; background: none; color: #c9b3ff; font-size: 12px; text-decoration: underline; text-align: left; cursor: pointer; }
@@ -925,6 +928,13 @@ body.touch .rcard-dismiss { min-width: 44px; min-height: 44px; }
 /* Upright, clear of the camera, back and Jump buttons on the right. */
 @media (orientation: portrait) { body.touch #radio-cards { width: calc(100vw - 110px - env(safe-area-inset-right)); } }
 body.retro .rcard { border-radius: 0; box-shadow: none; animation: none; }
+/* The heads-up (src/ui/headsUp.ts): an important line, up for a moment above the crosshair, then away
+   into the radio's corner (Mark, 9 November 2026). Semi-transparent: space shows through it. */
+#heads-up { position: fixed; left: 50%; top: 17vh; z-index: 7; transform: translate(-50%, 0); max-width: min(560px, 78vw); padding: 10px 16px 11px 14px; border: 1px solid var(--edge); border-left: 3px solid var(--who, var(--fg)); border-radius: 6px; background: rgba(4, 14, 12, 0.72); box-shadow: -3px 0 14px -6px var(--who, var(--fg)); pointer-events: none; font-size: 15px; line-height: 1.4; color: var(--fg); text-shadow: 0 1px 2px #000; }
+#heads-up b { display: block; margin-bottom: 2px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--who, var(--fg)); }
+#heads-up .rmark { stroke: var(--who, var(--fg)); }
+body.touch #heads-up { top: calc(max(8px, env(safe-area-inset-top)) + 64px); font-size: 14px; max-width: min(520px, 62vw); }
+body.retro #heads-up { border-radius: 0; box-shadow: none; background: rgba(0, 0, 0, 0.8); }
 #radio { position: fixed; left: 16px; bottom: 196px; z-index: 5; width: min(440px, 34vw); transition: opacity 1.2s ease; }
 body:not([data-state='flying']) #radio { display: none; }
 #radio.quiet:not(.open):not(:hover) { opacity: 0; pointer-events: none; }
@@ -1015,6 +1025,9 @@ body.touch .dash { top: 6px; bottom: auto; max-width: none; transform: translate
 body.touch #dock-aid { top: 128px; right: 12px; transform: scale(0.8); transform-origin: top right; }
 body.touch #target-info { top: 130px; }
 body.touch #banner { top: 64px; font-size: 15px; padding: 7px 12px; }
+/* A phone held sideways has no room above the dashboard: the log sits at the top, scrolling if it must. */
+body.touch #poi-log { bottom: auto; top: max(8px, env(safe-area-inset-top)); max-height: calc(100dvh - 24px); overflow-y: auto; }
+body.touch #poi-log p:first-of-type { max-height: none; }
 /* The survey bar would sit under the dashboard there; the bottom middle is clear. */
 body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); }
 

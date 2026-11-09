@@ -439,11 +439,14 @@ export function advanceTrail(c: Commander, poi: Poi): StarSystem | null {
   return next === undefined ? null : systemAt(galaxy, next);
 }
 
+/** A trail by its id ("0.3"). */
+export const trailById = (id: string): Trail | undefined => trailsOf(Number(id.split('.')[0])).find((t) => t.id === id);
+
 /** Trails under way, for the Station tab. */
-export function trailsUnderWay(c: Commander, galaxy: number): { title: string; found: number; of: number; next: string }[] {
+export function trailsUnderWay(c: Commander, galaxy: number): { title: string; found: number; of: number; next: string; at: number }[] {
   return trailsOf(galaxy)
     .filter((t) => trailProgress(c, t.id) > 0 && trailProgress(c, t.id) < t.systems.length)
-    .map((t) => ({ title: t.title, found: trailProgress(c, t.id), of: t.systems.length, next: systemAt(t.galaxy, t.systems[trailProgress(c, t.id)]).name }));
+    .map((t) => ({ title: t.title, found: trailProgress(c, t.id), of: t.systems.length, next: systemAt(t.galaxy, t.systems[trailProgress(c, t.id)]).name, at: t.systems[trailProgress(c, t.id)] }));
 }
 
 // --- The explorer's record ----------------------------------------------------------

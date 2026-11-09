@@ -211,6 +211,12 @@ export function radio(kind: RadioKind, from: string, text: string, o: RadioOpts 
   return id;
 }
 
+/** The ship's own computers: the trip computer's word on the next leg, a trail's progress. Worth knowing, so up for a moment, then into the radio (Mark). */
+export const COMPUTER_COLOUR = '#8ff0d6';
+export function computer(from: string, text: string, seconds = 4, colour = COMPUTER_COLOUR): number {
+  return radio('computer', from, text, { colour, urgency: 'worth', flash: seconds });
+}
+
 const companyVoice = (id: CompanyId) => ({ from: COMPANIES[id].name, colour: COMPANIES[id].colour });
 
 /** The companies' notes (the ones kept in Messages) are heard on the radio too. */

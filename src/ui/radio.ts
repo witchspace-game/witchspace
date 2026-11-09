@@ -3,6 +3,7 @@ import { isTouch } from '../game/input';
 import { onTap } from './touch';
 import { holdFlashes } from './hud';
 import { sfx } from '../audio/sound';
+import { clearHeadsUp, headsUp } from './headsUp';
 
 // The radio log in flight (docs/design/radio-and-comms.md): everything said
 // to you, by whom and when, in one place that fades when it's quiet. On a
@@ -20,7 +21,7 @@ import { sfx } from '../audio/sound';
 // The log is grouped by voice, one row each, not a wall of lines. In a fight
 // only cards interrupt, and the rest is summed up when it's over.
 
-export type RadioKind = 'station' | 'police' | 'company' | 'ship' | 'pirate' | 'mayday' | 'news' | 'beacon';
+export type RadioKind = 'station' | 'police' | 'company' | 'ship' | 'pirate' | 'mayday' | 'news' | 'beacon' | 'computer';
 export type Urgency = 'now' | 'worth' | 'background';
 
 export interface RadioAction {
@@ -86,6 +87,7 @@ const MARKS: Record<RadioKind, string> = {
   mayday: 'M8 2 A6 6 0 1 0 8.01 2 M8 6 A2 2 0 1 0 8.01 6',
   news: 'M3 4 H13 M3 8 H13 M3 12 H9',
   beacon: 'M8 2 V14 M2 8 H14 M4 4 L12 12 M12 4 L4 12',
+  computer: 'M2 3 H14 V11 H2 Z M5 14 H11 M5 7 H8',
 };
 const mark = (kind: RadioKind) => `<svg class="rmark" viewBox="0 0 16 16" aria-hidden="true"><path d="${MARKS[kind]}"/></svg>`;
 
@@ -152,6 +154,9 @@ export function say(line: RadioLine): number {
   if (fighting && e.urgency !== 'now' && e.from !== 'You') heardInFight.push(e);
   render();
   wake();
+  // Worth knowing: up for a moment, then away into the radio's corner (Mark). Cards carry themselves.
+  if (e.urgency === 'worth' && !fighting && !open && e.from !== 'You' && document.body.dataset.state === 'flying')
+    headsUp({ mark: mark(e.kind), from: e.from, text: e.text, colour: e.colour });
   if (isTouch && !fighting && !open && e.urgency !== 'background') {
     const el = root();
     el.classList.add('ticker');
@@ -204,6 +209,7 @@ export function setRadioFight(on: boolean) {
   fighting = on;
   const held = holdFlashes(on);
   if (on) {
+    clearHeadsUp();
     heardInFight = [];
     if (isTouch) {
       root().classList.remove('ticker');
@@ -272,6 +278,7 @@ function dismiss(e: Entry) {
 
 /** Forget everything (a new commander). */
 export function clearRadio() {
+  clearHeadsUp();
   entries.length = 0;
   unreadBy.clear();
   heardInFight = [];
