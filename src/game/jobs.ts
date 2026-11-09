@@ -1,7 +1,7 @@
 import { distanceLy, systemAt, type StarSystem } from '../galaxy/generate';
 import { stationName } from '../galaxy/stationNames';
 import type { Commander } from './commander';
-import { board, cannotTake, cargoName, contractWhat, destinationOf, jumpsBetween, nextHop, surveyDone, wyWorks, type ActiveContract, type Contract } from './contracts';
+import { board, cannotTake, cargoName, contractWhat, courseRoute, destinationOf, jumpsBetween, surveyDone, wyWorks, type ActiveContract, type Contract } from './contracts';
 import type { CompanyId } from './companies';
 import { worldOf, isSurveyed } from './explore';
 
@@ -40,9 +40,11 @@ export function byUrgency(contracts: ActiveContract[]): ActiveContract[] {
 
 /** The way to `end` from `here`: hyperspace on, set course, or refuel first. */
 function routeStep(c: Commander, here: StarSystem, end: StarSystem, then = ''): Pick<JobStep, 'next' | 'action' | 'hop' | 'end'> {
-  const hop = nextHop(here, end);
-  if (!hop) return { next: `${end.name} is out of reach from here · find a route on the chart (G)`, action: null };
-  const jumps = jumpsBetween(here, end, 12);
+  // The same route the course you plot follows, so the card and the chart never disagree.
+  const route = courseRoute(c, here, end);
+  const hop = route?.[0];
+  if (!route || !hop) return { next: `${end.name} is out of reach from here · find a route on the chart (G)`, action: null };
+  const jumps = route.length;
   const rest = hop === end ? then : ` · ${jumps} jumps to ${end.name}${then}`;
   if (distanceLy(here, hop) > c.fuel + 1e-9) return { next: `Refuel first: ${hop.name} is ${distanceLy(here, hop).toFixed(1)} LY${rest}`, action: null };
   if (c.target !== hop.index) return { next: `Set course to ${hop.name} (tap)${rest}`, action: 'course', hop, end };

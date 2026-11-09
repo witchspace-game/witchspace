@@ -5,7 +5,7 @@ import { sfx } from '../audio/sound';
 import { cargoCapacity, cargoTonnes, fuelCapacity, loadCommander, saveCommander, type Commander } from '../game/commander';
 import { fitCompartment } from '../game/compartment';
 import { currentAccount } from '../net/account';
-import { abandon, amendsCost, board, TICK, SIGNING_BONUS, welcome, cannotTake, cargoName, collect, DANGEROUS, destinationOf, jumpsBetween, safeRoute, makeAmends, nextHop, standing, surveyDone, take, type Contract } from '../game/contracts';
+import { abandon, amendsCost, board, TICK, SIGNING_BONUS, welcome, cannotTake, cargoName, collect, DANGEROUS, destinationOf, jumpsBetween, courseRoute, makeAmends, standing, surveyDone, take, type Contract } from '../game/contracts';
 import { ADRIFT_HOLD, assignmentFor, offerFor, companyHere, decide, incidentChoices, type Choice, fileOn, RIVAL, rivalPrice, sellToRival, type Message } from '../game/assignments';
 import { COMPANIES, COMPANY_IDS, standingName, type CompanyId } from '../game/companies';
 import { isSurveyed, worldOf } from '../game/explore';
@@ -146,14 +146,7 @@ const newOffers = (c: Commander, here: StarSystem, now: number) => board(c, here
  * (a player on the ideas board, 30 and 31 October 2026).
  */
 export function routeTo(from: StarSystem, end: StarSystem, hop = fuelCapacity(cmdr())): StarSystem[] | null {
-  if (modern()) return safeRoute(from, end, hop);
-  const route: StarSystem[] = [];
-  for (let at: StarSystem | null = from; at && at !== end; ) {
-    at = nextHop(at, end, hop);
-    if (!at) return null;
-    route.push(at);
-  }
-  return route.length ? route : null;
+  return courseRoute(cmdr(), from, end, hop);
 }
 
 export function plotCourse(c: Commander, system: number): string {
@@ -224,7 +217,7 @@ export function renderContracts() {
     const course = !s ? '' : c.target === s.system.index ? '<span class="on-course">On course</span>' : `<button data-course="${s.system.index}">Set course</button>`;
     return `<br><small>${where} · closes in ${hoursLeft(o.offer.expires)} h</small><span class="actions">${course}${decline}</span>`;
   };
-  const full = (m: Message) => `<li class="message${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small>${answer(m)}</li>`;
+  const full = (m: Message) => `<li class="message${m.id.startsWith('update:') ? ' update' : ''}${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small>${answer(m)}</li>`;
   const shown = (c.messages ?? []).filter((m) => !m.archived);
   // An offer you can still take stays in view after you've read it.
   const live = (m: Message) => ['here', 'elsewhere'].includes(offerFor(c, m, here, now)?.kind ?? '');

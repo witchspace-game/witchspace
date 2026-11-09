@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { systemAt } from '../galaxy/generate';
 import { newCommander } from './commander';
-import { board, destinationOf, nextHop, take, type ActiveContract } from './contracts';
+import { board, courseRoute, destinationOf, nextHop, take, type ActiveContract } from './contracts';
 import { byUrgency, jobStrip, routeWork, stepFor } from './jobs';
 
 const lave = systemAt(0, 7);
@@ -29,6 +29,28 @@ describe('the job strip', () => {
     expect(stepFor(c, lave, a)).toMatchObject({ action: 'course', hop });
     c.target = hop.index;
     expect(stepFor(c, lave, a).next).toContain(`Hyperspace to ${hop.name}`);
+  });
+
+  it("follows the course you plot, the safe way round, not a different shortest way (Mark: he went in circles)", () => {
+    const { c, a } = withDelivery();
+    // A trip where the safe way and the fewest jumps start differently.
+    let pair: { from: ReturnType<typeof systemAt>; to: ReturnType<typeof systemAt> } | null = null;
+    for (let i = 0; i < 256 && !pair; i++)
+      for (let j = 0; j < 256 && !pair; j++) {
+        const from = systemAt(0, i);
+        const to = systemAt(0, j);
+        const safe = courseRoute(c, from, to)?.[0];
+        if (safe && safe !== nextHop(from, to)) pair = { from, to };
+      }
+    expect(pair).not.toBeNull();
+    const { from, to } = pair!;
+    a.to = { galaxy: 0, system: to.index };
+    const route = courseRoute(c, from, to)!;
+    c.target = null;
+    expect(stepFor(c, from, a)).toMatchObject({ action: 'course', hop: route[0] });
+    expect(stepFor(c, from, a).next).toContain(`${route.length} jumps to ${to.name}`);
+    c.target = route[0].index;
+    expect(stepFor(c, from, a).next).toContain(`Hyperspace to ${route[0].name}`);
   });
 
   it('says dock once you are there', () => {
