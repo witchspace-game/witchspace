@@ -353,7 +353,7 @@ export interface Commander {
   companyLog?: Partial<Record<CompanyId, CompanyLog>>;
   /** Messages from the companies, newest first. */
   messages?: Message[];
-  /** The newest CHANGELOG.md section you've been sent, by date (game/changelog.ts). */
+  /** The newest CHANGELOG.md section you've been sent: its date and line count, "2026-11-09#9" (game/changelog.ts). */
   changesSeen?: string;
   /** Favours you owe each company (a lawyer here, a word there): leverage for later. */
   favours?: Partial<Record<CompanyId, number>>;

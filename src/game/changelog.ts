@@ -43,11 +43,17 @@ export const UPDATES = parseChangelog(text);
 export function checkUpdates(c: Commander, now: number, updates = UPDATES): Message | null {
   const latest = updates[0];
   if (!latest) return null;
+  // "2026-11-09#9": the date and how many lines it had, so a line added later the same day still reaches you.
   const seen = c.changesSeen;
-  c.changesSeen = latest.date;
-  if (seen ? seen >= latest.date : c.visits === 0) return null;
-  const id = `update:${latest.date}`;
+  const mark = `${latest.date}#${latest.lines.length}`;
+  c.changesSeen = mark;
+  if (!seen && c.visits === 0) return null;
+  const [day, count] = (seen ?? '#').split('#');
+  if (day > latest.date || (day === latest.date && Number(count || latest.lines.length) >= latest.lines.length)) return null;
+  const id = `update:${mark}`;
   if (c.messages?.some((m) => m.id === id)) return null;
+  // Only the newest word on it: an earlier message about the same day is replaced.
+  c.messages = c.messages?.filter((m) => !m.id.startsWith(`update:${latest.date}`));
   const message: Message = {
     id,
     company: 'hexon', // shown as from Witchspace, not a company

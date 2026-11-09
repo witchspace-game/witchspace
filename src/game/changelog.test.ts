@@ -38,7 +38,7 @@ describe("what's new", () => {
     const updates = parseChangelog(md);
     const fresh = newCommander('modern');
     expect(checkUpdates(fresh, 1, updates)).toBeNull();
-    expect(fresh.changesSeen).toBe('2026-11-09');
+    expect(fresh.changesSeen).toBe('2026-11-09#2');
 
     const back = { ...newCommander('modern'), visits: 12 };
     const m = checkUpdates(back, 1, updates);
@@ -47,7 +47,12 @@ describe("what's new", () => {
     expect(back.messages?.[0]).toBe(m);
     expect(checkUpdates(back, 2, updates)).toBeNull();
 
-    const behind = { ...newCommander('classic'), visits: 3, changesSeen: '2026-11-06' };
-    expect(checkUpdates(behind, 1, updates)?.id).toBe('update:2026-11-09');
+    // A line added later the same day: sent again, in place of the first.
+    const more = parseChangelog(md.replace('- Another.', '- Another.\n- A third.'));
+    expect(checkUpdates(back, 3, more)?.body).toContain('A third.');
+    expect(back.messages?.filter((x) => x.id.startsWith('update:'))).toHaveLength(1);
+
+    const behind = { ...newCommander('classic'), visits: 3, changesSeen: '2026-11-06#1' };
+    expect(checkUpdates(behind, 1, updates)?.id).toBe('update:2026-11-09#2');
   });
 });
