@@ -684,6 +684,8 @@ body.retro #galaxy-map .map-info { border-width: 2px; font-size: 12px; line-heig
 body.retro #galaxy-map .map-info h3 { font-size: 16px; }
 body.retro #galaxy-map .map-keys { font-size: 8px; }
 #galaxy-map .news-key { color: #ffb347; }
+.trail-key { color: #ffd98a; }
+body.retro .trail-key { color: #fff; }
 body.retro #galaxy-map .news-key { color: inherit; }
 
 /* --- 1984 mode: white on black, chunky 8x8-style type ------------------- */

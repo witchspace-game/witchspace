@@ -347,21 +347,17 @@ function draw() {
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  // A trail's next step: a small gold diamond beside the system.
+  root.querySelector<HTMLElement>('.trail-legend')!.hidden = !opts.trails?.length;
+  // A trail's next step: a dotted gold ring, wider than a contract's (the news has the diamonds).
   for (const t of opts.trails ?? []) {
     const [x, y] = toScreen(t.at);
     ctx.strokeStyle = retro ? '#fff' : TRAIL_GOLD;
     ctx.lineWidth = 1.5;
+    ctx.setLineDash([1.5, 3.5]);
     ctx.beginPath();
-    ctx.moveTo(x, y - 13);
-    ctx.lineTo(x + 6, y - 7);
-    ctx.lineTo(x, y - 1);
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x, y - 13);
-    ctx.lineTo(x - 6, y - 7);
-    ctx.lineTo(x, y - 1);
-    ctx.stroke();
+    ctx.setLineDash([]);
   }
   mark(cur, colours.current, 7, false);
   if (opts.target) mark(opts.target, colours.target, 9, false);
