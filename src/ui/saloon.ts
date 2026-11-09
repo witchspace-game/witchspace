@@ -14,6 +14,7 @@ import { escapeHtml } from './escape';
 import { record, regularsAt, slotOf, talk, venue } from '../game/saloon';
 import { hasBackRoom } from '../economy/blackmarket';
 import { $, cmdr, currentSystem, type DockTab } from '../core';
+import { HIS_DRINK, inTheSaloon, renownedOf, saloonScene } from '../game/renowned';
 
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as { setDockTab(tab: DockTab): void };
@@ -49,13 +50,36 @@ export function renderSaloon() {
       </li>`;
     })
     .join('');
-  const venn = vennCard(here, now, s.drinks);
+  const venn = vennCard(here, now, s.drinks) + renownedCard(here, now, slot, s.drinks);
   const back = hasBackRoom(c, here) ? `<button type="button" class="saloon-back">A door at the back ›</button>` : '';
   $('#saloon').innerHTML = `
     <h3>${escapeHtml(v.name)} <small>the ${v.kind} at ${escapeHtml(stationName(here).name)}</small></h3>
     <p class="meta">Regulars come and go every couple of hours. What they tell you might be worth a fortune, or nothing at all: nobody here wears a label.</p>
     <ul class="regulars">${venn}${cards}</ul>
     ${back}`;
+}
+
+/** The system's renowned pirate, when he's in (game/renowned.ts): licking his wounds, gloating, or on his off hours (Mark). Modern only. */
+function renownedCard(here: StarSystem, now: number, slot: number, drinks: string[]): string {
+  const c = cmdr();
+  const who = renownedOf(here);
+  if (!who || c.difficulty !== 'modern') return '';
+  const m = c.renowned?.[who.key];
+  const scene = inTheSaloon(here, m, slot, now);
+  if (!scene) return '';
+  const said = saloonScene(who, scene, m, c.name);
+  const drunk = drinks.includes(`renowned@${slot}`);
+  const action = said.refuses
+    ? `<button disabled>Buy him a drink · ${HIS_DRINK} Cr</button>`
+    : drunk
+      ? ''
+      : said.buys
+        ? '<button data-renowned>Sit down with him</button>'
+        : `<button data-renowned ${c.credits < HIS_DRINK ? 'disabled' : ''}>Buy him a drink · ${HIS_DRINK} Cr</button>`;
+  return `<li class="regular regular-renowned${said.refuses ? ' regular-crossed' : ''}"><strong>${escapeHtml(who.name)}</strong> <small>“${escapeHtml(who.by)}”, pirate, Cobra Mk III ${escapeHtml(who.ship)}</small>
+    <p class="regular-look">${escapeHtml(said.look)}</p>
+    ${said.refuses || drunk ? `<p class="regular-says">“${escapeHtml(said.says)}”</p>` : ''}
+    ${action ? `<p class="regular-actions">${action}</p>` : ''}</li>`;
 }
 
 /** The drink you bought her on this visit of hers. */
@@ -151,6 +175,20 @@ $('#saloon').addEventListener('click', (e) => {
     if (b.dataset.vennFly) flash(plotCourse(c, MERIDIAN), 3);
     declined.add(Number(b.dataset.vennFly ?? b.dataset.vennDecline));
     saveCommander(c);
+    renderSaloon();
+    return;
+  }
+  if (b.dataset.renowned !== undefined) {
+    const who = renownedOf(here);
+    const m = who ? c.renowned?.[who.key] : undefined;
+    const scene = who && inTheSaloon(here, m, slot, now);
+    if (!who || !scene) return;
+    const said = saloonScene(who, scene, m, c.name);
+    if (said.refuses || (!said.buys && c.credits < HIS_DRINK)) return;
+    if (!said.buys) c.credits = Math.round((c.credits - HIS_DRINK) * 10) / 10;
+    s.drinks = [...s.drinks, `renowned@${slot}`].slice(-40);
+    saveCommander(c);
+    sfx.beep();
     renderSaloon();
     return;
   }

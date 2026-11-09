@@ -49,10 +49,49 @@ export interface Renowned {
   ship: string;
   origin: string;
   code: string;
+  /** His own story, for the famous few: what he tells you over a drink. */
+  story?: string;
 }
+
+/**
+ * The famous few, written by hand (drafts for Mark's yes): the renowned pirates nearest Lave, where
+ * new commanders meet them first. Riedquat's ties into the Mutual's founding (Odile Venn's story at
+ * Meridian: Hale & Ostrander pulled out and left Riedquat with nothing).
+ */
+const FAMOUS: Record<string, Omit<Renowned, 'key'>> = {
+  '0:46': {
+    name: 'Ambrose Hale',
+    by: 'the Heir',
+    ship: 'Inheritance',
+    origin: 'is the last of the Hales of Hale & Ostrander, the ones who pulled out and left Riedquat to starve, and the only one who stayed',
+    code: "never touches the rose-coloured Cobra that brings the food in. Everyone at Meridian knows why",
+    story:
+      "My grandfather signed the order that left this place with nothing. I was nine. I watched the last company ship lift off from that window. Somebody had to stay and make it right, and honest work doesn't pay what Riedquat is owed. There's a captain in a rose Cobra who brings the food in at cost. Anyone touches her answers to me.",
+  },
+  '0:27': {
+    name: 'Osric Lasko',
+    by: 'the Undertaker',
+    ship: 'Short Straw',
+    origin: 'was a Navy gunner, cashiered for refusing to fire on a ship of refugees whose papers were wrong',
+    code: "buries every man he loses, and every one he kills, on the same rock off Quator's moon",
+    story:
+      "They asked me to fire on a ship full of farmers because their papers were wrong. I said no. They took my rank, my pension and my name off the wall. Now I bury people for a living, one way or another. They all go to the same rock. Yours too, if it comes to it.",
+  },
+  '0:155': {
+    name: 'Jory Petrakis',
+    by: 'Long Shot',
+    ship: 'Bad Penny',
+    origin: 'was the best shot the Lave Cup ever banned',
+    code: "never comes closer than a kilometre. He doesn't need to",
+    story:
+      "They banned me from the Cup for hitting a marker from three kilometres. Said it was unsporting. So I found a sport where it isn't. You'll never see me close, Commander. That's rather the point.",
+  },
+};
 
 /** The renowned pirate of a system, if it has one: the same man for everyone. */
 export function renownedOf(s: StarSystem): Renowned | null {
+  const famous = FAMOUS[`${s.galaxy}:${s.index}`];
+  if (famous) return { key: `${s.galaxy}:${s.index}`, ...famous };
   const r = (i: number) => hash(s, SALT, i);
   if (r(0) >= CHANCE[s.government]) return null;
   const pick = <T>(list: readonly T[], i: number) => list[Math.floor(r(i) * list.length)];
@@ -77,6 +116,8 @@ export interface RenownedMemory {
   ran: number;
   /** You shot his escape pod. He doesn't forget that. */
   podShot?: boolean;
+  /** How your last meeting ended, and when: for the saloon (licking his wounds, or gloating). */
+  last?: { how: 'beaten' | 'won' | 'ran'; at: number };
 }
 
 export const HOUR = 3600_000;
@@ -136,6 +177,7 @@ export function foughtHim(c: Commander, who: Renowned, how: 'beaten' | 'won' | '
     m.outUntil = now + OUT_OF_ACTION;
   } else if (how === 'won') m.beat++;
   else m.ran++;
+  m.last = { how, at: now };
 }
 
 // --- What's said ------------------------------------------------------------------------------
@@ -159,3 +201,71 @@ export const fromThePod = (who: Renowned) => `${who.name}, from a pod. Not bad. 
 
 /** He beat you: his word over your wreck, for the black box. */
 export const overYourWreck = (who: Renowned, beat: number) => `${beat > 1 ? `That's ${beat} times.` : 'Tell them who did it.'} ${who.name}, ${who.by}. Remember it.`;
+
+// --- The saloon (Mark: "will he be in the local saloon later on licking his wounds … or celebrating
+// and gloating on his win") ------------------------------------------------------------------------
+
+/** He gloats about a win, or a commander who ran, for this long. */
+export const GLOATS_FOR = 2 * 24 * HOUR;
+/** A drink for him costs this. */
+export const HIS_DRINK = 12;
+/** On his off hours he's at the bar this often (a share of the saloon's two-hour slots). */
+const RESTS = 0.3;
+
+export type SaloonScene = 'wounds' | 'gloating' | 'resting';
+
+/**
+ * Whether he's in his home saloon now, and in what mood: always while he's out of action (licking his
+ * wounds), for two days after beating you or seeing you run (gloating), and otherwise on some of his
+ * off hours, from the seed and the clock, the same for everyone.
+ */
+export function inTheSaloon(s: StarSystem, m: RenownedMemory | undefined, slot: number, now: number): SaloonScene | null {
+  if (m && !flying(m, now)) return 'wounds';
+  if (m?.last && m.last.how !== 'beaten' && now - m.last.at < GLOATS_FOR) return 'gloating';
+  return hash(s, SALT + 10, slot) < RESTS ? 'resting' : null;
+}
+
+/** How he looks, and what he says once you've bought him a drink (or he's bought you one). */
+export function saloonScene(who: Renowned, scene: SaloonScene, m: RenownedMemory | undefined, you: string): { look: string; says: string; refuses?: boolean; buys?: boolean } {
+  if (m?.podShot) return { look: 'sees you come in, and puts his glass down very carefully', says: 'You shot at my pod. Get out of my bar.', refuses: true };
+  if (scene === 'wounds') {
+    if (m?.last?.how === 'beaten')
+      return {
+        look: 'his arm in a sling, drinking alone in the corner; the regulars give him room',
+        says: `Fair fight, ${you}. I've lost ships to worse and drunk with them after. The ${who.ship} will fly again, and so will I. Enjoy the quiet while it lasts.`,
+      };
+    return { look: 'in bandages, drinking alone; nobody asks him who did it', says: `Someone got lucky. They won't twice.` };
+  }
+  if (scene === 'gloating') {
+    if (m?.last?.how === 'ran')
+      return { look: 'telling his crew, loudly, about a Cobra that turned and ran', says: `There they are! The one that ran. No shame in it, ${you}. I'd have run from me too. Next time, stay.`, buys: true };
+    const tally = m?.beat ?? 1;
+    return {
+      look: `buying rounds for his crew; your ship's name is chalked on the board behind the bar${tally > 1 ? `, with ${tally} marks after it` : ''}`,
+      says: `${you}! Sit down, sit down. I was just telling them how you went up. ${tally > 1 ? `That's ${tally} to me` : 'One to me'}, nothing to you. This round's on the ${who.ship}.`,
+      buys: true,
+    };
+  }
+  return {
+    look: `in the corner booth with his back to the wall. The regulars say he ${who.origin}, and that he ${who.code}`,
+    says: `${who.story ?? `They call me ${who.by}.`} ${m?.lost ? `You're the one who put me in a pod. I remember.` : m?.kills.length ? `You've been busy with my people, ${you}. I've noticed.` : `Fly straight here and we'll get along.`}`,
+  };
+}
+
+/** Whose patch a system is, for the galaxy chart: worth knowing before you go. */
+export const chartLine = (who: Renowned) => `${who.name}, "${who.by}" · Cobra Mk III ${who.ship}`;
+
+/** News, for the station's News tab: his pod picked up, or his boast, from what you know of him. */
+export function renownedNews(c: Commander, galaxyOf: (key: string) => StarSystem | null, now: number): { text: string; small: string; where: StarSystem }[] {
+  const out: { text: string; small: string; where: StarSystem }[] = [];
+  for (const [key, m] of Object.entries(c.renowned ?? {})) {
+    const where = galaxyOf(key);
+    const who = where && renownedOf(where);
+    if (!where || !who || !m.last) continue;
+    if (m.last.how === 'beaten' && !flying(m, now))
+      out.push({ where, text: `${who.name} of ${where.name} picked up from his escape pod; the ${who.ship} being rebuilt`, small: `Beaten by CMDR ${c.name} · back in the air in ${Math.ceil(((m.outUntil ?? now) - now) / (24 * HOUR))} days` });
+    else if (m.last.how !== 'beaten' && now - m.last.at < GLOATS_FOR)
+      out.push({ where, text: m.last.how === 'won' ? `${who.name} claims another Cobra at ${where.name}` : `${who.name} says a commander ran from him at ${where.name}`, small: `CMDR ${c.name} · he's buying the rounds at ${where.name}` });
+  }
+  return out;
+}

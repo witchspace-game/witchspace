@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { checkUpdates, parseChangelog, UPDATES } from './changelog';
+import text from '../../CHANGELOG.md?raw';
 import { newCommander } from './commander';
 
 const md = `# What's new
@@ -27,6 +28,13 @@ describe("what's new", () => {
       { date: '2026-11-09', title: '9 November 2026', lines: ['One thing, wrapped.', 'Another.'] },
       { date: '2026-11-06', title: '6 November 2026', lines: ['Older.'] },
     ]);
+  });
+
+  it('has only dated headings, "## 9 November 2026", so the site can read it too (Website builds /updates/ from it)', () => {
+    const headings = text.split('\n').filter((l) => /^##\s/.test(l));
+    expect(headings.length).toBeGreaterThan(0);
+    for (const h of headings) expect(h, h).toMatch(/^## [1-9]\d? (January|February|March|April|May|June|July|August|September|October|November|December) \d{4}$/);
+    expect(UPDATES).toHaveLength(headings.length);
   });
 
   it('reads the real CHANGELOG.md', () => {

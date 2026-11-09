@@ -51,7 +51,7 @@ import { cargoName, collect, deliver, destinationOf, forgive, wyWorks } from './
 import { checkMessages, collectHeld, thanksFrom } from './game/assignments';
 import { checkUpdates } from './game/changelog';
 import { bringRenowned } from './flight/renowned';
-import { renownedOf } from './game/renowned';
+import { chartLine, renownedOf } from './game/renowned';
 import { clearHeadsUp } from './ui/headsUp';
 import { COMPANIES } from './game/companies';
 import { bodiesOf, exploreOf, isFound, isSurveyed, poisOf, recordVisit, trailsUnderWay } from './game/explore';
@@ -876,6 +876,13 @@ function toggleGalaxyMap() {
     firsts: (s) => (c.difficulty === 'modern' ? firstsLine(s) : null),
     // Where Wexley-Yorozu runs the station, data sells for more (Mark: "how do I get to a W-Y station?").
     station: (s) => (c.difficulty === 'modern' && wyWorks(s) ? 'Wexley-Yorozu · pays 25% more for survey data' : null),
+    // Whose patch it is: worth knowing before you go hunting there (game/renowned.ts).
+    pirate: (s) => {
+      const who = c.difficulty === 'modern' ? renownedOf(s) : null;
+      if (!who) return null;
+      const m = c.renowned?.[who.key];
+      return `${chartLine(who)}${m && (m.outUntil ?? 0) > Date.now() ? ' · out of action' : ''}`;
+    },
     explored: (s) => {
       const e = exploreOf(c);
       if (!e.visited.includes(`${s.galaxy}:${s.index}`)) return { visited: false, line: 'Not yet' };
