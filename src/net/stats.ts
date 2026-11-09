@@ -1,6 +1,7 @@
 // Anonymous totals, to tell how Witchspace is played: once a day, which
-// rules this device's commander uses and which look is on; and a count of
-// new commanders by rules. Nothing identifies the player (see /privacy/).
+// rules this device's commander uses, which look is on, and whether it's a
+// phone, tablet or computer; and a count of new commanders by rules. Nothing
+// identifies the player (see /privacy/).
 
 import { API } from './account';
 
@@ -13,6 +14,13 @@ function send(body: Record<string, string>) {
   void fetch(`${API}/stats/ping`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true }).catch(() => {});
 }
 
+/** Phone, tablet or computer, by the screen and its pointer: an iPad's Safari calls itself a Mac. */
+export function deviceKind(): 'phone' | 'tablet' | 'desktop' {
+  const touch = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 1;
+  if (!touch || matchMedia('(pointer: fine)').matches) return 'desktop';
+  return Math.min(screen.width, screen.height) < 600 ? 'phone' : 'tablet';
+}
+
 /** At most once a day per device. */
 export function countDevice(rules: Rules, look: Look) {
   const today = new Date().toISOString().slice(0, 10);
@@ -22,7 +30,7 @@ export function countDevice(rules: Rules, look: Look) {
   } catch {
     // Storage blocked: the server counts each network once a day anyway.
   }
-  send({ rules, look });
+  send({ rules, look, device: deviceKind() });
 }
 
 /** A new commander, by rules. */

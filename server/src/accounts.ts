@@ -19,6 +19,7 @@ import { costOf, dayOf, JOIN_SHARE, MAX_REPORT_SECONDS, refusal, SPACE_BUDGET, s
 import { judgeCallsign, NAMES, nameKey, nameRule, type CallsignLookups } from './names';
 import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
 import { FEED_EACH, FLYING_NOW, type FirstEvent, type Flying } from './feed';
+import { deviceKind } from './device';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
 import { assignmentId, assignmentWaiting, CONTACT, CONTACT_COMPANIES, type CompanyId } from './contact';
 import { companyEmail, editionEmail, signInEmail } from './emails';
@@ -123,6 +124,14 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE TABLE IF NOT EXISTS space_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
     this.sql.exec('CREATE TABLE IF NOT EXISTS space_joins (account TEXT NOT NULL, net TEXT NOT NULL, room TEXT NOT NULL, at INTEGER NOT NULL)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS space_joins_at ON space_joins (at)');
+    // How many commanders flew in shared space each day: a count kept on the day, and who's been counted
+    // only for today and yesterday (Marketing, Mark's yes, 9 November 2026), then forgotten.
+    try {
+      this.sql.exec('ALTER TABLE space_days ADD COLUMN commanders INTEGER NOT NULL DEFAULT 0');
+    } catch {
+      /* already there */
+    }
+    this.sql.exec('CREATE TABLE IF NOT EXISTS space_seen (day TEXT NOT NULL, account TEXT NOT NULL, PRIMARY KEY (day, account))');
     this.sql.exec('CREATE TABLE IF NOT EXISTS cards (account TEXT PRIMARY KEY, id TEXT NOT NULL UNIQUE, v INTEGER NOT NULL, choices TEXT NOT NULL, finish TEXT NOT NULL, image BLOB NOT NULL, at INTEGER NOT NULL)');
     for (const row of this.sql.exec('SELECT id, callsign FROM accounts WHERE callsign IS NOT NULL AND callsign_loose IS NULL').toArray())
       this.sql.exec('UPDATE accounts SET callsign_loose = ? WHERE id = ?', nameKey(row.callsign as string), row.id as string);
@@ -354,9 +363,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
 
   // --- Shared space's budget (spaceBudget.ts) -------------------------------------
 
-  private spaceDay(now = Date.now()): SpaceDay & { day: string; seconds: number; messages: number; told: number } {
+  private spaceDay(now = Date.now()): SpaceDay & { day: string; seconds: number; messages: number; told: number; commanders: number } {
     const day = dayOf(now);
-    const row = this.sql.exec('SELECT seconds, messages, cost, told FROM space_days WHERE day = ?', day).toArray()[0];
+    const row = this.sql.exec('SELECT seconds, messages, cost, told, commanders FROM space_days WHERE day = ?', day).toArray()[0];
     const setting = (key: string) => this.sql.exec('SELECT value FROM space_settings WHERE key = ?', key).toArray()[0]?.value as string | undefined;
     return {
       day,
@@ -366,6 +375,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
       seconds: (row?.seconds as number) ?? 0,
       messages: (row?.messages as number) ?? 0,
       told: (row?.told as number) ?? 0,
+      commanders: (row?.commanders as number) ?? 0,
     };
   }
 
@@ -376,8 +386,19 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const rooms = (col: 'account' | 'net', v: string) =>
       this.sql.exec(`SELECT COUNT(DISTINCT room) AS n FROM space_joins WHERE ${col} = ? AND room != ?`, v, room).one().n as number;
     const why = refusal(this.spaceDay(now), { account: rooms('account', account), network: rooms('net', net) });
-    if (!why) this.sql.exec('INSERT INTO space_joins (account, net, room, at) VALUES (?, ?, ?, ?)', account, net, room, now);
+    if (!why) {
+      this.sql.exec('INSERT INTO space_joins (account, net, room, at) VALUES (?, ?, ?, ?)', account, net, room, now);
+      this.countSpaceCommander(account, now);
+    }
     return why;
+  }
+
+  /** One more commander in shared space today, the first time each one joins on the day. */
+  private countSpaceCommander(account: string, now: number) {
+    const day = dayOf(now);
+    this.sql.exec('DELETE FROM space_seen WHERE day < ?', dayOf(now - 86_400_000));
+    if (!this.sql.exec('INSERT OR IGNORE INTO space_seen (day, account) VALUES (?, ?)', day, account).rowsWritten) return;
+    this.sql.exec('INSERT INTO space_days (day, commanders) VALUES (?, 1) ON CONFLICT(day) DO UPDATE SET commanders = commanders + 1', day);
   }
 
   /** A busy room's use since its last report. Returns whether everyone should now fly solo. */
@@ -1034,9 +1055,17 @@ export class Accounts extends DurableObject<AccountsEnv> {
       return json({ sent, devices: this.devicesOf(who.id as string).length });
     }
     // Shared space's budget: today's use and settings; switch it off or on, or change the daily budget (dollars).
+    // ?days=30 adds each day's use before today, newest first, up to 366.
     if (request.method === 'GET' && path === '/admin/space') {
       const d = this.spaceDay();
-      return json({ day: d.day, off: d.off, budget: d.budget, cost: Number(d.cost.toFixed(4)), busyHours: Number((d.seconds / 3600).toFixed(2)), messages: d.messages });
+      const n = Math.min(366, Math.max(0, Math.floor(Number(new URL(request.url).searchParams.get('days')) || 0)));
+      const history = n
+        ? this.sql
+            .exec('SELECT day, seconds, messages, cost, commanders FROM space_days WHERE day >= ? ORDER BY day DESC', dayOf(Date.now() - (n - 1) * 86_400_000))
+            .toArray()
+            .map((r) => ({ day: r.day as string, busyHours: Number(((r.seconds as number) / 3600).toFixed(2)), cost: Number((r.cost as number).toFixed(4)), messages: r.messages as number, commanders: r.commanders as number }))
+        : undefined;
+      return json({ day: d.day, off: d.off, budget: d.budget, cost: Number(d.cost.toFixed(4)), busyHours: Number((d.seconds / 3600).toFixed(2)), messages: d.messages, commanders: d.commanders, ...(history ? { history } : {}) });
     }
     if (request.method === 'POST' && path === '/admin/space') {
       const b = (await request.json().catch(() => null)) as { off?: unknown; budget?: unknown } | null;
@@ -1132,12 +1161,12 @@ export class Accounts extends DurableObject<AccountsEnv> {
 
   /** POST /stats/ping {rules, look, event?}: add one to today's totals. Counted once a day per network. */
   private async ping(request: Request): Promise<Response> {
-    const body = (await request.json().catch(() => null)) as { rules?: unknown; look?: unknown; event?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as { rules?: unknown; look?: unknown; event?: unknown; device?: unknown } | null;
     const rules = ['modern', 'classic', 'none'].includes(body?.rules as string) ? (body!.rules as string) : null;
     const look = ['neo', '1984'].includes(body?.look as string) ? (body!.look as string) : null;
     if (!rules || !look) return json({ error: 'Not a ping' }, 400);
     const day = new Date().toISOString().slice(0, 10);
-    const keys = body?.event === 'new' ? [`new:${rules}`] : [`rules:${rules}`, `look:${look}`, 'devices'];
+    const keys = body?.event === 'new' ? [`new:${rules}`] : [`rules:${rules}`, `look:${look}`, 'devices', `device:${deviceKind(body?.device, request.headers.get('User-Agent'))}`];
     if (body?.event !== 'new') {
       const net = await networkOf(request, (this.env.ADMIN_KEY ?? 'witchspace') + ':stats');
       this.sql.exec('DELETE FROM pings WHERE day < ?', day);

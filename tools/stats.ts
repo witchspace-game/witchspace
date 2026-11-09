@@ -32,5 +32,7 @@ console.log(`  Classic commanders ${totals['rules:classic'] ?? 0} (${pct(totals[
 console.log(`  Modern commanders  ${totals['rules:modern'] ?? 0}`);
 console.log(`  no commander yet   ${totals['rules:none'] ?? 0}`);
 console.log(`  1984 look on       ${totals['look:1984'] ?? 0} (${pct(totals['look:1984'] ?? 0, devices)})`);
+const kinds = (totals['device:phone'] ?? 0) + (totals['device:tablet'] ?? 0) + (totals['device:desktop'] ?? 0);
+console.log(`  phone · tablet · computer  ${['phone', 'tablet', 'desktop'].map((k) => `${totals[`device:${k}`] ?? 0} (${pct(totals[`device:${k}`] ?? 0, kinds)})`).join(' · ')}${kinds < devices ? ` · counted since 9 Nov 2026` : ''}`);
 console.log(`  new commanders     Modern ${totals['new:modern'] ?? 0} · Classic ${totals['new:classic'] ?? 0}`);
 console.log(`\nAccounts: ${accounts} · cloud saves by rules: ${Object.entries(saves).map(([k, v]) => `${k} ${v}`).join(' · ') || 'none'}`);
