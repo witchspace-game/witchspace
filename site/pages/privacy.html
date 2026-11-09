@@ -22,7 +22,7 @@
   <p>To give each idea one vote per person without accounts, your browser keeps a random id. To stop abuse we keep a one-way hash of your network address, never the address itself. What you post is public.</p>
 
   <h2>Counting how it's played</h2>
-  <p>Once a day, the game tells us which rules your commander uses (Modern or Classic) and whether the 1984 look is on, and when a new commander is started, which rules they chose. We keep only the day's totals. To count each device once a day we keep a one-way hash of your network address for that day, never the address itself, and nothing else about you.</p>
+  <p>Once a day, the game tells us which rules your commander uses (Modern or Classic), whether the 1984 look is on, and whether it's a phone, tablet or computer, and when a new commander is started, which rules they chose. The game works out the kind of device from the screen; for older copies of the game, the server reads your browser's description of itself to tell, and doesn't keep it. We keep only the day's totals, and the number of commanders who flew in shared space each day (to count each one once, it remembers which accounts it has counted for a day or so, then forgets). To count each device once a day we keep a one-way hash of your network address for that day, never the address itself, and nothing else about you.</p>
 
   <h2>Counting visits</h2>
   <p>We count visits to the website and the game with Vercel Web Analytics: which pages are seen, which site sent you there, and roughly which country and kind of device you're on. It uses no cookies and keeps nothing that identifies you: a visitor is told apart by a hash that changes every day, and your network address isn't kept.</p>
