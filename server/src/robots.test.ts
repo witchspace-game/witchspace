@@ -12,6 +12,7 @@ describe('keeping space.witchspace.org.uk out of search', () => {
   it('leaves the preview pages the site serves as its own alone', () => {
     expect(tag('/card/abcdefghij', new Response('<html>'))).toBeNull();
     expect(tag('/clip-card/abcd1234', new Response('<html>'))).toBeNull();
+    expect(tag('/press-media/trailer-v2.mp4', new Response('x'))).toBeNull(); // the watch pages name them
   });
 
   it('keeps a redirect a redirect', () => {
@@ -22,6 +23,6 @@ describe('keeping space.witchspace.org.uk out of search', () => {
 
   it('lets crawlers reach only what link previews need', () => {
     expect(ROBOTS_TXT).toContain('Disallow: /\n');
-    for (const p of ['/card-image/', '/clip-card/', '/clip-video/']) expect(ROBOTS_TXT).toContain(`Allow: ${p}`);
+    for (const p of ['/card-image/', '/clip-card/', '/clip-video/', '/press-media/']) expect(ROBOTS_TXT).toContain(`Allow: ${p}`);
   });
 });

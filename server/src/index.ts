@@ -16,6 +16,7 @@ import { ClipBoard, type ClipsEnv } from './clips';
 import { buildFeed, FEED_MAX_AGE, FEED_WINDOW } from './feed';
 import { networkOf } from './http';
 import { noindex, ROBOTS_TXT } from './robots';
+import { objectResponse, PRESS_NAME, pressMedia } from './press';
 import { cleanPaint, ownPaint } from './paint';
 import { REPORT_EVERY_MS } from './spaceBudget';
 import { canFire, checkMove, closestApproach, collisionDamage, positionAt, recharge, reportHealth, resolveShot, stepMissile, takeHit, type Flight, type Health, type Sample, type Track } from './rules';
@@ -70,6 +71,9 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
     // A shared clip's own video (clips.ts), only while the clip is up; in ranges, as iPhones ask for video.
     const video = url.pathname.match(/^\/clip-video\/([a-z0-9]{8,12})\.mp4$/);
     if (video) return clipVideo(request, env, video[1]);
+    // The press kit's pictures and videos (server/src/press.ts): public, read-only.
+    const press = url.pathname.match(PRESS_NAME);
+    if (press) return pressMedia(request, env.CLIP_VIDEOS, press[1], press[2]);
     const card = url.pathname.match(/^\/clip-card\/([a-z0-9]{8,12})(\.jpg)?$/);
     if (card) return card[2] ? clipsOf(env).cardPicture(card[1]) : clipsOf(env).card(card[1]);
     const clip = url.pathname.match(/^\/clips(?:\/(mine|[a-z0-9]{8,12})(?:\/(heart|report|admin|takedown|putback|card|video))?)?$/);
@@ -293,18 +297,7 @@ async function clipVideo(request: Request, env: Env, id: string): Promise<Respon
   if (!env.CLIP_VIDEOS || !(await clipsOf(env).videoServable(id))) return new Response('Not found', { status: 404 });
   const obj = await env.CLIP_VIDEOS.get(`clips/${id}.mp4`, { range: request.headers });
   if (!obj) return new Response('Not found', { status: 404 });
-  const headers = new Headers({ 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': '*' });
-  headers.set('ETag', obj.httpEtag);
-  const range = obj.range as { offset?: number; length?: number } | undefined;
-  if (range && request.headers.has('Range')) {
-    const start = range.offset ?? 0;
-    const end = start + (range.length ?? obj.size - start) - 1;
-    headers.set('Content-Range', `bytes ${start}-${end}/${obj.size}`);
-    headers.set('Content-Length', String(end - start + 1));
-    return new Response(obj.body, { status: 206, headers });
-  }
-  headers.set('Content-Length', String(obj.size));
-  return new Response(obj.body, { headers });
+  return objectResponse(request, obj, new Headers({ 'Content-Type': 'video/mp4', 'Cache-Control': 'public, max-age=604800', 'Access-Control-Allow-Origin': '*' }));
 }
 
 /** What each connection carries through hibernation. */
