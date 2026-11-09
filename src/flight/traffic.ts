@@ -522,7 +522,7 @@ export function updateLegends(dt: number) {
     void main.keepCombat({ kind: 'legend', text: taken ? `The Falcon took ${taken}` : 'Beaten by the Falcon', subject: 'The Falcon' }, 20, 6);
   }
   for (const npc of npcs) {
-    if (!npc.brokeOff || npc.won || fleeing.has(npc)) continue;
+    if (!npc.brokeOff || npc.won || fleeing.has(npc) || npc.style === 'holdBack') continue; // a renowned pirate ejects instead (flight/renowned.ts)
     fleeing.set(npc, FALCON_JUMP_DELAY);
     Object.assign(npc, { mode: 'flee', hostile: false, fights: false, target: player });
     // Her ECM covers her: anything already fired at her goes.

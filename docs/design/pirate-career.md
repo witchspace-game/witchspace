@@ -80,6 +80,16 @@ Mark: *"Yes a pirate can go straight but would have to prove themselves; maybe t
 - **The cost:** the Solos and every pirate you flew with see a turncoat. The Falcon closes for good, and old contacts may hunt you.
 - **Where it leads:** in time, a clean ex-pirate can join the Marshals properly. The best Marshals were pirates once.
 
+## Renowned pirates *(Mark, 9 November 2026)*
+
+Mark: *"A single pirate with a backstory per system that is renowned and revered. They appear to level the playing field rather than having a player that can just keep blasting Mambas and Sidewinders all day long."* Not a spawn: one man (Mark: a man), known in his system, who comes out in answer to a commander killing his people there.
+
+- **Who** (`src/game/renowned.ts`): from the system's seed, so the same man for everyone. Mostly the lawless worlds (9 in 10 anarchies, 7 in 10 feudal, rarer the safer it gets; about 80 a galaxy). A name, what the regulars call him ("Old Iron", "the Undertaker"), his Cobra's name, where he came from and the code he lives by. The famous few get hand-written stories later; players can write them through a "Pirates wanted" brief.
+- **How he fights** (`src/game/npc.ts`, `FightStyle` `holdBack`): a Cobra Mk III with an orange-red band and a beam laser on a 4° gimbal, 37 damage a second against a pack pirate's 14. He makes long runs from 2 to 3 km, turns away at about 1 km (or 2.5 seconds out if you charge him), opens to 2 km before coming round, and pulls out to recharge below 30% shields until they're at 75%. He's a little slower than your Cobra, so running always works. Tuned with `npm run sim:duel`.
+- **When he comes** (`src/flight/renowned.ts`): kill 2 of his people in his system within a day and one of them says whose they were. Kill 4 and he's coming: his word on the radio, and the combat computer's heads-up, *"[Name] is coming for you · about 90 seconds · jump, dock or wait for him"*. At most once a day. Never for Harmless or Mostly Harmless commanders, never in Classic.
+- **How it ends:** at a fifth of his shields and hull he ejects. His Cobra goes up, you get his 400 Cr bounty and the rating, and his pod runs for home (picked up after 25 seconds). He's out of action for 3 days. Shoot the pod and he lives, and never forgets it. If he kills you, his tally against you grows; if you jump or dock once he's coming, you ran. All of it is remembered (`Commander.renowned`), and his first word next time shows it.
+- **Next:** the saloon (licking his wounds while he's out, gloating when he's won), the news, hand-written stories for the famous few, then a shared record on the Worker so every commander hears the same story.
+
 ## Three careers that feed each other
 
 Pirates make work for bounty hunters and Marshals, who give pirates a reason to be good. Traders hire escorts because pirates exist; the relief convoys and the Titan's supply line are already targets on the timetable. The balance: fun enough that people choose it, costly enough in lawful space that it's never the easy road, and kept away from newcomers.

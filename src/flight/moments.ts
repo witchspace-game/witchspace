@@ -1,6 +1,7 @@
 // The flight recorder and its moments (moved from main.ts): the kill cam's track and dying,
 // the recorder, the moments it keeps (fights, firsts and trades) and the kill cam itself.
 
+import { renownedKilledYou } from './renowned';
 import { sfx } from '../audio/sound';
 import { shipById } from '../content/ships';
 import { deleteCommander, hasEquipment, removeEquipment, saveCommander, hullOf } from '../game/commander';
@@ -131,6 +132,7 @@ export function die() {
   const c = cmdr();
   // The black box: the last seconds, and the ship going up, for the insurers' screen.
   const killer = flight.lastHitBy && flight.elapsed - flight.lastHitBy.at < 5 ? flight.lastHitBy.npc : null;
+  renownedKilledYou(killer);
   // Who did it, when someone did: a death worth watching from outside (ui/flightLog.ts worthWatching).
   const blackBox = keepCombat({ kind: 'death', text: `Ship destroyed at ${currentSystem().name}`, ...(killer ? { subject: killer.def.name } : {}) }, 26, 4);
   track.event({ t: flight.elapsed, kind: 'boom', id: trackId(player), p: player.obj.position.toArray() });

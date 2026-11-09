@@ -224,6 +224,7 @@ import type { ExploreRecord } from './explore';
 import type { ActiveContract, CompanyLog } from './contracts';
 import type { AdriftCase, Message } from './assignments';
 import type { WorldEvent } from '../economy/events';
+import type { RenownedMemory } from './renowned';
 import type { CompanyId } from './companies';
 import type { BtcOrder, BtcTrade } from '../economy/bitcoin';
 import type { Heard } from './saloon';
@@ -367,6 +368,8 @@ export interface Commander {
   yardLosses?: YardLoss[];
   /** A station that won't let you dock, until when: you fired on it (flight/law.ts). */
   dockingBan?: { galaxy: number; system: number; until: number };
+  /** Renowned pirates you've had dealings with, by home system "galaxy:system" (game/renowned.ts). */
+  renowned?: Record<string, RenownedMemory>;
   /** What Odile Venn remembers of you (game/odile.ts). */
   venn?: VennMemory;
   /** Missiles on the rails. */
