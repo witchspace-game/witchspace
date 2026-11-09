@@ -3,7 +3,7 @@ import { COMMODITIES, commodityById } from '../economy/commodities';
 import { stationTrades } from '../economy/legality';
 import { DANGER_PREMIUM, equilibriumPrice, tradeBalance } from '../economy/market';
 import { hash } from '../economy/seed';
-import { FUEL_CAPACITY, type Commander } from './commander';
+import { FUEL_CAPACITY, fuelCapacity, type Commander } from './commander';
 import { COMPANIES, COMPANY_IDS, pickCompany, presence, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
 import { bodiesOf, EXPLORER_DOORS, exploreOf, isSurveyed, worldOf } from './explore';
 
@@ -177,6 +177,22 @@ export function safeRoute(a: StarSystem, b: StarSystem, hop = ROUTE_HOP): StarSy
   const route = [b];
   while (prev.get(route[0].index) !== a) route.unshift(prev.get(route[0].index)!);
   return route;
+}
+
+/**
+ * The ship's computer's route for this commander: the safe way (Modern), or simply the fewest
+ * jumps (Classic), in jumps as long as their tank allows. The one route everything uses, the
+ * course you plot and the job card's next step alike (Mark: they disagreed, and he went in circles).
+ */
+export function courseRoute(c: Commander, from: StarSystem, end: StarSystem, hop = fuelCapacity(c)): StarSystem[] | null {
+  if (c.difficulty === 'modern') return safeRoute(from, end, hop);
+  const route: StarSystem[] = [];
+  for (let at: StarSystem | null = from; at && at !== end; ) {
+    at = nextHop(at, end, hop);
+    if (!at) return null;
+    route.push(at);
+  }
+  return route.length ? route : null;
 }
 
 /** Systems from 1 to `max` jumps away, with their jump counts. */

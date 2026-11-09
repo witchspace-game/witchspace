@@ -11,6 +11,7 @@ what's different, not how it was done. Credit whoever reported it.
 
 ## 9 November 2026
 
+- The job card and the course you plot now take the same route. The card could say one system while the course went to another, which sent you round in circles. (Mark)
 - Running dark past the police now gets one hail and one countdown. If the Viper that hailed you docks, the next one in sight carries the hail on, instead of starting a new 15 seconds.
 - The jump countdown names where you're going.
 - Routes are planned as far as your tank reaches, not a fixed 7 light years.
