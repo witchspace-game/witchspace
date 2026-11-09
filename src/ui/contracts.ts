@@ -2,7 +2,7 @@
 // players straight to a company's job, plotting courses, and paying commissions.
 
 import { sfx } from '../audio/sound';
-import { cargoCapacity, cargoTonnes, loadCommander, saveCommander, type Commander } from '../game/commander';
+import { cargoCapacity, cargoTonnes, fuelCapacity, loadCommander, saveCommander, type Commander } from '../game/commander';
 import { fitCompartment } from '../game/compartment';
 import { currentAccount } from '../net/account';
 import { abandon, amendsCost, board, TICK, SIGNING_BONUS, welcome, cannotTake, cargoName, collect, DANGEROUS, destinationOf, jumpsBetween, safeRoute, makeAmends, nextHop, standing, surveyDone, take, type Contract } from '../game/contracts';
@@ -140,12 +140,16 @@ const newOffers = (c: Commander, here: StarSystem, now: number) => board(c, here
  * Set a course to a system, however many jumps away: the first hop now, the
  * next after each jump (see hyperspace). Returns what to tell the commander.
  */
-/** The computer's route: the safe way (Modern), or simply the fewest jumps (Classic). */
-export function routeTo(from: StarSystem, end: StarSystem): StarSystem[] | null {
-  if (modern()) return safeRoute(from, end);
+/**
+ * The computer's route: the safe way (Modern), or simply the fewest jumps (Classic), in jumps as long as
+ * your tank allows. It planned with the standard tank, so long-range tanks got stops they didn't need
+ * (a player on the ideas board, 30 and 31 October 2026).
+ */
+export function routeTo(from: StarSystem, end: StarSystem, hop = fuelCapacity(cmdr())): StarSystem[] | null {
+  if (modern()) return safeRoute(from, end, hop);
   const route: StarSystem[] = [];
   for (let at: StarSystem | null = from; at && at !== end; ) {
-    at = nextHop(at, end);
+    at = nextHop(at, end, hop);
     if (!at) return null;
     route.push(at);
   }

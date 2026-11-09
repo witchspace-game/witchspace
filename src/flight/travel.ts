@@ -254,7 +254,13 @@ export function updateTravel(dt: number) {
   flight.countdown -= dt;
   const shown = Math.max(0, Math.ceil(flight.countdown));
   el.hidden = false;
-  el.textContent = String(shown);
+  // Where it's taking you, all the way down, as the 1984 game did: time to cancel if it's the wrong system
+  // (a player on the ideas board, 30 October 2026).
+  const to = galacticJump ? `Galaxy ${((currentSystem().galaxy + 1) % 8) + 1}` : destination()?.name ?? '';
+  if (el.textContent !== `${shown}${to}`) {
+    el.textContent = String(shown);
+    if (to) el.append(Object.assign(document.createElement('small'), { textContent: to }));
+  }
   if (shown < lastTick) {
     lastTick = shown;
     sfx.tick();
