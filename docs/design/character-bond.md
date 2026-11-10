@@ -40,7 +40,7 @@ The Cobra's maker's halo ship, an open brief until now ([the shipbuilders](shipb
 
 - **Shape:** one hexagon scaled along her length so every panel is flat. A needle nose, a crest along her spine, widest at the shoulders two-thirds back, narrowing to the tail, with a drive sponson down each flank for the Cobra family's broad arrowhead. About 171 m long, 80 m across the sponsons and 18 m high, so she docks.
 - **Stats (first draft):** speed 200, pitch 0.45, roll 0.9, hull 600, shields 400, 6 missiles, 650,000 Cr.
-- **Her hold is 180 t, not 350.** `balance_check` puts a hull her size at most about 185 t, at the density the fleet carries. She can't grow bigger and still dock, so the proportions table in [ships and classes](ships-and-classes.md) should come down to match.
+- **Her hold is 60 t, not 350.** The slim, elegant hull is about 38,000 m³, and `balance_check` puts a hull that size at about 65 t at the density the fleet carries. She can't grow bigger and still dock. That suits the Heavy class (best at armour and firepower, not hold; Mark: nobody wants a semi truck), and the proportions table in [ships and classes](ships-and-classes.md) should come down to match.
 
 ### His: an Anaconda the Bureau had converted
 
@@ -48,7 +48,7 @@ The Cobra's maker's halo ship, an open brief until now ([the shipbuilders](shipb
 - **Her name: *On Loan*.** Five were scrapped when the courier service closed. When the Bureau let him retire, nobody asked for the sixth back.
 - **Shape:** the Anaconda's hull with a **saloon raised on her crest** two-thirds back: a steep front like a windscreen, a flat roof over the lounge and the bar, falling away to the tail like a grand tourer's roof. No windows: the raised shape alone says people live and entertain aboard. 25.6 m high, inside the 26 m slot.
 - **Colour:** racing green (#26c46a), deeper and truer than the yard's Witchspace Green (#3dffb0).
-- **Stats (first draft):** speed 250 (faster than any Anaconda has a right to be), pitch 0.55, roll 1.0, hull 520, shields 480, hold 120 t, 3 missiles. Never for sale.
+- **She's fast** *(Mark)*: top speed 350, 125% of a Cobra's, quicker than a Falcon, behind only the Mamba and the Marshals' Lancer. She turns like the big ship she is (pitch 0.55, roll 1.0): a grand tourer, quick in a straight line. Hull 420, shields 480 (and the experimental shield), hold 40 t (the quarters took the rest), 3 missiles. Never for sale.
 
 ## The experimental shield *(Mark, 10 November 2026)*
 
