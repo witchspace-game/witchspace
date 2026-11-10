@@ -41,6 +41,7 @@ import { EDITIONS, editionById, editionNo } from '../../src/content/editions';
 import { normaliseVoucher, voucherCode } from './vouchers';
 import { papersFor, papersLink, type Papers } from '../../src/game/papers';
 import { firstAnchor, verify, type Anchor, type Save as LedgerSave } from './ledger';
+import { ARCHIVE_DAYS, ARCHIVE_MS, ARCHIVED, insertFor, pack, unpack, type Packed, type Row } from './archive';
 type Save = LedgerSave & { tampered?: boolean };
 import { ACCESS_TTL, challengeOk, clientName, CODE_TTL, connectPage, isMetadataUrl, redirectMatches, redirectOk, REFRESH_TTL, REQUEST_TTL, s256, SCOPE, verifierOk, withParams } from './oauth';
 
@@ -144,6 +145,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     // Callsigns of deleted accounts whose shared clips stay up under that name (Mark): nobody else may
     // claim one, so an old clip never looks like a new commander's. Only the name is kept, never who.
     this.sql.exec('CREATE TABLE IF NOT EXISTS retired (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, at INTEGER NOT NULL)');
+    // Deleted accounts, kept 90 days out of every live table (archive.ts), then erased.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS archive (account TEXT PRIMARY KEY, email TEXT NOT NULL, email_key TEXT, callsign TEXT,
+      callsign_loose TEXT, clips_left INTEGER NOT NULL DEFAULT 0, data TEXT NOT NULL, at INTEGER NOT NULL)`);
     // Anonymous daily totals (which rules, which look), to decide Classic's future. Nothing per person:
     // `pings` only stops a network being counted twice in a day, by a salted one-way hash.
     this.sql.exec('CREATE TABLE IF NOT EXISTS stats (day TEXT NOT NULL, key TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (day, key))');
@@ -221,7 +225,10 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('UPDATE editions SET token = lower(hex(randomblob(16))) WHERE token IS NULL');
   }
 
+  private lastPurge = 0;
+
   async fetch(request: Request): Promise<Response> {
+    if (Date.now() - this.lastPurge > 3600_000) this.purgeArchive(Date.now());
     const url = new URL(request.url);
     const path = url.pathname;
     const m = request.method;
@@ -556,6 +563,11 @@ export class Accounts extends DurableObject<AccountsEnv> {
       const twin = this.sql.exec('SELECT id, email, callsign FROM accounts WHERE email_key = ? ORDER BY created LIMIT 1', emailKey(email)).toArray()[0];
       if (twin && !this.isMaintainer(twin as unknown as Account)) account = twin;
     }
+    // Deleted within 90 days: signing in again brings it all back.
+    if (!account) {
+      const back = this.restoreArchive(email);
+      if (back) account = { ...back };
+    }
     if (!account) {
       const id = crypto.randomUUID();
       this.sql.exec('INSERT INTO accounts (id, email, email_key, created) VALUES (?, ?, ?, ?)', id, email, emailKey(email), Date.now());
@@ -729,6 +741,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
   private readonly callsignLookups: CallsignLookups = {
     holder: (key) =>
       (this.sql.exec('SELECT id FROM accounts WHERE callsign_loose = ? LIMIT 1', key).toArray()[0]?.id as string | undefined) ??
+      (this.sql.exec('SELECT 1 FROM archive WHERE callsign_loose = ?', key).toArray().length ? 'archived' : null) ??
       (this.sql.exec('SELECT 1 FROM retired WHERE name_key = ?', key).toArray().length ? 'retired' : null),
     releasedTo: (key) => (this.sql.exec('SELECT email FROM releases WHERE name_key = ?', key).toArray()[0]?.email as string | undefined) ?? null,
   };
@@ -1759,14 +1772,52 @@ export class Accounts extends DurableObject<AccountsEnv> {
     return { status: res.status, data: await res.text() };
   }
 
-  /** Everything goes but the callsign, held when their shared clips stay up under it (the Worker says, from the clips). */
+  /**
+   * Out of the game at once: signed out everywhere, no more emails or notifications, and the card,
+   * firsts and pirate record gone from public view. The rest is archived for 90 days (archive.ts), so
+   * signing in again brings it back; then it's erased. The callsign stays held meanwhile, and for good
+   * after that if the account's shared clips are still up under it (the Worker says, from the clips).
+   */
   private deleteAccount(account: Account, clipsLeft: boolean): Response {
-    if (clipsLeft && account.callsign) this.sql.exec('INSERT OR IGNORE INTO retired (name_key, name, at) VALUES (?, ?, ?)', nameKey(account.callsign), account.callsign, Date.now());
-    for (const table of ['saves', 'sessions', 'contact', 'devices', 'cards', 'firsts', 'renowned', 'submissions', 'oauth_codes', 'oauth_tokens']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
+    const row = this.sql.exec('SELECT * FROM accounts WHERE id = ?', account.id).toArray()[0] as Row | undefined;
+    if (row) {
+      const tables: Packed = { accounts: [row] };
+      for (const table of ARCHIVED) tables[table] = this.sql.exec(`SELECT * FROM ${table} WHERE account = ?`, account.id).toArray() as Row[];
+      this.sql.exec(
+        'INSERT OR REPLACE INTO archive (account, email, email_key, callsign, callsign_loose, clips_left, data, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        account.id, account.email, emailKey(account.email), account.callsign, account.callsign ? nameKey(account.callsign) : null, clipsLeft ? 1 : 0, pack(tables), Date.now(),
+      );
+    }
+    for (const table of [...ARCHIVED, 'sessions', 'contact', 'devices', 'oauth_codes', 'oauth_tokens']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM codes WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM accounts WHERE id = ?', account.id);
-    return json({ deleted: true });
+    return json({ deleted: true, keptDays: ARCHIVE_DAYS });
+  }
+
+  /** Signing in to a deleted account within 90 days: put everything back as it was. */
+  private restoreArchive(email: string): Account | null {
+    const a = this.sql.exec('SELECT account, data FROM archive WHERE email = ? OR email_key = ? ORDER BY at DESC LIMIT 1', email, emailKey(email)).toArray()[0];
+    if (!a) return null;
+    const tables = unpack(a.data as string);
+    for (const table of ['accounts', ...ARCHIVED]) {
+      for (const row of tables[table] ?? []) {
+        const { sql, values } = insertFor(table, row);
+        this.sql.exec(sql, ...values);
+      }
+    }
+    this.sql.exec('DELETE FROM archive WHERE account = ?', a.account as string);
+    const r = this.sql.exec('SELECT id, email, callsign FROM accounts WHERE id = ?', a.account as string).toArray()[0];
+    return r ? { id: r.id as string, email: r.email as string, callsign: (r.callsign as string | null) ?? null } : null;
+  }
+
+  /** Archives past 90 days are erased; a callsign whose clips are still up stays held, by name only. */
+  private purgeArchive(now: number) {
+    this.lastPurge = now;
+    const old = now - ARCHIVE_MS;
+    for (const r of this.sql.exec('SELECT callsign, callsign_loose FROM archive WHERE at < ? AND clips_left = 1 AND callsign IS NOT NULL', old).toArray())
+      this.sql.exec('INSERT OR IGNORE INTO retired (name_key, name, at) VALUES (?, ?, ?)', r.callsign_loose as string, r.callsign as string, now);
+    this.sql.exec('DELETE FROM archive WHERE at < ?', old);
   }
 }
 

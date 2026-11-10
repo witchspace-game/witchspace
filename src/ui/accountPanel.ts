@@ -202,6 +202,7 @@ function render() {
       const by = a.callsign ? ` under CMDR ${escapeHtml(a.callsign)}, and nobody else can take that callsign` : '';
       html += `<p class="meta delete-clips"><label><input type="checkbox" data-clips-down ${takeClipsDown ? 'checked' : ''} /> Also take down my shared ${n}</label><br><span class="small">Left unticked, ${clipsUp.length === 1 ? 'it stays' : 'they stay'} up${by}.</span></p>`;
     }
+    if (deleteArmed) html += `<p class="meta">Your account is kept for 90 days, out of sight, in case you change your mind: sign in again with this email to bring it all back. After that it's erased for good.</p>`;
     html += `<p class="account-actions"><button type="button" data-signout>Sign out</button> <button type="button" data-delete class="${deleteArmed ? 'danger' : ''}">${deleteArmed ? 'Press again to delete everything' : 'Delete account'}</button></p>`;
   }
   html += `<p class="account-close"><button type="button" data-close>Close</button><span class="small muted">or press Esc or A</span></p>`;
@@ -320,7 +321,7 @@ function wire() {
           if ('error' in r) throw new Error(`Couldn't take a clip down (${r.error}): nothing was deleted`);
         }
       await acct.deleteAccount();
-      hooks.flash('Account deleted. Your commander stays on this device.', 4);
+      hooks.flash('Account deleted. Your commander stays on this device. Sign in within 90 days to bring the account back.', 5);
     } catch (err) {
       hooks.flash((err as Error).message, 3);
     }
