@@ -17,7 +17,7 @@ import { viewer, type Viewer } from './viewer';
 const SAVE_KEY = 'ws-ship-draft';
 const CHECK_DELAY = 1000;
 const FLEET = Object.values(import.meta.glob<ShipDef>('../../content/ships/*.json', { eager: true, import: 'default' }))
-  .filter((s) => !s.modules && ROLES.includes(s.role))
+  .filter((s) => !s.unlisted && !s.modules && ROLES.includes(s.role)) // an unlisted ship is a character's, kept quiet
   .sort((a, b) => a.name.localeCompare(b.name));
 
 const $ = <T extends HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
