@@ -332,7 +332,7 @@ function payOff(npc: NpcShip, toll: number): RadioAction {
       c.credits = Math.round((c.credits - toll) * 10) / 10;
       saveCommander(c);
       const away = npc.obj.position.clone().sub(player.obj.position).normalize();
-      for (const p of ofRole('pirate').filter((p) => p.obj.position.distanceTo(npc.obj.position) < 3000)) {
+      for (const p of ofRole('pirate').filter((p) => !renownedNpc.has(p) && p.obj.position.distanceTo(npc.obj.position) < 3000)) {
         Object.assign(p, { paid: true, fights: false, hostile: false, target: null, mode: 'travel' });
         p.destination = p.obj.position.clone().addScaledVector(away, 30000);
       }
@@ -419,6 +419,8 @@ export function pirateThreats() {
   for (const p of ofRole('pirate')) {
     if (!p.hostile || threatened.has(p)) continue;
     threatened.add(p);
+    // A renowned pirate speaks for himself (flight/renowned.ts), and he isn't for sale (Mark).
+    if (renownedNpc.has(p)) continue;
     if (flight.elapsed - lastThreat < 20 || !main.npcIdentified(p) || p.obj.position.distanceTo(player.obj.position) > RADIO_RANGE) continue;
     lastThreat = flight.elapsed;
     cardOf(p, radio('pirate', p.def.name, pirateThreat(hailContext(serialOf(p) * 1000 + (minute() % 1000), p)), { answers: answerPirate(p) }));
