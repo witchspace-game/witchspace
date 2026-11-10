@@ -60,6 +60,8 @@ interface Entry extends Omit<RadioLine, 'action'> {
   summary?: boolean;
   /** Its last seconds have been called out once. */
   warned?: boolean;
+  /** Up as a heads-up, on its way into the log: it joins the log as it lands (a computer only). */
+  landing?: boolean;
 }
 
 /** How long a card waits for an answer when its answers don't say. */
@@ -152,11 +154,25 @@ export function say(line: RadioLine): number {
     if (!open) unread++;
   }
   if (fighting && e.urgency !== 'now' && e.from !== 'You') heardInFight.push(e);
+  // Worth knowing: up for a moment, then away into the radio's corner (Mark). Cards carry themselves.
+  // On a computer the line joins the log as the heads-up lands there, so it's never on screen twice
+  // (the phone's pill shows only a count, so there it can go in at once).
+  const up = e.urgency === 'worth' && !fighting && !open && e.from !== 'You' && document.body.dataset.state === 'flying';
+  if (up && !isTouch) e.landing = true;
   render();
   wake();
-  // Worth knowing: up for a moment, then away into the radio's corner (Mark). Cards carry themselves.
-  if (e.urgency === 'worth' && !fighting && !open && e.from !== 'You' && document.body.dataset.state === 'flying')
-    headsUp({ mark: mark(e.kind), from: e.from, text: e.text, colour: e.colour });
+  if (up)
+    headsUp({
+      mark: mark(e.kind),
+      from: e.from,
+      text: e.text,
+      colour: e.colour,
+      landed: () => {
+        if (!e.landing) return;
+        e.landing = false;
+        render();
+      },
+    });
   if (isTouch && !fighting && !open && e.urgency !== 'background') {
     const el = root();
     el.classList.add('ticker');
@@ -316,12 +332,12 @@ function render() {
   const now = Date.now();
   // Lapsed cards say so.
   for (const e of entries) if (e.answers && !e.done && until(e) <= now) e.done = 'Gone';
-  el.hidden = !entries.length;
+  el.hidden = !entries.some((e) => !e.landing);
   // One row per voice, the latest line on it, newest at the bottom; background folds into one row.
   const voices = new Map<string, Entry>();
   const background: Entry[] = [];
   for (const e of entries) {
-    if (e.summary) continue;
+    if (e.summary || e.landing) continue;
     if (e.urgency === 'background' && !waiting(e, now)) {
       if (open || now - e.at < BACKGROUND_FOR) background.push(e);
       continue;
@@ -408,8 +424,39 @@ function renderCards(now: number) {
 }
 let cardTimer = 0;
 
+/**
+ * On a computer the radio sits top left, as on the phone (Mark, 10 November 2026): the job strip,
+ * then the log under it, then the cards waiting for an answer. Each one's height changes as it
+ * fills, so the stack is measured: style.css places them by --job-bottom and --radio-bottom.
+ */
+function stack() {
+  if (isTouch) return;
+  const bottom = (q: string) => {
+    const el = document.querySelector<HTMLElement>(q);
+    const r = el && !el.hidden && getComputedStyle(el).display !== 'none' ? el.getBoundingClientRect() : null;
+    return r && r.height ? r.bottom : 0;
+  };
+  const root = document.documentElement.style;
+  root.setProperty('--job-bottom', `${Math.round(bottom('#job'))}px`);
+  root.setProperty('--radio-bottom', `${Math.round(bottom('#radio'))}px`);
+}
+
 export function initRadio() {
   const el = root();
+  if (!isTouch) {
+    const sizes = new ResizeObserver(stack);
+    // Shown and hidden change no size the observer sees (nor does flying or docking).
+    const shown = new MutationObserver(stack);
+    for (const q of ['#job', '#radio']) {
+      const box = document.querySelector<HTMLElement>(q);
+      if (!box) continue;
+      sizes.observe(box);
+      shown.observe(box, { attributes: true, attributeFilter: ['hidden'] });
+    }
+    shown.observe(document.body, { attributes: true, attributeFilter: ['data-state'] });
+    addEventListener('resize', stack);
+    stack();
+  }
   onTap(el.querySelector<HTMLElement>('.radio-pill')!, () => toggleRadio());
   onTap(el.querySelector<HTMLElement>('.radio-close')!, () => toggleRadio(false));
   // A tap anywhere else closes the log too.

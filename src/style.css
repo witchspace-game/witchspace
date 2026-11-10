@@ -354,7 +354,8 @@ body.retro #dash-plate { color: #fff; text-shadow: none; }
 #g-temp.hot::after { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
 #target-info {
   position: fixed;
-  top: 36px;
+  /* Just above the sights, where your eye already is (Mark, 10 November 2026); the phone's is below. */
+  top: calc(50% - 150px);
   left: 0;
   right: 0;
   margin: 0;
@@ -882,10 +883,11 @@ body.touch #job:not(.open) .job-line, body.touch #job:not(.open) .job-next, body
 body.touch #job .job-go, body.touch #job .job-more { min-height: 36px; padding: 4px 10px; font-size: 12px; }
 body.retro #job .job-main, body.retro #job .job-list { border-radius: 0; font-size: 9px; }
 body.retro #job .job-next, body.retro #job .job-list small { font-size: 8px; }
-/* The radio log: who said what, and when. Bottom left on a desktop, fading when it's quiet. */
+/* The radio log: who said what, and when. Top left, under the job strip, fading when it's quiet. */
 /* Radio cards: what wants an answer (src/ui/radio.ts). An accent on the edge, not a colour scheme; a subtle
    entrance per voice, once; then still (Mark). */
-#radio-cards { position: fixed; left: 16px; top: 22vh; z-index: 12; display: flex; flex-direction: column; gap: 8px; width: min(400px, 34vw); }
+/* Top left, under the job strip and the log (radio.ts stack() measures them), as on the phone (Mark). */
+#radio-cards { position: fixed; left: 16px; top: max(44px, calc(var(--job-bottom, 0px) + 8px), calc(var(--radio-bottom, 0px) + 10px)); z-index: 12; display: flex; flex-direction: column; gap: 8px; width: min(400px, 34vw); }
 body:not([data-state='flying']) #radio-cards { display: none; }
 .rcard { --who: var(--fg); position: relative; overflow: hidden; padding: 10px 12px 12px; border: 1px solid var(--edge); border-left: 3px solid var(--who); border-radius: 8px; background: rgba(2, 10, 8, 0.94); box-shadow: -2px 0 10px -4px var(--who); animation: rcard-in 0.35s ease-out; }
 .rcard.r-station { --who: #ffb347; } .rcard.r-police { --who: #4aa8ff; } .rcard.r-pirate { --who: #ff5f57; }
@@ -937,7 +939,7 @@ body.retro .rcard { border-radius: 0; box-shadow: none; animation: none; }
 #heads-up .rmark { stroke: var(--who, var(--fg)); }
 body.touch #heads-up { top: calc(max(8px, env(safe-area-inset-top)) + 64px); font-size: 14px; max-width: min(520px, 62vw); }
 body.retro #heads-up { border-radius: 0; box-shadow: none; background: rgba(0, 0, 0, 0.8); }
-#radio { position: fixed; left: 16px; bottom: 196px; z-index: 5; width: min(440px, 34vw); transition: opacity 1.2s ease; }
+#radio { position: fixed; left: 16px; top: max(44px, calc(var(--job-bottom, 0px) + 8px)); z-index: 5; width: min(440px, 34vw); transition: opacity 1.2s ease; }
 body:not([data-state='flying']) #radio { display: none; }
 #radio.quiet:not(.open):not(:hover) { opacity: 0; pointer-events: none; }
 #radio .radio-pill { display: none; }

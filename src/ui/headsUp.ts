@@ -17,10 +17,13 @@ interface HeadsUp {
   from: string;
   text: string;
   colour?: string;
+  /** Called once it's in the radio's corner, or gone without getting there (dropped or cleared). */
+  landed?: () => void;
 }
 
 const queue: HeadsUp[] = [];
 let showing = false;
+let current: HeadsUp | null = null;
 
 const box = () => {
   let el = document.querySelector<HTMLElement>('#heads-up');
@@ -35,23 +38,29 @@ const box = () => {
   return el;
 };
 
-/** Where it goes: the radio's pill on a phone, its log on a desktop. */
+/** Where it goes: the radio's pill on a phone; on a computer, the foot of the log, where its line joins. */
 function corner(): DOMRect | null {
   const pill = document.querySelector<HTMLElement>('#radio .radio-pill');
-  const target = pill && pill.offsetParent ? pill : document.querySelector<HTMLElement>('#radio');
-  const r = target?.getBoundingClientRect();
-  return r && r.width ? r : null;
+  if (pill && pill.offsetParent) return pill.getBoundingClientRect();
+  const list = document.querySelector<HTMLElement>('#radio .radio-list');
+  const r = list?.getBoundingClientRect();
+  if (r && r.width) return new DOMRect(r.left, r.bottom - 22, r.width, 22);
+  // The log's still empty (this is its first line): where it's about to appear, under the job strip.
+  const job = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--job-bottom')) || 0;
+  return new DOMRect(16, Math.max(44, job + 8), 200, 22);
 }
 
 export function headsUp(h: HeadsUp) {
   queue.push(h);
-  while (queue.length > QUEUE) queue.shift();
+  while (queue.length > QUEUE) queue.shift()?.landed?.();
   if (!showing) next();
 }
 
 /** Gone at once: a fight started, or you docked. */
 export function clearHeadsUp() {
-  queue.length = 0;
+  for (const h of queue.splice(0)) h.landed?.();
+  current?.landed?.();
+  current = null;
   const el = box();
   el.getAnimations().forEach((a) => a.cancel());
   el.hidden = true;
@@ -62,6 +71,7 @@ function next() {
   const h = queue.shift();
   if (!h) return void (showing = false);
   showing = true;
+  current = h;
   const el = box();
   el.innerHTML = '';
   const who = document.createElement('b');
@@ -95,9 +105,11 @@ function next() {
     })
     .catch(() => undefined) // cancelled: cleared
     .then(() => {
-      if (!showing) return;
+      if (!showing || current !== h) return;
+      current = null;
       el.hidden = true;
       el.getAnimations().forEach((a) => a.cancel());
+      h.landed?.();
       // The radio's corner answers with a glint as it lands.
       document.querySelector('#radio')?.animate([{ filter: 'brightness(1.8)' }, { filter: 'none' }], { duration: 500 });
       next();

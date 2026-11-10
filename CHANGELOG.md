@@ -12,6 +12,7 @@ reported it.
 
 ## 10 November 2026
 
+- On a computer the radio sits top left, as on a phone, with calls to answer under it. An important message lands in it as it shrinks away, rather than already being there. Whoever is in your sights is named just above them, not at the top edge. (Mark)
 - Deleting your account asks whether to take your shared clips down too. Left up, they keep your callsign, and nobody else can claim it. (Mark)
 - A renowned pirate no longer also sends the ordinary pirate's "Name your price" demand when he arrives. He speaks for himself, and he isn't for sale. (Mark)
 - A deleted account is kept for 90 days, out of sight. Sign in again with the same email in that time and it all comes back: callsign, cloud save, card and firsts. After that it's erased. (Mark)
