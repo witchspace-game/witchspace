@@ -6,7 +6,7 @@ summary: An Anaconda the Bureau of Continuity had rebuilt as a cruiser for peopl
 stages:
   - The hull, drawn and approved from pictures | proposed
   - In the game - our Anaconda and his conversion, checked against the fleet | proposed
-  - The experimental shield, the party pieces, and his outings | proposed
+  - The experimental shield, the will-o'-the-wisp, and his outings | proposed
 ---
 
 # Design: CMDR Bond's ship
@@ -19,7 +19,7 @@ Bond is an easter egg, and he leans on a famous character, so the lines are held
 
 - **His name is CMDR Bond, and only that.** Never his first name, anywhere: game text, ship names, files, commits, the changelog. Member **007** stays held as it is.
 - **The hull is ours.** It's our Anaconda, in the *spirit* of a 1960s British grand tourer and gentleman's motor yacht. No real car's or yacht's lines are traced, and no real maker is named anywhere, in the game or out of it.
-- **Nothing from the films.** No film names, no quotes, no music cues, no film gadget names. Every fitting has a plain, in-world name of its own.
+- **Nothing from the films.** No film names, no quotes, no music cues, and no gadgets at all (Mark).
 - **The Neo look holds.** She glows like every hull, never dimmed. Her colour is a line colour, and look numbers stay in `src/render/look.ts`. Mark's yes on pictures comes before any ship file merges.
 
 ## Where the shape came from
@@ -58,18 +58,18 @@ The Cobra's maker's halo ship, an open brief until now ([the shipbuilders](shipb
 
 **What it isn't:** for sale, or fittable, or anyone else's. If a player ever sees it on another hull, it's because the Constrictor story has moved.
 
-## The party pieces
+## No gadgets: a will-o'-the-wisp *(Mark, 10 November 2026)*
 
-Four fittings, his alone, used when he flies her (she's an NPC's ship; no player can buy or fit them). Each has a plain in-world name and does something you can see and understand on the scanner.
+Mark: *"she has none of the 'Bond' rubbish like a smoke screen or a tail plate. Will-o'-the-wisp maybe."* So she carries no gadgets at all: no smoke, no mines, no armour plates, no trackers. Her one strangeness is how she's seen, and it comes from the same experimental programme as her shield.
 
-| Fitting | What it does | What you see |
-|---|---|---|
-| **Smoke screen** | A cloud from the stern that breaks missile locks and hides her from scanners for a few seconds | A grey-green cloud; she drops off your scanner |
-| **Stern mine** | One mine, left in her wake; it drifts, then goes off near a ship | A small glowing point behind her, then a flash |
-| **Tail plate** | Armour that rises over the stern, and rear shots do nothing while it's up | A plate rising over her stern |
-| **Tracer tag** | Tags a ship so she can find it anywhere in the system | (On his side) a tagged ship stays on his scanner |
+**How she's seen:** like the old lights over marshes that travellers followed and never reached.
 
-*None of these is a film gadget's name, and the ideas are common to every spy story: a smoke screen, a mine, armour, a tracker. If a name feels too close, it changes.* Whether a cruiser keeps all four, or trades some for a host's touches (a welcome hail as you pass, an invitation aboard), is Mark's call.
+- She shows on your scanner as a faint light at the edge of range, there and then not. Turn towards her and she's further off than she should be. She's never close unless she means to be.
+- Follow her and she leads somewhere: a wreck, a beacon, a system on the Constrictor trail. Then she's gone.
+- It's the shield's programme, not a trick: the same experiment that hardens her shield bends how she shows on a scanner. That's what the Naval Yards were really building, and why the Constrictor matters.
+- **The glow never dims.** Up close she's as bright as any hull. It's the *scanner* that can't hold her, not her lines that fade.
+
+The few who see her talk about it in the saloon, and nobody believes them. That's the rare sighting [the world, 6.1](the-world.md#61-worked-example-cmdr-bond-007-retired) asks for.
 
 ## Where she appears
 
@@ -79,4 +79,4 @@ As [the world, 6.1](the-world.md#61-worked-example-cmdr-bond-007-retired) says: 
 
 1. **The hull.** *Done as pictures, 10 November 2026:* our Anaconda (redrawn after "quite ugly"; "much better") and his conversion with the saloon on her crest. Next: pictures of both flying in the game in the Neo look, at lane distance and on a phone, for Mark's yes.
 2. **In the game.** `content/ships/anaconda.json` (Cowell & MgRath) and his conversion (`aiAssisted: true`, never for sale), checked with `validate_ship` and `balance_check`, stats tuned.
-3. **The experimental shield, the party pieces, and his outings.** The shield and the fittings as NPC behaviour, tuned in the duel simulation, and the rare sighting on the trail.
+3. **The experimental shield, the will-o'-the-wisp, and his outings.** The shield as NPC behaviour, tuned in the duel simulation; how she shows on a scanner; and the rare sighting that leads somewhere on the trail.
