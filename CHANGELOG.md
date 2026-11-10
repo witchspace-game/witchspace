@@ -10,6 +10,11 @@ notice. Make a new heading for today if there isn't one, written like
 starting with `- `. Say what's different, not how it was done. Credit whoever
 reported it.
 
+## 10 November 2026
+
+- Deleting your account asks whether to take your shared clips down too. Left up, they keep your callsign, and nobody else can claim it. (Mark)
+- A deleted account is kept for 90 days, out of sight. Sign in again with the same email in that time and it all comes back: callsign, cloud save, card and firsts. After that it's erased. (Mark)
+
 ## 9 November 2026
 
 - Renowned pirates remember every commander. Put one in his pod and he's out of action for everyone, and the bar knows who did it. When he wins, he tells the next commander. Signed-in commanders only.
