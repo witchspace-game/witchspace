@@ -231,6 +231,41 @@ Website: a privacy line (what's kept at registration and in shared space, for ho
 - **Pirates and traders stay per player.** Simulating every NPC on the server would multiply the server's work many times over for little gain while commanders are few.
 - **Markets and contracts** stay per player until the server ledger (roadmap phase 4). Two commanders at Lave see the same starting prices, because both come from the seed and the clock, but their own trades only move their own market.
 
+### Ideas, not builds: getting commanders to meet (Mark, 10 November 2026)
+
+Mark: a few hundred commanders spread over 2,048 systems almost never meet. With about 10 online, the chance two share a system is about 2%, or about 16% if they all stay in Galaxy 1. He wants honest nudges, never fake players. **Decided: ideas for now.** They go on the ideas board for votes after Show HN. Scoped 10 November.
+
+Everything here counts **commanders in shared space** only. The server never sees single-player flying.
+
+| Idea | Cost | Notes |
+|---|---|---|
+| 1. The chart shows "N commanders this hour" | about 1 day, Worker deploy | Shared-space joins are already logged in `space_joins` (account, room, time; kept 1 hour). Add a public `GET /space/busy/<galaxy>` with counts only, no names, cached a minute, and a chart marker like the Pirates row. "Here now" also needs rooms to report leaves: about half a day more. |
+| 6. Traces: "a commander passed through an hour ago" | about half a day, alongside 1 | Keep `space_joins` 24 hours, not 1. The same endpoint gives the last time anyone was seen. |
+| 2. One headline event a day per galaxy | about 1 day, in the game only | Seeded from the clock (economy/events.ts), led in the News, and spreading outward by `newsArrives`. Stronger effects are what draw people, but they move the economy, so check them with the simulation first. |
+| 3. Real activity in the news, as counts | half a day for "4 commanders flew at Leesti this hour" (reuses 1) | Trade counts would need a report-your-trades endpoint, which is easy to fake: about 2 days, and better skipped. The renowned-pirate results are already shared (#409). |
+| 4. A weekly set-time convoy (Friday 20:00 UK out of Lave) | 1–2 weeks properly | Shared space has no ships that every commander sees, other than the commanders themselves. A cheap version: every game spawns the same seeded convoy at that time, about 1–2 days. But that's a meeting time, not a shared fight. |
+| 5. A shared bounty when two commanders damage one pirate | after 4 | Pirates are per player, so two commanders never hit the same one. |
+
+**Suggested order:** 1 with 6 (about 1.5 days, one Worker deploy), then 2, then the activity half of 3. 4 and 5 are a bigger, separate job: ships the server runs, which every commander in shared space sees.
+
+### Ideas, not builds: contested cargo (Mark, 10 November 2026)
+
+Mark: commander A takes a valuable "hot cargo" contract. A rival company offers commander B a contract to stop it before it's delivered, so both end up in the same system. **Rule (Mark): real missions like this only open once a commander reaches Competent.** It's an idea for the ideas board, not a build.
+
+- **What exists:** fights between commanders are already run by the server. It rules on hits and announces who destroyed whom, so a kill can't be faked. The server knows nothing about cargo or contracts: those are generated in each game (game/assignments.ts, `rivalPrice`). The shared-space protocol carries no cargo, so nothing drops when A is destroyed.
+- **The opt-in shape:** hot cargo pays more and says up front that a rival may send someone. A's position reaches B late, through the news delay, so it's a chase rather than a beacon. The law still applies, so a route through an anarchy is the danger zone. Whether attacking a commander in shared space feeds the law (Offender, Fugitive) still needs checking.
+- **The full version, about 1.5–2 weeks:**
+  - a server registry of hot cargo runs: posted by A, listed at nearby stations, taken by B, result recorded (about 2 days)
+  - the contract screens for both sides (about 2 days)
+  - canisters the server owns, dropped when A is hit and scooped by whoever the server says got there first (about 3 days; a small slice of convoy idea 4)
+  - testing on two devices
+- **The minimum honest version, about a week:**
+  - B's job is to stop the courier by destroying A's ship before delivery. No scooping.
+  - B is paid only on the server's own "destroyed" message.
+  - A's delivery payout is trusted to A's game, as all contracts are now.
+  - If no commander takes the intercept in time, a seeded NPC hunter comes instead, labelled as an NPC (built from the renowned pirate's spawning and fight style).
+- **Build first:** at about 10 online, there's almost never a B, so nearly every run ends with the NPC hunter. Build hot cargo plus the labelled NPC hunter first (about 1–2 days, in the game only, no server) to prove the fun. Then add the registry so a real commander can take the hunter's place.
+
 ---
 
 ## 3. Fair play and griefing
