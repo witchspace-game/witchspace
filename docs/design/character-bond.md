@@ -11,7 +11,7 @@ stages:
 
 # Design: CMDR Bond's ship
 
-*Proposed, 10 November 2026. Mark: "Lets build the ship and only CMDR BOND" (un-parked; the brief is [the world, 6.1](the-world.md#61-worked-example-cmdr-bond-007-retired) and [ideas](../ideas.md)). Mark, through the day: racing green rather than silver; "It needs to be a cruiser and have quarters for entertainment"; "instead of guessing, look for inspiration first"; "I think he should have an anaconda 2 inspired ship" (our own Anaconda, his a one-off); "compared to the Fdl it's quite ugly" (redrawn); "much better"; "For the lore etc she should have an experimental shielding". Change by pull request.*
+*Proposed, 10 November 2026. Mark: "Lets build the ship and only CMDR BOND" (un-parked; the brief is [the world, 6.1](the-world.md#61-worked-example-cmdr-bond-007-retired) and [ideas](../ideas.md)). Mark, through the day: racing green, then silver after seeing both in the game; "It needs to be a cruiser and have quarters for entertainment"; "instead of guessing, look for inspiration first"; "I think he should have an anaconda 2 inspired ship" (our own Anaconda, his a one-off); "compared to the Fdl it's quite ugly" (redrawn); "much better"; "For the lore etc she should have an experimental shielding". Change by pull request.*
 
 ## The rules for this one
 
@@ -47,7 +47,7 @@ The Cobra's maker's halo ship, an open brief until now ([the shipbuilders](shipb
 - **Why she exists:** the Bureau of Continuity ([lore](../lore.md)) had six Anacondas rebuilt in the years after the Grey Fever by **Hollis & Thorne**, coachbuilders who never built more than a dozen hulls a year, all to order. They became couriers for people, not cargo: envoys, witnesses, a scientist who couldn't be seen to travel. Most of the hold gave way to quarters.
 - **Her name: *Will o' the Wisp*** *(Mark)*, for how she shows on a scanner. Five were scrapped when the courier service closed. When the Bureau let him retire, nobody asked for the sixth back.
 - **Shape:** the Anaconda's hull with a **saloon raised on her crest** two-thirds back: a steep front like a windscreen, a flat roof over the lounge and the bar, falling away to the tail like a grand tourer's roof. No windows: the raised shape alone says people live and entertain aboard. 25.6 m high, inside the 26 m slot.
-- **Colour:** racing green (#26c46a), deeper and truer than the yard's Witchspace Green (#3dffb0).
+- **Colour: silver, #808d97** *(Mark)*. Racing green was tried first: true racing green glows too dim for the Neo look, and a brighter green read as ordinary green. Pale silvers bloomed into white blobs; this cool, mid silver glows as bright as any hull and keeps every line crisp. Clear of the yard's Coriolis White, which is far paler.
 - **She's fast** *(Mark)*: top speed 350, 125% of a Cobra's, quicker than a Falcon, behind only the Mamba and the Marshals' Lancer. She turns like the big ship she is (pitch 0.55, roll 1.0): a grand tourer, quick in a straight line. Hull 420, shields 480 (and the experimental shield), hold 40 t (the quarters took the rest), 3 missiles. Never for sale.
 
 ## The experimental shield *(Mark, 10 November 2026)*
