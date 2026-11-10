@@ -181,6 +181,7 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
 - **Size:**
   - numbers on every ship, the player's and NPCs', in the scanner, the target readout, police hails and bounties, with no server: about 1 day, and it could ship before registration;
   - the registry: about half a day on top of step 1 below.
+
 **The security record** (Mark: *"I was thinking about a security side as well"*). Alongside the passport, every visit to shared space is kept for 30 days:
 - account and callsign, system, time in and out, and how they left;
 - the network hash (never an IP address) and device type;
