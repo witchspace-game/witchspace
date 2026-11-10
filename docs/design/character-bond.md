@@ -2,7 +2,7 @@
 title: CMDR Bond's ship
 status: proposed
 pillar: world
-summary: An Anaconda the Bureau of Continuity had rebuilt as a cruiser for people, not cargo, with a saloon raised on her crest and an experimental shield from the same secret programme as the Constrictor. Racing green, never returned, never for sale.
+summary: The Will o' the Wisp, an Anaconda the Bureau of Continuity had rebuilt as a cruiser for people, not cargo, with a saloon raised on her crest and an experimental shield from the same secret programme as the Constrictor. Racing green, never returned, never for sale.
 stages:
   - The hull, drawn and approved from pictures | proposed
   - In the game - our Anaconda and his conversion, checked against the fleet | proposed
@@ -45,7 +45,7 @@ The Cobra's maker's halo ship, an open brief until now ([the shipbuilders](shipb
 ### His: an Anaconda the Bureau had converted
 
 - **Why she exists:** the Bureau of Continuity ([lore](../lore.md)) had six Anacondas rebuilt in the years after the Grey Fever by **Hollis & Thorne**, coachbuilders who never built more than a dozen hulls a year, all to order. They became couriers for people, not cargo: envoys, witnesses, a scientist who couldn't be seen to travel. Most of the hold gave way to quarters.
-- **Her name: *On Loan*.** Five were scrapped when the courier service closed. When the Bureau let him retire, nobody asked for the sixth back.
+- **Her name: *Will o' the Wisp*** *(Mark)*, for how she shows on a scanner. Five were scrapped when the courier service closed. When the Bureau let him retire, nobody asked for the sixth back.
 - **Shape:** the Anaconda's hull with a **saloon raised on her crest** two-thirds back: a steep front like a windscreen, a flat roof over the lounge and the bar, falling away to the tail like a grand tourer's roof. No windows: the raised shape alone says people live and entertain aboard. 25.6 m high, inside the 26 m slot.
 - **Colour:** racing green (#26c46a), deeper and truer than the yard's Witchspace Green (#3dffb0).
 - **She's fast** *(Mark)*: top speed 350, 125% of a Cobra's, quicker than a Falcon, behind only the Mamba and the Marshals' Lancer. She turns like the big ship she is (pitch 0.55, roll 1.0): a grand tourer, quick in a straight line. Hull 420, shields 480 (and the experimental shield), hold 40 t (the quarters took the rest), 3 missiles. Never for sale.
@@ -54,7 +54,7 @@ The Cobra's maker's halo ship, an open brief until now ([the shipbuilders](shipb
 
 **Where it came from:** the Co-operative Naval Yards' prototype programme, the one that built the **Constrictor**, the stolen prototype that is Bond's unclosed case ([the world, 6.1](the-world.md#61-worked-example-cmdr-bond-007-retired); [exploration](exploration.md#stage-4-legends)). The Bureau borrowed the programme's shield for its couriers, on trial. The trial was never written up, and his set was never taken back. So his ship carries a piece of the same secret as the ship he's still hunting, and he knows it.
 
-**What it does (to decide):** a shield that learns. Whatever keeps hitting her does less and less, down to about half, while it keeps hitting; let up, or hit her with something else, and it starts again. So the way to hurt her is to change weapons, or to use missiles, never to hold the trigger. It's readable on screen: each hit's flash on her shield grows brighter as it hardens (the glow only ever gets brighter, never dimmer).
+**What it does (to decide):** a shield that learns. Whatever keeps hitting her does less and less, down to about half, while it keeps hitting; let up, or hit her with something else, and it starts again. So the way to hurt her is to fire in bursts and change lasers, never to hold the trigger (missiles can't lock on her at all). It's readable on screen: each hit's flash on her shield grows brighter as it hardens (the glow only ever gets brighter, never dimmer).
 
 **What it isn't:** for sale, or fittable, or anyone else's. If a player ever sees it on another hull, it's because the Constrictor story has moved.
 
@@ -67,6 +67,7 @@ Mark: *"she has none of the 'Bond' rubbish like a smoke screen or a tail plate. 
 - She shows on your scanner as a faint light at the edge of range, there and then not. Turn towards her and she's further off than she should be. She's never close unless she means to be.
 - Follow her and she leads somewhere: a wreck, a beacon, a system on the Constrictor trail. Then she's gone.
 - It's the shield's programme, not a trick: the same experiment that hardens her shield bends how she shows on a scanner. That's what the Naval Yards were really building, and why the Constrictor matters.
+- **Nothing can lock on her** *(Mark)*. A missile's seeker needs the scanner to hold her, and it can't, at any range. To hurt her you need lasers, in bursts, and the learning shield punishes anyone who holds the trigger. She rarely fights, and almost nobody beats her when she does.
 - **The glow never dims.** Up close she's as bright as any hull. It's the *scanner* that can't hold her, not her lines that fade.
 
 The few who see her talk about it in the saloon, and nobody believes them. That's the rare sighting [the world, 6.1](the-world.md#61-worked-example-cmdr-bond-007-retired) asks for.
