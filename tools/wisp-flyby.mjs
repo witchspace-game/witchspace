@@ -4,6 +4,7 @@
 // looking at the hull in the Neo look before she's merged.
 //
 //   npx vite --port 5183 --strictPort   (in another terminal)
+//   cp docs/design/drafts/will-o-the-wisp.json content/ships/   (not committed: she's secret until live)
 //   node tools/wisp-flyby.mjs [--upright] [--out dir] [--url http://localhost:5183]
 
 import { mkdirSync, writeFileSync } from 'node:fs';

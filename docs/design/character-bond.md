@@ -79,5 +79,5 @@ As [the world, 6.1](the-world.md#61-worked-example-cmdr-bond-007-retired) says: 
 ## Stages
 
 1. **The hull.** *Done as pictures, 10 November 2026:* our Anaconda (redrawn after "quite ugly"; "much better") and his conversion with the saloon on her crest. Next: pictures of both flying in the game in the Neo look, at lane distance and on a phone, for Mark's yes.
-2. **In the game.** `content/ships/anaconda.json` (Cowell & MgRath) and his conversion (`aiAssisted: true`, never for sale), checked with `validate_ship` and `balance_check`, stats tuned.
+2. **In the game.** Drafted and checked (`validate_ship`, `balance_check`), and filmed flying in silver (`tools/wisp-flyby.mjs`). The files wait in [`drafts/`](drafts/) rather than `content/ships/`, because every ship file gets a public page on the site: Bond's stays secret until he's live, and the Anaconda's release (site page, shipyards) is Mark's call. To film her, copy her file into `content/ships/` locally.
 3. **The experimental shield, the will-o'-the-wisp, and his outings.** The shield as NPC behaviour, tuned in the duel simulation; how she shows on a scanner; and the rare sighting that leads somewhere on the trail.
