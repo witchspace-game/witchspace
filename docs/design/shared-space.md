@@ -152,20 +152,35 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
    - **It doesn't** (a beam laser with no purchase, Dangerous with no kills on record, an altered ledger, a tampered save): they don't fly in shared space until a maintainer has looked. Mark gets an email (as the ideas board does, #409): *"CMDR X: a beam laser with no purchase on record (registered 9 November 18:42)"*. The rest of the game goes on as normal.
 8. **Single player unregistered** carries on as it is, and nothing there is checked. If someone plays unregistered for a while, buys things, then wants to register, the server can't trust that time. They choose: register a fresh basic ship (their unregistered save carries on as a separate single-player game), or keep playing unregistered.
 
-**The transponder code stays with the ship** (Mark, 10 November 2026: *"Can we keep a record of every ship's transponder code? … so the transponder code stays with the ship."*). The game already has a transponder: on or off for running dark (Modern), damaged in a fight, and the police read your hull when they can't hail you. Registration gives it a code.
-- **Every hull gets a code for life**, issued by the server, like *WS-7F3K-29*. The registered Cobra gets the first one. Each ship bought after that gets its own.
-- **The code belongs to the ship, not the commander.** Renaming or repainting it doesn't change the code. Kit fitted is logged against it (what, where, when, for how much), so each hull has its own history.
-- **The ship registry** keeps every code ever issued: the hull type, who holds it, and each change, with date and system:
+**Every ship has a transponder number** (Mark, 10 November 2026: *"Can we keep a record of every ship's transponder code? … so the transponder code stays with the ship. … Why don't we just issue every ship a transponder number?"*). The game already has a transponder: on or off for running dark (Modern), damaged in a fight, and the police read your hull when they can't hail you. Now it carries a number, on every ship in the game.
+
+- **Every ship has one from the moment it exists,** registered or not, the player's or an NPC's: *WS-7F3K-29*. It's part of the world, not a sign-up step. A new commander's first Cobra shows its number on the first launch.
+- **The number belongs to the ship, not the commander.** Renaming or repainting the ship doesn't change it. Kit fitted is logged against it (what, where, when, for how much), so each hull has its own history.
+- **Who issues it is what counts.** A number made in the browser is a label: anyone who edits a save can give themselves any number. A number in the server's registry is proof.
+  - **Unregistered:** the number is made in the game and works everywhere except shared space.
+  - **Registering** writes that same number into the registry. You keep your number; registering makes it official.
+  - **Every ship bought after registering** gets its number from the server, straight into the registry.
+- **The ship registry** keeps every registered number: the hull type, who holds it, and each change, with date and system:
   - *registered*;
   - *kit fitted*;
-  - *traded in*: the hull goes back to the yard with its code;
-  - *destroyed*: the code is retired with the wreck, and the replacement Cobra gets a new one.
-  If commanders can ever sell ships to each other, the code and its history go to the new owner.
-- **At the door:** the ship sends its code when it enters shared space. A code the server never issued, one held by another commander, or one whose recorded kit doesn't match what the ship carries is the *"it's not true"* moment, caught without guesswork.
-- **Seen by others:** targeting a commander shows *"Cobra Mk III Small Mercy · WS-7F3K-29"*. Shared-space police log it, and a Wanted notice names it. Running dark hides it, which gives running dark a real point in shared space.
-- **Privacy:** a code names a ship, not a person, but the registry ties it to a callsign. It follows the account: hidden at once and archived 90 days when the account is deleted, then erased. A destroyed or traded-in hull's entry outlives its commander only as the hull type and code, with no callsign.
-- **Size:** about half a day on top of step 1 below (the registration number becomes the first code).
-
+  - *traded in*: the hull goes back to the yard with its number;
+  - *destroyed*: the number is retired with the wreck, and the replacement Cobra gets a new one.
+  If commanders can ever sell ships to each other, the number and its history go to the new owner.
+- **At the door:** the ship sends its number when it enters shared space. The server turns it away, the *"it's not true"* moment caught without guesswork, if:
+  - the number isn't in the registry;
+  - another commander holds it;
+  - its recorded kit doesn't match what the ship carries.
+- **Seen by others:** targeting a commander shows *"Cobra Mk III Small Mercy · WS-7F3K-29"*. Shared-space police log it, and a Wanted notice names it. Running dark hides it, which gives running dark a real point.
+- **NPC ships carry numbers too,** seeded from the system, the clock and the ship, so every commander sees the same number on the same ship. That makes the world feel registered and gives the law something to name:
+  - **The scanner and the police:** *"Python · CX-4471 · Offender"*. A police hail can read your number back to you, and a bounty can name the pirate's: *"Wanted: Python CX-4471, piracy, 120 Cr"*.
+  - **Renowned pirates** fly famous numbers, the same for everyone: *"Ambrose Hale's Cobra, RQ-0046, the rose Cobra"*. The news and the saloon use them: *"RQ-0046 seen near Riedquat"*.
+  - **The Falcon, Legends and characters** get theirs written by hand, like the famous three pirates.
+  - **The format** shows who flies it: two letters for a region or maker, then digits for NPCs, and *WS-* plus a mixed code for commanders, so a commander's ship is never mistaken for an NPC's.
+  - NPC numbers are made in the game from the seed, never registered, so they cost the server nothing.
+- **Privacy:** a number names a ship, not a person, but the registry ties a registered number to a callsign. It follows the account: hidden at once and archived 90 days when the account is deleted, then erased. A destroyed or traded-in hull's entry outlives its commander only as the hull type and number, with no callsign.
+- **Size:**
+  - numbers on every ship, the player's and NPCs', in the scanner, the target readout, police hails and bounties, with no server: about 1 day, and it could ship before registration;
+  - the registry: about half a day on top of step 1 below.
 **The security record** (Mark: *"I was thinking about a security side as well"*). Alongside the passport, every visit to shared space is kept for 30 days:
 - account and callsign, system, time in and out, and how they left;
 - the network hash (never an IP address) and device type;
@@ -185,8 +200,9 @@ It flags one account from many networks at once, many accounts from one network,
 5. **A flagged commander at the door:** kept out of shared space until Mark looks *(suggested)*; or let in with a hollow insignia.
 6. **Ideas board:** this is a design decision Mark has made, so it's written here; it could also go on the board, framed as "Register your ship", for players to see it coming.
 
-**Size.** About 4½–5½ days, in this order, each its own pull request:
-1. Registration: the prompt, the stamp, the certificate, the ledger's start, and the first transponder code with the ship registry (2½ days, Worker deploy).
+**Size.** About 5½–6½ days, in this order, each its own pull request:
+0. Transponder numbers on every ship, NPCs' included, in the game only (1 day, no server; can ship any time).
+1. Registration: the prompt, the stamp, the certificate, the ledger's start, and the ship registry (2½ days, Worker deploy).
 2. Kit and rank in the ledger, checked on each cloud save (1 day, Worker deploy).
 3. The door: the passport check, the 30-day visit record, flags emailed to Mark, bans (1–2 days, Worker deploy).
 4. Existing commanders registered, and Mark's look at the list (half a day).
