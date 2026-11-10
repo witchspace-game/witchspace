@@ -453,6 +453,7 @@ export function spawnRenowned(at: THREE.Vector3, near: THREE.Vector3) {
   npc.style = 'holdBack';
   npc.laser = RENOWNED_LASER;
   npc.gimbal = RENOWNED_GIMBAL;
+  npc.rearGun = true; // a beam aft as well as forward: his tail is no safe place (Mark, 10 November 2026)
   npc.bounty = BOUNTIES.renowned;
   npc.ecm = true;
   npc.missiles = 2;

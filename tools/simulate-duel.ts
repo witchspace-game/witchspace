@@ -44,12 +44,14 @@ interface Opponent {
   laser: Laser;
   style: FightStyle;
   gimbal?: number;
+  rearGun?: boolean;
 }
 
 const OPPONENTS: Opponent[] = [
   { name: 'Sidewinder (pack)', ship: 'sidewinder', laser: PIRATE_LASER, style: 'joust' },
   { name: 'Mamba (pack)', ship: 'mamba', laser: PIRATE_LASER, style: 'joust' },
-  { name: 'Renowned Cobra', ship: 'cobra-mk3', laser: RENOWNED_LASER, style: 'holdBack', gimbal: THREE.MathUtils.degToRad(4) },
+  { name: 'Renowned Cobra', ship: 'cobra-mk3', laser: RENOWNED_LASER, style: 'holdBack', gimbal: THREE.MathUtils.degToRad(4), rearGun: true },
+  { name: 'Renowned, no rear', ship: 'cobra-mk3', laser: RENOWNED_LASER, style: 'holdBack', gimbal: THREE.MathUtils.degToRad(4) },
 ];
 
 /** Does a shot along `dir` from `from` pass within `radius` of `at`, inside `range`? */
@@ -65,6 +67,7 @@ function duel(o: Opponent, run: boolean) {
   const npc = new NpcShip(load(o.ship), 'pirate', o.laser, { centre: new THREE.Vector3(), radius: 1000, height: 0, rate: 0.1, angle: 0 });
   npc.style = o.style;
   npc.gimbal = o.gimbal;
+  npc.rearGun = Boolean(o.rearGun);
   const dir = new THREE.Vector3(rand() - 0.5, (rand() - 0.5) * 0.4, 1).normalize();
   npc.obj.position.copy(dir.multiplyScalar(4000));
   npc.obj.lookAt(cobra.obj.position);

@@ -152,6 +152,10 @@ export class NpcShip {
   guns?: THREE.Vector3[];
   /** Gimballed lasers swing onto a target this far off the nose (radians); fixed ones need it dead ahead. */
   gimbal?: number;
+  /** A second laser on the rear mount, the same as the front one: sitting on his tail isn't safe (a renowned pirate, Mark). */
+  rearGun = false;
+  /** The last shot went out of the tail. */
+  firedAft = false;
   /** How it fights (see FightStyle). */
   style: FightStyle = 'joust';
   /** Holding back: pulled out to let the shields recharge, until they're up again. */
@@ -165,6 +169,7 @@ export class NpcShip {
 
   /** Where a shot leaves from, and which way: one from the nose, or one from each gun at once, converging on the target. */
   muzzles(shot: THREE.Vector3): { origin: THREE.Vector3; dir: THREE.Vector3 }[] {
+    if (this.firedAft) return [{ origin: this.obj.position.clone().addScaledVector(shot, 20), dir: shot }];
     if (!this.guns?.length) return [{ origin: this.obj.position.clone().addScaledVector(shot, 20), dir: shot }];
     // Wing guns converge where she's aiming, or a shot from a tip passes beside the target.
     const range = this.target ? this.target.obj.position.distanceTo(this.obj.position) : this.laser.range;
@@ -343,10 +348,15 @@ export class NpcShip {
 
     if (this.mode === 'attack' && dist < this.laser.range && this.cooldown <= 0) {
       const fwd = this.ship.forward();
-      if (fwd.angleTo(toTarget!) < (this.gimbal ?? FIRE_CONE)) {
+      const cone = this.gimbal ?? FIRE_CONE;
+      const ahead = fwd.angleTo(toTarget!) < cone;
+      const aft = !ahead && this.rearGun && fwd.clone().negate().angleTo(toTarget!) < cone;
+      if (ahead || aft) {
         this.cooldown = this.laser.interval;
+        this.firedAft = aft;
         const spread = new THREE.Vector3().randomDirection().multiplyScalar(Math.tan(AIM_SPREAD) * Math.random());
-        return (this.gimbal ? toTarget!.clone().normalize() : fwd).add(spread).normalize();
+        const along = aft ? fwd.clone().negate() : fwd;
+        return (this.gimbal ? toTarget!.clone().normalize() : along).add(spread).normalize();
       }
     }
     return null;

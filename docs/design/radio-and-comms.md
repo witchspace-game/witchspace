@@ -121,12 +121,31 @@ Played first, in Mark's scenario (running dark, a dogfight with pirates, into th
 
 Mark: *"If they were important, I wanted them to appear on the screen and then animate away, fade away back into the corner, so that we know there's time for the user to read the message. It doesn't have to be up for long, but if it just flashed up quickly, was semi-transparent, and faded away into the corner, it would give the player a quick heads-up on what that message is."*
 
-- **The motion:** an important message (*worth knowing* and up) appears in the middle of the screen, semi-transparent, for a moment. Then it shrinks and drifts into the radio's corner (bottom left on a desktop, the Radio pill on a phone), where it's kept. You see what it said, and where to find it again.
+- **The motion:** an important message (*worth knowing* and up) appears in the middle of the screen, semi-transparent, for a moment. Then it shrinks and drifts into the radio's corner (the log, top left, on a desktop; the Radio pill on a phone), where it's kept. You see what it said, and where to find it again.
 - **Not for long, and never in the way:** a second or two, clear of the crosshair, and never during a fight (the fight summary covers that).
 - **The ship's computers speak too:** the trip computer and the contract computer use the same heads-up for what you need to do before the next leg. For example, *"Refuel before the next jump: Diso is 6.2 LY, you have 4.1"* or *"Next leg: Leesti, 2 jumps · Hexon delivery due in 3"*. Contracts are confusing, and this is to stop players getting lost in them.
 - **Pictures first**, as before.
 
 *Built 9 November 2026* (`src/ui/headsUp.ts`): every *worth knowing* line from the radio, outside fights, shows for 1 to 3 seconds (by its length) above the crosshair, semi-transparent, under the banner if a flash is up. Then it shrinks into the Radio pill (phone) or the log (desktop), which glints as it lands. Two at most wait their turn. Reduced motion: it fades where it is. The ship's computers have their own voice (a screen mark, pale green): the **trip computer** on arrival ("Next jump: Diso, 6.2 LY · on the way to Leesti, 3 jumps · 4.1 LY in the tank: refuel first"), **trail** progress, and **explorer rank**.
+
+*Desktop, 10 November 2026 (Mark):* the radio moved to the top left on a computer, as on the phone: the job strip, then the log, then the cards waiting for an answer. A heads-up's line now joins the log as it lands, not before, so it's never on screen twice. Whoever is in your sights is named just above them, not at the top edge.
+
+#### The fight summary: needs a better design *(Mark, 10 November 2026)*
+
+Mark: *"Can we make a note about the While you were fighting card because it's not very elegant."*
+
+What it does today (`src/ui/radio.ts`, `setRadioFight`): when a fight ends, one card sums up every line heard during it, as a single run of text with an "Open the radio" button. Seen in the renowned-pirate clips, the problems are:
+
+- **A wall of text again.** Everything is joined into one paragraph (*"Pirate: Easy, Commander… · Teague Grieve: I hear you've been busy… · Combat computer: Teague Grieve is coming for you…"*). It's what the redesign set out to stop.
+- **It repeats the log.** The same lines are already in the radio, one row per voice.
+- **It comes up big, at the wrong moment.** It lands as the fight ends, when the player is looking at the wreck or the pod.
+- **Some of it was urgent.** A pirate's warning that his boss is coming shouldn't wait for a fight to end.
+
+Directions to try, pictures first:
+
+1. **No card: the log does it.** Lines heard in a fight go into the log as usual, marked unread. When the fight ends, the radio glints once and shows a count ("3 while you were fighting"). Nothing big comes up.
+2. **One line per voice, small.** If a card stays, it holds one short row per voice, the same as the log rows: mark, name, the latest line. No run-on paragraph and no button. It fades on its own.
+3. **Let the important ones through.** Anything *worth knowing* from a ship in the fight (a pirate's warning, a renowned pirate's call) shows as a heads-up even mid-fight. Only chatter waits.
 
 **Over to the community** *(Mark)*. These are starting points, not the answer. If you have a better idea for the radio and the comms array, or improvements to any of this, we'd love it: a sketch, a mock-up, a prototype or a paragraph. Post it in [Discussions](https://github.com/witchspace-game/witchspace/discussions/categories/ideas) or on the [ideas board](https://witchspace.org.uk/ideas/?about=The%20radio%20and%20comms), and the best answer gets built, credited to you.
 
