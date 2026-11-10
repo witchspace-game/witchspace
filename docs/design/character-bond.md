@@ -2,11 +2,11 @@
 title: CMDR Bond's ship
 status: proposed
 pillar: world
-summary: The Will o' the Wisp, an Anaconda the Bureau of Continuity had rebuilt as a cruiser for people, not cargo, with a saloon raised on her crest and an experimental shield from the same secret programme as the Constrictor. Racing green, never returned, never for sale.
+summary: On Loan, an Anaconda the Bureau of Continuity had rebuilt as a cruiser for people, not cargo, with a saloon raised on her crest, the finished Will-o'-the-Wisp and an experimental shield. Silver, fast, never returned, never for sale.
 stages:
   - The hull, drawn and approved from pictures | proposed
   - In the game - our Anaconda and his conversion, checked against the fleet | proposed
-  - The experimental shield, the will-o'-the-wisp, and his outings | proposed
+  - The experimental shield, the Wisp, and his outings | proposed
 ---
 
 # Design: CMDR Bond's ship
@@ -45,7 +45,7 @@ The Cobra's maker's halo ship, an open brief until now ([the shipbuilders](shipb
 ### His: an Anaconda the Bureau had converted
 
 - **Why she exists:** the Bureau of Continuity ([lore](../lore.md)) had six Anacondas rebuilt in the years after the Grey Fever by **Hollis & Thorne**, coachbuilders who never built more than a dozen hulls a year, all to order. They became couriers for people, not cargo: envoys, witnesses, a scientist who couldn't be seen to travel. Most of the hold gave way to quarters.
-- **Her name: *Will o' the Wisp*** *(Mark)*, for how she shows on a scanner. Five were scrapped when the courier service closed. When the Bureau let him retire, nobody asked for the sixth back.
+- **Her name: *On Loan*** *(Mark)*. For an afternoon she was the *Will o' the Wisp*, until we found the name already belonged to the explorers' prototype; she carries that device instead (below). Five were scrapped when the courier service closed. When the Bureau let him retire, nobody asked for the sixth back.
 - **Shape:** the Anaconda's hull with a **saloon raised on her crest** two-thirds back: a steep front like a windscreen, a flat roof over the lounge and the bar, falling away to the tail like a grand tourer's roof. No windows: the raised shape alone says people live and entertain aboard. 25.6 m high, inside the 26 m slot.
 - **Colour: silver, #808d97** *(Mark)*. Racing green was tried first: true racing green glows too dim for the Neo look, and a brighter green read as ordinary green. Pale silvers bloomed into white blobs; this cool, mid silver glows as bright as any hull and keeps every line crisp. Clear of the yard's Coriolis White, which is far paler.
 - **She's fast** *(Mark)*: top speed 350, 125% of a Cobra's, quicker than a Falcon, behind only the Mamba and the Marshals' Lancer. She turns like the big ship she is (pitch 0.55, roll 1.0): a grand tourer, quick in a straight line. Hull 420, shields 480 (and the experimental shield), hold 40 t (the quarters took the rest), 3 missiles. Never for sale.
@@ -58,15 +58,17 @@ The Cobra's maker's halo ship, an open brief until now ([the shipbuilders](shipb
 
 **What it isn't:** for sale, or fittable, or anyone else's. If a player ever sees it on another hull, it's because the Constrictor story has moved.
 
-## No gadgets: a will-o'-the-wisp *(Mark, 10 November 2026)*
+## No gadgets: the Will-o'-the-Wisp *(Mark, 10 November 2026)*
 
-Mark: *"she has none of the 'Bond' rubbish like a smoke screen or a tail plate. Will-o'-the-wisp maybe."* So she carries no gadgets at all: no smoke, no mines, no armour plates, no trackers. Her one strangeness is how she's seen, and it comes from the same experimental programme as her shield.
+Mark: *"she has none of the 'Bond' rubbish like a smoke screen or a tail plate. Will-o'-the-wisp maybe."* So she carries no gadgets at all: no smoke, no mines, no armour plates, no trackers. Her one strangeness is how she's seen.
+
+**One story, not two** *(Mark: "She carries the Wisp")*. The game already has a **Will-o'-the-Wisp**: the prototype in the rack of the lost Science Division courier, the *Quiet Hand*, that explorers find ([exploration](exploration.md#the-lost-courier-and-the-will-o-the-wisp), [lore](../lore.md)). While your lasers are cold, enemy lasers miss half the time and half the missiles are fooled. *On Loan* carries the **finished** device, the one the prototype was meant to become, fitted when the Bureau's couriers were the only ships that needed it. It's why the *Quiet Hand*'s last order said "under no circumstances let this fall into private hands", and why Wexley-Yorozu want theirs back: a retired agent has had one all along.
 
 **How she's seen:** like the old lights over marshes that travellers followed and never reached.
 
 - She shows on your scanner as a faint light at the edge of range, there and then not. Turn towards her and she's further off than she should be. She's never close unless she means to be.
 - Follow her and she leads somewhere: a wreck, a beacon, a system on the Constrictor trail. Then she's gone.
-- It's the shield's programme, not a trick: the same experiment that hardens her shield bends how she shows on a scanner. That's what the Naval Yards were really building, and why the Constrictor matters.
+- It's the finished Wisp, not a trick: what the explorers' prototype does by halves (missing lasers, fooled missiles), hers does all the way, and it bends how she shows on a scanner too.
 - **Nothing can lock on her** *(Mark)*. A missile's seeker needs the scanner to hold her, and it can't, at any range. To hurt her you need lasers, in bursts, and the learning shield punishes anyone who holds the trigger. She rarely fights, and almost nobody beats her when she does.
 - **The glow never dims.** Up close she's as bright as any hull. It's the *scanner* that can't hold her, not her lines that fade.
 
@@ -79,5 +81,5 @@ As [the world, 6.1](the-world.md#61-worked-example-cmdr-bond-007-retired) says: 
 ## Stages
 
 1. **The hull.** *Done as pictures, 10 November 2026:* our Anaconda (redrawn after "quite ugly"; "much better") and his conversion with the saloon on her crest. Next: pictures of both flying in the game in the Neo look, at lane distance and on a phone, for Mark's yes.
-2. **In the game.** Drafted and checked (`validate_ship`, `balance_check`), and filmed flying in silver (`tools/wisp-flyby.mjs`). The files wait in [`drafts/`](drafts/) rather than `content/ships/`, because every ship file gets a public page on the site: Bond's stays secret until he's live, and the Anaconda's release (site page, shipyards) is Mark's call. The Anaconda's file waits in [`drafts/`](drafts/). *The Will o' the Wisp is in the game* (`content/ships/will-o-the-wisp.json`, 10 November 2026), marked `unlisted`: the game, gifts and shared space know her, but she's kept off the site, the showroom's browsing and the public ship lists, and with no price she's never in a shipyard. Mark, as the game's owner, holds one in his own fleet (Mark: "As the owner of Witchspace, I have ownership of every ship in my fleet").
-3. **The experimental shield, the will-o'-the-wisp, and his outings.** The shield as NPC behaviour, tuned in the duel simulation; how she shows on a scanner; and the rare sighting that leads somewhere on the trail.
+2. **In the game.** Drafted and checked (`validate_ship`, `balance_check`), and filmed flying in silver (`tools/on-loan-flyby.mjs`). The Anaconda's file waits in [`drafts/`](drafts/): every ship file gets a public page on the site, and her release (site page, shipyards) is Mark's call. *On Loan is in the game* (`content/ships/on-loan.json`, 10 November 2026), marked `unlisted`: the game, gifts and shared space know her, but she's kept off the site, the showroom's browsing and the public ship lists, and with no price she's never in a shipyard. Off the site isn't secret: the repo is public. Mark, as the game's owner, holds one in his own fleet (Mark: "As the owner of Witchspace, I have ownership of every ship in my fleet").
+3. **The experimental shield, the Wisp, and his outings.** The shield and the finished Wisp as NPC behaviour (`src/flight/wisp.ts` has the prototype's), tuned in the duel simulation; how she shows on a scanner; and the rare sighting that leads somewhere on the trail.

@@ -1,11 +1,10 @@
-// The Will o' the Wisp, CMDR Bond's ship, passing close: she comes up on our left in open space,
+// On Loan, CMDR Bond's ship, passing close: she comes up on our left in open space,
 // overtakes slowly about 300 m off, banking a little, then pulls ahead and climbs away. Filmed with
 // the HUD and the game's own sound, as tools/pirate-clip.mjs films (tab capture, H.264 + AAC), for
 // looking at the hull in the Neo look before she's merged.
 //
 //   npx vite --port 5183 --strictPort   (in another terminal)
-//   cp docs/design/drafts/will-o-the-wisp.json content/ships/   (not committed: she's secret until live)
-//   node tools/wisp-flyby.mjs [--upright] [--out dir] [--url http://localhost:5183]
+//   node tools/on-loan-flyby.mjs [--upright] [--out dir] [--url http://localhost:5183]
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -165,7 +164,7 @@ await page.evaluate(async (narrow) => {
   const q = me.quaternion.clone();
   const p0 = me.position.clone();
   const at = (x, y, z) => new p0.constructor(-x * narrow, y, z).applyQuaternion(q).add(p0);
-  const her = addNpc(shipById('will-o-the-wisp'), 'trader', at(-240, -30, -320));
+  const her = addNpc(shipById('on-loan'), 'trader', at(-240, -30, -320));
   Object.assign(her, { hostile: false, fights: false });
   window.__her = her;
   const from = performance.now();
@@ -195,7 +194,7 @@ await cut();
 const size = await page.evaluate(() => window.__rec.finish());
 const parts = [];
 for (let i = 0; i < size; i += 4 << 20) parts.push(Buffer.from(await page.evaluate(([i, n]) => window.__rec.chunk(i, n), [i, 4 << 20]), 'base64'));
-const file = join(OUT, `will-o-the-wisp${UPRIGHT ? '-upright' : ''}.mp4`);
+const file = join(OUT, `on-loan${UPRIGHT ? '-upright' : ''}.mp4`);
 writeFileSync(file, Buffer.concat(parts));
 say(`${file} · ${(size / 1048576).toFixed(1)} MB`);
 await browser.close();

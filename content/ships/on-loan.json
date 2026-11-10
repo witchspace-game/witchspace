@@ -1,11 +1,11 @@
 {
   "$schema": "../../schemas/ship.schema.json",
-  "id": "will-o-the-wisp",
+  "id": "on-loan",
   "name": "Anaconda (Bureau conversion)",
   "manufacturer": "Cowell & MgRath, converted by Hollis & Thorne",
   "unlisted": true,
   "role": "multirole",
-  "description": "An Anaconda the Bureau of Continuity had rebuilt as a cruiser for people, not cargo: most of the hold gave way to quarters, and a saloon rises on her crest, falling away to the tail like a grand tourer's roof. Fast, and hard to hold on a scanner. Six were converted; one was never returned.",
+  "description": "An Anaconda the Bureau of Continuity had rebuilt as a cruiser for people, not cargo: most of the hold gave way to quarters, and a saloon rises on her crest, falling away to the tail like a grand tourer's roof. Fast, and fitted with the finished Will-o'-the-Wisp, so nothing holds her for long. Six were converted; one was never returned.",
   "credits": {
     "authors": [
       "Witchspace contributors"
