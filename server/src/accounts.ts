@@ -1762,7 +1762,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
   /** Everything goes but the callsign, held when their shared clips stay up under it (the Worker says, from the clips). */
   private deleteAccount(account: Account, clipsLeft: boolean): Response {
     if (clipsLeft && account.callsign) this.sql.exec('INSERT OR IGNORE INTO retired (name_key, name, at) VALUES (?, ?, ?)', nameKey(account.callsign), account.callsign, Date.now());
-    for (const table of ['saves', 'sessions', 'contact', 'devices', 'firsts', 'renowned', 'submissions', 'oauth_codes', 'oauth_tokens']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
+    for (const table of ['saves', 'sessions', 'contact', 'devices', 'cards', 'firsts', 'renowned', 'submissions', 'oauth_codes', 'oauth_tokens']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM codes WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM accounts WHERE id = ?', account.id);
