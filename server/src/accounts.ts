@@ -141,6 +141,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec('CREATE TABLE IF NOT EXISTS sends (email TEXT NOT NULL, net TEXT NOT NULL, t INTEGER NOT NULL)');
     // Protected callsigns released to one person (names.ts): only that email's account may claim them.
     this.sql.exec('CREATE TABLE IF NOT EXISTS releases (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL, created INTEGER NOT NULL)');
+    // Callsigns of deleted accounts whose shared clips stay up under that name (Mark): nobody else may
+    // claim one, so an old clip never looks like a new commander's. Only the name is kept, never who.
+    this.sql.exec('CREATE TABLE IF NOT EXISTS retired (name_key TEXT PRIMARY KEY, name TEXT NOT NULL, at INTEGER NOT NULL)');
     // Anonymous daily totals (which rules, which look), to decide Classic's future. Nothing per person:
     // `pings` only stops a network being counted twice in a day, by a salted one-way hash.
     this.sql.exec('CREATE TABLE IF NOT EXISTS stats (day TEXT NOT NULL, key TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY (day, key))');
@@ -264,7 +267,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'GET' && path === '/me/save') return this.getSave(account);
     if (m === 'PUT' && path === '/me/save') return this.putSave(request, account);
     if (m === 'POST' && path === '/auth/signout') return this.signOut(request);
-    if (m === 'DELETE' && path === '/me') return this.deleteAccount(account);
+    if (m === 'DELETE' && path === '/me') return this.deleteAccount(account, request.headers.get('X-Clips-Left') === '1');
     if (m === 'GET' && path === '/me/contact') return this.getContact(account, url);
     if (m === 'PUT' && path === '/me/contact') return this.putContact(request, account);
     if (m === 'POST' && path === '/me/firsts') return this.claimFirsts(request, account);
@@ -724,7 +727,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
   }
 
   private readonly callsignLookups: CallsignLookups = {
-    holder: (key) => (this.sql.exec('SELECT id FROM accounts WHERE callsign_loose = ? LIMIT 1', key).toArray()[0]?.id as string | undefined) ?? null,
+    holder: (key) =>
+      (this.sql.exec('SELECT id FROM accounts WHERE callsign_loose = ? LIMIT 1', key).toArray()[0]?.id as string | undefined) ??
+      (this.sql.exec('SELECT 1 FROM retired WHERE name_key = ?', key).toArray().length ? 'retired' : null),
     releasedTo: (key) => (this.sql.exec('SELECT email FROM releases WHERE name_key = ?', key).toArray()[0]?.email as string | undefined) ?? null,
   };
 
@@ -1754,7 +1759,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     return { status: res.status, data: await res.text() };
   }
 
-  private deleteAccount(account: Account): Response {
+  /** Everything goes but the callsign, held when their shared clips stay up under it (the Worker says, from the clips). */
+  private deleteAccount(account: Account, clipsLeft: boolean): Response {
+    if (clipsLeft && account.callsign) this.sql.exec('INSERT OR IGNORE INTO retired (name_key, name, at) VALUES (?, ?, ?)', nameKey(account.callsign), account.callsign, Date.now());
     for (const table of ['saves', 'sessions', 'contact', 'devices', 'firsts', 'renowned', 'submissions', 'oauth_codes', 'oauth_tokens']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM codes WHERE email = ?', account.email);

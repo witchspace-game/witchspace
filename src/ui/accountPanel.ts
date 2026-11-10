@@ -5,6 +5,7 @@
 
 import { loadCommander, saveCommander, type Commander } from '../game/commander';
 import * as acct from '../net/account';
+import { myClips, takeDownClip } from '../net/clips';
 import { disablePush, enablePush, getContact, needsHomeScreen, pushSupported, setEmailContact } from '../net/notify';
 import { escapeHtml } from './escape';
 
@@ -27,6 +28,9 @@ let devLink = '';
 let devCode = '';
 let choice: { local: Commander; cloud: Commander; updated: number } | null = null;
 let deleteArmed = false;
+/** Your shared clips still up, asked for when you arm the delete: they stay up under your callsign unless you tick the box. */
+let clipsUp: string[] = [];
+let takeClipsDown = false;
 /** Whether the companies may contact you (loaded when the panel opens). */
 let contact: acct.Contact | null = null;
 let turnstileToken = '';
@@ -193,6 +197,11 @@ function render() {
     html += `<dl><dt>Signed in</dt><dd>${escapeHtml(a.email)}</dd><dt>Callsign</dt><dd>${a.callsign ? `CMDR ${escapeHtml(a.callsign)}` : '<i>not claimed yet</i>'}</dd><dt>Cloud save</dt><dd>${acct.syncedAt() ? 'On: your commander saves to your account' : 'Waiting for your first save'}</dd></dl>`;
     if (!a.callsign) html += `<form class="callsign-form"><input maxlength="24" placeholder="Your callsign" aria-label="Callsign" /> <button type="submit">Claim</button></form>`;
     html += contactSection();
+    if (deleteArmed && clipsUp.length) {
+      const n = clipsUp.length === 1 ? 'clip' : `${clipsUp.length} clips`;
+      const by = a.callsign ? ` under CMDR ${escapeHtml(a.callsign)}, and nobody else can take that callsign` : '';
+      html += `<p class="meta delete-clips"><label><input type="checkbox" data-clips-down ${takeClipsDown ? 'checked' : ''} /> Also take down my shared ${n}</label><br><span class="small">Left unticked, ${clipsUp.length === 1 ? 'it stays' : 'they stay'} up${by}.</span></p>`;
+    }
     html += `<p class="account-actions"><button type="button" data-signout>Sign out</button> <button type="button" data-delete class="${deleteArmed ? 'danger' : ''}">${deleteArmed ? 'Press again to delete everything' : 'Delete account'}</button></p>`;
   }
   html += `<p class="account-close"><button type="button" data-close>Close</button><span class="small muted">or press Esc or A</span></p>`;
@@ -291,14 +300,25 @@ function wire() {
     updateButton();
     render();
   });
+  panel.querySelector<HTMLInputElement>('[data-clips-down]')?.addEventListener('change', (e) => {
+    takeClipsDown = (e.target as HTMLInputElement).checked;
+  });
   panel.querySelector('[data-delete]')?.addEventListener('click', async () => {
     if (!deleteArmed) {
       deleteArmed = true;
+      takeClipsDown = false;
+      clipsUp = ((await myClips()) ?? []).filter((c) => c.up).map((c) => c.id);
       render();
       return;
     }
     deleteArmed = false;
     try {
+      // Clips first, while you're still signed in to say they're yours.
+      if (takeClipsDown)
+        for (const id of clipsUp) {
+          const r = await takeDownClip(id);
+          if ('error' in r) throw new Error(`Couldn't take a clip down (${r.error}): nothing was deleted`);
+        }
       await acct.deleteAccount();
       hooks.flash('Account deleted. Your commander stays on this device.', 4);
     } catch (err) {

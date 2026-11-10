@@ -111,7 +111,7 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
       const allowed = ORIGINS.some((o) => o.test(origin));
       if (!allowed) return new Response('Forbidden', { status: 403 });
       if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
-      const res = await (ideas ? env.IDEAS.get(env.IDEAS.idFromName('board')) : accountsOf(env)).fetch(request);
+      const res = await (ideas ? env.IDEAS.get(env.IDEAS.idFromName('board')) : accountsOf(env)).fetch(await withClipsLeft(request, env, url));
       const out = new Response(res.body, res);
       for (const [k, v] of Object.entries(cors(origin))) out.headers.set(k, v);
       return out;
@@ -128,6 +128,17 @@ async function route(request: Request, env: Env, ctx: ExecutionContext): Promise
 }
 
 const clipsOf = (env: Env) => env.CLIPS.get(env.CLIPS.idFromName('clips'));
+
+/** Deleting an account: tell the accounts whether its shared clips stay up, so it holds the callsign for them (never the caller's say). */
+async function withClipsLeft(request: Request, env: Env, url: URL): Promise<Request> {
+  if (url.pathname !== '/me' || request.method !== 'DELETE') return request;
+  const out = new Request(request);
+  out.headers.delete('X-Clips-Left');
+  const auth = request.headers.get('Authorization') ?? '';
+  const account = auth.startsWith('Bearer ') ? await accountsOf(env).whoIs(auth.slice(7)) : null;
+  if (account && (await clipsOf(env).upFor(account.id)) > 0) out.headers.set('X-Clips-Left', '1');
+  return out;
+}
 
 /** The authorisation server's public side: metadata, registration, the start of a sign-in, and tokens. Any client, from anywhere. */
 async function oauthRoute(request: Request, env: Env, url: URL): Promise<Response> {

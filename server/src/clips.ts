@@ -240,6 +240,11 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
       .map((r) => ({ id: r.id as string, url: `${SITE}/clip/${r.id as string}`, title: r.title as string, system: r.system as string, created: r.created as number, hearts: r.hearts as number, up: r.hidden === 0, card: r.card === 1, video: (r.video as number) > 0, image: r.card === 1 ? cardImage(r.id as string, r.card_v as number) : null }));
   }
 
+  /** How many of an account's shared clips are still up: its callsign is held for them when it's deleted. */
+  upFor(account: string): number {
+    return this.sql.exec('SELECT COUNT(*) AS n FROM clips WHERE account = ? AND hidden = 0', account).one().n as number;
+  }
+
   /** Take your own clip down (or put it back up): gone from its page and the feed. Only its sharer, by account or browser. */
   takeDown(id: string, account: string | null, voter: string | null, down = true) {
     if (!idOk(id)) return { error: 'No such clip', status: 404 };

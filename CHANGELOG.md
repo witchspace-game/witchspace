@@ -10,6 +10,10 @@ notice. Make a new heading for today if there isn't one, written like
 starting with `- `. Say what's different, not how it was done. Credit whoever
 reported it.
 
+## 10 November 2026
+
+- Deleting your account asks whether to take your shared clips down too. Left up, they keep your callsign, and nobody else can claim it. (Mark)
+
 ## 9 November 2026
 
 - Renowned pirates remember every commander. Put one in his pod and he's out of action for everyone, and the bar knows who did it. When he wins, he tells the next commander. Signed-in commanders only.
