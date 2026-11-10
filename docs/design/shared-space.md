@@ -152,7 +152,7 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
    - **It doesn't** (a beam laser with no purchase, Dangerous with no kills on record, an altered ledger, a tampered save): they don't fly in shared space until a maintainer has looked. Mark gets an email (as the ideas board does, #409): *"CMDR X: a beam laser with no purchase on record (registered 9 November 18:42)"*. The rest of the game goes on as normal.
 8. **Single player unregistered** carries on as it is, and nothing there is checked. If someone plays unregistered for a while, buys things, then wants to register, the server can't trust that time. They choose: register a fresh basic ship (their unregistered save carries on as a separate single-player game), or keep playing unregistered.
 
-**Every ship has a transponder number** (Mark, 10 November 2026: *"Can we keep a record of every ship's transponder code? … so the transponder code stays with the ship. … Why don't we just issue every ship a transponder number?"*). The game already has a transponder: on or off for running dark (Modern), damaged in a fight, and the police read your hull when they can't hail you. Now it carries a number, on every ship in the game.
+**Every ship has a transponder number** (Mark, 10 November 2026, as *"an elegant way to prevent cheating and to encourage users to register their ships"*: *"Can we keep a record of every ship's transponder code? … so the transponder code stays with the ship. … Why don't we just issue every ship a transponder number?"*). The game already has a transponder: on or off for running dark (Modern), damaged in a fight, and the police read your hull when they can't hail you. Now it carries a number, on every ship in the game.
 
 - **Every ship has one from the moment it exists,** registered or not, the player's or an NPC's: *WS-7F3K-29*. It's part of the world, not a sign-up step. A new commander's first Cobra shows its number on the first launch.
 - **The number belongs to the ship, not the commander.** Renaming or repainting the ship doesn't change it. Kit fitted is logged against it (what, where, when, for how much), so each hull has its own history.
@@ -164,7 +164,7 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
   - *registered*;
   - *kit fitted*;
   - *traded in*: the hull goes back to the yard with its number;
-  - *destroyed*: the number is retired with the wreck, and the replacement Cobra gets a new one.
+  - *destroyed*: the number is retired with the wreck, and its entry says where, when and who did it (*"WS-7F3K-29, destroyed at Riedquat by Ambrose Hale, 10 November"*). **New ship, new number** (Mark, 10 November 2026): the insurers' replacement gets its own number, linked to the old one (*"replaces WS-7F3K-29"*), so the chain stays unbroken. An escape pod doesn't save the number, only the kit. A Fugitive's bare Co-operative Cobra is a new ship with a new number, linked the same way.
   If commanders can ever sell ships to each other, the number and its history go to the new owner.
 - **At the door:** the ship sends its number when it enters shared space. The server turns it away, the *"it's not true"* moment caught without guesswork, if:
   - the number isn't in the registry;
