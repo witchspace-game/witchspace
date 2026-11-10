@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { galaxy } from '../galaxy/generate';
 import { newCommander } from './commander';
-import { arrival, CALL_AT, flying, foughtHim, GLOATS_FOR, HOUR, inTheSaloon, KILL_WINDOW, killedHisMan, memoryOf, OUT_OF_ACTION, renownedNews, renownedOf, saloonScene, WARN_AT } from './renowned';
+import { arrival, CALL_AT, flying, foughtHim, GLOATS_FOR, HOUR, inTheSaloon, KILL_WINDOW, killedHisMan, memoryOf, OUT_OF_ACTION, renownedNews, renownedOf, saloonScene, sharedNews, chartLine, WARN_AT, type SharedRecord } from './renowned';
 
 const NOW = Date.UTC(2026, 10, 9, 12);
 const home = galaxy(0).find((s) => s.government === 0 && renownedOf(s))!;
@@ -109,5 +109,38 @@ describe('a renowned pirate in his saloon', () => {
     foughtHim(c, who, 'won', NOW + OUT_OF_ACTION);
     expect(renownedNews(c, at, NOW + OUT_OF_ACTION + HOUR)[0].text).toContain('claims another Cobra');
     expect(renownedNews(c, at, NOW + OUT_OF_ACTION + GLOATS_FOR + HOUR)).toHaveLength(0);
+  });
+});
+
+describe('what every commander knows of him', () => {
+  const riedquat = galaxy(0)[46];
+  const who = renownedOf(riedquat)!;
+  const shared = (o: Partial<SharedRecord> = {}): SharedRecord => ({ beaten: 0, won: 0, ran: 0, out: 0, recent: [], ...o });
+
+  it("doesn't come for you while someone else has him in a pod", () => {
+    const c = veteran();
+    const out = shared({ beaten: 1, out: NOW + HOUR, recent: [{ c: 'Kestrel', how: 'beaten', at: NOW - HOUR }] });
+    for (let i = 0; i < CALL_AT; i++) expect(killedHisMan(c, riedquat, NOW + i, out)).toBeNull();
+  });
+
+  it("tells you, in the saloon, who put him there, or who he's beaten", () => {
+    const out = shared({ beaten: 1, out: NOW + HOUR, recent: [{ c: 'Kestrel', how: 'beaten', at: NOW - HOUR }] });
+    expect(inTheSaloon(riedquat, undefined, 0, NOW, out)).toBe('wounds');
+    expect(saloonScene(who, 'wounds', undefined, 'Jameson', out, NOW).look).toContain('CMDR Kestrel');
+    const won = shared({ won: 3, recent: [{ c: 'Wren', how: 'won', at: NOW - HOUR }] });
+    expect(inTheSaloon(riedquat, undefined, 0, NOW, won)).toBe('gloating');
+    const g = saloonScene(who, 'gloating', undefined, 'Jameson', won, NOW);
+    expect(g.says).toContain("Don't be Wren");
+    expect(g.buys).toBeFalsy();
+    expect(arrival(who, memoryOf(veteran(), who.key), won)).toContain("I've put down 3 commanders");
+  });
+
+  it('puts it on the chart and in the news, leaving out your own', () => {
+    const out = shared({ beaten: 1, out: NOW + HOUR, recent: [{ c: 'Kestrel', how: 'beaten', at: NOW - HOUR }] });
+    expect(chartLine(who, out, NOW)).toContain('beaten by CMDR Kestrel');
+    const records = new Map([[46, out]]);
+    const at = (g: number, i: number) => galaxy(g)[i];
+    expect(sharedNews(0, records, null, NOW, at)[0].text).toBe('CMDR Kestrel puts Ambrose Hale of Riedquat in his escape pod');
+    expect(sharedNews(0, records, 'Kestrel', NOW, at)).toHaveLength(0);
   });
 });

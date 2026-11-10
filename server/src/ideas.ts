@@ -9,6 +9,7 @@
 //   someone looks at it.
 
 import { DurableObject } from 'cloudflare:workers';
+import { boardEmail } from './emails';
 import { isHuman, json, networkOf } from './http';
 import { SEED_IDEAS } from './seed-ideas';
 
@@ -17,9 +18,20 @@ export interface IdeasEnv {
   TURNSTILE_SECRET?: string;
   /** For changing an idea's status or unhiding it; without it, there's no admin. */
   ADMIN_KEY?: string;
+  /** For telling the maintainer about new ideas (the sign-in email's key). */
+  RESEND_API_KEY?: string;
+  /** Where to tell them (a secret); without it, the first of MAINTAINERS. */
+  NOTIFY_EMAIL?: string;
+  MAINTAINERS?: string;
 }
 
+const SITE = 'https://witchspace.org.uk';
+/** Emails to the maintainer in one day, at most: then one "and more", then the board. */
+export const EMAILS_PER_DAY = 20;
+
 export type Status = 'open' | 'planned' | 'building' | 'built' | 'declined';
+/** What a post is: an idea, or a bug report (a player: "the rate limit on submitting ideas is inappropriate since I'm trying to submit bugs"). */
+export type Kind = 'idea' | 'bug';
 const STATUSES: Status[] = ['open', 'planned', 'building', 'built', 'declined'];
 
 export interface Idea {
@@ -30,6 +42,9 @@ export interface Idea {
   up: number;
   down: number;
   created: number;
+  kind: Kind;
+  /** The team's answer, if there is one (Mark: "make sure we are replying to these ideas"). */
+  reply: { text: string; at: number } | null;
   /** This browser's vote: 1, -1 or 0. */
   mine: number;
 }
@@ -39,6 +54,9 @@ const BODY_MAX = 600;
 const VOTES_PER_NETWORK = 3; // per idea: a household or office can share an address
 const REPORTS_TO_HIDE = 3;
 const POSTS_PER_HOUR = 3;
+/** Bug reports come in bunches from someone playing: more of them an hour. */
+const BUGS_PER_HOUR = 10;
+const REPLY_MAX = 1000;
 const VOTES_PER_MINUTE = 30;
 
 /** Plain text only: no markup, no control characters, trimmed. */
@@ -67,6 +85,12 @@ export class IdeasBoard extends DurableObject<IdeasEnv> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS votes (idea TEXT NOT NULL, voter TEXT NOT NULL, net TEXT NOT NULL, value INTEGER NOT NULL, PRIMARY KEY (idea, voter))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS reports (idea TEXT NOT NULL, voter TEXT NOT NULL, PRIMARY KEY (idea, voter))`);
     this.sql.exec(`CREATE TABLE IF NOT EXISTS activity (voter TEXT NOT NULL, net TEXT NOT NULL, kind TEXT NOT NULL, t INTEGER NOT NULL)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS emailed (day TEXT PRIMARY KEY, n INTEGER NOT NULL)`);
+    // Added later: a post's kind, and the team's reply.
+    const cols = new Set(this.sql.exec('PRAGMA table_info(ideas)').toArray().map((c) => c.name as string));
+    if (!cols.has('kind')) this.sql.exec(`ALTER TABLE ideas ADD COLUMN kind TEXT NOT NULL DEFAULT 'idea'`);
+    if (!cols.has('reply')) this.sql.exec('ALTER TABLE ideas ADD COLUMN reply TEXT');
+    if (!cols.has('replied')) this.sql.exec('ALTER TABLE ideas ADD COLUMN replied INTEGER');
     // A new board starts with the ideas already written down.
     const count = this.sql.exec('SELECT COUNT(*) AS n FROM ideas').one().n as number;
     if (count === 0) {
@@ -110,21 +134,30 @@ export class IdeasBoard extends DurableObject<IdeasEnv> {
         up: r.up as number,
         down: r.down as number,
         created: r.created as number,
+        kind: (r.kind as Kind) ?? 'idea',
+        reply: r.reply ? { text: r.reply as string, at: (r.replied as number) ?? 0 } : null,
         mine: mine.get(r.id as string) ?? 0,
       })),
     };
   }
 
   private async post(request: Request, voter: string, net: string): Promise<Response> {
-    const body = (await request.json().catch(() => null)) as { title?: unknown; body?: unknown; turnstile?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as { title?: unknown; body?: unknown; turnstile?: unknown; kind?: unknown } | null;
     const title = cleanText(body?.title, TITLE_MAX);
     const text = cleanText(body?.body, BODY_MAX);
-    if (title.length < 4) return json({ error: 'Give your idea a title' }, 400);
-    if (this.recent(voter, net, 'post', 3600_000) >= POSTS_PER_HOUR) return json({ error: 'That’s plenty of ideas for one hour: try again later' }, 429);
+    const kind: Kind = body?.kind === 'bug' ? 'bug' : 'idea';
+    if (title.length < 4) return json({ error: kind === 'bug' ? 'Give the bug a title' : 'Give your idea a title' }, 400);
+    // Ideas: 3 an hour. Bugs: up to 10, counting ideas too, so calling an idea a bug gets no more than 10 (and Mark can refile it).
+    const ideas = this.recent(voter, net, 'post', 3600_000);
+    const all = ideas + this.recent(voter, net, 'bug', 3600_000);
+    if (kind === 'bug' ? all >= BUGS_PER_HOUR : ideas >= POSTS_PER_HOUR)
+      return json({ error: kind === 'bug' ? 'That’s a lot of bugs for one hour: thank you! Try again a little later' : 'That’s plenty of ideas for one hour: try again later' }, 429);
     if (!(await isHuman(this.env.TURNSTILE_SECRET, body?.turnstile, request))) return json({ error: 'The human check didn’t pass: please try again' }, 403);
     const id = crypto.randomUUID().slice(0, 8);
-    this.sql.exec('INSERT INTO ideas (id, title, body, created) VALUES (?, ?, ?, ?)', id, title, text, Date.now());
-    this.note(voter, net, 'post');
+    this.sql.exec('INSERT INTO ideas (id, title, body, created, kind) VALUES (?, ?, ?, ?, ?)', id, title, text, Date.now(), kind);
+    this.note(voter, net, kind === 'bug' ? 'bug' : 'post');
+    // Tell the maintainer, after answering: an email that fails never fails the post.
+    this.ctx.waitUntil(this.tell(kind, title, text, id));
     // Your own idea starts with your vote.
     this.setVote(id, voter, net, 1);
     return json({ id });
@@ -154,21 +187,49 @@ export class IdeasBoard extends DurableObject<IdeasEnv> {
   private report(id: string, voter: string): Response {
     this.sql.exec('INSERT OR IGNORE INTO reports (idea, voter) VALUES (?, ?)', id, voter);
     const n = this.sql.exec('SELECT COUNT(*) AS n FROM reports WHERE idea = ?', id).one().n as number;
-    if (n >= REPORTS_TO_HIDE) this.sql.exec('UPDATE ideas SET hidden = 1 WHERE id = ?', id);
+    if (n === REPORTS_TO_HIDE) {
+      this.sql.exec('UPDATE ideas SET hidden = 1 WHERE id = ?', id);
+      const r = this.sql.exec('SELECT title, body FROM ideas WHERE id = ?', id).one();
+      this.ctx.waitUntil(this.tell('hidden', r.title as string, r.body as string, id));
+    } else if (n > REPORTS_TO_HIDE) this.sql.exec('UPDATE ideas SET hidden = 1 WHERE id = ?', id);
     return json({ reported: true });
   }
 
-  /** Set an idea's status, or hide or unhide it. Needs the admin key. */
+  /** Set an idea's status, hide or unhide it, refile it as an idea or a bug, or reply to it (all in one call if you like). Needs the admin key. */
   private async admin(request: Request, id: string): Promise<Response> {
     const key = request.headers.get('X-Admin-Key');
     if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return json({ error: 'Forbidden' }, 403);
-    const body = (await request.json().catch(() => null)) as { status?: unknown; hidden?: unknown } | null;
+    const body = (await request.json().catch(() => null)) as { status?: unknown; hidden?: unknown; reply?: unknown; kind?: unknown } | null;
+    // Refile: a bug that's really an idea, or the other way round.
+    if (body?.kind === 'idea' || body?.kind === 'bug') this.sql.exec('UPDATE ideas SET kind = ? WHERE id = ?', body.kind, id);
+    // The reply: plain text, up to 1,000 characters; "" or null takes it away. Either way, it's dated now.
+    if (body && 'reply' in body && (typeof body.reply === 'string' || body.reply === null)) {
+      const text = cleanText(body.reply, REPLY_MAX);
+      this.sql.exec('UPDATE ideas SET reply = ?, replied = ? WHERE id = ?', text || null, Date.now(), id);
+    }
     if (typeof body?.status === 'string' && STATUSES.includes(body.status as Status)) this.sql.exec('UPDATE ideas SET status = ? WHERE id = ?', body.status, id);
     if (typeof body?.hidden === 'boolean') {
       this.sql.exec('UPDATE ideas SET hidden = ? WHERE id = ?', body.hidden ? 1 : 0, id);
       if (!body.hidden) this.sql.exec('DELETE FROM reports WHERE idea = ?', id);
     }
     return json({ ok: true });
+  }
+
+  /** An email to the maintainer: at most EMAILS_PER_DAY a day, then one "and more". */
+  private async tell(what: Kind | 'hidden', title: string, body: string, id: string): Promise<void> {
+    const to = this.env.NOTIFY_EMAIL?.trim() || (this.env.MAINTAINERS ?? '').split(',')[0]?.trim();
+    if (!this.env.RESEND_API_KEY || !to) return;
+    const day = new Date().toISOString().slice(0, 10);
+    const n = ((this.sql.exec('SELECT n FROM emailed WHERE day = ?', day).toArray()[0]?.n as number | undefined) ?? 0) + 1;
+    this.sql.exec('INSERT OR REPLACE INTO emailed (day, n) VALUES (?, ?)', day, n);
+    this.sql.exec('DELETE FROM emailed WHERE day < ?', new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10));
+    if (n > EMAILS_PER_DAY + 1) return;
+    const email = n > EMAILS_PER_DAY ? boardEmail('more', '', '', `${SITE}/ideas/?sort=new`) : boardEmail(what, title, body, `${SITE}/ideas/#idea-${id}`);
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: 'Witchspace ideas board <contact@witchspace.org.uk>', to: [to], ...email }),
+    }).catch(() => undefined);
   }
 
   private exists(id: string) {

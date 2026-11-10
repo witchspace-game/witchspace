@@ -18,6 +18,7 @@ import { emailKey } from './emailKey';
 import { costOf, dayOf, JOIN_SHARE, MAX_REPORT_SECONDS, refusal, SPACE_BUDGET, stopAll, type SpaceDay } from './spaceBudget';
 import { judgeCallsign, NAMES, nameKey, nameRule, type CallsignLookups } from './names';
 import { allowance, isRealClaim, MAX_CLAIMS } from './firsts';
+import { isResult, RECORD_WINDOW, RESULT_GAP, summarise, type How } from './renowned';
 import { FEED_EACH, FLYING_NOW, type FirstEvent, type Flying } from './feed';
 import { deviceKind } from './device';
 import { isHuman, json, networkOf, randomToken, sha256 } from './http';
@@ -170,6 +171,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS firsts (
       galaxy INTEGER NOT NULL, system INTEGER NOT NULL, body TEXT NOT NULL, account TEXT NOT NULL, at INTEGER NOT NULL,
       PRIMARY KEY (galaxy, system, body))`);
+    // Renowned pirates (renowned.ts): how commanders' meetings with each went, for everyone's story.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS renowned (galaxy INTEGER NOT NULL, system INTEGER NOT NULL, account TEXT NOT NULL, how TEXT NOT NULL, at INTEGER NOT NULL)`);
     // Submissions (submissions.ts): ships and modules handed in, private to their author and the maintainers.
     this.sql.exec(`CREATE TABLE IF NOT EXISTS submissions (
       id TEXT PRIMARY KEY, account TEXT NOT NULL, kind TEXT NOT NULL, item TEXT NOT NULL, title TEXT NOT NULL, revises INTEGER NOT NULL,
@@ -231,6 +234,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'GET' && path === '/contact/stop') return this.stop(url);
     const galaxy = path.match(/^\/firsts\/([0-7])$/);
     if (m === 'GET' && galaxy) return this.firstsOf(Number(galaxy[1]));
+    const pirates = path.match(/^\/renowned\/([0-7])$/);
+    if (m === 'GET' && pirates) return this.renownedOf(Number(pirates[1]));
     if (m === 'POST' && path === '/submissions/check') return this.checkOnly(request);
     if (m === 'GET' && path === '/callsign/check') return this.checkCallsign(request, url);
     const cardPage = path.match(/^\/card\/([a-z0-9]{10})$/);
@@ -263,6 +268,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     if (m === 'GET' && path === '/me/contact') return this.getContact(account, url);
     if (m === 'PUT' && path === '/me/contact') return this.putContact(request, account);
     if (m === 'POST' && path === '/me/firsts') return this.claimFirsts(request, account);
+    if (m === 'POST' && path === '/me/renowned') return this.renownedResult(request, account);
     if (m === 'GET' && path === '/me/connections') return this.connections(account);
     if (m === 'POST' && path === '/me/voucher') return this.redeemVoucher(request, account);
     if (m === 'GET' && path === '/me/gifts') return json({ gifts: this.giftsFor(account) });
@@ -295,6 +301,36 @@ export class Accounts extends DurableObject<AccountsEnv> {
       }
     }
     return json({ error: 'Not found' }, 404);
+  }
+
+  // --- Renowned pirates' shared record (renowned.ts) -------------------------------
+
+  /** GET /renowned/<galaxy>: each pirate's tallies, when he's back, and the latest meetings, by callsign. Public. */
+  private renownedOf(galaxy: number): Response {
+    const now = Date.now();
+    const rows = this.sql
+      .exec('SELECT r.system, r.how, r.at, a.callsign FROM renowned r JOIN accounts a ON a.id = r.account WHERE r.galaxy = ? AND r.at > ? AND a.callsign IS NOT NULL ORDER BY r.at DESC', galaxy, now - RECORD_WINDOW)
+      .toArray()
+      .map((r) => ({ system: r.system as number, how: r.how as How, at: r.at as number, callsign: r.callsign as string }));
+    const res = json({ pirates: summarise(rows, now) });
+    res.headers.set('Cache-Control', 'public, max-age=60');
+    return res;
+  }
+
+  /** POST /me/renowned {galaxy, system, how}: how your meeting with him went. One per pirate a day; none while he's out. */
+  private async renownedResult(request: Request, account: Account): Promise<Response> {
+    if (!account.callsign) return json({ error: 'Choose a callsign first' }, 409);
+    const body = await request.json().catch(() => null);
+    if (!isResult(body)) return json({ error: 'No such pirate' }, 400);
+    const now = Date.now();
+    const mine = this.sql.exec('SELECT COUNT(*) AS n FROM renowned WHERE account = ? AND galaxy = ? AND system = ? AND at > ?', account.id, body.galaxy, body.system, now - RESULT_GAP).one().n as number;
+    if (mine > 0) return json({ kept: false, why: 'Already told today' });
+    if (body.how === 'beaten') {
+      const out = this.sql.exec(`SELECT COUNT(*) AS n FROM renowned WHERE galaxy = ? AND system = ? AND how = 'beaten' AND at > ?`, body.galaxy, body.system, now - 3 * 86_400_000).one().n as number;
+      if (out > 0) return json({ kept: false, why: 'He was already out of action' });
+    }
+    this.sql.exec('INSERT INTO renowned (galaxy, system, account, how, at) VALUES (?, ?, ?, ?, ?)', body.galaxy, body.system, account.id, body.how, now);
+    return json({ kept: true });
   }
 
   // --- Your name on the galaxy (docs/design/exploration.md, stage 1b) -------------
@@ -1018,6 +1054,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
       const who = this.sql.exec('SELECT id, callsign FROM accounts WHERE callsign_key = ?', key).toArray()[0];
       if (!who) return json({ error: 'No commander with that callsign' }, 404);
       const wiped = this.sql.exec('DELETE FROM firsts WHERE account = ?', who.id).rowsWritten;
+      this.sql.exec('DELETE FROM renowned WHERE account = ?', who.id); // a cheat's pirate tales go with their firsts
       return json({ wiped, callsign: who.callsign });
     }
     // Why a ship's log didn't arrive: each thing it needs, for one commander. No addresses or keys, just yes or no.
@@ -1718,7 +1755,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
   }
 
   private deleteAccount(account: Account): Response {
-    for (const table of ['saves', 'sessions', 'contact', 'devices', 'firsts', 'submissions', 'oauth_codes', 'oauth_tokens']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
+    for (const table of ['saves', 'sessions', 'contact', 'devices', 'firsts', 'renowned', 'submissions', 'oauth_codes', 'oauth_tokens']) this.sql.exec(`DELETE FROM ${table} WHERE account = ?`, account.id);
     this.sql.exec('DELETE FROM links WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM codes WHERE email = ?', account.email);
     this.sql.exec('DELETE FROM accounts WHERE id = ?', account.id);

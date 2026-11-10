@@ -10,6 +10,7 @@ stages:
   - Test pilots, room tests and a second account for testing alone | proposed
   - Every ship flown as itself on the server | built
   - Rank, the law and your ship kept by the server | proposed
+  - Registering your ship, the passport and the door into shared space | proposed
   - The law between commanders: self-defence, fair kills, protected starters | proposed
   - Talking to each other (player radio stage 2) | proposed
   - Wings | proposed
@@ -123,6 +124,60 @@ What the room needs to know, kept by the server, not claimed:
 - **Ship and kit:** the yard already records orders, the fleet and editions on the server (`server/src/yard.ts`). The room trusts those for the hull, and the lasers, missiles and ECM sent at join are capped by what the ship can carry.
 - **Why:** bounties, self-defence and kill points all depend on the server knowing who's clean and how good they are.
 - **Not yet:** credits, cargo and markets stay in the browser. Moving them to a server ledger is roadmap phase 4 ([economy and exchanges](economy-and-exchanges.md)), a much bigger job.
+
+### Step 4a. Registering your ship *(Mark, 9 November 2026)*
+
+Mark: *"When they first play the game, in order for them to be able to rank, get a better ship, more equipment and all the rest of it, they get told they have to register their ship. As soon as they register the ship, we know when it was registered: the date, the time, etc. We know that it's a basic ship. If a week later they try and go into shared space with lasers and everything else, then we know it's not true."*
+
+**Why.** Single-player saves live in the browser, so anyone can edit one. Carrying a commander into shared space invites cheats: edit your way to a Fer-de-lance with military lasers and pick on newcomers (Mark: *"The latter would invite cheats!"*). But making shared space start from scratch would throw away everything earned in single player (Mark: he doesn't want a player to *"go through all the pain"* of a docking computer, better lasers and a bigger hold, *"and then realise that when they go into the shared space, they can't take that equipment with them"*). Registering at the start fixes both. It gives the server the one thing it can't otherwise have: a known, honest starting point for each commander. From there, single player becomes the training ground, and everything earned in it counts in shared space, because it's all on the record.
+
+**How it works**
+
+1. **Play first.** A new commander starts as now: a Cobra Mk III at Lave, 100 Cr, Harmless. They can fly, dock, trade and fight with no sign-up. Asking for an email at the very first screen loses players.
+2. **Register to progress.** The first time they go to buy equipment or a ship, or reach Mostly Harmless, the game says: *"Register your ship to trade up."* By then they know they like it.
+3. **Registering is signing in** with an email (as shared space already needs). The server checks the ship is still basic and stamps it, kept for good:
+   - a registration number, the callsign and account (so the email);
+   - the date and time, and the home port (where they registered);
+   - the ship as registered: *Cobra Mk III, standard fit, 100 Cr, Harmless*;
+   - the start of the commander's ledger, so the chain begins at a point the server saw.
+   One tick box with it: *"I'll fly fair. Witchspace keeps a record of this ship, and of when and where it flies in shared space, to keep things fair."* That's the consent the privacy page points to.
+4. **Papers.** A registration certificate (built on the [edition certificate](edition-certificate.md)): number, date, home port and the ship in its paint. It shows on the callsign card, and can be shared. *"Registered 9 November 2026, Lave"* gives every ship a history.
+5. **Everything after is on the record.** The ledger already chains every trade by hash and is checked against the galaxy's seeded prices on each cloud save (`src/game/ledger.ts`, `server/src/ledger.ts`, since #275). Registration adds:
+   - **equipment:** a new ledger entry for each piece of kit bought: what, where, for how much. It must be a station whose tech level sells it, at its price;
+   - **rank:** kills and rating points as they're earned, held to a believable pace;
+   - **ships:** from the yard records the server already keeps (`server/src/yard.ts`).
+6. **One commander for both.** Single player and shared space use the same registered commander. Nothing is lost going in or coming out.
+7. **The door into shared space** (the passport). Each time a registered commander joins, the server replays their record from registration and compares what they bring (hull, lasers, missiles, ECM, rank, edition paint) with what the record shows they earned. The first entry into shared space is stamped (date, time, system, as they were), and so is every one after, so each return is checked against the last.
+   - **It adds up:** in they go.
+   - **It doesn't** (a beam laser with no purchase, Dangerous with no kills on record, an altered ledger, a tampered save): they don't fly in shared space until a maintainer has looked. Mark gets an email (as the ideas board does, #409): *"CMDR X: a beam laser with no purchase on record (registered 9 November 18:42)"*. The rest of the game goes on as normal.
+8. **Single player unregistered** carries on as it is, and nothing there is checked. If someone plays unregistered for a while, buys things, then wants to register, the server can't trust that time. They choose: register a fresh basic ship (their unregistered save carries on as a separate single-player game), or keep playing unregistered.
+
+**The security record** (Mark: *"I was thinking about a security side as well"*). Alongside the passport, every visit to shared space is kept for 30 days:
+- account and callsign, system, time in and out, and how they left;
+- the network hash (never an IP address) and device type;
+- how many of their moves, shots and claims the server refused.
+
+It flags one account from many networks at once, many accounts from one network, and visits with many refusals, emailed to Mark. A complaint (*"CMDR X killed me at Lave around 18:40"*) is one lookup. Bans from shared space are by account, network hash or both, set from the admin side with no deploy; a banned commander still plays solo. Only Mark can see the record, with the admin key. Deleting an account deletes its visits, and a ban keeps only the hashes.
+
+**Commanders who already have progress.** There are few. Each is registered as they are on the day this ships, with any existing ledger flags shown, and Mark takes a one-off look at the list rather than making anyone start again.
+
+**What it doesn't close.** A commander who plays honestly but very fast (a bot) still has to be caught by pace limits. The moment-to-moment game still runs in the browser until the server keeps the books itself (roadmap phase 4). This makes cheating hard, not impossible: a big step from today, where nothing is checked at the door.
+
+**Decisions for Mark** (suggested answers marked):
+1. **When to ask:** at the first equipment or ship purchase, or at Mostly Harmless, whichever comes first *(suggested)*; or straight after the first dock; or only at the door to shared space.
+2. **What an unregistered commander can't do:** buy equipment and ships, and rank past Mostly Harmless *(suggested)*; or nothing, so registering only matters for shared space.
+3. **A fee:** none *(suggested: registering should feel like a welcome, not a toll)*; or 100 Cr for the ritual.
+4. **Re-registering:** once per commander *(suggested)*; a new commander can register a new ship.
+5. **A flagged commander at the door:** kept out of shared space until Mark looks *(suggested)*; or let in with a hollow insignia.
+6. **Ideas board:** this is a design decision Mark has made, so it's written here; it could also go on the board, framed as "Register your ship", for players to see it coming.
+
+**Size.** About 4–5 days, in this order, each its own pull request:
+1. Registration: the prompt, the stamp, the certificate, the ledger's start (2 days, Worker deploy).
+2. Kit and rank in the ledger, checked on each cloud save (1 day, Worker deploy).
+3. The door: the passport check, the 30-day visit record, flags emailed to Mark, bans (1–2 days, Worker deploy).
+4. Existing commanders registered, and Mark's look at the list (half a day).
+
+Website: a privacy line (what's kept at registration and in shared space, for how long) live no later than each deploy, and a page explaining registration. Marketing: *"Register your ship"* is a moment worth a post.
 
 ### Step 5. The law between commanders
 
@@ -274,6 +329,7 @@ The server runs on **Cloudflare Workers with SQLite-backed Durable Objects**, on
 | 2. Test pilots, room tests, `?fps` | 2 days | Yes | None | None |
 | 3. Every ship as itself; remote lasers drawn right | 1 day | Yes | Shared space page: "fly your own ship" | "Bring your Fer-de-lance" |
 | 4. Rank, legal status and ship kept by the server | 2–3 days | Yes | Privacy page: what's stored | None |
+| 4a. Registering your ship, the passport and the security record | 4–5 days | Yes (three) | Privacy line; a page on registering | "Register your ship" |
 | 5. The law between commanders | 2–3 days | Yes | How the law works in shared space | "Fight anyone. The law is watching." |
 | 6. Player radio (after the Online Safety Act steps) | 3–4 days plus the paperwork | Yes | Rules, report route, privacy | "Talk to other commanders" |
 | 7. Wings | 2 days | Yes | A line on the shared space page | "Fly as a wing" |
@@ -289,7 +345,7 @@ Each step is a Worker deploy that Mark runs himself. Website and Marketing words
 
 1. ~~**Workers Paid ($5 a month) before Show HN?**~~ Yes (Mark, 30 Oct). How to pay for it long term is still open (section 5).
 2. **Test pilots:** yes to server-run commanders that only Mark can call, for testing and load?
-3. **Rank carried over from single-player:** shown hollow until earned in shared space (recommended), shown as is, or reset to Harmless in shared space?
+3. ~~**Rank carried over from single-player:**~~ Answered by registration (step 4a, Mark, 9 November 2026): rank earned since registration counts in shared space, because it's on the record; anything that doesn't add up keeps the commander out until Mark looks.
 4. **Player fights:** one galaxy with the law as the answer and no PvP-off switch (recommended), or an opt-out?
 5. **Wingmates:** firing on a wingmate no crime (recommended), or the same as anyone?
 6. **Radio before or after wings?** Recommended: radio first, as wings are formed by hail.

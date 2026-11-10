@@ -1,7 +1,9 @@
 // The news and the market (moved from main.ts): the station's news board, the exchange (Modern) or
 // 1984's price list (Classic), and the trade context every trading screen works from.
 
-import { renownedNews } from '../game/renowned';
+import { renownedNews, sharedNews } from '../game/renowned';
+import { sharedIn } from '../net/renowned';
+import { currentAccount } from '../net/account';
 import { sfx } from '../audio/sound';
 import { cargoCapacity, saveCommander } from '../game/commander';
 import { recordCrime } from '../game/law';
@@ -79,7 +81,10 @@ export function renderNews() {
   const venn = main.exploring() && vennAway(v, now) ? `<li><b>Mutual captain Odile Venn picked up from her escape pod; Second Wind under repair</b><small>Carriers' Mutual · back on her run by ${new Date(v!.lostAt! + LOST_FOR).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tomorrow</small></li>` : '';
   // Renowned pirates you've had dealings with: his pod picked up, or his boast (game/renowned.ts).
   const pirates = main.exploring()
-    ? renownedNews(cmdr(), (key) => { const [g, i] = key.split(':').map(Number); return g === here.galaxy ? systemAt(g, i) : null; }, now)
+    ? [
+        ...renownedNews(cmdr(), (key) => { const [g, i] = key.split(':').map(Number); return g === here.galaxy ? systemAt(g, i) : null; }, now),
+        ...sharedNews(here.galaxy, sharedIn(here.galaxy), currentAccount()?.callsign ?? null, now, systemAt),
+      ]
         .map((n) => `<li class="${n.where === here ? 'here' : ''}"><b>${linkSystem(n.text, n.where)}</b><small>${escapeHtml(n.small)}</small></li>`)
         .join('')
     : '';
