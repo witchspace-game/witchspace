@@ -24,6 +24,7 @@ export function loadMcpData() {
       const { $schema: _, ...ship } = JSON.parse(readFileSync(join(shipDir, f), 'utf8'));
       return ship as ShipDef;
     })
+    .filter((s) => !s.unlisted) // a character's ship, kept quiet
     .sort((a, b) => a.name.localeCompare(b.name));
   const moduleDir = join(root, 'content/modules');
   const modules: ModuleDef[] = readdirSync(moduleDir)

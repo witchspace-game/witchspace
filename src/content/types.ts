@@ -17,6 +17,8 @@ export interface ShipDef {
    * coming soon; it flies now, so the game and the site say "built to order", not "coming soon".
    */
   concept?: true;
+  /** Kept off the site, the showroom and the public ship lists, though the game knows her (a character's own ship, quiet until she's live). */
+  unlisted?: true;
   /** False for a ship that never docks (a carrier, a yard hauler): it needn't fit the slot (src/content/slot.ts). */
   docks?: boolean;
   description: string;

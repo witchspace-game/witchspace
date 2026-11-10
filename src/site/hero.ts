@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ships } from '../content/ships';
+import { listedShips as ships } from '../content/ships';
 import { MAX_PIXEL_RATIO, STARS } from '../render/look';
 import { buildShip } from '../render/shipModel';
 import { setLineResolution } from '../render/wire';

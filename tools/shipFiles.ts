@@ -22,7 +22,7 @@ export function loadShips(root: string): ShipFile[] {
   const all = readdirSync(dir)
     .filter((f) => f.endsWith('.json'))
     .map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')) as ShipFile)
-    .filter((s) => !SKIP.has(s.id));
+    .filter((s) => !SKIP.has(s.id) && !(s as { unlisted?: boolean }).unlisted); // a character's ship, kept quiet
   return all.sort((a, b) => (a.id === FIRST ? -1 : b.id === FIRST ? 1 : a.name.localeCompare(b.name)));
 }
 
