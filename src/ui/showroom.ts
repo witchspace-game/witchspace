@@ -24,8 +24,15 @@ let zoom = 1; // showroom zoom: >1 is closer
 const ZOOM_MIN = 0.6;
 const ZOOM_MAX = 3;
 
+/** Browsing skips an unlisted ship (a character's own, kept quiet), unless she's yours. */
+const browsable = (i: number) => !showroomModels[i].def.unlisted || i === ownIndex();
+
 export function showShip(index: number) {
-  shipIndex = (index + showroomModels.length) % showroomModels.length;
+  const n = showroomModels.length;
+  const step = index < shipIndex ? -1 : 1;
+  let i = (index + n) % n;
+  for (let k = 0; k < n && !browsable(i); k++) i = (i + step + n) % n;
+  shipIndex = i;
   showroomModels.forEach((m, i) => (m.root.visible = i === shipIndex));
   flyIn = 0;
   resetShowroomView();

@@ -700,7 +700,8 @@ async function loadMine() {
 
 /** The ships a save holds, each in her own paint, and whether its commander is Elite. */
 function fromSave(c: Commander) {
-  const list = [hullFrom(hullOf(c), c.paint), ...(c.fleet ?? []).map((s) => hullFrom(s.ship, s.paint))].filter((h): h is Hull => Boolean(h));
+  // An unlisted ship (a character's, kept quiet) has no card picture, so she isn't offered on the card.
+  const list = [hullFrom(hullOf(c), c.paint), ...(c.fleet ?? []).map((s) => hullFrom(s.ship, s.paint))].filter((h): h is Hull => Boolean(h) && !shipById(h!.ship)?.unlisted);
   owned = list.filter((h, i) => list.findIndex((o) => o.key === h.key) === i);
   if (!owned.length) owned = [COBRA];
   if (!owned.some((h) => h.key === hull.key)) hull = owned[0];

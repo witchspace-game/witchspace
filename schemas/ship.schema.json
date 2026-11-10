@@ -38,6 +38,10 @@
       "description": "A maker's concept: shown off on the site and in the showroom as coming soon, but not flying yet. Nothing in the game spawns or sells it.",
       "const": true
     },
+    "unlisted": {
+      "description": "Kept off the site, the showroom and the public ship lists, though the game knows her: a character's own ship, kept quiet until she's live. Never in a shipyard (give her no price).",
+      "const": true
+    },
     "docks": {
       "description": "False for a ship that never docks at a station (a carrier, a yard hauler): it needn't fit the docking slot, 90 m wide and 26 m tall. Every other ship that flies must.",
       "type": "boolean"

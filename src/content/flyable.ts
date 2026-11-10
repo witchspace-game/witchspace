@@ -5,6 +5,7 @@
 
 import cobra from '../../content/ships/cobra-mk3.json';
 import ferDeLance from '../../content/ships/fer-de-lance.json';
+import onLoan from '../../content/ships/on-loan.json';
 
 export interface Flyable {
   name: string;
@@ -28,6 +29,8 @@ function flyable(def: { name: string; stats: { maxSpeed: number; shields: number
 export const FLYABLE: Record<string, Flyable> = {
   'cobra-mk3': flyable(cobra),
   'fer-de-lance': flyable(ferDeLance),
+  // CMDR Bond's, unlisted; and the owner's (docs/design/character-bond.md).
+  'on-loan': flyable(onLoan),
 };
 
 export const flyableOf = (ship: string) => FLYABLE[ship] ?? FLYABLE['cobra-mk3'];
