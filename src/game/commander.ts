@@ -450,6 +450,23 @@ export const fuelCapacity = (c: Commander) => FUEL_CAPACITY + (c.equipment.inclu
 export const FUEL_PRICE = 2; // credits per light year
 export const MISSILE_PRICE = 30;
 
+/**
+ * Paints the yard has changed, old colour to new: ships already in one move with it. Zaonce Rose
+ * became Zaonce Neon (10 November 2026), so no player's Cobra passes for Odile Venn's (Mark).
+ */
+export const REPAINTED: Record<string, string> = { '#ff6fae': '#ff2e88' };
+
+/** Bring a save's paints up to the yard's palette: the ship you fly, those in hangars, and one on order. */
+export function repaint(c: Commander) {
+  const fix = (p?: { colour: string }) => {
+    if (p && REPAINTED[p.colour.toLowerCase()]) p.colour = REPAINTED[p.colour.toLowerCase()];
+  };
+  fix(c.paint);
+  for (const s of c.fleet ?? []) fix(s.paint);
+  fix(c.order);
+  return c;
+}
+
 export function loadCommander(): Commander | null {
   try {
     const raw = localStorage.getItem(KEY);
@@ -460,7 +477,7 @@ export function loadCommander(): Commander | null {
       if (typeof chk === 'string' && chk !== checksum(JSON.stringify(stored))) saved.tampered = true;
       const c: Commander = { ...newCommander('modern'), ...saved };
       if (c.impound && !c.impound.items.length) c.impound = null; // a debt with nothing held is written off
-      return c;
+      return repaint(c);
     }
   } catch {
     // Private mode or blocked storage: play without saving.
