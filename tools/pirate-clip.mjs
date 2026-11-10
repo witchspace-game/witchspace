@@ -204,7 +204,7 @@ await page.evaluate(() => {
     w.player.speed = Math.min(w.player.speed, window.__speed ?? 120);
     // A pilot's trigger: in bursts, only with him in the sights, easing off before the laser runs hot.
     const flight = window.__flight;
-    const want = Boolean(window.__trigger && on && flight && flight.laserHeat < 70 && on.obj.position.clone().sub(me.position).angleTo(w.player.forward()) < 0.06);
+    const want = Boolean(window.__trigger && on && flight && flight.laserHeat < 50 && on.obj.position.clone().sub(me.position).angleTo(w.player.forward()) < 0.06);
     if (want !== Boolean(window.__firing)) {
       window.__firing = want;
       dispatchEvent(new KeyboardEvent(want ? 'keydown' : 'keyup', { code: 'KeyF' }));
@@ -351,7 +351,7 @@ const fightFrom = Date.now();
 const ejected = () => page.evaluate(() => window.witchspace.npcs.some((n) => n.def.id === 'escape-pod'));
 const nearlyBeaten = () => page.evaluate(() => {
   const r = window.witchspace.npcs.find((n) => n.style === 'holdBack' && !n.brokeOff);
-  return !r || r.health < 0.3;
+  return !r || r.health < 0.235;
 });
 if (!(await until(ejected, 9_000))) {
   // A real fight runs most of a minute (the duel simulation's average is 50 s). Nine seconds of it,
