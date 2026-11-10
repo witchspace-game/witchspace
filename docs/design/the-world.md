@@ -179,6 +179,13 @@ Each flies in its colours, from [the companies](../companies.md), on hulls that 
 - **Plague:** medical ships under Co-operative escort.
 - **A boom:** more traffic of every kind; the station's queue lengthens.
 
+### 4.2b Busy where it's safe, thin and hard where it isn't *(Mark, 10 November 2026)*
+
+Mark asked whether six or more traders on screen at once was normal, and agreed traffic should follow the government. He added: *"the traders should be skilled rather than harmless. A harmless trader would be mad to take on these routes."*
+
+- **How many:** at most 3 ships on the lanes in an anarchy, 4 in a feudal system, 5, 6, 6 and 7 in the middle, and 8 in democracies and corporate states (`src/flight/traffic.ts` `VOYAGES_BY_GOVERNMENT`). It's taken from the same seeded voyage list, so everyone in a system still sees the same ships.
+- **How they fight:** an anarchy or feudal world's traders carry a police Viper's gun on a small gimbal. The middling systems' traders hit harder than the timid traders of the safe ones (`src/game/weapons.ts` `traderArms`). A pirate still wins against one alone, but pays for it.
+
 ### 4.3 Work that isn't fighting
 
 Miners at asteroid fields, surveyors over a new find, couriers in a hurry, salvage crews over a wreck, a passenger liner, a racing gate on a workers' day off.
