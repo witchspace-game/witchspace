@@ -12,6 +12,7 @@ reported it.
 
 ## 10 November 2026
 
+- The shipyard's Zaonce Rose is now Zaonce Neon, a hot raspberry, so nobody's Cobra passes for Odile Venn's pale rose. Ships already in Zaonce Rose have been repainted free. (Mark)
 - On a computer the radio sits top left, as on a phone, with calls to answer under it. An important message lands in it as it shrinks away, rather than already being there. Whoever is in your sights is named just above them, not at the top edge. (Mark)
 - Deleting your account asks whether to take your shared clips down too. Left up, they keep your callsign, and nobody else can claim it. (Mark)
 - A renowned pirate no longer also sends the ordinary pirate's "Name your price" demand when he arrives. He speaks for himself, and he isn't for sale. (Mark)

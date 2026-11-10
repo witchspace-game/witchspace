@@ -35,7 +35,9 @@ export const PALETTE: { colour: string; name: string; price: number; line: strin
   { colour: '#f2f6ff', name: 'Coriolis White', price: 0, line: 'The colour of a docking slot at full beam.' },
   { colour: '#ffb347', name: 'Diso Amber', price: 0, line: 'Diso’s old sun, low on the horizon.' },
   { colour: '#ff7a45', name: 'Leesti Ember', price: 9_500, line: 'Hot, like the trade in Leesti’s back rooms.' },
-  { colour: '#ff6fae', name: 'Zaonce Rose', price: 9_500, line: 'For pilots who want to be noticed in Zaonce.' },
+  // Was Zaonce Rose, #ff6fae: at range it could pass for Odile Venn's pale rose Cobra, a colour nobody
+  // else flies (Mark). Ships already in it moved over (game/commander.ts REPAINTED).
+  { colour: '#ff2e88', name: 'Zaonce Neon', price: 9_500, line: 'For pilots who want to be noticed in Zaonce.' },
   { colour: '#b6ff5c', name: 'Reorte Acid', price: 12_000, line: 'Loud. Very loud.' },
   { colour: '#9b6bff', name: 'Xeer Ultraviolet', price: 18_000, line: 'The light the eye half sees, at the edge of Xeer’s sun.' },
   { colour: '#ff8f7a', name: 'Tibedied Coral', price: 14_000, line: 'Warm as the bars on Tibedied’s night side.' },
