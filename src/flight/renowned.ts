@@ -159,7 +159,7 @@ export function podDestroyed(npc: NpcShip, byYou: boolean): boolean {
   if (byYou && game.commander) {
     memoryOf(cmdr(), p.who.key).podShot = true;
     saveCommander(cmdr());
-    flash(`You shot ${p.who.name}'s escape pod · he'll live, and he won't forget`, 4);
+    flash(`You shot ${p.who.name}'s escape pod · he'll live, and he won't forget · and that's a crime`, 4);
   }
   return true;
 }

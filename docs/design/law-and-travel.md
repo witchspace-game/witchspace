@@ -61,6 +61,7 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
 | **Fugitive** | Serious crime (attacking police or stations, murder) | **Refused** (see "Ways out" below) |
 
 - **Ordinary crimes are local:** your record belongs to the system where the crime happened. You're wanted in Lave, not across the galaxy.
+- **Shooting an escape pod is a serious crime, whoever is in it, a pirate included** *(Mark, 10 November 2026: "Shooting an escape pod has to carry a punishment even if it's a pirate")*. The pod's beacon reports it, so it needs no witness. Where there's law you're a Fugitive with a Marshals warrant. In an anarchy, with nobody local to answer to, the Marshals issue the warrant anyway. A renowned pirate also never forgets it (`src/flight/law.ts` `shotAPod`).
 - **Serious crimes become galaxy-wide, at the speed of news:** attacking stations, killing clean ships, or crimes beyond the local police's reach produce a **Co-operative Marshals warrant**. Today it follows you into every Co-operative system at once; Mark has decided it should spread system by system as news does, with the Marshals following your trail (see [warrants travel at the speed of news](#warrants-travel-at-the-speed-of-news-mark-31-october-2026) below).
 - **Records cool down as you travel.** *(Built: each hyperspace jump away counts. An Offender record clears after 2 jumps; a Fugitive record cools to Offender after 6. Tune these in `src/game/law.ts`.)*
 - **The type of government shapes everything:**
