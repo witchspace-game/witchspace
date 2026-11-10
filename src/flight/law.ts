@@ -166,6 +166,22 @@ export function becomeFugitive(serious = false) {
   if (!c.warrant || hadWarrant) flash('You are now a FUGITIVE', 2.5);
 }
 
+/**
+ * Shooting an escape pod is a serious crime, whoever was in it, a pirate included (Mark, 10 November
+ * 2026). A pod's beacon reports it, so it needs no witness. Where there's law you're a Fugitive with a
+ * Marshals warrant; in an anarchy, with nobody local to answer to, the Marshals issue the warrant
+ * anyway, and it follows you to every system with a government.
+ */
+export function shotAPod() {
+  const c = cmdr();
+  if (!identified()) return unpinnedCrime('fugitive', true);
+  if (hasLaw(currentSystem())) return becomeFugitive(true);
+  if (c.difficulty !== 'modern' || c.warrant) return;
+  c.warrant = true;
+  flash("The pod's beacon reported it · Co-operative Marshals warrant issued", 3);
+  scheduleMarshals();
+}
+
 export function becomeOffender(message: string, unknown = !identified()) {
   if (unknown) return unpinnedCrime('offender', false);
   if (legalStatus(cmdr()) !== 'clean') return;
@@ -206,8 +222,11 @@ export function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   space.scene.add(boom.group);
   explosions.push(boom);
   boomAt(npc.obj.position, 2.2, 1600, 1.6);
-  // A renowned pirate's escape pod: no bounty, and he won't forget (flight/renowned.ts).
-  if (podDestroyed(npc, killer === player.obj)) return removeNpc(npc);
+  // A renowned pirate's escape pod: no bounty, he won't forget (flight/renowned.ts), and it's a crime.
+  if (podDestroyed(npc, killer === player.obj)) {
+    if (killer === player.obj) shotAPod();
+    return removeNpc(npc);
+  }
   // A pirate carrying your lost case drops it again.
   if (npc.carrying && game.commander) {
     const k = cmdr().adrift?.find((x) => x.contract === npc.carrying);

@@ -118,6 +118,18 @@ export const RENOWNED_LASER: Laser = {
 
 export const TRADER_LASER: Laser = { ...PIRATE_LASER, interval: 0.8, damage: 5, color: '#ffe08a' };
 
+/**
+ * A trader's guns, by how dangerous the system is (Modern). Mark: "the traders should be skilled
+ * rather than harmless. A harmless trader would be mad to take on these routes." In an anarchy or a
+ * feudal world, a police Viper's gun on a little gimbal; in the middling systems, better than the
+ * timid trader of the safe ones. A pirate still wins against one alone, but pays for it.
+ */
+export function traderArms(government: number): { laser: Laser; gimbal?: number } {
+  if (government <= 1) return { laser: { ...TRADER_LASER, interval: 0.45, damage: 8 }, gimbal: (3 * Math.PI) / 180 };
+  if (government <= 3) return { laser: { ...TRADER_LASER, interval: 0.6, damage: 6 } };
+  return { laser: TRADER_LASER };
+}
+
 export interface Target<T> {
   value: T;
   position: THREE.Vector3;

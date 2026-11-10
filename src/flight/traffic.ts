@@ -10,7 +10,7 @@ import { VENN, vennAway } from '../game/odile';
 import { saveCommander, type Commander } from '../game/commander';
 import { systemKey } from '../game/law';
 import { NpcShip, type NpcRole } from '../game/npc';
-import { FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, POLICE_LASER, RENOWNED_LASER, TRADER_LASER } from '../game/weapons';
+import { FALCON_LASER, MARSHAL_LASER, PIRATE_LASER, POLICE_LASER, RENOWNED_LASER, TRADER_LASER, traderArms } from '../game/weapons';
 import { PlayerShip } from '../game/playerShip';
 import { SLOT } from '../game/station';
 import { addStanding } from '../game/contracts';
@@ -149,7 +149,9 @@ export function randomCargo(): Record<string, number> {
 }
 
 export function addNpc(def: string | ShipDef, role: NpcRole, at: THREE.Vector3, patrolCentre = station.root.position) {
-  const laser = role === 'pirate' ? PIRATE_LASER : role === 'trader' ? TRADER_LASER : role === 'marshal' ? MARSHAL_LASER : POLICE_LASER;
+  // Traders are armed for the system they work (Modern): skilled where it's dangerous (Mark).
+  const arms = role === 'trader' && modern() ? traderArms(currentSystem().government) : null;
+  const laser = role === 'pirate' ? PIRATE_LASER : role === 'trader' ? (arms?.laser ?? TRADER_LASER) : role === 'marshal' ? MARSHAL_LASER : POLICE_LASER;
   const npc = new NpcShip(typeof def === 'string' ? shipById(def)! : def, role, laser, {
     centre: patrolCentre.clone(),
     radius: 1200 + Math.random() * 600,
@@ -158,6 +160,7 @@ export function addNpc(def: string | ShipDef, role: NpcRole, at: THREE.Vector3, 
     angle: Math.random() * Math.PI * 2,
   });
   npc.obj.position.copy(at);
+  if (arms?.gimbal) npc.gimbal = arms.gimbal;
   space.scene.add(npc.obj);
   npcs.push(npc);
   return npc;
@@ -204,7 +207,12 @@ export const railsOf = new WeakMap<NpcShip, Rails>();
 export const voyageOf = new WeakMap<NpcShip, Voyage>();
 const LANE_OUT = 30_000; // metres from the station where a lane begins or ends
 const RAILS_NEAR = 2500; // closer to you than this, a ship flies itself
-const MAX_VOYAGES = 8; // ships on their lanes at once, at most (5 until convoys, 31 October 2026: Mark wanted busier systems)
+/**
+ * Ships on their lanes at once, at most, by government (5 until convoys, then 8 everywhere, 31 October
+ * 2026: Mark wanted busier systems). Since 10 November 2026 (Mark): an anarchy is thin and dangerous,
+ * a corporate state busy. Everyone in a system sees the same ships: the list is the same for all.
+ */
+export const VOYAGES_BY_GOVERNMENT = [3, 4, 5, 6, 6, 7, 8, 8];
 let trafficShips = new Map<string, NpcShip>(); // voyage id → its ship, this visit
 let trafficDone = new Set<string>(); // voyages flown, docked or lost, this visit
 let trafficList: Voyage[] = [];
@@ -353,7 +361,7 @@ function syncTraffic(dt: number) {
     trafficListAt = now;
   }
   for (const v of trafficList) {
-    if (trafficShips.size >= MAX_VOYAGES) break;
+    if (trafficShips.size >= VOYAGES_BY_GOVERNMENT[currentSystem().government]) break;
     if (trafficShips.has(v.id) || trafficDone.has(v.id)) continue;
     if (v.to === 'titan' && cmdr().yardLosses?.some((l) => l.voyage === v.id)) continue; // lost on an earlier visit
     if (v.character && vennAway(cmdr().venn, now)) continue; // Second Wind is being repaired
@@ -453,6 +461,7 @@ export function spawnRenowned(at: THREE.Vector3, near: THREE.Vector3) {
   npc.style = 'holdBack';
   npc.laser = RENOWNED_LASER;
   npc.gimbal = RENOWNED_GIMBAL;
+  npc.rearGun = true; // a beam aft as well as forward: his tail is no safe place (Mark, 10 November 2026)
   npc.bounty = BOUNTIES.renowned;
   npc.ecm = true;
   npc.missiles = 2;

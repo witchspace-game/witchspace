@@ -12,6 +12,9 @@ reported it.
 
 ## 10 November 2026
 
+- Busy systems are busy and lawless ones thin: at most three traders on the lanes in an anarchy, rising to eight in a corporate state. Traders who work the dangerous routes are skilled, with better guns that swing onto a target, and they fight back. (Mark)
+- Shooting an escape pod is a serious crime, even a pirate's. The pod's beacon reports it, so it needs no witness: you're a Fugitive with a Co-operative Marshals warrant, and in an anarchy the Marshals issue the warrant anyway. (Mark)
+- Renowned pirates carry a beam laser aft as well as forward: sitting on his tail is no longer safe. (Mark)
 - The shipyard's Zaonce Rose is now Zaonce Neon, a hot raspberry, so nobody's Cobra passes for Odile Venn's pale rose. Ships already in Zaonce Rose have been repainted free. (Mark)
 - On a computer the radio sits top left, as on a phone, with calls to answer under it. An important message lands in it as it shrinks away, rather than already being there. Whoever is in your sights is named just above them, not at the top edge. (Mark)
 - Deleting your account asks whether to take your shared clips down too. Left up, they keep your callsign, and nobody else can claim it. (Mark)

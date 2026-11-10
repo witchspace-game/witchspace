@@ -191,26 +191,35 @@ await page.evaluate(() => {
 });
 
 // The director: turn the nose onto the nearest pirate (the sights on him), and keep the camera alive.
+await page.evaluate(async () => (window.__flight = (await import('/src/scene.ts')).flight));
 await page.evaluate(() => {
   const w = window.witchspace;
   window.__director = setInterval(() => {
     const me = w.player.obj;
     const them = w.npcs.filter((n) => n.role === 'pirate' && !n.dead && n.def.id !== 'escape-pod');
     const pod = w.npcs.find((n) => n.def.id === 'escape-pod');
-    const on = window.__watchPod && pod ? pod : them.sort((a, b) => a.obj.position.distanceTo(me.position) - b.obj.position.distanceTo(me.position))[0];
+    const on = window.__watchPod && pod ? pod : window.__mark && !window.__mark.dead && w.npcs.includes(window.__mark) ? window.__mark : them.sort((a, b) => a.obj.position.distanceTo(me.position) - b.obj.position.distanceTo(me.position))[0];
     w.player.hull = Math.max(w.player.hull, 70);
     w.player.shields = Math.max(w.player.shields, 40);
     w.player.speed = Math.min(w.player.speed, window.__speed ?? 120);
-    if (!on) return;
-    const look = me.clone();
-    look.lookAt(on.obj.position);
-    // In the fight, a pilot's hand: the sights drift across him and back, so it takes a while.
-    if (window.__wobble) {
-      const t = performance.now() / 1000;
-      look.rotateY(0.045 * Math.sin(t * 1.7));
-      look.rotateX(0.035 * Math.sin(t * 1.1 + 1));
+    // A pilot's trigger: in bursts, only with him in the sights, easing off before the laser runs hot.
+    const flight = window.__flight;
+    const want = Boolean(window.__trigger && on && flight && flight.laserHeat < 70 && on.obj.position.clone().sub(me.position).angleTo(w.player.forward()) < 0.06);
+    if (want !== Boolean(window.__firing)) {
+      window.__firing = want;
+      dispatchEvent(new KeyboardEvent(want ? 'keydown' : 'keyup', { code: 'KeyF' }));
     }
-    me.quaternion.slerp(look.quaternion, 0.06);
+    if (!on) return;
+    // A pilot's hands, not a robot's: the nose turns no faster than a Cobra's, and the aim is off by
+    // about what the duel simulation gives a human (tools/simulate-duel.ts, 0.03 rad), drifting slowly.
+    const t = performance.now() / 1000;
+    const err = window.__human ? 0.03 : 0;
+    const aimAt = on.obj.position.clone().add(new on.obj.position.constructor(Math.sin(t * 0.9), Math.sin(t * 1.3 + 2), Math.cos(t * 0.7)).multiplyScalar(err * on.obj.position.distanceTo(me.position)));
+    const look = me.clone();
+    look.lookAt(aimAt);
+    const most = window.__human ? 1.1 * 0.016 : Infinity; // radians a tick: about a Cobra's turn
+    const gap = me.quaternion.angleTo(look.quaternion);
+    me.quaternion.slerp(look.quaternion, Math.min(0.06, gap > 0 ? most / gap : 1));
   }, 16);
 });
 
@@ -239,34 +248,55 @@ const pack = () =>
     window.__quiet = setInterval(() => w.npcs.forEach((n) => n.role === 'pirate' && n.style !== 'holdBack' && Object.assign(n, { hostile: false, fights: false })), 50);
     return Math.min(4, ps.length);
   });
-const killOne = () =>
-  page.evaluate(() => {
+/**
+ * Down the nearest of his crew, by our own guns: the nose on him, firing, until he goes. If he's
+ * slow to die, he's finished off only while he's in the sights, so no shot is seen to miss.
+ */
+const killOne = async () => {
+  const id = await page.evaluate(() => {
     const w = window.witchspace;
     const me = w.player.obj.position;
-    const t = w.npcs.filter((n) => n.role === 'pirate' && !n.dead).sort((a, b) => a.obj.position.distanceTo(me) - b.obj.position.distanceTo(me))[0];
-    if (t) w.playerHitNpc(t, 9999);
+    const t = w.npcs.filter((n) => n.role === 'pirate' && !n.dead && n.style !== 'holdBack').sort((a, b) => a.obj.position.distanceTo(me) - b.obj.position.distanceTo(me))[0];
+    window.__mark = t;
+    return Boolean(t);
   });
+  if (!id) return;
+  const end = Date.now() + 9000;
+  while (Date.now() < end) {
+    const state = await page.evaluate((late) => {
+      const w = window.witchspace;
+      const t = window.__mark;
+      if (!t || t.dead || !w.npcs.includes(t)) return 'down';
+      const to = t.obj.position.clone().sub(w.player.obj.position).normalize();
+      if (late && to.angleTo(w.player.forward()) < 0.05) {
+        w.playerHitNpc(t, 9999);
+        return 'down';
+      }
+      return 'fighting';
+    }, Date.now() > end - 6500);
+    if (state === 'down') return;
+    await wait(100);
+  }
+  await page.evaluate(() => window.__mark && !window.__mark.dead && window.witchspace.playerHitNpc(window.__mark, 9999));
+};
 
 say(`${await pack()} of his crew`);
 await wait(1500);
-await page.keyboard.down('KeyF');
+await page.evaluate(() => (window.__trigger = true));
 // 1. Two of his crew down, and his warning.
+// One of each pair goes down off camera: the clip shows the second, and what it brings.
+await killOne();
 await roll();
-await wait(1500);
 await killOne();
-await wait(1800);
-await killOne();
-await wait(5500); // the warning comes 2.5 s after
+await wait(4500); // the warning comes 2.5 s after
 await cut();
 // 2. Two more, and the call: he's coming, 90 seconds.
-await wait(1500);
+await killOne();
 await roll();
 await killOne();
-await wait(1500);
-await killOne();
 const called = Date.now(); // he's due 90 s of flight after this kill
-await page.keyboard.up('KeyF');
-await wait(8000); // the call, then the computer's "about 90 seconds"; long enough to read
+await page.evaluate(() => (window.__trigger = false));
+await wait(7000); // the call, then the computer's "about 90 seconds"; long enough to read
 await cut();
 // From here it's him alone: any other pirate the system sends is cleared away before it can hail.
 await page.evaluate(() => {
@@ -286,7 +316,12 @@ const until = async (test, ms) => {
   while (Date.now() < end && !(await test())) await wait(100);
   return test();
 };
-if (!(await until(him, 120_000))) throw new Error('he never came');
+if (!(await until(him, 120_000))) {
+  // Now and then the call doesn't take (a kill missed in the count): bring him by the game's own arrival.
+  say('no sign of him: bringing him in');
+  await page.evaluate(() => window.witchspace.spawnRenowned());
+  if (!(await until(him, 5_000))) throw new Error('he never came');
+}
 await roll();
 say('he is here');
 // His entrance: he sweeps past close, so the Cobra reads as a ship (on a phone, not a glowing dot),
@@ -311,31 +346,30 @@ await page.evaluate((narrow) => {
 }, UPRIGHT ? 0.45 : 1);
 await wait(6000); // his hail, the pass, and him pulling out to his range
 // 4. The fight: him holding off with his beam, us turning to keep him in the sights.
-await page.evaluate(() => (window.__wobble = true));
-await page.keyboard.down('KeyF');
+await page.evaluate(() => ((window.__trigger = true), (window.__human = true)));
 const fightFrom = Date.now();
 const ejected = () => page.evaluate(() => window.witchspace.npcs.some((n) => n.def.id === 'escape-pod'));
+const nearlyBeaten = () => page.evaluate(() => {
+  const r = window.witchspace.npcs.find((n) => n.style === 'holdBack' && !n.brokeOff);
+  return !r || r.health < 0.3;
+});
 if (!(await until(ejected, 9_000))) {
-  // Nine seconds of it is plenty: a cut, then the end of it. Our lasers do the work you see;
-  // here a few hits more make sure it's over in seconds, not minutes.
+  // A real fight runs most of a minute (the duel simulation's average is 50 s). Nine seconds of it,
+  // a cut while it goes on, unrecorded, then the end of it as it happened.
   await cut();
-  await page.evaluate(() => {
-    const w = window.witchspace;
-    const r = w.npcs.find((n) => n.style === 'holdBack' && !n.brokeOff);
-    if (r) w.playerHitNpc(r, Math.max(0, r.ship.shields + r.ship.hull - 0.28 * (r.def.stats.shields + r.def.stats.hull)));
-  });
-  await roll();
-  const end = Date.now() + 20_000;
-  while (Date.now() < end && !(await ejected())) {
+  if (!(await until(nearlyBeaten, 150_000))) {
+    // Still at it after two and a half minutes: help it to an end, as before.
     await page.evaluate(() => {
       const w = window.witchspace;
       const r = w.npcs.find((n) => n.style === 'holdBack' && !n.brokeOff);
-      if (r) w.playerHitNpc(r, 4);
+      if (r) w.playerHitNpc(r, Math.max(0, r.ship.shields + r.ship.hull - 0.28 * (r.def.stats.shields + r.def.stats.hull)));
     });
-    await wait(250);
+    say('helped to an end');
   }
+  await roll();
+  await until(ejected, 30_000);
 }
-await page.keyboard.up('KeyF');
+await page.evaluate(() => (window.__trigger = false));
 await page.evaluate(() => (window.__watchPod = true));
 say(`ejected after ${Math.round((Date.now() - fightFrom) / 1000)} s`);
 // 5. His pod, running.
