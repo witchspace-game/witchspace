@@ -2,11 +2,10 @@
 // market on screen, Bitcoin's, and the back room. The exchange itself is in exchange.ts.
 
 import { abolitionistPrice, backRoomQuotes, fenceQuotes, hasAbolitionists, hasBackRoom, stingChance } from '../economy/blackmarket';
-import { formatSats, ordersOf } from '../economy/bitcoin';
 import { commodityById, type Commodity } from '../economy/commodities';
 import { recentTrades } from '../economy/market';
 import type { OrderState } from '../economy/orders';
-import { marketState, quotes, type TradeContext } from '../economy/trade';
+import { marketState, type TradeContext } from '../economy/trade';
 import type { Commander } from '../game/commander';
 import { ticker } from './ordersList';
 
@@ -14,20 +13,12 @@ const fmt = (n: number, dp = 1) => n.toLocaleString(undefined, { minimumFraction
 const clock = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 const unitLabel = (c: Commodity) => (c.unit === 't' ? 't' : c.unit);
 
-/** Your Bitcoin orders and trades. */
-export function btcTradesHtml(c: Commander): { title: string; html: string } {
+/** Your Bitcoin trades. Open orders are in the trade window's Orders. */
+export function btcTradesHtml(c: Commander, openOrders: number): { title: string; html: string } {
   const trades = (c.btcTrades ?? []).slice().reverse();
-  const orders = ordersOf(c);
-  const open = orders.length
-    ? `<h5>Open orders</h5><table class="ex-orders"><thead><tr><th>Side</th><th class="num">Amount</th><th class="num">Fills at</th><th class="num">Placed</th><th></th></tr></thead><tbody>${orders
-        .map(
-          (o) => `<tr><td class="${o.side === 'buy' ? 'up' : 'down'}">${o.side === 'buy' ? 'Buy' : 'Sell'}</td><td class="num">${o.side === 'buy' ? `${fmt(o.credits!)} Cr` : formatSats(o.sats!)}</td>
-          <td class="num">${fmt(o.limit, 0)}</td><td class="num">${clock(o.placed)}</td><td class="num"><button data-btc-cancel="${o.id}">Cancel</button></td></tr>`,
-        )
-        .join('')}</tbody></table>`
-    : '';
+  const link = `<button class="ex-act-orders" data-open-orders="1">${openOrders ? `Your orders (${openOrders}), every market ›` : 'Your orders, every market ›'}</button>`;
   const html =
-    open +
+    link +
     (trades.length
       ? `<table><thead><tr><th>Time</th><th>Side</th><th class="num">Sats</th><th class="num">Price</th><th class="num">Fee</th><th class="num">Total</th></tr></thead><tbody>${trades
           .map(
@@ -35,10 +26,8 @@ export function btcTradesHtml(c: Commander): { title: string; html: string } {
           <td class="num">${t.sats.toLocaleString()}</td><td class="num">${fmt(t.price)}</td><td class="num">${t.fee !== undefined ? fmt(t.fee, 2) : '-'}</td><td class="num">${fmt(t.total)}</td></tr>`,
           )
           .join('')}</tbody></table>`
-      : orders.length
-        ? ''
-        : '<p class="ex-empty">No Bitcoin trades yet. They follow you to every station.</p>');
-  return { title: orders.length ? 'Your Bitcoin orders and trades' : 'Your Bitcoin trades', html };
+      : '<p class="ex-empty">No Bitcoin trades yet. They follow you to every station.</p>');
+  return { title: 'Your Bitcoin trades', html };
 }
 
 /** Every trade in this good at the market on screen, other traders' and yours. */
@@ -57,29 +46,18 @@ export function feedHtml(ctx: TradeContext, id: string): string {
     : '<p class="ex-empty">No trades in the last few hours.</p>';
 }
 
-/** Your orders, storage and trades at the market on screen. */
-export function tradesHtml(ctx: TradeContext, remote: boolean, now: number): { title: string; html: string } {
+/** Your trades at the market on screen, and what's in storage there. Open orders are in the trade window's Orders. */
+export function tradesHtml(ctx: TradeContext, remote: boolean, openOrders: number): { title: string; html: string } {
   const state = marketState(ctx) as OrderState;
   const trades = (state.trades ?? []).slice().reverse();
-  const orders = state.orders ?? [];
   const stored = Object.entries(state.storage ?? {}).filter(([, q]) => q > 0);
-  const openHtml = orders.length
-    ? `<h5>Open orders</h5><table class="ex-orders"><thead><tr><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Limit</th><th class="num">Market</th><th></th></tr></thead><tbody>${orders
-        .map((o) => {
-          const market = quotes(ctx).find((x) => x.commodity.id === o.id)!.price;
-          const onWay = o.sent !== undefined && o.placed > now;
-          const status = o.cancel !== undefined ? `<small>cancelling</small>` : onWay ? `<small>arrives ${clock(o.placed)}</small>` : fmt(market, 2);
-          return `<tr><td>${commodityById(o.id)?.name}</td><td class="${o.side === 'buy' ? 'up' : 'down'}">${o.side === 'buy' ? 'Buy' : 'Sell'}</td><td class="num">${o.qty.toLocaleString()}</td>
-            <td class="num">${fmt(o.limit, 2)}</td><td class="num">${status}</td><td class="num">${o.cancel !== undefined ? '' : `<button data-cancel="${o.oid}">Cancel</button>`}</td></tr>`;
-        })
-        .join('')}</tbody></table>`
-    : '';
   const storageHtml = stored.length
     ? `<p class="ex-storage">In storage ${remote ? 'there' : 'here, waiting for hold space'}: ${stored.map(([id, q]) => `<b>${q.toLocaleString()} ${unitLabel(commodityById(id)!)} ${commodityById(id)?.name}</b>`).join(', ')}</p>`
     : '';
+  const link = `<button class="ex-act-orders" data-open-orders="1">${openOrders ? `Your orders (${openOrders}), every market ›` : 'Your orders, every market ›'}</button>`;
   const where = remote ? `at ${ctx.system.name}` : 'here';
   const html =
-    openHtml +
+    link +
     storageHtml +
     (trades.length
       ? `<table><thead><tr><th>Time</th><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Avg</th><th class="num">Total</th></tr></thead><tbody>${trades
@@ -89,7 +67,7 @@ export function tradesHtml(ctx: TradeContext, remote: boolean, now: number): { t
           )
           .join('')}</tbody></table>`
       : '<p class="ex-empty">No trades at this station yet.</p>');
-  return { title: orders.length ? `Your orders and trades ${where}` : `Your trades ${where}`, html };
+  return { title: `Your trades ${where}`, html };
 }
 
 /** The back room: whether there's one to show, and what's in it. */

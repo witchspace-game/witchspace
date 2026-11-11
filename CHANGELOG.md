@@ -12,7 +12,7 @@ reported it.
 
 ## 11 November 2026
 
-- Trading has a proper trade window, like a real exchange: Buy and Sell open it, with the order book beside the form, Price and Amount with + and −, a slider with stops, Total, and one button. Placing a limit order is no longer fiddly, on a phone or a computer. (Mark)
+- Trading has a proper trade window, like a real exchange: Buy and Sell open it, with the order book beside the form, Price and Amount with + and −, a slider with stops, Total, and one button. Placing a limit order is no longer fiddly, on a phone or a computer. A limit buy fills your hold at most, unless you switch on Fill to storage, when the rest waits at the station. (Mark)
 - All your orders in one place, at every market: open orders, goods waiting in storage and your trades, each with where it is and what your news says of it. Edit or cancel any of them. (Mark)
 - Trade from the chart: SELL and BUY in its corner, a + on the price scale to place a limit order at that price (a long press on a phone), and your orders as tags on their lines that you can drag to a new price or cancel. You always confirm in the trade window. (Mark)
 - Cancelling or changing an order at another market travels at the speed of news, as placing it did: it can still fill at its old price until the message gets there. (Mark)

@@ -1333,9 +1333,6 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-price span, .ex-price b { color: var(--ex-dim); font-size: 12px; font-weight: 500; }
 .ex-price input { flex: 1; min-width: 0; padding: 8px 0; border: 0; background: none; color: var(--ex-text); font: inherit; font-size: 14px; text-align: right; outline: none; }
 .ex-mine h5 { margin: 0 0 4px; font-size: 11px; font-weight: 600; color: var(--ex-gold); text-transform: none; letter-spacing: 0; }
-.ex-orders { margin-bottom: 10px; }
-.ex-orders button { padding: 1px 8px; border: 1px solid var(--ex-line); border-radius: 3px; background: none; color: var(--ex-dim); font-size: 11px; }
-.ex-orders button:hover { color: var(--ex-down); border-color: var(--ex-down); }
 .ex-storage { margin: 0 0 10px; color: var(--ex-dim); }
 .ex-storage b { color: var(--ex-text); font-weight: 600; }
 .ex-ordertype span { font-weight: 400; color: var(--ex-dim); margin-left: 4px; }
@@ -2513,3 +2510,10 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 }
 .ex-plus-menu { z-index: 5; }
 .ex-plus { z-index: 4; }
+.ex-storage-toggle { align-self: flex-start; display: flex; align-items: center; gap: 7px; padding: 2px 0; border: 0; background: none; color: var(--ex-dim); font-size: 12px; cursor: pointer; }
+.ex-storage-toggle i { width: 26px; height: 14px; border-radius: 7px; background: var(--ex-line); position: relative; flex: none; }
+.ex-storage-toggle i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--ex-dim); transition: left 0.15s; }
+.ex-storage-toggle.on { color: var(--ex-text); }
+.ex-storage-toggle.on i { background: var(--ex-up); }
+.ex-storage-toggle.on i::after { left: 14px; background: #fff; }
+.ex-mine .ex-act-orders { display: block; margin-bottom: 6px; }

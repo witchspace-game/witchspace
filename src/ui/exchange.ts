@@ -95,6 +95,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   let modalOpen = false;
   let otab: OrdersTab = 'open';
   let editing: { key: string; oid: number } | null = null;
+  /** A limit buy here may buy more than the hold takes, the rest waiting in storage (Mark: off unless asked). */
+  let fillStorage = false;
 
   root.innerHTML = `
     <section class="ex-back" hidden></section>
@@ -157,6 +159,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
               <input class="ex-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Amount as a share of the most you can trade" />
               <div class="ex-ticks">${[0, 25, 50, 75, 100].map((p) => `<button type="button" data-pct="${p}"><i></i><span>${p ? `${p}%` : '0'}</span></button>`).join('')}</div>
             </div>
+            <button type="button" class="ex-storage-toggle" data-storage="1" aria-pressed="false" hidden title="Buy more than your hold takes: the rest waits in storage at this station until you collect it"><i></i>Fill to storage</button>
             <dl class="ex-est"></dl>
             <p class="ex-avail"></p>
             <button class="ex-submit"></button>
@@ -224,6 +227,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   });
 
   const commodity = () => commodityById(selected)!;
+  /** How many units of the good on screen fit in the hold's free space. */
+  const holdRoom = (ctx: TradeContext) => Math.floor(freeTonnes(ctx) * UNITS_PER_TONNE[commodity().unit] + 1e-9);
   const index = () => COMMODITIES.findIndex((c) => c.id === selected);
   const limitPrice = () => Number(priceInput.value) || 0;
   const maxQty = (ctx: TradeContext) => {
@@ -235,8 +240,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     }
     // Where there's a law, only clean goods can be sold openly.
     if (side === 'sell') return ctx.system.government > 0 ? cleanQty(ctx.commander, selected) : (ctx.commander.cargo[selected] ?? 0);
-    // A limit buy waits for the price, so it's limited by credits, not stock or hold.
-    if (orderType === 'limit') return limitPrice() > 0 ? Math.floor(ctx.commander.credits / limitPrice()) : 0;
+    // A limit buy waits for the price: what fits in the hold (Mark), or with Fill to storage on,
+    // as much as your credits cover, the rest waiting in storage here.
+    if (orderType === 'limit') {
+      const byCredits = limitPrice() > 0 ? Math.floor(ctx.commander.credits / limitPrice()) : 0;
+      return fillStorage ? byCredits : Math.min(byCredits, holdRoom(ctx));
+    }
     return maxBuyable(ctx, selected);
   };
   /** Start the limit price a little better than the market: below it to buy, above it to sell. */
@@ -762,7 +771,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     $('.ex-qty-name').textContent = 'Amount';
     $('.ex-qty input').toggleAttribute('disabled', editing !== null);
     $('.ex-stops').hidden = editing !== null;
-    renderStops(side === 'sell' ? 'All' : limit ? 'Max' : 'Hold');
+    renderStops(side === 'sell' ? 'All' : limit && (fillStorage || remote()) ? 'Max' : 'Hold');
+    // Fill to storage: a limit buy here, only. Remote buys always go to storage there.
+    const toggle = $<HTMLButtonElement>('.ex-storage-toggle');
+    toggle.hidden = !(limit && side === 'buy' && !remote());
+    toggle.classList.toggle('on', fillStorage);
+    toggle.setAttribute('aria-pressed', String(fillStorage));
     $('.ex-avail').innerHTML = '';
     const cancelBtn = $<HTMLButtonElement>('.ex-cancel-order');
     cancelBtn.hidden = !edit;
@@ -826,8 +840,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       submit.disabled = Boolean(why) || n === 0;
       submit.textContent = why || `${side === 'buy' ? 'Buy' : 'Sell'} ${t}`;
       $('.ex-fnote').textContent = remote()
-        ? `Sent to ${ctx.system.name}: arrives in ${age(newsDelay(ctx.system, deps.context().system))}, then waits for your price. ${side === 'buy' ? 'What it buys waits in storage there.' : 'Sells from your storage there.'}`
-        : `Fills when the price ${side === 'buy' ? 'falls' : 'rises'} to ${limitPrice() ? fmt(limitPrice(), 2) : 'yours'}, while you're away too. ${side === 'buy' ? 'Credits' : 'Goods'} held until then.`;
+        ? `Sent to ${ctx.system.name}: arrives in ${age(newsDelay(ctx.system, deps.context().system))}, then waits for your price. ${side === 'buy' ? `→ storage at ${ctx.system.name}.` : 'Sells from your storage there.'}`
+        : `Fills when the price ${side === 'buy' ? 'falls' : 'rises'} to ${limitPrice() ? fmt(limitPrice(), 2) : 'yours'}, while you're away too. ${side === 'buy' ? 'Credits' : 'Goods'} held until then.${
+            side === 'buy' && n > holdRoom(ctx) ? ` ${(n - holdRoom(ctx)).toLocaleString()} ${u} won't fit your hold: ${n - holdRoom(ctx) === 1 ? 'it waits' : 'they wait'} in storage at ${ctx.system.name}.` : ''
+          }`;
       $('.ex-msg').textContent = message;
       return;
     }
@@ -871,10 +887,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     message = '';
     qtyInput.value = '';
     slider.value = '0';
-    modalOpen = true;
-    modalEl.hidden = false;
-    document.body.classList.add('ex-modal-open');
-    render();
+    showModal();
     if (orderType === 'limit') {
       if (o.price) priceInput.value = isBtc() ? String(Math.round(o.price)) : o.price.toFixed(2);
       else suggestPrice(view());
@@ -898,18 +911,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     orderType = 'limit';
     editing = { key, oid };
     message = '';
-    modalOpen = true;
-    modalEl.hidden = false;
-    document.body.classList.add('ex-modal-open');
     priceInput.value = (price ?? order.amend?.limit ?? order.limit).toFixed(2);
-    render();
+    showModal();
   }
 
   function closeModal() {
-    modalOpen = false;
-    editing = null;
-    modalEl.hidden = true;
-    document.body.classList.remove('ex-modal-open');
+    closeQuietly();
     render();
   }
 
@@ -924,10 +931,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     $('.ex-orders-all').innerHTML = ordersPanel(docked.commander, docked.system, docked.now, otab, phone.matches);
   }
 
-  function renderActions(ctx: TradeContext) {
-    const docked = deps.context();
-    $('.ex-actions').innerHTML = actionsHtml(ctx, windowView(ctx), openCount(docked.commander, docked.system, docked.now), modalOpen ? '' : message);
-  }
+  /** How many orders you have open, every market. */
+  const ordersOpen = () => openCount(deps.context().commander, deps.context().system, deps.context().now);
+  const renderActions = (ctx: TradeContext) => ($('.ex-actions').innerHTML = actionsHtml(ctx, windowView(ctx), ordersOpen(), modalOpen ? '' : message));
 
   function updateOverlay(ctx: TradeContext) {
     overlay.update({ ...chartState(ctx, selected, deps.context().now), decimals: isBtc() ? 0 : 2, enabled: !backOpen });
@@ -936,7 +942,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   // --- Your trades ----------------------------------------------------------------
 
   function renderBtcTrades(ctx: TradeContext) {
-    const t = btcTradesHtml(ctx.commander);
+    const t = btcTradesHtml(ctx.commander, ordersOpen());
     $('.ex-mine h4').textContent = t.title;
     $('.ex-trades-list').innerHTML = t.html;
   }
@@ -944,7 +950,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   const renderFeed = (ctx: TradeContext) => ($('.ex-feed-list').innerHTML = feedHtml(ctx, selected));
 
   function renderTrades(ctx: TradeContext) {
-    const t = tradesHtml(ctx, remote(), deps.context().now);
+    const t = tradesHtml(ctx, remote(), ordersOpen());
     $('.ex-mine h4').textContent = t.title;
     $('.ex-trades-list').innerHTML = t.html;
   }
@@ -1150,6 +1156,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       .finally(() => (refreshing = false));
   }
   let submitting = false;
+  function showModal() {
+    modalOpen = true;
+    modalEl.hidden = false;
+    document.body.classList.add('ex-modal-open');
+    render();
+  }
   /** Done: the window closes, and the page shows what happened. */
   function closeQuietly() {
     modalOpen = false;
@@ -1228,12 +1240,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       const docked = deps.context();
       const result = requestCancel(docked.commander, t.state, t.order.oid, docked.capacity, docked.now, delayTo(t.system), t.system.name);
       message = result.message;
-      if (result.ok) {
-        editing = null;
-        modalOpen = false;
-        modalEl.hidden = true;
-        document.body.classList.remove('ex-modal-open');
-      }
+      if (result.ok) closeQuietly();
       deps.traded(result);
       return;
     }
@@ -1243,12 +1250,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       const docked = deps.context();
       const result = amendOrder(docked.commander, t.system, t.state, t.order.oid, limitPrice(), docked.now, delayTo(t.system));
       message = result.message;
-      if (result.ok) {
-        editing = null;
-        modalOpen = false;
-        modalEl.hidden = true;
-        document.body.classList.remove('ex-modal-open');
-      }
+      if (result.ok) closeQuietly();
       deps.traded(result);
       return;
     }
@@ -1347,12 +1349,11 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       slider.value = '0';
       message = '';
       if (orderType === 'limit') suggestPrice(view());
-    } else if (el.dataset.cancel) {
+    } else if (el.dataset.storage) {
+      fillStorage = !fillStorage;
       const ctx = view();
-      const result = requestCancel(ctx.commander, marketState(ctx) as OrderState, Number(el.dataset.cancel), ctx.capacity, deps.context().now, delayTo(ctx.system), ctx.system.name);
-      message = result.message;
-      deps.traded(result);
-      return;
+      if (qty() > maxQty(ctx)) setQty(maxQty(ctx), ctx);
+      else setQty(qty(), ctx); // the slider's share of the new maximum
     } else if (el.dataset.interval) {
       interval = el.dataset.interval as Interval;
     } else if (el.dataset.pct) {
