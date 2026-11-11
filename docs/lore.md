@@ -18,7 +18,7 @@ Every commander starts the same way: 100 credits and a Cobra Mk III at Lave, doc
 
 **The Galactic Co-operative** is the closest thing the galaxy has to a government. It issues the credit, keys every police transponder, and stamps the police markings (beacons, hull band, transponder) that can't be bought, copied or painted on, in any system however corrupt. It owns the core Coriolis stations, so a fair, rules-bound station is never more than a jump or two away. It is also the safety net: lose everything and the Co-operative will give you a bare Cobra, no questions and no upgrades.
 
-**The Bureau of Continuity** is the Co-operative's quiet intelligence office. It sits on Hexon's board (an empty seat, though every vote goes its way), it buys from Vorg, and it chartered the Carriers' Mutual. Nobody is quite sure whose side it's on. That's how it likes it. Your Hexon file carries one redacted line: *Bureau of Continuity interest: noted.*
+**The Bureau of Continuity** is the Co-operative's quiet intelligence office. It keeps the minutes of Hexon's board (it has no seat, but the minutes are always right, so every vote goes its way), it buys from Vorg, and it chartered the Carriers' Mutual. Nobody is quite sure whose side it's on. That's how it likes it. Your Hexon file carries one redacted line: *Bureau of Continuity interest: noted.*
 
 **Governments** run from the safe and orderly to the lawless: Corporate States, Democracies and Confederacies; Communist worlds and Multi-Governments; Dictatorships, Feudal worlds and Anarchies. The lower the order, the higher the profit and the risk. Lawful worlds fine you fairly and inspect your hold. Corrupt ones take bribes and may "lose" some of your cargo. Anarchies check nothing and protect nobody.
 

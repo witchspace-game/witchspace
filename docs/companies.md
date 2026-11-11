@@ -39,7 +39,7 @@ Medicine, biologicals, luxury goods and anything that must arrive on time, acros
 
 - When a plague breaks out, Hexon's medicine is already on the way. Some say it's already in the warehouse a fortnight before. Nobody has proved it. The people who tried to are hard to find.
 - Some cargo travels in **sealed containers**, class-4 biologicals, never opened, never scanned. Customs officers who ask are thanked, and transferred.
-- The Bureau's seat on the board is empty at every meeting, and every vote goes its way.
+- The Bureau of Continuity has no seat on Hexon's board. It keeps the minutes, and the minutes are always right: every vote goes its way, because the record says it did.
 
 ### Mark and livery
 
@@ -248,4 +248,4 @@ Named for *Titanoboa*, the largest snake that ever lived. *(Original class.)*
 - **Hexon and Vorg** need each other: Hexon's worlds buy Vorg's weapons, and Vorg's frontier buys Hexon's medicine. In public they despise each other.
 - **The Mutual** carries for both when it has to, and trusts neither.
 - **Wexley-Yorozu** builds the worlds the others trade with, and owns the debts of the people on them. Hexon sells its colonies medicine; Vorg sells them protection; the Mutual carries for them at cost and asks awkward questions.
-- **The Bureau of Continuity** sits on Hexon's board, buys from Vorg, and chartered the Mutual. Nobody is quite sure whose side it's on. That's how it likes it.
+- **The Bureau of Continuity** keeps the minutes of Hexon's board, buys from Vorg, and chartered the Mutual. Nobody is quite sure whose side it's on. That's how it likes it.
