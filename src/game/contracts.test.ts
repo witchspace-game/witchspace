@@ -243,3 +243,28 @@ describe('routes as long as your tank', () => {
     expect(route === null || route.length > 1).toBe(true);
   });
 });
+
+describe('a new rank with a company (Mark: "when I became a contractor for W-Y I wasn\'t notified")', () => {
+  it('sends a message in the company\'s voice, once, however the points were earned', async () => {
+    const { addStanding } = await import('./contracts');
+    const c = newCommander('modern');
+    addStanding(c, 'wy', 3, 1000);
+    expect(c.messages ?? []).toHaveLength(0); // still Casual
+    addStanding(c, 'wy', 3, 2000); // 6: Contractor
+    expect(c.messages?.[0]).toMatchObject({ id: 'rank:wy:Contractor', company: 'wy', at: 2000 });
+    expect(c.messages?.[0].body).toContain('Contractor with Wexley-Yorozu');
+    addStanding(c, 'wy', -3, 3000); // back to Casual: nothing
+    addStanding(c, 'wy', 3, 4000); // Contractor again: not said twice
+    expect(c.messages?.filter((m) => m.id.startsWith('rank:'))).toHaveLength(1);
+    addStanding(c, 'wy', 10, 5000); // Trusted
+    expect(c.messages?.[0].id).toBe('rank:wy:Trusted');
+  });
+
+  it('says nothing for climbing back up from below zero', async () => {
+    const { addStanding } = await import('./contracts');
+    const c = newCommander('modern');
+    c.standing = { vorg: -6 };
+    addStanding(c, 'vorg', 4);
+    expect(c.messages ?? []).toHaveLength(0);
+  });
+});

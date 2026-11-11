@@ -23,6 +23,12 @@ export interface LimitOrder {
   market?: number;
   /** Sent from another station: when it was sent (it starts working at `placed`, once it arrives). */
   sent?: number;
+  /** Cancelled from another station: when the cancel reaches the market. It can still fill until then. */
+  cancel?: number;
+  /** A new price sent from another station: it takes over when the message arrives. */
+  amend?: { limit: number; at: number };
+  /** Buys: credits held per unit, when more than the limit (a raised price on its way). */
+  held?: number;
 }
 
 export interface Fill {
@@ -38,6 +44,8 @@ export type OrderState = MarketState & {
   ordersChecked?: number;
   /** Fills you haven't been told about yet. */
   fills?: Fill[];
+  /** Cancels that reached the market, as far as you've heard, not yet told. */
+  cancelled?: LimitOrder[];
 };
 
 const STEP = 60_000; // ms: how finely the price history is checked for fills
@@ -115,8 +123,9 @@ export function cancelOrder(c: Commander, state: OrderState, oid: number, capaci
   if (!order) return { ok: false, message: 'No such order' };
   state.orders = state.orders!.filter((o) => o.oid !== oid);
   if (order.side === 'buy') {
-    c.credits = Math.round((c.credits + order.limit * order.qty) * 10) / 10;
-    record(c, { k: 'fill', d: order.limit * order.qty, g: order.id, q: -order.qty });
+    const back = heldPer(order) * order.qty;
+    c.credits = Math.round((c.credits + back) * 10) / 10;
+    record(c, { k: 'fill', d: back, g: order.id, q: -order.qty });
   }
   else {
     state.storage = { ...(state.storage ?? {}), [order.id]: (state.storage?.[order.id] ?? 0) + order.qty };
@@ -140,6 +149,8 @@ export function checkOrders(c: Commander, system: StarSystem, state: OrderState,
   const filled: Fill[] = [];
   for (const order of open) {
     for (let t = Math.max(from, order.placed) + STEP; t <= now && order.qty > 0; t += STEP) {
+      if (order.cancel !== undefined && t > order.cancel) break; // the cancel got there first
+      if (order.amend && t >= order.amend.at) applyAmend(c, order, t);
       const price = priceAt(system, state, order.id, t);
       if (order.side === 'buy' ? price > order.limit : price < order.limit) continue;
       // Only as much as the market takes at your price: a big order fills in parts, as the
@@ -153,7 +164,15 @@ export function checkOrders(c: Commander, system: StarSystem, state: OrderState,
       state.trades = [...(state.trades ?? []), { t, id: order.id, side: order.side, qty, total: Math.round(order.limit * qty * 10) / 10 }]
         .sort((a, b) => a.t - b.t)
         .slice(-TRADE_MEMORY);
-      if (order.side === 'buy') state.storage = { ...(state.storage ?? {}), [order.id]: (state.storage?.[order.id] ?? 0) + qty };
+      if (order.side === 'buy') {
+        state.storage = { ...(state.storage ?? {}), [order.id]: (state.storage?.[order.id] ?? 0) + qty };
+        // Credits held for a higher price still on its way: what this fill didn't need comes back.
+        const spare = Math.round((heldPer(order) - order.limit) * qty * 10) / 10;
+        if (spare > 0) {
+          c.credits = Math.round((c.credits + spare) * 10) / 10;
+          record(c, { t, k: 'fill', d: spare, g: order.id, q: 0 });
+        }
+      }
       else {
         c.credits = Math.round((c.credits + order.limit * qty) * 10) / 10;
         record(c, { t, k: 'fill', d: order.limit * qty, g: order.id, q: -qty, s: [system.galaxy, system.index] });
@@ -161,13 +180,95 @@ export function checkOrders(c: Commander, system: StarSystem, state: OrderState,
       order.qty -= qty;
     }
   }
-  if (filled.length) {
-    state.orders = open.filter((o) => o.qty > 0);
-    state.fills = [...(state.fills ?? []), ...filled];
+  // A new price that has arrived by now, and cancels that have: credits back, goods back to storage there.
+  const cancelled: LimitOrder[] = [];
+  for (const order of open) {
+    if (order.amend && now >= order.amend.at) applyAmend(c, order, order.amend.at);
+    if (order.cancel === undefined || order.cancel > now || order.qty <= 0) continue;
+    if (order.side === 'buy') {
+      const back = Math.round(heldPer(order) * order.qty * 10) / 10;
+      c.credits = Math.round((c.credits + back) * 10) / 10;
+      record(c, { t: order.cancel, k: 'fill', d: back, g: order.id, q: -order.qty, s: [system.galaxy, system.index] });
+    } else state.storage = { ...(state.storage ?? {}), [order.id]: (state.storage?.[order.id] ?? 0) + order.qty };
+    cancelled.push({ ...order });
+    order.qty = 0;
   }
+  if (filled.length || cancelled.length) state.orders = open.filter((o) => o.qty > 0);
+  if (filled.length) state.fills = [...(state.fills ?? []), ...filled];
+  if (cancelled.length) state.cancelled = [...(state.cancelled ?? []), ...cancelled];
   state.ordersChecked = now;
   return filled;
 }
+
+/** Credits held per unit by a buy order. */
+const heldPer = (o: LimitOrder) => Math.max(o.held ?? o.limit, o.limit);
+
+/** A new price arrives at the market: a lower buy price gives back what it no longer needs held. */
+function applyAmend(c: Commander, order: LimitOrder, t: number) {
+  const next = order.amend!.limit;
+  if (order.side === 'buy') {
+    const spare = Math.round((heldPer(order) - next) * order.qty * 10) / 10;
+    if (spare > 0) {
+      c.credits = Math.round((c.credits + spare) * 10) / 10;
+      record(c, { t, k: 'fill', d: spare, g: order.id, q: 0 });
+    }
+    delete order.held;
+  }
+  order.limit = next;
+  delete order.amend;
+}
+
+/**
+ * Cancel an order. At the station you're at, at once. Elsewhere the cancel travels at the speed of
+ * news (`delay`): the order can still fill until it arrives, and you hear it's done when the news
+ * of that market comes back.
+ */
+export function requestCancel(c: Commander, state: OrderState, oid: number, capacity: number, now: number, delay: number, marketName: string): OrderResult {
+  if (delay <= 0) return cancelOrder(c, state, oid, capacity, true);
+  const order = (state.orders ?? []).find((o) => o.oid === oid);
+  if (!order) return { ok: false, message: 'No such order' };
+  if (order.cancel !== undefined) return { ok: false, message: 'Already cancelling' };
+  order.cancel = Math.max(now + delay, order.placed);
+  delete order.amend;
+  return { ok: true, message: `Cancel sent to ${marketName}: it arrives ${clockOf(order.cancel)}, and the order can fill until then` };
+}
+
+/**
+ * A new price for an order. At the station you're at, at once (and it mustn't fill straight away, as
+ * when placing one). Elsewhere it travels at the speed of news and the old price works until it
+ * arrives. Raising a buy holds the extra credits now; lowering one gives credits back when it arrives.
+ */
+export function amendOrder(c: Commander, system: StarSystem, state: OrderState, oid: number, limit: number, now: number, delay: number): OrderResult {
+  const order = (state.orders ?? []).find((o) => o.oid === oid);
+  if (!order) return { ok: false, message: 'No such order' };
+  if (order.cancel !== undefined) return { ok: false, message: 'That order is being cancelled' };
+  limit = Math.round(limit * 100) / 100;
+  if (!(limit > 0)) return { ok: false, message: 'Set a price' };
+  const name = commodityById(order.id)?.name ?? order.id;
+  if (delay <= 0) {
+    const price = priceAt(system, state, order.id, now);
+    if (order.side === 'buy' && limit >= price) return { ok: false, message: `That's at or above the market (${price.toFixed(1)} Cr): use a market order` };
+    if (order.side === 'sell' && limit <= price) return { ok: false, message: `That's at or below the market (${price.toFixed(1)} Cr): use a market order` };
+  }
+  if (order.side === 'buy') {
+    const extra = Math.round((limit - heldPer(order)) * order.qty * 10) / 10;
+    if (extra > 0) {
+      if (extra > c.credits) return { ok: false, message: 'Not enough credits to cover the new price' };
+      c.credits = Math.round((c.credits - extra) * 10) / 10;
+      record(c, { t: now, k: 'fill', d: -extra, g: order.id, q: 0 });
+      order.held = limit;
+    }
+  }
+  if (delay <= 0) {
+    order.amend = { limit, at: now };
+    applyAmend(c, order, now);
+    return { ok: true, message: `Order changed: ${order.qty}${units(order.id)} of ${name} at ${limit.toFixed(2)} Cr` };
+  }
+  order.amend = { limit, at: Math.max(now + delay, order.placed) };
+  return { ok: true, message: `New price sent to ${system.name}: ${limit.toFixed(2)} Cr from ${clockOf(order.amend.at)}` };
+}
+
+const clockOf = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 
 /**
  * How much of an order the market takes at time `t` without the price going past
