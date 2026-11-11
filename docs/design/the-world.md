@@ -216,6 +216,16 @@ Exceptions are what makes the world respond. The question is whose world they ch
 
 Starting point: **solo changes stay yours; shared-space changes are everyone's, because the server refereed them.** A commander who robs a convoy in solo has a world one convoy shorter. A wing that saves the yard's supply line in shared space has saved it for everybody. (Open question 2.)
 
+### 5.1 How long an exception is kept *(11 November 2026)*
+
+*From a storage check (Mark: "Are we storing information that we don't need?"). Solo is already tidy: the yard's losses are pruned as each new one comes (`keepLosses`). This is the rule for the server's rows, written before they're built.*
+
+- **An exception is kept while it changes something,** and no longer. A destroyed convoy matters until its run is due again; a lost supply ship until its stage is finished; then the row goes.
+- **The longest anything is kept is 60 days,** the same as a renowned pirate's record on the privacy page, unless it's a story beat (section 6) or a first, which are history and kept.
+- **Who did it goes first.** A row names a commander only while that matters to someone (the news, a character's memory of you); after that it's kept, if at all, as "a commander".
+- **A deleted account's exceptions go with it,** as its firsts and pirate record do: out of view at once, erased after 90 days.
+- **Pruned by the server, on its own,** like the rest of its housekeeping: expired sign-in codes and old pirate records each hour, and taken-down clips' videos and cards after 30 days.
+
 ---
 
 ## 6. Characters
@@ -295,7 +305,7 @@ Mark (1 November 2026), of the characters remembering real commanders as well as
 
 - **The bar has heard.** *"A commander called Kestrel came through on Tuesday, answered the Mutual's call at the witchpoint. Odile's still buying them drinks."* *"Steer clear of the Riedquat lane. Some commander in a Mamba's been taking Mutual ships apart."*
 - **Only what the server saw.** Gossip comes from shared space, where the server referees what happened, so it can't be faked: a character or trader destroyed, a distress call answered, a convoy saved, a bounty claimed, a first discovery ([live feed](live-feed.md) already gathers some of this). Never from free text a player typed.
-- **It travels at the speed of news.** Told first at the station where it happened, then a jump further each few hours, fading after some days. Your reputation spreads across the chart like ripples, so a commander can outrun their past, for a while.
+- **It travels at the speed of news.** Told first at the station where it happened, then spreading at the game's news delay (`newsDelay`: 10 minutes, then 12 more for every light year), the same as the News board and warrants, fading after some days. The same server-seen events lead the station's News ([shared space, idea 7](shared-space.md#ideas-not-builds-getting-commanders-to-meet-mark-10-november-2026); Mark, 11 November 2026), so the board and the bar never disagree. Your reputation spreads across the chart like ripples, so a commander can outrun their past, for a while.
 - **Your transponder decides whether they know your name.** Fly dark (0) and the gossip is about "a ship with no transponder": the deed is remembered, but not who did it. Pirates have a real choice: be feared by name, or stay nobody.
 - **Heard in solo too.** A solo commander, signed in, hears the gossip about real commanders, so the galaxy feels lived in even before you ever meet one. Their own deeds in solo stay in their own world (section 5).
 - **Characters react to it.** A trader hails you coldly because she's heard; a harbourmaster has a bounty notice with your callsign on it two systems away; the shebeen keeper buys you a drink for the same thing.

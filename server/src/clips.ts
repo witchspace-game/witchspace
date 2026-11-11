@@ -34,6 +34,8 @@ const HEARTS_PER_NETWORK = 3; // per clip
 const REPORTS_TO_HIDE = 3;
 const SHARES_PER_HOUR = 6;
 const HEARTS_PER_MINUTE = 30;
+/** A clip that's down (taken down by its sharer, hidden after reports or by the admin) keeps its video and card this long, then they're erased (Mark, 11 November 2026). */
+export const ERASE_AFTER = 30 * 86_400_000;
 
 const voterOk = (v: string | null): v is string => Boolean(v && /^[A-Za-z0-9-]{16,64}$/.test(v));
 const idOk = (id: string | undefined): id is string => Boolean(id && /^[a-z0-9]{8,12}$/.test(id));
@@ -75,7 +77,7 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     // and its version, which goes in the picture's address so X and the rest fetch a new one fresh.
     // And its video (from 29 October 2026, Mark: the link plays your own video first): its version, and whether it's upright.
     // And its line for link previews, written from the fight (from 4 November 2026): older clips get theirs when first asked.
-    for (const col of ['sharer TEXT', 'withdrawn INTEGER NOT NULL DEFAULT 0', 'card BLOB', 'card_v INTEGER NOT NULL DEFAULT 0', 'video INTEGER NOT NULL DEFAULT 0', 'upright INTEGER NOT NULL DEFAULT 0', 'line TEXT']) {
+    for (const col of ['sharer TEXT', 'withdrawn INTEGER NOT NULL DEFAULT 0', 'card BLOB', 'card_v INTEGER NOT NULL DEFAULT 0', 'video INTEGER NOT NULL DEFAULT 0', 'upright INTEGER NOT NULL DEFAULT 0', 'line TEXT', 'down_at INTEGER']) {
       try {
         this.sql.exec(`ALTER TABLE clips ADD COLUMN ${col}`);
       } catch {
@@ -83,6 +85,9 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
       }
     }
     this.sql.exec('CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)');
+    // Clips already down before the 30-day erase (11 November 2026): their 30 days start now.
+    this.sql.exec('UPDATE clips SET down_at = ? WHERE hidden = 1 AND down_at IS NULL', Date.now());
+    void this.ctx.blockConcurrencyWhile(() => this.scheduleErase());
     this.retitle();
     // Lines written on 5 November 2026 before they read the title's kills ("3 kills" over "Two pirates down"): once, again.
     if (!this.sql.exec("SELECT 1 FROM meta WHERE key = 'relined-kills'").toArray().length) {
@@ -214,7 +219,7 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     if (!voterOk(voter) || !idOk(id)) return { error: 'No voter id', status: 400 };
     this.sql.exec('INSERT OR IGNORE INTO reports (clip, voter, t) VALUES (?, ?, ?)', id, voter, Date.now());
     const n = this.sql.exec('SELECT COUNT(*) AS n FROM reports WHERE clip = ?', id).one().n as number;
-    if (n >= REPORTS_TO_HIDE) this.sql.exec('UPDATE clips SET hidden = 1 WHERE id = ?', id);
+    if (n >= REPORTS_TO_HIDE) this.down(id, true);
     return { ok: true, status: 200 };
   }
 
@@ -254,15 +259,48 @@ export class ClipBoard extends DurableObject<ClipsEnv> {
     if (!yours) return { error: 'That clip isn’t yours to take down', status: 403 };
     // A clip hidden by reports or the admin stays hidden: only a withdrawn one can be put back.
     if (!down && r.hidden === 1 && r.withdrawn !== 1) return { error: 'That clip is hidden for review', status: 409 };
-    this.sql.exec('UPDATE clips SET hidden = ?, withdrawn = ? WHERE id = ?', down ? 1 : 0, down ? 1 : 0, id);
+    this.sql.exec('UPDATE clips SET withdrawn = ? WHERE id = ?', down ? 1 : 0, id);
+    this.down(id, down);
     return { ok: true, up: !down, status: 200 };
   }
 
   /** The admin key hides or restores a clip. */
   admin(id: string, key: string | null, hidden: boolean) {
     if (!this.env.ADMIN_KEY || key !== this.env.ADMIN_KEY) return { error: 'Not allowed', status: 403 };
-    this.sql.exec('UPDATE clips SET hidden = ? WHERE id = ?', hidden ? 1 : 0, id);
+    this.down(id, hidden);
     return { ok: true, status: 200 };
+  }
+
+  /** Take a clip down or put it back up. Down, its 30 days start (unless they already have); up, they stop. */
+  private down(id: string, down: boolean) {
+    if (down) this.sql.exec('UPDATE clips SET hidden = 1, down_at = COALESCE(down_at, ?) WHERE id = ? AND hidden = 0', Date.now(), id);
+    else this.sql.exec('UPDATE clips SET hidden = 0, down_at = NULL WHERE id = ?', id);
+    void this.scheduleErase();
+  }
+
+  /** Wake when the next down clip's 30 days are up, if any has a video or card left to erase. */
+  private async scheduleErase() {
+    const next = this.sql.exec('SELECT MIN(down_at) AS t FROM clips WHERE hidden = 1 AND down_at IS NOT NULL AND (video > 0 OR card IS NOT NULL)').one().t as number | null;
+    if (next === null) return;
+    const at = Math.max(next + ERASE_AFTER, Date.now() + 3600_000); // overdue (or no bucket to erase from): try again within the hour
+    const set = await this.ctx.storage.getAlarm();
+    if (set === null || set > at) await this.ctx.storage.setAlarm(at);
+  }
+
+  /**
+   * Erase the videos and cards of clips down for 30 days: the video from the bucket, the card from here.
+   * The clip itself (its flight track, title and hearts) stays, so its sharer can still put it back up, without them.
+   */
+  async alarm(): Promise<void> {
+    const due = this.sql.exec('SELECT id, video FROM clips WHERE hidden = 1 AND down_at IS NOT NULL AND down_at <= ? AND (video > 0 OR card IS NOT NULL)', Date.now() - ERASE_AFTER).toArray();
+    for (const r of due) {
+      if ((r.video as number) > 0) {
+        if (!this.env.CLIP_VIDEOS) continue; // no bucket here: try again next time
+        await this.env.CLIP_VIDEOS.delete(`clips/${r.id as string}.mp4`);
+      }
+      this.sql.exec('UPDATE clips SET video = 0, upright = 0, card = NULL WHERE id = ?', r.id);
+    }
+    await this.scheduleErase();
   }
 
   /** A clip's line for link previews: kept, or written now from its track (a clip from before 4 November 2026). */

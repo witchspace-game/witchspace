@@ -3,7 +3,7 @@ import { distanceLy, systemAt, systemsWithin, type StarSystem } from '../galaxy/
 import { COMMODITIES } from './commodities';
 import { stationTrades } from './legality';
 import { costToBuy, freshMarket, proceedsToSell, recover, type MarketState } from './market';
-import { checkOrders, type Fill, type OrderState } from './orders';
+import { checkOrders, type Fill, type LimitOrder, type OrderState } from './orders';
 import { newsDelay } from './events';
 import { maxBuyable, quotes, type TradeContext } from './trade';
 
@@ -150,6 +150,18 @@ export function checkSentOrders(c: Commander, here: StarSystem, now: number): { 
     checkOrders(c, s, state, t);
     for (const fill of state.fills ?? []) out.push({ system: s, fill });
     state.fills = []; // told here, not again on arrival
+  }
+  return out;
+}
+
+/** Cancels that have reached their markets, as far as you've heard: each told once. */
+export function takeCancelled(c: Commander): { system: StarSystem; order: LimitOrder }[] {
+  const out: { system: StarSystem; order: LimitOrder }[] = [];
+  for (const [k, state] of Object.entries(c.markets) as [string, OrderState][]) {
+    if (!state.cancelled?.length) continue;
+    const [g, i] = k.split(':').map(Number);
+    for (const order of state.cancelled) out.push({ system: systemAt(g, i), order });
+    state.cancelled = [];
   }
   return out;
 }

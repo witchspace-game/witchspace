@@ -12,6 +12,7 @@ stages:
   - Three monies: the Money tab made plain, why it's moving, one wallet; company stablecoins and liquidity hidden | built
   - Backing a world: credits into its treasury, a stake that follows how it does | proposed
   - Shared galaxy: a ledger anyone can check, order books | proposed
+  - Real-world signals: gold, oil, the market's fear, the dollar, the long bond and Hexon's fortunes, damped | proposed
   - Later: crises driven by players, the Meridian Compact | proposed
 help:
   - Model a currency crisis for one government type | design
@@ -32,6 +33,49 @@ The machinery here was built before the reasons a player would need it (Mark: th
 | **Bitcoin** | Maths | The same everywhere, and nobody can take it |
 
 **Hidden for now** (code kept): company stablecoins, providing liquidity, and Bitcoin in Corporate States' reserves (so no runs). Anything a commander held is paid back in credits on docking. Stablecoins as a separate idea, and the Meridian Compact, wait for later. Sections 4 to 6b below describe the fuller design; [section 9e](#9e-three-monies-as-built-marks-yes-on-the-pictures-1-november-2026) is what's built now.
+
+## The galaxy's markets breathe with ours *(proposed, Mark, 11 November 2026)*
+
+Mark: Bitcoin's real price already reaches the game through the relay; what else could come from the real world? His list: *"OIL, Gold, Google, Tesla, NVidia, Pfizer and DXY, VIX and The Long Bond."* **Decided (Mark): the macro six plus Pfizer.** Google, Tesla and NVidia are left out: single stocks swing on company news that means nothing in the galaxy, and mirroring one invites "this ship company is Tesla".
+
+### Seven signals, and what each moves
+
+| Real signal | In the galaxy |
+|---|---|
+| **Bitcoin** | Already live: Bitcoin on the exchange ([6b](#6b-bitcoin-against-the-witchspace-universe-mark-26-october-2026)). |
+| **Gold** | The price of Gold, Platinum and Gem-stones. |
+| **Oil** | The price of fuel (a flat 2 Cr a light year today), fuel tenders and haulage rates. Every commander feels it, explorers most ([trails need kit](exploration.md#trails-need-kit-idea-mark-11-november-2026)). |
+| **VIX** (the market's fear) | **The galaxy's Fear and Greed**: one gauge on the news board, the mood the two sides' councils read (the parked idea of the Co-operative against the Meridian Compact). |
+| **DXY** (the dollar's strength) | **The credit's strength** against worlds' own money. |
+| **The long bond** (the 30-year yield) | **The Co-operative's interest rate**: what credit costs, colony debt, clause 214. When yields rise, a credit that has to keep growing gets harder to roll. |
+| **Pfizer** | **Hexon**: the Medicine price, and how well Hexon's contracts pay. |
+
+### Rules
+
+- **Never a real number or a real name in the game.** No "Gold $2,400", no company named: only the effect in our world. It keeps the galaxy in-world, keeps no real brand in the game, and stays on the right side of the data provider's display terms (to check).
+- **Damped, smoothed, capped.** The galaxy moves by a fraction of the real change from a rolling baseline (say 30 days), smoothed, and capped (say ±25% on a good's price; numbers to tune with the economy simulation before it ships). A real crash is a hard week in the galaxy, not a broken economy.
+- **The same for every commander,** solo and shared: the server sends the same numbers to every game, as the seed and the clock do.
+- **Still when the markets are.** Weekends and holidays hold the last value; only Bitcoin moves around the clock.
+- **Modern only.** Classic keeps Elite's prices.
+- **Not financial information.** Effects in a game, never presented as advice or a signal to trade the real thing.
+
+### Where it comes from
+
+- **Bitcoin:** as now, Binance through the relay in Tokyo ([relay/](../../relay/README.md)). Binance also lists a gold-backed token (PAXG), a fallback for gold.
+- **The rest: Financial Modeling Prep (FMP),** Mark's paid account (used already by Botpit and Capital Flow): commodities (gold, crude), Pfizer's quote, the VIX and the dollar index, and Treasury rates. Symbols to confirm against the plan.
+- **The Worker asks, not the game:** one fetch every 15 minutes, cached, so a few hundred calls a day however many play. A new `GET /markets` returns the galaxy's effects (factors and gauges), not quotes. If FMP is down, the last values hold; with none, everything is neutral.
+- **The key** is a Worker secret Mark sets (`cd server && npx wrangler secret put FMP_API_KEY`), never in the repo. A separate key from Botpit's if FMP allows one, so a game bug can never spend the quota a trading arena needs.
+
+### The real calendar as the day's headline
+
+FMP's economic calendar (Capital Flow already reads it) gives the real release days: inflation, jobs, the Fed. These can be the galaxy's **one headline event a day** ([shared space, idea 2](shared-space.md#ideas-not-builds-getting-commanders-to-meet-mark-10-november-2026)): on a Fed day the Co-operative's council meets, the rate is set, and the credit moves for everyone at once, spreading at the speed of news. The galaxy's own words, never the real event's name.
+
+### To decide
+
+1. FMP's display and redistribution terms on Mark's plan.
+2. The damping and caps, after the economy simulation.
+3. Whether the site says so: *"The galaxy's markets breathe with ours"* is a hook for Marketing, with no numbers.
+4. Whether this waits for the two sides (the Meridian Compact), or starts with goods and fuel on their own.
 
 ## The idea
 

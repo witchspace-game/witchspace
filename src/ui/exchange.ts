@@ -13,17 +13,21 @@ import {
   type Time,
   type UTCTimestamp,
 } from 'lightweight-charts';
-import { COMMODITIES, commodityById, isPlural, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
-import { abolitionistPrice, backRoomQuotes, fenceQuotes, fenceSell, freeSlaves, hasAbolitionists, hasBackRoom, stingChance, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
+import { COMMODITIES, commodityById, UNITS_PER_TONNE, type Commodity } from '../economy/commodities';
+import { fenceSell, freeSlaves, backRoomTrade, type BackRoomResult } from '../economy/blackmarket';
 import { cleanQty, FUEL_CAPACITY, stolenQty } from '../game/commander';
 import { activeEvent, eventsAt, EVENT_KINDS, newsAt, newsDelay, type NewsItem } from '../economy/events';
-import { candles, drift, equilibriumPrice, orderBook, priceAt, recentTrades, stationOrder, tradeBalance } from '../economy/market';
-import { BROKER_FEE, cancelOrder, collect, describeFill, placeOrder, sendOrder, type OrderState } from '../economy/orders';
+import { candles, drift, equilibriumPrice, orderBook, priceAt, stationOrder, tradeBalance } from '../economy/market';
+import { amendOrder, BROKER_FEE, collect, describeFill, placeOrder, requestCancel, sendOrder, type OrderState } from '../economy/orders';
 import { buy, freeTonnes, marketState, maxBuyable, quotes, sell, tradesHere, type TradeContext, type TradeResult } from '../economy/trade';
-import { bestKnownElsewhere, bestOutlets, bestRoutes, checkSentOrders, knownAt, marketsForOrders, type Route } from '../economy/routes';
+import { bestKnownElsewhere, bestOutlets, bestRoutes, checkSentOrders, knownAt, marketsForOrders, takeCancelled, type Route } from '../economy/routes';
 import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
 import { btcValue, buyAt, buyBitcoin, cancelBtcOrder, formatBtc, formatSats, isFresh, ordersOf, placeBtcOrder, satsOf, sellAt, sellBitcoin, FEE } from '../economy/bitcoin';
 import { btcCandles, btcQuote, checkBtcOrders, heardCandles, heardQuote } from '../net/bitcoin';
+import { openCount, ordersPanel, ticker, type OrdersTab } from './ordersList';
+import { mountChartOrders } from './chartOrders';
+import { actionsHtml, bookHtml, btcHeadHtml, chartState, headHtml, whyLine, type WindowView } from './tradeWindow';
+import { backRoomHtml, btcTradesHtml, feedHtml, tradesHtml } from './exchangeTables';
 
 // The station market as a trading exchange, in the style of today's crypto
 // exchanges: a list of pairs against the credit, a candlestick chart, the
@@ -50,14 +54,6 @@ export interface ExchangeDeps {
   /** A system's own money and how many units a credit buys there, for prices in local money; null in an anarchy. */
   localMoney?(system: StarSystem): { ticker: string; rate: number } | null;
 }
-
-const TICKERS: Record<string, string> = {
-  food: 'FOOD', textiles: 'TEXT', radioactives: 'RADS', slaves: 'SLAV', liquor: 'LIQR', luxuries: 'LUXR',
-  narcotics: 'NARC', computers: 'COMP', machinery: 'MACH', alloys: 'ALOY', firearms: 'ARMS', furs: 'FURS',
-  minerals: 'MINR', gold: 'GOLD', platinum: 'PLAT', gems: 'GEMS', alien: 'ALIN',
-  water: 'WATR', hydrogen: 'HYDR', electronics: 'ELEC', medicine: 'MEDS',
-};
-const ticker = (id: string) => TICKERS[id] ?? id.slice(0, 4).toUpperCase();
 
 const INTERVALS = { '5m': [5 * 60_000, 60], '15m': [15 * 60_000, 60], '1h': [3600_000, 48] } as const;
 type Interval = keyof typeof INTERVALS;
@@ -95,6 +91,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   let interval: Interval = '15m';
   let message = '';
   let timer = 0;
+  /** The trade window: open or not, which tab of your orders, and an order being changed. */
+  let modalOpen = false;
+  let otab: OrdersTab = 'open';
+  let editing: { key: string; oid: number } | null = null;
+  /** A limit buy here may buy more than the hold takes, the rest waiting in storage (Mark: off unless asked). */
+  let fillStorage = false;
 
   root.innerHTML = `
     <section class="ex-back" hidden></section>
@@ -125,24 +127,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div class="ex-mid"></div>
         <div class="ex-bids"></div>
       </section>
-      <section class="ex-form" aria-label="Trade">
-        <div class="ex-sides" role="tablist">
-          <button data-side="buy" role="tab">Buy</button>
-          <button data-side="sell" role="tab">Sell</button>
-        </div>
-        <div class="ex-types" role="group" aria-label="Order type">
-          <button data-type="market">Market</button><button data-type="limit">Limit</button>
-        </div>
-        <p class="ex-ordertype"></p>
-        <label class="ex-price" hidden><span>Limit price</span><input type="number" min="0" step="0.01" inputmode="decimal" /><b>Cr</b></label>
-        <p class="ex-avail"></p>
-        <label class="ex-qty"><span>Quantity</span><input type="number" min="0" step="1" inputmode="numeric" /><b class="ex-qty-unit"></b></label>
-        <input class="ex-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Quantity as a share of the most you can trade" />
-        <div class="ex-ticks">${[25, 50, 75, 100].map((p) => `<button data-pct="${p}">${p}%</button>`).join('')}</div>
-        <dl class="ex-est"></dl>
-        <button class="ex-submit"></button>
-        <p class="ex-msg" aria-live="polite"></p>
-      </section>
+      <section class="ex-actions" aria-label="Trade"></section>
       <section class="ex-trades">
         <div class="ex-feed" aria-label="Market trades">
           <h4>Market trades</h4>
@@ -153,9 +138,45 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
           <div class="ex-trades-list"></div>
         </div>
       </section>
+    </div>
+    <div class="ex-modal" hidden>
+      <div class="ex-sheet" role="dialog" aria-modal="true" aria-label="Trade">
+        <header class="ex-mhead"></header>
+        <div class="ex-mbody">
+          <section class="ex-mbook" aria-label="Order book"></section>
+          <section class="ex-form" aria-label="Order">
+            <div class="ex-sides" role="tablist">
+              <button data-side="buy" role="tab">Buy</button>
+              <button data-side="sell" role="tab">Sell</button>
+            </div>
+            <div class="ex-types" role="group" aria-label="Order type">
+              <button data-type="limit">Limit</button><button data-type="market">Market</button>
+            </div>
+            <p class="ex-ordertype" hidden></p>
+            <label class="ex-price ex-field" hidden><button type="button" data-step="price:-1" aria-label="Lower">−</button><span class="ex-in"><span>Price (<b class="ex-price-unit">Cr</b>)</span><input type="number" min="0" step="0.01" inputmode="decimal" /></span><button type="button" data-step="price:1" aria-label="Higher">+</button></label>
+            <label class="ex-qty ex-field"><button type="button" data-step="qty:-1" aria-label="Less">−</button><span class="ex-in"><span><span class="ex-qty-name">Amount</span> (<b class="ex-qty-unit"></b>)</span><input type="number" min="0" step="1" inputmode="numeric" /></span><button type="button" data-step="qty:1" aria-label="More">+</button></label>
+            <div class="ex-stops">
+              <input class="ex-slider" type="range" min="0" max="100" step="1" value="0" aria-label="Amount as a share of the most you can trade" />
+              <div class="ex-ticks">${[0, 25, 50, 75, 100].map((p) => `<button type="button" data-pct="${p}"><i></i><span>${p ? `${p}%` : '0'}</span></button>`).join('')}</div>
+            </div>
+            <button type="button" class="ex-storage-toggle" data-storage="1" aria-pressed="false" hidden title="Buy more than your hold takes: the rest waits in storage at this station until you collect it"><i></i>Fill to storage</button>
+            <dl class="ex-est"></dl>
+            <p class="ex-avail"></p>
+            <button class="ex-submit"></button>
+            <button class="ex-cancel-order" hidden>Cancel order</button>
+            <p class="ex-fnote"></p>
+            <p class="ex-msg" aria-live="polite"></p>
+          </section>
+        </div>
+        <section class="ex-orders-all" aria-label="Your orders"></section>
+      </div>
     </div>`;
 
-  const $ = <T extends HTMLElement>(sel: string) => root.querySelector<T>(sel)!;
+  // The trade window lives on the page itself, so a phone's scrolling panel can't trap it.
+  const modalEl = root.querySelector<HTMLElement>('.ex-modal')!;
+  document.body.append(modalEl);
+  const $ = <T extends HTMLElement>(sel: string) => (root.querySelector<T>(sel) ?? modalEl.querySelector<T>(sel))!;
+  const modalAll = <T extends HTMLElement>(sel: string) => modalEl.querySelectorAll<T>(sel);
   const qtyInput = $<HTMLInputElement>('.ex-qty input');
   const priceInput = $<HTMLInputElement>('.ex-price input');
   let orderType: 'market' | 'limit' = 'market';
@@ -191,8 +212,23 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   let orderLines: IPriceLine[] = [];
   let chartKey = '';
   chart.subscribeCrosshairMove((param: MouseEventParams) => legend(param.seriesData.get(candleSeries) as CandlestickData | undefined, param.time));
+  // Trading from the chart: every one of these opens the trade window to confirm.
+  const overlay = mountChartOrders($('.ex-canvas'), chart, candleSeries, {
+    quick: (s) => openModal({ side: s, type: 'market' }),
+    limit: (s, price) => openModal({ side: s, type: 'limit', price }),
+    move: (ref, price) => (ref.startsWith('btc:') ? render() : openEdit(ref, price)),
+    cancel: (ref) => {
+      if (ref.startsWith('btc:')) {
+        const result = cancelBtcOrder(view().commander, Number(ref.slice(4)));
+        message = result.message;
+        deps.traded(result);
+      } else openEdit(ref);
+    },
+  });
 
   const commodity = () => commodityById(selected)!;
+  /** How many units of the good on screen fit in the hold's free space. */
+  const holdRoom = (ctx: TradeContext) => Math.floor(freeTonnes(ctx) * UNITS_PER_TONNE[commodity().unit] + 1e-9);
   const index = () => COMMODITIES.findIndex((c) => c.id === selected);
   const limitPrice = () => Number(priceInput.value) || 0;
   const maxQty = (ctx: TradeContext) => {
@@ -204,8 +240,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     }
     // Where there's a law, only clean goods can be sold openly.
     if (side === 'sell') return ctx.system.government > 0 ? cleanQty(ctx.commander, selected) : (ctx.commander.cargo[selected] ?? 0);
-    // A limit buy waits for the price, so it's limited by credits, not stock or hold.
-    if (orderType === 'limit') return limitPrice() > 0 ? Math.floor(ctx.commander.credits / limitPrice()) : 0;
+    // A limit buy waits for the price: what fits in the hold (Mark), or with Fill to storage on,
+    // as much as your credits cover, the rest waiting in storage here.
+    if (orderType === 'limit') {
+      const byCredits = limitPrice() > 0 ? Math.floor(ctx.commander.credits / limitPrice()) : 0;
+      return fillStorage ? byCredits : Math.min(byCredits, holdRoom(ctx));
+    }
     return maxBuyable(ctx, selected);
   };
   /** Start the limit price a little better than the market: below it to buy, above it to sell. */
@@ -434,41 +474,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   function renderBtcHead(ctx: TradeContext) {
     bestSlot.innerHTML = '';
-    const q = heardQuote();
-    const day = heardCandles('1h', 48)?.slice(-24);
-    const open = day?.[0]?.o;
-    const change = q && open ? (q.price - open) / open : 0;
-    const sats = satsOf(ctx.commander);
-    const now = Date.now();
-    const quiet = q && !isFresh(q, now);
-    $('.ex-head').innerHTML = `
-      ${quiet ? `<div class="ex-event hit">Network quiet · price ${age(now - q!.time)} old · trading paused</div>` : ''}
-      <div class="ex-title"><b>Bitcoin</b><span>/CR</span><small>per coin · live · the same at every station</small></div>
-      <div class="ex-last ${change >= 0 ? 'up' : 'down'}">${q ? fmt(q.price) : '…'}<small>Cr</small></div>
-      <dl>
-        <div><dt>24h change</dt><dd class="${change >= 0 ? 'up' : 'down'}">${day ? pct(change) : '-'}</dd></div>
-        <div><dt>24h high</dt><dd>${day ? fmt(Math.max(...day.map((k) => k.h))) : '-'}</dd></div>
-        <div><dt>24h low</dt><dd>${day ? fmt(Math.min(...day.map((k) => k.l))) : '-'}</dd></div>
-        <div><dt>Broker's fee</dt><dd>${FEE.limit === FEE.market ? `${pctFee(FEE.limit)} a trade` : `${pctFee(FEE.limit)} limit · ${pctFee(FEE.market)} market`}</dd></div>
-        <div><dt>In your wallet</dt><dd>${formatBtc(sats)}${sats ? ` <small>${formatSats(sats)} · ${fmt(btcValue(ctx.commander, q))} Cr</small>` : ''}</dd></div>
-        <div><dt>Hold space</dt><dd>None</dd></div>
-      </dl>
-      <p class="ex-why">One network, so one price at every station: you can't profit by carrying it, only by choosing when to hold it. It takes no hold space, pirates can't scoop it, and nobody can take it: fines and the insurers come out of your credits, never your Bitcoin. <span class="ex-honest">Witchspace Bitcoin stays in Witchspace: it can't be bought or cashed out for real money.</span></p>`;
+    $('.ex-head').innerHTML = btcHeadHtml(ctx.commander);
   }
 
   /** Why the price is what it is, in a sentence. */
-  function why(ctx: TradeContext, c: Commodity, balance: number, order: ReturnType<typeof stationOrder>, event: ReturnType<typeof activeEvent>): string {
-    const here = ctx.system.name;
-    const at = remote() ? 'there' : 'here';
-    const [is, isnt, it, sells, itHas, itsWanted] = isPlural(c) ? ['are', "aren't", 'them', 'sell', 'they have', "they're wanted"] : ['is', "isn't", 'it', 'sells', 'it has', "it's wanted"];
-    if (!tradesHere(ctx, c.id)) return `${c.name} ${isnt} traded openly at ${here}: it's against the law ${at}.`;
-    if (event) return `${EVENT_KINDS[event.type].headline(here)}. That's moving ${c.name.toLowerCase()} prices ${at}.`;
-    if (order?.side === 'buy') return `${here} is short of ${c.name.toLowerCase()} and the station is buying to restock: a good place to sell.`;
-    if (order?.side === 'sell') return `${here} has more ${c.name.toLowerCase()} than it can use: cheap while the glut lasts.`;
-    if (balance > 0.25) return `${c.name} ${is} cheap ${at}: ${here} makes ${it}. Sell ${it} where ${itsWanted}.`;
-    if (balance < -0.25) return `${c.name} ${sells} well ${at}: ${here} doesn't make ${it}, so ${itHas} to be brought in.`;
-    return `${here} makes and uses its own ${c.name.toLowerCase()}, so the price stays close to fair.`;
-  }
+  const why = (ctx: TradeContext, c: Commodity, balance: number, order: ReturnType<typeof stationOrder>, event: ReturnType<typeof activeEvent>) =>
+    whyLine(ctx, c, balance, order, event, remote());
 
   // --- Chart ------------------------------------------------------------------
 
@@ -508,7 +519,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       last.l = Math.min(last.l, q.price);
     }
     const range = key === chartKey ? chart.timeScale().getVisibleLogicalRange() : null;
-    orderLines = ordersOf(ctx.commander).map((o) => candleSeries.createPriceLine({ price: o.limit, color: o.side === 'buy' ? UP : DOWN, lineStyle: LineStyle.Dashed, lineWidth: 1, axisLabelVisible: true, title: o.side === 'buy' ? 'Buy' : 'Sell' }));
+    orderLines = ordersOf(ctx.commander).map((o) => candleSeries.createPriceLine({ price: o.limit, color: o.side === 'buy' ? UP : DOWN, lineStyle: LineStyle.Dashed, lineWidth: 1, axisLabelVisible: true, title: '' }));
     candleSeries.applyOptions({ priceFormat: { type: 'price', precision: 1, minMove: 0.1 } });
     candleSeries.setData(cs.map((k) => ({ time: toChartTime(k.t), open: k.o, high: k.h, low: k.l, close: k.c })));
     volumeSeries.setData(cs.map((k) => ({ time: toChartTime(k.t), value: k.v, color: k.c >= k.o ? 'rgba(46,189,133,0.35)' : 'rgba(246,70,93,0.35)' })));
@@ -557,7 +568,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     for (const l of orderLines) candleSeries.removePriceLine(l);
     orderLines = ((state as OrderState).orders ?? [])
       .filter((o) => o.id === selected)
-      .map((o) => candleSeries.createPriceLine({ price: o.limit, color: o.side === 'buy' ? UP : DOWN, lineStyle: LineStyle.Dashed, lineWidth: 1, axisLabelVisible: true, title: `${o.side === 'buy' ? 'Buy' : 'Sell'} ${o.qty}` }));
+      .map((o) => candleSeries.createPriceLine({ price: o.amend?.limit ?? o.limit, color: o.side === 'buy' ? UP : DOWN, lineStyle: LineStyle.Dashed, lineWidth: 1, axisLabelVisible: true, title: '' }));
     if (fairLine) fairLine.applyOptions({ price: fair });
     else fairLine = candleSeries.createPriceLine({ price: fair, color: 'rgba(247,166,0,0.6)', lineStyle: LineStyle.Dotted, lineWidth: 1, axisLabelVisible: true, title: 'Fair' });
 
@@ -657,26 +668,46 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   // --- Trade form ---------------------------------------------------------------
 
+  // --- Trade form (in the trade window) ------------------------------------------------------
+  // As an exchange's order panel (Mark, 11 November 2026: "it should feel like a real exchange"):
+  // Buy | Sell, Limit | Market, Price and Amount with steppers, a slider with stops, Total, Avbl,
+  // the fee, one button, and one line under it.
+
+  /** The slider's stops: lit up to where the slider is, the last named for what it fills. */
+  function renderStops(last: string) {
+    const v = Number(slider.value);
+    modalAll<HTMLButtonElement>('.ex-ticks [data-pct]').forEach((b) => {
+      const p = Number(b.dataset.pct);
+      b.classList.toggle('on', v >= p && (p > 0 || v > 0));
+      b.querySelector('span')!.textContent = p === 100 ? last : p ? `${p}%` : '0';
+    });
+    slider.style.setProperty('--fill', `${v}%`);
+  }
+
+  /** Side, order type and the colours of the form, all at once. */
+  function formFrame() {
+    modalAll<HTMLButtonElement>('[data-side]').forEach((b) => b.classList.toggle('active', b.dataset.side === side));
+    modalAll<HTMLButtonElement>('[data-type]').forEach((b) => b.classList.toggle('active', b.dataset.type === orderType));
+    $('.ex-form').classList.toggle('selling', side === 'sell');
+    $('.ex-form').classList.toggle('editing', editing !== null);
+    $('.ex-price').hidden = orderType !== 'limit';
+  }
+  const kv = (k: string, v: string, cls = '') => `<div><dt>${k}</dt><dd class="${cls}">${v}</dd></div>`;
+
   function renderBtcForm(ctx: TradeContext) {
     const limit = orderType === 'limit';
     $('.ex-types').hidden = false;
-    $('.ex-price').hidden = !limit;
-    root.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => b.classList.toggle('active', b.dataset.side === side));
-    root.querySelectorAll<HTMLButtonElement>('[data-type]').forEach((b) => b.classList.toggle('active', b.dataset.type === orderType));
-    $('.ex-form').classList.toggle('selling', side === 'sell');
-    $('.ex-ordertype').innerHTML = limit
-      ? `Limit order <span>fills when the real price ${side === 'buy' ? 'falls' : 'rises'} to yours, wherever you are; your ${side === 'buy' ? 'credits are' : 'Bitcoin is'} held until then</span>`
-      : `Market order <span>fills now, at the live price</span>`;
+    formFrame();
+    $('.ex-cancel-order').hidden = true;
     const max = maxQty(ctx);
     if (qty() > max) setQty(max, ctx);
-    root.querySelectorAll<HTMLButtonElement>('[data-pct]').forEach((b) => (b.textContent = `${b.dataset.pct}%`));
     const buying = side === 'buy';
     $('.ex-qty-unit').textContent = buying ? 'Cr' : 'sats';
-    $('.ex-qty span').textContent = buying ? 'Spend' : 'Sell';
+    $('.ex-qty-name').textContent = buying ? 'Spend' : 'Amount';
+    $('.ex-qty input').removeAttribute('disabled');
+    renderStops(buying ? 'Max' : 'All');
     const sats = satsOf(ctx.commander);
-    $('.ex-avail').innerHTML = buying
-      ? `Available <b>${fmt(ctx.commander.credits)} Cr</b> · takes no hold space`
-      : `In your wallet <b>${formatBtc(sats)}</b> ${formatSats(sats)}`;
+    $('.ex-avail').innerHTML = '';
     const q = heardQuote();
     const n = qty();
     const fresh = isFresh(q);
@@ -685,91 +716,134 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const estimate = (price: number, fee: number) =>
       !price || !n ? null : buying ? { get: formatSats(buyAt(n, price, fee).sats), fee: buyAt(n, price, fee).fee } : { get: `${fmt(sellAt(n, price, fee).total)} Cr`, fee: sellAt(n, price, fee).fee };
     const est = limit ? estimate(at, FEE.limit) : estimate(q?.price ?? 0, FEE.market);
-    const feeLine = `<div><dt>Fee · ${pctFee(limit ? FEE.limit : FEE.market)}</dt><dd>${est ? `${fmt(est.fee, 2)} Cr` : '-'}</dd></div>`;
-    const getLine = `<div><dt>${buying ? 'You get, about' : 'You receive, about'}</dt><dd><b>${est ? est.get : '-'}</b></dd></div>`;
-    if (limit)
-      $('.ex-est').innerHTML = `
-        <div><dt>Fills at</dt><dd>${at ? `${fmt(at)} Cr` : '-'}</dd></div>
-        <div><dt>Bitcoin now</dt><dd>${q ? `${fmt(q.price)} Cr` : '-'}</dd></div>
-        ${feeLine}${getLine}`;
-    else
-      $('.ex-est').innerHTML = `
-      <div><dt>${buying ? 'You buy at' : 'You sell at'}</dt><dd>${q ? `${fmt(q.price)} Cr` : '-'}</dd></div>
-      ${feeLine}${getLine}`;
+    $('.ex-est').innerHTML = [
+      kv('Total', `<b>${est ? est.get : '-'}</b>`),
+      kv('Avbl', buying ? `${fmt(ctx.commander.credits)} Cr` : `${formatBtc(sats)}`),
+      kv(`Fee ${pctFee(limit ? FEE.limit : FEE.market)}`, est ? `${fmt(est.fee, 2)} Cr` : '-'),
+    ].join('');
     let reason = '';
-    if (limit && !at) reason = 'Set the price it should fill at';
+    if (limit && !at) reason = 'Set a price';
     else if (!q && !limit) reason = 'Waiting for the price';
     else if (!fresh && !limit) reason = 'Trading paused: the network is quiet';
     else if (buying && max === 0) reason = 'Not enough credits';
     else if (!buying && sats === 0) reason = 'No Bitcoin in your wallet';
     const submit = $<HTMLButtonElement>('.ex-submit');
     submit.disabled = Boolean(reason) || n === 0 || submitting;
-    submit.textContent = submitting
-      ? 'Checking the price…'
-      : reason ||
-        (limit
-          ? `Place ${side} order${n ? ` · ${buying ? `${n.toLocaleString()} Cr` : formatSats(n)} at ${fmt(at, 0)}` : ''}`
-          : buying
-            ? `Buy Bitcoin${n ? ` · ${n.toLocaleString()} Cr` : ''}`
-            : `Sell ${n ? formatSats(n) : 'Bitcoin'}`);
+    submit.textContent = submitting ? 'Checking the price…' : reason || `${buying ? 'Buy' : 'Sell'} BTC`;
+    $('.ex-fnote').textContent = limit
+      ? `Fills when the real price ${buying ? 'falls' : 'rises'} to ${at ? fmt(at, 0) : 'yours'}, while you're away too. ${buying ? 'Credits' : 'Bitcoin'} held until then.`
+      : 'Fills now, at the live price. Takes no hold space.';
     $('.ex-msg').textContent = message;
   }
 
+  /** The order being changed, if any, and where it is. */
+  function editTarget() {
+    if (!editing) return null;
+    const state = view().commander.markets[editing.key] as OrderState | undefined;
+    const order = state?.orders?.find((o) => o.oid === editing!.oid);
+    if (!state || !order) return null;
+    const [g, i] = editing.key.split(':').map(Number);
+    return { state, order, system: systemAt(g, i) };
+  }
+
+  /** Delay for a message to a market: nothing at the station you're at. */
+  const delayTo = (system: StarSystem) => {
+    const docked = deps.context();
+    return system.galaxy === docked.system.galaxy && system.index === docked.system.index ? 0 : newsDelay(system, docked.system);
+  };
+
   function renderForm(ctx: TradeContext) {
     if (isBtc()) return renderBtcForm(ctx);
-    $('.ex-qty span').textContent = 'Quantity';
     const c = commodity();
     const u = unitLabel(c);
+    const edit = editTarget();
+    if (editing && !edit) editing = null; // filled or gone meanwhile
     if (remote() && orderType !== 'limit') {
       orderType = 'limit';
       suggestPrice(ctx);
     }
-    $('.ex-types').hidden = remote();
-    root.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => b.classList.toggle('active', b.dataset.side === side));
-    root.querySelectorAll<HTMLButtonElement>('[data-type]').forEach((b) => b.classList.toggle('active', b.dataset.type === orderType));
-    $('.ex-form').classList.toggle('selling', side === 'sell');
+    $('.ex-types').hidden = remote() || editing !== null;
+    formFrame();
     const limit = orderType === 'limit';
-    $('.ex-price').hidden = !limit;
-    $('.ex-ordertype').innerHTML = remote()
-      ? `Order to ${ctx.system.name} <span>arrives in ${age(newsDelay(ctx.system, deps.context().system))}, then waits for your price; ${side === 'buy' ? 'what it buys waits in storage there' : 'sells from your storage there'}. Remote orders always wait for a price: the market you see there is old news.</span>`
-      : limit
-      ? `Limit order <span>waits until the price reaches yours; ${side === 'buy' ? 'your credits are held' : 'your goods are held'} until then</span>`
-      : `Market order <span>fills now, at the station's prices</span>`;
     const max = maxQty(ctx);
-    if (qty() > max) setQty(max, ctx);
+    if (!editing && qty() > max) setQty(max, ctx);
     $('.ex-qty-unit').textContent = u;
-    // The quick amounts in tonnes, not percentages (Mark): "5 t", "10 t", "15 t", "Full".
-    root.querySelectorAll<HTMLButtonElement>('[data-pct]').forEach((b) => {
-      const p = Number(b.dataset.pct);
-      b.textContent = p === 100 ? (side === 'sell' ? 'All' : orderType === 'limit' ? 'Most' : 'Full') : max >= 4 ? `${Math.floor((max * p) / 100).toLocaleString()} ${u}` : `${p}%`;
-    });
-    const held = ctx.commander.cargo[selected] ?? 0;
-    $('.ex-avail').innerHTML =
-      remote()
-        ? side === 'buy'
-          ? `Available <b>${fmt(ctx.commander.credits)} Cr</b>`
-          : `In storage there <b>${storedThere(ctx, selected).toLocaleString()} ${u}</b> ${c.name}`
-        : side === 'buy'
-        ? `Available <b>${fmt(ctx.commander.credits)} Cr</b> · Hold space <b>${fmt(freeTonnes(ctx))} t</b>`
-        : `Available <b>${held.toLocaleString()} ${u}</b> ${c.name}`;
+    $('.ex-qty-name').textContent = 'Amount';
+    $('.ex-qty input').toggleAttribute('disabled', editing !== null);
+    $('.ex-stops').hidden = editing !== null;
+    renderStops(side === 'sell' ? 'All' : limit && (fillStorage || remote()) ? 'Max' : 'Hold');
+    // Fill to storage: a limit buy here, only. Remote buys always go to storage there.
+    const toggle = $<HTMLButtonElement>('.ex-storage-toggle');
+    toggle.hidden = !(limit && side === 'buy' && !remote());
+    toggle.classList.toggle('on', fillStorage);
+    toggle.setAttribute('aria-pressed', String(fillStorage));
+    $('.ex-avail').innerHTML = '';
+    const cancelBtn = $<HTMLButtonElement>('.ex-cancel-order');
+    cancelBtn.hidden = !edit;
+    const submit = $<HTMLButtonElement>('.ex-submit');
+    const t = ticker(selected);
 
+    if (edit) {
+      // Changing an order's price, or cancelling it: at once here, at the speed of news elsewhere.
+      const o = edit.order;
+      qtyInput.value = String(o.qty);
+      const delay = delayTo(edit.system);
+      const at = limitPrice();
+      const held = o.side === 'buy' ? Math.max(o.held ?? o.limit, o.limit) : 0;
+      const extra = o.side === 'buy' ? Math.max(0, (at - held) * o.qty) : 0;
+      $('.ex-est').innerHTML = [
+        kv('Now', `${fmt(o.limit, 2)} Cr × ${o.qty.toLocaleString()} ${u}`),
+        kv('New total', `<b>${at ? `${fmt(at * o.qty)} Cr` : '-'}</b>`),
+        o.side === 'buy' ? kv('Avbl', `${fmt(ctx.commander.credits)} Cr`) : '',
+        delay ? kv('Arrives', `in ${age(delay)}`) : '',
+      ].join('');
+      let why = '';
+      if (o.sent !== undefined && o.placed > deps.context().now) why = 'Still on its way: it can only be cancelled';
+      else if (o.cancel !== undefined) why = 'Being cancelled';
+      else if (!at) why = 'Set a price';
+      else if (Math.abs(at - o.limit) < 0.005) why = 'Same price';
+      else if (extra > ctx.commander.credits) why = 'Not enough credits';
+      submit.disabled = Boolean(why);
+      submit.textContent = why || `Change price · ${t}`;
+      cancelBtn.disabled = o.cancel !== undefined;
+      $('.ex-fnote').textContent = delay
+        ? `${edit.system.name} is ${distanceLy(deps.context().system, edit.system).toFixed(1)} LY away: a change or a cancel arrives in ${age(delay)}, and the order can fill at its old price until then.`
+        : 'At this station: a change or a cancel is at once.';
+      $('.ex-msg').textContent = message;
+      return;
+    }
+
+    const held = ctx.commander.cargo[selected] ?? 0;
     const n = qty();
     const state = marketState(ctx);
+    const avbl = remote()
+      ? side === 'buy'
+        ? `${fmt(ctx.commander.credits)} Cr`
+        : `${storedThere(ctx, selected).toLocaleString()} ${u} in storage`
+      : side === 'buy'
+        ? `${fmt(ctx.commander.credits)} Cr`
+        : `${held.toLocaleString()} ${u}`;
     if (limit) {
       const value = n * limitPrice();
       const fee = remote() ? Math.round(value * BROKER_FEE * 10) / 10 : 0;
-      $('.ex-est').innerHTML = `
-        <div><dt>Limit price</dt><dd>${limitPrice() ? `${fmt(limitPrice(), 2)} Cr` : '-'}</dd></div>
-        <div><dt>${remote() ? 'Market, as known' : 'Market now'}</dt><dd>${fmt(quotes(ctx).find((x) => x.commodity.id === selected)!.price, 2)} Cr</dd></div>
-        ${remote() ? `<div><dt>Broker</dt><dd>${fee ? `${fmt(fee)} Cr` : '-'}</dd></div>` : ''}
-        <div><dt>${side === 'buy' ? 'Credits held' : 'You receive when filled'}</dt><dd><b>${value ? `${fmt(value)} Cr` : '-'}</b></dd></div>`;
-      const submit = $<HTMLButtonElement>('.ex-submit');
+      $('.ex-est').innerHTML = [
+        kv('Total', `<b>${value ? `${fmt(value)} Cr` : '-'}</b>`),
+        kv('Avbl', avbl),
+        side === 'buy' && !remote() ? kv('Hold space', `${fmt(freeTonnes(ctx))} t`) : '',
+        kv(remote() ? `Broker ${(BROKER_FEE * 100).toFixed(0)}%` : 'Fee', remote() ? (fee ? `${fmt(fee)} Cr` : '-') : 'None'),
+      ].join('');
       let why = '';
       if (!tradesHere(ctx, selected)) why = 'Not traded openly there';
       else if (side === 'sell' && (remote() ? storedThere(ctx, selected) : held) === 0) why = remote() ? `No ${c.name} in storage there` : `No ${c.name} in your hold`;
       else if (side === 'buy' && value + fee > ctx.commander.credits) why = 'Not enough credits';
-      submit.disabled = Boolean(why) || n === 0 || !limitPrice();
-      submit.textContent = why || `${remote() ? `Send ${side} order` : `Place ${side} order`}${n ? ` · ${n.toLocaleString()} ${u} at ${fmt(limitPrice(), 2)}` : ''}`;
+      else if (!limitPrice()) why = 'Set a price';
+      submit.disabled = Boolean(why) || n === 0;
+      submit.textContent = why || `${side === 'buy' ? 'Buy' : 'Sell'} ${t}`;
+      $('.ex-fnote').textContent = remote()
+        ? `Sent to ${ctx.system.name}: arrives in ${age(newsDelay(ctx.system, deps.context().system))}, then waits for your price. ${side === 'buy' ? `→ storage at ${ctx.system.name}.` : 'Sells from your storage there.'}`
+        : `Fills when the price ${side === 'buy' ? 'falls' : 'rises'} to ${limitPrice() ? fmt(limitPrice(), 2) : 'yours'}, while you're away too. ${side === 'buy' ? 'Credits' : 'Goods'} held until then.${
+            side === 'buy' && n > holdRoom(ctx) ? ` ${(n - holdRoom(ctx)).toLocaleString()} ${u} won't fit your hold: ${n - holdRoom(ctx) === 1 ? 'it waits' : 'they wait'} in storage at ${ctx.system.name}.` : ''
+          }`;
       $('.ex-msg').textContent = message;
       return;
     }
@@ -785,89 +859,100 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     }
     const avg = n > 0 && total ? total / n : 0;
     const impact = avg && best ? (side === 'buy' ? avg / best - 1 : 1 - avg / best) : 0;
-    $('.ex-est').innerHTML = `
-      <div><dt>Average price</dt><dd>${avg ? `${fmt(avg, 2)} Cr` : '-'}</dd></div>
-      <div><dt title="How far your own trade walks the station's price: it's dearer for each tonne you buy, and cheaper for each you sell">Your ${side === 'buy' ? 'buying' : 'selling'} moves it</dt><dd class="${impact > 0.02 ? 'warn' : ''}">${avg ? `${side === 'buy' ? '+' : '−'}${(impact * 100).toFixed(impact < 0.1 ? 1 : 0)}%` : '-'}</dd></div>
-      <div><dt>${side === 'buy' ? 'Total cost' : 'You receive'}</dt><dd><b>${total ? `${fmt(total)} Cr` : '-'}</b>${total && inLocal(ctx, total) ? `<small class="ex-local">${inLocal(ctx, total)}</small>` : ''}</dd></div>`;
-
-    const submit = $<HTMLButtonElement>('.ex-submit');
+    $('.ex-est').innerHTML = [
+      kv('Total', `<b>${total ? `${fmt(total)} Cr` : '-'}</b>${total && inLocal(ctx, total) ? `<small class="ex-local">${inLocal(ctx, total)}</small>` : ''}`),
+      kv('Avg price', avg ? `${fmt(avg, 2)} Cr` : '-'),
+      `<div><dt title="How far your own trade walks the station's price: it's dearer for each tonne you buy, and cheaper for each you sell">Price impact</dt><dd class="${impact > 0.02 ? 'warn' : ''}">${avg ? `${side === 'buy' ? '+' : '−'}${(impact * 100).toFixed(impact < 0.1 ? 1 : 0)}%` : '-'}</dd></div>`,
+      kv('Avbl', avbl),
+      side === 'buy' ? kv('Hold space', `${fmt(freeTonnes(ctx))} t`) : '',
+    ].join('');
     let reason = '';
     if (!tradesHere(ctx, selected)) reason = 'Not traded at this lawful station';
     else if (side === 'buy' && max === 0) reason = quotes(ctx).find((x) => x.commodity.id === selected)!.stock <= 0 ? 'Out of stock' : freeTonnes(ctx) < 1 / UNITS_PER_TONNE[c.unit] ? 'Hold full' : 'Not enough credits';
     else if (side === 'sell' && held === 0) reason = `No ${c.name} in your hold`;
     else if (side === 'sell' && max === 0) reason = 'Stolen: try a fence in the back room';
     submit.disabled = Boolean(reason) || n === 0;
-    submit.textContent = reason || `${side === 'buy' ? 'Buy' : 'Sell'} ${n ? n.toLocaleString() + ' ' + u + ' ' : ''}${c.name}`;
+    submit.textContent = reason || `${side === 'buy' ? 'Buy' : 'Sell'} ${t}`;
+    $('.ex-fnote').textContent = `Fills now, at the station's prices: the more you ${side}, the further the price moves.`;
     $('.ex-msg').textContent = message;
+  }
+
+  // --- The trade window ----------------------------------------------------------------------
+
+  /** Open the trade window on the good on screen, set up as asked. You still confirm. */
+  function openModal(o: { side?: 'buy' | 'sell'; type?: 'market' | 'limit'; price?: number; qty?: number } = {}) {
+    editing = null;
+    if (o.side) side = o.side;
+    if (o.type) orderType = o.type;
+    message = '';
+    qtyInput.value = '';
+    slider.value = '0';
+    showModal();
+    if (orderType === 'limit') {
+      if (o.price) priceInput.value = isBtc() ? String(Math.round(o.price)) : o.price.toFixed(2);
+      else suggestPrice(view());
+    }
+    if (o.qty) setQty(o.qty);
+    renderForm(view());
+  }
+
+  /** Change or cancel an order ("galaxy:index:oid"), optionally at a new price picked on the chart. */
+  function openEdit(ref: string, price?: number) {
+    const [g, i, oid] = ref.split(':').map(Number);
+    const key = `${g}:${i}`;
+    const state = deps.context().commander.markets[key] as OrderState | undefined;
+    const order = state?.orders?.find((x) => x.oid === oid);
+    if (!order) return render();
+    const docked = deps.context();
+    const sys = systemAt(g, i);
+    viewing = sys.index === docked.system.index && sys.galaxy === docked.system.galaxy ? null : sys;
+    selected = order.id;
+    side = order.side;
+    orderType = 'limit';
+    editing = { key, oid };
+    message = '';
+    priceInput.value = (price ?? order.amend?.limit ?? order.limit).toFixed(2);
+    showModal();
+  }
+
+  function closeModal() {
+    closeQuietly();
+    render();
+  }
+
+  /** The good on screen, as the trade window's drawing needs it. */
+  const windowView = (ctx: TradeContext): WindowView => ({ id: selected, remote: remote(), stored: isBtc() ? 0 : storedThere(ctx, selected) });
+
+  function renderModal(ctx: TradeContext) {
+    if (!modalOpen) return;
+    $('.ex-mhead').innerHTML = headHtml(ctx, windowView(ctx), editing !== null);
+    $('.ex-mbook').innerHTML = bookHtml(ctx, selected, phone.matches ? 5 : 7);
+    const docked = deps.context();
+    $('.ex-orders-all').innerHTML = ordersPanel(docked.commander, docked.system, docked.now, otab, phone.matches);
+  }
+
+  /** How many orders you have open, every market. */
+  const ordersOpen = () => openCount(deps.context().commander, deps.context().system, deps.context().now);
+  const renderActions = (ctx: TradeContext) => ($('.ex-actions').innerHTML = actionsHtml(ctx, windowView(ctx), ordersOpen(), modalOpen ? '' : message));
+
+  function updateOverlay(ctx: TradeContext) {
+    overlay.update({ ...chartState(ctx, selected, deps.context().now), decimals: isBtc() ? 0 : 2, enabled: !backOpen });
   }
 
   // --- Your trades ----------------------------------------------------------------
 
   function renderBtcTrades(ctx: TradeContext) {
-    const trades = (ctx.commander.btcTrades ?? []).slice().reverse();
-    const orders = ordersOf(ctx.commander);
-    $('.ex-mine h4').textContent = orders.length ? 'Your Bitcoin orders and trades' : 'Your Bitcoin trades';
-    const open = orders.length
-      ? `<h5>Open orders</h5><table class="ex-orders"><thead><tr><th>Side</th><th class="num">Amount</th><th class="num">Fills at</th><th class="num">Placed</th><th></th></tr></thead><tbody>${orders
-          .map(
-            (o) => `<tr><td class="${o.side === 'buy' ? 'up' : 'down'}">${o.side === 'buy' ? 'Buy' : 'Sell'}</td><td class="num">${o.side === 'buy' ? `${fmt(o.credits!)} Cr` : formatSats(o.sats!)}</td>
-            <td class="num">${fmt(o.limit, 0)}</td><td class="num">${clock(o.placed)}</td><td class="num"><button data-btc-cancel="${o.id}">Cancel</button></td></tr>`,
-          )
-          .join('')}</tbody></table>`
-      : '';
-    $('.ex-trades-list').innerHTML = open + (trades.length
-      ? `<table><thead><tr><th>Time</th><th>Side</th><th class="num">Sats</th><th class="num">Price</th><th class="num">Fee</th><th class="num">Total</th></tr></thead><tbody>${trades
-          .map(
-            (t) => `<tr><td>${clock(t.t)}</td><td class="${t.side === 'buy' ? 'up' : 'down'}">${t.side === 'buy' ? 'Buy' : 'Sell'}</td>
-            <td class="num">${t.sats.toLocaleString()}</td><td class="num">${fmt(t.price)}</td><td class="num">${t.fee !== undefined ? fmt(t.fee, 2) : '-'}</td><td class="num">${fmt(t.total)}</td></tr>`,
-          )
-          .join('')}</tbody></table>`
-      : orders.length ? '' : '<p class="ex-empty">No Bitcoin trades yet. They follow you to every station.</p>');
+    const t = btcTradesHtml(ctx.commander, ordersOpen());
+    $('.ex-mine h4').textContent = t.title;
+    $('.ex-trades-list').innerHTML = t.html;
   }
 
-  function renderFeed(ctx: TradeContext) {
-    const u = unitLabel(commodity());
-    const events = recentTrades(ctx.system, marketState(ctx), selected, ctx.now, 14);
-    $('.ex-feed-list').innerHTML = events.length
-      ? `<table><thead><tr><th>Price (Cr)</th><th class="num">Qty (${u})</th><th class="num">Time</th></tr></thead><tbody>${events
-          .map((e) =>
-            e.by === 'lost'
-              ? `<tr class="lost" title="The trader carrying this delivery was destroyed"><td>Lost</td><td class="num">${e.qty.toLocaleString()} <em>destroyed</em></td><td class="num">${clock(e.t)}</td></tr>`
-              : `<tr class="${e.by === 'you' ? 'you' : ''}"><td class="${e.side === 'buy' ? 'up' : 'down'}">${fmt(e.price, 2)}</td>
-            <td class="num">${e.qty.toLocaleString()}${e.by === 'you' ? ' <em>you</em>' : ''}</td><td class="num">${clock(e.t)}</td></tr>`,
-          )
-          .join('')}</tbody></table>`
-      : '<p class="ex-empty">No trades in the last few hours.</p>';
-  }
+  const renderFeed = (ctx: TradeContext) => ($('.ex-feed-list').innerHTML = feedHtml(ctx, selected));
 
   function renderTrades(ctx: TradeContext) {
-    const state = marketState(ctx) as OrderState;
-    const trades = (state.trades ?? []).slice().reverse();
-    const orders = state.orders ?? [];
-    const stored = Object.entries(state.storage ?? {}).filter(([, q]) => q > 0);
-    const openHtml = orders.length
-      ? `<h5>Open orders</h5><table class="ex-orders"><thead><tr><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Limit</th><th class="num">Market</th><th></th></tr></thead><tbody>${orders
-          .map((o) => {
-            const now = quotes(ctx).find((x) => x.commodity.id === o.id)!.price;
-            const onWay = o.sent !== undefined && o.placed > deps.context().now;
-            return `<tr><td>${commodityById(o.id)?.name}</td><td class="${o.side === 'buy' ? 'up' : 'down'}">${o.side === 'buy' ? 'Buy' : 'Sell'}</td><td class="num">${o.qty.toLocaleString()}</td>
-              <td class="num">${fmt(o.limit, 2)}</td><td class="num">${onWay ? `<small>arrives ${clock(o.placed)}</small>` : fmt(now, 2)}</td><td class="num"><button data-cancel="${o.oid}">Cancel</button></td></tr>`;
-          })
-          .join('')}</tbody></table>`
-      : '';
-    const storageHtml = stored.length
-      ? `<p class="ex-storage">In storage here, waiting for hold space: ${stored.map(([id, q]) => `<b>${q.toLocaleString()} ${unitLabel(commodityById(id)!)} ${commodityById(id)?.name}</b>`).join(', ')}</p>`
-      : '';
-    const where = remote() ? `at ${ctx.system.name}` : 'here';
-    $('.ex-mine h4').textContent = orders.length ? `Your orders and trades ${where}` : `Your trades ${where}`;
-    $('.ex-trades-list').innerHTML = openHtml + storageHtml + (trades.length
-      ? `<table><thead><tr><th>Time</th><th>Pair</th><th>Side</th><th class="num">Qty</th><th class="num">Avg</th><th class="num">Total</th></tr></thead><tbody>${trades
-          .map(
-            (t) => `<tr><td>${clock(t.t)}</td><td>${commodityById(t.id)?.name}</td><td class="${t.side === 'buy' ? 'up' : 'down'}">${t.side === 'buy' ? 'Buy' : 'Sell'}</td>
-            <td class="num">${t.qty.toLocaleString()}</td><td class="num">${fmt(t.total / t.qty, 2)}</td><td class="num">${fmt(t.total)}</td></tr>`,
-          )
-          .join('')}</tbody></table>`
-      : '<p class="ex-empty">No trades at this station yet.</p>');
+    const t = tradesHtml(ctx, remote(), ordersOpen());
+    $('.ex-mine h4').textContent = t.title;
+    $('.ex-trades-list').innerHTML = t.html;
   }
 
   // --- The back room -------------------------------------------------------------------
@@ -877,55 +962,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   let backCaught = false;
 
   function renderBackRoom(ctx: TradeContext) {
-    const c = ctx.commander;
-    const room = hasBackRoom(c, ctx.system);
-    const quotesHere = room ? backRoomQuotes(c, ctx.system, marketState(ctx), ctx.now) : [];
-    const abolition = hasAbolitionists(c, ctx.system);
-    const fence = fenceQuotes(c, ctx.system, marketState(ctx), ctx.now);
-    const toggle = $<HTMLButtonElement>('.ex-backroom-toggle');
-    toggle.hidden = remote() || (!quotesHere.length && !fence.length && !(abolition && (c.cargo.slaves ?? 0) > 0));
-    if (!backOpen) return;
-    const risk = stingChance(ctx.system, 1);
-    const rows = quotesHere
-      .map((q) => {
-        const good = commodityById(q.id)!;
-        const u = unitLabel(good);
-        const held = c.cargo[q.id] ?? 0;
-        // Buy only what they have and you can pay for (Mark's 100 Cr could "buy" Narcotics at 255: it checked their stock alone).
-        const can = (n: number) => q.stock >= n && c.credits >= q.ask * n;
-        return `<tr><td><b>${good.name}</b><small>${ticker(q.id)}</small></td><td class="num" data-l="They sell">${fmt(q.ask)}</td><td class="num" data-l="They buy">${fmt(q.bid)}</td>
-          <td class="num" data-l="Stock">${q.stock.toLocaleString()} ${u}</td><td class="num" data-l="Your hold">${held.toLocaleString()} ${u}</td>
-          <td class="ex-back-actions">
-            <button data-back="buy" data-good="${q.id}" data-n="1" ${can(1) ? '' : 'disabled'}>Buy 1</button>
-            <button data-back="buy" data-good="${q.id}" data-n="5" ${can(5) ? '' : 'disabled'}>Buy 5</button>
-            <button data-back="sell" data-good="${q.id}" data-n="1" ${held >= 1 ? '' : 'disabled'}>Sell 1</button>
-            <button data-back="sell" data-good="${q.id}" data-n="${held}" ${held >= 1 ? '' : 'disabled'}>Sell all</button>
-          </td></tr>`;
-      })
-      .join('');
-    const slaves = c.cargo.slaves ?? 0;
-    const abolitionists = abolition
-      ? `<div class="ex-abolition"><h4>Abolitionist Society</h4>
-          <p>They buy slaves to set them free: ${fmt(abolitionistPrice(ctx.system, ctx.now))} Cr each, about half what the back room pays. Legal, and no questions about where they came from.${c.freed ? ` You've freed ${c.freed.toLocaleString()} people.` : ''}</p>
-          <button data-free="${slaves}" ${slaves ? '' : 'disabled'}>${slaves ? `Free ${slaves.toLocaleString()}` : 'No slaves aboard'}</button></div>`
-      : '';
-    $('.ex-back').innerHTML = `
-      <header><button class="ex-back-close">‹ Exchange</button><h3>Back room</h3><span>No questions asked</span>
-        ${quotesHere.length ? `<span class="ex-heat" title="The chance any one deal is with undercover police. Bigger deals draw more attention.">Undercover risk ${(risk * 100).toFixed(0)}% a deal, more for big ones</span>` : ''}</header>
-      ${quotesHere.length ? `<table><thead><tr><th>Goods</th><th class="num">They sell</th><th class="num">They buy</th><th class="num">Their stock</th><th class="num">Your hold</th><th></th></tr></thead><tbody>${rows}</tbody></table>` : '<p class="ex-empty">Nothing here is against the law.</p>'}
-      ${
-        fence.length
-          ? `<div class="ex-fence"><h4>The fence</h4><p>Stolen goods, bought at about 60% of the open price. No questions asked, though the buyer could be police.</p><table><tbody>${fence
-              .map((f) => {
-                const good = commodityById(f.id)!;
-                return `<tr><td><b>${good.name}</b><small>stolen</small></td><td class="num">${fmt(f.bid)} Cr each</td><td class="num">${f.qty.toLocaleString()} ${unitLabel(good)} aboard</td>
-                  <td class="ex-back-actions"><button data-fence="${f.id}" data-n="1">Sell 1</button><button data-fence="${f.id}" data-n="${f.qty}">Sell all</button></td></tr>`;
-              })
-              .join('')}</tbody></table></div>`
-          : ''
-      }
-      <p class="ex-back-msg${backCaught ? ' caught' : ''}" aria-live="polite">${backMessage}</p>
-      ${abolitionists}`;
+    const room = backRoomHtml(ctx, backMessage, backCaught);
+    $<HTMLButtonElement>('.ex-backroom-toggle').hidden = remote() || !room.there;
+    if (backOpen) $('.ex-back').innerHTML = room.html;
   }
 
   function setBackOpen(open: boolean) {
@@ -1022,6 +1061,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     for (const [id, q] of Object.entries(moved)) notes.push(`Collected ${q.toLocaleString()} ${unitLabel(commodityById(id)!)} of ${commodityById(id)?.name} from storage`);
     // Orders sent elsewhere, as far as news of them has come back.
     for (const { system, fill } of checkSentOrders(docked.commander, docked.system, docked.now)) notes.push(`News from ${system.name}: ${describeFill(fill)}`);
+    for (const { system, order } of takeCancelled(docked.commander)) notes.push(`News from ${system.name}: order cancelled, ${order.qty.toLocaleString()} ${unitLabel(commodityById(order.id)!)} of ${commodityById(order.id)?.name}${order.side === 'buy' ? ': credits back' : ': goods back in storage there'}`);
     renderChooser();
     const ctx = view();
     if (notes.length) {
@@ -1042,6 +1082,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       renderBtcBook();
       renderForm(ctx);
       renderBtcTrades(ctx);
+      renderActions(ctx);
+      renderModal(ctx);
+      updateOverlay(ctx);
       return;
     }
     renderHead(ctx);
@@ -1050,6 +1093,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     renderForm(ctx);
     renderFeed(ctx);
     renderTrades(ctx);
+    renderActions(ctx);
+    renderModal(ctx);
+    updateOverlay(ctx);
   }
 
   // A phone (docs/design/flight-hud-and-touch.md, "The Market on a phone"): the list first, and the
@@ -1067,7 +1113,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   backToList.className = 'ex-phone-back';
   backToList.textContent = '‹ All goods';
   const head = $('.ex-head');
-  const form = $('.ex-form');
+  const form = $('.ex-actions');
   const more = [$('.ex-more-toggle'), $('.ex-book'), $('.ex-trades')];
   function placeForPhone() {
     const ex = root.querySelector<HTMLElement>('.ex')!;
@@ -1110,13 +1156,104 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       .finally(() => (refreshing = false));
   }
   let submitting = false;
+  function showModal() {
+    modalOpen = true;
+    modalEl.hidden = false;
+    document.body.classList.add('ex-modal-open');
+    render();
+  }
+  /** Done: the window closes, and the page shows what happened. */
+  function closeQuietly() {
+    modalOpen = false;
+    editing = null;
+    modalEl.hidden = true;
+    document.body.classList.remove('ex-modal-open');
+  }
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalOpen) closeModal();
+  });
 
   // --- Events ------------------------------------------------------------------------
 
-  root.addEventListener('click', (e) => {
+  const onClick = (e: MouseEvent) => {
+    // A tap on the dimmed page behind the trade window closes it.
+    if ((e.target as HTMLElement).classList.contains('ex-modal')) return closeModal();
     const el = (e.target as HTMLElement).closest<HTMLElement>('button');
     if (!el) return;
     el.blur();
+    if (el.classList.contains('ex-mclose')) return closeModal();
+    if (el.dataset.open) return openModal({ side: el.dataset.open as 'buy' | 'sell', type: remote() ? 'limit' : orderType });
+    if (el.dataset.openOrders) {
+      otab = 'open';
+      openModal({});
+      $('.ex-orders-all').scrollIntoView({ block: 'start' });
+      return;
+    }
+    if (el.dataset.otab) {
+      otab = el.dataset.otab as OrdersTab;
+      return render();
+    }
+    if (el.dataset.mprice) {
+      // A level in the book: its price, as a limit order.
+      orderType = 'limit';
+      priceInput.value = el.dataset.mprice;
+      return render();
+    }
+    if (el.dataset.oedit) return openEdit(el.dataset.oedit);
+    if (el.dataset.ocancel) {
+      const [g, i, oid] = el.dataset.ocancel.split(':').map(Number);
+      const sys = systemAt(g, i);
+      const docked = deps.context();
+      const result = requestCancel(docked.commander, docked.commander.markets[`${g}:${i}`] as OrderState, oid, docked.capacity, docked.now, delayTo(sys), sys.name);
+      message = result.message;
+      deps.traded(result);
+      return;
+    }
+    if (el.dataset.ostore) {
+      // Sell what's waiting in storage at another market: a sell order sent there.
+      const [g, i, id] = el.dataset.ostore.split(':');
+      const docked = deps.context();
+      const sys = systemAt(Number(g), Number(i));
+      viewing = sys.galaxy === docked.system.galaxy && sys.index === docked.system.index ? null : sys;
+      selected = id;
+      openModal({ side: 'sell', type: 'limit' });
+      setQty(storedThere(view(), id));
+      renderForm(view());
+      return;
+    }
+    if (el.dataset.step) {
+      const [what, dir] = el.dataset.step.split(':');
+      const d = Number(dir);
+      if (what === 'price') {
+        const step = isBtc() ? 10 : limitPrice() >= 100 ? 0.5 : 0.1;
+        const base = limitPrice() || (isBtc() ? (heardQuote()?.price ?? 0) : quotes(view()).find((x) => x.commodity.id === selected)!.price);
+        priceInput.value = isBtc() ? String(Math.max(0, Math.round(base + d * step))) : Math.max(0.01, base + d * step).toFixed(2);
+      } else {
+        const step = isBtc() ? (side === 'buy' ? 100 : 100_000) : 1;
+        setQty(qty() + d * step);
+      }
+      return renderForm(view());
+    }
+    if (el.classList.contains('ex-cancel-order')) {
+      const t = editTarget();
+      if (!t) return closeModal();
+      const docked = deps.context();
+      const result = requestCancel(docked.commander, t.state, t.order.oid, docked.capacity, docked.now, delayTo(t.system), t.system.name);
+      message = result.message;
+      if (result.ok) closeQuietly();
+      deps.traded(result);
+      return;
+    }
+    if (el.classList.contains('ex-submit') && editing) {
+      const t = editTarget();
+      if (!t) return closeModal();
+      const docked = deps.context();
+      const result = amendOrder(docked.commander, t.system, t.state, t.order.oid, limitPrice(), docked.now, delayTo(t.system));
+      message = result.message;
+      if (result.ok) closeQuietly();
+      deps.traded(result);
+      return;
+    }
     if (el.classList.contains('ex-routes-toggle') || el.classList.contains('ex-runs-open')) {
       setRoutesOpen(true);
       return;
@@ -1150,8 +1287,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         routesOpen = false;
         openOnPhone(true);
       } else render();
-      if (el.dataset.n) setQty(Number(el.dataset.n));
-      renderForm(view());
+      if (el.dataset.routeBuy) openModal({ side: 'buy', type: 'market', qty: Number(el.dataset.n) });
       return;
     } else if (el.classList.contains('ex-backroom-toggle')) {
       backMessage = '';
@@ -1199,15 +1335,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       message = '';
       qtyInput.value = '';
       slider.value = '0';
-      // From the lists: ready to buy as much as you can, or sell the lot. You still confirm.
-      if (el.dataset.quick) {
-        side = el.dataset.quick as 'buy' | 'sell';
-        orderType = 'market';
-        render();
-        setQty(maxQty(view()));
-        renderForm(view());
-        return;
-      }
+      // From the lists: Buy or Sell is ready for it.
+      if (el.dataset.quick) side = el.dataset.quick as 'buy' | 'sell';
     } else if (el.dataset.side) {
       side = el.dataset.side as 'buy' | 'sell';
       qtyInput.value = '';
@@ -1220,30 +1349,28 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       slider.value = '0';
       message = '';
       if (orderType === 'limit') suggestPrice(view());
-    } else if (el.dataset.cancel) {
+    } else if (el.dataset.storage) {
+      fillStorage = !fillStorage;
       const ctx = view();
-      const result = cancelOrder(ctx.commander, marketState(ctx) as OrderState, Number(el.dataset.cancel), ctx.capacity, !remote());
-      message = result.message;
-      deps.traded(result);
-      return;
+      if (qty() > maxQty(ctx)) setQty(maxQty(ctx), ctx);
+      else setQty(qty(), ctx); // the slider's share of the new maximum
     } else if (el.dataset.interval) {
       interval = el.dataset.interval as Interval;
     } else if (el.dataset.pct) {
       setQty((maxQty(view()) * Number(el.dataset.pct)) / 100);
     } else if (el.dataset.order) {
       // Fill the station's order: sell into a buy order, buy from a sell order.
-      side = el.dataset.order === 'buy' ? 'sell' : 'buy';
-      setQty(Number(el.dataset.total));
+      return openModal({ side: el.dataset.order === 'buy' ? 'sell' : 'buy', type: 'market', qty: Number(el.dataset.total) });
     } else if (el.dataset.kind) {
-      // Clicking a level fills the form: asks to buy, bids to sell, down to that level.
-      side = el.dataset.kind === 'ask' ? 'buy' : 'sell';
-      setQty(Number(el.dataset.total));
+      // Clicking a level opens the trade window: asks to buy, bids to sell, down to that level.
+      return openModal({ side: el.dataset.kind === 'ask' ? 'buy' : 'sell', type: 'market', qty: Number(el.dataset.total) });
     } else if (el.classList.contains('ex-submit') && isBtc() && orderType === 'limit') {
       const ctx = view();
       const result = placeBtcOrder(ctx.commander, side, qty(), limitPrice());
       if (result.ok) {
         qtyInput.value = '';
         slider.value = '0';
+        closeQuietly();
       }
       message = result.message;
       deps.traded(result);
@@ -1266,6 +1393,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         if (result.ok) {
           qtyInput.value = '';
           slider.value = '0';
+          closeQuietly();
         }
         message = result.message;
         deps.traded(result);
@@ -1285,13 +1413,16 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       if (result.ok) {
         qtyInput.value = '';
         slider.value = '0';
+        closeQuietly();
       }
       message = result.message;
       deps.traded(result);
       return;
     } else return;
     render();
-  });
+  };
+  root.addEventListener('click', onClick);
+  modalEl.addEventListener('click', onClick);
   $<HTMLSelectElement>('.ex-market select').addEventListener('change', (e) => {
     const v = (e.target as HTMLSelectElement).value;
     const docked = deps.context();
@@ -1312,7 +1443,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   priceInput.addEventListener('input', () => renderForm(view()));
   slider.addEventListener('input', () => {
     const ctx = view();
-    setQty((maxQty(ctx) * Number(slider.value)) / 100, ctx);
+    const v = Number(slider.value);
+    setQty((maxQty(ctx) * v) / 100, ctx);
+    slider.value = String(v); // keep the thumb where the finger is
     renderForm(ctx);
   });
   return {
@@ -1360,6 +1493,7 @@ const fromChartTime = (t: UTCTimestamp) => (t + offset(t * 1000)) * 1000;
 /** Lawless worlds pay a danger premium; say so, so the best runs are a real choice. */
 const risk = (s: StarSystem) =>
   s.government <= 1 ? ` <em class="ex-risk high">${GOVERNMENTS[s.government]} · pirates</em>` : s.government <= 3 ? ` <em class="ex-risk">${GOVERNMENTS[s.government]}</em>` : '';
+
 
 const UP = '#2ebd85';
 const DOWN = '#f6465d';
