@@ -12,6 +12,8 @@ import { checkOrders, type OrderState } from '../../src/economy/orders';
 import { checkSentOrders } from '../../src/economy/routes';
 import { systemAt } from '../../src/galaxy/generate';
 import type { Commander } from '../../src/game/commander';
+import { COMPANIES, STANDINGS, standingName, type CompanyId } from '../../src/game/companies';
+import { PROMOTION } from '../../src/game/contracts';
 
 export interface LogKinds {
   /** Bitcoin limit orders filling. */
@@ -55,7 +57,7 @@ export async function btcItems(orders: BtcOrder[], now: number, fetch: CandleFet
 }
 
 /**
- * Sell orders for goods that have filled while they were away (Mark), judged as the game judges
+ * Orders for goods that have filled while they were away, sells and buys (Mark), judged as the game judges
  * them (economy/orders.ts) on a copy of the save, and only once the news of it would have reached
  * where they are: at the speed of ships (routes.ts knownAt). The game fills the save itself when it
  * opens, and keeps the fill as a moment to share (game/tradeMoments.ts).
@@ -75,11 +77,12 @@ export function goodsItems(save: Commander, now: number): LogItem[] {
   const out: LogItem[] = [];
   for (const { system, fill } of fills) {
     const o = fill.order;
-    if (o.side !== 'sell') continue;
     const good = commodityById(o.id);
     const unit = good?.unit === 't' || !good ? ' t' : ` ${good.unit}`;
     const total = Math.round(o.limit * o.qty);
-    out.push({ key: `goods:${system.galaxy}:${system.index}:${o.oid}:${fill.t}`, text: `your order filled at ${system.name}: ${o.qty}${unit} of ${(good?.name ?? o.id).toLowerCase()} sold for ${total.toLocaleString('en-GB')} Cr` });
+    // Buys too (Mark): what it bought waits in storage there.
+    const did = o.side === 'sell' ? 'sold' : 'bought';
+    out.push({ key: `goods:${system.galaxy}:${system.index}:${o.oid}:${fill.t}`, text: `your order filled at ${system.name}: ${o.qty}${unit} of ${(good?.name ?? o.id).toLowerCase()} ${did} for ${total.toLocaleString('en-GB')} Cr` });
   }
   return out;
 }
@@ -100,4 +103,21 @@ export function logMessage(items: LogItem[]): { title: string; body: string } {
   const more = items.length - shown.length;
   const body = shown.join(' · ') + (more > 0 ? ` · and ${more} more` : '');
   return { title: `Ship's log · ${items.length} ${items.length === 1 ? 'message' : 'messages'}`, body: body.charAt(0).toUpperCase() + body.slice(1) };
+}
+
+/**
+ * A company's new rank for you, from the save (Mark: "when I became a contractor for W-Y I wasn't
+ * notified"): the rank you hold now with each company, from Contractor up, in its own voice. The
+ * seen keys (`rank:wy:Contractor`) make each one said once; a rank you've slipped from and
+ * regained isn't said again.
+ */
+export function rankItems(standing: Partial<Record<CompanyId, number>> | undefined): { key: string; title: string; body: string }[] {
+  const from = STANDINGS.findIndex((s) => s.name === 'Contractor');
+  const out: { key: string; title: string; body: string }[] = [];
+  for (const id of Object.keys(COMPANIES) as CompanyId[]) {
+    const rank = standingName(standing?.[id] ?? 0);
+    if (STANDINGS.findIndex((s) => s.name === rank) < from) continue;
+    out.push({ key: `rank:${id}:${rank}`, title: COMPANIES[id].name, body: PROMOTION[id](rank).body });
+  }
+  return out;
 }

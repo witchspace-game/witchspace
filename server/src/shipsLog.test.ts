@@ -61,11 +61,33 @@ describe("goods orders filled while you were away", () => {
     expect(items[0].text).toMatch(/^your order filled at Diso: 5 t of food sold for/);
   });
 
+  it('tells of buys as well as sells (Mark)', async () => {
+    const { goodsItems } = await import('./shipsLog');
+    const { c, t0, delay } = await setup();
+    const state = Object.values(c.markets)[0] as unknown as { orders: unknown[] };
+    state.orders = [{ oid: 2, id: 'food', side: 'buy', qty: 4, limit: 500, placed: t0, market: 4 }];
+    const items = goodsItems(c, t0 + delay + 600_000);
+    expect(items.some((i) => /^your order filled at Diso: 4 t of food bought for/.test(i.text))).toBe(true);
+  });
+
   it("leaves the save alone: the game fills it when it opens", async () => {
     const { goodsItems } = await import('./shipsLog');
     const { c, t0, delay } = await setup();
     const before = JSON.stringify(c);
     goodsItems(c, t0 + delay + 600_000);
     expect(JSON.stringify(c)).toBe(before);
+  });
+});
+
+describe('a new rank with a company', () => {
+  it('names the rank held with each company, from Contractor up, once per rank', async () => {
+    const { rankItems } = await import('./shipsLog');
+    expect(rankItems(undefined)).toEqual([]);
+    expect(rankItems({ wy: 4 })).toEqual([]);
+    const items = rankItems({ wy: 6, vorg: 20, hexon: -8 });
+    expect(items.map((i) => i.key).sort()).toEqual(['rank:vorg:Trusted', 'rank:wy:Contractor']);
+    const wy = items.find((i) => i.key === 'rank:wy:Contractor')!;
+    expect(wy.title).toBe('Wexley-Yorozu');
+    expect(wy.body).toContain("You're Contractor with Wexley-Yorozu now");
   });
 });

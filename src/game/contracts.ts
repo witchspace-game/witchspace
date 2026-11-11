@@ -4,7 +4,7 @@ import { stationTrades } from '../economy/legality';
 import { DANGER_PREMIUM, equilibriumPrice, tradeBalance } from '../economy/market';
 import { hash } from '../economy/seed';
 import { FUEL_CAPACITY, fuelCapacity, type Commander } from './commander';
-import { COMPANIES, COMPANY_IDS, pickCompany, presence, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
+import { COMPANIES, COMPANY_IDS, pickCompany, presence, STANDINGS, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
 import { bodiesOf, EXPLORER_DOORS, exploreOf, isSurveyed, worldOf } from './explore';
 
 // Company contracts (Modern rules), as set out in
@@ -385,8 +385,44 @@ export function logContract(c: Commander, id: CompanyId, what: keyof CompanyLog)
 /** What the cargo is called on screen. */
 export const cargoName = (a: Contract) => a.label ?? commodityById(a.good)?.name ?? a.good;
 
-export function addStanding(c: Commander, id: CompanyId, points: number) {
+export function addStanding(c: Commander, id: CompanyId, points: number, now = Date.now()) {
+  const before = standingName(standing(c, id));
   c.standing = { ...c.standing, [id]: Math.max(-20, standing(c, id) + points) };
+  const after = standingName(standing(c, id));
+  if (rankIndex(after) > rankIndex(before) && rankIndex(after) >= rankIndex('Contractor')) promoted(c, id, after, now);
+}
+
+const rankIndex = (name: StandingName) => STANDINGS.findIndex((s) => s.name === name);
+
+/**
+ * A new rank with a company is its own moment (Mark: "when I became a contractor for W-Y I wasn't
+ * notified"), however it was earned: a message in each company's own voice, once per rank. The
+ * notification server tells you too, from the save (server/src/accounts.ts, rankItems).
+ */
+export const PROMOTION: Record<CompanyId, (rank: StandingName) => { subject: string; body: string }> = {
+  hexon: (rank) => ({
+    subject: `Your standing: ${rank}`,
+    body: `Congratulations, Commander. Our records now list you as ${rank}. Continuity of care extends to those who deliver: better-paid work will follow, with the paperwork.`,
+  }),
+  vorg: (rank) => ({
+    subject: `${rank}. Mr Vorg has heard your name`,
+    body: `That doesn't happen often. You're ${rank} with Vorg Industries now: bigger jobs, bigger danger bonuses. Don't make him regret it.`,
+  }),
+  mutual: (rank) => ({
+    subject: `The members say: ${rank}`,
+    body: `It went to a vote, slowly, and you're ${rank} with the Carriers' Mutual now. There's better work on the board for you, and the members will answer your call as you've answered theirs.`,
+  }),
+  wy: (rank) => ({
+    subject: `Science Division: ${rank}`,
+    body: `The Science Division notes your record. You're ${rank} with Wexley-Yorozu now. Special orders will find you.`,
+  }),
+};
+
+function promoted(c: Commander, id: CompanyId, rank: StandingName, now: number) {
+  const mid = `rank:${id}:${rank}`;
+  if (c.messages?.some((m) => m.id === mid)) return;
+  const { subject, body } = PROMOTION[id](rank);
+  c.messages = [{ id: mid, company: id, subject, body, at: now }, ...(c.messages ?? [])].slice(0, 20);
 }
 
 const DAY = 24 * 3600_000;

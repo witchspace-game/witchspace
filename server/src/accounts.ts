@@ -31,7 +31,7 @@ import type { StoredShip } from '../../src/game/commander';
 import data from './mcp-data.json';
 import { checkSpec } from '../../src/game/shipyard';
 import type { ShipDef } from '../../src/content/types';
-import { awake, btcItems, goodsItems, heartItems, LOG_EVERY, logMessage, type LogItem, type LogKinds } from './shipsLog';
+import { awake, btcItems, goodsItems, heartItems, LOG_EVERY, logMessage, rankItems, type LogItem, type LogKinds } from './shipsLog';
 import type { Commander } from '../../src/game/commander';
 import type { BtcOrder, PriceSpan } from '../../src/economy/bitcoin';
 import { CHECKS_PER_MINUTE, KINDS, MAX_NOTE, OPEN, OPEN_AT_ONCE, parseFile, PER_DAY, prepare, pullRequestText, repoFile, type Kind, type Status, type Via } from './submissions';
@@ -1344,6 +1344,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
         await this.contactOne(row, now);
         await this.shipsLog(row, now);
         await this.yardReady(row, now);
+        await this.rankReady(row, now);
       } catch (e) {
         console.error('contact failed', row.account, e);
       }
@@ -1364,8 +1365,9 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const company = CONTACT_COMPANIES.find((id) => {
       if (!assignmentWaiting(c.name!, id, c.standing?.[id] ?? 0, now)) return false;
       const aid = assignmentId(id, now);
-      // Not if you've already seen it in the game, taken it, or been told.
-      return ![...(c.contracts ?? []), ...(c.messages ?? [])].some((x) => x.id === aid) && !c.contractsDone?.includes(aid) && !sent.some((s) => s.id === aid);
+      // Not if you've taken it, done it, or been told. Seeing it in the game is no longer enough to stay
+      // quiet (Mark: a commander who plays every day never heard from the companies at all).
+      return !(c.contracts ?? []).some((x) => x.id === aid) && !c.contractsDone?.includes(aid) && !sent.some((s) => s.id === aid);
     });
     if (!company) return;
     const { name, subject } = CONTACT[company];
@@ -1420,6 +1422,18 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const msgs = [readyMessage(data?.order, name, now), ...arrivedMessages(data?.fleet, name, now)].filter((m) => m && !seen.has(m.key));
     for (const msg of msgs) if (msg && (await this.notify(row.account, msg.title, msg.body))) seen.add(msg.key);
     if (msgs.length) this.sql.exec('UPDATE contact SET seen = ? WHERE account = ?', JSON.stringify([...seen].slice(-300)), row.account);
+  }
+
+  /** A new rank with a company: told once, on any device you've switched on, outside quiet hours. */
+  private async rankReady(row: ContactRow, now: number) {
+    if (!this.devicesOf(row.account).length || !awake(now, row.tz ?? 0)) return;
+    const save = this.sql.exec('SELECT data FROM saves WHERE account = ?', row.account).toArray()[0];
+    const data = save ? (JSON.parse(save.data as string) as { difficulty?: string; standing?: Record<string, number> }) : undefined;
+    if (data?.difficulty !== 'modern') return;
+    const seen = new Set(JSON.parse(row.seen ?? '[]') as string[]);
+    const fresh = rankItems(data.standing).filter((r) => !seen.has(r.key));
+    for (const r of fresh) if (await this.notify(row.account, r.title, r.body)) seen.add(r.key);
+    if (fresh.length) this.sql.exec('UPDATE contact SET seen = ? WHERE account = ?', JSON.stringify([...seen].slice(-300)), row.account);
   }
 
   private async contactEmail(row: ContactRow, company: CompanyId, name: string, subject: string): Promise<boolean> {

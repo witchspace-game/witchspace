@@ -10,6 +10,16 @@ notice. Make a new heading for today if there isn't one, written like
 starting with `- `. Say what's different, not how it was done. Credit whoever
 reported it.
 
+## 11 November 2026
+
+- Trading has a proper trade window, like a real exchange: Buy and Sell open it, with the order book beside the form, Price and Amount with + and −, a slider with stops, Total, and one button. Placing a limit order is no longer fiddly, on a phone or a computer. A limit buy fills your hold at most, unless you switch on Fill to storage, when the rest waits at the station. (Mark)
+- All your orders in one place, at every market: open orders, goods waiting in storage and your trades, each with where it is and what your news says of it. Edit or cancel any of them. (Mark)
+- Trade from the chart: SELL and BUY in its corner, a + on the price scale to place a limit order at that price (a long press on a phone), and your orders as tags on their lines that you can drag to a new price or cancel. You always confirm in the trade window. (Mark)
+- Cancelling or changing an order at another market travels at the speed of news, as placing it did: it can still fill at its old price until the message gets there. (Mark)
+- The ship's log tells you when a buy order fills, not only a sell. (Mark)
+- A new rank with a company is its own message, however you earned it, and a notification if you've switched them on: "You're Contractor with Wexley-Yorozu now. Special orders will find you." (Mark)
+- The companies' special assignments reach your phone even on days you play: seeing one in the game no longer stops the notification. (Mark)
+
 ## 10 November 2026
 
 - Busy systems are busy and lawless ones thin: at most three traders on the lanes in an anarchy, rising to eight in a corporate state. Traders who work the dangerous routes are skilled, with better guns that swing onto a target, and they fight back. (Mark)
