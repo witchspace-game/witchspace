@@ -276,6 +276,14 @@ Everything here counts **commanders in shared space** only. The server never see
 | 3. Real activity in the news, as counts | half a day for "4 commanders flew at Leesti this hour" (reuses 1) | Trade counts would need a report-your-trades endpoint, which is easy to fake: about 2 days, and better skipped. The renowned-pirate results are already shared (#409). |
 | 4. A weekly set-time convoy (Friday 20:00 UK out of Lave) | 1–2 weeks properly | Shared space has no ships that every commander sees, other than the commanders themselves. A cheap version: every game spawns the same seeded convoy at that time, about 1–2 days. But that's a meeting time, not a shared fight. |
 | 5. A shared bounty when two commanders damage one pirate | after 4 | Pirates are per player, so two commanders never hit the same one. |
+| 7. Commanders lead the news *(Mark, 11 November 2026)* | about 2 days, after step 10 | A station's News puts what real commanders did nearby above the seeded events, so the news shows where commanders have been. Below. |
+
+**7. Commanders lead the news** *(idea, Mark, 11 November 2026)*. Mark: use the news to put first the systems where commanders have surveyed or changed something, so players can see through the news where other commanders are.
+- **Only what the server saw.** Shared-space exceptions ([the world, 5](the-world.md#5-what-players-change-exceptions)) are already server rows: a convoy saved or robbed, a bounty claimed, a renowned pirate brought down. Surveys happen on the phone, so the server never sees one; a **published first discovery** does reach it ([live feed](live-feed.md)), and ordinary surveys can only show as counts (*"3 worlds surveyed near Leesti today"*) from the counts in idea 3.
+- **Ranked, not added.** Commanders' news goes above the seeded events (famine, boom and the rest), nearest and freshest first; quiet systems' boards stay as they are.
+- **Where they were, never where they are.** It spreads at the speed of news (`newsDelay`: 10 minutes, then 12 more for every light year), so it's a trail to follow, not a tracker to hunt with.
+- **One source, two voices.** The same events feed the station's News, in its formal headline (*"Mutual convoy saved at the Riedquat witchpoint"*), and the saloon's gossip, in a character's words ([the world, 6.6](the-world.md#66-other-commanders-remembered-mark)). Both arrive by the same delay, so the board and the bar never disagree about what's known where.
+- **The gossip rules hold:** name the doers, never player victims; kind on balance; a commander flying dark is "a ship with no transponder"; callsigns only with the commander's yes (step 10).
 
 **Suggested order:** 1 with 6 (about 1.5 days, one Worker deploy), then 2, then the activity half of 3. 4 and 5 are a bigger, separate job: ships the server runs, which every commander in shared space sees.
 
