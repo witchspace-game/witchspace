@@ -1,6 +1,7 @@
 // The flight log, full screen from the button beside the galaxy map, and the replay player (the death replay
 // too): watch, share, keep or delete the clips and photos the ship kept.
 
+import { RECORDER_KINDS, recordsKind, setRecordsKind } from '../game/recorderKinds';
 import { addMoment, BUDGET, byTrip, clearUnkept, deleteMoment, listMoments, momentBytes, momentsUnreadable, setSaved, type LoggedMoment } from '../game/flightLog';
 import { escapeHtml } from './escape';
 import { openShareSheet } from './shareSheet';
@@ -319,6 +320,10 @@ export function closeReplay() {
  */
 let allClips = false;
 
+/** Select mode in the flight log: several moments let go at once (desktop has no swipe). */
+let selecting = false;
+const picked = new Set<string>();
+
 /** The game's count of kills in a moment, which the server believes up to what the track shows (the clip's title). */
 const killsOf = (m: LoggedMoment) => m.events.filter((e) => e.kind === 'kill').length;
 
@@ -490,7 +495,10 @@ export async function renderFlightLog(opts: {
       <div class="rec-row"><strong>Flight recorder</strong>${quality}${toggle}</div>
       ${moments.length ? `<div class="rec-meter" role="meter" aria-valuemin="0" aria-valuemax="${BUDGET}" aria-valuenow="${used}" aria-label="Space used on this device"><span style="width:${Math.min(100, (used / BUDGET) * 100).toFixed(1)}%"></span></div>
       <div class="rec-row rec-small"><span>${moments.length} ${moments.length === 1 ? 'moment' : 'moments'} · ${megabytes(used)} of ${megabytes(BUDGET)} on this device</span>${moments.some((m) => !m.saved) ? '<button type="button" class="log-clear">Clear unstarred</button>' : ''}</div>
-      <p class="rec-note">What you don't star clears after a week. Swipe one away to let it go.</p>` : ''}
+      <p class="rec-note">What you don't star clears after a week. ${matchMedia('(pointer: coarse)').matches ? 'Swipe one away to let it go.' : 'Hover over one to let it go, or Select several.'}</p>` : ''}
+      ${opts.enabled ? `<div class="rec-kinds" role="group" aria-label="What the recorder keeps"><span>Keeps</span>${RECORDER_KINDS.map((k) => `<button type="button" class="rec-kind" data-kind="${k.kind}" aria-pressed="${recordsKind(k.kind)}">${k.label}</button>`).join('')}</div>
+      <p class="rec-note">Moments you keep by hand, and photos, always save.</p>` : ''}
+      ${moments.length ? `<div class="rec-row rec-small rec-select">${selecting ? `<span>${picked.size} selected</span><button type="button" class="log-select-all">All unstarred</button><button type="button" class="log-delete-picked danger"${picked.size ? '' : ' disabled'}>Let ${picked.size || ''} go</button><button type="button" class="log-select-done">Done</button>` : '<button type="button" class="log-select">Select</button>'}</div>` : ''}
     </div>`;
   // The library, trip by trip (Mark: "the library should be somewhere else"; the dock shows only this trip).
   const day = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
@@ -500,10 +508,11 @@ export async function renderFlightLog(opts: {
         (t) => `<h3 class="log-trip">${day(t.moments[t.moments.length - 1].created)} · ${[...new Set(t.moments.map((m) => m.system).reverse())].map(escapeHtml).join(' → ')}</h3>
       <ul class="log-list">${t.moments
         .map(
-          (m) => `<li data-id="${m.id}">
+          (m) => `<li data-id="${m.id}"${selecting ? ` class="picking${picked.has(m.id) ? ' picked' : ''}"` : ''}>
+          ${selecting ? `<input type="checkbox" class="log-pick" aria-label="Select ${escapeHtml(tidy(m.title))}"${picked.has(m.id) ? ' checked' : ''} />` : ''}
           <button type="button" class="log-play" aria-label="${m.video ? 'Watch' : 'View'} ${escapeHtml(tidy(m.title))}"><img src="${url(m.poster ?? media(m))}" alt="" /><span>${m.video ? `${Math.round(m.seconds)} s${m.tags.includes('upright') ? ' · upright' : ''}` : 'Photo'}</span></button>
           <div><strong>${escapeHtml(tidy(m.title))}</strong><small>${escapeHtml(m.events.map((e) => e.text).join(' · '))}</small>
-          <span class="log-actions"><button type="button" class="moment-star" data-act="keep" aria-pressed="${m.saved}" aria-label="${m.saved ? 'Starred: kept forever' : 'Star it to keep it forever'}">${m.saved ? '★' : '☆'}</button><button type="button" class="primary" data-act="share">Share</button><button type="button" data-act="more">More</button></span></div>
+          <span class="log-actions"><button type="button" class="moment-star" data-act="keep" aria-pressed="${m.saved}" aria-label="${m.saved ? 'Starred: kept forever' : 'Star it to keep it forever'}">${m.saved ? '★' : '☆'}</button><button type="button" class="primary" data-act="share">Share</button><button type="button" data-act="more">More</button><button type="button" class="log-let-go" data-act="delete" aria-label="Let it go" title="Let it go">✕</button></span></div>
         </li>`,
         )
         .join('')}</ul>`,
@@ -529,9 +538,64 @@ export async function renderFlightLog(opts: {
       await clearUnkept();
       void renderFlightLog(opts);
     };
+  for (const b of el.querySelectorAll<HTMLButtonElement>('.rec-kind')) {
+    b.onclick = () => {
+      const kind = RECORDER_KINDS.find((x) => x.kind === b.dataset.kind)!.kind;
+      setRecordsKind(kind, !recordsKind(kind));
+      b.setAttribute('aria-pressed', String(recordsKind(kind)));
+    };
+  }
+  const again = () => void renderFlightLog(opts);
+  el.querySelector<HTMLButtonElement>('.log-select')?.addEventListener('click', () => {
+    selecting = true;
+    picked.clear();
+    again();
+  });
+  el.querySelector<HTMLButtonElement>('.log-select-done')?.addEventListener('click', () => {
+    selecting = false;
+    picked.clear();
+    again();
+  });
+  el.querySelector<HTMLButtonElement>('.log-select-all')?.addEventListener('click', () => {
+    for (const m of moments) if (!m.saved) picked.add(m.id);
+    again();
+  });
+  const letGo = el.querySelector<HTMLButtonElement>('.log-delete-picked');
+  if (letGo)
+    letGo.onclick = async () => {
+      if (!letGo.dataset.armed) {
+        letGo.dataset.armed = '1';
+        letGo.textContent = `Let ${picked.size} go? ${[...picked].some((id) => moments.find((m) => m.id === id)?.saved) ? 'Starred ones too. ' : ''}Tap again`;
+        return;
+      }
+      for (const id of picked) await deleteMoment(id);
+      picked.clear();
+      selecting = false;
+      again();
+    };
   for (const li of el.querySelectorAll<HTMLLIElement>('li[data-id]')) {
     const m = moments.find((x) => x.id === li.dataset.id)!;
     const refresh = () => void renderFlightLog(opts);
+    if (selecting) {
+      // Selecting: a tap anywhere on a moment picks it.
+      li.onclick = (e) => {
+        e.preventDefault();
+        if (picked.has(m.id)) picked.delete(m.id);
+        else picked.add(m.id);
+        refresh();
+      };
+      continue;
+    }
+    const x = li.querySelector<HTMLButtonElement>('.log-let-go')!;
+    x.onclick = async () => {
+      if (!x.dataset.armed) {
+        x.dataset.armed = '1';
+        x.textContent = m.saved ? 'Starred · let go?' : 'Let go?';
+        return;
+      }
+      await deleteMoment(m.id);
+      refresh();
+    };
     li.querySelector<HTMLButtonElement>('.log-play')!.onclick = () => openReplay(m, 'Your moments', refresh, m.photo ? 'Taken with your ship camera. It stays on this device unless you share it.' : undefined);
     li.querySelector<HTMLButtonElement>('[data-act="share"]')!.onclick = () => shareMoment(m, refresh);
     li.querySelector<HTMLButtonElement>('[data-act="keep"]')!.onclick = async () => {

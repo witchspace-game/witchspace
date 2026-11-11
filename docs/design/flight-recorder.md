@@ -150,6 +150,16 @@ Mark: "you could fly, trade, explore, build and then post straight to twitter". 
 
 Both sit in This trip with the share button, like a kill. They have no flight track, so they share as a video or photo with the title rather than as a clip page. Never real money or Bitcoin as the boast.
 
+## What it keeps: a switch per kind *(a player on the ideas board, 11 November 2026; built)*
+
+From the ideas board, "Selectively disable flight recorder": surveys get recorded too, and they're boring; and on a computer each clip takes several clicks to delete, with no swipe.
+
+- **A switch per kind,** under the recorder in the flight log (`src/game/recorderKinds.ts`): Fights, Ship lost, Legends, Marshals, Crimes, Trade runs, Surveys. Kept on the device. **Surveys start off** (Mark's call); everything else on.
+- **Always saved:** moments kept by hand (Shift+P, holding the camera button) and photos.
+- **A switched-off kind in a fight** isn't kept on its own, but a fight already being kept still holds it, so a crime in a fight is still in the fight's clip.
+- **Letting go on a computer:** an ✕ when you hover over a moment (armed, then tap again), and **Select**: tick several, or All unstarred, then Let them go. Phones keep the swipe.
+- **Crimes** are a new kind: the moment of an offence, linked from your record ([law and travel, your record](law-and-travel.md#your-record-a-player-on-the-ideas-board-11-november-2026-built)).
+
 ## The claim: submit your recorder *(Mark, 25 October 2026)*
 
 When you're destroyed, the insurers pay out when you **submit your flight recorder**: the clip and its data go to Witchspace. It's the act that settles the claim in the game, and in the world it's how commanders' best and worst moments reach everyone else. Deaths are the most shareable moments there are, and this makes handing one over part of getting your ship back.

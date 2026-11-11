@@ -156,7 +156,7 @@ export const flight = {
   scanned: false,
   scanProgress: 0,
   /** A crime seen but not pinned on you. Forgotten when you leave the system. */
-  unpinned: null as { status: 'offender' | 'fugitive'; serious: boolean; at: number } | null,
+  unpinned: null as { status: 'offender' | 'fugitive'; serious: boolean; at: number; what: string } | null,
   /** A police hail to answer, from whom, and by when. */
   hail: null as { by: NpcShip; until: number } | null,
   /** Police have read your hull this visit (a broken transponder): no more hails. */

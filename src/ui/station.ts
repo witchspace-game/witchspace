@@ -24,6 +24,7 @@ import { escapeHtml } from './escape';
 import { $, cmdr, currentSystem, game } from '../core';
 import { player } from '../scene';
 import { openManual } from './manual';
+import { hasRecord, openRapSheet } from './rapSheet';
 import { plotCourse, renderContracts } from './contracts';
 import { openBooth, showroomModels } from './showroom';
 import { hasShipyard, renderShipyard, showOwnShip } from './shipyard';
@@ -226,7 +227,7 @@ export function renderDocked() {
       : []),
     ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
     ['Lasers', MOUNTS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
-    ['Legal status', main.legalLabel()],
+    ['Legal status', `${main.legalLabel()}${hasRecord(c) ? ' <button type="button" class="small rap-open">Your record</button>' : ''}`],
     ['Destination', c.target === null ? (isTouch ? 'None (choose on the Galaxy map)' : 'None (press G)') : systemAt(here.galaxy, c.target).name],
     ['Rating', c.difficulty === 'classic' ? combatRating(c.kills) : ratingProgress(c.kills)],
     ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited${main.myFirsts(here.galaxy) ? ` · ${main.myFirsts(here.galaxy)} first${main.myFirsts(here.galaxy) === 1 ? '' : 's'} on the chart` : ''}`],
@@ -244,6 +245,7 @@ export function renderDocked() {
     renderDocked();
   });
   $('#cmdr .rename').addEventListener('click', () => startRename());
+  document.querySelector<HTMLButtonElement>('#cmdr .rap-open')?.addEventListener('click', () => void openRapSheet(c));
   document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
     flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);
     saveCommander(c);

@@ -132,7 +132,7 @@ export const exchange = mountExchange($('#exchange'), {
   dealt(result) {
     if (result.ok) saveCommander(cmdr());
     if (result.caught) {
-      recordCrime(cmdr(), 'offender');
+      recordCrime(cmdr(), 'offender', false, 'Caught at a black-market deal');
       saveCommander(cmdr());
       sfx.explosion();
     } else if (result.ok) sfx.beep();

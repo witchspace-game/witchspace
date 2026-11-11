@@ -437,13 +437,13 @@ export function decide(c: Commander, contract: string, choice: Choice, here: Sta
     if (choice === 'open') {
       failCase(c, contract, -6);
       const crime = a.company === 'vorg';
-      if (crime) recordCrime(c, 'offender');
+      if (crime) recordCrime(c, 'offender', false, `Carrying armed crates for ${firm}`);
       const after = consequence(c, a, 'station', here, Date.now());
       return `They opened it. ${crime ? 'The crates were armed: you are an OFFENDER here. ' : ''}${after ?? `You're free to go; ${firm} is not pleased.`}`;
     }
     if (choice === 'refuse') {
       failCase(c, contract, 1);
-      recordCrime(c, 'offender');
+      recordCrime(c, 'offender', false, 'Refusing a police search');
       return `The police keep the case and mark you an OFFENDER for obstruction. ${firm} appreciates your silence.`;
     }
     if (choice === 'call') {

@@ -2116,6 +2116,19 @@ body.retro #trip-sheet { background: #000; backdrop-filter: none; }
 .moment-more-sheet [data-more='star'][aria-pressed='true'] i { color: var(--amber); }
 .moment-let-go b, .moment-let-go i { color: var(--danger); }
 .moment-more-close { margin-top: 4px; }
+/* Your record (ui/rapSheet.ts). */
+.rap-sheet .moment-more-sheet { max-height: 88vh; overflow-y: auto; }
+.rap-sheet h3 { margin: 4px 0 2px; }
+.rap-sheet h4 { margin: 10px 0 0; font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; }
+.rap-now, .rap-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rap-now li, .rap-list li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--edge); border-radius: 8px; }
+.rap-now li span, .rap-when { color: var(--dim); font-size: 12px; }
+.rap-warrant { border-color: #ffd98a !important; }
+.rap-made { font-size: 12px; }
+.rap-made.offender { color: var(--amber); }
+.rap-made.fugitive { color: var(--danger); }
+.rap-list li button { justify-self: start; margin-top: 4px; min-height: 30px; padding: 2px 12px; font-size: 13px; }
+.rap-note { margin: 4px 0 0; color: var(--dim); font-size: 12px; }
 /* On its side, the best moment's video beside its title and buttons, so Share is in view (Marketing). */
 @media (max-height: 500px) and (orientation: landscape) {
   .trip-list li.trip-best { grid-template-columns: minmax(0, 34%) 1fr; grid-template-rows: auto auto 1fr; column-gap: 14px; }
@@ -2163,6 +2176,24 @@ body.retro #replay { backdrop-filter: none; }
 .rec-meter span { display: block; height: 100%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 .log-clear { min-height: 30px; padding: 2px 10px; font-size: 12px; }
 .rec-note { margin: 4px 0 0; font-size: 12px; color: var(--dim); }
+/* What it keeps: a switch per kind (a player on the ideas board: surveys are boring). */
+.rec-kinds { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
+.rec-kinds > span { font-size: 12px; color: var(--dim); margin-right: 2px; }
+#flight-log .rec-kind { min-height: 30px; padding: 2px 10px; border-radius: 999px; font-size: 12px; color: var(--dim); }
+#flight-log .rec-kind[aria-pressed='true'] { background: rgba(61, 255, 176, 0.16); border-color: var(--accent); color: var(--accent); }
+.rec-select { flex-wrap: wrap; }
+.rec-select button { min-height: 30px; padding: 2px 10px; font-size: 12px; }
+.rec-select .danger:not(:disabled) { border-color: var(--danger); color: var(--danger); }
+/* Letting one go on desktop, where there's no swipe: an ✕ when you hover over it. */
+.log-let-go { display: none; margin-left: auto; color: var(--danger); }
+@media (hover: hover) and (pointer: fine) {
+  .log-let-go { display: inline-block; visibility: hidden; }
+  .log-list li:hover .log-let-go, .log-let-go:focus-visible, .log-let-go[data-armed] { visibility: visible; }
+}
+.log-list li.picking { position: relative; cursor: pointer; }
+.log-list li.picking .log-actions { display: none; }
+.log-list li.picked { border-color: var(--accent); background: rgba(61, 255, 176, 0.08); }
+.log-pick { position: absolute; top: 14px; left: 14px; z-index: 1; width: 20px; height: 20px; margin: 0; accent-color: var(--accent); pointer-events: none; }
 .log-intro { padding: 12px 14px; border: 1px solid var(--accent); border-radius: 10px; background: rgba(61, 255, 176, 0.06); }
 .log-intro p { margin: 0 0 10px; }
 .log-intro-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 !important; }

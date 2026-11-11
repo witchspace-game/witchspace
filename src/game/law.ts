@@ -2,7 +2,7 @@ import { systemAt, type StarSystem } from '../galaxy/generate';
 import { contrabandAt, stolenAt } from '../economy/legality';
 import { bannedSpecial, objectionableTonnes, shieldedTonnes } from './compartment';
 import { addStanding, cargoName, finish, logContract } from './contracts';
-import { EQUIPMENT, STAKE, removeEquipment, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus } from './commander';
+import { EQUIPMENT, STAKE, removeEquipment, removeStolen, tidyStolen, type Commander, type EquipmentId, type LegalStatus, type Offence } from './commander';
 
 // The law, as set out in docs/design/law-and-travel.md:
 // - ordinary crimes are local: your record belongs to the system where it happened;
@@ -32,14 +32,32 @@ export function legalStatus(c: Commander, system: StarSystem = here(c)): LegalSt
   return c.records[systemKey(system)]?.status ?? 'clean';
 }
 
-/** Record a crime in the current system. Records only ever get worse this way. */
-export function recordCrime(c: Commander, status: Exclude<LegalStatus, 'clean'>, serious = false) {
-  if (!hasLaw(here(c))) return;
+/** How many offences the rap sheet keeps. */
+export const RAP_SHEET = 20;
+
+/** Put an offence on your rap sheet (an idea from a player on the ideas board: "a way to see what I did to get Fugitive status"). */
+export function noteOffence(c: Commander, what: string, made: Offence['made'], warrant = false, now = Date.now()): Offence {
+  const o: Offence = { t: now, galaxy: c.location.galaxy, system: c.location.system, what, made, ...(warrant ? { warrant: true } : {}) };
+  c.rapSheet = [...(c.rapSheet ?? []), o].slice(-RAP_SHEET);
+  return o;
+}
+
+/**
+ * Record a crime in the current system. Records only ever get worse this way. With `what`, it goes
+ * on your rap sheet too; the offence is returned, so a moment of it can be linked.
+ */
+export function recordCrime(c: Commander, status: Exclude<LegalStatus, 'clean'>, serious = false, what = ''): Offence | null {
+  if (!hasLaw(here(c))) return null;
   const key = systemKey(here(c));
   const old = c.records[key]?.status ?? 'clean';
   if (RANK[status] > RANK[old]) c.records[key] = { status, jumps: 0 };
-  if (serious && c.difficulty === 'modern') c.warrant = true;
+  const warrant = serious && c.difficulty === 'modern';
+  if (warrant) c.warrant = true;
+  return what ? noteOffence(c, what, status, warrant) : null;
 }
+
+/** The words of a crime's flash, without its verdict: "Firing on a trader · you are an OFFENDER" → "Firing on a trader". */
+export const offenceWords = (message: string) => message.replace(/\s·\s(you are (now )?(an |a )?)?(OFFENDER|FUGITIVE).*$/i, '').replace(/\s·\s(you are the suspect).*$/i, '');
 
 export function clearRecord(c: Commander, system: StarSystem = here(c)) {
   delete c.records[systemKey(system)];

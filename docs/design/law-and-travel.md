@@ -83,6 +83,15 @@ Mark: *"It doesn't feel fair to have a warrant issued that is immediately galaxy
 
 Mark: "When you are in combat and a police Viper flies in front of you and it catches a laser shot, you immediately become a Fugitive!" Under Modern rules, in a fight (pirates about, or anyone after you), the first stray hit on a police or company security ship is forgiven: it radios "Check your fire, Commander!", and a burst that clips it counts once. Hit it again within 30 seconds, hit one with no fight on, or hit a ship you've locked a missile on, and it's a crime as before. Destroying one always counts. Classic keeps 1984's rule.
 
+### Your record *(a player on the ideas board, 11 November 2026; built)*
+
+From the ideas board, "Rap sheet": "a way to see what I did to get Fugitive status", a Viper hit by mistake, ideally with the clip.
+
+- **On file:** each crime that's recorded goes on your rap sheet in your save: what you did ("Firing on a police Viper", "Caught at a black-market deal"), where, when, and what it made you, with any Marshals warrant. The last 20 are kept (`noteOffence`, `src/game/law.ts`). Crimes done running dark go on file when they're pinned on you, as "…, running dark".
+- **With its clip:** an offence asks the flight recorder for the moment (a new kind, Crimes), joining the fight's clip if there is one. The record links to it while it's still in the flight log.
+- **Where you stand:** each system's record and how many jumps until it cools, and the warrant, with the way out (settle, or surrender).
+- **Where:** **Your record**, beside Legal status on the Station screen (`src/ui/rapSheet.ts`). Solo, in the save: no server.
+
 ## 3. Ways out when you're wanted
 
 | Option | How | Cost |

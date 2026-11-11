@@ -298,6 +298,19 @@ export interface ShipOrder {
   system: number;
 }
 
+/** One offence on your record: what you did, where, when, and what it made you. */
+export interface Offence {
+  t: number; // ms
+  galaxy: number;
+  system: number;
+  what: string;
+  made: 'offender' | 'fugitive';
+  /** It brought a Co-operative Marshals warrant. */
+  warrant?: boolean;
+  /** The flight recorder's moment of it, while that's on this device. */
+  moment?: string;
+}
+
 export interface Commander {
   name: string;
   difficulty: Difficulty;
@@ -309,6 +322,8 @@ export interface Commander {
   records: Record<string, { status: LegalStatus; jumps: number }>;
   /** A Co-operative Marshals warrant for a serious crime: wanted everywhere with a government (Modern). */
   warrant: boolean;
+  /** Your rap sheet: the last offences on record, newest last (game/law.ts). */
+  rapSheet?: Offence[];
   /** Equipment held at a station until a fine is paid. */
   impound: { at: string; items: EquipmentId[]; owed: number } | null;
   /** Fitted equipment knocked offline in combat (Modern rules); repaired at a station. */
