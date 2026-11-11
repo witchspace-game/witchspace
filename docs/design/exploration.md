@@ -104,6 +104,32 @@ A derelict's log points somewhere. Follow it and the next find continues the sto
 - **On the Station tab:** trails under way, how far along, and where the last clue pointed.
 - **Said plainly** *(Mark: "am I actually on a trail or not?", 9 November 2026)*. A trail's later steps show on the HUD as **Trail signal · <trail>** in gold, not as a plain Signal. Finding a step puts a gold line on its log: *Trail · A debt unpaid · 2 of 5 found · next: Razaar · course set*. When the log closes, the ship's computer says it again as a heads-up into the radio (see [radio and comms](radio-and-comms.md)). The course is set only if you have none of your own: otherwise it's kept and you're told where the trail goes. The galaxy chart marks each trail's next system with a gold diamond, shows a Trail row on it, and lists your trails. Every signal's log, trail or not, is kept in Messages to read again when docked.
 
+### Trails need kit *(idea, Mark, 11 November 2026)*
+
+Mark: *"These trails need a little more thought. For example, would having an extended fuel range allowing that extra distance be part of a successful trail? This would mean you need to purchase the upgrade to complete the trail. This idea could be expanded."*
+
+**Today every trail is easy:** 3–5 systems, each hop 2–7 LY (inside a Cobra's ordinary range), no rank needed and no fight built in. That's about half an hour (estimated, not measured), and nothing about it uses what an explorer buys.
+
+**The idea:** each trail needs one piece of exploring kit to finish, and the story says why. A trail becomes a reason to buy the kit, and the proof you've fitted it.
+
+| Trail | Needs | Why, in the story |
+|---|---|---|
+| *The long way home* | **Fuel Scoops** (600 Cr) | Ada ran out of fuel one jump short. Her ship lies where there's no station, so you skim the star to get home: what she couldn't do. |
+| *The lost survey* | **Deep Survey Scanner** (1,800 Cr) | Fenn's beacons are old and faint; an ordinary scanner never picks them up. |
+| *The colony that stopped answering* | **Long-Range Fuel Tanks** (2,200 Cr, 10 LY) | Wexley-Yorozu put the colony past the lanes so nobody would drop by: the last hop is 8–10 LY, past a standard drive. |
+| *A debt unpaid* | A fight rather than kit | Bel's cache is in an anarchy, and someone else is looking for it. |
+
+- **A ladder:** cheap kit for a new explorer, dearer kit further up, so the trails teach exploring one tool at a time.
+- **Expanded later:** a trail that crosses into the next galaxy (Galactic Hyperdrive, 5,000 Cr); a Legends trail that needs the Survey Autopilot to hold a low orbit over something dangerous.
+
+**Rules, so it never feels like a paywall:**
+- **Said before you commit.** The step's log says what the next needs, in the story's words (*"The colony's beacon is 9.4 LY out, past a standard drive"*), and the chart marks a step you can't reach yet.
+- **The trail waits.** Leave, buy the kit, come back: nothing is lost.
+- **The kit is on sale within reach:** a station of high enough tech level within a few jumps of the step that needs it (the trail is placed so there is one).
+- **The treasure pays it back.** The richer ends already do (about 17,700 Cr for Ada's ship, 10,200 for Bel's cache, at base prices).
+
+**The Ninefold pays too little** *(Mark, 11 November 2026: "not consistent with the lore")*. Its end is about 1,330 Cr with the report sold to Wexley-Yorozu (1,200 for the report, a little medicine and computers), or 430 Cr published: the poorest choice-ending on any trail, for the report a company that saved 27,000,000 Cr under clause 214 would most want buried, from a Science Division that "pays more than anyone". Proposed: W-Y pays about what the richer trails do (around 15,000 Cr, against 2,200 Cr of fuel tanks to get there), so the choice is a real treasure or the truth; publishing stays at 300 Cr from the Mutual's newsletter. Much more (27,000, a tenth of one percent of the saving) would overpay a half-hour trail unless it's also made harder, for instance by W-Y watching the relay. **To decide, after the talk about money:** the amount, and whether W-Y pays in credits at all (see [system currencies](system-currencies.md)).
+
 ### Terraforming candidates
 
 Every system's planet is already home to someone, so Wexley-Yorozu looks at the **moons**. A moon survey now grades it: **Barren** (about half), **Marginal** (a third) or **Candidate** (about one in six; bigger moons more often). A Candidate's data is worth **four times** as much: it's the start of a colony.
