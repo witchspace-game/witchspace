@@ -216,6 +216,16 @@ Exceptions are what makes the world respond. The question is whose world they ch
 
 Starting point: **solo changes stay yours; shared-space changes are everyone's, because the server refereed them.** A commander who robs a convoy in solo has a world one convoy shorter. A wing that saves the yard's supply line in shared space has saved it for everybody. (Open question 2.)
 
+### 5.1 How long an exception is kept *(11 November 2026)*
+
+*From a storage check (Mark: "Are we storing information that we don't need?"). Solo is already tidy: the yard's losses are pruned as each new one comes (`keepLosses`). This is the rule for the server's rows, written before they're built.*
+
+- **An exception is kept while it changes something,** and no longer. A destroyed convoy matters until its run is due again; a lost supply ship until its stage is finished; then the row goes.
+- **The longest anything is kept is 60 days,** the same as a renowned pirate's record on the privacy page, unless it's a story beat (section 6) or a first, which are history and kept.
+- **Who did it goes first.** A row names a commander only while that matters to someone (the news, a character's memory of you); after that it's kept, if at all, as "a commander".
+- **A deleted account's exceptions go with it,** as its firsts and pirate record do: out of view at once, erased after 90 days.
+- **Pruned by the server, on its own,** like the rest of its housekeeping: expired sign-in codes and old pirate records each hour, and taken-down clips' videos and cards after 30 days.
+
 ---
 
 ## 6. Characters

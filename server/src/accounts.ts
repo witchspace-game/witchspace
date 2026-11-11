@@ -340,6 +340,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
       if (out > 0) return json({ kept: false, why: 'He was already out of action' });
     }
     this.sql.exec('INSERT INTO renowned (galaxy, system, account, how, at) VALUES (?, ?, ?, ?, ?)', body.galaxy, body.system, account.id, body.how, now);
+    this.sql.exec('DELETE FROM renowned WHERE at < ?', now - RECORD_WINDOW); // on his record for 60 days, as the privacy page says
     return json({ kept: true });
   }
 
@@ -500,6 +501,7 @@ export class Accounts extends DurableObject<AccountsEnv> {
     const hourAgo = Date.now() - 3600_000;
     this.sql.exec('DELETE FROM sends WHERE t < ?', hourAgo);
     this.sql.exec('DELETE FROM links WHERE expires < ?', Date.now());
+    this.sql.exec('DELETE FROM codes WHERE expires < ?', Date.now()); // expired codes keep nobody's email
     const byEmail = this.sql.exec('SELECT COUNT(*) AS n FROM sends WHERE email = ?', email).one().n as number;
     const byNet = this.sql.exec('SELECT COUNT(*) AS n FROM sends WHERE net = ?', net).one().n as number;
     if (byEmail >= LINKS_PER_EMAIL_PER_HOUR || byNet >= LINKS_PER_NETWORK_PER_HOUR) return json({ error: 'Too many sign-in emails: please wait a while and try again' }, 429);
@@ -1333,6 +1335,10 @@ export class Accounts extends DurableObject<AccountsEnv> {
   async alarm(): Promise<void> {
     const rows = this.sql.exec(`SELECT account, email, stop, sent, kinds, tz, logged, seen FROM contact WHERE email = 1 OR ${HAS_DEVICE}`).toArray() as unknown as ContactRow[];
     const now = Date.now();
+    // Housekeeping: nothing kept past what the privacy page promises.
+    this.sql.exec('DELETE FROM codes WHERE expires < ?', now);
+    this.sql.exec('DELETE FROM links WHERE expires < ?', now);
+    this.sql.exec('DELETE FROM renowned WHERE at < ?', now - RECORD_WINDOW);
     for (const row of rows) {
       try {
         await this.contactOne(row, now);
