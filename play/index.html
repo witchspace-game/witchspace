@@ -102,6 +102,7 @@
       <div class="wallet-sheet" id="wallet-sheet" hidden></div>
       <div class="tabs" role="tablist">
         <button data-tab="station" role="tab">Station</button>
+        <button data-tab="equip" role="tab">Equip ship</button>
         <button data-tab="contracts" role="tab">Contracts</button>
         <button data-tab="market" role="tab"><span class="key">T · </span>Market</button>
         <button data-tab="news" role="tab">News</button>
@@ -123,8 +124,7 @@
              panel: the live hull, turning, drag to turn her. On a computer she's beside the panel already. -->
         <div class="ship-window" id="ship-window">
           <div class="sw-title"><p class="sw-meta"></p><h3 class="sw-name"></h3><p class="sw-own" hidden></p></div>
-          <div class="ship-actions"><button type="button" class="manual-open">Manual</button><button type="button" class="booth-open">Photo</button></div>
-          <ul class="sw-kit"></ul>
+          <div class="sw-foot"><ul class="sw-kit"></ul><div class="ship-actions"><button type="button" class="manual-open">Manual</button><button type="button" class="booth-open">Photo</button></div></div>
           <p class="sw-hint">Drag to turn her</p>
         </div>
         <div class="st-tiles">
@@ -137,7 +137,9 @@
         <p class="fuel-row" id="data-row" hidden></p>
         <p class="fuel-row" id="arrivals" hidden></p>
         <dl id="cmdr"></dl>
-        <h3>Equip ship</h3>
+      </div>
+      <!-- The shop, on its own screen (Mark, 12 November 2026: the Station screen ends after survey data). -->
+      <div id="tab-equip" role="tabpanel" hidden>
         <ul id="equip"></ul>
       </div>
       <div id="tab-contracts" role="tabpanel" hidden>

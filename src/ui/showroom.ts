@@ -72,6 +72,7 @@ showroom.scene.add(hangar);
 
 function updateBerth(dt: number, model: ShipModel) {
   hangar.visible = true;
+  (hangar.userData.pad as THREE.Object3D).visible = !document.body.classList.contains('retro');
   showroom.stars.visible = false;
   // Rest the ship on the pad: its lowest point at floor level.
   const lowest = Math.min(...model.def.geometry.vertices.map((v) => v[1]));
@@ -122,14 +123,16 @@ function shipWindow(): DOMRect | null {
 function frameInWindow(model: ShipModel, win: DOMRect) {
   const w = innerWidth;
   const h = innerHeight;
-  const room = Math.min(win.width * 0.78, win.height * 1.45);
+  // The ship alone (Mark: "a little fussy"): the pad's orange off, and her below the title, clear of it.
+  (hangar.userData.pad as THREE.Object3D).visible = false;
+  const room = Math.min(win.width * 0.7, win.height * 1.15);
   const dist = (model.radius * 2 * h) / (room * 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / zoom;
   const elevation = THREE.MathUtils.clamp(0.28 + spin.x * 0.5, 0.05, 1.1);
   const lowest = Math.min(...model.def.geometry.vertices.map((v) => v[1]));
   const centre = new THREE.Vector3(0, -lowest + 1, 0);
   camera.position.set(Math.sin(spin.y) * Math.cos(elevation) * dist, centre.y + Math.sin(elevation) * dist, Math.cos(spin.y) * Math.cos(elevation) * dist);
   camera.lookAt(centre);
-  camera.setViewOffset(w, h, Math.round(w / 2 - (win.left + win.width / 2)), Math.round(h / 2 - (win.top + win.height * 0.52)), w, h);
+  camera.setViewOffset(w, h, Math.round(w / 2 - (win.left + win.width / 2)), Math.round(h / 2 - (win.top + win.height * 0.6)), w, h);
 }
 
 /**

@@ -7,7 +7,7 @@ import type { Commander } from './game/commander';
 import { systemAt, type StarSystem } from './galaxy/generate';
 
 export type State = 'title' | 'newgame' | 'docked' | 'flying' | 'transition' | 'dead';
-export type DockTab = 'station' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard' | 'money';
+export type DockTab = 'station' | 'equip' | 'contracts' | 'market' | 'news' | 'saloon' | 'shipyard' | 'money';
 
 export const game = {
   /** The commander being played, once one is loaded or made. */

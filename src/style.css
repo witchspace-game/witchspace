@@ -1160,12 +1160,10 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
   /* Your ship: a window onto the berth behind the panel, cut out of the panel's background (the hole follows the
      window as you scroll: ui/showroom.ts measures it). Sideways drags turn her; up and down still scroll. */
   .panel.docked.ship-shown { backdrop-filter: none; background: linear-gradient(to bottom, rgba(0, 10, 7, 0.9) 0, rgba(0, 10, 7, 0.9) var(--win-top, 0), transparent var(--win-top, 0), transparent var(--win-bot, 0), rgba(0, 10, 7, 0.9) var(--win-bot, 0)) local; }
-  .ship-window { height: 236px; margin: -8px -14px 10px; padding: 10px 14px 8px; grid-template-rows: auto 1fr auto; border-bottom: 1px solid var(--edge); background: linear-gradient(180deg, rgba(2, 8, 6, 0.8) 0%, transparent 30%, transparent 70%, rgba(2, 8, 6, 0.85) 100%); touch-action: pan-y; cursor: grab; }
-  .ship-window .sw-kit { align-self: end; margin-bottom: 14px; }
-  .sw-hint { display: block; position: absolute; left: 0; right: 0; bottom: 6px; margin: 0; text-align: center; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); pointer-events: none; }
-  body.retro .ship-window { height: auto; margin: 0 0 10px; padding: 0; background: none; border: 0; }
-  body.retro .sw-hint { display: none; }
-  .tile button, .ship-actions button, #data-row button { min-height: 36px; }
+  .ship-window { height: 236px; margin: -8px -14px 4px; padding: 10px 14px 10px; justify-content: space-between; border-bottom: 1px solid var(--edge); background: linear-gradient(180deg, rgba(2, 8, 6, 0.85) 0%, transparent 34%, transparent 74%, rgba(2, 8, 6, 0.85) 100%); touch-action: pan-y; cursor: grab; }
+  .sw-title { display: grid; gap: 2px; }
+  body.retro .ship-window { height: auto; margin: 0 0 6px; padding: 0; background: none; border: 0; }
+  .tile button, .ship-actions button, #data-row button, .fuel-row#arrivals button { min-height: 36px; }
   .tile .minus { min-width: 36px; }
   .dock-which { flex-shrink: 0; font-weight: 600; }
   .dock-which::after { content: ' ▾'; color: var(--dim); }
@@ -1573,47 +1571,50 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 #wanted.pulse { animation: wanted-pulse 0.4s ease-out 3; }
 @keyframes wanted-pulse { 50% { box-shadow: 0 0 0 3px var(--danger); } }
 /* Your ship's own buttons: full size, not squeezed beside her name. */
-/* The Station screen (Mark, 12 November 2026): your ship on top, four tiles, the Commander card. On a computer
-   she's beside the panel, so this is just her name and setup; on a phone it's a window onto the berth (below). */
-.ship-window { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; margin: 0 0 10px; }
-.sw-title { min-width: 0; }
+/* The Station screen (Mark, 12 November 2026): your ship on top, then one panel of rows split by faint hairlines,
+   no box per item (Mark: "a little fussy"). Green for the interface, white and grey for text, her paint only on her,
+   amber only for a warning. On a computer she's beside the panel; on a phone it's a window onto the berth (below). */
+.ship-window { position: relative; display: flex; flex-direction: column; gap: 2px; margin: 0 0 6px; }
 .panel .ship-window p { margin: 0; }
-.sw-meta { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
-.panel .ship-window .sw-name { margin: 2px 0 0; font-size: 22px; font-weight: 700; letter-spacing: 0.03em; text-transform: none; color: var(--fg); }
-.sw-own { font-size: 13px; color: var(--hull, var(--accent)); }
-.ship-actions { display: flex; gap: 6px; align-self: start; }
-.ship-actions button { min-height: 34px; padding: 4px 10px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
-.sw-kit { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
-.sw-kit li::before { content: ''; display: inline-block; width: 14px; height: 1px; margin-right: 6px; vertical-align: middle; background: var(--accent); opacity: 0.6; }
+.sw-meta { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.panel .ship-window .sw-name { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0.03em; text-transform: none; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sw-own { font-size: 12.5px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.swatch { display: inline-block; width: 8px; height: 8px; margin-right: 6px; vertical-align: 1px; background: var(--hull); }
+.sw-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.sw-kit { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; padding: 0; list-style: none; font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.ship-actions { display: flex; flex-shrink: 0; gap: 6px; }
+.ship-actions button { min-height: 32px; padding: 3px 9px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
 .sw-hint { display: none; }
-.st-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 6px; }
-.tile, .cmdr-card, #data-row { min-width: 0; padding: 8px 10px; border: 1px solid var(--edge); background: rgba(0, 12, 8, 0.55); }
-.tile { display: flex; flex-direction: column; gap: 3px; padding: 6px 9px 7px; }
-.tile.wide { grid-column: 1 / -1; }
+.st-tiles { display: grid; grid-template-columns: 1fr; margin: 0; }
+.tile, .cmdr-card, #data-row { min-width: 0; padding: 8px 0; border: 0; border-bottom: 1px solid rgba(61, 255, 176, 0.1); background: none; }
+.tile { display: grid; grid-template-columns: 96px 1fr; align-items: center; column-gap: 10px; row-gap: 3px; }
+.tile .meter, .tile .t-sub { grid-column: 2; }
 .t-label { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
 .t-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 30px; }
-.t-val { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.t-val { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .t-ok { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
-.tile button { min-height: 30px; padding: 2px 7px; font-size: 11.5px; letter-spacing: 0.04em; white-space: nowrap; }
+.tile button { min-height: 30px; padding: 2px 9px; font-size: 11.5px; letter-spacing: 0.04em; white-space: nowrap; }
 .t-buttons { display: flex; gap: 4px; }
 .tile .minus { min-width: 30px; padding: 2px 0; font-size: 15px; }
 .t-sub { font-size: 11.5px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.meter { display: block; height: 4px; background: rgba(61, 255, 176, 0.12); }
-.meter i { display: block; height: 100%; background: var(--accent); box-shadow: 0 0 6px var(--accent); }
-.meter.full i { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
-.cmdr-card { display: grid; gap: 5px; margin: 0 0 6px; }
-.cc-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
-.panel .cc-name { padding: 0; min-height: 0; border: 0; background: none; box-shadow: none; font-size: 18px; font-weight: 700; letter-spacing: 0.03em; text-transform: none; color: var(--fg); }
-.cc-name::after { content: ' ✎'; font-size: 12px; font-weight: 400; color: var(--dim); }
-.cc-rules { margin-right: auto; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
-.badge { padding: 3px 8px; min-height: 0; border: 1px solid var(--accent); background: none; color: var(--accent); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+.meter { display: block; height: 3px; background: rgba(61, 255, 176, 0.12); }
+.meter i { display: block; height: 100%; background: var(--accent); }
+.meter.full i { background: var(--amber); }
+.cmdr-card { display: grid; gap: 4px; margin: 0; }
+.cc-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
+.panel .cc-name { padding: 0; min-height: 0; border: 0; background: none; box-shadow: none; font-size: 17px; font-weight: 700; letter-spacing: 0.03em; text-transform: none; color: var(--fg); }
+.cc-rules { flex-basis: 100%; text-align: right; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.badge { padding: 2px 7px; min-height: 0; border: 1px solid var(--accent); background: none; color: var(--accent); font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; }
 .badge.warn { border-color: var(--amber); color: var(--amber); }
 .cc-rank { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
 .cc-rank span { color: var(--dim); }
 .panel .cc-explore { margin: 0; font-size: 12.5px; color: var(--dim); }
 .cc-explore b { color: var(--fg); font-weight: 600; }
-.fuel-row#data-row { margin: 0 0 6px; }
-#data-row button { width: auto; height: 34px; padding: 0 10px; font-size: 12px; }
+.fuel-row#data-row { margin: 0; }
+#data-row button { width: auto; height: 30px; padding: 0 10px; font-size: 11.5px; }
+/* Odile's arrival: one quiet line. */
+.fuel-row#arrivals { margin: 8px 0 0; font-size: 12.5px; }
+.fuel-row#arrivals button { width: auto; height: 30px; padding: 0 10px; font-size: 11.5px; }
 #tab-station > #cmdr { margin: 6px 0 0; }
 body.retro .callsign input, body.retro .rename-form input { font-size: 12px; border-radius: 0; border-color: #fff; }
 
@@ -2637,12 +2638,26 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 .ex-storage-toggle.on i::after { left: 14px; background: #fff; }
 .ex-mine .ex-act-orders { display: block; margin-bottom: 6px; }
 
-/* 1984: the pixel font is wide, so the Station screen's new pieces take a smaller size. */
-body.retro .panel .ship-window .sw-name { font-size: 15px; }
-body.retro .sw-meta, body.retro .sw-own, body.retro .sw-kit, body.retro .t-label, body.retro .t-ok, body.retro .t-sub, body.retro .cc-rules, body.retro .badge { font-size: 8px; letter-spacing: 0.04em; }
-body.retro .t-val, body.retro .cc-rank, body.retro .panel .cc-explore { font-size: 10px; letter-spacing: 0; }
-body.retro .panel .cc-name { font-size: 12px; }
-body.retro .tile button, body.retro .ship-actions button, body.retro #data-row button { font-size: 8px; letter-spacing: 0; padding: 2px 5px; }
-body.retro .t-row { flex-wrap: wrap; }
-body.retro .dock-where { font-size: 8px; }
+/* 1984: white on black and nothing else (Mark: "the 1984 look does not have color"). State shows as inverse video or an
+   outline. The pixel font is wide and tall, so the Station screen's pieces take a smaller size and more line spacing. */
+body.retro .ship-window, body.retro .st-tiles, body.retro .cmdr-card, body.retro #data-row, body.retro #arrivals { --hull: #fff; --accent: #fff; --amber: #fff; --dim: #bbb; line-height: 1.6; }
+body.retro .swatch { display: none; }
+body.retro .tile, body.retro .cmdr-card, body.retro #data-row { border-bottom-color: #555; }
+body.retro .meter { background: #333; }
+body.retro .meter i, body.retro .meter.full i { background: #fff; box-shadow: none; }
+body.retro .meter.full { outline: 1px solid #fff; outline-offset: 1px; }
+body.retro .badge.warn { color: #000; background: #fff; }
+body.retro .panel .ship-window .sw-name { font-size: 14px; line-height: 1.5; }
+body.retro .sw-meta, body.retro .sw-own, body.retro .sw-kit, body.retro .t-label, body.retro .t-ok, body.retro .t-sub, body.retro .cc-rules, body.retro .badge { font-size: 8px; letter-spacing: 0.04em; line-height: 1.6; }
+body.retro .t-val, body.retro .cc-rank, body.retro .panel .cc-explore, body.retro .fuel-row#arrivals { font-size: 9px; letter-spacing: 0; line-height: 1.7; }
+body.retro .tile { grid-template-columns: 74px 1fr; }
+body.retro .panel .cc-name { font-size: 11px; }
+body.retro .tile button, body.retro .ship-actions button, body.retro #data-row button, body.retro .fuel-row#arrivals button { font-size: 8px; letter-spacing: 0; padding: 2px 5px; }
+/* The header: the place on its own row, so the station's name fits; the wallet and NEO under it. */
+@media (max-width: 700px) and (orientation: portrait) {
+  body.retro .panel.docked > .dock-head { flex-wrap: wrap; row-gap: 6px; }
+  body.retro .dock-place { flex-basis: 100%; }
+  body.retro .wallet-button { margin-left: auto; }
+}
+body.retro .dock-where { font-size: 8px; line-height: 1.6; }
 body.retro .dock-which, body.retro .look-mini, body.retro .wallet-button { font-size: 10px; letter-spacing: 0.02em; }

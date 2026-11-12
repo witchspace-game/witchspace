@@ -101,7 +101,7 @@ export function showFittings(c: Commander | null) {
 function startRename() {
   const c = cmdr();
   const dd = $('#cmdr-card .cc-top');
-  dd.innerHTML = `<form class="rename-form"><input maxlength="24" value="${escapeHtml(c.name).replace(/"/g, '&quot;')}" aria-label="Callsign" /> <button type="submit">Save</button> <button type="button" data-cancel>Cancel</button></form>`;
+  dd.innerHTML = `<form class="rename-form"><input maxlength="24" value="${escapeHtml(c.name).replace(/"/g, '&quot;')}" aria-label="Callsign" /> <button type="submit">Save</button> <button type="button" data-cancel>Cancel</button><small class="cc-rules">${DIFFICULTIES[c.difficulty].name} rules</small></form>`;
   const input = dd.querySelector('input')!;
   input.focus();
   input.select();
@@ -141,7 +141,8 @@ function renderShipWindow(c: Commander) {
   const ed = c.paint?.edition ? editionById(c.paint.edition.id) : undefined;
   const own = [c.paint?.name ? `“${c.paint.name}”` : '', ed ? `${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''].filter(Boolean).join(' · ');
   const ownEl = win.querySelector<HTMLElement>('.sw-own')!;
-  ownEl.textContent = own;
+  // In grey like any other secondary line, with a swatch of her paint (Mark: no paint-coloured text).
+  ownEl.innerHTML = own ? `${c.paint ? '<i class="swatch" aria-hidden="true"></i>' : ''}${escapeHtml(own)}` : '';
   ownEl.hidden = !own;
   const kit = [
     ...MOUNTS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`),
@@ -251,7 +252,7 @@ export function renderDocked() {
   const firsts = main.myFirsts(here.galaxy);
   const badge = `${escapeHtml(legal)}`;
   $('#cmdr-card').innerHTML = `
-    <div class="cc-top"><button type="button" class="cc-name rename" title="Change your callsign">${escapeHtml(c.name)}</button><span class="cc-rules">${DIFFICULTIES[c.difficulty].name} rules</span>${
+    <div class="cc-top"><button type="button" class="cc-name rename" title="Your callsign: tap to change it">${escapeHtml(c.name)}</button>${
       hasRecord(c) ? `<button type="button" class="badge rap-open${status === 'clean' ? '' : ' warn'}" title="Your record">${badge} ›</button>` : `<span class="badge${status === 'clean' ? '' : ' warn'}">${badge}</span>`
     }</div>
     <div class="cc-rank"><b>${rank}</b>${c.difficulty === 'classic' || !next ? '' : `<span>${left < 10 ? left.toFixed(1) : Math.ceil(left).toLocaleString()} to ${next.name}</span>`}</div>
@@ -329,7 +330,8 @@ export function renderDocked() {
   // Survey data: sold here, for more the further it's come.
   const dataRow = $('#data-row');
   const data = exploreOf(c).data;
-  dataRow.hidden = c.difficulty !== 'modern';
+  // Nothing to sell, no row (Mark): it comes back when there's data.
+  dataRow.hidden = c.difficulty !== 'modern' || !data.length;
   if (!dataRow.hidden) {
     // Wexley-Yorozu pays best, and is the only one the Science Division's report goes to.
     const wy = wyWorks(here);

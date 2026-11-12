@@ -23,6 +23,8 @@ export function setDockTab(tab: DockTab) {
   game.dockTab = tab;
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
+  $('#tab-equip').hidden = tab !== 'equip';
+  if (tab === 'equip' && game.state === 'docked') renderDocked();
   if (tab === 'station' && game.state === 'docked') renderDocked(); // credits, hold and wallet may have changed at the exchange
   $('#tab-market').hidden = tab !== 'market';
   $('#tab-news').hidden = tab !== 'news';
