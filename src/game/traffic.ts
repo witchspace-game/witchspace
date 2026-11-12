@@ -91,9 +91,9 @@ export const NAMES = [
 // three minutes, "Night Shift" twice). Names picked at random repeat within the half hour, and one name in
 // two places reads as one ship in two places. So each system takes its lane ships' names in turn from its
 // own shuffle of NAMES: a name comes round again only after 20 windows (80 minutes at the busiest, three
-// hours in an anarchy). A convoy's followers are her sisters (Night Shift II, III); the Titan's freighters
+// hours in an anarchy). A convoy's other ships are named after people (below); the Titan's freighters
 // and the relief ships have names of their own, so they never meet a lane ship's.
-const TITAN_NAMES = ['Groundwork', 'Load Bearing', 'Foundation', 'Keystone', 'Plumb Line', 'Cornerstone', 'Scaffold', 'Spirit Level', 'Ballast', 'Bedrock', 'Lintel', 'Footing'];
+const TITAN_NAMES = ['Groundwork', 'Load Bearing', 'Foundation', 'Keystone', 'Plumb Line', 'Cornerstone', 'Scaffold', 'Spirit Level', 'Ballast', 'Bedrock', 'Lintel', 'Footing', 'Girder', 'Mortar', 'Rivet', 'Truss', 'Corbel', 'Joist'];
 const RELIEF_NAMES = ['Good Neighbour', 'Answered Call', 'Helping Hand', 'Open Door', 'Full Larder', 'Mercy Run', 'Kind Heart', 'Lifeline', 'Warm Welcome', 'Common Good', 'Soft Landing', 'Fair Share'];
 const shuffles = new Map<string, string[]>();
 function namesOf(s: StarSystem): string[] {
@@ -110,8 +110,42 @@ function namesOf(s: StarSystem): string[] {
   return out;
 }
 const inTurn = (list: string[], slot: number) => list[((slot % list.length) + list.length) % list.length];
-const SISTERS = ['', ' II', ' III', ' IV', ' V', ' VI', ' VII', ' VIII', ' IX', ' X'];
-const sister = (name: string, i: number) => (i < SISTERS.length ? name + SISTERS[i] : `${name} ${i + 1}`);
+
+// A convoy's other ships have names of their own (Mark, 12 November 2026: Free Hand, Free Hand II, Free Hand III
+// "looks silly … very unrealistic"). Named after people, as fishing boats are named for a wife, a daughter, a
+// father (the world, 6.5b): a first name and a surname, each from the system's own shuffle. Every window keeps a
+// block of FOLLOWERS slots, so no name comes round again for 1,600 slots: hours, even at the busiest port.
+const FIRST = [
+  'Ada', 'Tom', 'Margaret', 'Nell', 'Arthur', 'Rosa', 'Ewan', 'Mabel', 'Jonah', 'Iris', 'Saul', 'Edie', 'Rafael', 'Hana',
+  'Owen', 'Bettina', 'Ilse', 'Kofi', 'Mira', 'Declan', 'Ines', 'Tobias', 'Wren', 'Aziz', 'Grace', 'Lev', 'Dora', 'Callum',
+  'Yusra', 'Piet', 'Freya', 'Mateo', 'Agnes', 'Ruben', 'Leni', 'Bram', 'Sunniva', 'Oskar', 'Thea', 'Emeka',
+];
+const SURNAMES = [
+  'Reyes', 'Hart', 'Okafor', 'Lindqvist', 'Marsh', 'Pellow', 'Duarte', 'Ashby', 'Kerrigan', 'Novak', 'Treloar', 'Haldane',
+  'Quist', 'Moreau', 'Tanaka', 'Brennan', 'Szabo', 'Farrow', 'Iqbal', 'Castell', 'Weir', 'Abara', 'Holm', 'Penhale',
+  'Sato', 'Dunmore', 'Rask', 'Fennimore', 'Carver', 'Oduya', 'Vance', 'Kessler', 'Lorne', 'Amadi', 'Hollis', 'Petrov',
+  'Gale', 'Mendes', 'Thorne', 'Byatt',
+];
+const FOLLOWERS = 16;
+const peopleShuffles = new Map<string, [string[], string[]]>();
+function shuffled(s: StarSystem, list: string[], salt: number): string[] {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(hash(s, salt, i) * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+/** The name of a lane convoy's ship `i` (1 and on) in window slot `slot`. */
+function followerName(s: StarSystem, slot: number, i: number): string {
+  const key = `${s.galaxy}:${s.index}`;
+  let lists = peopleShuffles.get(key);
+  if (!lists) peopleShuffles.set(key, (lists = [shuffled(s, FIRST, 91_910), shuffled(s, SURNAMES, 91_920)]));
+  const [first, last] = lists;
+  const n = slot * FOLLOWERS + i - 1;
+  // Both lists step on together, the surname one further each lap, so neighbours share neither and 1,600 slots pass before a repeat.
+  return `${inTurn(first, n)} ${inTurn(last, n + Math.floor(n / first.length))}`;
+}
 
 /** Of a system's lane ships, the share flying for no company: independents, most of all where there's no law. */
 const INDEPENDENT = [0.45, 0.35, 0.25, 0.2, 0.2, 0.2, 0.2, 0.2];
@@ -190,7 +224,7 @@ export function packHolds(cargo: Consignment[], hold: number): Consignment[][] {
 }
 
 /** A voyage too big for her hold becomes a convoy: the same company and lane, a ship every CONVOY_GAP_MS. */
-function convoy(v: Voyage): Voyage[] {
+function convoy(v: Voyage, named: (i: number) => string): Voyage[] {
   const loads = packHolds(v.cargo, HOLD[v.hull] ?? 20);
   if (loads.length <= 1) return [v];
   return loads.map((cargo, i) => ({
@@ -198,7 +232,7 @@ function convoy(v: Voyage): Voyage[] {
     id: i ? `${v.id}:c${i}` : v.id,
     at: v.at + i * CONVOY_GAP_MS,
     cargo,
-    name: sister(v.name, i),
+    name: i ? named(i) : v.name,
     // One escort for the convoy, not one for each ship (Mark counted 8 Vipers to 2 Cobras): they fly with the lead.
     escorts: i ? 0 : v.escorts,
   }));
@@ -235,8 +269,9 @@ export function voyages(s: StarSystem, from: number, to: number, lost: { id: str
     const [leg, k] = key.split(':') as ['in' | 'out', string];
     const kn = Number(k);
     const company = hash(s, 91_400 + (leg === 'in' ? 0 : 1), kn) >= INDEPENDENT[s.government] ? pickCompany(s, hash(s, 91_500 + (leg === 'in' ? 0 : 1), kn)) : null;
-    const name = inTurn(namesOf(s), kn * 2 + (leg === 'in' ? 0 : 1));
-    for (const v of convoy(voyageFor(s, leg, 'station', kn, cargo.sort((a, b) => a.t - b.t), company, name))) if (v.at >= from && v.at <= to) out.push(v);
+    const slot = kn * 2 + (leg === 'in' ? 0 : 1);
+    const name = inTurn(namesOf(s), slot);
+    for (const v of convoy(voyageFor(s, leg, 'station', kn, cargo.sort((a, b) => a.t - b.t), company, name), (i) => followerName(s, slot, i))) if (v.at >= from && v.at <= to) out.push(v);
   }
   out.push(...titanVoyages(s, from, to), ...reliefVoyages(s, from, to), ...vennVoyages(s, from, to));
   return out.sort((a, b) => a.at - b.at);
@@ -253,7 +288,7 @@ export function titanVoyages(s: StarSystem, from: number, to: number): Voyage[] 
     const needs = yard ? TITAN_NEEDS[yard.stage] : [];
     if (!needs.length) continue;
     const id = needs[Math.floor(hash(s, 92_200, k) * needs.length)];
-    for (const v of convoy(voyageFor(s, 'in', 'titan', k, [{ id, t: at, qty: 20 + Math.floor(hash(s, 92_300, k) * 30) }], 'wy', inTurn(TITAN_NAMES, k)))) if (v.at >= from && v.at <= to) out.push(v);
+    for (const v of convoy(voyageFor(s, 'in', 'titan', k, [{ id, t: at, qty: 20 + Math.floor(hash(s, 92_300, k) * 30) }], 'wy', inTurn(TITAN_NAMES, k * 3)), (i) => inTurn(TITAN_NAMES, k * 3 + i))) if (v.at >= from && v.at <= to) out.push(v);
   }
   return out;
 }
@@ -273,8 +308,8 @@ export function reliefVoyages(s: StarSystem, from: number, to: number): Voyage[]
     if (!e || !short.length) continue;
     const id = short[Math.floor(hash(s, 93_200, k) * short.length)];
     const company = hash(s, 93_300, k) < 0.5 ? 'mutual' : pickCompany(s, hash(s, 93_400, k));
-    const v = voyageFor(s, 'in', 'station', 1_000_000 + k, [{ id, t: at, qty: 15 + Math.floor(hash(s, 93_500, k) * 25) }], company, inTurn(RELIEF_NAMES, k));
-    for (const c of convoy(v)) if (c.at >= from && c.at <= to) out.push({ ...c, id: `${c.id}:relief`, relief: e.type });
+    const v = voyageFor(s, 'in', 'station', 1_000_000 + k, [{ id, t: at, qty: 15 + Math.floor(hash(s, 93_500, k) * 25) }], company, inTurn(RELIEF_NAMES, k * 2));
+    for (const c of convoy(v, (i) => inTurn(RELIEF_NAMES, k * 2 + i))) if (c.at >= from && c.at <= to) out.push({ ...c, id: `${c.id}:relief`, relief: e.type });
   }
   return out;
 }
