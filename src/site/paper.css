@@ -277,6 +277,8 @@ html.paper .ship-svg path.detail { stroke: #6a707c; opacity: 1; }
 html.paper .ship-card:hover .ship-svg path { filter: none; stroke: color-mix(in oklab, var(--ship) 45%, var(--ink)); }
 /* A viewer anywhere but a ship's own page is a window of space. */
 html.paper .ship-view:not(.ship-page .ship-view) { background: #04060b; border-color: #04060b; }
+/* The configurator's stage is the cockpit's, dark, in either look: she glows on black. */
+html.paper body.build-body .build .build-view { background: #020406; border-color: var(--edge); }
 html.paper body:is(.edition-body, .build-body, .press-item) .ship-view::after, html.paper body:is(.edition-body, .build-body, .press-item) .ship-view::before { display: none; }
 
 /* --- The galaxy's charts: printed in ink, like a chart in the manual --------------------------------- */

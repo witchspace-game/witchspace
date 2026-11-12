@@ -988,22 +988,23 @@ button.button { cursor: pointer; }
 /* The configurator (/ships/<id>/build/), in the cockpit's look (Mark, 12 Nov: "the new more modern look"): the ship
    big and square-edged, the labels in the game's Rajdhani, square panels with thin edges, and the price as a spec sheet. */
 .build-body { padding-bottom: 104px; }
-/* Set where her colour is (--hull), so the edges follow her paint. The bar sits outside, so it gets its own. */
-.build-page, .build-bar { --edge: color-mix(in srgb, var(--hull, #3dffb0) 32%, transparent); --edge-on: color-mix(in srgb, var(--hull, #3dffb0) 75%, transparent); --hud: 'Rajdhani', var(--display); }
+/* Her paint is on her and nowhere else (Mark: "the ship is the star of the show"): the interface is the site's green,
+   text white and grey, whatever colour she's in. Her colour shows only in the swatches (--sw). */
+.build-page, .build-bar { --ui: var(--accent); --edge: color-mix(in srgb, var(--ui) 28%, transparent); --edge-on: color-mix(in srgb, var(--ui) 70%, transparent); --hud: 'Rajdhani', var(--display); }
 .build { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 36px; align-items: start; }
 .build-stage { position: sticky; top: 84px; }
 /* The stage: square edges, no rounded box, the glow never dimmed. */
-.build .build-view { border: 1px solid var(--edge); border-radius: 0; background: radial-gradient(70% 60% at 50% 50%, color-mix(in srgb, var(--hull) 7%, transparent), transparent 75%), #020406; box-shadow: 0 0 40px color-mix(in srgb, var(--hull) 10%, transparent); transition: box-shadow 0.4s, border-color 0.4s; }
+.build .build-view { border: 1px solid var(--edge); border-radius: 0; background: #020406; transition: border-color 0.4s; }
 .build-tags { position: absolute; z-index: 2; top: 14px; left: 14px; right: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; pointer-events: none; }
 .build-tags span { display: inline-flex; align-items: center; gap: 8px; font: 600 12px var(--hud); letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg); }
 .build-tags span::before { content: ''; width: 22px; height: 1px; background: var(--edge-on); }
-.build-tags b { font: 700 20px var(--hud); letter-spacing: 0.03em; text-transform: none; color: var(--hull); text-shadow: 0 0 10px color-mix(in srgb, var(--hull) 50%, transparent); }
+.build-tags b { font: 700 20px var(--hud); letter-spacing: 0.03em; text-transform: none; color: var(--fg); }
 .build-tags i { width: 9px; height: 9px; background: var(--sw); box-shadow: 0 0 8px var(--sw); }
 .build-drag { position: absolute; z-index: 2; left: 0; right: 0; bottom: 10px; margin: 0; text-align: center; font: 500 11px var(--hud); letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); pointer-events: none; }
 .build-panel .kicker { font-family: var(--hud); }
 .build-page .build-panel h1 { margin: 4px 0 12px; font: 700 clamp(34px, 4.6vw, 50px)/1.02 var(--hud); letter-spacing: 0.01em; }
 .build-page .build-panel h2 { margin: 24px 0 10px; font: 600 13px var(--hud); letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
-.build-page .build-panel h2 span { margin-left: 8px; color: var(--hull); letter-spacing: 0.12em; }
+.build-page .build-panel h2 span { margin-left: 8px; color: var(--ui); letter-spacing: 0.12em; }
 .build-line { margin: -4px 0 12px; color: var(--fg); font-style: italic; }
 /* The steps: one strip, scrolling sideways when it must. */
 .build-steps { display: flex; gap: 0; margin: 22px 0 4px; overflow-x: auto; scrollbar-width: none; border: 1px solid var(--edge); scroll-margin-top: 90px; }
@@ -1011,7 +1012,7 @@ button.button { cursor: pointer; }
 .build-steps button { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 12px; border: 0; border-left: 1px solid var(--edge); border-radius: 0; background: none; color: var(--muted); font: 600 13px var(--hud); letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; }
 .build-steps button:first-child { border-left: 0; }
 .build-steps small { font: 600 11px var(--hud); color: var(--muted); }
-.build-steps [aria-current='step'] { color: #03140e; background: var(--hull); box-shadow: 0 0 14px color-mix(in srgb, var(--hull) 40%, transparent); }
+.build-steps [aria-current='step'] { color: #03140e; background: var(--ui); box-shadow: 0 0 14px color-mix(in srgb, var(--ui) 40%, transparent); }
 .build-steps [aria-current='step'] small { color: #03140e; }
 /* Square panels, thin edges. */
 .build-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
@@ -1021,26 +1022,26 @@ button.button { cursor: pointer; }
 .build-swatches span { flex: 1; min-width: 0; }
 .build-swatches small { flex-basis: 100%; padding-left: 24px; }
 .build-swatches small, .build-choice small, .build-tick small { color: var(--muted); font: 600 12px var(--hud); letter-spacing: 0.12em; text-transform: uppercase; white-space: nowrap; }
-.build-swatches [aria-pressed='true'], .build-choice[aria-pressed='true'] { border-color: var(--edge-on); background: color-mix(in srgb, var(--hull) 10%, transparent); box-shadow: 0 0 12px color-mix(in srgb, var(--hull) 22%, transparent) inset; }
+.build-swatches [aria-pressed='true'], .build-choice[aria-pressed='true'] { border-color: var(--edge-on); background: color-mix(in srgb, var(--ui) 10%, transparent); box-shadow: 0 0 12px color-mix(in srgb, var(--ui) 22%, transparent) inset; }
 .build-choices, .build-ticks { display: grid; gap: 6px; }
 .build-choices + .build-swatches { margin-top: 10px; }
 .build-choice span, .build-tick span { flex: 1; }
 .build-choice em, .build-tick em { display: block; margin-top: 2px; color: var(--muted); font: 400 13px var(--font); letter-spacing: 0; font-style: normal; }
-.build-tick input { flex: 0 0 auto; width: 16px; height: 16px; accent-color: var(--hull); }
+.build-tick input { flex: 0 0 auto; width: 16px; height: 16px; accent-color: var(--ui); }
 .build-tick.standard { cursor: default; opacity: 0.85; }
 .build-tick.standard small { color: var(--accent); }
-.build-tick:has(input:checked) { border-color: var(--edge-on); background: color-mix(in srgb, var(--hull) 10%, transparent); }
+.build-tick:has(input:checked) { border-color: var(--edge-on); background: color-mix(in srgb, var(--ui) 10%, transparent); }
 .build-note { margin: 12px 0 0; color: var(--muted); font-size: 14px; }
 .build-note.done { color: var(--fg); }
-.build-note.done b { color: var(--hull); }
-.build-name { width: 100%; padding: 12px 14px; border: 1px solid var(--edge-on); border-radius: 0; background: rgba(2, 8, 6, 0.6); color: var(--hull); font: 700 22px var(--hud); letter-spacing: 0.03em; }
+.build-note.done b { color: var(--ui); }
+.build-name { width: 100%; padding: 12px 14px; border: 1px solid var(--edge-on); border-radius: 0; background: rgba(2, 8, 6, 0.6); color: var(--fg); font: 700 22px var(--hud); letter-spacing: 0.03em; }
 .build-summary { display: grid; gap: 10px; margin: 0; }
 .build-summary dt { color: var(--muted); font: 600 12px var(--hud); letter-spacing: 0.16em; text-transform: uppercase; }
 .build-summary dd { margin: 2px 0 0; }
 .build-dot { display: inline-block; width: 10px; height: 10px; margin-right: 8px; background: var(--sw); box-shadow: 0 0 8px var(--sw); }
 .build-order-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--edge); }
 .build-order-total span { color: var(--muted); }
-.build-order-total b { white-space: nowrap; font: 700 20px var(--hud); color: var(--hull); }
+.build-order-total b { white-space: nowrap; font: 700 20px var(--hud); color: var(--fg); }
 .build-panel .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
 .build-order-total.kit b { color: var(--fg); font-size: 17px; }
 .build-order-new { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
@@ -1049,8 +1050,8 @@ button.button { cursor: pointer; }
 .build-models { display: flex; flex-wrap: wrap; gap: 6px; margin: 20px 0 0; }
 .build-models button { display: inline-flex; align-items: center; gap: 4px; padding: 8px 14px; border: 1px solid var(--edge); border-radius: 0; background: rgba(2, 8, 6, 0.6); color: var(--fg); font: 600 14px var(--hud); letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; }
 .build-models button small { margin-left: 6px; color: var(--muted); font-size: 12px; }
-.build-models [aria-pressed='true'] { border-color: var(--edge-on); background: color-mix(in srgb, var(--hull) 12%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--hull) 25%, transparent); }
-.build-page .build-edition-name { color: var(--edition); text-shadow: 0 0 12px color-mix(in srgb, var(--edition) 50%, transparent); font: 700 26px var(--hud) !important; letter-spacing: 0.02em !important; text-transform: none !important; }
+.build-models [aria-pressed='true'] { border-color: var(--edge-on); background: color-mix(in srgb, var(--ui) 12%, transparent); box-shadow: 0 0 14px color-mix(in srgb, var(--ui) 25%, transparent); }
+.build-page .build-edition-name { color: var(--fg); font: 700 26px var(--hud) !important; letter-spacing: 0.02em !important; text-transform: none !important; }
 .build-steps[hidden] { display: none; }
 .edition-see { margin: 14px 0 0; }
 /* The price along the bottom, as a spec sheet: hull, fit-out, finish, total. */
@@ -1061,9 +1062,9 @@ button.button { cursor: pointer; }
 .build-sheet dt { font: 600 10.5px var(--hud); letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
 .build-sheet dd { margin: 0; font: 700 17px var(--hud); font-variant-numeric: tabular-nums; }
 .build-sheet .total { border-color: var(--edge-on); }
-.build-sheet .total dd { color: var(--hull); font-size: 21px; }
+.build-sheet .total dd { color: var(--fg); font-size: 21px; }
 .build-bar .button { font-family: var(--hud); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; }
-.build-price b { display: block; color: var(--hull); font: 700 22px var(--hud); }
+.build-price b { display: block; color: var(--fg); font: 700 22px var(--hud); }
 .build-price span { color: var(--muted); font-size: 13px; }
 .build-bar-buttons { display: flex; flex: 0 0 auto; gap: 8px; }
 @media (max-width: 860px) {
