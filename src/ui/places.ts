@@ -107,6 +107,8 @@ function toggleSheet(sheet: string, button: string) {
   closeDockSheets();
   if (!open) return;
   if (sheet === '#wallet-sheet') renderWallet();
+  // Opened under the header wherever you've scrolled to: the header's height, for the sheet to sit below.
+  $('.panel.docked').style.setProperty('--dock-head-h', `${$('.dock-head').getBoundingClientRect().height}px`);
   $(sheet).hidden = false;
   $(button).setAttribute('aria-expanded', 'true');
 }

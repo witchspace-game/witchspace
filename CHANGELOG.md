@@ -17,6 +17,7 @@ reported it.
 - Each company treats a lost or late cargo its own way. Vorg gives half your bond back if you were shot down ("You flew it"); the Mutual's pool covers its members, less a small excess; Hexon keeps the bond, takes a quarter off for each jump late, and drops you a rank for a second loss in a week. Lose a cargo in a fight you started, and nobody covers it. (Mark)
 - A good record buys one mistake: ten deliveries since your last failure halve what the next costs you in standing. (Mark)
 - Saloon regulars no longer tell the same story in the same words: two people in one bar never share a tip, and every mood has four ways of putting things. (Mark)
+- On a phone, the docked places menu and the wallet open just under the header, wherever you've scrolled to, instead of at the top of the page. (Mark)
 
 ## 11 November 2026
 

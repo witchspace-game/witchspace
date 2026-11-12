@@ -1140,7 +1140,7 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
 @media (max-width: 700px) and (orientation: portrait) {
   .panel.docked { background: rgba(0, 10, 7, 0.9); } /* text over a glowing beam was hard to read */
   .panel.docked > .dock-head h2, .panel.docked > #dock-location, .panel.docked > .tabs { display: none; }
-  .panel.docked > .dock-head { position: sticky; top: -12px; z-index: 2; margin: -12px -14px 8px; padding: 10px 14px 8px; background: rgba(0, 10, 7, 0.97); border-bottom: 1px solid var(--edge); }
+  .panel.docked > .dock-head { position: sticky; top: -12px; z-index: 2; margin: -12px -14px 8px; padding: 10px 14px 8px; background: rgb(0, 10, 7); border-bottom: 1px solid var(--edge); }
   .dock-place { display: flex; flex: 1; min-width: 0; align-items: baseline; gap: 0; padding: 7px 10px; font-size: 14px; text-align: left; text-transform: none; letter-spacing: 0.02em; }
   .dock-where { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
   .dock-which { flex-shrink: 0; font-weight: 600; }
@@ -1148,6 +1148,8 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
   .dock-place[aria-expanded='true'] .dock-which::after { content: ' ▴'; }
   .dock-dot { flex-shrink: 0; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 6px var(--accent); align-self: center; }
   .dock-dot[hidden] { display: none; }
+  /* The places and the wallet open just under the header, wherever you've scrolled to (Mark's iPhone, 12 Nov 2026). */
+  .panel.docked > .dock-places, .panel.docked > .wallet-sheet { position: sticky; top: calc(var(--dock-head-h, 48px) - 12px); z-index: 2; margin: -8px -14px 12px; padding: 8px 14px 10px; border: 0; border-bottom: 1px solid var(--edge); border-radius: 0; background: rgb(0, 10, 7); max-height: 60vh; overflow-y: auto; }
 }
 @media (min-width: 701px), (orientation: landscape) { .dock-places { display: none !important; } }
 
