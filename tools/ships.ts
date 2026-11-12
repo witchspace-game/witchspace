@@ -590,8 +590,9 @@ export function buildPage(s: ShipFile, names: Record<string, string>) {
       <div class="ship-view build-view">
         ${shipSvg(s, 'ship-svg fallback')}
         <canvas class="ship-canvas" aria-label="Your ${esc(s.name)}, turning in your paint: drag to rotate"></canvas>
+        <div class="build-tags" id="build-caption" aria-live="polite"></div>
+        <p class="build-drag" aria-hidden="true">⟲ Drag to turn her</p>
       </div>
-      <p class="build-caption" id="build-caption"></p>
     </div>
     <div class="build-panel">
       <p class="kicker">${esc(roleLine(s))}</p>

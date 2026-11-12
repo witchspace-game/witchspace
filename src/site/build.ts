@@ -125,7 +125,8 @@ function options(): string {
   switch (step) {
     case 'paint': {
       const c = colourOf(spec.colour);
-      return `<h2>Her colour <span>${c ? escapeHtml(c.name) : 'The maker’s own'}</span></h2>${swatches('data-colour', spec.colour)}${c ? `<p class="build-note">${escapeHtml(c.line)}</p>` : ''}`;
+      // The colour's own line goes with its name, not under the grid, where it read as a stray caption.
+      return `<h2>Her colour <span>${c ? escapeHtml(c.name) : 'The maker’s own'}</span></h2>${c ? `<p class="build-line">${escapeHtml(c.line)}</p>` : ''}${swatches('data-colour', spec.colour)}`;
     }
     case 'glow':
       return `<h2>How hard she glows</h2><div class="build-choices">${(Object.keys(GLOWS) as GlowId[]).map((g) => choice('data-glow', g, spec.glow === g, GLOWS[g].name, cost(GLOWS[g].price))).join('')}</div><p class="build-note">Never dimmer than the yard’s own: the glow is the signature.</p>`;
@@ -165,7 +166,8 @@ function orderStep(): string {
     <p class="build-order-total"><span>Price</span><b>${cr(total)}</b></p>
     ${def.concept ? `<p class="build-order-total"><span>Deposit, a tenth, refundable until she’s ready</span><b>${cr(depositFor(total))}</b></p>` : ''}
     <p class="connect-buttons"><button type="button" class="button primary" id="build-order">${def.concept ? 'Order her' : 'Save her for the yard'}</button> <button type="button" class="button ghost" id="build-share" data-share data-share-title="My ${escapeHtml(def.name)}">Share your spec</button></p>
-    <p class="build-note" id="build-ordered">${note()}</p>`;
+    <p class="build-note" id="build-ordered">${note()}</p>
+    <p class="build-fly"><a class="button primary big" href="/play/">Fly her now, free in your browser</a></p>`;
 }
 
 /** A numbered edition, on show: what she is, how many are left, a name for her and a way to share her. */
@@ -184,11 +186,20 @@ function editionView(e: Edition): string {
 
 const shareTitle = (e: Edition) => (editionName ? `${editionName}, my ${def.name} ${e.name}` : `The ${def.name} ${e.name}`);
 
+/** Labels on the ship as she's specced, like the station screen's: her name, her paint, her trim, her glow. */
 function caption() {
   const s = showing();
   const c = colourOf(s.colour);
   const t = colourOf(s.trim);
-  $('#build-caption').textContent = `${edition ? `${editionName ? `“${editionName}” · ` : ''}${edition.name} · ` : ''}${c?.name ?? 'The maker’s own'}${t ? `, with ${t.name} trim` : ''} · ${GLOWS[s.glow].name}`;
+  const name = edition ? editionName : s.name;
+  const tags = [
+    ...(name ? [`<b>“${escapeHtml(name)}”</b>`] : []),
+    ...(edition ? [escapeHtml(edition.name)] : []),
+    `<i style="--sw:${s.colour}"></i>${escapeHtml(c?.name ?? 'The maker’s own')}`,
+    ...(t ? [`<i style="--sw:${t.colour}"></i>${escapeHtml(t.name)} trim`] : []),
+    `${escapeHtml(GLOWS[s.glow].name)} glow`,
+  ];
+  $('#build-caption').innerHTML = tags.map((x) => `<span>${x}</span>`).join('');
 }
 
 /** Your own spec, or one of the numbered editions: the first choice, as on a car maker's site. */
@@ -248,8 +259,15 @@ function bar() {
   const p = priceLines(def, spec);
   const i = STEPS.findIndex(([s]) => s === step);
   const next = STEPS[i + 1];
+  // The spec sheet: what she costs, part by part, as tiles (on a phone, just the total).
+  const n = (x: number) => x.toLocaleString('en-GB');
   $('#build-bar').innerHTML = `<div class="build-bar-in">
-    <div class="build-price"><b>${cr(total)}</b><span>Hull ${p.hull.toLocaleString('en-GB')} · fit-out ${p.fit.toLocaleString('en-GB')} · finish ${p.finish.toLocaleString('en-GB')}${def.concept ? ` · deposit ${cr(depositFor(total))}` : ''}</span></div>
+    <dl class="build-sheet">
+      <div class="part"><dt>Hull</dt><dd>${n(p.hull)}</dd></div>
+      <div class="part"><dt>Fit-out</dt><dd>${n(p.fit)}</dd></div>
+      <div class="part"><dt>Finish</dt><dd>${n(p.finish)}</dd></div>
+      <div class="total"><dt>Total${def.concept ? ` · deposit ${n(depositFor(total))}` : ''}</dt><dd>${cr(total)}</dd></div>
+    </dl>
     ${next ? `<button type="button" class="button primary" data-step="${next[0]}">${next[1]} →</button>` : ''}
   </div>`;
 }
@@ -257,7 +275,11 @@ function bar() {
 function render() {
   $('#build-models').innerHTML = models();
   $('#build-steps').hidden = Boolean(edition);
-  $('#build-steps').innerHTML = STEPS.map(([s, label], i) => `<button type="button" data-step="${s}" aria-current="${s === step ? 'step' : 'false'}"><small>${i + 1}</small>${label}</button>`).join('');
+  const strip = $('#build-steps');
+  strip.innerHTML = STEPS.map(([s, label], i) => `<button type="button" data-step="${s}" aria-current="${s === step ? 'step' : 'false'}"><small>${i + 1}</small>${label}</button>`).join('');
+  // One strip that scrolls sideways on a phone: keep the step you're on in sight.
+  const on = strip.querySelector<HTMLElement>('[aria-current="step"]');
+  if (on) strip.scrollLeft = on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2;
   $('#build-options').innerHTML = edition ? editionView(edition) : options();
   $('#account').hidden = Boolean(edition) || step !== 'order';
   paint();
@@ -317,8 +339,10 @@ document.addEventListener('input', (e) => {
   if (i.id === 'edition-name' && edition) {
     editionName = cleanName(i.value);
     caption();
-  } else if (i.id === 'build-name') spec.name = cleanName(i.value);
-  else return;
+  } else if (i.id === 'build-name') {
+    spec.name = cleanName(i.value);
+    caption();
+  } else return;
   history.replaceState(null, '', link().slice(location.origin.length));
   shareLinks();
 });
