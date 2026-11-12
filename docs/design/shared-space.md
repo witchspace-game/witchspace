@@ -182,6 +182,31 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
   - numbers on every ship, the player's and NPCs', in the scanner, the target readout, police hails and bounties, with no server: about 1 day, and it could ship before registration;
   - the registry: about half a day on top of step 1 below.
 
+**Her name, and the galaxy talking about her** *(Mark, 12 November 2026; proposed)*. Mark: *"The name of the ship becomes important and should be part of the game. Example the ship can be named by pirates in saloons etc. This way the ship rather than the comdr flying her can be shared in the news etc without asking for permission."*
+
+- **One name per ship, unique across the galaxy** among registered ships, whatever the hull: one *Brass Neck*.
+  - Names match as callsigns do (`callsign_key` in `server/src/accounts.ts`, `names.ts`): case, spacing and look-alike letters count as the same name.
+  - The same filters as callsigns: no swearing, no real brands, nothing official-sounding (*Galactic Police*, *Co-operative*).
+  - **Reserved for the characters,** never claimable: *Second Wind* (Odile Venn), each renowned pirate's ship (*Small Mercy* and the rest), *On Loan*, and any name held for a character still to come (members 002–100). A server-side list, so nothing in a save can claim one.
+- **On her papers, beside her number:** *Brass Neck · WS-7F3K-29 · registered at Lave, 12 November*. The number stays with the hull for life; the name can change, and a rename is an entry in the registry like any other. Names still aren't drawn on hulls (Mark, 2 November 2026): her name is on her papers, her manual, her clips, and now in the galaxy's talk.
+- **Released** when her ship is destroyed and not replaced, when she's renamed, or after 90 days with her commander inactive; then held 90 days before anyone else can claim it.
+- **Claimed free, at registration.** A newcomer has a Cobra and 100 Cr, so naming can't wait for an order or a payment. Registering claims the callsign *and* her name together, for the Cobra they already fly. The configurator leads into it (Website): *"Last Orders is free. Register to claim her name and fly her now. Her paint waits at the yard."* Unregistered, a ship can be called anything in its own game: not checked, not unique, and never public.
+- **"Let the galaxy talk about her"** (the consent). One tick box when naming her: *"Let the galaxy talk about her: in saloons, the news and Witchspace's own posts."* This is what makes Mark's *"without asking for permission"* honest: the player gives it once, up front, and can change it at any time from her papers.
+  - **Ticked:** her name and story can appear in saloon gossip, the in-game news and the live feed, the yard's order book, and Witchspace's own posts (Instagram, Reddit, press).
+  - **Unticked:** she's *"a Cobra"* in the game's own talk, and never in marketing.
+  - The privacy page explains it (Website), live before it ships.
+- **Ships in the story of the galaxy** (ticked ships only). Built on what the game already records: the flight recorder's moments, firsts, crimes and Your record, the renowned pirates' memory, the yard's records.
+  - **Saloon gossip** ([trading.md, the saloon](trading.md#3-the-saloon)): *"Saw the Brass Neck take on three Mambas at Riedquat and limp home."*
+  - **A renowned pirate's grudge:** *"Old Iron's asking after a Cobra called Brass Neck."*
+  - **Wanted notices** ([law-and-travel.md](law-and-travel.md#ship-registry-and-flags)): *"Wanted at Leesti: the Cobra Last Orders."*
+  - **The news and the live feed** ([live-feed.md](live-feed.md#named-ships)): *"The Brass Neck made the first survey of Xeesle."*, *"The Last Orders left the yard at Lave in Zaonce Neon."*
+- **The yard's order book** on the site ([ship-configurator.md](ship-configurator.md#the-yards-order-book-mark-12-november-2026-proposed)).
+- **Size** (on top of registration, step 1 below, which is still proposed):
+  - the name registry, reservations, release and hold, the consent flag, and claiming at registration: about 1½ days, Worker deploy;
+  - the order book's list on the server: about 1 day, Worker deploy (Website builds the page);
+  - named ships in the saloon, pirates' grudges, wanted notices, the news and the feed: about 2 days. The saloon and the news are worked out in the browser from the seed and the clock, so this needs a small server list of ticked ships and what they've done lately, read like the feed.
+  About 4½ days in all.
+
 **The security record** (Mark: *"I was thinking about a security side as well"*). Alongside the passport, every visit to shared space is kept for 30 days:
 - account and callsign, system, time in and out, and how they left;
 - the network hash (never an IP address) and device type;
@@ -207,6 +232,7 @@ It flags one account from many networks at once, many accounts from one network,
 2. Kit and rank in the ledger, checked on each cloud save (1 day, Worker deploy).
 3. The door: the passport check, the 30-day visit record, flags emailed to Mark, bans (1–2 days, Worker deploy).
 4. Existing commanders registered, and Mark's look at the list (half a day).
+5. Her name: the registry, the consent and the order book's list; then named ships in the galaxy's talk (about 4½ days, two Worker deploys; Mark, 12 November 2026, proposed).
 
 Website: a privacy line (what's kept at registration and in shared space, for how long) live no later than each deploy, and a page explaining registration. Marketing: *"Register your ship"* is a moment worth a post.
 
@@ -404,6 +430,7 @@ The server runs on **Cloudflare Workers with SQLite-backed Durable Objects**, on
 | 3. Every ship as itself; remote lasers drawn right | 1 day | Yes | Shared space page: "fly your own ship" | "Bring your Fer-de-lance" |
 | 4. Rank, legal status and ship kept by the server | 2–3 days | Yes | Privacy page: what's stored | None |
 | 4a. Registering your ship, the passport and the security record | 4–5 days | Yes (three) | Privacy line; a page on registering | "Register your ship" |
+| 4b. Her name: unique names, the consent, the order book, named ships in the talk (proposed) | 4½ days | Yes (two) | The naming step and consent (configurator, callsign page); privacy wording; the order book page | Real ships with real stories, ticked ships only |
 | 5. The law between commanders | 2–3 days | Yes | How the law works in shared space | "Fight anyone. The law is watching." |
 | 6. Player radio (after the Online Safety Act steps) | 3–4 days plus the paperwork | Yes | Rules, report route, privacy | "Talk to other commanders" |
 | 7. Wings | 2 days | Yes | A line on the shared space page | "Fly as a wing" |

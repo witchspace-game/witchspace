@@ -88,6 +88,10 @@ Counts only, never names.
 
 On the home page: a *Shipyard* line, "Dark Edition 001 left Zorgon Petterson's yard" (or, named, "Dark Edition 001 signed over to Commander MARK"), its note "Goddard Ring, Onrira · 2 h ago · One of 50" (the number from the edition's own `limit`, never fixed), beside it the edition's public share card (`/share/ships-<ship>-<edition>.jpg`), linked to the edition's public page (`/ships/<ship>/<edition>/`), never to her private certificate. The ticker opens with it while it's the newest commander line.
 
+### Named ships *(Mark, 12 November 2026; proposed)*
+
+Registered ships whose owners ticked *"Let the galaxy talk about her"* can be named in the feed and the station news by her name rather than her commander's: *"The Brass Neck made the first survey of Xeesle."*, *"The Last Orders left the yard at Lave in Zaonce Neon."* Unticked, she's *"a Cobra"*. See [shared-space.md, her name](shared-space.md#step-4a-registering-your-ship-mark-9-november-2026).
+
 ### Privacy
 
 Nothing that isn't already public elsewhere: callsigns and firsts are on the galaxy chart, clips and their hearts are on their pages, and the counts are totals. No emails, no account ids, no network data, no clip's owner beyond what its title already says.

@@ -53,6 +53,18 @@ The site then says: *"She's on order. Dock at any shipyard and the yard has your
 - Any other hull already flying can't be ordered yet ("bought outright, when shipyards sell"). Its spec waits in the configurator, filled in, for when it can.
 - **The handover** (agreed with Website, 12 November 2026): the same `Spec`, in localStorage `witchspace.spec.v1` as `{spec, at}` and on the account by `PUT /me/spec`. No new field: a spec whose `ship` is the hull you fly is a repaint.
 
+## The yard's order book *(Mark, 12 November 2026; proposed)*
+
+Mark: *"They could order her and the order could be sat in a queue on the website where people can see the ships people are ordering and their spec."*
+
+- A public page of the ships commanders are building, each turning in her own paint (her paint on her only; the page stays green, white and grey).
+- Each entry: her name, hull, colour and glow, home port, and where she's got to: *Specced, saving up* → *On order at <yard>* → *Ready at the yard* → *Delivered*.
+- Only registered ships whose owners ticked *"Let the galaxy talk about her"* ([shared-space.md, her name](shared-space.md#step-4a-registering-your-ship-mark-9-november-2026)): that keeps out spam and covers permission.
+- Newest first, filters by hull and colour; *"Spec one like her"* opens the configurator with her spec.
+- **The list is the server's** (Game dev), from the yard records it already keeps (`server/src/yard.ts`) and the account's spec: `GET /yard/orders`, public, cached, nothing in it but the above. **The page is the site's** (Website).
+- Later, perhaps: a save-up bar for signed-in players with a cloud save.
+- **The configurator's last step, now** (Website): not *"Fly her now"*, which suggests you'll fly the ship you specced, but *"Start flying free: earn her paint in the game"*.
+
 ## Rules
 
 - **The game decides.** The site checks a spec with `validSpec` and prices it with the game's code, but only the game takes a deposit.
