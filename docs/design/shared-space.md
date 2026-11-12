@@ -199,7 +199,7 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
   - **Saloon gossip** ([trading.md, the saloon](trading.md#3-the-saloon)): *"Saw the Brass Neck take on three Mambas at Riedquat and limp home."*
   - **A renowned pirate's grudge:** *"Old Iron's asking after a Cobra called Brass Neck."*
   - **Wanted notices** ([law-and-travel.md](law-and-travel.md#ship-registry-and-flags)): *"Wanted at Leesti: the Cobra Last Orders."*
-  - **The news and the live feed** ([live-feed.md](live-feed.md#named-ships)): *"The Brass Neck made the first survey of Xeesle."*, *"The Last Orders left the yard at Lave in Zaonce Neon."*
+  - **The news and the live feed** ([live-feed.md](live-feed.md#named-ships-mark-12-november-2026-proposed)): *"The Brass Neck made the first survey of Xeesle."*, *"The Last Orders left the yard at Lave in Zaonce Neon."*
 - **The yard's order book** on the site ([ship-configurator.md](ship-configurator.md#the-yards-order-book-mark-12-november-2026-proposed)).
 - **Size** (on top of registration, step 1 below, which is still proposed):
   - the name registry, reservations, release and hold, the consent flag, and claiming at registration: about 1½ days, Worker deploy;
