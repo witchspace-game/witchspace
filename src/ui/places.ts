@@ -23,6 +23,11 @@ export function setDockTab(tab: DockTab) {
   game.dockTab = tab;
   document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
   $('#tab-station').hidden = tab !== 'station';
+  $('#tab-equip').hidden = tab !== 'equip';
+  if (tab === 'equip' && game.state === 'docked') {
+    renderDocked();
+    $('.panel.docked').scrollTop = 0; // the shop from the top, not wherever the last screen was scrolled
+  }
   if (tab === 'station' && game.state === 'docked') renderDocked(); // credits, hold and wallet may have changed at the exchange
   $('#tab-market').hidden = tab !== 'market';
   $('#tab-news').hidden = tab !== 'news';
@@ -73,7 +78,7 @@ const tabName = (b: HTMLElement) => {
 export function updateDockHead() {
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]')];
   const active = tabs.find((b) => b.dataset.tab === game.dockTab);
-  $('.dock-where').textContent = game.commander ? `${stationName(currentSystem()).name}\u00a0·\u00a0` : '';
+  $('.dock-where').textContent = game.commander ? `${currentSystem().name}\u00a0·\u00a0${stationName(currentSystem()).name}` : '';
   $('.dock-which').textContent = game.dockTab === 'money' ? 'Money' : active ? tabName(active) : '';
   const news = tabs.some((b) => !b.hidden && b.dataset.tab !== game.dockTab && b.querySelector('.tab-badge'));
   $('.dock-dot').hidden = !news;
@@ -107,6 +112,8 @@ function toggleSheet(sheet: string, button: string) {
   closeDockSheets();
   if (!open) return;
   if (sheet === '#wallet-sheet') renderWallet();
+  // Opened under the header wherever you've scrolled to: the header's height, for the sheet to sit below.
+  $('.panel.docked').style.setProperty('--dock-head-h', `${$('.dock-head').getBoundingClientRect().height}px`);
   $(sheet).hidden = false;
   $(button).setAttribute('aria-expanded', 'true');
 }

@@ -94,12 +94,15 @@
         <h2>Docked</h2>
         <button type="button" class="dock-place" aria-expanded="false" aria-controls="dock-places"><span class="dock-where"></span><b class="dock-which">Station</b><i class="dock-dot" hidden></i></button>
         <button type="button" class="wallet-button" aria-expanded="false" aria-controls="wallet-sheet" aria-label="Your wallet"></button>
+        <!-- On a phone, the look switch lives here instead of a band across the top (Mark). -->
+        <button type="button" class="look-mini" data-key="KeyM" aria-pressed="true" title="Neo-vector look: on, or off for 1984 (M)" aria-label="Neo-vector look">Neo</button>
       </header>
       <p class="meta" id="dock-location">Coriolis Station · Lave</p>
       <div class="dock-places" id="dock-places" hidden></div>
       <div class="wallet-sheet" id="wallet-sheet" hidden></div>
       <div class="tabs" role="tablist">
         <button data-tab="station" role="tab">Station</button>
+        <button data-tab="equip" role="tab">Equip ship</button>
         <button data-tab="contracts" role="tab">Contracts</button>
         <button data-tab="market" role="tab"><span class="key">T · </span>Market</button>
         <button data-tab="news" role="tab">News</button>
@@ -113,17 +116,30 @@
         <button data-key="KeyM"><span class="key">M · </span>1984</button>
         <button data-key="KeyF" class="log-button"><span class="key">F · </span>Flight log</button>
         <button data-key="KeyG"><span class="key">G · </span>Galaxy map</button>
-        <button data-key="KeyL" class="primary"><span class="key">L · </span>Launch</button>
+        <button data-key="KeyL" class="primary cut launch-button"><span class="key">L · </span><span class="launch-label">Launch</span></button>
       </div>
       <div id="tab-station" role="tabpanel">
         <div id="wanted" role="alert" hidden></div>
-        <dl id="cmdr"></dl>
-        <div class="ship-actions"><button type="button" class="manual-open">Owner's manual</button><button type="button" class="booth-open">Photograph her</button></div>
-        <p class="fuel-row" id="fuel"></p>
-        <p class="fuel-row" id="missile-row"></p>
+        <!-- Your ship, at the top (Mark, 12 November 2026). On a phone this is a window onto the berth behind the
+             panel: the live hull, turning, drag to turn her. On a computer she's beside the panel already. -->
+        <div class="ship-window" id="ship-window">
+          <div class="sw-title"><p class="sw-meta"></p><h3 class="sw-name"></h3><p class="sw-own" hidden></p></div>
+          <div class="sw-foot"><ul class="sw-kit"></ul><div class="ship-actions"><button type="button" class="manual-open">Manual</button><button type="button" class="booth-open">Photo</button></div></div>
+          <p class="sw-hint">Drag to turn her</p>
+        </div>
+        <div class="st-tiles">
+          <div class="tile" id="fuel"></div>
+          <div class="tile" id="missile-row"></div>
+          <div class="tile tile-cargo" id="cargo-tile"></div>
+          <div class="tile" id="lights-tile" hidden></div>
+        </div>
+        <div class="cmdr-card" id="cmdr-card"></div>
         <p class="fuel-row" id="data-row" hidden></p>
         <p class="fuel-row" id="arrivals" hidden></p>
-        <h3>Equip ship</h3>
+        <dl id="cmdr"></dl>
+      </div>
+      <!-- The shop, on its own screen (Mark, 12 November 2026: the Station screen ends after survey data). -->
+      <div id="tab-equip" role="tabpanel" hidden>
         <ul id="equip"></ul>
       </div>
       <div id="tab-contracts" role="tabpanel" hidden>
@@ -153,7 +169,7 @@
     <nav class="controls" data-screen="docked">
       <button data-key="KeyF" class="log-button"><span class="key">F · </span>Flight log</button>
       <button data-key="KeyG"><span class="key">G · </span>Galaxy map</button>
-      <button data-key="KeyL" class="primary"><span class="key">L · </span>Launch</button>
+      <button data-key="KeyL" class="primary cut launch-button"><span class="key">L · </span><span class="launch-label">Launch</span></button>
     </nav>
 
     <!-- Flight -->

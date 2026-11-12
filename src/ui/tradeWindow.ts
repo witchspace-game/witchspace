@@ -114,7 +114,7 @@ export function actionsHtml(ctx: TradeContext, v: WindowView, openOrders: number
       ? `Avbl <b>${fmt(ctx.commander.credits)} Cr</b> · <b>${formatBtc(satsOf(ctx.commander))}</b>`
       : `Avbl <b>${fmt(ctx.commander.credits)} Cr</b> · ${v.remote ? `in storage there <b>${v.stored.toLocaleString()} ${u}</b>` : `in your hold <b>${(ctx.commander.cargo[v.id] ?? 0).toLocaleString()} ${u}</b>`}`;
   return `
-    <div class="ex-act-buttons"><button class="ex-act buy" data-open="buy">Buy ${t}</button><button class="ex-act sell" data-open="sell">Sell ${t}</button></div>
+    <div class="ex-act-buttons"><button class="ex-act buy cut" data-open="buy">Buy ${t}</button><button class="ex-act sell cut" data-open="sell">Sell ${t}</button></div>
     <p class="ex-act-avail">${avbl}</p>
     <button class="ex-act-orders" data-open-orders="1">Your orders${openOrders ? ` (${openOrders})` : ''} ›</button>
     ${message ? `<p class="ex-msg">${message}</p>` : ''}`;

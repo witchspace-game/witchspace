@@ -35,7 +35,7 @@ export interface Papers {
   fittedLine: string;
   /** The edition's luxuries, with the game's own descriptions. */
   aboard: { name: string; blurb: string }[];
-  /** For a sentence: "an owner’s suite, a name in gold leaf and a starlight cabin". */
+  /** For a sentence: "an owner’s suite, her name in gold leaf and a starlight cabin". */
   aboardLine: string;
   /** The yard where she waits: "Goddard Ring", and its system, "Onrira". */
   yard: string;
@@ -54,7 +54,7 @@ export const sentence = (xs: string[]) => (xs.length < 2 ? (xs[0] ?? '') : `${xs
 /** A thing in a sentence: "an owner’s suite", "a starlight cabin", "black-light running lights". */
 const article = (name: string) => {
   const s = lower(name);
-  if (/^(a|an) /.test(s) || /s$/.test(s)) return s;
+  if (/^(a|an|her) /.test(s) || /s$/.test(s)) return s;
   return `${/^[aeiouAEIOU]/.test(s) ? 'an' : 'a'} ${s}`;
 };
 

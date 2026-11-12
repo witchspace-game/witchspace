@@ -135,6 +135,10 @@ Every station has somewhere traders rest: **the saloon** (a bar on a Coriolis; a
 
 **Insiders are another matter.** Some people in the saloon have information that isn't theirs to sell: a station clerk who sees the price reports before they're posted, a company contact who knows a shipping schedule, a port official who knows a crackdown is coming. Paying one of them is **insider trading**: more reliable than bar talk, dearer **(to tune: 200–1,000 Cr)**, and illegal in lawful systems (corporate state, democracy, confederacy). Big trades on what they told you, made before it was public, can be noticed afterwards: the Co-operative's market inspectors may fine you and give you a record (an Offender, as for smuggling) **(to tune: chance by size and government)**, and the insider loses their job, which they'll remember. Anarchies and feudal worlds don't care. The risk is the price of the edge.
 
+### Named ships in the talk *(Mark, 12 November 2026; proposed)*
+
+Once ships have registered names ([shared-space.md, her name](shared-space.md#step-4a-registering-your-ship-mark-9-november-2026)), regulars talk about real commanders' ships, only those whose owners ticked *"Let the galaxy talk about her"*: *"Saw the Brass Neck take on three Mambas at Riedquat and limp home."* A renowned pirate's grudge comes through the bar too: *"Old Iron's asking after a Cobra called Brass Neck."* Unticked ships are *"a Cobra"*.
+
 ### Meet the founder in the saloon *(Mark, 27 October 2026)*
 
 Players could meet Mark in the saloon. His callsign is **Jameson**, the original's default commander, which suits the corner table. It grows with the game:

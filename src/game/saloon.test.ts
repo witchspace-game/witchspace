@@ -81,6 +81,22 @@ describe('the saloon', () => {
     expect(cameTrue(t, newsArrives(g[e.r.tip!.system], e.here, e.r.tip!.start) + 1)).toBe(true);
   });
 
+  it('never has two people in one bar telling the same story, or in the same words (Mark, 12 November 2026)', () => {
+    for (const here of g)
+      for (let h = 0; h < 48; h += 2) {
+        const now = NOW + h * 3600_000;
+        const bar = regularsAt(here, now);
+        const tips = bar.filter((r) => r.tip).map((r) => `${r.tip!.system}:${r.tip!.event}`);
+        expect(new Set(tips).size).toBe(tips.length);
+        for (const paid of [false, true]) {
+          const said = bar.map((r) => talk(r, name, paid).said);
+          expect(new Set(said).size).toBe(said.length);
+        }
+        const looks = bar.map((r) => r.look);
+        expect(new Set(looks).size).toBe(looks.length);
+      }
+  });
+
   it('has a bar, a club, a tea room or a shebeen, by who runs the system', () => {
     const kinds = new Set(g.map((s) => venue(s).kind));
     expect([...kinds].sort()).toEqual(['club', 'saloon', 'shebeen', 'tea room']);

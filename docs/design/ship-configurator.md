@@ -48,7 +48,22 @@ The site then says: *"She's on order. Dock at any shipyard and the yard has your
 **Game:**
 - On docking at a station with a shipyard: if there's a spec (the newer of this browser's and the account's), and no order already in production, a message from the yard says *"Your {ship} spec from the website is here."* Opening it shows the configurator in `'spec'` mode with that spec filled in.
 - **Order** works as now: `placeOrder` makes every check (only a concept takes a deposit, the laser ratings, the credits). If it succeeds, the game clears the spec from both places.
-- A hull already flying can't be ordered yet ("bought outright, when shipyards sell"). Its spec waits in the configurator, filled in, for when it can.
+- **A spec for the hull you fly is a repaint** (Mark, 12 November 2026: most new players spec the Cobra they start in, and it went nowhere). The yard says *"Your Cobra spec from the website is here: repaint her … for X Cr?"*, quoted with `repaintQuote` against the paint she has now (so it can come in under the site's factory-Cobra figure). One tap if you can afford it; if not, *"You need N Cr more. Your spec waits here."* `repaint` takes the spec's colour, glow, trim and name; then the spec is cleared, as an order clears it. Edition colours stay protected (`paintable`).
+- **Its kit isn't a repaint.** The lasers and upgrades in the spec go on a list at the top of the station's **Equip ship** screen (*"From your website spec: Beam laser, front · 1,000 Cr"*), ticked off as you buy them there as usual, laser ratings and all (`specKitLines`; kept on the commander as `specKit` until it's all fitted). Luxuries come with a new hull, not at a station.
+- Any other hull already flying can't be ordered yet ("bought outright, when shipyards sell"). Its spec waits in the configurator, filled in, for when it can.
+- **The handover** (agreed with Website, 12 November 2026): the same `Spec`, in localStorage `witchspace.spec.v1` as `{spec, at}` and on the account by `PUT /me/spec`. No new field: a spec whose `ship` is the hull you fly is a repaint.
+
+## The yard's order book *(Mark, 12 November 2026; proposed)*
+
+Mark: *"They could order her and the order could be sat in a queue on the website where people can see the ships people are ordering and their spec."*
+
+- A public page of the ships commanders are building, each turning in her own paint (her paint on her only; the page stays green, white and grey).
+- Each entry: her name, hull, colour and glow, home port, and where she's got to: *Specced, saving up* → *On order at <yard>* → *Ready at the yard* → *Delivered*.
+- Only registered ships whose owners ticked *"Let the galaxy talk about her"* ([shared-space.md, her name](shared-space.md#step-4a-registering-your-ship-mark-9-november-2026)): that keeps out spam and covers permission.
+- Newest first, filters by hull and colour; *"Spec one like her"* opens the configurator with her spec.
+- **The list is the server's** (Game dev), from the yard records it already keeps (`server/src/yard.ts`) and the account's spec: `GET /yard/book` ([the API](shared-space.md#step-4a-registering-your-ship-mark-9-november-2026)), public, cached, nothing in it but the above. **The page is the site's** (Website).
+- Later, perhaps: a save-up bar for signed-in players with a cloud save.
+- **The configurator's last step, now** (Website): not *"Fly her now"*, which suggests you'll fly the ship you specced, but *"Start flying free: earn her paint in the game"*.
 
 ## Rules
 

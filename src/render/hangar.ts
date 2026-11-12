@@ -63,6 +63,7 @@ export function buildHangar(): THREE.Group {
   ];
   const retro = [floorMesh.clone(), retroLines([...structure, ...pad])];
   g.add(...neo, ...retro);
+  g.userData.pad = neo[3]; // the landing pad's glow: the Station screen's window hides it (ui/showroom.ts)
   registerParts({ neo, retro });
   return g;
 }

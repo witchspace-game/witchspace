@@ -50,6 +50,7 @@ Like real ships, every ship is **registered** in a system: its **flag**. The reg
 - **Flags of convenience.** As at sea: register in a corporate state for low tariffs and a respectable flag, or in an anarchy where nobody asks questions, and live with what that flag says about you. Some governments refuse to register ships with records; others will register anyone.
 - **Team insignia.** Guilds and wings get an insignia of their own beside the crest, issued by the server so nobody can wear another team's badge. Needs accounts.
 - **Classic rules:** no registry, as in 1984.
+- **Named in a notice** *(Mark, 12 November 2026; proposed)*: a registered ship whose owner let the galaxy talk about her is named on wanted notices, *"Wanted at Leesti: the Cobra Last Orders"*; otherwise she's *"a Cobra"* and her number ([shared-space.md, her name](shared-space.md#step-4a-registering-your-ship-mark-9-november-2026)).
 
 
 ## 2. The law and your record

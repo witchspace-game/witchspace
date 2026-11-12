@@ -103,7 +103,7 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
   const booth = await s.w(async () => {
     document.querySelector('.tabs [data-tab="station"]')?.click();
     await new Promise((r) => setTimeout(r, 300));
-    [...document.querySelectorAll('button')].find((b) => /Photograph her/i.test(b.textContent ?? ''))?.click();
+    document.querySelector('#ship-window .booth-open')?.click(); // "Photo" on the Station screen (was "Photograph her")
     await new Promise((r) => setTimeout(r, 600));
     const open = !document.querySelector('#booth')?.hidden;
     document.querySelector('#booth .booth-close, #booth [data-close], #booth button[aria-label*="lose"]')?.click();
@@ -121,14 +121,17 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     food?.click();
     await new Promise((r) => setTimeout(r, 600));
     const before = held();
-    document.querySelector('#exchange [data-side="buy"]')?.click();
-    document.querySelector('#exchange [data-type="market"]')?.click();
-    const qty = document.querySelector('#exchange .ex-qty input');
+    // The trade window (#418): Buy opens it, then market order.
+    [...document.querySelectorAll('#exchange [data-open="buy"]')].find((b) => b.offsetParent)?.click();
+    await new Promise((r) => setTimeout(r, 400));
+    document.querySelector('.ex-modal [data-side="buy"]')?.click();
+    document.querySelector('.ex-modal [data-type="market"]')?.click();
+    const qty = document.querySelector('.ex-modal .ex-qty input');
     if (!qty) return 'no quantity box';
     qty.value = '2';
     qty.dispatchEvent(new Event('input', { bubbles: true }));
     await new Promise((r) => setTimeout(r, 200));
-    const submit = document.querySelector('#exchange .ex-submit');
+    const submit = document.querySelector('.ex-modal .ex-submit');
     if (!submit || submit.disabled) return `can't submit: ${submit?.textContent}`;
     submit.click();
     await new Promise((r) => setTimeout(r, 600));
@@ -140,13 +143,15 @@ const warp = (s, x) => s.w((x) => { const real = window.__realNow ?? (window.__r
     document.querySelector('.tabs [data-tab="station"]')?.click();
     await new Promise((r) => setTimeout(r, 400));
     const find = (re) => [...document.querySelectorAll('#tab-station button')].find((b) => re.test(b.textContent ?? '') && !b.disabled);
+    if (w.commander.missiles >= 1) { w.commander.missiles -= 1; w.renderDocked(); } // room on the rails for one more
+    await new Promise((r) => setTimeout(r, 200));
     const start = w.commander.credits;
-    const buy = find(/^\s*Buy 1 · \d+ Cr/);
+    const buy = find(/^\s*\+1 · \d+ Cr/);
     if (!buy) return 'no missile to buy';
     buy.click();
     await new Promise((r) => setTimeout(r, 300));
     const paid = start - w.commander.credits;
-    const sell = find(/^\s*Sell 1/);
+    const sell = document.querySelector('#missile-row .minus');
     if (!sell) return `paid ${paid}, nothing to sell`;
     sell.click();
     await new Promise((r) => setTimeout(r, 300));

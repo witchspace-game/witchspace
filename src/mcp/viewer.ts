@@ -35,7 +35,7 @@ export const VIEWER_HTML = `<!doctype html>
   #bar { position: absolute; left: 0; right: 0; bottom: 0; display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: linear-gradient(transparent, rgba(4,6,10,.85)); }
   #name { font-weight: 600; letter-spacing: .02em; }
   #facts { color: var(--dim); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  button { font: inherit; color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+  button { font: inherit; color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 2px; padding: 4px 10px; cursor: pointer; }
   button[aria-pressed="true"] { border-color: currentColor; }
   #hint { position: absolute; top: 10px; left: 0; right: 0; text-align: center; color: var(--dim); font-size: 12px; transition: opacity .6s; pointer-events: none; }
   #wait { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim); }

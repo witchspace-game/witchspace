@@ -415,9 +415,11 @@ export interface Commander {
   gift?: { ship: string; edition?: { id: string; number: number }; /** Where she's waiting, if she was signed over at one yard. */ at?: { galaxy: number; system: number } };
   /** A ship you've specced and put a deposit on, in production at a yard (src/game/shipyard.ts). */
   order?: ShipOrder;
+  /** The kit from a website spec for the ship you fly, once the yard has repainted her: a list for the Equip screen. */
+  specKit?: { laser: ShipOrder['laser']; rear?: ShipOrder['laser']; upgrades: EquipmentId[] };
   /** The hull you fly, by content id; a Cobra Mk III until you collect another. */
   ship?: string;
-  /** Its finish, from the yard: colour, glow, trim and the name painted on. */
+  /** Its finish, from the yard: colour, glow, trim, and her name (on her papers, her manual and your clips; not drawn on the hull). */
   paint?: Paint;
   /** Your fleet (Mark): the ships you own but aren't flying, each in the hangar where you left her, or on her way to another. */
   fleet?: StoredShip[];

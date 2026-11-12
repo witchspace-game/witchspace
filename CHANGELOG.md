@@ -16,6 +16,14 @@ reported it.
 - Valuable cargo asks a bond, back with the pay on delivery: never more than half your credits. (Mark)
 - Each company treats a lost or late cargo its own way. Vorg gives half your bond back if you were shot down ("You flew it"); the Mutual's pool covers its members, less a small excess; Hexon keeps the bond, takes a quarter off for each jump late, and drops you a rank for a second loss in a week. Lose a cargo in a fight you started, and nobody covers it. (Mark)
 - A good record buys one mistake: ten deliveries since your last failure halve what the next costs you in standing. (Mark)
+- Saloon regulars no longer tell the same story in the same words: two people in one bar never share a tip, and every mood has four ways of putting things. (Mark)
+- On a phone, the docked places menu and the wallet open just under the header, wherever you've scrolled to, instead of at the top of the page. (Mark)
+- The docked screens redrawn: your own ship, live, at the top of the Station screen (drag to turn her); fuel, missiles, cargo and running lights as tiles; a Commander card with your rank's progress; Launch → where you're going. (Mark)
+- The owner's manual opens full screen with her live at the top: drag to turn, pinch to zoom. (Mark)
+- The header says which system you're in first, and on a phone the look switch is one NEO button in it: lit for neo-vector, off for 1984. (Mark)
+- No more pill buttons: square everywhere, with clipped corners on the main action, the trade window included. (Mark)
+- A Cobra specced on the website is no longer a dead end: the yard repaints the Cobra you fly to it, name and all, and her kit goes on a list at Equip ship. (Mark)
+- The yard no longer promises a name painted on her: it's on her papers, her manual and your clips. (Mark)
 
 ## 11 November 2026
 
