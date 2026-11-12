@@ -6,7 +6,8 @@ import { drift, equilibriumPrice, freshMarket, priceAt } from '../economy/market
 import { distanceLy, galaxy, type StarSystem } from '../galaxy/generate';
 import { COMPANIES } from '../game/companies';
 import { cargoName, destinationOf } from '../game/contracts';
-import { cargoWords, voyages, type Voyage } from '../game/traffic';
+import { cargoWords, voyages } from '../game/traffic';
+import { andList, groupConvoys, type Arrival } from './convoys';
 import { stageInfo, STAGES, yardsNear } from '../game/yards';
 import { MAX_PIXEL_RATIO } from '../render/look';
 import { buildShip } from '../render/shipModel';
@@ -180,8 +181,8 @@ function render() {
   }
 
   // Arrivals at Lave: the market's own timetable made visible, the next ships due in, the same for everyone.
-  const due = voyages(lave, now, now + 90 * 60_000).filter((v) => v.leg === 'in').slice(0, 4);
-  if (due.length) $('now-arrivals')!.innerHTML = due.map((v) => arrival(v, now)).join('');
+  const due = voyages(lave, now, now + 90 * 60_000).filter((v) => v.leg === 'in');
+  if (due.length) $('now-arrivals')!.innerHTML = groupConvoys(due, 4).map((a) => arrival(a, now)).join('');
   // And the Titan's next supply run at the nearest yard, under guard.
   const titan = yards.length ? voyages(yards[0].where, now, now + 30 * 60_000).find((v) => v.to === 'titan') : undefined;
   const run = $('now-titan')!;
@@ -211,11 +212,19 @@ const hullName = (id: string) => shipById(id)?.name ?? id;
 const place = (s: StarSystem) => (s.galaxy === 0 ? `<a href="${systemUrl(s.name)}">${escapeHtml(s.name)}</a>` : escapeHtml(s.name));
 const inMin = (t: number, now: number) => `in ${Math.max(1, Math.round((t - now) / 60_000))}\u00a0min`;
 
-/** One line of the arrivals board: when, who and for whom, from where, with what. */
-function arrival(v: Voyage, now: number): string {
+/**
+ * One line of the arrivals board: when, who and for whom, from where, with what. A convoy is one
+ * line (Mark): "Free Hand, with Cold Comfort and Even Keel · Hexon convoy of 3".
+ */
+function arrival({ lead: v, with: sisters, rest }: Arrival, now: number): string {
   const firm = v.company ? COMPANIES[v.company].name : 'Independent';
   const why = v.relief ? ` · relief for the ${EVENT_KINDS[v.relief].name.toLowerCase()}` : '';
-  return `<li><time>${inMin(v.at, now).slice(3)}</time><span><b>${escapeHtml(v.name)}</b> <small>${escapeHtml(firm)} ${escapeHtml(hullName(v.hull))}</small></span><small>from ${place(galaxy(0)[v.other])} with ${escapeHtml(cargoWords(v.cargo))}${why}${v.escorts ? ` · ${v.escorts} escort${v.escorts > 1 ? 's' : ''}` : ''}</small></li>`;
+  const ships = [v, ...sisters];
+  const n = ships.length;
+  const who = sisters.length ? `<b>${escapeHtml(v.name)}</b>, with ${escapeHtml(andList(sisters.map((s) => s.name)))}` : `<b>${escapeHtml(v.name)}</b>`;
+  const what = rest ? `${n > 1 ? `last ${n}` : 'last'} of a ${escapeHtml(firm)} convoy` : n > 1 ? `${escapeHtml(firm)} convoy of ${n}` : `${escapeHtml(firm)} ${escapeHtml(hullName(v.hull))}`;
+  const escorts = ships.reduce((sum, s) => sum + s.escorts, 0);
+  return `<li><time>${inMin(v.at, now).slice(3)}</time><span>${who} <small>${what}</small></span><small>from ${place(galaxy(0)[v.other])} with ${escapeHtml(cargoWords(ships.flatMap((s) => s.cargo)))}${why}${escorts ? ` · ${escorts} escort${escorts > 1 ? 's' : ''}` : ''}</small></li>`;
 }
 
 /** Fetch what commanders have done; on any failure keep what we had (nothing, at first). */
