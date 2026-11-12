@@ -105,7 +105,8 @@ let holeAt = '';
 function shipWindow(): DOMRect | null {
   const panel = document.querySelector<HTMLElement>('.panel.docked');
   const win = document.getElementById('ship-window');
-  const shown = Boolean(panel && win && game.state === 'docked' && game.dockTab === 'station' && phoneUpright.matches && !booth && !manualView && win.offsetParent);
+  // 1984 draws its own way, without the window: her name and setup head the screen, as on a computer.
+  const shown = Boolean(panel && win && game.state === 'docked' && game.dockTab === 'station' && phoneUpright.matches && !booth && !manualView && win.offsetParent && !document.body.classList.contains('retro'));
   panel?.classList.toggle('ship-shown', shown);
   if (!shown) return null;
   const at = `${win!.offsetTop}:${win!.offsetHeight}`;

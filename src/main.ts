@@ -829,6 +829,8 @@ function snapPhoto() {
 function updateModeLabel() {
   $('#mode').textContent = isRetro() ? '1984 MODE' : 'NEO-VECTOR';
   $('#look').classList.toggle('retro', isRetro());
+  // The phone's docked header: one NEO button, lit when the neo-vector look is on (Mark).
+  $('.look-mini').setAttribute('aria-pressed', String(!isRetro()));
 }
 
 /** Gamepad buttons map onto the keyboard action for the current screen. */

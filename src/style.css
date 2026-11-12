@@ -1153,16 +1153,18 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
   /* The look switch, small and square in the header; the band across the top is for the title screen. */
   body[data-state='docked'] #look { display: none; }
   .panel.docked, .panel.docked.wide { max-height: calc(100vh - var(--controls-h, 48px) - 58px - max(10px, env(safe-area-inset-top))); }
-  .look-mini { display: inline-flex; align-self: stretch; align-items: center; padding: 0; font-size: 11px; letter-spacing: 0.06em; }
-  .look-mini span { padding: 0 6px; color: var(--dim); }
-  .look-mini .neo, body.retro .look-mini .r84 { color: #000; background: var(--accent); align-self: stretch; display: flex; align-items: center; }
-  body.retro .look-mini .neo { color: var(--dim); background: none; }
+  /* One NEO button (Mark: "We just need a NEO button which is off or on"): lit for neo-vector, outlined in 1984. */
+  .look-mini { display: inline-flex; align-self: stretch; align-items: center; padding: 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; }
+  .look-mini[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.14); box-shadow: inset 0 0 10px rgba(61, 255, 176, 0.3), 0 0 10px rgba(61, 255, 176, 0.3); text-shadow: 0 0 6px var(--accent); }
+  .look-mini[aria-pressed='false'] { border-color: #fff; color: #fff; background: #000; box-shadow: none; font-weight: 400; }
   /* Your ship: a window onto the berth behind the panel, cut out of the panel's background (the hole follows the
      window as you scroll: ui/showroom.ts measures it). Sideways drags turn her; up and down still scroll. */
   .panel.docked.ship-shown { backdrop-filter: none; background: linear-gradient(to bottom, rgba(0, 10, 7, 0.9) 0, rgba(0, 10, 7, 0.9) var(--win-top, 0), transparent var(--win-top, 0), transparent var(--win-bot, 0), rgba(0, 10, 7, 0.9) var(--win-bot, 0)) local; }
   .ship-window { height: 236px; margin: -8px -14px 10px; padding: 10px 14px 8px; grid-template-rows: auto 1fr auto; border-bottom: 1px solid var(--edge); background: linear-gradient(180deg, rgba(2, 8, 6, 0.8) 0%, transparent 30%, transparent 70%, rgba(2, 8, 6, 0.85) 100%); touch-action: pan-y; cursor: grab; }
   .ship-window .sw-kit { align-self: end; margin-bottom: 14px; }
   .sw-hint { display: block; position: absolute; left: 0; right: 0; bottom: 6px; margin: 0; text-align: center; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); pointer-events: none; }
+  body.retro .ship-window { height: auto; margin: 0 0 10px; padding: 0; background: none; border: 0; }
+  body.retro .sw-hint { display: none; }
   .tile button, .ship-actions button, #data-row button { min-height: 36px; }
   .tile .minus { min-width: 36px; }
   .dock-which { flex-shrink: 0; font-weight: 600; }
@@ -2634,3 +2636,13 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 .ex-storage-toggle.on i { background: var(--ex-up); }
 .ex-storage-toggle.on i::after { left: 14px; background: #fff; }
 .ex-mine .ex-act-orders { display: block; margin-bottom: 6px; }
+
+/* 1984: the pixel font is wide, so the Station screen's new pieces take a smaller size. */
+body.retro .panel .ship-window .sw-name { font-size: 15px; }
+body.retro .sw-meta, body.retro .sw-own, body.retro .sw-kit, body.retro .t-label, body.retro .t-ok, body.retro .t-sub, body.retro .cc-rules, body.retro .badge { font-size: 8px; letter-spacing: 0.04em; }
+body.retro .t-val, body.retro .cc-rank, body.retro .panel .cc-explore { font-size: 10px; letter-spacing: 0; }
+body.retro .panel .cc-name { font-size: 12px; }
+body.retro .tile button, body.retro .ship-actions button, body.retro #data-row button { font-size: 8px; letter-spacing: 0; padding: 2px 5px; }
+body.retro .t-row { flex-wrap: wrap; }
+body.retro .dock-where { font-size: 8px; }
+body.retro .dock-which, body.retro .look-mini, body.retro .wallet-button { font-size: 10px; letter-spacing: 0.02em; }
