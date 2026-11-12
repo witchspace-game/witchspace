@@ -1650,6 +1650,7 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .contracts .actions { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: flex; gap: 6px; }
 .contracts .actions button { font-size: 12px; padding: 4px 10px; }
 .contracts .pay { color: var(--accent); font-weight: 600; }
+.contracts .bond { color: var(--amber); }
 .contracts .late { color: var(--danger); }
 .contracts .on-course { color: var(--amber); font-size: 12px; align-self: center; }
 .company { color: var(--company, var(--accent)); font-weight: 600; }

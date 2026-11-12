@@ -5,6 +5,7 @@ pillar: fight
 summary: Earn the gold band. The galaxy's best pilots are found by a recruiter, pass a trial, and fly a Lancer of their own for the Co-operative Marshals, hunting the galaxy's worst, real commanders included, with warrant alerts on your phone.
 card: lancer
 stages:
+  - Deputies: the post advertised to all, apply when qualified, recovering computer-flown debtors and fugitives, prisoner transport | proposed
   - The recruiter and the trial, against computer-flown warrants, solo and shared | proposed
   - The Lancer issued, in livery only the server can grant, the gold card and the tag | proposed
   - Calls in shared space, players first and the Bastion as backstop, and warrant alerts on your phone that travel at the speed of news | proposed
@@ -34,10 +35,17 @@ Nothing here is built yet; it comes after launch. It brings together pieces alre
 
 ## The career
 
-### 1. They find you
-**Nobody applies.** At **Dangerous**, with a clean record, a recruiter finds you in a Co-operative Saloon: *"We've been watching your record, Commander."* It's the companies' pattern, who start getting in touch at Contractor.
+### 1. Advertised to everyone; you apply when you qualify *(Mark, 12 November 2026)*
+Mark: *"We could still advertise the job, and obviously it wouldn't be available to anybody unless they're a marshal. But it would be interesting for players to see that there is a route there, looking for a marshal. They can apply to become a marshal, but only if they've got the right competencies."*
 
-Who qualifies:
+- **The post is on every Co-operative station's board,** for everyone to see: *"Wanted: Deputy Marshals. Apply at any Co-operative station."* So are the Marshals' own jobs (recovery, transport, warrants), shown to all and taken only by Marshals: *"Needs Deputy Marshal"*, as a company job shows *"Needs Contractor"*.
+- **Apply** opens your record against what's asked, each line ticked or not: *"Competent ✓ · clean 30 days ✗ (an Offender at Leesti, 12 days ago) · signed in ✓"*. What you're short of reads as a goal, not a wall, as the shipyard's message does ([ships and classes](ships-and-classes.md)).
+- **The recruiter still finds the best.** At Dangerous with a clean record, a recruiter finds you in a Co-operative Saloon: *"We've been watching your record, Commander."* That's the invitation to the trial for a full Marshal's Lancer.
+- **The website** can carry the same post on its careers and jobs pages (the website session's to build), so the route is visible before anyone plays.
+
+Who qualifies as a **Deputy Marshal**: a combat rating of **Competent** or higher, clean (as below), signed in.
+
+Who qualifies for the trial, as a full **Marshal**:
 - a combat rating of **Dangerous** or higher (512 points);
 - **clean:** no Fugitive status in the last 90 days, and no Offender in the last 30. One mistake in shared space shouldn't close a career for good;
 - **signed in,** since the career lives on your account.
@@ -73,7 +81,41 @@ Marshals answer to the same law they enforce, more strictly.
 - **Resigning:** hand the Lancer back at any Co-operative station. You can come back after 30 days with a single trial mission. Struck off means no return.
 
 ### 6. Rank
-Earned by warrants served and missions flown: **Probationer → Marshal → Senior Marshal → Chief Marshal** (not "Marshal Commander", which clashes with CMDR). Higher rank brings longer-range calls, the right to call in a Bastion yourself, a second Lancer for a wingman you vouch for, and in time a hand in the Marshals' own stories.
+Earned by warrants served and missions flown: **Deputy Marshal → Marshal → Senior Marshal → Chief Marshal** (not "Marshal Commander", which clashes with CMDR). Higher rank brings longer-range calls, the right to call in a Bastion yourself, a second Lancer for a wingman you vouch for, and in time a hand in the Marshals' own stories.
+
+## Deputies and debtors *(Mark, 12 November 2026)*
+
+Mark: *"I was hoping to just allow the marshal career … Once you become or get offered the job of becoming a marshal, that's when you can chase debtors. That way, we'll have more people in the game. They can trade as well, but they can also fly special missions that are chasing debtors that are in the game, rather than actual commanders that are playing in shared space … it would work just like the bounty system in America."*
+
+**No separate bounty-hunter career:** chasing debtors is Marshals' work. It works like the American system:
+
+| The American system | Witchspace |
+|---|---|
+| Bail, put up so you can go free | A contract's **bond** ([contract terms](companies-and-contracts.md#terms-rank-pays-and-each-company-treats-failure-its-own-way-mark-built-12-november-2026)) |
+| A bail bondsman fronts it for a fee, against collateral | **Merrow & Daughters**, licensed: fronts the bond for a clean commander, about 10%, the ship as collateral |
+| A skip: fails to appear | A borrower who **defaults** |
+| The court issues a warrant | The Co-operative's court issues a **civil warrant** |
+| Deputy US Marshals serve warrants and recover fugitives | **Deputy Marshals** recover computer-flown debtors and fugitives |
+| Loan sharks, outside all of it | **The Vane Syndicate:** anyone, brutal interest, never the court, its own heavies ([law and travel](law-and-travel.md#the-vane-syndicate-big-contracts-borrowed-bonds-and-bounty-hunters-mark-12-november-2026-proposed)) |
+
+**Deputy Marshals** (Competent, clean, signed in):
+- **Fly your own ship and keep trading.** Papers, not a Lancer; the Lancer waits for the trial at Dangerous.
+- **Fugitive recovery, the main work:** a computer-flown debtor who skipped on a Merrow bond, or a criminal character with a warrant. Each is a character ([the world](the-world.md#6-characters)): a name, a ship, a route and a story.
+  - **Tracing them:** their contract gives the last sighting; saloons, the news and the station's arrivals board give the rest, as a skip tracer works.
+  - **Paid like a recovery agent:** a share of the bond (10–20%) and Marshals' standing. Destroyed pays the least; brought in alive pays most, once disabling is built.
+  - **Some deserve better:** talk to them over the radio, and you can let them settle at the next station for a smaller fee. It's a choice, not a quota.
+- **Prisoner transport:** carry a prisoner from one station to another, like a contract, with a chance of an escape attempt or friends waiting on the lane. Good work for a trader with papers.
+- **Repossession** (later, with boarding): bring back a defaulter's ship.
+
+**Real commanders are never hunted for debt** by other players. Their default is handled by the law at the dock (Merrow) or by the Syndicate's characters on the frontier (Vane). Real commanders are only hunted for crimes: the full Marshals' warrants for Fugitives, below.
+
+**A Merrow default: the impound** *(Mark, 12 November 2026: "That's a real thing if they impound your ship with all the upgrades! Ouch!")*. The ship was the collateral, so it's held, as a real impound lot holds it:
+- **A warning first.** Merrow writes before the due date, and docking at a lawful station offers *Settle now* before anything happens. Nobody loses a ship by surprise.
+- **Held, not sold.** Unpaid, the ship and every upgrade wait at that station's impound, and you leave in the Co-operative's bare Cobra.
+- **Pay the debt and a small daily storage fee,** and she's yours again, exactly as you left her.
+- **Unclaimed after 30 days, she's auctioned.** The sale clears the debt, and whatever's left over comes back to you.
+
+**Still to set:** the fee shares for recovery work.
 
 ## Warrant alerts on your phone *(Mark)*
 
@@ -123,6 +165,7 @@ Mark: *"The warrant would be issued in the system, and if there's no Marshals in
 
 ## Building it in stages
 
+0. **Bonds fronted** by Merrow & Daughters and the Vane Syndicate, debt, repaying, and the two defaults ([law and travel](law-and-travel.md)). Then **Deputies:** the post on every board and Apply with the checklist; debtor and fugitive characters with routes; recovery missions (destroyed, to start); prisoner transport. All solo-playable.
 1. **The recruiter and the trial,** against computer-flown warrants. Works solo from day one; player calls grow as players arrive.
 2. **The Lancer issued,** with livery checked by the server (as editions are), the gold card and the tag.
 3. **Calls in shared space:** on-duty Marshals get warrants first, the Bastion if nobody answers; and warrant alerts by Web Push.

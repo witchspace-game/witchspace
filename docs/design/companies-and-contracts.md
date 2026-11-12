@@ -112,6 +112,27 @@ Standing is its own record, beside the combat rating and the explorer's rank, an
 - **Lost** (ship destroyed, cargo taken or jettisoned): no pay, the bond is forfeit, standing drops. Your savings and your ship's insurance are untouched; the company insured its own cargo.
 - **Stolen by you** (sold to a fence): the company knows. Standing with it falls to the floor, and the cargo is reported stolen everywhere it trades.
 
+### Terms: rank pays, and each company treats failure its own way *(Mark, built 12 November 2026)*
+
+Mark: *"There should be some advantages to becoming a contractor, and therefore you have to earn your way. Once you become a contractor, it should be advantageous … Don't want to make it too easy in the beginning."* *"Would Vorg punish you the same way [the] Mutual would? … think about what should happen if you lose your cargo, how that affects the rank."* *"This would protect and make players think twice because they want to maintain their contractor status, so they wouldn't engage frivolously in combat."* Numbers in `src/game/terms.ts`.
+
+- **Casual stays lean.** The pay as posted, and a danger bonus that's a share of the cargo's value, so a cheap load into an anarchy pays poorly. No bond.
+- **Rank pays,** on every job from the company: Contractor +15%, Trusted +30%, Preferred +50%, Partner +75%.
+- **Hazard pay, from Contractor up:** a flat sum for the trip, whatever the cargo, because the danger is in going: 200 Cr into an anarchy, 140 feudal, 60 multi-government, 25 a dictatorship, nothing safer, at Contractor; ×1.5 Trusted, ×2 Preferred, ×2.5 Partner. The card shows it with the danger bonus as one *danger pay*.
+- **Each company's way:** Vorg pays 25% more hazard pay and 10% less for the miles; the Mutual 15% more for the miles; Hexon 10% more on valuable cargo.
+- **A bond** on cargo that needs Contractor or better (worth 400 Cr or more): Hexon 20% of its value, the Mutual and Wexley-Yorozu 15%, Vorg 10%. Back with the pay on delivery. Never more than half your credits: a loss always hurts and never ruins anyone.
+- **A fight you started is yours.** Lost within five minutes of firing first on a ship that wasn't attacking you (or on a station), and no insurer covers it.
+
+| | Lost with your ship | Your fault | Late | Walked away |
+|---|---|---|---|---|
+| **Hexon** | Bond kept, −3; a second loss inside a week drops a whole rank, with a polite letter | Bond kept, −4 ("a breach of contract") | A quarter off for each jump late, −1 | −3, bond kept |
+| **Vorg** | Half the bond back, −1: "You flew it. That's what we pay for." | Bond kept, −3 | Full pay a jump late, then half | −3, bond kept |
+| **The Mutual** | Members (Contractor and up): the pool pays, less an excess of 5% of the cargo's value (Contractor) down to 2% (Partner), −1. Not yet a member: bond kept, −2 | Bond kept, −3: the pool doesn't cover a fight you started | Three quarters of the pay | −4, bond kept: "No hauler flies alone" works both ways |
+| **Wexley-Yorozu** | Bond kept, −3 | Bond kept, −4 | Half pay | −3, bond kept |
+
+- **A good record buys one mistake:** ten deliveries since your last failure halve what the next one costs in standing.
+- **Still to come:** cargo handed to pirates or jettisoned (contract cargo can't be yet), and the fence.
+
 ## 2b. Files, messages and special assignments
 
 **Built (October 2026, `src/game/assignments.ts`).**

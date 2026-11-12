@@ -157,6 +157,8 @@ export const flight = {
   scanProgress: 0,
   /** A crime seen but not pinned on you. Forgotten when you leave the system. */
   unpinned: null as { status: 'offender' | 'fugitive'; serious: boolean; at: number; what: string } | null,
+  /** When you last fired first on a ship that wasn't attacking you (ms): a loss soon after is your fault, and no insurer covers it (game/terms.ts). */
+  startedFightAt: 0,
   /** A police hail to answer, from whom, and by when. */
   hail: null as { by: NpcShip; until: number } | null,
   /** Police have read your hull this visit (a broken transponder): no more hails. */

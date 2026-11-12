@@ -187,9 +187,78 @@ Today a murder costs at most 1,500 Cr (a Fugitive's 500 and a warrant's 1,000, i
 
 - Fight the police and lose, and the insurer won't pay and the bank won't lend to a criminal. **That leaves the sharks.**
 - **Bounty hunters** start appearing in systems you visit after a few missed payments, more and nastier as the debt grows. They fly unmarked, often second-hand ships, so you can't tell who's hunting you until they open fire.
-- **Ways out of debt:** pay up, hide in anarchies where the sharks' reach is weaker, or fight the hunters off, which means fighting your own debt.
-- **Multiplayer:** players can take the sharks' contracts as bounty hunters.
+- **Ways out of debt:** pay up, keep to the lawful core where the sharks' hunters don't work (see the Vane Syndicate, below), or fight the hunters off, which means fighting your own debt.
+- **Multiplayer:** debtors are never hunted by other players; Deputy Marshals chase computer-flown debtors ([become a Marshal](marshals-career.md#deputies-and-debtors-mark-12-november-2026)).
 - **Lender names** must be original (no names from the Elite novels). Placeholders: *Merrow & Daughters* (bank), *the Vane Syndicate* (sharks). Better names welcome.
+
+### The Vane Syndicate: big contracts, borrowed bonds and bounty hunters *(Mark, 12 November 2026; proposed)*
+
+Mark: *"It needs to offer a way out for a player to be able to pay back the debt … by losing a large contract. This allows the player to take on larger contracts that they can't really afford. If they lose the cargo, they can borrow money, but at a high interest rate. Of course, this opens up having bounty hunters … You have to be Competent or above … becoming a bounty hunter allows you to chase debtors."*
+
+It builds on the [contract terms](companies-and-contracts.md#terms-rank-pays-and-each-company-treats-failure-its-own-way-mark-built-12-november-2026): valuable cargo asks a bond, never more than half your credits.
+
+**1. The Syndicate fronts the bond.**
+- A job's card shows when you're short: *"Bond 4,000 Cr · you can put down 1,500 · the Vane Syndicate will front the rest"*. Their man is in the saloon or the back room of any station with one. Anarchies have no back room; there, he's in the bar.
+- **The vig:** 20% of what they front, owed at once. Then **5% a jump** while it's unpaid. Jumps, not hours, as with deadlines, so closing the game never buries anyone.
+- **Delivered:** the bond comes back, and the Syndicate takes what it's owed out of it first. You've paid the vig for a job you couldn't otherwise take.
+- **Lost:** you owe the whole loan and the vig, growing each jump.
+- **How much:** up to three times your credits, and never more than a ceiling (say 20,000 Cr) in all. Over the ceiling, they won't lend.
+
+**2. Paying it back.**
+- Pay any part, any time, at a saloon or back room. The Syndicate's messages say what you owe and by when.
+- **Due within 10 jumps.**
+  - After that: a warning, then a penalty (+10%) every 3 jumps.
+  - After 5 more jumps: **hunters**.
+- **Working it off:** the Syndicate offers dirty runs that clear part of the debt (sealed crates in a shielded compartment, a passenger who mustn't be scanned). It's a way out, but it's crime.
+- **Bankruptcy** stays the last reset (below).
+
+**3. Where they reach.** This resolves the old line about "hiding in anarchies".
+- **Their hunters work where the law is thin:** anarchies, feudal worlds and multi-government systems. The frontier is the Syndicate's ground, and lawful police would arrest anyone collecting a debt with lasers.
+- **So a debtor is safest in the lawful core,** which is exactly where Vorg's big-paying danger runs don't go.
+
+**4. The hunters are characters** *(Mark: "if they're going to be computer-flown, they need to be in-game characters, not just random hunters")*.
+
+Not a spawn: a handful of named hunters in each galaxy, made the way the [world's characters](the-world.md#6-characters) and the [renowned pirates](pirate-career.md) are. The same hunters for everyone, from the seed and the clock.
+- **Each has a home, a ship, a patch and a temperament:**
+  - **Home:** a frontier station, where you find them in the saloon between jobs.
+  - **Ship:** second-hand and named, a Fer-de-Lance, a Mamba or an old Cobra, with no company colours.
+  - **Patch:** the frontier systems a few jumps around home.
+  - **Character:** a line of where they came from and a code they live by, as the renowned pirates have.
+- **Your file goes to whoever's patch you're in.** Fly into it in default and they come for you, by name: *"Ines Calloway. The Syndicate sends its regards. You can pay me, or you can pay me later, at a worse rate."* They hail first and offer terms once, then fight.
+- **They remember you:**
+  - **Beat one:** they eject, they're out of action for a while, and they come back with a grudge.
+  - **Pay one off in the saloon:** they're civil next time.
+  - **Lose to one:** they say so in their home bar.
+  - Kept per commander, on the server for signed-in commanders, as the renowned pirates' memory is.
+- **Their stories move on:**
+  - **The news reports their catches:** *"Calloway brought in the Even Keel at Ensoreus"*, naming the hunter and a computer-flown debtor, never a real commander.
+  - **The galaxy chart** marks a hunter's patch, as it does a renowned pirate's.
+- **In shared space,** each hunter is one ship that everyone sees, flown by the system's server, as the characters are.
+- **They want you alive.** Until disabling is built, a hunter who destroys you takes what they can: your hold, and credits up to the debt. Insurance still replaces the ship; the debt stays unless that cleared it.
+- **Member numbers:** the famous few hold callsigns from 002 to 100, as characters do, so nobody can take their names.
+
+**First drafts, for Mark's yes** (original names; the rest seeded from word lists, as the renowned pirates are):
+- **Ines Calloway, "Paper".**
+  - **Past:** a Bankers' Guild assessor until the Guild wrote off a debt she'd spent a year chasing.
+  - **Ship:** a Fer-de-Lance, *Settlement*.
+  - **Code:** she keeps every debt in a hand-written ledger, and always offers terms once.
+  - **Patch:** the feudal worlds nearest Lave, where new commanders first borrow.
+- **Old Brannock.**
+  - **Past:** a Mutual tug pilot who tows his debtors in alive, the only hunter who still does it the old way.
+  - **Ship:** a patched Cobra, *Tow Line*.
+  - **Code:** he won't take the file of a Mutual member: "Not my own." The Mutual's members find that out when they need it.
+- **The Lisle sisters.**
+  - **Who they are:** two Mambas, *Sooner* and *Later*. One talks, one doesn't.
+  - **Code:** they never split a fee and never split up. A debtor who sees one Mamba has about ten seconds before the second.
+
+**5. Chasing debtors is the Marshals' work** *(Mark, 12 November 2026)*: no separate bounty-hunter career. Deputy Marshals, from Competent, recover computer-flown debtors who skipped on a licensed lender's bond, as the American bail system works; real commanders are never hunted for debt by other players. See [become a Marshal: deputies and debtors](marshals-career.md#deputies-and-debtors-mark-12-november-2026). The Syndicate never goes to court: its own characters collect.
+
+**6. Two lenders.** *Merrow & Daughters*, licensed, fronts bonds for clean commanders at about 10%, the ship as collateral; a default goes to the Co-operative's court as a civil warrant, checked when you dock at a lawful station. Unpaid, the ship is impounded there: held with every upgrade until you pay (with a small daily storage fee), auctioned after 30 days, the balance back to you ([become a Marshal](marshals-career.md#deputies-and-debtors-mark-12-november-2026)). The Vane Syndicate lends to anyone, at the rates above, and sends its heavies.
+
+**Open questions:**
+1. The numbers: the vig, interest a jump, the ceiling, the due date.
+2. ~~Real commanders as quarry~~: never, for debt (Mark, 12 November 2026).
+3. ~~A lawful lender too~~: yes, Merrow & Daughters (above).
 
 ### The safety net
 

@@ -212,6 +212,7 @@ function firePlayerLaser() {
  * it's a serious crime: you're a Fugitive and the police launch at once.
  */
 export function playerHitStation() {
+  flight.startedFightAt = Date.now(); // a station never starts it
   const sinceWarning = flight.elapsed - stationWarnedAt;
   // No law in an anarchy, but the station still won't be shot at (Mark, 2 November 2026): one warning, then no docking.
   if (!hasLaw(currentSystem())) {

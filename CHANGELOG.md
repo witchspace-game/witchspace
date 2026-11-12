@@ -10,6 +10,13 @@ notice. Make a new heading for today if there isn't one, written like
 starting with `- `. Say what's different, not how it was done. Credit whoever
 reported it.
 
+## 12 November 2026
+
+- Rank with a company pays: Contractor +15% on every job, up to +75% for a Partner, and hazard pay from Contractor up, a flat sum for flying into danger whatever you carry (200 Cr into an anarchy at Contractor). Casual work pays as before. (Mark)
+- Valuable cargo asks a bond, back with the pay on delivery: never more than half your credits. (Mark)
+- Each company treats a lost or late cargo its own way. Vorg gives half your bond back if you were shot down ("You flew it"); the Mutual's pool covers its members, less a small excess; Hexon keeps the bond, takes a quarter off for each jump late, and drops you a rank for a second loss in a week. Lose a cargo in a fight you started, and nobody covers it. (Mark)
+- A good record buys one mistake: ten deliveries since your last failure halve what the next costs you in standing. (Mark)
+
 ## 11 November 2026
 
 - Trading has a proper trade window, like a real exchange: Buy and Sell open it, with the order book beside the form, Price and Amount with + and −, a slider with stops, Total, and one button. Placing a limit order is no longer fiddly, on a phone or a computer. A limit buy fills your hold at most, unless you switch on Fill to storage, when the rest waits at the station. (Mark)

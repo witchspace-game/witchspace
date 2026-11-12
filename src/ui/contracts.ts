@@ -21,6 +21,14 @@ import { $, cmdr, currentSystem, game, modern } from '../core';
 import type { DockTab } from '../core';
 import { player } from '../scene';
 
+/** What's in the pay: your rank's share, and danger pay (hazard pay for your rank and the cargo's danger bonus together). */
+function payParts(c: Commander, o: Contract): string {
+  const rank = standingName(standing(c, o.company));
+  const danger = (o.hazard ?? 0) + o.danger;
+  const parts = [o.rankBonus ? `+${o.rankBonus.toLocaleString()} as ${rank}` : '', danger ? `${danger.toLocaleString()} danger pay` : ''].filter(Boolean);
+  return parts.length ? ` (${parts.join(', ')})` : '';
+}
+
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
   showNewGame(): void;
@@ -297,7 +305,7 @@ export function renderContracts() {
       }
       const what = a.survey
         ? `Survey the moons of ${place(to)}<br><small>${left} · ${worldOf(to).moons.filter((_, i) => isSurveyed(c, to, `moon${i}`)).length} of ${worldOf(to).moons.length} surveyed${surveyDone(c, a) ? ' · hand in at any Wexley-Yorozu station' : ''} · ${a.pay.toLocaleString()} Cr</small>`
-        : `${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery</small>`;
+        : `${a.qty} t ${escapeHtml(cargoName(a))} → ${place(to)}<br><small>${left} · ${a.pay.toLocaleString()} Cr on delivery${a.bondPaid ? ` · your ${a.bondPaid.toLocaleString()} Cr bond with it` : ''}</small>`;
       return `<li class="${a.special ? 'special' : ''}${a.id === justTaken ? ' fresh' : ''}">${companyMark(a.company)} · ${what}
         <span class="actions">${k && where!.index !== here.index ? `<button data-course="${where!.index}">Set course</button>` : course}${sale}<button data-abandon="${a.id}" title="The company takes its cargo back, and remembers">Abandon</button></span></li>`;
     })
@@ -312,7 +320,7 @@ export function renderContracts() {
       const why = cannotTake(c, o, free);
       const fresh = o.posted !== undefined && now - o.posted < TICK;
       return `<li class="${o === sought ? 'fresh sought' : ''}">${companyMark(o.company)}${fresh ? ' <em class="posted">Just posted</em>' : ''}${o.rush ? ' <em class="risk">Rush</em>' : ''} · ${o.survey ? `Survey the moons of ${place(to)} <small>(${worldOf(to).moons.length}) · data to any Wexley-Yorozu station</small>` : `${o.qty} t ${goodName(o.good)} → ${place(to)}`}<br>
-        <small>within ${o.jumps} jump${o.jumps === 1 ? '' : 's'} · <b class="pay">${o.pay.toLocaleString()} Cr</b>${o.danger ? ` (${o.danger} danger bonus)` : ''}${o.needs !== 'Casual' ? ` · needs ${o.needs}` : ''}</small>
+        <small>within ${o.jumps} jump${o.jumps === 1 ? '' : 's'} · <b class="pay">${o.pay.toLocaleString()} Cr</b>${payParts(c, o)}${o.needs !== 'Casual' ? ` · needs ${o.needs}` : ''}</small>${o.bond ? `<br><small class="bond">Bond ${o.bond.toLocaleString()} Cr, back on delivery</small>` : ''}
         <span class="actions"><button data-take="${o.id}" ${why ? `disabled title="${escapeHtml(why)}"` : ''}>Take</button></span>${why ? `<small class="why">${escapeHtml(why)}</small>` : ''}</li>`;
     })
     .join('');
