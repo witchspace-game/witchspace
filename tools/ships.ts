@@ -581,11 +581,11 @@ export function buildPage(s: ShipFile, names: Record<string, string>) {
   // Every commander already flies a Cobra Mk III, so hers is a repaint (Mark, 12 Nov; src/site/build.ts REPAINT).
   const repaint = s.id === 'cobra-mk3';
   return {
-    card: { ship: s.id, kicker: 'Build yours', title: `Spec your ${s.name}`, sub: repaint ? 'Her colour, her glow, her name and her kit, priced as you go. The next shipyard repaints the one you fly.' : 'Her colour, her glow, her name and her fit-out, priced as you go. Order her, and she’s waiting at the yard.' },
+    card: { ship: s.id, kicker: 'Build yours', title: `Spec your ${s.name}`, sub: repaint ? 'Her colour, her glow, her name and her kit, priced as you go. The next shipyard offers to repaint the one you fly.' : 'Her colour, her glow, her name and her fit-out, priced as you go. Order her, and she’s waiting at the yard.' },
     schema: [{ '@type': 'WebApplication', name: `${s.name} configurator`, applicationCategory: 'GameApplication', about: { '@type': 'CreativeWork', name: s.name, url: `https://witchspace.org.uk/ships/${s.id}/` }, isPartOf: { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' } }],
     title: `Build your ${s.name} · Ships · Witchspace`,
     description: repaint
-      ? `Spec your own ${s.name}: her colour, glow, trim, name and kit, priced as you go. Every commander flies one, so the next shipyard repaints yours in this spec.`
+      ? `Spec your own ${s.name}: her colour, glow, trim, name and kit, priced as you go. Every commander flies one, so the next shipyard offers to repaint yours in this spec.`
       : `Spec your own ${s.name}: her colour, glow, trim, name and fit-out, priced as you go. Order her, and the shipyard has her ready for your deposit when you next dock.`,
     content: `<section class="section ship-page build-page" style="--hull:${esc(s.style?.lineColor ?? '#7fd4ff')}">
   <a class="back" href="/ships/${esc(s.id)}/">← The ${esc(s.name)}</a>
@@ -601,7 +601,7 @@ export function buildPage(s: ShipFile, names: Record<string, string>) {
     <div class="build-panel">
       <p class="kicker">${esc(roleLine(s))}</p>
       <h1>Spec your ${esc(s.name)}</h1>
-      <p class="lede">${s.concept ? `${esc(s.manufacturer ?? 'Her makers')} build her to order. Spec her here, and the deposit is one tap at the next shipyard you dock at.` : repaint ? `You already fly one. Spec her here, and the next shipyard you dock at repaints her in it.` : `Spec her here, and she’s waiting at the next shipyard you dock at.`}</p>
+      <p class="lede">${s.concept ? `${esc(s.manufacturer ?? 'Her makers')} build her to order. Spec her here, and the deposit is one tap at the next shipyard you dock at.` : repaint ? `You already fly one. Spec her here, and the next shipyard you dock at offers to repaint her in it.` : `Spec her here, and she’s waiting at the next shipyard you dock at.`}</p>
       <div id="build-models"></div>
       <nav class="build-steps" id="build-steps" aria-label="Steps"></nav>
       <div id="build-options"></div>

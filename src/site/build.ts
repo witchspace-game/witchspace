@@ -33,7 +33,7 @@ const REPAINT = def.id === 'cobra-mk3';
 /** She as she leaves the factory: the repaint's starting point (the yard quotes against your actual paint). */
 const FACTORY = { colour: def.style.lineColor, glow: 'standard' as GlowId, trim: null };
 const repaintOf = (s: Spec) => repaintQuote(def, { colour: s.colour, glow: s.glow, trim: s.trim }, FACTORY);
-/** What the spec adds that a Cobra fresh from the factory hasn't got, at the station's price. */
+/** What the spec adds that a Cobra fresh from the factory hasn't got, at the station's price. Luxuries come only with a new hull (Game dev). */
 function kitList(s: Spec): { name: string; price: number }[] {
   const k = fitScale(def);
   const free = standardKit(def);
@@ -41,7 +41,6 @@ function kitList(s: Spec): { name: string; price: number }[] {
     ...(s.laser !== standardLaser(def) ? [{ name: PLAYER_LASERS[s.laser].name, price: PLAYER_LASERS[s.laser].price }] : []),
     ...(s.rear ? [{ name: `${PLAYER_LASERS[s.rear].name} at the rear`, price: PLAYER_LASERS[s.rear].price }] : []),
     ...s.upgrades.filter((id) => !free.includes(id)).map((id) => UPGRADES.find((e) => e.id === id)!).filter(Boolean).map((e) => ({ name: e.name, price: e.price })),
-    ...s.luxuries.map((id) => LUXURIES.find((l) => l.id === id)!).filter(Boolean).map((l) => ({ name: l.name, price: l.price })),
   ].map((x) => ({ ...x, price: Math.round(x.price * k) }));
 }
 const kitTotal = (s: Spec) => kitList(s).reduce((sum, x) => sum + x.price, 0);
@@ -156,7 +155,7 @@ function options(): string {
         <div class="build-choices">${choice('data-two-tone', '', !spec.trim, 'One colour', 'Included')}${choice('data-two-tone', '1', Boolean(spec.trim), 'Two-tone: the fine lines in a second colour', cr(TRIM_PRICE))}</div>
         ${spec.trim ? swatches('data-trim', spec.trim) : ''}${def.geometry.details ? '' : '<p class="build-note">This hull has few fine lines, so the trim is subtle.</p>'}`;
     case 'aboard':
-      return `<h2>Aboard <span>comfort and showing off: nothing that flies or fights better</span></h2><div class="build-ticks">${ORDERABLE_LUXURIES.map((l) => tick('data-lux', l.id, spec.luxuries.includes(l.id), l.name, cr(l.price), l.blurb)).join('')}</div>`;
+      return `<h2>Aboard <span>${REPAINT ? 'with a new hull, not a repaint' : 'comfort and showing off: nothing that flies or fights better'}</span></h2><div class="build-ticks">${ORDERABLE_LUXURIES.map((l) => tick('data-lux', l.id, spec.luxuries.includes(l.id), l.name, cr(l.price), l.blurb)).join('')}</div>`;
     case 'fit':
       return `<h2>Her laser</h2><div class="build-choices">${LASERS.map((id) => choice('data-laser', id, spec.laser === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>
         <h2>Rear laser</h2><div class="build-choices">${choice('data-rear', '', !spec.rear, 'None', '—')}${LASERS.map((id) => choice('data-rear', id, spec.rear === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>
@@ -184,6 +183,7 @@ function orderStep(): string {
   const prices = REPAINT
     ? `<p class="build-order-total"><span>Repaint your ${escapeHtml(def.name)}</span><b>${cr(repaintOf(spec))}</b></p>
     ${kit.length ? `<p class="build-order-total kit"><span>Fit at any station: ${kit.map((x) => escapeHtml(x.name)).join(' · ')}</span><b>${cr(kitTotal(spec))}</b></p>` : ''}
+    ${spec.luxuries.length ? `<p class="build-order-new">Aboard comes with a new hull, not a repaint: ${spec.luxuries.map((id) => escapeHtml(LUXURIES.find((l) => l.id === id)?.name ?? id)).join(' · ')}.</p>` : ''}
     <p class="build-order-new">Or a new one from the yard: ${cr(total)}. Yards don’t sell her outright yet.</p>`
     : `<p class="build-order-total"><span>Price</span><b>${cr(total)}</b></p>`;
   return `<h2>Her name <span>on her papers, her manual and your clips. 24 letters at most.</span></h2>
@@ -251,7 +251,7 @@ function note(): string {
   return def.concept
     ? `Nothing is paid here. Dock at any shipyard and your spec is there: the deposit is one tap, in credits. ${escapeHtml(def.manufacturer ?? 'The yard')} then finish her for you, in about ${days} days. ${where}`
     : REPAINT
-      ? `Nothing is paid here. At the next shipyard, the yard repaints your ${escapeHtml(def.name)} in this spec. Kit is on your list at the station. ${where}`
+      ? `Nothing is paid here. At the next shipyard, the yard offers to repaint your ${escapeHtml(def.name)} in this spec. Kit is on your list at the station. ${where}`
       : `Nothing is paid here. Shipyards will sell the ${escapeHtml(def.name)} outright soon; your spec waits at the yard until they do. ${where}`;
 }
 
@@ -439,7 +439,7 @@ async function order() {
   }
   const total = quote(def, spec);
   if (REPAINT) {
-    say.innerHTML = `<b>Saved for the yard.</b> At the next shipyard, the yard repaints your ${escapeHtml(def.name)} in this spec. Kit is on your list at the station.${account ? ' It’s waiting on any device you’re signed in on.' : signedIn() ? ' It’s in this browser; your account didn’t answer, so save again later to have it on your other devices too.' : ' It’s in this browser. Sign in below to have it on your other devices too.'}`;
+    say.innerHTML = `<b>Saved for the yard.</b> At the next shipyard, the yard offers to repaint your ${escapeHtml(def.name)} in this spec. Kit is on your list at the station.${account ? ' It’s waiting on any device you’re signed in on.' : signedIn() ? ' It’s in this browser; your account didn’t answer, so save again later to have it on your other devices too.' : ' It’s in this browser. Sign in below to have it on your other devices too.'}`;
     say.classList.add('done');
     button.textContent = 'Saved ✓';
     return;
