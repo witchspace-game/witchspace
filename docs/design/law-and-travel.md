@@ -188,7 +188,7 @@ Today a murder costs at most 1,500 Cr (a Fugitive's 500 and a warrant's 1,000, i
 - Fight the police and lose, and the insurer won't pay and the bank won't lend to a criminal. **That leaves the sharks.**
 - **Bounty hunters** start appearing in systems you visit after a few missed payments, more and nastier as the debt grows. They fly unmarked, often second-hand ships, so you can't tell who's hunting you until they open fire.
 - **Ways out of debt:** pay up, keep to the lawful core where the sharks' hunters don't work (see the Vane Syndicate, below), or fight the hunters off, which means fighting your own debt.
-- **Multiplayer:** players can take the sharks' contracts as bounty hunters.
+- **Multiplayer:** debtors are never hunted by other players; Deputy Marshals chase computer-flown debtors ([become a Marshal](marshals-career.md#deputies-and-debtors-mark-12-november-2026)).
 - **Lender names** must be original (no names from the Elite novels). Placeholders: *Merrow & Daughters* (bank), *the Vane Syndicate* (sharks). Better names welcome.
 
 ### The Vane Syndicate: big contracts, borrowed bonds and bounty hunters *(Mark, 12 November 2026; proposed)*
@@ -251,21 +251,14 @@ Not a spawn: a handful of named hunters in each galaxy, made the way the [world'
   - **Who they are:** two Mambas, *Sooner* and *Later*. One talks, one doesn't.
   - **Code:** they never split a fee and never split up. A debtor who sees one Mamba has about ten seconds before the second.
 
-**5. Bounty hunters: a career from Competent** (the rung below the Marshals at Dangerous).
-- **Getting papers:** at Competent, a hunter approaches you in a saloon on the Syndicate's behalf: *"You handle yourself."* Calloway, if you're near Lave. You get **hunter's papers**.
-- **The debtors are characters too:** a trader who borrowed after a bad run, with a ship's name, a route and a story. Their contract gives what they owe, where they were last seen and why they borrowed. You're paid about 15% of what's recovered if they're destroyed, and more for bringing them in alive once disabling exists.
-- **Some debtors deserve better.** A debtor can be talked to over the radio:
-  - **Let them go,** and the Syndicate marks it on your papers.
-  - **Pay part of their debt yourself,** and they remember it.
-  - It's a choice, not a quota.
-- **It's grey work.** Shooting a debtor in lawful space is a crime like any other, because the Syndicate isn't the law. Hunt on the frontier.
-- **Real commanders in debt (shared space):** past the hunters stage, a real debtor could appear as a contract for hunters in shared space. **Mark to decide:** a debtor isn't a criminal, and "name the doers, never player victims" argues against phone alerts or news. Suggested: the contract appears only for hunters in the same frontier system, with no alerts and no feed, and never in lawful space.
-- **Paperwork with the law:** Syndicate work doesn't bar you from the Marshals. Killing a clean commander still does.
+**5. Chasing debtors is the Marshals' work** *(Mark, 12 November 2026)*: no separate bounty-hunter career. Deputy Marshals, from Competent, recover computer-flown debtors who skipped on a licensed lender's bond, as the American bail system works; real commanders are never hunted for debt by other players. See [become a Marshal: deputies and debtors](marshals-career.md#deputies-and-debtors-mark-12-november-2026). The Syndicate never goes to court: its own characters collect.
+
+**6. Two lenders.** *Merrow & Daughters*, licensed, fronts bonds for clean commanders at about 10%, the ship as collateral; a default goes to the Co-operative's court as a civil warrant, checked when you dock at a lawful station. The Vane Syndicate lends to anyone, at the rates above, and sends its heavies.
 
 **Open questions:**
 1. The numbers: the vig, interest a jump, the ceiling, the due date.
-2. Real commanders as quarry, as above.
-3. Whether a lawful lender (*Merrow & Daughters*) also fronts bonds for clean commanders at modest interest, as section 7 proposes, so the Syndicate is the choice of the desperate.
+2. ~~Real commanders as quarry~~: never, for debt (Mark, 12 November 2026).
+3. ~~A lawful lender too~~: yes, Merrow & Daughters (above).
 
 ### The safety net
 
