@@ -6,7 +6,8 @@ import { sfx } from '../audio/sound';
 import { boomAt } from '../audio/spatial';
 import { shipById } from '../content/ships';
 import { hasEquipment, isWorking, rollEquipmentDamage, rollFragileDamage, saveCommander, type Commander } from '../game/commander';
-import { checksClearance, hasLaw, legalStatus, recordCrime } from '../game/law';
+import { checksClearance, hasLaw, legalStatus, noteOffence, offenceWords, recordCrime } from '../game/law';
+import type { Offence } from '../game/commander';
 import { NpcShip } from '../game/npc';
 import { combatRating, killPoints, pointsNote, rightOn, type Foe } from '../game/rating';
 import { POLICE_LASER } from '../game/weapons';
@@ -144,18 +145,18 @@ export function damagePlayer(amount: number, from?: NpcShip): boolean {
  * police, attacking the station) also bring a Marshals warrant under Modern
  * rules, which follows you to every system with a government.
  */
-export function becomeFugitive(serious = false) {
+export function becomeFugitive(serious = false, what = 'Attacking the police') {
   const c = cmdr();
   if (!hasLaw(currentSystem())) return;
   if (!identified()) {
     // Running dark: seen, not known. Police who saw it come after the ship anyway.
-    unpinnedCrime('fugitive', serious);
+    unpinnedCrime('fugitive', serious, what);
     if (ofRole('police').some((p) => p.obj.position.distanceTo(player.obj.position) < POLICE_SEE)) flight.defiedPolice = true;
     return;
   }
   const hadWarrant = c.warrant;
   const was = isFugitive();
-  recordCrime(c, 'fugitive', serious);
+  onRecord(recordCrime(c, 'fugitive', serious, what));
   flight.surrenderTimer = null;
   if (c.warrant && !hadWarrant) {
     flash('Co-operative Marshals warrant issued', 2.5);
@@ -174,18 +175,32 @@ export function becomeFugitive(serious = false) {
  */
 export function shotAPod() {
   const c = cmdr();
-  if (!identified()) return unpinnedCrime('fugitive', true);
-  if (hasLaw(currentSystem())) return becomeFugitive(true);
+  if (!identified()) return unpinnedCrime('fugitive', true, 'Shooting an escape pod');
+  if (hasLaw(currentSystem())) return becomeFugitive(true, 'Shooting an escape pod');
   if (c.difficulty !== 'modern' || c.warrant) return;
   c.warrant = true;
+  onRecord(noteOffence(c, 'Shooting an escape pod', 'fugitive', true));
   flash("The pod's beacon reported it · Co-operative Marshals warrant issued", 3);
   scheduleMarshals();
 }
 
+/**
+ * An offence on the rap sheet gets the flight recorder's moment of it (it joins the fight's clip, if there's
+ * a fight), so the record can show what happened. Linked once the clip is cut.
+ */
+function onRecord(o: Offence | null) {
+  if (!o) return;
+  void main.keepCombat({ kind: 'crime', text: o.what }, 20, 4).then((m) => {
+    if (!m || !game.commander) return;
+    o.moment = m.id;
+    saveCommander(cmdr());
+  });
+}
+
 export function becomeOffender(message: string, unknown = !identified()) {
-  if (unknown) return unpinnedCrime('offender', false);
+  if (unknown) return unpinnedCrime('offender', false, offenceWords(message));
   if (legalStatus(cmdr()) !== 'clean') return;
-  recordCrime(cmdr(), 'offender');
+  onRecord(recordCrime(cmdr(), 'offender', false, offenceWords(message)));
   flash(message, 3);
 }
 
@@ -276,10 +291,11 @@ export function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
     // Killing police or an innocent trader is a serious crime. Under Classic
     // rules, as in 1984, a trader only counts if the station sees it happen;
     // under Modern, only if anyone saw (the victim can't tell anyone now).
-    if (npc.role !== 'trader') becomeFugitive(true);
+    const killed = `Destroying ${npc.role === 'trader' ? 'a trader' : npc.role === 'police' ? 'a police ship' : npc.role === 'marshal' ? 'a Marshals ship' : `a ${npc.def.name}`}`;
+    if (npc.role !== 'trader') becomeFugitive(true, killed);
     else if (c.difficulty === 'classic') {
-      if (inSafeZone(npc.obj.position)) becomeFugitive(true);
-    } else if (witnessed(npc.obj.position, npc)) becomeFugitive(true);
+      if (inSafeZone(npc.obj.position)) becomeFugitive(true, killed);
+    } else if (witnessed(npc.obj.position, npc)) becomeFugitive(true, killed);
     else flash('No witnesses · but its cargo is stolen goods', 3);
   }
   saveCommander(c);
@@ -355,7 +371,7 @@ export function playerHitNpc(npc: NpcShip, damage: number) {
     // The doorstep, not the law: no crime, but the militia remembers (youFiredOnTheApproach).
   } else if (npc.guard) {
     if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on company security · you are an OFFENDER');
-  } else if (npc.role === 'police' || npc.role === 'marshal') becomeFugitive();
+  } else if (npc.role === 'police' || npc.role === 'marshal') becomeFugitive(false, npc.role === 'police' ? `Firing on a police ${npc.def.name}` : 'Firing on the Marshals');
   else if (npc.role === 'trader') {
     if (witnessed(npc.obj.position, npc)) becomeOffender('Firing on a trader · you are an OFFENDER');
     else {
@@ -625,8 +641,9 @@ export function identified(): boolean {
   return npcs.some((n) => (n.role === 'police' || n.role === 'marshal') && n.obj.position.distanceTo(player.obj.position) < HULL_READ);
 }
 
-function unpinnedCrime(status: 'offender' | 'fugitive', serious: boolean) {
-  flight.unpinned = { status: flight.unpinned?.status === 'fugitive' ? 'fugitive' : status, serious: serious || Boolean(flight.unpinned?.serious), at: flight.elapsed };
+function unpinnedCrime(status: 'offender' | 'fugitive', serious: boolean, what: string) {
+  const worse = !flight.unpinned || (status === 'fugitive' && flight.unpinned.status !== 'fugitive');
+  flight.unpinned = { status: flight.unpinned?.status === 'fugitive' ? 'fugitive' : status, serious: serious || Boolean(flight.unpinned?.serious), at: flight.elapsed, what: worse ? what : flight.unpinned!.what };
   flash(`Seen, but not identified · an unidentified ${player.def.name}`, 2.5);
 }
 
@@ -682,8 +699,8 @@ export function toggleTransponder() {
   flight.unpinned = null; // switched on quietly, or too late: the trail goes cold
   if (watched && (crime || flight.defiedPolice)) {
     flight.defiedPolice = false;
-    if (crime?.status === 'fugitive') becomeFugitive(crime.serious);
-    else becomeOffender(crime ? 'Transponder on, near the scene · you are the suspect · OFFENDER' : 'Transponder on · you ignored a police hail · OFFENDER');
+    if (crime?.status === 'fugitive') becomeFugitive(crime.serious, `${crime.what}, running dark`);
+    else becomeOffender(crime ? `${crime.what}, running dark · you are the suspect · OFFENDER` : 'Transponder on · you ignored a police hail · OFFENDER');
     return;
   }
   if (flight.hail) radio('police', `${currentSystem().name} police`, 'Transponder read · thank you, Commander', { flash: 2, urgent: true, line: 'Transponder read · thank you, Commander' });

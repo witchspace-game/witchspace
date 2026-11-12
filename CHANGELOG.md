@@ -18,6 +18,10 @@ reported it.
 - Cancelling or changing an order at another market travels at the speed of news, as placing it did: it can still fill at its old price until the message gets there. (Mark)
 - The ship's log tells you when a buy order fills, not only a sell. (Mark)
 - A new rank with a company is its own message, however you earned it, and a notification if you've switched them on: "You're Contractor with Wexley-Yorozu now. Special orders will find you." (Mark)
+- Choose what the flight recorder keeps: a switch for each kind of moment in the flight log (fights, your ship lost, Legends, the Marshals, crimes, trade runs, surveys). Surveys start off. Moments you keep by hand, and photos, always save. (A player on the ideas board)
+- Letting moments go on a computer: an ✕ when you hover over one, and Select to let several go at once. (A player on the ideas board)
+- A convoy's ships each have their own name, many of them named after people as fishing boats are (Tom Treloar, Yusra Carver), not one name numbered II, III, IV. (Mark)
+- Your record: on the Station screen, by your legal status. Each offence, when and where, what it made you, and the flight recorder's clip of it while that's still in your flight log; and how long until each system's record cools. (A player on the ideas board)
 - The companies' special assignments reach your phone even on days you play: seeing one in the game no longer stops the notification. (Mark)
 
 ## 10 November 2026

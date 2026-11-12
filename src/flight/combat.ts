@@ -224,13 +224,13 @@ export function playerHitStation() {
   }
   if (!isFugitive() && sinceWarning > STATION_WARNING_MEMORY) {
     stationWarnedAt = flight.elapsed;
-    recordCrime(cmdr(), 'offender');
+    recordCrime(cmdr(), 'offender', false, 'Firing on the station');
     flash('Cease fire, Commander · this is your only warning · you are an OFFENDER', 3);
     return;
   }
   if (!isFugitive() && sinceWarning < STATION_GRACE) return; // time to let go of the trigger
   if (!isFugitive() || !cmdr().warrant) {
-    becomeFugitive(true);
+    becomeFugitive(true, 'Attacking the station');
     flash('Station under attack · Police launching', 2.5);
   }
   if (modern() && !dockingBanned()) refuseDocking();

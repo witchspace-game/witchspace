@@ -29,7 +29,7 @@ import type { LoggedMoment } from '../game/flightLog';
 
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
-  becomeFugitive: (serious?: boolean) => void;
+  becomeFugitive: (serious?: boolean, what?: string) => void;
   becomeOffender: (message: string, unknown?: boolean) => void;
   rateKill: (npc: NpcShip | "crime") => string;
   hitFeedback: (strength: number) => void;
@@ -189,7 +189,7 @@ function commanderDestroyed(r: Remote, byMe: boolean, collision = false) {
   }
   const c = cmdr();
   flash(`Commander ${r.name} destroyed · ${main.rateKill('crime')}`, 2.5);
-  main.becomeFugitive(true); // killing a clean commander is a serious crime: no rating
+  main.becomeFugitive(true, 'Destroying a clean commander'); // killing a clean commander is a serious crime: no rating
   saveCommander(c);
   // Kept, as a pirate kill is: probably the best fight the game can make. Never by name: "A commander".
   void main.keepCombat({ kind: 'kill', text: 'Shot down another commander', subject: 'Commander' }, 20, 4);

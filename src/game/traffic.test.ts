@@ -172,10 +172,19 @@ describe('names', () => {
     }
   });
 
-  it("a convoy's followers are her sisters", () => {
+  it("a convoy's ships each have a name of their own, never the lead's with a number", () => {
     const t0 = Date.UTC(2026, 10, 1, 12);
-    const v = galaxy(0).flatMap((s) => voyages(s, t0, t0 + 3600_000)).find((x) => x.id.endsWith(':c1'))!;
-    expect(v.name).toMatch(/ II$/);
+    for (const s of galaxy(0).slice(0, 80)) {
+      const list = voyages(s, t0, t0 + 3600_000);
+      for (const v of list.filter((x) => /:c\d+$/.test(x.id))) {
+        const lead = list.find((x) => x.id === v.id.replace(/:c\d+$/, ''));
+        expect(v.name).not.toMatch(/ (I|V|X)+$|\d$/);
+        if (lead) expect(v.name.startsWith(lead.name)).toBe(false);
+      }
+      const convoys = new Map<string, string[]>();
+      for (const v of list) convoys.set(v.id.replace(/:c\d+$/, ''), [...(convoys.get(v.id.replace(/:c\d+$/, '')) ?? []), v.name]);
+      for (const names of convoys.values()) expect(new Set(names).size).toBe(names.length);
+    }
   });
 
   it('anarchies have more independents than company space', () => {

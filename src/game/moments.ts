@@ -4,7 +4,7 @@
 // pictures, so its title, description and tags are true. The flight log, the
 // death replay and (later) the channel agent all write from here.
 
-export type MomentKind = 'death' | 'marshals' | 'legend' | 'discovery' | 'trade' | 'kill' | 'kept' | 'photo';
+export type MomentKind = 'death' | 'marshals' | 'legend' | 'discovery' | 'trade' | 'kill' | 'crime' | 'kept' | 'photo';
 
 export interface MomentEvent {
   kind: MomentKind;
@@ -28,7 +28,7 @@ export interface MomentContext {
 }
 
 /** The order a moment is named by when several happen in one clip: the most remarkable first. */
-const WEIGHT: Record<MomentKind, number> = { death: 6, marshals: 5, legend: 4, discovery: 3, trade: 2.5, kill: 2, kept: 1, photo: 0 };
+const WEIGHT: Record<MomentKind, number> = { death: 6, marshals: 5, legend: 4, discovery: 3, trade: 2.5, kill: 2, crime: 1.5, kept: 1, photo: 0 };
 
 /** How remarkable a moment is (its lead event's weight): This trip shows the best first. */
 export const momentWeight = (events: MomentEvent[]) => (events.length ? WEIGHT[leadEvent(events).kind] : 0);
@@ -70,6 +70,9 @@ export function momentTitle(events: MomentEvent[], ctx: MomentContext): string {
       break;
     case 'kill':
       title = kills.length > 1 ? `${plural(kills.length, 'kill')} in one fight${at}` : `${lead.subject ?? 'Pirate'} down${at}`;
+      break;
+    case 'crime':
+      title = `${lead.text.split(' · ')[0]}${at}`;
       break;
     case 'trade':
       // "Ran medicine into the plague at Xeaqu: +4,200 Cr" (game/tradeMoments.ts).

@@ -24,6 +24,7 @@ import { FlightRecorder, type Clip } from '../game/recorder';
 import { RecorderWatch } from '../game/recorderWatch';
 import { addMoment, attachTrack, deleteMoment, type LoggedMoment } from '../game/flightLog';
 import { readTrack, TrackRecorder, trackBlob, type Pose } from '../game/track';
+import { recordsKind } from '../game/recorderKinds';
 import { momentDescription, momentTags, momentTitle, whoIs, type MomentContext, type MomentEvent } from '../game/moments';
 import { closeReplay, openReplay, renderFlightLog, setOutsideView, shareMoment } from '../ui/flightLog';
 import { shareVideo as shareVideoPlain, KillCam } from '../ui/killCam';
@@ -327,6 +328,7 @@ export function noticeTrades(): boolean {
 }
 
 async function keepTrade(subject: string, credits: number, docking: boolean) {
+  if (!recordsKind('trade')) return;
   const event: MomentEvent = { kind: 'trade', text: `${subject}: +${Math.round(credits).toLocaleString('en-GB')} Cr`, subject, credits };
   let m = docking ? await keepMoment(event, 14, 0) : null;
   const ctx = momentContext();
@@ -376,7 +378,7 @@ const sameEvents = (a: MomentMeta, b: MomentMeta): MomentMeta => ({ events: [...
 /** Keep the seconds around now in the flight log. Resolves with the logged moment (or null: no recorder, or nothing to keep). */
 export function keepMoment(event: MomentEvent, before: number, after: number, events: MomentEvent[] = [event]): Promise<LoggedMoment | null> {
   const ctx = momentContext();
-  if (!ctx) return Promise.resolve(null);
+  if (!ctx || !recordsKind(event.kind)) return Promise.resolve(null); // a kind you've switched off in the flight log
   return recorder.keep({ events, ctx }, before, after, sameEvents).then((clip) => {
     if (!clip) return null;
     let m = logged.get(clip);
@@ -397,6 +399,8 @@ const FIGHT_MAX = 60;
 let combatClip: { start: number; last: number; events: MomentEvent[]; moment: Promise<LoggedMoment | null> } | null = null;
 
 export function keepCombat(event: MomentEvent, before: number, after: number): Promise<LoggedMoment | null> {
+  // Switched off: not kept on its own, but a fight already being kept is still the moment it happened in.
+  if (!recordsKind(event.kind)) return combatClip && recorder.time - combatClip.last <= FIGHT_GAP ? combatClip.moment : Promise.resolve(null);
   const t = recorder.time;
   if (!combatClip || t - combatClip.last > FIGHT_GAP || t + after - combatClip.start > FIGHT_MAX) combatClip = { start: t - before, last: t, events: [], moment: Promise.resolve(null) };
   const f = combatClip;
