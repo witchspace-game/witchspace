@@ -61,7 +61,7 @@ Mark: *"They could order her and the order could be sat in a queue on the websit
 - Each entry: her name, hull, colour and glow, home port, and where she's got to: *Specced, saving up* → *On order at <yard>* → *Ready at the yard* → *Delivered*.
 - Only registered ships whose owners ticked *"Let the galaxy talk about her"* ([shared-space.md, her name](shared-space.md#step-4a-registering-your-ship-mark-9-november-2026)): that keeps out spam and covers permission.
 - Newest first, filters by hull and colour; *"Spec one like her"* opens the configurator with her spec.
-- **The list is the server's** (Game dev), from the yard records it already keeps (`server/src/yard.ts`) and the account's spec: `GET /yard/orders`, public, cached, nothing in it but the above. **The page is the site's** (Website).
+- **The list is the server's** (Game dev), from the yard records it already keeps (`server/src/yard.ts`) and the account's spec: `GET /yard/book` ([the API](shared-space.md#step-4a-registering-your-ship-mark-9-november-2026)), public, cached, nothing in it but the above. **The page is the site's** (Website).
 - Later, perhaps: a save-up bar for signed-in players with a cloud save.
 - **The configurator's last step, now** (Website): not *"Fly her now"*, which suggests you'll fly the ship you specced, but *"Start flying free: earn her paint in the game"*.
 

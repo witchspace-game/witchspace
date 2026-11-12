@@ -201,9 +201,16 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
   - **Wanted notices** ([law-and-travel.md](law-and-travel.md#ship-registry-and-flags)): *"Wanted at Leesti: the Cobra Last Orders."*
   - **The news and the live feed** ([live-feed.md](live-feed.md#named-ships-mark-12-november-2026-proposed)): *"The Brass Neck made the first survey of Xeesle."*, *"The Last Orders left the yard at Lave in Zaonce Neon."*
 - **The yard's order book** on the site ([ship-configurator.md](ship-configurator.md#the-yards-order-book-mark-12-november-2026-proposed)).
+- **The API** (agreed with Website, 12 November 2026; Website builds its pages against stubs of these while the Worker side is built, and both go out together after Mark's deploy):
+  - `GET /names/check?name=` → `{ ok: true }` or `{ ok: false, why: 'taken' | 'reserved' | 'rude' | 'held', suggestion?: string }`. Public, rate-limited per network hash (it's for live checking as someone types), and it says nothing about who holds a name.
+  - **Claiming at sign-up:** the sign-in call that sets the callsign (email code → callsign) takes optional `shipName` and `talk: boolean`. Errors come back per field, `{ errors: { callsign?: why, shipName?: why } }`, so each shows beside its own box; the callsign can succeed while the name is refused.
+  - `PATCH /me/ship` with `{ name?, talk? }`: rename her or change the tick. A rename is logged in the registry (old name, new name, when), and the old name goes into its 90-day hold.
+  - `GET /me` adds `ship: { name: string | null, number: string, talk: boolean }`.
+  - `GET /yard/book?hull=&colour=&before=&limit=` → `[{ name, hull, colour, glow, trim, port, status: 'specced' | 'ordered' | 'ready' | 'delivered', yard?, at, spec }]`, newest first (`before` is an `at` for paging, `limit` at most 50). Public, cached about 60 s. Only registered ships with `talk: true`. `spec` is the `Spec` that *"Spec one like her"* opens.
+  - **Where an entry comes from:** *specced* is the account's website spec (`PUT /me/spec`), so a spec saved on the site joins the book only for a registered account that ticked *talk*; *ordered* and *ready* are the yard's order records (`server/src/yard.ts`); *delivered* is the handover, kept for 30 days on the book.
 - **Size** (on top of registration, step 1 below, which is still proposed):
   - the name registry, reservations, release and hold, the consent flag, and claiming at registration: about 1½ days, Worker deploy;
-  - the order book's list on the server: about 1 day, Worker deploy (Website builds the page);
+  - the order book's list on the server (`GET /yard/book`): about 1 day, Worker deploy (Website builds the page: about 3 days with the naming step and the callsign page, alongside);
   - named ships in the saloon, pirates' grudges, wanted notices, the news and the feed: about 2 days. The saloon and the news are worked out in the browser from the seed and the clock, so this needs a small server list of ticked ships and what they've done lately, read like the feed.
   About 4½ days in all.
 
