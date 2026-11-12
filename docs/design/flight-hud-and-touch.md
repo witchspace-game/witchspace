@@ -81,6 +81,15 @@ From Mark and Marketing's walkthrough of every docked screen (launch/docked-audi
 - **The Market on a phone:** the game's neon look, not the grey terminal. The list first; tap a good and it opens as a screen of its own, with *‹ All goods* to go back: its price and news, its candles, the best place to sell it, and the trade form. The order book and trades fold under one line, *Order book and trades · Show* (Mark, 1 November 2026: the candles were folded away and nobody saw them; [trading](trading.md#1a-the-exchange-needs-work-mark-1-november-2026)).
 - **Kit, grouped** (all screens): Combat, Trade, Exploration and Ship (game/kit.ts), repairs first. In each group what you can buy here comes first, then what you own (✓). What you can't afford says how much more, in amber; what isn't sold here folds to one line saying why (tech level, explorer rank, the law) and opens out on a tap. The list went from about 2,300 px to 850 on a phone.
 
+## The docked screens redrawn *(Mark, 12 November 2026; built)*
+
+- **Your ship on top of the Station screen.** On a phone the panel covered the berth, so the Station screen leaves a window in it (about 236 px): your own hull, live, in her own paint, turning slowly; drag sideways to turn her, while up and down still scroll. Over her: maker and role, her name, her own name and edition, her setup (lasers, running lights), and **Manual** and **Photo**. On a computer she's beside the panel already, so the panel shows just her name and setup.
+- **Tiles, not rows.** Fuel, missiles (+1 at a time, and a small − to sell one back), cargo with a bar (amber when full) and what most of it is, and the running lights. A **Commander card** under them: callsign (tap to rename), the rules, the legal badge (tap for your record), the rank with a bar to the next, and the explorer on one line. Survey data on one row, with what's in it on the title. Where you're going rides on the Launch button: **Launch → Anarlaqu**.
+- **The owner's manual, full screen,** with her large and live at the top (drag to turn, pinch to zoom), then her name, who it's prepared for, **Photograph her** and **Controls**, three numbers from her file and her story. She's drawn only while it's open.
+- **The system first in the header** ("Leesti · Maxwell Terminal", the screen under it), and on a phone the Neo-vector/1984 switch is a small square in the header row, not a band across the top; the title screen keeps the full switch.
+- **No pills.** Buttons, tags and cards are square (0–2 px corners), with a thin border and a glow; the main action on a screen (Launch, Photograph her, Buy and Sell in the trade window) has two clipped corners.
+- **Drawing only what's seen.** On a phone, a docked screen that covers the berth (or the Station screen scrolled past her) draws nothing new: the last frame stays on the canvas.
+
 ## As built
 
 - `src/game/jobs.ts`: the next step, deadlines and route fit, pure and tested (`jobs.test.ts`).

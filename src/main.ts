@@ -88,7 +88,7 @@ import { renderControlsCard, showControlsCardOnce, toggleControlsCard } from './
 import { initKeyboard } from './ui/keyboard';
 import { newsLine } from './game/newsLines';
 import { answerAdvert, answerChart, boardSeen, initContracts, markInbox, payCommissions, plotCourse, recruiter, showWantedChart } from './ui/contracts';
-import { booth, closeBooth, cobraIndex, shipIndex, showShip, showroom, updateShowroom } from './ui/showroom';
+import { booth, closeBooth, cobraIndex, shipIndex, showShip, showroom, showroomIdle, updateShowroom } from './ui/showroom';
 import { boardShip, checkSignedOver, checkSiteSpec, showOwnShip } from './ui/shipyard';
 import { initMoney, markDocked } from './ui/money';
 import { initSaloon } from './ui/saloon';
@@ -1163,8 +1163,11 @@ function frame(now?: number) {
     else recorder.pause();
   } else {
     lens.aim(camera, null, 0, 0);
-    updateShowroom(dt);
-    render(showroom.scene);
+    // On a phone, a docked screen that covers her: nothing new to draw (the last frame stays), so nothing is drawn.
+    if (!showroomIdle() || game.photoPending) {
+      updateShowroom(dt);
+      render(showroom.scene);
+    }
     recorder.pause();
   }
   if (game.photoPending) {

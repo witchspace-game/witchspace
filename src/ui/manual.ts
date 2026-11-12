@@ -17,6 +17,8 @@ import { keyboardInCard, refreshKeyboards, setKeyDescriptions } from './keyboard
 import { flash } from './hud';
 import { escapeHtml } from './escape';
 import { $, cmdr, game } from '../core';
+import { closeManualView, openBooth, openManualView } from './showroom';
+import { showOwnShip } from './shipyard';
 import SHOTS from '../content/manualShots.json';
 import * as THREE from 'three';
 
@@ -91,15 +93,23 @@ export function openManual(def: ShipDef) {
   const roll = Math.round(THREE.MathUtils.radToDeg(MAX_ROLL_ERROR));
   // An edition's owner gets a manual made theirs: her own cover, and her edition's page (the edition delivery pack).
   const papers = ed ? papersFor(ed, c!.paint!.edition!.number, def.name) : null;
-  const cover = papers
-    ? `<section class="man-cover man-edition-cover" style="--hull:${c!.paint!.colour}">
-      <p class="meta">${escapeHtml(def.manufacturer ?? 'Witchspace')} · ${escapeHtml(papers.edition)} ${papers.no}</p>
-      <h3>${c!.paint!.name ? `“${escapeHtml(c!.paint!.name)}”` : escapeHtml(`${papers.edition} ${papers.no}`)}</h3>
-      <p>The owner’s manual, prepared for Commander ${escapeHtml(c!.name)}</p>
-    </section>`
-    : `<section class="man-cover" style="--hull:${mine && c!.paint ? c!.paint.colour : def.style.lineColor}">
-      <p class="meta">${escapeHtml(def.manufacturer ?? 'Witchspace')} · ${escapeHtml(def.role)}</p>
-      <h3>${escapeHtml(title)}</h3>
+  // The cover (Mark, 12 November 2026): her, live and large, at the top (drag to turn, pinch to zoom; ui/showroom.ts
+  // draws her into .man-hero), then her name, who the manual's for, and three numbers from her file.
+  const hull = mine && c!.paint ? c!.paint.colour : def.style.lineColor;
+  const named = papers ? (c!.paint!.name ? `“${c!.paint!.name}”` : `${papers.edition} ${papers.no}`) : title;
+  const metaLine = papers ? `${def.manufacturer ?? 'Witchspace'} · ${papers.edition} ${papers.no}` : `${def.manufacturer ?? 'Witchspace'} · ${def.role}`;
+  const cover = `<div class="man-hero" aria-hidden="true"><p class="man-hero-hint">${isTouch ? 'Drag to turn · pinch to zoom' : 'Drag to turn · scroll to zoom'}</p></div>
+    <section class="man-cover${papers ? ' man-edition-cover' : ''}" style="--hull:${hull}">
+      <p class="meta">${escapeHtml(metaLine)}</p>
+      <h3>${escapeHtml(named)}</h3>
+      ${c ? `<p class="man-for">The owner’s manual, prepared for Commander ${escapeHtml(c.name)}</p>` : ''}
+      <div class="man-acts">${mine ? '<button type="button" class="primary cut man-photo">Photograph her</button>' : ''}<button type="button" class="man-controls">Controls</button></div>
+      <div class="man-stats">
+        <div><span>Top speed</span><b>${def.stats.maxSpeed}</b></div>
+        <div><span>Shields</span><b>${def.stats.shields}</b></div>
+        <div><span>Hull</span><b>${def.stats.hull}</b></div>
+      </div>
+      <h4>Her story</h4>
       <p>${escapeHtml(def.description)}</p>
     </section>`;
   const yours = papers
@@ -178,8 +188,23 @@ ${PHONE.map(([k, v]) => `        <dt>${numbered('flight', k)}</dt><dd>${v}</dd>
     });
   $('#manual').hidden = false;
   $('#manual').scrollTop = 0;
+  document.body.classList.add('manual-open'); // the screens underneath step aside: she's drawn through a window
+  openManualView(def.id);
+  $('#manual').style.setProperty('--hull', hull);
+  $('#manual-body').querySelector('.man-photo')?.addEventListener('click', () => {
+    closeManual();
+    showOwnShip();
+    openBooth();
+  });
+  $('#manual-body').querySelector('.man-controls')!.addEventListener('click', () => $('#manual').querySelector(isTouch ? '#man-phone' : '#man-desk')?.scrollIntoView({ behavior: 'smooth' }));
 }
-$('#manual .manual-close').addEventListener('click', () => ($('#manual').hidden = true));
+
+/** Close the manual, and stop drawing her in it. */
+export function closeManual() {
+  $('#manual').hidden = true;
+  closeManualView();
+}
+$('#manual .manual-close').addEventListener('click', closeManual);
 $('#manual').addEventListener('click', (e) => {
   const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('.man-toc a');
   if (!a) return;

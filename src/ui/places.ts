@@ -73,7 +73,7 @@ const tabName = (b: HTMLElement) => {
 export function updateDockHead() {
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]')];
   const active = tabs.find((b) => b.dataset.tab === game.dockTab);
-  $('.dock-where').textContent = game.commander ? `${stationName(currentSystem()).name}\u00a0·\u00a0` : '';
+  $('.dock-where').textContent = game.commander ? `${currentSystem().name}\u00a0·\u00a0${stationName(currentSystem()).name}` : '';
   $('.dock-which').textContent = game.dockTab === 'money' ? 'Money' : active ? tabName(active) : '';
   const news = tabs.some((b) => !b.hidden && b.dataset.tab !== game.dockTab && b.querySelector('.tab-badge'));
   $('.dock-dot').hidden = !news;

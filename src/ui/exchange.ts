@@ -162,7 +162,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
             <button type="button" class="ex-storage-toggle" data-storage="1" aria-pressed="false" hidden title="Buy more than your hold takes: the rest waits in storage at this station until you collect it"><i></i>Fill to storage</button>
             <dl class="ex-est"></dl>
             <p class="ex-avail"></p>
-            <button class="ex-submit"></button>
+            <button class="ex-submit cut"></button>
             <button class="ex-cancel-order" hidden>Cancel order</button>
             <p class="ex-fnote"></p>
             <p class="ex-msg" aria-live="polite"></p>

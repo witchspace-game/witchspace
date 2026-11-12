@@ -7,7 +7,7 @@ import { fineDue, legalStatus, redeemImpound, scansCargo, settle, systemKey } fr
 import { isTouch } from '../game/input';
 import { claimCallsign } from './accountPanel';
 import { cleanName } from '../../server/src/protocol';
-import { combatRating, ratingProgress } from '../game/rating';
+import { combatRating, nextRating, ratingPoints } from '../game/rating';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from '../render/fittings';
 import { KIT_GROUPS, KIT_NAMES, kitGroup, type KitGroup } from '../game/kit';
 import { laserLocked, production } from '../game/shipyard';
@@ -21,6 +21,7 @@ import { flash } from './hud';
 import { systemAt } from '../galaxy/generate';
 import { commodityById } from '../economy/commodities';
 import { escapeHtml } from './escape';
+import { editionById, editionNo } from '../content/editions';
 import { $, cmdr, currentSystem, game } from '../core';
 import { player } from '../scene';
 import { openManual } from './manual';
@@ -99,7 +100,7 @@ export function showFittings(c: Commander | null) {
 /** Change your callsign at a station: the name becomes a little form until you save or cancel. */
 function startRename() {
   const c = cmdr();
-  const dd = $('#cmdr .rename').parentElement!;
+  const dd = $('#cmdr-card .cc-top');
   dd.innerHTML = `<form class="rename-form"><input maxlength="24" value="${escapeHtml(c.name).replace(/"/g, '&quot;')}" aria-label="Callsign" /> <button type="submit">Save</button> <button type="button" data-cancel>Cancel</button></form>`;
   const input = dd.querySelector('input')!;
   input.focus();
@@ -121,14 +122,33 @@ function startRename() {
   });
 }
 
-/** What's in the hold, company cargo included, for the Station tab. */
-function holdList(c: Commander): string {
+/** What's in the hold, company cargo included, for the Station tab's cargo tile. */
+function holdItems(c: Commander): { t: number; name: string }[] {
   const own = Object.entries(c.cargo)
     .filter(([, q]) => q > 0)
-    .map(([id, q]) => `${q}${commodityById(id)?.unit === 't' ? ' t' : ' ' + commodityById(id)?.unit} ${escapeHtml(commodityById(id)?.name ?? id)}`);
-  const company = (c.contracts ?? []).filter((a) => !a.adrift).map((a) => `${a.qty} t ${escapeHtml(cargoName(a))} <small>(${escapeHtml(COMPANIES[a.company].name)}, for ${escapeHtml(destinationOf(a).name)})</small>`);
-  const all = [...own, ...company];
-  return all.length ? `<br><small class="hold-list">${all.join(' · ')}</small>` : '';
+    .map(([id, q]) => ({ t: q, name: commodityById(id)?.name ?? id }));
+  const company = (c.contracts ?? []).filter((a) => !a.adrift).map((a) => ({ t: a.qty, name: `${cargoName(a)} (${COMPANIES[a.company].name}, for ${destinationOf(a).name})` }));
+  return [...own, ...company];
+}
+
+/** Your ship at the top of the Station screen: maker and role, her name, her own name and edition, and her setup. */
+function renderShipWindow(c: Commander) {
+  const def = player.def;
+  const win = $('#ship-window');
+  win.style.setProperty('--hull', c.paint?.colour ?? def.style.lineColor);
+  win.querySelector('.sw-meta')!.textContent = [def.manufacturer, def.role].filter(Boolean).join(' · ');
+  win.querySelector('.sw-name')!.textContent = def.name;
+  const ed = c.paint?.edition ? editionById(c.paint.edition.id) : undefined;
+  const own = [c.paint?.name ? `“${c.paint.name}”` : '', ed ? `${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''].filter(Boolean).join(' · ');
+  const ownEl = win.querySelector<HTMLElement>('.sw-own')!;
+  ownEl.textContent = own;
+  ownEl.hidden = !own;
+  const kit = [
+    ...MOUNTS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`),
+    ...(c.paint?.luxuries.includes('black-light-lights') ? [c.paint.ghost ? 'Lights off' : 'Black-light'] : []),
+  ];
+  win.querySelector('.sw-kit')!.innerHTML = kit.map((k) => `<li>${escapeHtml(k)}</li>`).join('');
+  win.querySelector('.sw-hint')!.textContent = isTouch ? 'Drag to turn her' : 'Drag to turn her · scroll to zoom';
 }
 
 // Wanted here, the station says so first, with the way out (Mark, 31 October 2026: the Settle
@@ -207,7 +227,7 @@ export function renderDocked() {
   main.refreshFlightLog();
   const here = currentSystem();
   const st = stationName(here);
-  $('#dock-location').textContent = `${st.name} · ${here.name}`;
+  $('#dock-location').textContent = `${here.name} · ${st.name}`;
   $('#dock-location').title = st.honours ? `Named for ${st.honours}` : '';
   main.updateDockHead();
   // Company contracts are Modern work; Classic stays as 1984.
@@ -217,58 +237,92 @@ export function renderDocked() {
   if (game.dockTab === 'news') renderNews();
   // Docked somewhere new with the saloon still open: that station's regulars, not the last one's (Mark).
   if (game.dockTab === 'saloon') renderSaloon();
+  renderShipWindow(c);
+  // The Commander card (Mark, 12 November 2026): callsign (tap it to rename), the law (tap it for your record),
+  // the rank and how far to the next, and the explorer, on one card.
+  const status = legalStatus(c);
+  const legal = main.legalLabel();
+  const rank = combatRating(c.kills);
+  const next = nextRating(c.kills);
+  const from = ratingPoints(rank);
+  const toNext = next ? Math.max(0, Math.min(1, (c.kills - from) / (next.at - from))) : 1;
+  const left = next ? next.at - c.kills : 0;
+  const ex = exploreOf(c);
+  const firsts = main.myFirsts(here.galaxy);
+  const badge = `${escapeHtml(legal)}`;
+  $('#cmdr-card').innerHTML = `
+    <div class="cc-top"><button type="button" class="cc-name rename" title="Change your callsign">${escapeHtml(c.name)}</button><span class="cc-rules">${DIFFICULTIES[c.difficulty].name} rules</span>${
+      hasRecord(c) ? `<button type="button" class="badge rap-open${status === 'clean' ? '' : ' warn'}" title="Your record">${badge} ›</button>` : `<span class="badge${status === 'clean' ? '' : ' warn'}">${badge}</span>`
+    }</div>
+    <div class="cc-rank"><b>${rank}</b>${c.difficulty === 'classic' || !next ? '' : `<span>${left < 10 ? left.toFixed(1) : Math.ceil(left).toLocaleString()} to ${next.name}</span>`}</div>
+    ${c.difficulty === 'classic' ? '' : `<div class="meter" role="progressbar" aria-label="Towards ${next?.name ?? 'Elite'}" aria-valuenow="${Math.round(toNext * 100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${(toNext * 100).toFixed(1)}%"></i></div>`}
+    <p class="cc-explore"><b>${explorerRank(ex.points)}</b> · ${ex.visited.length} visited${firsts ? ` · ${firsts} first${firsts === 1 ? '' : 's'}` : ''}</p>`;
+  // Anything else worth a line: trails under way, and the explorer's tips.
   const rows: [string, string][] = [
-    ['Commander', `${escapeHtml(c.name)} <button type="button" class="rename" title="Change your callsign">Rename</button>`],
-    ['Rules', DIFFICULTIES[c.difficulty].name],
-    ['Ship', escapeHtml(player.def.name)],
-    // The Dark Edition's running lights, or the full ghost: just the hull (Mark).
-    ...(c.paint?.luxuries.includes('black-light-lights')
-      ? ([['Running lights', `${c.paint.ghost ? 'Off: the full ghost, just the hull' : 'Black-light, seen only close to'} <button type="button" class="small lights-toggle">${c.paint.ghost ? 'Lights on' : 'Go full ghost'}</button>`]] as [string, string][])
-      : []),
-    ['Cargo', `${+cargoTonnes(c).toFixed(1)} / ${cargoCapacity(c, player.def.stats.cargo)} t${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}${holdList(c)}`],
-    ['Lasers', MOUNTS.filter((m) => c.lasers[m]).map((m) => `${m[0].toUpperCase()}${m.slice(1)} ${PLAYER_LASERS[c.lasers[m]!].name.replace(' laser', '').toLowerCase()}`).join(' · ') || 'None'],
-    ['Legal status', `${main.legalLabel()}${hasRecord(c) ? ' <button type="button" class="small rap-open">Your record</button>' : ''}`],
-    ['Destination', c.target === null ? (isTouch ? 'None (choose on the Galaxy map)' : 'None (press G)') : systemAt(here.galaxy, c.target).name],
-    ['Rating', c.difficulty === 'classic' ? combatRating(c.kills) : ratingProgress(c.kills)],
-    ['Explorer', `${explorerRank(exploreOf(c).points)} · ${exploreOf(c).visited.length} system${exploreOf(c).visited.length === 1 ? '' : 's'} visited${main.myFirsts(here.galaxy) ? ` · ${main.myFirsts(here.galaxy)} first${main.myFirsts(here.galaxy) === 1 ? '' : 's'} on the chart` : ''}`],
     ...trailsUnderWay(c, here.galaxy).map((t): [string, string] => ['Trail', `${escapeHtml(t.title)} · ${t.found} of ${t.of} found · the clue points to ${escapeHtml(t.next)}`]),
     ...main.explorerTips(c, here),
   ];
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   renderWanted(c);
-  $('#cmdr .lights-toggle')?.addEventListener('click', () => {
-    if (!c.paint) return;
-    c.paint.ghost = !c.paint.ghost;
-    saveCommander(c);
-    showOwnShip();
-    flash(c.paint.ghost ? 'Running lights off · the full ghost' : 'Running lights on', 2);
-    renderDocked();
-  });
-  $('#cmdr .rename').addEventListener('click', () => startRename());
-  document.querySelector<HTMLButtonElement>('#cmdr .rap-open')?.addEventListener('click', () => void openRapSheet(c));
+  $('#cmdr-card .rename').addEventListener('click', () => startRename());
+  document.querySelector<HTMLButtonElement>('#cmdr-card .rap-open')?.addEventListener('click', () => void openRapSheet(c));
   document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
     flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);
     saveCommander(c);
     renderDocked();
   });
+  // Where you're going rides on the Launch button (Mark: "Launch → Anarlaqu").
+  document.querySelectorAll('.launch-label').forEach((l) => (l.textContent = c.target === null ? 'Launch' : `Launch → ${systemAt(here.galaxy, c.target).name}`));
 
+  // The tiles: fuel, missiles, cargo and the running lights, two by two.
+  const tile = (label: string, value: string, extra = '') => `<span class="t-label">${label}</span><span class="t-row"><b class="t-val">${value}</b>${extra}</span>`;
+  const full = '<span class="t-ok">✓ Full</span>';
   // Fuel: top up to a full tank at the station.
   const missing = Math.round((fuelCapacity(c) - c.fuel) * 10) / 10;
-  const fuelCost = Math.round(missing * FUEL_PRICE * 10) / 10;
   const affordable = Math.min(missing, Math.floor((c.credits / FUEL_PRICE) * 10) / 10);
-  $('#fuel').innerHTML = `<span>Fuel <b>${c.fuel.toFixed(1)} / ${fuelCapacity(c)} LY</b></span>`;
-  const refuel = document.createElement('button');
-  refuel.textContent = missing <= 0 ? 'Full' : affordable < missing ? `${affordable.toFixed(1)} LY · ${(affordable * FUEL_PRICE).toFixed(1)} Cr` : `Refuel · ${fuelCost.toFixed(1)} Cr`;
-  refuel.disabled = missing <= 0 || affordable <= 0;
-  refuel.title = affordable < missing ? `Refuel as far as your credits allow` : `Fill the tank`;
-  refuel.addEventListener('click', () => {
-    c.credits = Math.round((c.credits - affordable * FUEL_PRICE) * 10) / 10;
-    c.fuel = Math.round((c.fuel + affordable) * 10) / 10;
-    saveCommander(c);
-    sfx.beep();
-    renderDocked();
-  });
-  $('#fuel').append(refuel);
+  const lyNow = Number.isInteger(c.fuel) ? `${c.fuel}` : c.fuel.toFixed(1);
+  $('#fuel').innerHTML = tile('Fuel', `${lyNow} / ${fuelCapacity(c)} LY`, missing <= 0 ? full : '');
+  if (missing > 0) {
+    const refuel = document.createElement('button');
+    refuel.textContent = affordable <= 0 ? 'No credits' : `${affordable < missing ? `+${affordable.toFixed(1)} LY` : 'Fill'} · ${(Math.round(affordable * FUEL_PRICE * 10) / 10).toFixed(1)} Cr`;
+    refuel.disabled = affordable <= 0;
+    refuel.title = affordable < missing ? 'Refuel as far as your credits allow' : 'Fill the tank';
+    refuel.addEventListener('click', () => {
+      c.credits = Math.round((c.credits - affordable * FUEL_PRICE) * 10) / 10;
+      c.fuel = Math.round((c.fuel + affordable) * 10) / 10;
+      saveCommander(c);
+      sfx.beep();
+      renderDocked();
+    });
+    $('#fuel .t-row').append(refuel);
+  }
+
+  // Cargo: how full, with a bar (amber when it's full), and what most of it is.
+  const used = +cargoTonnes(c).toFixed(1);
+  const room = cargoCapacity(c, player.def.stats.cargo);
+  const held = holdItems(c).sort((a, b) => b.t - a.t);
+  const top = held[0];
+  const rest = held.slice(1).reduce((s, h) => s + h.t, 0);
+  const line = top ? `${top.t} t ${escapeHtml(top.name)}${rest ? ` · ${+rest.toFixed(1)} t other` : ''}` : 'Empty';
+  $('#cargo-tile').innerHTML = `${tile('Cargo', `${used} / ${room} t`)}<span class="meter${used >= room ? ' full' : ''}"><i style="width:${room ? Math.min(100, (used / room) * 100).toFixed(1) : 0}%"></i></span><small class="t-sub">${line}${c.compartment ? ` · ${c.compartment.tonnes} t shielded` : ''}</small>`;
+  $('#cargo-tile').title = held.map((h) => `${h.t} t ${h.name}`).join('\n');
+
+  // The Dark Edition's running lights, or the full ghost: just the hull (Mark).
+  const lightsTile = $('#lights-tile');
+  const lights = Boolean(c.paint?.luxuries.includes('black-light-lights'));
+  lightsTile.hidden = !lights;
+  $('#cargo-tile').classList.toggle('wide', !lights);
+  if (lights) {
+    lightsTile.innerHTML = tile('Running lights', c.paint!.ghost ? 'Ghost' : 'Black-light', `<button type="button" class="lights-toggle" title="${c.paint!.ghost ? 'Running lights on: black-light, seen only close to' : 'Running lights off: the full ghost, just the hull'}">${c.paint!.ghost ? 'Lights' : 'Ghost'}</button>`);
+    lightsTile.querySelector('.lights-toggle')!.addEventListener('click', () => {
+      if (!c.paint) return;
+      c.paint.ghost = !c.paint.ghost;
+      saveCommander(c);
+      showOwnShip();
+      flash(c.paint.ghost ? 'Running lights off · the full ghost' : 'Running lights on', 2);
+      renderDocked();
+    });
+  }
 
   renderArrivals(here);
 
@@ -283,11 +337,10 @@ export function renderDocked() {
     const kept = data.filter((d) => forContract(c, d));
     const sellable = data.filter((d) => (wy || !d.report) && !kept.includes(d));
     const worth = sellable.reduce((sum, d) => sum + dataValue(d, here, wy), 0);
-    // Say what's in it (a tooltip doesn't show on a phone), and that a company station pays more.
-    const names = data.filter((d) => !kept.includes(d)).map((d) => d.name).join(', ');
     const keptLine = kept.length ? `${kept.map((d) => d.name).join(', ')}: kept for your Wexley-Yorozu survey contract` : '';
-    dataRow.innerHTML = `<span>Survey data <b>${data.length ? `${data.length} record${data.length === 1 ? '' : 's'}` : 'None'}</b>${data.length ? ` <small>${[escapeHtml(names), escapeHtml(keptLine), wy ? 'This is a Wexley-Yorozu station: data sells for 25% more here' : 'Wexley-Yorozu stations pay 25% more: look for them on the galaxy map'].filter(Boolean).join(' · ')}</small>` : ''}</span>`;
-    dataRow.title = data.length ? data.map((d) => `${d.name}: ${dataValue(d, here, wy)} Cr`).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
+    // One row (Mark: the hint was cut off on an iPhone). What's in it is on the title, and on a long press.
+    dataRow.innerHTML = `<span>Survey data <b>${data.length || 'none'}</b>${data.length ? ` <small>· ${wy ? 'W-Y pays 25% more here' : 'W-Y pays 25% more'}${kept.length ? ` · ${kept.length} kept for your contract` : ''}</small>` : ''}</span>`;
+    dataRow.title = data.length ? [...data.map((d) => `${d.name}: ${forContract(c, d) ? 'kept for your contract' : `${dataValue(d, here, wy)} Cr`}`), keptLine, wy ? 'This is a Wexley-Yorozu station: data sells for 25% more here' : 'Wexley-Yorozu stations pay 25% more: look for them on the galaxy map'].filter(Boolean).join('\n') : 'Fly low over planets, moons and the star to survey them, then sell the data at any station';
     const sell = document.createElement('button');
     sell.textContent = sellable.length ? `Sell · ${worth.toLocaleString()} Cr` : 'Nothing to sell';
     sell.disabled = !sellable.length;
@@ -333,42 +386,47 @@ export function renderDocked() {
     }
   }
 
-  // Missiles: top up the rails.
+  // Missiles: one more at a time, and a small − to sell one back (full price if bought on this visit).
   const rails = player.def.stats.missiles ?? 0;
   const short = rails - c.missiles;
-  const canAfford = Math.min(short, Math.floor(c.credits / MISSILE_PRICE));
-  $('#missile-row').innerHTML = `<span>Missiles <b>${c.missiles} / ${rails}</b></span>`;
-  const rearm = document.createElement('button');
-  rearm.textContent = short <= 0 ? 'Full' : `Buy ${canAfford || short} · ${(canAfford || short) * MISSILE_PRICE} Cr`;
-  rearm.disabled = short <= 0 || canAfford <= 0;
-  rearm.addEventListener('click', () => {
-    c.credits -= canAfford * MISSILE_PRICE;
-    c.missiles += canAfford;
-    boughtHere.missiles += canAfford;
-    saveCommander(c);
-    sfx.beep();
-    renderDocked();
-  });
-  const missileButtons = document.createElement('div');
-  missileButtons.className = 'buttons';
-  missileButtons.append(rearm);
-  $('#missile-row').append(missileButtons);
+  const mrow = $('#missile-row');
+  mrow.innerHTML = tile('Missiles', rails ? `${c.missiles} / ${rails}` : 'None', rails && short <= 0 ? full : '');
+  const mButtons = document.createElement('span');
+  mButtons.className = 't-buttons';
   if (c.missiles > 0) {
     const undo = boughtHere.missiles > 0;
     const back = undo ? MISSILE_PRICE : MISSILE_PRICE / 2;
     const sell = document.createElement('button');
-    sell.textContent = `Sell 1 · +${back} Cr`;
-    sell.title = undo ? 'Bought here: full refund' : 'Sells for half price';
+    sell.className = 'minus';
+    sell.textContent = '−';
+    sell.setAttribute('aria-label', `Sell one missile, +${back} Cr`);
+    sell.title = `Sell one · +${back} Cr${undo ? ' (bought here: full refund)' : ' (half price)'}`;
     sell.addEventListener('click', () => {
       c.credits += back;
       c.missiles -= 1;
       if (undo) boughtHere.missiles -= 1;
       saveCommander(c);
       sfx.beep();
+      flash(`Missile sold · +${back} Cr`, 2);
       renderDocked();
     });
-    missileButtons.append(sell);
+    mButtons.append(sell);
   }
+  if (short > 0) {
+    const rearm = document.createElement('button');
+    rearm.textContent = `+1 · ${MISSILE_PRICE} Cr`;
+    rearm.disabled = c.credits < MISSILE_PRICE;
+    rearm.addEventListener('click', () => {
+      c.credits -= MISSILE_PRICE;
+      c.missiles += 1;
+      boughtHere.missiles += 1;
+      saveCommander(c);
+      sfx.beep();
+      renderDocked();
+    });
+    mButtons.append(rearm);
+  }
+  if (mButtons.childElementCount) mrow.querySelector('.t-row')!.append(mButtons);
 
   const list = $('#equip');
   list.innerHTML = '';

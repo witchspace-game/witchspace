@@ -119,7 +119,7 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin: 4px 0 12px; } /* two tidy rows rather than tabs hidden off the edge (Mark) */
 .tabs button { flex: 1 0 auto; font-size: 13px; padding: 5px 8px; white-space: nowrap; }
 @media (max-width: 440px) { .tabs button { padding: 7px 4px; font-size: 12.5px; overflow: visible; } .tabs .key { display: none; } .tab-badge-word { display: none; } }
-.tab-badge { display: inline-block; min-width: 16px; margin-left: 4px; padding: 0 4px; border-radius: 8px; color: #000; background: var(--accent); font-size: 10px; line-height: 16px; letter-spacing: 0; text-align: center; vertical-align: 1px; }
+.tab-badge { display: inline-block; min-width: 16px; margin-left: 4px; padding: 0 4px; border-radius: 2px; color: #000; background: var(--accent); font-size: 10px; line-height: 16px; letter-spacing: 0; text-align: center; vertical-align: 1px; }
 .tabs button.active { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
 .market-summary { margin: 0 0 8px; font-size: 14px; color: var(--dim); }
 .market-summary b { color: var(--fg); font-weight: 600; }
@@ -139,7 +139,7 @@ dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .docked .sys-link:hover { color: var(--accent); }
 #news-list li.over { opacity: 0.6; }
 #news-list li.quiet { border-left-color: var(--edge); background: none; color: var(--dim); }
-#news-list .yard-bar { display: flex; height: 6px; margin-top: 6px; border-radius: 3px; overflow: hidden; background: rgba(61, 255, 176, 0.12); }
+#news-list .yard-bar { display: flex; height: 6px; margin-top: 6px; border-radius: 2px; overflow: hidden; background: rgba(61, 255, 176, 0.12); }
 #news-list .yard-bar span { background: var(--accent); }
 #news-list .yard-bar .lost { background: repeating-linear-gradient(90deg, var(--amber) 0 3px, transparent 3px 6px); }
 #news-list b { display: block; font-weight: 600; font-size: 15px; }
@@ -208,7 +208,13 @@ button {
 }
 button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 button:disabled { opacity: 0.4; cursor: default; }
-button.primary { border-color: var(--accent); color: var(--accent); }
+button.primary { border-color: var(--accent); color: var(--accent); box-shadow: inset 0 0 12px rgba(61, 255, 176, 0.18), 0 0 10px rgba(61, 255, 176, 0.15); }
+/* Square everywhere (Mark, 12 November 2026: no pills). The main action on a screen (Launch, Photograph her, Buy)
+   gets two clipped corners; the cut edges are drawn in, since a clip takes the border with it. */
+.cut { --c: 9px; position: relative; clip-path: polygon(var(--c) 0, 100% 0, 100% calc(100% - var(--c)), calc(100% - var(--c)) 100%, 0 100%, 0 var(--c)); }
+.cut::before, .cut::after { content: ''; position: absolute; width: calc(var(--c) * 1.42); height: 1px; background: currentColor; opacity: 0.8; pointer-events: none; }
+.cut::before { left: -1px; top: calc(var(--c) - 1px); transform-origin: 0 0; transform: rotate(-45deg); }
+.cut::after { right: -1px; bottom: calc(var(--c) - 1px); transform-origin: 100% 100%; transform: rotate(-45deg); }
 
 .tribute a { color: var(--dim); }
 .tribute a:hover { color: var(--accent); }
@@ -486,7 +492,7 @@ body.retro #target-info .cargo { font-size: 8px; color: inherit; }
   -webkit-backdrop-filter: blur(6px);
   border: 1px solid rgba(61, 255, 176, 0.3);
   border-left: 3px solid var(--accent);
-  border-radius: 6px;
+  border-radius: 2px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 0 18px rgba(61, 255, 176, 0.1);
   pointer-events: none;
   z-index: 6;
@@ -518,7 +524,7 @@ body[data-state='dead'] #banner { top: 22%; padding: 0; font-size: clamp(28px, 6
   height: var(--s, 90px);
   margin: calc(var(--s, 90px) / -2) 0 0 calc(var(--s, 90px) / -2);
   border: 2px dashed var(--accent);
-  border-radius: 6px;
+  border-radius: 2px;
   opacity: 0.55;
   pointer-events: none;
   z-index: 4;
@@ -822,26 +828,26 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
 /* The drawer: a tab on the right edge; everything but the fight slides out from it. */
 #touch .touch-drawer { position: absolute; right: 0; top: max(8px, env(safe-area-inset-top)); display: flex; align-items: flex-start; pointer-events: none; }
 #touch .touch-drawer > * { pointer-events: auto; }
-#touch .drawer-tab { width: 40px; min-height: 44px; padding: 0; border-radius: 10px 0 0 10px; border-right: none; background: rgba(0, 10, 6, 0.55); font-size: 20px; line-height: 1; }
+#touch .drawer-tab { width: 40px; min-height: 44px; padding: 0; border-radius: 2px 0 0 2px; border-right: none; background: rgba(0, 10, 6, 0.55); font-size: 20px; line-height: 1; }
 #touch .touch-drawer.open .drawer-tab { border-color: var(--accent); color: var(--accent); }
 #touch .touch-actions {
   display: none; grid-template-columns: repeat(4, 56px); gap: 8px; padding: 8px;
-  margin-right: max(8px, env(safe-area-inset-right)); background: rgba(0, 12, 8, 0.78); border: 1px solid var(--edge); border-radius: 12px;
+  margin-right: max(8px, env(safe-area-inset-right)); background: rgba(0, 12, 8, 0.78); border: 1px solid var(--edge); border-radius: 2px;
 }
 #touch .touch-drawer.open { z-index: 2; } /* over the fire buttons while it is open */
 #touch .touch-drawer.open .touch-actions { display: grid; animation: drawer-in 0.16s ease-out; }
 #touch .touch-drawer.settling .touch-actions { pointer-events: none; }
 @keyframes drawer-in { from { transform: translateX(36px); opacity: 0; } }
 /* The camera: left of the drawer tab, out of the way of the thumbs. */
-#touch .photo-button { position: absolute; right: 52px; top: max(8px, env(safe-area-inset-top)); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
+#touch .photo-button { position: absolute; right: 52px; top: max(8px, env(safe-area-inset-top)); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 2px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
 /* Below the top edge, beside the next step: on an iPhone a downward slide from the top edge pulls
    down Notification Centre, and a web page can't stop it (Mark). */
-#touch .view-button { touch-action: none; -webkit-user-select: none; user-select: none; position: absolute; right: calc(112px + var(--view-shift, 0px)); top: calc(max(8px, env(safe-area-inset-top)) + 56px); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 10px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
+#touch .view-button { touch-action: none; -webkit-user-select: none; user-select: none; position: absolute; right: calc(112px + var(--view-shift, 0px)); top: calc(max(8px, env(safe-area-inset-top)) + 56px); width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 2px; background: rgba(0, 10, 6, 0.55); display: grid; place-items: center; }
 #touch .view-button svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; transition: transform 0.2s ease-out; }
 #touch .view-button.away { border-color: var(--amber); color: var(--amber); }
 /* Opens to the left of the big Dock/Jump button, never over it (Mark). */
 /* Centred on the button, so a glance is one short slide from under the thumb: up, down or across. */
-#touch .view-picker { position: absolute; right: calc(21px + var(--view-shift, 0px)); top: calc(max(8px, env(safe-area-inset-top)) + 1px); display: grid; grid-template-columns: repeat(3, 66px); grid-template-rows: repeat(3, 42px); gap: 6px; padding: 8px; border: 1px solid var(--edge); border-radius: 12px; background: rgba(2, 10, 8, 0.92); z-index: 6; }
+#touch .view-picker { position: absolute; right: calc(21px + var(--view-shift, 0px)); top: calc(max(8px, env(safe-area-inset-top)) + 1px); display: grid; grid-template-columns: repeat(3, 66px); grid-template-rows: repeat(3, 42px); gap: 6px; padding: 8px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(2, 10, 8, 0.92); z-index: 6; }
 #touch .view-picker[hidden] { display: none; }
 #touch .view-picker button { min-height: 0; padding: 0; font-size: 13px; letter-spacing: 0.06em; }
 #touch .view-picker [data-view='front'] { grid-area: 1 / 2; }
@@ -856,12 +862,12 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
 #touch .touch-drawer.open + .touch-context { display: none; }
 #touch .context-button { min-width: 76px; min-height: 44px; padding: 4px 10px; font-size: 13px; letter-spacing: 0.06em; border-color: var(--accent); color: var(--accent); background: rgba(0, 10, 6, 0.55); box-shadow: 0 0 10px rgba(61, 255, 176, 0.25); }
 #touch .context-button[hidden] { display: none; }
-#touch .ecm { min-width: 92px; min-height: 40px; padding: 4px 10px; border-radius: 999px; font-size: 12px; letter-spacing: 0.1em; background: rgba(0, 10, 6, 0.55); }
+#touch .ecm { min-width: 92px; min-height: 40px; padding: 4px 10px; border-radius: 2px; font-size: 12px; letter-spacing: 0.1em; background: rgba(0, 10, 6, 0.55); }
 @media (max-height: 500px) { body.touch #touch .ecm { min-width: 76px; min-height: 36px; } }
 
 /* The job strip: what you're doing and what's next. */
 #job { position: fixed; left: 16px; top: 44px; z-index: 5; max-width: min(460px, 44vw); }
-#job .job-main { display: block; width: 100%; text-align: left; padding: 6px 10px; border: 1px solid var(--edge); border-left: 3px solid var(--accent); border-radius: 6px; background: var(--panel); color: var(--fg); font: inherit; font-size: 14px; letter-spacing: 0.03em; text-transform: none; }
+#job .job-main { display: block; width: 100%; text-align: left; padding: 6px 10px; border: 1px solid var(--edge); border-left: 3px solid var(--accent); border-radius: 2px; background: var(--panel); color: var(--fg); font: inherit; font-size: 14px; letter-spacing: 0.03em; text-transform: none; }
 #job .job-line { display: block; }
 #job .job-next { display: block; margin-top: 2px; color: var(--dim); font-size: 12.5px; }
 #job.actionable .job-next { color: var(--accent); }
@@ -871,7 +877,7 @@ body.touch, body.touch canvas { touch-action: none; overscroll-behavior: none; }
 #job .job-buttons { display: flex; gap: 6px; margin-top: 4px; }
 #job .job-go, #job .job-more { padding: 2px 8px; font-size: 11px; min-height: 0; }
 #job .job-go { border-color: var(--accent); color: var(--accent); }
-#job .job-list { list-style: none; margin: 4px 0 0; padding: 6px 10px; border: 1px solid var(--edge); border-radius: 6px; background: var(--panel); font-size: 12.5px; }
+#job .job-list { list-style: none; margin: 4px 0 0; padding: 6px 10px; border: 1px solid var(--edge); border-radius: 2px; background: var(--panel); font-size: 12.5px; }
 #job .job-list li + li { margin-top: 5px; }
 #job .job-list small { display: block; color: var(--dim); }
 /* On a phone the strip is a small pill clear of the dashboard; tap it for the details. */
@@ -889,7 +895,7 @@ body.retro #job .job-next, body.retro #job .job-list small { font-size: 8px; }
 /* Top left, under the job strip and the log (radio.ts stack() measures them), as on the phone (Mark). */
 #radio-cards { position: fixed; left: 16px; top: max(44px, calc(var(--job-bottom, 0px) + 8px), calc(var(--radio-bottom, 0px) + 10px)); z-index: 12; display: flex; flex-direction: column; gap: 8px; width: min(400px, 34vw); }
 body:not([data-state='flying']) #radio-cards { display: none; }
-.rcard { --who: var(--fg); position: relative; overflow: hidden; padding: 10px 12px 12px; border: 1px solid var(--edge); border-left: 3px solid var(--who); border-radius: 8px; background: rgba(2, 10, 8, 0.94); box-shadow: -2px 0 10px -4px var(--who); animation: rcard-in 0.35s ease-out; }
+.rcard { --who: var(--fg); position: relative; overflow: hidden; padding: 10px 12px 12px; border: 1px solid var(--edge); border-left: 3px solid var(--who); border-radius: 2px; background: rgba(2, 10, 8, 0.94); box-shadow: -2px 0 10px -4px var(--who); animation: rcard-in 0.35s ease-out; }
 .rcard.r-station { --who: #ffb347; } .rcard.r-police { --who: #4aa8ff; } .rcard.r-pirate { --who: #ff5f57; }
 .rcard.r-mayday { --who: #ff8fa3; } .rcard.r-company { --who: var(--accent); } .rcard.r-news { --who: #c9b3ff; } .rcard.r-beacon { --who: #ffd98a; }
 .rcard.r-summary { --who: var(--fg); }
@@ -934,7 +940,7 @@ body.touch .rcard-dismiss { min-width: 44px; min-height: 44px; }
 body.retro .rcard { border-radius: 0; box-shadow: none; animation: none; }
 /* The heads-up (src/ui/headsUp.ts): an important line, up for a moment above the crosshair, then away
    into the radio's corner (Mark, 9 November 2026). Semi-transparent: space shows through it. */
-#heads-up { position: fixed; left: 50%; top: 17vh; z-index: 7; transform: translate(-50%, 0); max-width: min(560px, 78vw); padding: 10px 16px 11px 14px; border: 1px solid var(--edge); border-left: 3px solid var(--who, var(--fg)); border-radius: 6px; background: rgba(4, 14, 12, 0.72); box-shadow: -3px 0 14px -6px var(--who, var(--fg)); pointer-events: none; font-size: 15px; line-height: 1.4; color: var(--fg); text-shadow: 0 1px 2px #000; }
+#heads-up { position: fixed; left: 50%; top: 17vh; z-index: 7; transform: translate(-50%, 0); max-width: min(560px, 78vw); padding: 10px 16px 11px 14px; border: 1px solid var(--edge); border-left: 3px solid var(--who, var(--fg)); border-radius: 2px; background: rgba(4, 14, 12, 0.72); box-shadow: -3px 0 14px -6px var(--who, var(--fg)); pointer-events: none; font-size: 15px; line-height: 1.4; color: var(--fg); text-shadow: 0 1px 2px #000; }
 #heads-up b { display: block; margin-bottom: 2px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--who, var(--fg)); }
 #heads-up .rmark { stroke: var(--who, var(--fg)); }
 body.touch #heads-up { top: calc(max(8px, env(safe-area-inset-top)) + 64px); font-size: 14px; max-width: min(520px, 62vw); }
@@ -944,7 +950,7 @@ body:not([data-state='flying']) #radio { display: none; }
 #radio.quiet:not(.open):not(:hover) { opacity: 0; pointer-events: none; }
 #radio .radio-pill { display: none; }
 #radio .radio-panel { position: relative; }
-#radio .radio-list { list-style: none; margin: 0; padding: 6px 10px; border: 1px solid var(--edge); border-left: 3px solid var(--dim); border-radius: 6px; background: var(--panel); font-size: 12.5px; line-height: 1.35; }
+#radio .radio-list { list-style: none; margin: 0; padding: 6px 10px; border: 1px solid var(--edge); border-left: 3px solid var(--dim); border-radius: 2px; background: var(--panel); font-size: 12.5px; line-height: 1.35; }
 #radio.open .radio-list { max-height: 42vh; overflow-y: auto; padding-right: 30px; }
 #radio .radio-list li + li { margin-top: 4px; }
 #radio .radio-list time { color: var(--dim); font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -955,7 +961,7 @@ body:not([data-state='flying']) #radio { display: none; }
 #radio .rrow { display: flex; align-items: center; gap: 4px; width: 100%; min-height: 0; padding: 1px 0; border: 0; background: none; font: inherit; color: inherit; text-align: left; letter-spacing: 0; text-transform: none; }
 #radio .rrow b { flex: none; margin-right: 4px; }
 #radio .rrow-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#radio .rrow-count { flex: none; min-width: 16px; padding: 0 5px; border-radius: 8px; background: var(--fg); color: #000; font-size: 10.5px; font-weight: 700; text-align: center; }
+#radio .rrow-count { flex: none; min-width: 16px; padding: 0 5px; border-radius: 2px; background: var(--fg); color: #000; font-size: 10.5px; font-weight: 700; text-align: center; }
 #radio .rrow-more, #radio .rrow-card { flex: none; color: var(--dim); font-size: 11px; }
 #radio.open .rrow { cursor: pointer; min-height: 30px; }
 #radio .rthread { border-left: 0 !important; box-shadow: none !important; }
@@ -999,7 +1005,7 @@ body.touch #radio.quiet:not(.open) { opacity: 1; pointer-events: auto; }
 body.touch #radio .radio-pill { display: flex; align-items: center; gap: 6px; max-width: 100%; min-height: 32px; padding: 4px 10px; font-size: 11px; letter-spacing: 0.06em; background: var(--panel); border-color: var(--edge); color: var(--dim); white-space: nowrap; overflow: hidden; }
 body.touch #radio.unread .radio-pill { color: var(--fg); border-color: var(--accent); }
 body.touch #radio .radio-count:empty { display: none; }
-body.touch #radio .radio-count { min-width: 16px; padding: 0 4px; border-radius: 8px; color: #000; background: var(--accent); font-size: 10px; text-align: center; }
+body.touch #radio .radio-count { min-width: 16px; padding: 0 4px; border-radius: 2px; color: #000; background: var(--accent); font-size: 10px; text-align: center; }
 body.touch #radio .radio-ticker { display: none; overflow: hidden; text-overflow: ellipsis; text-transform: none; letter-spacing: 0.02em; color: var(--fg); }
 body.touch #radio.ticker .radio-ticker { display: inline; }
 body.touch #radio .radio-panel { display: none; }
@@ -1115,14 +1121,14 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
 /* --- The docked header, places and wallet (docs/design/flight-hud-and-touch.md) --- */
 .dock-head { display: flex; align-items: center; gap: 10px; }
 .dock-head h2 { flex: 1; min-width: 0; }
-.dock-place { display: none; }
+.dock-place, .look-mini { display: none; }
 .wallet-button { flex-shrink: 0; padding: 5px 12px; font-size: 14px; font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0.02em; }
 .wallet-button::before { content: ''; display: inline-block; width: 12px; height: 9px; margin-right: 7px; border: 1.5px solid currentColor; border-radius: 2px; vertical-align: -0.5px; }
 .wallet-button[aria-expanded='true'], .dock-place[aria-expanded='true'] { border-color: var(--accent); color: var(--accent); }
 .dock-places { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 12px; }
 .dock-places button { padding: 12px 4px; font-size: 14px; }
 .dock-places button[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); background: rgba(61, 255, 176, 0.1); }
-.wallet-sheet { margin: 8px 0 12px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 8px; background: rgba(0, 12, 8, 0.6); }
+.wallet-sheet { margin: 8px 0 12px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(0, 12, 8, 0.6); }
 .wallet-title { margin: 0 0 6px; color: var(--dim); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; }
 .wallet-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .wallet-list li { display: grid; gap: 1px; padding-left: 10px; border-left: 2px solid rgba(215, 255, 240, 0.3); }
@@ -1141,8 +1147,24 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
   .panel.docked { background: rgba(0, 10, 7, 0.9); } /* text over a glowing beam was hard to read */
   .panel.docked > .dock-head h2, .panel.docked > #dock-location, .panel.docked > .tabs { display: none; }
   .panel.docked > .dock-head { position: sticky; top: -12px; z-index: 2; margin: -12px -14px 8px; padding: 10px 14px 8px; background: rgb(0, 10, 7); border-bottom: 1px solid var(--edge); }
-  .dock-place { display: flex; flex: 1; min-width: 0; align-items: baseline; gap: 0; padding: 7px 10px; font-size: 14px; text-align: left; text-transform: none; letter-spacing: 0.02em; }
-  .dock-where { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); }
+  /* System first, then the station; the screen's name under them (Mark: "you can't see which system you're in"). */
+  .dock-place { display: flex; flex-wrap: wrap; flex: 1; min-width: 0; align-items: baseline; gap: 0; padding: 5px 10px 6px; font-size: 14px; line-height: 1.25; text-align: left; text-transform: none; letter-spacing: 0.02em; }
+  .dock-where { flex: 0 0 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--dim); font-size: 12px; }
+  /* The look switch, small and square in the header; the band across the top is for the title screen. */
+  body[data-state='docked'] #look { display: none; }
+  .panel.docked, .panel.docked.wide { max-height: calc(100vh - var(--controls-h, 48px) - 58px - max(10px, env(safe-area-inset-top))); }
+  .look-mini { display: inline-flex; align-self: stretch; align-items: center; padding: 0; font-size: 11px; letter-spacing: 0.06em; }
+  .look-mini span { padding: 0 6px; color: var(--dim); }
+  .look-mini .neo, body.retro .look-mini .r84 { color: #000; background: var(--accent); align-self: stretch; display: flex; align-items: center; }
+  body.retro .look-mini .neo { color: var(--dim); background: none; }
+  /* Your ship: a window onto the berth behind the panel, cut out of the panel's background (the hole follows the
+     window as you scroll: ui/showroom.ts measures it). Sideways drags turn her; up and down still scroll. */
+  .panel.docked.ship-shown { backdrop-filter: none; background: linear-gradient(to bottom, rgba(0, 10, 7, 0.9) 0, rgba(0, 10, 7, 0.9) var(--win-top, 0), transparent var(--win-top, 0), transparent var(--win-bot, 0), rgba(0, 10, 7, 0.9) var(--win-bot, 0)) local; }
+  .ship-window { height: 236px; margin: -8px -14px 10px; padding: 10px 14px 8px; grid-template-rows: auto 1fr auto; border-bottom: 1px solid var(--edge); background: linear-gradient(180deg, rgba(2, 8, 6, 0.8) 0%, transparent 30%, transparent 70%, rgba(2, 8, 6, 0.85) 100%); touch-action: pan-y; cursor: grab; }
+  .ship-window .sw-kit { align-self: end; margin-bottom: 14px; }
+  .sw-hint { display: block; position: absolute; left: 0; right: 0; bottom: 6px; margin: 0; text-align: center; font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); pointer-events: none; }
+  .tile button, .ship-actions button, #data-row button { min-height: 36px; }
+  .tile .minus { min-width: 36px; }
   .dock-which { flex-shrink: 0; font-weight: 600; }
   .dock-which::after { content: ' ▾'; color: var(--dim); }
   .dock-place[aria-expanded='true'] .dock-which::after { content: ' ▴'; }
@@ -1213,7 +1235,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 }
 /* With the trade computer beside the chart, its column is wider (later rules narrow it on smaller screens). */
 .ex.runs { grid-template-columns: 206px minmax(0, 1fr) 300px 236px; }
-.ex > * { background: var(--ex-card); border: 1px solid var(--ex-line); border-radius: 6px; min-width: 0; }
+.ex > * { background: var(--ex-card); border: 1px solid var(--ex-line); border-radius: 2px; min-width: 0; }
 .ex h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--ex-text); letter-spacing: 0; text-transform: none; }
 .ex .num { text-align: right; }
 .ex .up { color: var(--ex-up); }
@@ -1233,7 +1255,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-spark .down { stroke: var(--ex-down); }
 .ex-pair.hot .ex-sub { color: #f7a600; }
 .ex-market { display: flex; align-items: center; gap: 8px; padding: 8px 10px 4px; color: var(--ex-dim); font-size: 11.5px; }
-.ex-market select { flex: 1; min-width: 0; padding: 5px 6px; border: 1px solid var(--ex-line); border-radius: 4px; background: #0b0f14; color: var(--ex-text); font: inherit; font-size: 12.5px; }
+.ex-market select { flex: 1; min-width: 0; padding: 5px 6px; border: 1px solid var(--ex-line); border-radius: 2px; background: #0b0f14; color: var(--ex-text); font: inherit; font-size: 12.5px; }
 .ex-remote-note { margin: 2px 10px 8px; color: #f7a600; font-size: 11.5px; line-height: 1.4; }
 .ex-rest-toggle { width: 100%; margin-top: 8px; padding: 6px 10px; border: 0; border-top: 1px solid var(--ex-line); border-radius: 0; background: none; color: var(--ex-dim); font-size: 11.5px; text-align: left; cursor: pointer; }
 .ex-why { grid-column: 1 / -1; width: 100%; margin: 2px 0 0; color: #b7c0cc; font-size: 12.5px; line-height: 1.4; }
@@ -1246,11 +1268,11 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-sym { color: var(--ex-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ex-sym b { color: var(--ex-text); font-weight: 600; }
 .ex-sym em { display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--ex-down); vertical-align: middle; font-size: 0; }
-.ex-tag { margin-left: 5px; padding: 0 4px; border-radius: 3px; font-style: normal; font-size: 9px; font-weight: 600; vertical-align: 1px; }
+.ex-tag { margin-left: 5px; padding: 0 4px; border-radius: 2px; font-style: normal; font-size: 9px; font-weight: 600; vertical-align: 1px; }
 .ex-tag.short { background: rgba(46, 189, 133, 0.16); color: var(--ex-up); }
 .ex-tag.glut { background: rgba(246, 70, 93, 0.16); color: var(--ex-down); }
 /* Bitcoin (economy/bitcoin.ts): its row, the broker's two prices, and the honest line. */
-.ex-sym .ex-live { margin-left: 6px; padding: 0 4px; border: 1px solid rgba(247, 166, 0, 0.5); border-radius: 3px; color: var(--ex-gold); font-size: 9.5px; font-style: normal; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px; }
+.ex-sym .ex-live { margin-left: 6px; padding: 0 4px; border: 1px solid rgba(247, 166, 0, 0.5); border-radius: 2px; color: var(--ex-gold); font-size: 9.5px; font-style: normal; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; vertical-align: 1px; }
 .ex-quote { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 10px; font-size: 12.5px; }
 .ex-quote span { color: var(--ex-dim); }
 .ex-quote b { font-size: 15px; }
@@ -1273,7 +1295,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 
 /* Header */
 .ex-head { grid-area: head; display: flex; align-items: center; gap: 22px; padding: 10px 14px; flex-wrap: wrap; }
-.ex-event { padding: 4px 10px; border-radius: 4px; background: rgba(247, 166, 0, 0.12); color: var(--ex-gold); font-weight: 600; font-size: 12px; }
+.ex-event { padding: 4px 10px; border-radius: 2px; background: rgba(247, 166, 0, 0.12); color: var(--ex-gold); font-weight: 600; font-size: 12px; }
 .ex-event.hit { background: rgba(247, 166, 0, 0.22); box-shadow: inset 0 0 0 1px rgba(247, 166, 0, 0.5); }
 .ex-title { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 2px; }
 .ex-title b { font-size: 19px; font-weight: 700; }
@@ -1292,7 +1314,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-chart { grid-area: chart; display: flex; flex-direction: column; padding: 6px 8px 8px; min-height: 0; }
 .ex-chart-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; flex-wrap: wrap; }
 .ex-intervals { display: flex; gap: 2px; }
-.ex-intervals button { padding: 3px 8px; border: 0; border-radius: 4px; background: none; color: var(--ex-dim); font-size: 12px; }
+.ex-intervals button { padding: 3px 8px; border: 0; border-radius: 2px; background: none; color: var(--ex-dim); font-size: 12px; }
 .ex-intervals button.active { background: rgba(255, 255, 255, 0.08); color: var(--ex-text); }
 .ex-ohlc { color: var(--ex-dim); font-size: 11.5px; }
 .ex-ohlc span { margin-right: 6px; }
@@ -1321,15 +1343,15 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 
 /* Trade form */
 .ex-form { grid-area: form; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
-.ex-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border-radius: 6px; background: rgba(255, 255, 255, 0.04); }
-.ex-sides button { padding: 6px; border: 0; border-radius: 4px; background: none; color: var(--ex-dim); font-weight: 600; font-size: 13px; }
+.ex-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.04); }
+.ex-sides button { padding: 6px; border: 0; border-radius: 2px; background: none; color: var(--ex-dim); font-weight: 600; font-size: 13px; }
 .ex-sides button[data-side='buy'].active { background: var(--ex-up); color: #fff; }
 .ex-sides button[data-side='sell'].active { background: var(--ex-down); color: #fff; }
 .ex-ordertype { margin: 0; font-weight: 600; font-size: 12px; }
 .ex-types { display: flex; gap: 4px; }
 .ex-types button { flex: 1; padding: 4px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--ex-dim); font-size: 12.5px; font-weight: 600; }
 .ex-types button.active { color: var(--ex-text); border-bottom-color: var(--ex-gold); }
-.ex-price { display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--ex-line); border-radius: 4px; background: rgba(255, 255, 255, 0.03); }
+.ex-price { display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--ex-line); border-radius: 2px; background: rgba(255, 255, 255, 0.03); }
 .ex-price[hidden] { display: none; }
 .ex-price:focus-within { border-color: var(--ex-gold); }
 .ex-price span, .ex-price b { color: var(--ex-dim); font-size: 12px; font-weight: 500; }
@@ -1341,7 +1363,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-avail { margin: 0; color: var(--ex-dim); font-size: 11.5px; }
 .ex-avail b { white-space: nowrap; }
 .ex-avail b { color: var(--ex-text); font-weight: 500; }
-.ex-qty { display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--ex-line); border-radius: 4px; background: rgba(255, 255, 255, 0.03); }
+.ex-qty { display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--ex-line); border-radius: 2px; background: rgba(255, 255, 255, 0.03); }
 .ex-qty:focus-within { border-color: var(--ex-gold); }
 .ex-qty span { color: var(--ex-dim); font-size: 12px; }
 .ex-qty input { flex: 1; min-width: 0; padding: 8px 0; border: 0; background: none; color: var(--ex-text); font: inherit; font-size: 14px; text-align: right; outline: none; }
@@ -1349,20 +1371,20 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-slider { width: 100%; accent-color: var(--ex-up); margin: 0; }
 .ex-form.selling .ex-slider { accent-color: var(--ex-down); }
 .ex-ticks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
-.ex-ticks button { padding: 3px 0; border: 1px solid var(--ex-line); border-radius: 4px; background: none; color: var(--ex-dim); font-size: 11px; }
+.ex-ticks button { padding: 3px 0; border: 1px solid var(--ex-line); border-radius: 2px; background: none; color: var(--ex-dim); font-size: 11px; }
 .ex-ticks button:hover { color: var(--ex-text); border-color: #3a414b; }
 .ex-est { display: flex; flex-direction: column; gap: 3px; margin: 0; font-size: 12px; }
 .ex-est div { display: flex; justify-content: space-between; }
 .ex-est dt { color: var(--ex-dim); }
 .ex-est dd.warn { color: var(--ex-gold); }
-.ex-submit { padding: 9px; border: 0; border-radius: 4px; background: var(--ex-up); color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; }
+.ex-submit { padding: 9px; border: 0; border-radius: 2px; background: var(--ex-up); color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; }
 .ex-form.selling .ex-submit { background: var(--ex-down); }
 .ex-form .ex-submit:disabled { background: rgba(255, 255, 255, 0.08); color: var(--ex-dim); cursor: default; }
 .ex-msg { margin: 0; min-height: 1.3em; color: var(--ex-gold); font-size: 11.5px; }
 
 /* Your trades */
 .ex-trades { grid-area: trades; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); background: none; border: 0; gap: 8px; }
-.ex-feed, .ex-mine { padding: 10px; min-height: 0; overflow-y: auto; background: var(--ex-card); border: 1px solid var(--ex-line); border-radius: 6px; }
+.ex-feed, .ex-mine { padding: 10px; min-height: 0; overflow-y: auto; background: var(--ex-card); border: 1px solid var(--ex-line); border-radius: 2px; }
 .ex-feed td { border-top: 0; padding: 1px 4px; }
 .ex-feed tr.you td { background: rgba(247, 166, 0, 0.08); }
 .ex-feed em { font-style: normal; font-size: 10px; color: var(--ex-gold); }
@@ -1388,13 +1410,13 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 }
 
 /* The back room: darker, plainer, a little furtive. */
-.ex-backroom-toggle { margin: 8px 10px 2px; padding: 6px 10px; border: 1px dashed rgba(246, 70, 93, 0.5); border-radius: 4px; background: rgba(246, 70, 93, 0.08); color: #ff8a9a; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-align: left; }
-.ex-back { --ex-dim: #848e9c; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; letter-spacing: 0; color: #d9d2c8; background: #0d0a0b; border: 1px solid #2a1c1f; border-radius: 6px; padding: 14px 16px; }
+.ex-backroom-toggle { margin: 8px 10px 2px; padding: 6px 10px; border: 1px dashed rgba(246, 70, 93, 0.5); border-radius: 2px; background: rgba(246, 70, 93, 0.08); color: #ff8a9a; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-align: left; }
+.ex-back { --ex-dim: #848e9c; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; letter-spacing: 0; color: #d9d2c8; background: #0d0a0b; border: 1px solid #2a1c1f; border-radius: 2px; padding: 14px 16px; }
 .ex-back header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 10px; }
 .ex-back h3 { margin: 0; font-size: 20px; color: #ff8a9a; letter-spacing: 0; text-transform: none; }
 .ex-back header span { color: var(--ex-dim); }
 .ex-back .ex-heat { margin-left: auto; color: #f7a600; }
-.ex-back button { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: 12px; padding: 4px 9px; border-radius: 4px; }
+.ex-back button { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: 12px; padding: 4px 9px; border-radius: 2px; }
 .ex-back-close { border-color: #2a1c1f; }
 .ex-back table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .ex-back th { text-align: left; color: var(--ex-dim); font-weight: 400; font-size: 11.5px; padding: 4px 6px; }
@@ -1480,7 +1502,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   .ex-inline .ex-head { padding: 0; gap: 8px 14px; }
   .ex-inline .ex-head dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; width: 100%; }
   .ex-inline .ex-chart { padding: 0; }
-  .ex-inline .ex-canvas { flex: none; height: 220px; min-height: 0; border: 1px solid var(--ex-line); border-radius: 6px; }
+  .ex-inline .ex-canvas { flex: none; height: 220px; min-height: 0; border: 1px solid var(--ex-line); border-radius: 2px; }
   .ex-inline .ex-head dl { font-size: 12.5px; }
   .ex-inline .ex-head dt { font-size: 11.5px; }
   .ex-inline .ex-best { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label gain' 'where where' 'age age' 'actions actions'; gap: 6px 10px; padding: 12px; background: rgba(61, 255, 176, 0.04); font-size: 14px; }
@@ -1501,7 +1523,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   .ex-routes-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
   .ex-routes-head .ex-routes-close { padding: 8px 0; border: 0; background: none; color: var(--accent); font-size: 15px; }
   .ex-routes-intro, .ex-routes .ex-note { font-size: 13.5px; }
-  .ex-routes .ex-filter button { min-height: 36px; padding: 0 14px; font-size: 14px; border-radius: 18px; }
+  .ex-routes .ex-filter button { min-height: 36px; padding: 0 14px; font-size: 14px; border-radius: 2px; }
   .ex-run-card { padding: 12px; gap: 6px; border-color: var(--edge); }
   .ex-run-top > b { font-size: 17px; color: var(--accent); }
   .ex-routes .ex-run-good { font-size: 16px; }
@@ -1525,7 +1547,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   min-width: 0;
   padding: 7px 10px;
   border: 1px solid var(--edge);
-  border-radius: 6px;
+  border-radius: 2px;
   background: rgba(0, 0, 0, 0.35);
   color: var(--fg);
   font: 600 17px var(--font);
@@ -1540,7 +1562,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 #cmdr .rename { padding: 2px 10px; font-size: 12px; margin-left: 6px; }
 .rename-form button { padding: 2px 10px; font-size: 12px; }
 /* Wanted here: said first, with the way out (Mark: a small Settle button gets missed, and you launch into the police). */
-#wanted { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--amber); border-left-width: 4px; border-radius: 6px; background: color-mix(in srgb, var(--amber) 10%, transparent); display: grid; gap: 8px; }
+#wanted { margin: 0 0 14px; padding: 12px 14px; border: 1px solid var(--amber); border-left-width: 4px; border-radius: 2px; background: color-mix(in srgb, var(--amber) 10%, transparent); display: grid; gap: 8px; }
 #wanted.fugitive { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 #wanted b { color: var(--amber); letter-spacing: 0.08em; text-transform: uppercase; font-size: 13px; }
 #wanted.fugitive b { color: var(--danger); }
@@ -1549,8 +1571,48 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 #wanted.pulse { animation: wanted-pulse 0.4s ease-out 3; }
 @keyframes wanted-pulse { 50% { box-shadow: 0 0 0 3px var(--danger); } }
 /* Your ship's own buttons: full size, not squeezed beside her name. */
-.ship-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 0; }
-.ship-actions button { min-height: 44px; font-size: 14px; }
+/* The Station screen (Mark, 12 November 2026): your ship on top, four tiles, the Commander card. On a computer
+   she's beside the panel, so this is just her name and setup; on a phone it's a window onto the berth (below). */
+.ship-window { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; margin: 0 0 10px; }
+.sw-title { min-width: 0; }
+.panel .ship-window p { margin: 0; }
+.sw-meta { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.panel .ship-window .sw-name { margin: 2px 0 0; font-size: 22px; font-weight: 700; letter-spacing: 0.03em; text-transform: none; color: var(--fg); }
+.sw-own { font-size: 13px; color: var(--hull, var(--accent)); }
+.ship-actions { display: flex; gap: 6px; align-self: start; }
+.ship-actions button { min-height: 34px; padding: 4px 10px; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+.sw-kit { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; list-style: none; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+.sw-kit li::before { content: ''; display: inline-block; width: 14px; height: 1px; margin-right: 6px; vertical-align: middle; background: var(--accent); opacity: 0.6; }
+.sw-hint { display: none; }
+.st-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 6px; }
+.tile, .cmdr-card, #data-row { min-width: 0; padding: 8px 10px; border: 1px solid var(--edge); background: rgba(0, 12, 8, 0.55); }
+.tile { display: flex; flex-direction: column; gap: 3px; padding: 6px 9px 7px; }
+.tile.wide { grid-column: 1 / -1; }
+.t-label { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.t-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 30px; }
+.t-val { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.t-ok { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+.tile button { min-height: 30px; padding: 2px 7px; font-size: 11.5px; letter-spacing: 0.04em; white-space: nowrap; }
+.t-buttons { display: flex; gap: 4px; }
+.tile .minus { min-width: 30px; padding: 2px 0; font-size: 15px; }
+.t-sub { font-size: 11.5px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meter { display: block; height: 4px; background: rgba(61, 255, 176, 0.12); }
+.meter i { display: block; height: 100%; background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+.meter.full i { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+.cmdr-card { display: grid; gap: 5px; margin: 0 0 6px; }
+.cc-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.panel .cc-name { padding: 0; min-height: 0; border: 0; background: none; box-shadow: none; font-size: 18px; font-weight: 700; letter-spacing: 0.03em; text-transform: none; color: var(--fg); }
+.cc-name::after { content: ' ✎'; font-size: 12px; font-weight: 400; color: var(--dim); }
+.cc-rules { margin-right: auto; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.badge { padding: 3px 8px; min-height: 0; border: 1px solid var(--accent); background: none; color: var(--accent); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
+.badge.warn { border-color: var(--amber); color: var(--amber); }
+.cc-rank { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.cc-rank span { color: var(--dim); }
+.panel .cc-explore { margin: 0; font-size: 12.5px; color: var(--dim); }
+.cc-explore b { color: var(--fg); font-weight: 600; }
+.fuel-row#data-row { margin: 0 0 6px; }
+#data-row button { width: auto; height: 34px; padding: 0 10px; font-size: 12px; }
+#tab-station > #cmdr { margin: 6px 0 0; }
 body.retro .callsign input, body.retro .rename-form input { font-size: 12px; border-radius: 0; border-color: #fff; }
 
 /* The account panel (A on the title screen). */
@@ -1573,7 +1635,7 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .account-form input, .callsign-form input, .code-form input {
   padding: 8px 10px;
   border: 1px solid var(--edge);
-  border-radius: 6px;
+  border-radius: 2px;
   background: rgba(0, 0, 0, 0.35);
   color: var(--fg);
   font: 600 16px var(--font);
@@ -1596,11 +1658,11 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 /* The trade computer (Mark, 1 November 2026: answers, not a spreadsheet): each run a card, its profit
    first. On a computer it shares the column beside the chart with the order book; on a phone it has the
    screen to itself. */
-.ex-routes-toggle { margin: 8px 10px 2px; padding: 6px 10px; border: 1px solid rgba(46, 189, 133, 0.5); border-radius: 4px; background: rgba(46, 189, 133, 0.08); color: #2ebd85; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-align: left; }
-.ex-routes { --ex-dim: #848e9c; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12.5px; letter-spacing: 0; color: #eaecef; background: #0b0e11; border: 1px solid #1e242c; border-radius: 6px; padding: 14px 16px; }
+.ex-routes-toggle { margin: 8px 10px 2px; padding: 6px 10px; border: 1px solid rgba(46, 189, 133, 0.5); border-radius: 2px; background: rgba(46, 189, 133, 0.08); color: #2ebd85; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-align: left; }
+.ex-routes { --ex-dim: #848e9c; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12.5px; letter-spacing: 0; color: #eaecef; background: #0b0e11; border: 1px solid #1e242c; border-radius: 2px; padding: 14px 16px; }
 #exchange > .ex-routes { height: 100%; overflow-y: auto; }
 #exchange .ex > .ex-routes { grid-area: book; min-height: 0; overflow-y: auto; padding: 8px 10px; background: var(--ex-card); }
-.ex-routes button { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: 12px; padding: 4px 9px; border-radius: 4px; }
+.ex-routes button { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: 12px; padding: 4px 9px; border-radius: 2px; }
 .ex-routes-head { display: none; }
 .ex-routes h3 { margin: 0; font-size: 20px; color: #2ebd85; letter-spacing: 0; text-transform: none; }
 .ex-routes h4 { margin: 14px 0 6px; font-size: 12px; color: var(--ex-dim); letter-spacing: 0.04em; text-transform: none; font-weight: 600; }
@@ -1612,10 +1674,10 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .ex-panes button.active { color: var(--ex-text, #eaecef); border-bottom-color: var(--ex-gold, #f7a600); }
 .ex-panes button[hidden] { display: none; }
 .ex-filter { display: flex; gap: 6px; margin: 4px 0 8px; }
-.ex-routes .ex-filter button { padding: 3px 10px; border: 1px solid #1e242c; border-radius: 12px; background: none; color: var(--ex-dim); font-size: 11.5px; }
+.ex-routes .ex-filter button { padding: 3px 10px; border: 1px solid #1e242c; border-radius: 2px; background: none; color: var(--ex-dim); font-size: 11.5px; }
 .ex-routes .ex-filter button.active { background: #1e242c; color: #eaecef; }
 .ex-runs { display: flex; flex-direction: column; gap: 6px; }
-.ex-run-card { display: flex; flex-direction: column; gap: 3px; padding: 8px 9px; border: 1px solid #1e242c; border-radius: 4px; }
+.ex-run-card { display: flex; flex-direction: column; gap: 3px; padding: 8px 9px; border: 1px solid #1e242c; border-radius: 2px; }
 .ex-run-card.active { border-color: rgba(247, 166, 0, 0.6); }
 .ex-run-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .ex-run-top > b { white-space: nowrap; font-size: 13.5px; }
@@ -1628,19 +1690,19 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .ex-routes .ex-run-actions button { flex: 1; border: 1px solid #2c343e; background: none; color: #eaecef; }
 .ex-routes .ex-run-actions .ex-run-buy { border-color: transparent; background: #2ebd85; color: #0b0e11; font-weight: 600; }
 .ex-on-course { flex: 1; color: #f7a600; font-size: 12px; padding: 4px 6px; text-align: center; }
-.ex-risk { display: inline-block; margin-left: 2px; padding: 0 5px; border-radius: 3px; font-style: normal; font-size: 10.5px; color: #f7a600; background: rgba(247, 166, 0, 0.1); }
+.ex-risk { display: inline-block; margin-left: 2px; padding: 0 5px; border-radius: 2px; font-style: normal; font-size: 10.5px; color: #f7a600; background: rgba(247, 166, 0, 0.1); }
 .ex-risk.high { color: #f6465d; background: rgba(246, 70, 93, 0.12); }
 /* A good's best place to sell: one line under its price on a computer, a box under the candles on a phone. */
 .ex-best-slot { flex-basis: 100%; }
 .ex-best-slot:empty { display: none; }
-.ex-best { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 6px 10px; border: 1px solid var(--ex-line); border-radius: 6px; background: rgba(0, 0, 0, 0.2); font-size: 12.5px; }
+.ex-best { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; padding: 6px 10px; border: 1px solid var(--ex-line); border-radius: 2px; background: rgba(0, 0, 0, 0.2); font-size: 12.5px; }
 .ex-best.none { display: block; margin: 0; color: var(--ex-dim); }
 .ex-best-label { grid-area: label; color: var(--ex-dim); }
 .ex-best-where { grid-area: where; }
 .ex-best-age { grid-area: age; color: var(--ex-dim); font-size: 11.5px; }
 .ex-best-gain { grid-area: gain; margin-left: auto; font-size: 14px; white-space: nowrap; }
 .ex-best-actions { grid-area: actions; display: flex; gap: 6px; }
-.ex-best-actions button { padding: 4px 12px; border: 1px solid #2c343e; border-radius: 4px; background: none; color: var(--ex-text); font-size: 12px; }
+.ex-best-actions button { padding: 4px 12px; border: 1px solid #2c343e; border-radius: 2px; background: none; color: var(--ex-text); font-size: 12px; }
 .ex-best .ex-on-course { flex: none; }
 .ex.runs .ex-runs-open { display: none; } /* the runs are already beside the chart */
 .ex .sys-link, .ex-routes .sys-link { padding: 0; border: 0; background: none; color: var(--ex-text, #eaecef); font: inherit; font-weight: 600; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
@@ -1656,9 +1718,9 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .contracts .late { color: var(--danger); }
 .contracts .on-course { color: var(--amber); font-size: 12px; align-self: center; }
 .company { color: var(--company, var(--accent)); font-weight: 600; }
-.risk { font-style: normal; font-size: 11px; padding: 0 5px; border-radius: 3px; color: var(--amber); background: rgba(255, 179, 71, 0.1); }
+.risk { font-style: normal; font-size: 11px; padding: 0 5px; border-radius: 2px; color: var(--amber); background: rgba(255, 179, 71, 0.1); }
 .risk.high { color: var(--danger); background: rgba(255, 77, 109, 0.12); }
-.posted { font-style: normal; font-size: 11px; padding: 0 5px; border-radius: 3px; color: var(--accent); background: rgba(61, 255, 176, 0.1); }
+.posted { font-style: normal; font-size: 11px; padding: 0 5px; border-radius: 2px; color: var(--accent); background: rgba(61, 255, 176, 0.1); }
 @media (max-width: 700px) {
   .contracts li { padding-right: 10px; }
   .contracts .actions { position: static; transform: none; margin-top: 6px; justify-content: flex-end; }
@@ -1690,7 +1752,7 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 /* The shipyard: a showroom, each hull a card in its own colour. */
 #shipyard .meta { text-transform: none; letter-spacing: normal; font-size: 14px; }
 .yard { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
-.yard button { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; text-align: left; text-transform: none; letter-spacing: normal; border: 1px solid var(--edge); border-left: 3px solid var(--hull); border-radius: 8px; background: rgba(0, 12, 8, 0.6); }
+.yard button { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 10px 12px; text-align: left; text-transform: none; letter-spacing: normal; border: 1px solid var(--edge); border-left: 3px solid var(--hull); border-radius: 2px; background: rgba(0, 12, 8, 0.6); }
 .yard button[aria-pressed='true'] { border-color: var(--hull); box-shadow: 0 0 14px color-mix(in srgb, var(--hull) 35%, transparent); }
 .yard strong { color: var(--hull); }
 .yard em { font-style: normal; font-size: 12px; color: var(--dim); }
@@ -1701,11 +1763,11 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 #money h3 { margin: 12px 0 6px; }
 .money-head { display: flex; align-items: baseline; gap: 10px; }
 .money-head h3 { margin-bottom: 4px; }
-.money-gov { margin-left: auto; padding: 0 8px; border: 1px solid var(--edge); border-radius: 10px; font-size: 12px; color: var(--dim); }
+.money-gov { margin-left: auto; padding: 0 8px; border: 1px solid var(--edge); border-radius: 2px; font-size: 12px; color: var(--dim); }
 .money-title span { margin-left: 6px; font-size: 13px; letter-spacing: 0.12em; color: var(--dim); }
 .money-policy { font-size: 14px; color: var(--dim); margin: 0 0 10px; }
 .money-policy b { color: var(--fg); }
-.money-rate { display: flex; align-items: flex-end; gap: 12px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 8px; }
+.money-rate { display: flex; align-items: flex-end; gap: 12px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 2px; }
 .money-rate > div { display: grid; gap: 2px; min-width: 0; }
 .money-rate strong { font-size: 24px; font-variant-numeric: tabular-nums; }
 .money-rate span { font-size: 14px; color: var(--dim); }
@@ -1718,17 +1780,17 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .money-reasons { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 5px; font-size: 15px; }
 .money-reasons li { display: flex; gap: 8px; align-items: baseline; }
 .money-reasons i { flex: none; width: 12px; font-style: normal; font-size: 12px; color: var(--dim); }
-.money-form { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 8px; }
+.money-form { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid var(--edge); border-radius: 2px; }
 .yard-lasers.money-sides { grid-template-columns: 1fr 1fr; }
 .yard-lasers.money-sides button { justify-content: center; font-size: 14px; }
 .money-amount { display: grid; gap: 4px; font-size: 13px; color: var(--dim); }
-.money-amount input { padding: 7px 10px; border: 1px solid var(--edge); border-radius: 6px; background: rgba(0, 0, 0, 0.35); color: var(--fg); font: 600 16px var(--font); }
+.money-amount input { padding: 7px 10px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(0, 0, 0, 0.35); color: var(--fg); font: 600 16px var(--font); }
 .money-quote { margin: 0; font-size: 15px; }
 .money-quote .dim { color: var(--dim); }
 .money-held { margin: 10px 0 0; font-size: 15px; color: var(--dim); }
 .money-held b { color: var(--fg); }
 .money-wallet { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.money-wallet li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--edge); border-radius: 8px; }
+.money-wallet li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--edge); border-radius: 2px; }
 .money-wallet span { grid-column: 1; font-size: 12px; color: var(--dim); }
 .money-wallet button { grid-column: 2; grid-row: 1 / span 2; min-height: 30px; padding: 2px 10px; font-size: 12px; text-transform: none; letter-spacing: normal; color: var(--fg); }
 @media (pointer: coarse) { .money-sides button, .money-go, .money-wallet button { min-height: 44px; } }
@@ -1736,7 +1798,7 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 /* The configurator and your order. */
 .yard-funds { margin: 0 0 8px; font-size: 13px; color: var(--dim); }
 .yard-funds b { color: var(--fg); }
-.yard-message { margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 8px; font-size: 14px; }
+.yard-message { margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 2px; font-size: 14px; }
 .yard-spec { width: 100%; margin-top: 10px; }
 .yard-back { min-height: 30px; padding: 2px 10px; font-size: 13px; }
 .yard-title { margin: 10px 0 4px; color: var(--hull); }
@@ -1770,7 +1832,7 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard-total b { font-size: 18px; color: var(--fg); }
 .yard-deposit { width: 100%; }
 .yard-note { margin: 8px 0 0; font-size: 13px; color: var(--dim); }
-.yard-order { display: grid; gap: 4px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--hull); border-radius: 8px; box-shadow: 0 0 14px color-mix(in srgb, var(--hull) 30%, transparent); }
+.yard-order { display: grid; gap: 4px; margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--hull); border-radius: 2px; box-shadow: 0 0 14px color-mix(in srgb, var(--hull) 30%, transparent); }
 .yard-order strong { color: var(--hull); }
 .yard-order span { font-size: 13px; color: var(--dim); }
 .yard-order .rec-meter { margin: 4px 0; }
@@ -1781,7 +1843,7 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard-old button[aria-checked='true'] { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 25%, transparent); }
 .yard-fleet { margin: 0 0 12px; }
 .yard-fleet ul { display: grid; gap: 8px; margin: 6px 0 0; padding: 0; list-style: none; }
-.yard-fleet li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--hull); border-radius: 8px; }
+.yard-fleet li { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--hull); border-radius: 2px; }
 .yard-fleet li strong { color: var(--hull); }
 .yard-fleet li span { font-size: 13px; color: var(--dim); }
 .yard-fleet li button { justify-self: start; text-transform: none; letter-spacing: normal; }
@@ -1881,7 +1943,7 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 .contracts .why { display: block; margin-top: 4px; color: var(--amber); font-size: 12px; }
 /* Touch: the missile button sits above FIRE. Lock, then it turns red: tap again to launch. */
 #touch .fire-stack { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-#touch .missile { min-width: 92px; min-height: 44px; padding: 6px 10px; border-radius: 999px; font-size: 13px; letter-spacing: 0.06em; background: rgba(0, 10, 6, 0.55); }
+#touch .missile { min-width: 92px; min-height: 44px; padding: 6px 10px; border-radius: 2px; font-size: 13px; letter-spacing: 0.06em; background: rgba(0, 10, 6, 0.55); }
 #touch .missile.armed { border-color: var(--danger); color: #fff; background: rgba(255, 77, 109, 0.55); box-shadow: 0 0 14px var(--danger); }
 #touch .missile.empty { opacity: 0.45; }
 .ws-share-who { margin: 8px 2px 0; font-size: 13px; color: var(--dim); }
@@ -1892,7 +1954,7 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 #clip-view .cv-head { display: flex; align-items: center; gap: 12px; }
 #clip-view .cv-title { flex: 1; margin: 0; font-size: 15px; letter-spacing: 0.03em; }
 #clip-view .cv-close { width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 50%; font-size: 18px; }
-#clip-view .cv-video { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; border-radius: 8px; }
+#clip-view .cv-video { flex: 1; min-height: 0; width: 100%; object-fit: contain; background: #000; border-radius: 2px; }
 #clip-view .cv-invite { margin: 0; text-align: center; color: var(--dim); font-size: 14px; }
 #clip-view .cv-invite a { color: var(--accent); text-underline-offset: 3px; }
 #clip-view .cv-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
@@ -1926,7 +1988,7 @@ body.retro #galaxy-map .map-find input, body.retro #galaxy-map .map-find li butt
 /* Which way up (main.ts updateTurnHint): a little phone that turns round. */
 .turn { position: fixed; z-index: 30; left: 50%; top: 42%; transform: translate(-50%, -50%); width: max-content; max-width: calc(100vw - 32px); margin: 0; display: flex; align-items: center; gap: 14px; padding: 12px 18px; border: 1px solid var(--edge); border-left: 3px solid var(--accent); background: rgba(0, 10, 6, 0.88); font-size: 15px; letter-spacing: 0.04em; pointer-events: none; }
 .turn[hidden] { display: none; }
-.turn::before { content: ''; flex: none; width: 14px; height: 24px; border: 2px solid var(--accent); border-radius: 4px; animation: turn-phone 1.4s ease-in-out infinite alternate; }
+.turn::before { content: ''; flex: none; width: 14px; height: 24px; border: 2px solid var(--accent); border-radius: 2px; animation: turn-phone 1.4s ease-in-out infinite alternate; }
 .turn.upright::before { animation-direction: alternate-reverse; }
 @keyframes turn-phone { 0%, 25% { transform: rotate(0deg); } 75%, 100% { transform: rotate(-90deg); } }
 
@@ -1960,10 +2022,10 @@ body.retro .ship-nav-name { font-size: 9px; }
 /* The flight recorder: replays (the death replay too) and the flight log tab. */
 #replay { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top)) 12px; background: rgba(0, 4, 3, 0.82); backdrop-filter: blur(6px); }
 #replay[hidden] { display: none; }
-.replay-card { width: min(860px, 100%); max-height: 100%; overflow: auto; padding: 16px; border: 1px solid var(--edge); border-radius: 12px; background: rgba(0, 12, 8, 0.92); box-shadow: 0 0 40px rgba(61, 255, 176, 0.18); }
+.replay-card { width: min(860px, 100%); max-height: 100%; overflow: auto; padding: 16px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(0, 12, 8, 0.92); box-shadow: 0 0 40px rgba(61, 255, 176, 0.18); }
 .replay-heading { margin: 0 0 10px; color: var(--accent); font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; }
-.replay-card video { display: block; width: 100%; max-height: 60vh; border-radius: 8px; background: #000; }
-.replay-video { position: relative; min-height: 120px; border-radius: 8px; background: #000; overflow: hidden; }
+.replay-card video { display: block; width: 100%; max-height: 60vh; border-radius: 2px; background: #000; }
+.replay-video { position: relative; min-height: 120px; border-radius: 2px; background: #000; overflow: hidden; }
 .replay-video > img { display: block; width: 100%; max-height: 60vh; object-fit: contain; }
 .replay-loading:empty { display: none; }
 .replay-loading { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 8px 12px; font-size: 13px; color: var(--dim, #8aa); background: linear-gradient(transparent, rgba(0, 0, 0, 0.8)); }
@@ -2000,7 +2062,7 @@ body.photo-booth .panel, body.photo-booth nav.controls, body.photo-booth #look, 
 .ho-card { width: min(560px, 100%); }
 .ho-lead { margin: 8px 0 16px; color: #c2cddb; line-height: 1.5; }
 .ho-lead b { color: #fff; }
-.ho-cert { padding: 22px 20px 18px; border: 1px solid var(--ed-trim); border-top: 4px solid var(--ed); border-radius: 12px; background: #07090f; box-shadow: 0 0 40px color-mix(in srgb, var(--ed) 22%, transparent); text-align: center; }
+.ho-cert { padding: 22px 20px 18px; border: 1px solid var(--ed-trim); border-top: 4px solid var(--ed); border-radius: 2px; background: #07090f; box-shadow: 0 0 40px color-mix(in srgb, var(--ed) 22%, transparent); text-align: center; }
 .ho-maker { margin: 0; font-size: 12px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--ed); font-weight: 700; }
 .ho-kind { margin: 4px 0 14px; font-size: 13px; color: #95a3b8; font-style: italic; }
 .ho-cert h2 { margin: 0; font-size: 24px; color: #fff; }
@@ -2027,8 +2089,26 @@ body.photo-booth .panel, body.photo-booth nav.controls, body.photo-booth #look, 
 #manual-body h4 { margin: 14px 0 6px; font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 #manual-body p, #manual-body li { font-size: 15px; line-height: 1.45; }
 #manual-body ol, #manual-body ul { padding-left: 20px; display: grid; gap: 6px; }
-.man-cover { padding: 14px 16px; border: 1px solid var(--hull); border-radius: 10px; box-shadow: 0 0 18px color-mix(in srgb, var(--hull) 25%, transparent); }
-.man-cover h3 { color: var(--hull); }
+/* The cover (Mark, 12 November 2026): her, live, at the top, drawn behind the manual through a hole in its
+   background (ui/showroom.ts measures it), then her name, two buttons, three numbers and her story. */
+#manual { backdrop-filter: none; background: linear-gradient(to bottom, transparent 0, transparent var(--hero-bot, 0), rgba(0, 6, 4, 0.97) var(--hero-bot, 0)) local; }
+body.manual-open .panel, body.manual-open nav.controls, body.manual-open #look, body.manual-open #booth { visibility: hidden; }
+#manual .log-head { position: sticky; top: 0; z-index: 2; justify-content: flex-end; margin-bottom: 0; pointer-events: none; }
+#manual .log-head h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+#manual .log-close { pointer-events: auto; background: rgba(0, 6, 4, 0.75); }
+.man-hero { position: relative; height: 38vh; min-height: 210px; max-height: 420px; margin: -40px 0 0; border-bottom: 1px solid var(--edge); background: linear-gradient(180deg, transparent 62%, rgba(0, 6, 4, 0.9) 100%); touch-action: none; cursor: grab; }
+#manual-body .man-hero-hint { position: absolute; left: 0; right: 0; bottom: 8px; margin: 0; text-align: center; font-size: 10.5px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); pointer-events: none; }
+.man-cover { padding: 14px 0 0; }
+#manual-body .man-cover .meta { margin: 0 0 2px; color: var(--accent); letter-spacing: 0.14em; }
+#manual-body .man-cover h3 { margin: 0 0 4px; font-size: 30px; letter-spacing: 0.02em; color: var(--fg); }
+#manual-body .man-for { margin: 0 0 12px; color: var(--dim); font-size: 14px; }
+.man-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 12px; }
+.man-acts button { min-height: 44px; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; }
+.man-acts button:only-child { grid-column: 1 / -1; }
+.man-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 0 0 6px; }
+.man-stats div { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--edge); }
+.man-stats span { font-size: 10.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.man-stats b { font-size: 19px; font-variant-numeric: tabular-nums; }
 .man-toc { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0 0 18px; font-size: 14px; }
 .man-toc a { color: var(--accent); }
 .man-table { width: 100%; border-collapse: collapse; font-size: 14px; }
@@ -2042,7 +2122,7 @@ body.photo-booth .panel, body.photo-booth nav.controls, body.photo-booth #look, 
 .man-fig figcaption { margin-top: 6px; color: var(--dim); font-size: 13px; line-height: 1.45; }
 .man-shots { display: flex; gap: 8px; align-items: flex-start; }
 .man-shot { position: relative; flex: 1 1 0; min-width: 0; }
-.man-shot img { display: block; width: 100%; height: auto; border: 1px solid rgba(61, 255, 176, 0.18); border-radius: 6px; }
+.man-shot img { display: block; width: 100%; height: auto; border: 1px solid rgba(61, 255, 176, 0.18); border-radius: 2px; }
 .man-shot b, .man-num { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: #ffb347; color: #000; font-size: 11px; font-weight: 700; line-height: 1; }
 .man-shot b { position: absolute; transform: translate(-50%, -50%); box-shadow: 0 0 0 2px #000; }
 .man-num { margin-right: 6px; vertical-align: 1px; }
@@ -2057,24 +2137,24 @@ body.photo-booth .panel, body.photo-booth nav.controls, body.photo-booth #look, 
 .log-head, #flight-log { max-width: 1100px; margin-inline: auto; }
 .log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .log-head h2 { margin: 0; }
-.log-close { width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; font-size: 18px; }
+.log-close { width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 0; font-size: 18px; }
 #flight-log-view .log-list { grid-template-columns: repeat(auto-fill, minmax(min(240px, calc(50% - 7px)), 1fr)); gap: 14px; margin-top: 12px; }
-#flight-log-view .log-list li { grid-template-columns: 1fr; gap: 8px; padding: 10px; border: 1px solid var(--edge); border-radius: 10px; background: rgba(0, 12, 8, 0.7); }
+#flight-log-view .log-list li { grid-template-columns: 1fr; gap: 8px; padding: 10px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(0, 12, 8, 0.7); }
 #flight-log-view .log-play { width: 100%; }
 body.retro #flight-log-view { background: #000; backdrop-filter: none; }
 #flight-log .meta { color: var(--dim); text-transform: none; letter-spacing: normal; font-size: 15px; }
 .log-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
 .log-list li { display: grid; grid-template-columns: 132px 1fr; gap: 12px; align-items: start; }
-.log-play { position: relative; padding: 0; width: 132px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 6px; background: #000; }
+.log-play { position: relative; padding: 0; width: 132px; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 2px; background: #000; }
 .log-play img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.log-play span { position: absolute; right: 4px; bottom: 3px; padding: 0 5px; border-radius: 4px; background: rgba(0, 0, 0, 0.7); font-size: 12px; }
+.log-play span { position: absolute; right: 4px; bottom: 3px; padding: 0 5px; border-radius: 2px; background: rgba(0, 0, 0, 0.7); font-size: 12px; }
 .log-list strong { display: block; }
 .log-list small { display: block; color: var(--dim); margin: 2px 0 6px; }
 .log-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .log-actions button { padding: 2px 10px; font-size: 13px; min-height: 30px; }
 .log-trip { margin: 18px 0 0; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); }
 /* This trip: a sheet up from the bottom on docking, only this trip's moments (Mark). */
-#trip-sheet { position: fixed; z-index: 40; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100vw); max-height: 72dvh; overflow-y: auto; padding: 6px 16px max(14px, env(safe-area-inset-bottom)); border: 1px solid var(--edge); border-bottom: 0; border-radius: 16px 16px 0 0; background: rgba(0, 10, 7, 0.96); backdrop-filter: blur(8px); box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6); animation: trip-up 0.25s ease-out; }
+#trip-sheet { position: fixed; z-index: 40; left: 50%; bottom: 0; transform: translateX(-50%); width: min(560px, 100vw); max-height: 72dvh; overflow-y: auto; padding: 6px 16px max(14px, env(safe-area-inset-bottom)); border: 1px solid var(--edge); border-bottom: 0; border-radius: 2px 2px 0 0; background: rgba(0, 10, 7, 0.96); backdrop-filter: blur(8px); box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6); animation: trip-up 0.25s ease-out; }
 #trip-sheet[hidden] { display: none; }
 @keyframes trip-up { from { transform: translate(-50%, 100%); } }
 .trip-grip { width: 40px; height: 4px; margin: 2px auto 8px; border-radius: 2px; background: var(--edge); }
@@ -2084,9 +2164,9 @@ body.retro #flight-log-view { background: #000; backdrop-filter: none; }
 .trip-close { grid-row: 1 / 3; grid-column: 2; width: 36px; height: 36px; min-height: 0; padding: 0; border-radius: 50%; }
 .trip-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
 .trip-list li { display: grid; grid-template-columns: 112px 1fr; grid-template-rows: auto 1fr; column-gap: 12px; row-gap: 6px; align-items: start; }
-.trip-play { grid-row: 1 / 3; position: relative; width: 112px; padding: 0; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 6px; background: #000; }
+.trip-play { grid-row: 1 / 3; position: relative; width: 112px; padding: 0; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 2px; background: #000; }
 .trip-play img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.trip-play span { position: absolute; right: 4px; bottom: 3px; padding: 0 5px; border-radius: 4px; background: rgba(0, 0, 0, 0.7); font-size: 12px; }
+.trip-play span { position: absolute; right: 4px; bottom: 3px; padding: 0 5px; border-radius: 2px; background: rgba(0, 0, 0, 0.7); font-size: 12px; }
 .trip-list strong { font-size: 14px; line-height: 1.3; }
 .trip-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .trip-actions button { min-height: 34px; padding: 2px 12px; font-size: 13px; }
@@ -2110,7 +2190,7 @@ body.retro #trip-sheet { background: #000; backdrop-filter: none; }
 .moment-star { min-width: 36px; min-height: 34px; padding: 0 8px; font-size: 18px; line-height: 1; background: rgba(0, 10, 7, 0.7); }
 .moment-star[aria-pressed='true'] { color: var(--amber); border-color: var(--amber); }
 .moment-more { position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, 0.45); }
-.moment-more-sheet { width: min(480px, 100vw); padding: 12px 16px max(14px, env(safe-area-inset-bottom)); border: 1px solid var(--edge); border-bottom: 0; border-radius: 16px 16px 0 0; background: rgba(0, 10, 7, 0.98); display: grid; gap: 6px; }
+.moment-more-sheet { width: min(480px, 100vw); padding: 12px 16px max(14px, env(safe-area-inset-bottom)); border: 1px solid var(--edge); border-bottom: 0; border-radius: 2px 2px 0 0; background: rgba(0, 10, 7, 0.98); display: grid; gap: 6px; }
 .moment-more-title { margin: 0 0 4px; color: var(--dim); font-size: 13px; }
 .moment-more-sheet button[data-more]:not(.moment-more-close) { display: grid; grid-template-columns: 28px 1fr; grid-template-rows: auto auto; column-gap: 10px; padding: 10px 12px; text-align: left; text-transform: none; letter-spacing: normal; }
 .moment-more-sheet button i { grid-row: 1 / 3; align-self: center; font-style: normal; font-size: 20px; text-align: center; }
@@ -2124,7 +2204,7 @@ body.retro #trip-sheet { background: #000; backdrop-filter: none; }
 .rap-sheet h3 { margin: 4px 0 2px; }
 .rap-sheet h4 { margin: 10px 0 0; font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; }
 .rap-now, .rap-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-.rap-now li, .rap-list li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--edge); border-radius: 8px; }
+.rap-now li, .rap-list li { display: grid; gap: 2px; padding: 8px 10px; border: 1px solid var(--edge); border-radius: 2px; }
 .rap-now li span, .rap-when { color: var(--dim); font-size: 12px; }
 .rap-warrant { border-color: #ffd98a !important; }
 .rap-made { font-size: 12px; }
@@ -2143,16 +2223,16 @@ body.retro #trip-sheet { background: #000; backdrop-filter: none; }
 }
 
 body.retro #replay { backdrop-filter: none; }
-.replay-card > img { display: block; width: 100%; max-height: 60vh; object-fit: contain; border-radius: 8px; background: #000; }
+.replay-card > img { display: block; width: 100%; max-height: 60vh; object-fit: contain; border-radius: 2px; background: #000; }
 /* Your clips on the site: compact rows, the whole row plays it, one quiet action at the end. */
-.log-public { margin: 0 0 14px; padding: 12px; border: 1px solid var(--edge); border-radius: 10px; background: rgba(0, 12, 8, 0.7); }
+.log-public { margin: 0 0 14px; padding: 12px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(0, 12, 8, 0.7); }
 .log-public h3 { margin: 0; display: flex; align-items: center; gap: 8px; }
 .log-public h3::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #ff8da1; box-shadow: 0 0 8px #ff8da1; }
 .log-public .clip-sub { margin: 2px 0 8px; font-size: 13px; color: var(--dim); }
 .log-public ul { list-style: none; margin: 0; padding: 0; }
 .log-public li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid rgba(61, 255, 176, 0.12); }
 .log-public li a { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; color: var(--fg); text-decoration: none; }
-.clip-thumb { flex: none; position: relative; width: 64px; aspect-ratio: 16 / 9; border-radius: 5px; overflow: hidden; background: #000; border: 1px solid rgba(61, 255, 176, 0.18); }
+.clip-thumb { flex: none; position: relative; width: 64px; aspect-ratio: 16 / 9; border-radius: 2px; overflow: hidden; background: #000; border: 1px solid rgba(61, 255, 176, 0.18); }
 .clip-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .clip-thumb::after { content: ''; position: absolute; left: 50%; top: 50%; translate: -35% -50%; border-style: solid; border-width: 6px 0 6px 10px; border-color: transparent transparent transparent var(--fg); opacity: 0.85; filter: drop-shadow(0 0 3px #000); }
 .clip-text { min-width: 0; display: flex; flex-direction: column; }
@@ -2166,23 +2246,23 @@ body.retro #replay { backdrop-filter: none; }
 .log-public .clip-more { display: block; width: 100%; margin-top: 4px; min-height: 36px; font-size: 13px; border: 0; border-top: 1px solid rgba(61, 255, 176, 0.12); border-radius: 0; background: transparent; color: var(--accent); }
 .log-public-mark { margin-left: 6px; font-style: normal; font-size: 11px; color: #ff8da1; }
 /* The recorder: a switch, a meter, and clearing out. */
-.log-recorder { margin: 0 0 6px; padding: 12px; border: 1px solid var(--edge); border-radius: 10px; }
+.log-recorder { margin: 0 0 6px; padding: 12px; border: 1px solid var(--edge); border-radius: 2px; }
 .rec-row { display: flex; align-items: center; gap: 10px; }
 .rec-row strong { flex: 1; }
 .rec-small { margin-top: 6px; font-size: 13px; color: var(--dim); }
 .rec-small span { flex: 1; }
 #flight-log .log-quality { font-size: 12px; color: var(--dim); }
 #flight-log .log-hd { margin-left: 4px; padding: 2px 8px; min-height: 26px; font-size: 12px; }
-#flight-log .log-toggle { min-width: 56px; min-height: 32px; padding: 4px 12px; border-radius: 999px; font-size: 13px; }
+#flight-log .log-toggle { min-width: 56px; min-height: 32px; padding: 4px 12px; border-radius: 2px; font-size: 13px; }
 #flight-log .log-toggle[aria-pressed='true'] { background: rgba(61, 255, 176, 0.16); border-color: var(--accent); color: var(--accent); }
-.rec-meter { height: 6px; margin-top: 10px; border-radius: 3px; background: rgba(61, 255, 176, 0.12); overflow: hidden; }
+.rec-meter { height: 6px; margin-top: 10px; border-radius: 2px; background: rgba(61, 255, 176, 0.12); overflow: hidden; }
 .rec-meter span { display: block; height: 100%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
 .log-clear { min-height: 30px; padding: 2px 10px; font-size: 12px; }
 .rec-note { margin: 4px 0 0; font-size: 12px; color: var(--dim); }
 /* What it keeps: a switch per kind (a player on the ideas board: surveys are boring). */
 .rec-kinds { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; }
 .rec-kinds > span { font-size: 12px; color: var(--dim); margin-right: 2px; }
-#flight-log .rec-kind { min-height: 30px; padding: 2px 10px; border-radius: 999px; font-size: 12px; color: var(--dim); }
+#flight-log .rec-kind { min-height: 30px; padding: 2px 10px; border-radius: 2px; font-size: 12px; color: var(--dim); }
 #flight-log .rec-kind[aria-pressed='true'] { background: rgba(61, 255, 176, 0.16); border-color: var(--accent); color: var(--accent); }
 .rec-select { flex-wrap: wrap; }
 .rec-select button { min-height: 30px; padding: 2px 10px; font-size: 12px; }
@@ -2197,7 +2277,7 @@ body.retro #replay { backdrop-filter: none; }
 .log-list li.picking .log-actions { display: none; }
 .log-list li.picked { border-color: var(--accent); background: rgba(61, 255, 176, 0.08); }
 .log-pick { position: absolute; top: 14px; left: 14px; z-index: 1; width: 20px; height: 20px; margin: 0; accent-color: var(--accent); pointer-events: none; }
-.log-intro { padding: 12px 14px; border: 1px solid var(--accent); border-radius: 10px; background: rgba(61, 255, 176, 0.06); }
+.log-intro { padding: 12px 14px; border: 1px solid var(--accent); border-radius: 2px; background: rgba(61, 255, 176, 0.06); }
 .log-intro p { margin: 0 0 10px; }
 .log-intro-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 !important; }
 
@@ -2207,7 +2287,7 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
 .killcam-shared button { min-height: 36px; padding: 4px 14px; }
 /* The heart: the bottom-right corner, under your thumb; an outline until you've hearted it (Mark). Beside the controls
    where there's room, just above them where they fill the width. */
-#killcam .killcam-heart { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 0; padding: 8px; border: 0; background: rgba(0, 0, 0, 0.35); border-radius: 28px; color: #ff8da1; }
+#killcam .killcam-heart { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 2px; min-height: 0; padding: 8px; border: 0; background: rgba(0, 0, 0, 0.35); border-radius: 2px; color: #ff8da1; }
 #killcam .killcam-heart svg { width: 30px; height: 30px; fill: none; stroke: currentColor; stroke-width: 1.8; transition: transform 0.15s ease; }
 #killcam .killcam-heart b { font-size: 13px; font-weight: 600; color: #f2d6dc; }
 #killcam .killcam-heart[aria-pressed='true'] { color: #ff4d6d; }
@@ -2230,16 +2310,16 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
 /* The controls: one line to play, scrub and slow; one for the camera and saving. Close sits apart, top right. */
 .killcam-close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 14px; width: 40px; height: 40px; min-height: 0; padding: 10px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); cursor: pointer; }
 .killcam-close svg { width: 100%; height: 100%; }
-.killcam-bar { position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(640px, calc(100% - 32px)); display: grid; gap: 10px; padding: 12px; background: rgba(0, 8, 6, 0.72); border: 1px solid rgba(61, 255, 176, 0.25); border-radius: 12px; cursor: default; }
+.killcam-bar { position: absolute; left: 50%; bottom: max(14px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(640px, calc(100% - 32px)); display: grid; gap: 10px; padding: 12px; background: rgba(0, 8, 6, 0.72); border: 1px solid rgba(61, 255, 176, 0.25); border-radius: 2px; cursor: default; }
 .killcam-time-row { display: flex; gap: 12px; align-items: center; }
 #killcam .killcam-play { flex: none; width: 40px; height: 40px; min-height: 0; padding: 10px; border-radius: 50%; border-color: var(--neo, #3dffb0); color: var(--neo, #3dffb0); }
 .killcam-play svg { display: block; width: 100%; height: 100%; fill: currentColor; }
 .killcam-scrub { flex: 1; min-width: 0; accent-color: #3dffb0; }
 .killcam-time { flex: none; color: var(--dim); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-#killcam .killcam-slow { flex: none; min-height: 0; padding: 6px 10px; border-radius: 6px; font-size: 13px; }
+#killcam .killcam-slow { flex: none; min-height: 0; padding: 6px 10px; border-radius: 2px; font-size: 13px; }
 #killcam .killcam-slow[aria-pressed='true'] { border-color: var(--neo, #3dffb0); color: var(--neo, #3dffb0); background: rgba(61, 255, 176, 0.14); }
 .killcam-row { display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
-.killcam-seg { display: inline-flex; align-items: stretch; border: 1px solid rgba(61, 255, 176, 0.35); border-radius: 8px; overflow: hidden; }
+.killcam-seg { display: inline-flex; align-items: stretch; border: 1px solid rgba(61, 255, 176, 0.35); border-radius: 2px; overflow: hidden; }
 #killcam .killcam-seg button { min-height: 0; padding: 8px 14px; border: 0; border-radius: 0; background: transparent; font-size: 13px; }
 #killcam .killcam-seg > * + button { border-left: 1px solid rgba(61, 255, 176, 0.2); }
 #killcam .killcam-seg button.active { background: rgba(61, 255, 176, 0.16); color: var(--neo, #3dffb0); }
@@ -2250,7 +2330,7 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
   .killcam-row > .killcam-seg { flex: 1 1 100%; }
   #killcam .killcam-seg button { flex: 1; }
 }
-.killcam-label { position: absolute; left: 0; top: 0; padding: 3px 7px; font-size: 13px; white-space: nowrap; color: #d8e2f0; background: rgba(0, 6, 4, 0.66); border-radius: 4px; pointer-events: none; }
+.killcam-label { position: absolute; left: 0; top: 0; padding: 3px 7px; font-size: 13px; white-space: nowrap; color: #d8e2f0; background: rgba(0, 6, 4, 0.66); border-radius: 2px; pointer-events: none; }
 .killcam-note { color: #e8f0fa; font-size: 13px; }
 /* The end card, faded up once the replay has played out (the same card the videos end on). */
 .killcam-end { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; transition: opacity 1.2s ease; }
@@ -2260,11 +2340,11 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
 /* --- The share sheet (src/ui/shareSheet.ts): the card, one main button, the links --- */
 .ws-share { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: rgba(0, 4, 3, 0); transition: background 0.2s ease; }
 .ws-share.shown { background: rgba(0, 4, 3, 0.78); }
-.ws-share-sheet { position: relative; width: min(440px, 100%); max-height: 100%; overflow: auto; padding: 16px; border: 1px solid var(--edge); border-radius: 14px; background: rgba(0, 12, 8, 0.96); box-shadow: 0 0 40px rgba(61, 255, 176, 0.12); opacity: 0; transform: translateY(12px); transition: opacity 0.2s ease, transform 0.2s ease; }
+.ws-share-sheet { position: relative; width: min(440px, 100%); max-height: 100%; overflow: auto; padding: 16px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(0, 12, 8, 0.96); box-shadow: 0 0 40px rgba(61, 255, 176, 0.12); opacity: 0; transform: translateY(12px); transition: opacity 0.2s ease, transform 0.2s ease; }
 .ws-share.shown .ws-share-sheet { opacity: 1; transform: none; }
 .ws-share-close { position: absolute; top: 8px; right: 8px; z-index: 1; width: 36px; height: 36px; min-height: 0; padding: 8px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); }
 .ws-share-close svg { width: 100%; height: 100%; }
-.ws-share-card { margin: 0 0 14px; overflow: hidden; border: 1px solid var(--edge); border-radius: 10px; background: #000; }
+.ws-share-card { margin: 0 0 14px; overflow: hidden; border: 1px solid var(--edge); border-radius: 2px; background: #000; }
 .ws-share-card video, .ws-share-card img { display: block; width: 100%; max-height: 46vh; object-fit: contain; background: #000; }
 .ws-share-card figcaption { display: grid; gap: 2px; padding: 10px 12px; background: rgba(0, 12, 8, 0.92); }
 .ws-share-card strong { font-size: 16px; line-height: 1.25; }
@@ -2280,13 +2360,13 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
 .ws-share-replay[hidden], .ws-share-consent[hidden], .ws-share-put[hidden] { display: none; }
 .ws-share-put { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; min-height: 48px; font-size: 15px; }
 .ws-share-put svg { width: 18px; height: 18px; }
-.ws-share-consent { padding: 12px; border: 1px solid var(--edge); border-radius: 10px; background: rgba(0, 0, 0, 0.35); }
+.ws-share-consent { padding: 12px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(0, 0, 0, 0.35); }
 .ws-share-consent p { margin: 0 0 10px; font-size: 14px; line-height: 1.4; }
 .ws-share-consent-actions { display: flex; gap: 8px; margin: 0 !important; }
 .ws-share-consent-actions button { flex: 1; min-height: 40px; }
 .ws-share-or { margin: 16px 2px 8px; color: var(--dim); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
 .ws-share-links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.ws-share-links a, .ws-share-copy { display: flex; min-height: 44px; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px; border: 1px solid var(--edge); border-radius: 8px; background: rgba(0, 0, 0, 0.3); color: var(--fg); font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; }
+.ws-share-links a, .ws-share-copy { display: flex; min-height: 44px; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(0, 0, 0, 0.3); color: var(--fg); font: inherit; font-size: 14px; text-decoration: none; cursor: pointer; }
 .ws-share-links a:hover, .ws-share-copy:hover { border-color: var(--accent); }
 .ws-share-links svg { flex: none; width: 18px; height: 18px; }
 .ws-share-msg { min-height: 1em; margin: 10px 2px 0; color: var(--amber); font-size: 13px; }
@@ -2304,7 +2384,7 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
 }
 @media (max-width: 600px) {
   .ws-share { place-items: end stretch; padding: 0; }
-  .ws-share-sheet { width: 100%; border-radius: 14px 14px 0 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); transform: translateY(40px); }
+  .ws-share-sheet { width: 100%; border-radius: 2px 2px 0 0; padding-bottom: max(16px, env(safe-area-inset-bottom)); transform: translateY(40px); }
 }
 
 
@@ -2328,7 +2408,7 @@ body.killcam-open > :not(#neo):not(#retro):not(#killcam):not(.ws-share) { visibi
   align-items: flex-start;
   padding: 3px 4px;
   border: 1px solid rgba(61, 255, 176, 0.12);
-  border-radius: 5px;
+  border-radius: 2px;
   background: rgba(0, 0, 0, 0.35);
   color: var(--dim);
   font: 600 calc(var(--kb-size) * 0.3) / 1 var(--font);
@@ -2354,7 +2434,7 @@ body.retro .kb-key.used { --kc: #fff; box-shadow: none; }
 body:not(.touch) #controls-card { width: min(900px, calc(100vw - 32px)); }
 #controls-card .kb { --kb-size: 42px; margin-top: 10px; }
 /* Pinned over the game: see-through, and clicks pass through to the game, except on its handle. */
-#keyboard-pin { position: fixed; left: 0; top: 0; z-index: 6; padding: 6px 8px 8px; border: 1px solid var(--edge); border-radius: 8px; background: rgba(0, 10, 6, 0.55); opacity: var(--kb-opacity, 0.75); pointer-events: none; }
+#keyboard-pin { position: fixed; left: 0; top: 0; z-index: 6; padding: 6px 8px 8px; border: 1px solid var(--edge); border-radius: 2px; background: rgba(0, 10, 6, 0.55); opacity: var(--kb-opacity, 0.75); pointer-events: none; }
 #keyboard-pin .kb { --kb-size: var(--kb-size-pin, 34px); pointer-events: none; }
 #keyboard-pin .kb-handle { display: flex; align-items: center; gap: 4px; margin-bottom: 6px; color: var(--dim); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; cursor: move; pointer-events: auto; user-select: none; }
 #keyboard-pin .kb-handle span { flex: 1; }
@@ -2383,9 +2463,10 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
    exchange palette everywhere, the phone included. */
 .ex-actions { grid-area: form; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
 .ex-act-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.ex-act { padding: 11px 6px; border: 0; border-radius: 4px; font-weight: 700; font-size: 14px; color: #fff; cursor: pointer; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; letter-spacing: 0; text-transform: none; }
-.ex-act.buy { background: #2ebd85; }
-.ex-act.sell { background: #f6465d; }
+/* Square, a thin border and a glow, and the clipped corners of a main action (Mark, 12 November 2026). */
+.ex-act { --side: #2ebd85; padding: 11px 6px; border: 1px solid var(--side); border-radius: 0; background: color-mix(in srgb, var(--side) 16%, transparent); color: var(--side); font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; box-shadow: inset 0 0 14px color-mix(in srgb, var(--side) 30%, transparent), 0 0 12px color-mix(in srgb, var(--side) 22%, transparent); }
+.ex-act.buy { --side: #2ebd85; }
+.ex-act.sell { --side: #f6465d; }
 .ex-act-avail { margin: 0; color: var(--ex-dim); font-size: 12px; line-height: 1.5; }
 .ex-act-avail b { color: var(--ex-text); font-weight: 500; white-space: nowrap; }
 .ex-act-orders { align-self: flex-start; padding: 4px 0; border: 0; background: none; color: var(--ex-gold); font-size: 12.5px; cursor: pointer; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; letter-spacing: 0; text-transform: none; }
@@ -2410,7 +2491,7 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: min(880px, calc(100vw - 32px)); max-height: calc(100vh - 32px);
   display: flex; flex-direction: column; overflow: hidden;
-  background: var(--ex-card); border: 1px solid var(--ex-line); border-radius: 10px; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.8);
+  background: var(--ex-card); border: 1px solid var(--ex-line); border-radius: 2px; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.8);
 }
 .ex-mhead { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--ex-line); }
 .ex-mpair b { font-size: 18px; font-weight: 700; } .ex-mpair b span { color: var(--ex-dim); font-weight: 500; }
@@ -2439,14 +2520,15 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 .ex-mbook-note { color: var(--ex-dim); font-size: 11.5px; line-height: 1.4; }
 
 .ex-modal .ex-form { grid-area: auto; padding: 12px 16px; gap: 9px; overflow: visible; background: none; border: 0; }
-.ex-modal .ex-sides { padding: 0; gap: 0; border-radius: 4px; background: var(--ex-field); }
+.ex-modal .ex-sides { padding: 0; gap: 0; border-radius: 2px; background: var(--ex-field); }
 .ex-modal .ex-sides button { padding: 9px 0; border-radius: 0; font-size: 14px; font-weight: 700; color: var(--ex-dim); background: none; min-height: 0; }
-.ex-modal .ex-sides button[data-side='buy'].active { background: var(--ex-up); color: #fff; clip-path: polygon(0 0, 100% 0, 93% 100%, 0 100%); border-radius: 4px 0 0 4px; }
-.ex-modal .ex-sides button[data-side='sell'].active { background: var(--ex-down); color: #fff; clip-path: polygon(7% 0, 100% 0, 100% 100%, 0 100%); border-radius: 0 4px 4px 0; }
+.ex-modal .ex-sides button { min-height: 44px; letter-spacing: 0.12em; text-transform: uppercase; }
+.ex-modal .ex-sides button[data-side='buy'].active { background: color-mix(in srgb, var(--ex-up) 22%, transparent); color: var(--ex-up); box-shadow: inset 0 0 0 1px var(--ex-up), inset 0 0 14px color-mix(in srgb, var(--ex-up) 35%, transparent); clip-path: polygon(0 0, 100% 0, 93% 100%, 0 100%); border-radius: 0; }
+.ex-modal .ex-sides button[data-side='sell'].active { background: color-mix(in srgb, var(--ex-down) 22%, transparent); color: var(--ex-down); box-shadow: inset 0 0 0 1px var(--ex-down), inset 0 0 14px color-mix(in srgb, var(--ex-down) 35%, transparent); clip-path: polygon(7% 0, 100% 0, 100% 100%, 0 100%); border-radius: 0; }
 .ex-modal .ex-types { gap: 18px; }
 .ex-modal .ex-types button { flex: none; padding: 2px 0; border: 0; background: none; color: var(--ex-dim); font-size: 13.5px; font-weight: 500; }
 .ex-modal .ex-types button.active { color: var(--ex-text); font-weight: 600; border: 0; }
-.ex-modal .ex-field { display: flex; align-items: stretch; gap: 0; min-height: 42px; padding: 0; border: 1px solid transparent; border-radius: 4px; background: var(--ex-field); }
+.ex-modal .ex-field { display: flex; align-items: stretch; gap: 0; min-height: 42px; padding: 0; border: 1px solid transparent; border-radius: 2px; background: var(--ex-field); }
 .ex-modal .ex-field:focus-within { border-color: var(--ex-gold); }
 .ex-modal .ex-field > button { width: 40px; flex: none; border: 0; background: none; color: var(--ex-dim); font-size: 20px; cursor: pointer; padding: 0; }
 .ex-modal .ex-field > button:hover { color: var(--ex-text); }
@@ -2472,12 +2554,13 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 .ex-modal .ex-est { gap: 5px; font-size: 12.5px; }
 .ex-modal .ex-est div { display: flex; justify-content: space-between; }
 .ex-modal .ex-est dt { color: var(--ex-dim); } .ex-modal .ex-est dd { margin: 0; color: var(--ex-text); }
-.ex-modal .ex-est div:first-child { padding: 10px 12px; border-radius: 4px; background: var(--ex-field); font-size: 13.5px; }
+.ex-modal .ex-est div:first-child { padding: 10px 12px; border-radius: 2px; background: var(--ex-field); font-size: 13.5px; }
 .ex-modal .ex-avail:empty, .ex-modal .ex-msg:empty { display: none; }
-.ex-modal .ex-submit { padding: 12px; border-radius: 4px; font-size: 15px; font-weight: 700; }
-.ex-modal .ex-form.selling .ex-submit { background: var(--ex-down); }
-.ex-modal .ex-form .ex-submit:disabled { background: rgba(255, 255, 255, 0.08); color: var(--ex-dim); }
-.ex-cancel-order { padding: 10px; border: 1px solid var(--ex-down); border-radius: 4px; background: none; color: var(--ex-down); font-weight: 600; font-size: 14px; cursor: pointer; }
+/* The main action, as everywhere (Mark, 12 November 2026): square, a thin border and a glow, two clipped corners. */
+.ex-modal .ex-submit { --side: var(--ex-up); min-height: 50px; padding: 12px; border: 1px solid var(--side); border-radius: 0; background: color-mix(in srgb, var(--side) 16%, transparent); color: var(--side); font-size: 15px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; box-shadow: inset 0 0 14px color-mix(in srgb, var(--side) 30%, transparent), 0 0 12px color-mix(in srgb, var(--side) 25%, transparent); }
+.ex-modal .ex-form.selling .ex-submit { --side: var(--ex-down); background: color-mix(in srgb, var(--side) 16%, transparent); }
+.ex-modal .ex-form .ex-submit:disabled { --side: var(--ex-dim); background: rgba(255, 255, 255, 0.04); color: var(--ex-dim); box-shadow: none; text-transform: none; letter-spacing: 0.02em; }
+.ex-cancel-order { padding: 10px; border: 1px solid var(--ex-down); border-radius: 2px; background: none; color: var(--ex-down); font-weight: 600; font-size: 14px; cursor: pointer; }
 .ex-cancel-order:disabled { opacity: 0.4; }
 .ex-fnote { margin: 0; color: var(--ex-dim); font-size: 11.5px; line-height: 1.4; }
 .ex-modal .ex-msg { margin: 0; color: var(--ex-gold); font-size: 12px; }
@@ -2498,7 +2581,7 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 .ex-ocard { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; padding: 10px 16px; border-bottom: 1px solid #1e2329; font-size: 12.5px; }
 .ex-ocard .t { font-weight: 600; } .ex-ocard .a { text-align: right; }
 .ex-ocard-actions { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 4px; }
-.ex-ocard-actions button { flex: 1; padding: 8px 0; border: 0; border-radius: 4px; background: var(--ex-field); color: var(--ex-text); font-size: 13px; cursor: pointer; }
+.ex-ocard-actions button { flex: 1; padding: 8px 0; border: 0; border-radius: 2px; background: var(--ex-field); color: var(--ex-text); font-size: 13px; cursor: pointer; }
 
 /* The chart's own trading layer: SELL and BUY, the "+" on the price scale, your orders' tags. */
 .ex-chart-host { position: relative; }
@@ -2507,15 +2590,15 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 .ex-quick { position: absolute; left: 8px; top: 8px; display: flex; gap: 2px; }
 .ex-quick button { display: flex; flex-direction: column; align-items: flex-start; min-width: 64px; min-height: 0; padding: 3px 8px; border: 0; color: #fff; font-size: 12px; cursor: pointer; line-height: 1.15; }
 .ex-quick button small { font-size: 9.5px; opacity: 0.85; } .ex-quick button b { font-weight: 600; }
-.ex-quick .sell { background: rgba(246, 70, 93, 0.9); border-radius: 4px 0 0 4px; }
-.ex-quick .buy { background: rgba(46, 189, 133, 0.9); border-radius: 0 4px 4px 0; align-items: flex-end; }
-.ex-plus { position: absolute; width: 18px; height: 18px; min-height: 0; padding: 0; border: 0; border-radius: 3px; background: #f0b90b; color: #111; font-size: 14px; font-weight: 700; line-height: 18px; cursor: pointer; }
-.ex-plus-menu { position: absolute; display: flex; flex-direction: column; gap: 2px; padding: 4px; border: 1px solid #2b3139; border-radius: 4px; background: #161a1e; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); pointer-events: auto; }
-.ex-plus-menu button { padding: 7px 12px; border: 0; border-radius: 3px; background: none; text-align: left; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.ex-quick .sell { background: rgba(246, 70, 93, 0.9); border-radius: 2px 0 0 2px; }
+.ex-quick .buy { background: rgba(46, 189, 133, 0.9); border-radius: 0 2px 2px 0; align-items: flex-end; }
+.ex-plus { position: absolute; width: 18px; height: 18px; min-height: 0; padding: 0; border: 0; border-radius: 2px; background: #f0b90b; color: #111; font-size: 14px; font-weight: 700; line-height: 18px; cursor: pointer; }
+.ex-plus-menu { position: absolute; display: flex; flex-direction: column; gap: 2px; padding: 4px; border: 1px solid #2b3139; border-radius: 2px; background: #161a1e; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); pointer-events: auto; }
+.ex-plus-menu button { padding: 7px 12px; border: 0; border-radius: 2px; background: none; text-align: left; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
 .ex-plus-menu .buy { color: #2ebd85; } .ex-plus-menu .sell { color: #f6465d; }
 .ex-plus-menu button:hover { background: rgba(255, 255, 255, 0.06); }
 .ex-otags { position: absolute; inset: 0; }
-.ex-otag { position: absolute; display: flex; align-items: center; gap: 6px; height: 20px; padding: 0 2px 0 7px; border-radius: 3px; color: #fff; font-size: 11px; white-space: nowrap; touch-action: none; }
+.ex-otag { position: absolute; display: flex; align-items: center; gap: 6px; height: 20px; padding: 0 2px 0 7px; border-radius: 2px; color: #fff; font-size: 11px; white-space: nowrap; touch-action: none; }
 .ex-otag.buy { background: rgba(46, 189, 133, 0.92); } .ex-otag.sell { background: rgba(246, 70, 93, 0.92); }
 .ex-otag.drag { cursor: ns-resize; }
 .ex-otag.faint { opacity: 0.5; }
@@ -2524,7 +2607,7 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 
 /* A phone: a bottom sheet, the form beside a narrow book, your orders as cards. */
 @media (max-width: 700px) and (orientation: portrait), (max-height: 500px) {
-  .ex-sheet { left: 0; right: 0; top: auto; bottom: 0; transform: none; width: auto; max-height: 94vh; border-radius: 14px 14px 0 0; border-bottom: 0; overflow-y: auto; }
+  .ex-sheet { left: 0; right: 0; top: auto; bottom: 0; transform: none; width: auto; max-height: 94vh; border-radius: 2px 2px 0 0; border-bottom: 0; overflow-y: auto; }
   .ex-mbody { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); overflow: visible; }
   .ex-mbook { order: 2; border-right: 0; padding-left: 4px; }
   .ex-modal .ex-form { order: 1; padding-right: 8px; }
@@ -2545,7 +2628,7 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 .ex-plus-menu { z-index: 5; }
 .ex-plus { z-index: 4; }
 .ex-storage-toggle { align-self: flex-start; display: flex; align-items: center; gap: 7px; padding: 2px 0; border: 0; background: none; color: var(--ex-dim); font-size: 12px; cursor: pointer; }
-.ex-storage-toggle i { width: 26px; height: 14px; border-radius: 7px; background: var(--ex-line); position: relative; flex: none; }
+.ex-storage-toggle i { width: 26px; height: 14px; border-radius: 2px; background: var(--ex-line); position: relative; flex: none; }
 .ex-storage-toggle i::after { content: ''; position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: var(--ex-dim); transition: left 0.15s; }
 .ex-storage-toggle.on { color: var(--ex-text); }
 .ex-storage-toggle.on i { background: var(--ex-up); }

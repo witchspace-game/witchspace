@@ -18,6 +18,10 @@ reported it.
 - A good record buys one mistake: ten deliveries since your last failure halve what the next costs you in standing. (Mark)
 - Saloon regulars no longer tell the same story in the same words: two people in one bar never share a tip, and every mood has four ways of putting things. (Mark)
 - On a phone, the docked places menu and the wallet open just under the header, wherever you've scrolled to, instead of at the top of the page. (Mark)
+- The docked screens redrawn: your own ship, live, at the top of the Station screen (drag to turn her); fuel, missiles, cargo and running lights as tiles; a Commander card with your rank's progress; Launch → where you're going. (Mark)
+- The owner's manual opens full screen with her live at the top: drag to turn, pinch to zoom. (Mark)
+- The header says which system you're in first, and on a phone the Neo/1984 switch moves into it. (Mark)
+- No more pill buttons: square everywhere, with clipped corners on the main action, the trade window included. (Mark)
 
 ## 11 November 2026
 
