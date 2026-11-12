@@ -187,9 +187,52 @@ Today a murder costs at most 1,500 Cr (a Fugitive's 500 and a warrant's 1,000, i
 
 - Fight the police and lose, and the insurer won't pay and the bank won't lend to a criminal. **That leaves the sharks.**
 - **Bounty hunters** start appearing in systems you visit after a few missed payments, more and nastier as the debt grows. They fly unmarked, often second-hand ships, so you can't tell who's hunting you until they open fire.
-- **Ways out of debt:** pay up, hide in anarchies where the sharks' reach is weaker, or fight the hunters off, which means fighting your own debt.
+- **Ways out of debt:** pay up, keep to the lawful core where the sharks' hunters don't work (see the Vane Syndicate, below), or fight the hunters off, which means fighting your own debt.
 - **Multiplayer:** players can take the sharks' contracts as bounty hunters.
 - **Lender names** must be original (no names from the Elite novels). Placeholders: *Merrow & Daughters* (bank), *the Vane Syndicate* (sharks). Better names welcome.
+
+### The Vane Syndicate: big contracts, borrowed bonds and bounty hunters *(Mark, 12 November 2026; proposed)*
+
+Mark: *"It needs to offer a way out for a player to be able to pay back the debt … by losing a large contract. This allows the player to take on larger contracts that they can't really afford. If they lose the cargo, they can borrow money, but at a high interest rate. Of course, this opens up having bounty hunters … You have to be Competent or above … becoming a bounty hunter allows you to chase debtors."*
+
+It builds on the [contract terms](companies-and-contracts.md#terms-rank-pays-and-each-company-treats-failure-its-own-way-mark-built-12-november-2026): valuable cargo asks a bond, never more than half your credits.
+
+**1. The Syndicate fronts the bond.**
+- A job's card shows when you're short: *"Bond 4,000 Cr · you can put down 1,500 · the Vane Syndicate will front the rest"*. Their man is in the saloon or the back room of any station with one. Anarchies have no back room; there, he's in the bar.
+- **The vig:** 20% of what they front, owed at once. Then **5% a jump** while it's unpaid. Jumps, not hours, as with deadlines, so closing the game never buries anyone.
+- **Delivered:** the bond comes back, and the Syndicate takes what it's owed out of it first. You've paid the vig for a job you couldn't otherwise take.
+- **Lost:** you owe the whole loan and the vig, growing each jump.
+- **How much:** up to three times your credits, and never more than a ceiling (say 20,000 Cr) in all. Over the ceiling, they won't lend.
+
+**2. Paying it back.**
+- Pay any part, any time, at a saloon or back room. The Syndicate's messages say what you owe and by when.
+- **Due within 10 jumps.**
+  - After that: a warning, then a penalty (+10%) every 3 jumps.
+  - After 5 more jumps: **hunters**.
+- **Working it off:** the Syndicate offers dirty runs that clear part of the debt (sealed crates in a shielded compartment, a passenger who mustn't be scanned). It's a way out, but it's crime.
+- **Bankruptcy** stays the last reset (below).
+
+**3. Where they reach.** This resolves the old line about "hiding in anarchies".
+- **Their hunters work where the law is thin:** anarchies, feudal worlds and multi-government systems. The frontier is the Syndicate's ground, and lawful police would arrest anyone collecting a debt with lasers.
+- **So a debtor is safest in the lawful core,** which is exactly where Vorg's big-paying danger runs don't go.
+
+**4. When the hunters come.**
+- **Computer-flown hunters** appear in frontier systems you visit, more and nastier as the debt grows.
+- **They fly unmarked, second-hand ships,** so you don't know who's hunting you until they hail or open fire: *"The Syndicate sends its regards."*
+- **They want you alive.** Until disabling is built, a hunter who destroys you takes what they can: your hold, and credits up to the debt. Insurance still replaces the ship; the debt stays unless that cleared it.
+
+**5. Bounty hunters: a career from Competent** (the rung below the Marshals at Dangerous).
+- **Getting papers:** at Competent, the Syndicate's man approaches you in a saloon: *"You handle yourself."* You get **hunter's papers**.
+- **Debtor contracts:** a named debtor, what they owe and where they were last seen. Your fee is a share of what's recovered, about 15% if the debtor is destroyed. Bringing them in alive pays more once disabling exists.
+- **Computer-flown debtors** fly a known route like the traders, so the work exists solo.
+- **It's grey work.** Shooting a debtor in lawful space is a crime like any other, because the Syndicate isn't the law. Hunt on the frontier.
+- **Real commanders in debt (shared space):** past the hunters stage, a real debtor could appear as a contract for hunters in shared space. **Mark to decide:** a debtor isn't a criminal, and "name the doers, never player victims" argues against phone alerts or news. Suggested: the contract appears only for hunters in the same frontier system, with no alerts and no feed, and never in lawful space.
+- **Paperwork with the law:** Syndicate work doesn't bar you from the Marshals. Killing a clean commander still does.
+
+**Open questions:**
+1. The numbers: the vig, interest a jump, the ceiling, the due date.
+2. Real commanders as quarry, as above.
+3. Whether a lawful lender (*Merrow & Daughters*) also fronts bonds for clean commanders at modest interest, as section 7 proposes, so the Syndicate is the choice of the desperate.
 
 ### The safety net
 
