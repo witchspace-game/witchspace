@@ -1089,6 +1089,16 @@ button.button { cursor: pointer; }
 .manual-page .man-cover h1 span { display: inline-block; font-size: 0.5em; letter-spacing: 0; }
 .manual-page .man-cover h1 small { display: block; margin-top: 8px; font-size: 0.45em; letter-spacing: 0.02em; }
 .manual-page .man-cover .kicker { color: var(--hull); }
+/* The cover: her words, and the ship beside them (under them on a phone). */
+.manual-page .man-cover { display: flex; align-items: center; gap: 24px; }
+.manual-page .man-cover-text { flex: 1 1 auto; min-width: 0; }
+.manual-page .man-ship { flex: 0 0 200px; max-width: 200px; }
+.manual-page .man-free { margin: 14px 0 0; color: var(--fg); font-weight: 600; }
+.manual-page .man-fly { margin-top: 28px; }
+@media (max-width: 640px) {
+  .manual-page .man-cover { flex-direction: column-reverse; align-items: flex-start; gap: 4px; }
+  .manual-page .man-ship { flex-basis: auto; width: 150px; align-self: center; }
+}
 /* The manual's pictures from the game, with numbered callouts (as the game's own manual, src/style.css). */
 .manual-page .man-fig { margin: 16px 0; }
 .manual-page .man-fig figcaption { margin-top: 6px; color: var(--muted); font-size: 14px; line-height: 1.45; }

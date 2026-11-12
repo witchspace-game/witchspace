@@ -47,6 +47,8 @@ export interface ManualData {
   kit: Record<string, string[]>;
   luxuries: Record<string, string[]>;
   editions: Record<string, string>;
+  /** Free to read for everyone (the Cobra's, the guide to playing); every other ship's is her owner's. */
+  open?: boolean;
   /** The phone's drawer, from play/index.html: what each button does comes from the controls list (src/game/controls.ts drawerHelp). */
   drawer: { key?: string; label: string; title: string }[];
 }
@@ -548,28 +550,49 @@ function previewCard(s: ShipFile): string {
 }
 
 /** A ship's owner's manual: only its owner sees it. The page checks the save (src/site/manual.ts); everyone else is told it comes with the ship. */
+/**
+ * A ship's owner's manual. The Cobra's is free to read (Mark): every commander starts in one, so it's the guide to
+ * playing, a page to land on. Every other ship's shows her cover and a reason to earn her; the words are her owner's.
+ */
 export function manualPage(s: ShipFile, m: ManualData) {
-  const data = JSON.stringify(m).replace(/</g, '\\u003c');
+  const open = s.id === 'cobra-mk3';
+  const data = JSON.stringify({ ...m, open }).replace(/</g, '\\u003c');
+  const about = { '@type': 'CreativeWork', name: s.name, url: `https://witchspace.org.uk/ships/${s.id}/` };
+  const game = { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' };
   return {
-    card: { ship: s.id, kicker: 'Owner’s manual', title: `The ${s.name} owner’s manual`, sub: 'Comes with the ship: how she flies, how to dock her, and where every button is.' },
-    schema: [{ '@type': 'CreativeWork', name: `${s.name} owner’s manual`, about: { '@type': 'CreativeWork', name: s.name, url: `https://witchspace.org.uk/ships/${s.id}/` }, isPartOf: { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' } }],
-    title: `${s.name} owner’s manual · Ships · Witchspace`,
-    description: `The ${s.name} owner’s manual comes with the ship: how she flies against a Cobra, how to dock her, and every control. Owners only.`,
-    head: '    <meta name="robots" content="noindex" />\n',
-    content: `<section class="section ship-page manual-page" style="--hull:${esc(m.colour)}">
+    card: open
+      ? { ship: s.id, kicker: 'Owner’s manual · free to read', title: `How to fly the ${s.name}`, sub: 'The dashboard, docking, every control on a computer or a phone, and the flight recorder.' }
+      : { ship: s.id, kicker: 'Owner’s manual', title: `The ${s.name} owner’s manual`, sub: 'Comes with the ship: how she flies, how to dock her, and where every button is.' },
+    schema: [
+      open
+        ? { '@type': 'TechArticle', headline: `${s.name} owner’s manual: how to fly, fight and dock`, description: 'The guide to flying in Witchspace, free to read.', isAccessibleForFree: true, about, isPartOf: game }
+        : { '@type': 'CreativeWork', name: `${s.name} owner’s manual`, about, isPartOf: game },
+    ],
+    title: open ? `${s.name} owner’s manual: how to fly, fight and dock · Witchspace` : `${s.name} owner’s manual · Ships · Witchspace`,
+    description: open
+      ? `Free to read: the ${s.name} owner’s manual is the guide to flying in Witchspace. The dashboard, docking, every control on a computer or a phone, and the flight recorder.`
+      : `The ${s.name} owner’s manual comes with the ship: how she flies against a Cobra, how to dock her, and every control. Owners only.`,
+    // The Cobra's is a page to land on; the rest are owners' perks, kept out of search.
+    head: open ? '' : '    <meta name="robots" content="noindex" />\n',
+    content: `<section class="section ship-page manual-page" style="--hull:${esc(m.colour)};--ship:${esc(m.colour)}">
   <a class="back" href="/ships/${esc(s.id)}/">← The ${esc(s.name)}</a>
   <header class="man-cover">
-    <p class="kicker">Owner’s manual · ${esc(m.meta)}</p>
-    <h1 id="man-title">${esc(s.name)}</h1>
-    <p class="lede">${esc(m.description)}</p>
+    <div class="man-cover-text">
+      <p class="kicker">Owner’s manual · ${esc(m.meta)}</p>
+      <h1 id="man-title">${esc(s.name)}</h1>
+      <p class="lede">${esc(m.description)}</p>
+      ${open ? '<p class="man-free">Free to read. Every commander starts in a Cobra, so this is the guide to flying her.</p>' : ''}
+    </div>
+    ${shipSvg(s, 'ship-svg man-ship')}
   </header>
-  <div class="card manual-gate" id="manual-gate">
-    <h3>For owners only</h3>
-    <p id="manual-why">Every ${esc(s.name)} comes with her manual: how she flies against a Cobra, how to dock her, and where every button is. Checking whether she’s yours…</p>
+  <div class="card manual-gate" id="manual-gate"${open ? ' hidden' : ''}>
+    <h3>Owners only</h3>
+    <p id="manual-why">Earn her in the game, and her manual is yours, made out to you: how she flies against a Cobra, how to dock her, and where every button is.</p>
+    <p class="connect-buttons"><a class="button primary" href="/play/">Play free in your browser</a> <a class="button ghost" href="/ships/${esc(s.id)}/">See the ${esc(s.name)}</a></p>
     <div id="account" hidden></div>
-    <p class="connect-buttons"><a class="button primary small" href="/ships/${esc(s.id)}/">See the ${esc(s.name)}</a> <a class="button ghost small" href="/play/">Play Witchspace</a></p>
   </div>
   <article class="manual" id="manual" hidden></article>
+  ${open ? `<p class="connect-buttons man-fly"><a class="button primary big" href="/play/">Fly her now, free in your browser</a></p>` : ''}
   <script type="application/json" id="manual-data">${data}</script>
 </section>`,
   };

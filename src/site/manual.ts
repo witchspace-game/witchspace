@@ -166,9 +166,19 @@ function locked(why: string, signIn: boolean) {
 }
 
 const NOT_YOURS = (flying: string) =>
-  `Every ${escapeHtml(m.name)} comes with her manual: how she flies against a Cobra, how to dock her, and where every button is. You fly ${flying}: buy a ${escapeHtml(m.name)} at a shipyard and her manual is yours, here and in the game.`;
+  `You fly ${flying}: earn a ${escapeHtml(m.name)} in the game, and her manual is yours, made out to you: how she flies against a Cobra, how to dock her, and where every button is.`;
 
 async function check() {
+  // The Cobra's is open to everyone (Mark): the generic edition at once, made out to you if your save is a Cobra's.
+  if (m.open) {
+    const here = localSave();
+    if (here && hullOf(here) === m.id) return show(here);
+    show({});
+    if (!signedIn()) await refresh();
+    const cloud = await cloudSave();
+    if (cloud && hullOf(cloud) === m.id) show(cloud);
+    return;
+  }
   const here = localSave();
   if (here && hullOf(here) === m.id) return show(here);
   if (!signedIn()) await refresh();
@@ -176,7 +186,7 @@ async function check() {
   if (cloud && hullOf(cloud) === m.id) return show(cloud);
   const known = cloud ?? here;
   if (known) return locked(NOT_YOURS(hullOf(known) === 'cobra-mk3' ? 'a Cobra' : 'another ship'), false);
-  locked(`Every ${escapeHtml(m.name)} comes with her manual: how she flies against a Cobra, how to dock her, and where every button is. If she’s yours, sign in with your game account and it opens here.`, true);
+  locked(`Earn her in the game, and her manual is yours, made out to you: how she flies against a Cobra, how to dock her, and where every button is. If she’s already yours, sign in with your game account and it opens here.`, true);
   box.render();
 }
 
