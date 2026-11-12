@@ -253,7 +253,7 @@ Not a spawn: a handful of named hunters in each galaxy, made the way the [world'
 
 **5. Chasing debtors is the Marshals' work** *(Mark, 12 November 2026)*: no separate bounty-hunter career. Deputy Marshals, from Competent, recover computer-flown debtors who skipped on a licensed lender's bond, as the American bail system works; real commanders are never hunted for debt by other players. See [become a Marshal: deputies and debtors](marshals-career.md#deputies-and-debtors-mark-12-november-2026). The Syndicate never goes to court: its own characters collect.
 
-**6. Two lenders.** *Merrow & Daughters*, licensed, fronts bonds for clean commanders at about 10%, the ship as collateral; a default goes to the Co-operative's court as a civil warrant, checked when you dock at a lawful station. The Vane Syndicate lends to anyone, at the rates above, and sends its heavies.
+**6. Two lenders.** *Merrow & Daughters*, licensed, fronts bonds for clean commanders at about 10%, the ship as collateral; a default goes to the Co-operative's court as a civil warrant, checked when you dock at a lawful station. Unpaid, the ship is impounded there: held with every upgrade until you pay (with a small daily storage fee), auctioned after 30 days, the balance back to you ([become a Marshal](marshals-career.md#deputies-and-debtors-mark-12-november-2026)). The Vane Syndicate lends to anyone, at the rates above, and sends its heavies.
 
 **Open questions:**
 1. The numbers: the vig, interest a jump, the ceiling, the due date.

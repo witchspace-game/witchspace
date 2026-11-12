@@ -109,7 +109,13 @@ Mark: *"I was hoping to just allow the marshal career … Once you become or get
 
 **Real commanders are never hunted for debt** by other players. Their default is handled by the law at the dock (Merrow) or by the Syndicate's characters on the frontier (Vane). Real commanders are only hunted for crimes: the full Marshals' warrants for Fugitives, below.
 
-**To decide (Mark):** whether a Merrow default impounds the ship at a lawful dock (pay or leave in the Co-operative's bare Cobra), and the fee shares.
+**A Merrow default: the impound** *(Mark, 12 November 2026: "That's a real thing if they impound your ship with all the upgrades! Ouch!")*. The ship was the collateral, so it's held, as a real impound lot holds it:
+- **A warning first.** Merrow writes before the due date, and docking at a lawful station offers *Settle now* before anything happens. Nobody loses a ship by surprise.
+- **Held, not sold.** Unpaid, the ship and every upgrade wait at that station's impound, and you leave in the Co-operative's bare Cobra.
+- **Pay the debt and a small daily storage fee,** and she's yours again, exactly as you left her.
+- **Unclaimed after 30 days, she's auctioned.** The sale clears the debt, and whatever's left over comes back to you.
+
+**Still to set:** the fee shares for recovery work.
 
 ## Warrant alerts on your phone *(Mark)*
 
