@@ -92,11 +92,11 @@ html.paper .brand-mark { stroke: currentColor; filter: none; }
 html.paper .site-header .brand-mark { color: var(--fg); }
 
 /* Buttons: solid ink, square-shouldered, no glow. In space they're the game's green, still flat. */
-html.paper .button { border-radius: 4px; background: transparent; border-color: var(--border-strong); box-shadow: none; backdrop-filter: none; }
+html.paper .button { border-radius: var(--radius-ctl); background: transparent; border-color: var(--border-strong); box-shadow: none; backdrop-filter: none; }
 html.paper .button:hover { background: var(--surface-2); border-color: var(--fg); transform: none; }
 /* The call to action is the game's green everywhere, flat: the brand's colour, not a generic black pill. */
-html.paper .button.primary, html.paper a.button.primary { background: #3dffb0; color: #04140d; box-shadow: none; }
-html.paper .button.primary:hover, html.paper a.button.primary:hover { background: #1fe89a; color: #04140d; box-shadow: none; }
+html.paper .button.primary, html.paper a.button.primary { --fill-a: #3dffb0; --fill-b: #3dffb0; background: linear-gradient(135deg, transparent calc(var(--cut) * 0.7071), var(--fill-a) calc(var(--cut) * 0.7071), var(--fill-b) calc(100% - var(--cut) * 0.7071), transparent calc(100% - var(--cut) * 0.7071)); color: #04140d; box-shadow: none; filter: none; }
+html.paper .button.primary:hover, html.paper a.button.primary:hover { --fill-a: #1fe89a; --fill-b: #1fe89a; color: #04140d; }
 html.paper a.button { color: var(--fg); }
 html.paper .button.ghost { background: transparent; }
 
