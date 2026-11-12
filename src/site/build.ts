@@ -194,7 +194,7 @@ function orderStep(): string {
     ${def.concept ? `<p class="build-order-total"><span>Deposit, a tenth, refundable until she’s ready</span><b>${cr(depositFor(total))}</b></p>` : ''}
     <p class="connect-buttons"><button type="button" class="button primary" id="build-order">${def.concept ? 'Order her' : 'Save her for the yard'}</button> <button type="button" class="button ghost" id="build-share" data-share data-share-title="My ${escapeHtml(def.name)}">Share your spec</button></p>
     <p class="build-note" id="build-ordered">${note()}</p>
-    <p class="build-fly"><a class="button primary big" href="/play/">Fly her now, free in your browser</a></p>`;
+    <p class="build-fly"><a class="button primary big" href="/play/">${REPAINT ? 'Start flying free: earn her paint in the game' : 'Start flying free: earn her in the game'}</a></p>`;
 }
 
 /** A numbered edition, on show: what she is, how many are left, a name for her and a way to share her. */
