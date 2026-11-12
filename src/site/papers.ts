@@ -245,7 +245,7 @@ async function save(p: Papers) {
   y = H - 150;
   c.fillStyle = muted;
   c.font = `italic 400 24px ${body}`;
-  c.fillText(`One of ${p.limit}. The number is painted beside her name, and no other ship will carry it.`, W / 2, y, W - 160);
+  c.fillText(`One of ${p.limit}. Her number stands beside her name, and no other ship will carry it.`, W / 2, y, W - 160);
   y += 50;
   c.fillStyle = fg;
   c.font = `400 26px ${body}`;

@@ -58,7 +58,7 @@ if (counts.length)
         // Signed over to contributors, not sold: how many the maker has given (Mark).
         const given = Math.min(e.taken, e.limit);
         if (!given) continue;
-        el.innerHTML = given < e.limit ? `<b>${given} of ${e.limit} signed over.</b> Numbered 001 to ${String(e.limit).padStart(3, '0')}, each painted beside its name.` : `<b>All ${e.limit} signed over.</b> Every one numbered, and every one given.`;
+        el.innerHTML = given < e.limit ? `<b>${given} of ${e.limit} signed over.</b> Numbered 001 to ${String(e.limit).padStart(3, '0')}, each beside her name on her papers.` : `<b>All ${e.limit} signed over.</b> Every one numbered, and every one given.`;
         el.classList.toggle('gone', given >= e.limit);
       }
     } catch {

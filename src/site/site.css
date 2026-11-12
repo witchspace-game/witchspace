@@ -1038,10 +1038,12 @@ button.button { cursor: pointer; }
 .build-summary dt { color: var(--muted); font: 600 12px var(--hud); letter-spacing: 0.16em; text-transform: uppercase; }
 .build-summary dd { margin: 2px 0 0; }
 .build-dot { display: inline-block; width: 10px; height: 10px; margin-right: 8px; background: var(--sw); box-shadow: 0 0 8px var(--sw); }
-.build-order-total { display: flex; justify-content: space-between; gap: 12px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--edge); }
+.build-order-total { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--edge); }
 .build-order-total span { color: var(--muted); }
 .build-order-total b { white-space: nowrap; font: 700 20px var(--hud); color: var(--hull); }
 .build-panel .connect-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.build-order-total.kit b { color: var(--fg); font-size: 17px; }
+.build-order-new { margin: 10px 0 0; color: var(--muted); font-size: 14px; }
 .build-fly { margin: 24px 0 0; padding-top: 20px; border-top: 1px solid var(--edge); }
 /* Your own spec, or a numbered edition: the first choice. */
 .build-models { display: flex; flex-wrap: wrap; gap: 6px; margin: 20px 0 0; }
@@ -1068,8 +1070,12 @@ button.button { cursor: pointer; }
   .build { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   /* The ship is the hero: edge to edge, about 42% of the screen, and she stays in sight as you choose. */
   .build-stage { top: 64px; z-index: 2; margin: 0 calc(-1 * var(--gutter)); background: var(--bg); }
-  .build .build-view { aspect-ratio: auto; height: 42svh; min-height: 260px; border-left: 0; border-right: 0; }
+  .build-page { --stage: 42svh; }
+  /* Scrolling through the choices, she steps back a little so more of them fit (Mark); full size at the top or on a new step. */
+  .build-page.shrunk { --stage: 28svh; }
+  .build .build-view { aspect-ratio: auto; height: var(--stage); min-height: 180px; border-left: 0; border-right: 0; transition: height 0.3s ease, box-shadow 0.4s, border-color 0.4s; }
   .build-steps { scroll-margin-top: calc(64px + 42svh + 10px); }
+  .build-fly { margin-top: 32px; padding-top: 28px; padding-bottom: 12px; }
   .build-steps button { flex: 0 0 auto; }
   .build-sheet .part { display: none; }
   .build-bar-buttons .button { padding-left: 14px; padding-right: 14px; }
