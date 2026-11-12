@@ -216,15 +216,48 @@ It builds on the [contract terms](companies-and-contracts.md#terms-rank-pays-and
 - **Their hunters work where the law is thin:** anarchies, feudal worlds and multi-government systems. The frontier is the Syndicate's ground, and lawful police would arrest anyone collecting a debt with lasers.
 - **So a debtor is safest in the lawful core,** which is exactly where Vorg's big-paying danger runs don't go.
 
-**4. When the hunters come.**
-- **Computer-flown hunters** appear in frontier systems you visit, more and nastier as the debt grows.
-- **They fly unmarked, second-hand ships,** so you don't know who's hunting you until they hail or open fire: *"The Syndicate sends its regards."*
+**4. The hunters are characters** *(Mark: "if they're going to be computer-flown, they need to be in-game characters, not just random hunters")*.
+
+Not a spawn: a handful of named hunters in each galaxy, made the way the [world's characters](the-world.md#6-characters) and the [renowned pirates](pirate-career.md) are. The same hunters for everyone, from the seed and the clock.
+- **Each has a home, a ship, a patch and a temperament:**
+  - **Home:** a frontier station, where you find them in the saloon between jobs.
+  - **Ship:** second-hand and named, a Fer-de-Lance, a Mamba or an old Cobra, with no company colours.
+  - **Patch:** the frontier systems a few jumps around home.
+  - **Character:** a line of where they came from and a code they live by, as the renowned pirates have.
+- **Your file goes to whoever's patch you're in.** Fly into it in default and they come for you, by name: *"Ines Calloway. The Syndicate sends its regards. You can pay me, or you can pay me later, at a worse rate."* They hail first and offer terms once, then fight.
+- **They remember you:**
+  - **Beat one:** they eject, they're out of action for a while, and they come back with a grudge.
+  - **Pay one off in the saloon:** they're civil next time.
+  - **Lose to one:** they say so in their home bar.
+  - Kept per commander, on the server for signed-in commanders, as the renowned pirates' memory is.
+- **Their stories move on:**
+  - **The news reports their catches:** *"Calloway brought in the Even Keel at Ensoreus"*, naming the hunter and a computer-flown debtor, never a real commander.
+  - **The galaxy chart** marks a hunter's patch, as it does a renowned pirate's.
+- **In shared space,** each hunter is one ship that everyone sees, flown by the system's server, as the characters are.
 - **They want you alive.** Until disabling is built, a hunter who destroys you takes what they can: your hold, and credits up to the debt. Insurance still replaces the ship; the debt stays unless that cleared it.
+- **Member numbers:** the famous few hold callsigns from 002 to 100, as characters do, so nobody can take their names.
+
+**First drafts, for Mark's yes** (original names; the rest seeded from word lists, as the renowned pirates are):
+- **Ines Calloway, "Paper".**
+  - **Past:** a Bankers' Guild assessor until the Guild wrote off a debt she'd spent a year chasing.
+  - **Ship:** a Fer-de-Lance, *Settlement*.
+  - **Code:** she keeps every debt in a hand-written ledger, and always offers terms once.
+  - **Patch:** the feudal worlds nearest Lave, where new commanders first borrow.
+- **Old Brannock.**
+  - **Past:** a Mutual tug pilot who tows his debtors in alive, the only hunter who still does it the old way.
+  - **Ship:** a patched Cobra, *Tow Line*.
+  - **Code:** he won't take the file of a Mutual member: "Not my own." The Mutual's members find that out when they need it.
+- **The Lisle sisters.**
+  - **Who they are:** two Mambas, *Sooner* and *Later*. One talks, one doesn't.
+  - **Code:** they never split a fee and never split up. A debtor who sees one Mamba has about ten seconds before the second.
 
 **5. Bounty hunters: a career from Competent** (the rung below the Marshals at Dangerous).
-- **Getting papers:** at Competent, the Syndicate's man approaches you in a saloon: *"You handle yourself."* You get **hunter's papers**.
-- **Debtor contracts:** a named debtor, what they owe and where they were last seen. Your fee is a share of what's recovered, about 15% if the debtor is destroyed. Bringing them in alive pays more once disabling exists.
-- **Computer-flown debtors** fly a known route like the traders, so the work exists solo.
+- **Getting papers:** at Competent, a hunter approaches you in a saloon on the Syndicate's behalf: *"You handle yourself."* Calloway, if you're near Lave. You get **hunter's papers**.
+- **The debtors are characters too:** a trader who borrowed after a bad run, with a ship's name, a route and a story. Their contract gives what they owe, where they were last seen and why they borrowed. You're paid about 15% of what's recovered if they're destroyed, and more for bringing them in alive once disabling exists.
+- **Some debtors deserve better.** A debtor can be talked to over the radio:
+  - **Let them go,** and the Syndicate marks it on your papers.
+  - **Pay part of their debt yourself,** and they remember it.
+  - It's a choice, not a quota.
 - **It's grey work.** Shooting a debtor in lawful space is a crime like any other, because the Syndicate isn't the law. Hunt on the frontier.
 - **Real commanders in debt (shared space):** past the hunters stage, a real debtor could appear as a contract for hunters in shared space. **Mark to decide:** a debtor isn't a criminal, and "name the doers, never player victims" argues against phone alerts or news. Suggested: the contract appears only for hunters in the same frontier system, with no alerts and no feed, and never in lawful space.
 - **Paperwork with the law:** Syndicate work doesn't bar you from the Marshals. Killing a clean commander still does.
