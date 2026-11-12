@@ -195,6 +195,7 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
   - **Ticked:** her name and story can appear in saloon gossip, the in-game news and the live feed, the yard's order book, and Witchspace's own posts (Instagram, Reddit, press).
   - **Unticked:** she's *"a Cobra"* in the game's own talk, and never in marketing.
   - The privacy page explains it (Website), live before it ships.
+- **Never together** (Mark, 12 November 2026): in public (the feed, the news, the order book, saloon gossip, wanted notices, Witchspace's posts) a ship's name and her commander's callsign never appear together. In the world she's known by her own name only. No public endpoint returns a callsign alongside a ship; only the owner's own `GET /me` joins them.
 - **Ships in the story of the galaxy** (ticked ships only). Built on what the game already records: the flight recorder's moments, firsts, crimes and Your record, the renowned pirates' memory, the yard's records.
   - **Saloon gossip** ([trading.md, the saloon](trading.md#3-the-saloon)): *"Saw the Brass Neck take on three Mambas at Riedquat and limp home."*
   - **A renowned pirate's grudge:** *"Old Iron's asking after a Cobra called Brass Neck."*
@@ -202,6 +203,7 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
   - **The news and the live feed** ([live-feed.md](live-feed.md#named-ships-mark-12-november-2026-proposed)): *"The Brass Neck made the first survey of Xeesle."*, *"The Last Orders left the yard at Lave in Zaonce Neon."*
 - **The yard's order book** on the site ([ship-configurator.md](ship-configurator.md#the-yards-order-book-mark-12-november-2026-proposed)).
 - **The API** (agreed with Website, 12 November 2026; Website builds its pages against stubs of these while the Worker side is built, and both go out together after Mark's deploy):
+  - **Never together:** nothing public names a ship's commander. `/names/check` and `/yard/book` carry no callsign or account id, and no field that leads to one.
   - `GET /names/check?name=` → `{ ok: true }` or `{ ok: false, why: 'taken' | 'reserved' | 'rude' | 'held', suggestion?: string }`. Public, rate-limited per network hash (it's for live checking as someone types), and it says nothing about who holds a name.
   - **Claiming at sign-up:** the sign-in call that sets the callsign (email code → callsign) takes optional `shipName` and `talk: boolean`. Errors come back per field, `{ errors: { callsign?: why, shipName?: why } }`, so each shows beside its own box; the callsign can succeed while the name is refused.
   - `PATCH /me/ship` with `{ name?, talk? }`: rename her or change the tick. A rename is logged in the registry (old name, new name, when), and the old name goes into its 90-day hold.
@@ -212,7 +214,7 @@ Mark: *"When they first play the game, in order for them to be able to rank, get
   - the name registry, reservations, release and hold, the consent flag, and claiming at registration: about 1½ days, Worker deploy;
   - the order book's list on the server (`GET /yard/book`): about 1 day, Worker deploy (Website builds the page: about 3 days with the naming step and the callsign page, alongside);
   - named ships in the saloon, pirates' grudges, wanted notices, the news and the feed: about 2 days. The saloon and the news are worked out in the browser from the seed and the clock, so this needs a small server list of ticked ships and what they've done lately, read like the feed.
-  About 4½ days in all.
+  About 4½ days in all. **When** (Mark, 12 November 2026): after the current work is live; registration first, then names.
 
 **The security record** (Mark: *"I was thinking about a security side as well"*). Alongside the passport, every visit to shared space is kept for 30 days:
 - account and callsign, system, time in and out, and how they left;
