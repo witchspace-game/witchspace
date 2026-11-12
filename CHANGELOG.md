@@ -23,6 +23,7 @@ reported it.
 - The header says which system you're in first, and on a phone the look switch is one NEO button in it: lit for neo-vector, off for 1984. (Mark)
 - No more pill buttons: square everywhere, with clipped corners on the main action, the trade window included. (Mark)
 - A Cobra specced on the website is no longer a dead end: the yard repaints the Cobra you fly to it, name and all, and her kit goes on a list at Equip ship. (Mark)
+- Every ship has a transponder number: yours, like WS-7F3K-29, is under her name on the Station screen, and every NPC's is in the target readout (a Python LA-4471). It stays with the hull; a new ship, or the insurers' replacement, gets a new one. Run dark and nobody reads it. (Mark)
 - The yard no longer promises a name painted on her: it's on her papers, her manual and your clips. (Mark)
 
 ## 11 November 2026

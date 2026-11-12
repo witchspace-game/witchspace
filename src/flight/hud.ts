@@ -20,6 +20,7 @@ import { distresses } from './comms';
 import { callsignTag, commanderColour } from './sharedSpace';
 import { exploreMarkers } from './explore';
 import { gimballed, laserDirection, playerLaser } from './combat';
+import { numberOf } from './numbers';
 import * as THREE from 'three';
 
 // --- Situational awareness markers ----------------------------------------------
@@ -106,7 +107,8 @@ export function updateCombatHud() {
     const owner = best.company ? COMPANIES[best.company].name.toUpperCase() : best.role.toUpperCase();
     // A renowned pirate is known by name: his, and his ship's (Mark).
     const known = renownedNpc.get(best);
-    targetInfo.textContent = `${known ? `${known.name} · ${best.def.name} ${known.ship}` : `${best.def.name} · ${owner}`} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === flight.locked ? ' · LOCKED' : ''}`;
+    // Her transponder number, read as she's identified (Mark, 10 November 2026).
+    targetInfo.textContent = `${known ? `${known.name} · ${best.def.name} ${known.ship} · ${numberOf(best)}` : `${best.def.name} · ${numberOf(best)} · ${owner}`} · ${km} km · ${Math.round(best.health * 100)}% · ${best.hostile ? 'HOSTILE' : standing}${best === flight.locked ? ' · LOCKED' : ''}`;
     // Close enough, the scanner reads the hold.
     if (best.obj.position.distanceTo(player.obj.position) < CARGO_SCAN_RANGE && best.role !== 'police' && best.role !== 'marshal') {
       const hold = Object.entries(best.cargo)

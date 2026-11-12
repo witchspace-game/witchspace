@@ -34,6 +34,8 @@ import * as THREE from 'three';
 import type { LoggedMoment } from '../game/flightLog';
 import type { MomentEvent } from '../game/moments';
 import { vennLost, vennShot } from './odile';
+import { numberOf } from './numbers';
+import { shipNumberOf } from '../game/transponder';
 /** What main.ts still owns (it fills these in at start). */
 const main = {} as {
   setAutopilot: (on: boolean, message?: string | undefined) => void;
@@ -284,7 +286,7 @@ export function destroyNpc(npc: NpcShip, killer: THREE.Object3D | null) {
   if (npc.role === 'pirate') {
     const paid = npc.bounty + (npc.doorstep ?? 0);
     c.credits = Math.round((c.credits + paid) * 10) / 10;
-    flash(`${npc.def.name} destroyed · Bounty ${npc.bounty} Cr${npc.doorstep ? ` + ${npc.doorstep} Cr from the station` : ''}${note}`, 2.5);
+    flash(`${npc.def.name} ${numberOf(npc)} destroyed · Bounty ${npc.bounty} Cr${npc.doorstep ? ` + ${npc.doorstep} Cr from the station` : ''}${note}`, 2.5);
     void main.keepCombat({ kind: 'kill', text: `${npc.def.name} destroyed · bounty ${npc.bounty} Cr`, subject: npc.def.name }, 20, 4);
   } else {
     flash(`${npc.def.name} destroyed${note}`, 1.5);
@@ -705,8 +707,9 @@ export function toggleTransponder() {
     else becomeOffender(crime ? `${crime.what}, running dark · you are the suspect · OFFENDER` : 'Transponder on · you ignored a police hail · OFFENDER');
     return;
   }
-  if (flight.hail) radio('police', `${currentSystem().name} police`, 'Transponder read · thank you, Commander', { flash: 2, urgent: true, line: 'Transponder read · thank you, Commander' });
-  else flash('Transponder on', 2);
+  const no = shipNumberOf(cmdr());
+  if (flight.hail) radio('police', `${currentSystem().name} police`, `Transponder read · ${no} · thank you, Commander`, { flash: 2, urgent: true, line: `Transponder read · ${no} · thank you, Commander` });
+  else flash(`Transponder on · ${no}`, 2);
 }
 
 function showTransponder() {
@@ -797,7 +800,9 @@ export function updateHail() {
       flight.hail = null;
       flight.hullChecked = true;
       box.hidden = true;
-      radio('police', `${currentSystem().name} police`, isFugitive() ? 'Hull read · you are wanted here' : 'Hull read · clean · get that transponder seen to at the next station', { flash: 3, urgent: true, line: isFugitive() ? 'Hull read · you are wanted here' : 'Hull read · clean · get that transponder seen to at the next station' });
+      // They read your number off the hull, and read it back to you.
+      const read = isFugitive() ? `Hull read · ${shipNumberOf(cmdr())} · you are wanted here` : `Hull read · ${shipNumberOf(cmdr())} · clean · get that transponder seen to at the next station`;
+      radio('police', `${currentSystem().name} police`, read, { flash: 3, urgent: true, line: read });
       return;
     }
   }

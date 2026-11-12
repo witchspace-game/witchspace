@@ -2,6 +2,7 @@ import { shipById } from '../content/ships';
 import { EQUIPMENT, FUEL_CAPACITY, hullOf, MISSILE_PRICE, STAKE, newCommander, removeEquipment, type Commander } from './commander';
 import { legalStatus, spareCredits } from './law';
 import { PLAYER_LASERS } from './weapons';
+import { newHull } from './transponder';
 
 // Losing your ship under Modern rules, as set out in docs/design/law-and-travel.md
 // (section 7). The insurers replace the ship and its kit, less an excess, but
@@ -37,6 +38,8 @@ export type Claim =
 export function claimInsurance(c: Commander): Claim {
   const pod = c.equipment.includes('escape-pod');
   c.fuel = FUEL_CAPACITY;
+  // New ship, new number (Mark, 10 November 2026), linked to the old one so the chain stays unbroken.
+  newHull(c, true);
   // A shielded compartment isn't on the ship's papers, so the insurers don't replace it.
   delete c.compartment;
   if (legalStatus(c) === 'fugitive' && !pod) {

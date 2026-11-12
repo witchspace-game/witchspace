@@ -230,6 +230,7 @@ import type { BtcOrder, BtcTrade } from '../economy/bitcoin';
 import type { Heard } from './saloon';
 import type { YardLoss } from './yards';
 import type { VennMemory } from './odile';
+import { shipNumberOf } from './transponder';
 
 /** A ship's finish from the yard. */
 /**
@@ -248,6 +249,9 @@ export interface StoredShip {
   damaged: EquipmentId[];
   /** A hull you bought (the starter and a gift weren't). */
   bought?: boolean;
+  /** Her transponder number, and the ship she replaced (game/transponder.ts). */
+  number?: string;
+  replaces?: string;
   /** Where she waits: galaxy and system index. */
   at: { galaxy: number; system: number };
   /** On her way to another hangar: where, and when she gets there. */
@@ -419,6 +423,10 @@ export interface Commander {
   specKit?: { laser: ShipOrder['laser']; rear?: ShipOrder['laser']; upgrades: EquipmentId[] };
   /** The hull you fly, by content id; a Cobra Mk III until you collect another. */
   ship?: string;
+  /** Her transponder number, WS-7F3K-29 (game/transponder.ts): the hull's for life, given when she first exists. */
+  shipNumber?: string;
+  /** The number of the ship she replaced, when the insurers gave her to you. */
+  replaces?: string;
   /** Its finish, from the yard: colour, glow, trim, and her name (on her papers, her manual and your clips; not drawn on the hull). */
   paint?: Paint;
   /** Your fleet (Mark): the ships you own but aren't flying, each in the hangar where you left her, or on her way to another. */
@@ -494,6 +502,7 @@ export function loadCommander(): Commander | null {
       if (typeof chk === 'string' && chk !== checksum(JSON.stringify(stored))) saved.tampered = true;
       const c: Commander = { ...newCommander('modern'), ...saved };
       if (c.impound && !c.impound.items.length) c.impound = null; // a debt with nothing held is written off
+      shipNumberOf(c); // saves from before transponder numbers: she gets hers now
       return repaint(c);
     }
   } catch {

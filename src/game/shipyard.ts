@@ -7,6 +7,7 @@ import { PRODUCTION_HOURS, productionHours } from './production';
 import { record } from './ledger';
 import { combatRating, ratingPoints } from './rating';
 import { inYards } from './manual';
+import { boardNumber, newHull, stowNumber } from './transponder';
 
 // Speccing a ship and putting down a deposit, as you would on a new car
 // (docs/design/ships-and-classes.md, "Spec it, and put down a deposit"). You
@@ -331,6 +332,7 @@ export function stowShip(c: Commander, current: ShipDef, at: { galaxy: number; s
     missiles: c.missiles,
     damaged: c.damaged.filter((id) => UPGRADES.some((e) => e.id === id)),
     ...(hullBought(c) ? { bought: true } : {}),
+    ...stowNumber(c),
     at,
   };
 }
@@ -343,6 +345,7 @@ function board(c: Commander, s: StoredShip) {
   c.lasers = { ...s.lasers };
   c.missiles = s.missiles;
   c.ship = s.ship;
+  boardNumber(c, s);
   if (s.paint) c.paint = { ...s.paint };
   else delete c.paint;
 }
@@ -438,6 +441,7 @@ export function collectOrder(c: Commander, current: ShipDef, next: ShipDef, here
   c.lasers = { front: o.laser, ...(o.rear ? { rear: o.rear } : {}) };
   c.missiles = Math.min(c.missiles, next.stats.missiles ?? 0);
   c.ship = next.id;
+  newHull(c, false); // the yard's new hull, her own number
   c.paint = {
     colour: o.colour,
     glow: o.glow ?? 'standard',

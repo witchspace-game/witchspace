@@ -236,7 +236,7 @@ It flags one account from many networks at once, many accounts from one network,
 6. **Ideas board:** this is a design decision Mark has made, so it's written here; it could also go on the board, framed as "Register your ship", for players to see it coming.
 
 **Size.** About 5½–6½ days, in this order, each its own pull request:
-0. Transponder numbers on every ship, NPCs' included, in the game only (1 day, no server; can ship any time).
+0. Transponder numbers on every ship, NPCs' included, in the game only (1 day, no server; can ship any time). *Built 12 November 2026* (`src/game/transponder.ts`, `src/flight/numbers.ts`): yours on the Station screen, NPCs' in the target readout, bounties and police hull reads. Not yet: commanders' numbers seen by each other in shared space (with the door, step 3).
 1. Registration: the prompt, the stamp, the certificate, the ledger's start, and the ship registry (2½ days, Worker deploy).
 2. Kit and rank in the ledger, checked on each cloud save (1 day, Worker deploy).
 3. The door: the passport check, the 30-day visit record, flags emailed to Mark, bans (1–2 days, Worker deploy).

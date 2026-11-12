@@ -1,6 +1,7 @@
 // The station screen (moved from main.ts): your ship and what's fitted, the hold, the record, fuel,
 // missiles and kit to buy or sell, and refunds for a change of mind before launch.
 
+import { shipNumberOf } from '../game/transponder';
 import { sfx } from '../audio/sound';
 import { cargoCapacity, cargoTonnes, DIFFICULTIES, EQUIPMENT, FUEL_PRICE, fuelCapacity, MISSILE_PRICE, hasEquipment, REPAIR_FRACTION, type Mount, MOUNTS, removeEquipment, saveCommander, type Commander } from '../game/commander';
 import { fineDue, legalStatus, redeemImpound, scansCargo, settle, systemKey } from '../game/law';
@@ -139,7 +140,8 @@ function renderShipWindow(c: Commander) {
   win.querySelector('.sw-meta')!.textContent = [def.manufacturer, def.role].filter(Boolean).join(' · ');
   win.querySelector('.sw-name')!.textContent = def.name;
   const ed = c.paint?.edition ? editionById(c.paint.edition.id) : undefined;
-  const own = [c.paint?.name ? `“${c.paint.name}”` : '', ed ? `${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''].filter(Boolean).join(' · ');
+  // Her transponder number, always: the hull's for life (game/transponder.ts).
+  const own = [c.paint?.name ? `“${c.paint.name}”` : '', shipNumberOf(c), ed ? `${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''].filter(Boolean).join(' · ');
   const ownEl = win.querySelector<HTMLElement>('.sw-own')!;
   // In grey like any other secondary line, with a swatch of her paint (Mark: no paint-coloured text).
   ownEl.innerHTML = own ? `${c.paint ? '<i class="swatch" aria-hidden="true"></i>' : ''}${escapeHtml(own)}` : '';
