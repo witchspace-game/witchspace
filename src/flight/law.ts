@@ -363,6 +363,8 @@ export function playerHitNpc(npc: NpcShip, damage: number) {
     if (npc.hit(damage)) destroyNpc(npc, player.obj);
     return;
   }
+  // Fired first on a ship that wasn't after you: whatever happens next is your fight (game/terms.ts).
+  if (!npc.hostile && !npc.firedOnPlayer) flight.startedFightAt = Date.now();
   alertSecurity(npc, player);
   youFiredOnTheApproach(npc);
   youFiredInTheSlot(npc);

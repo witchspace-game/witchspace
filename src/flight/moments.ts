@@ -30,6 +30,9 @@ import { closeReplay, openReplay, renderFlightLog, setOutsideView, shareMoment }
 import { shareVideo as shareVideoPlain, KillCam } from '../ui/killCam';
 import { $, cmdr, currentSystem, game } from '../core';
 import { explosions, flight, missiles, sharedSpace, npcs, planetPos, player, space, station, SUN_POS } from '../scene';
+
+/** A loss this soon after you fired first counts as your fight (game/terms.ts). */
+const STARTED_IT = 5 * 60_000;
 import { myLook } from '../ui/shipyard';
 import { carrier, marshalsStandDown } from './marshals';
 import { spillCargo, spillSpecial } from './adrift';
@@ -203,7 +206,8 @@ export function die() {
       removeEquipment(c, 'escape-pod');
       message = 'Picked up. Your insurers have replaced the ship.';
     } else {
-      const lost = loseContracts(c);
+      // Your fight if you fired first at a ship that wasn't after you in the last five minutes.
+      const lost = loseContracts(c, Date.now() - flight.startedFightAt < STARTED_IT);
       const adrift = (c.adrift ?? [])
         .filter((k) => Date.now() - k.lost < 10_000)
         .map((k) => (k.held ? `The ${k.label} survived: the station crew picked it up` : `The ${k.label} survived: it's adrift, beaconing. Recover it within 24 hours`));

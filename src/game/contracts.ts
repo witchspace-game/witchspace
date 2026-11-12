@@ -6,6 +6,8 @@ import { hash } from '../economy/seed';
 import { FUEL_CAPACITY, fuelCapacity, type Commander } from './commander';
 import { COMPANIES, COMPANY_IDS, pickCompany, presence, STANDINGS, standingName, workNeeds, type CompanyId, type StandingName } from './companies';
 import { bodiesOf, EXPLORER_DOORS, exploreOf, isSurveyed, worldOf } from './explore';
+import { abandonStanding, bondFor, CARRIAGE, GOOD_RECORD, HEXON_SECOND_LOSS, HEXON_VALUABLE, lateShare, lateStanding, lateWords, lossTerms, termsFor } from './terms';
+import { VALUABLE } from './traffic';
 
 // Company contracts (Modern rules), as set out in
 // docs/design/companies-and-contracts.md: carry the company's cargo from here
@@ -27,6 +29,13 @@ export interface Contract {
   pay: number;
   /** Of the pay, how much is the danger bonus (for showing). */
   danger: number;
+  /** Of the pay, what your rank with the company adds, and its hazard pay (game/terms.ts). */
+  rankBonus?: number;
+  hazard?: number;
+  /** The cargo's value where it's loaded: what a bond and an excess are shares of. */
+  value?: number;
+  /** The bond it asks, back on delivery (cargo that needs Contractor or better). */
+  bond?: number;
   rush: boolean;
   /** Standing with the company needed to take it. */
   needs: StandingName;
@@ -46,6 +55,8 @@ export interface Contract {
 /** A contract you've taken, counting down. */
 export interface ActiveContract extends Contract {
   jumpsLeft: number;
+  /** The bond you put down, back on delivery. */
+  bondPaid?: number;
   /** Special cargo that survived your ship and is adrift, waiting to be recovered (game/assignments.ts). */
   adrift?: boolean;
   /**
@@ -266,7 +277,17 @@ export function board(c: Commander, here: StarSystem, now: number): Contract[] {
       if (r(0) < SURVEY_CHANCE) stamp(surveyOffer(here, near, (salt) => r(salt + 20 * k), `${kind}:${station}:${t}`, kind === 'order'), t, SURVEY_EVERY);
     }
   }
-  return offers.filter((o) => !c.contracts?.some((a) => a.id === o.id) && !c.contractsDone?.includes(o.id)).sort((a, b) => b.pay - a.pay);
+  return offers
+    .filter((o) => !c.contracts?.some((a) => a.id === o.id) && !c.contractsDone?.includes(o.id))
+    .map((o) => yours(c, o))
+    .sort((a, b) => b.pay - a.pay);
+}
+
+/** An offer on your terms: the pay at your rank with the company, with hazard pay, and the bond it asks of you. Surveys are as posted. */
+export function yours(c: Commander, o: Contract): Contract {
+  if (o.survey || o.special) return o;
+  const t = termsFor(o.pay, o.company, standingName(standing(c, o.company)), placeOf(o.to).government);
+  return { ...o, pay: t.pay, rankBonus: t.rankBonus, hazard: t.hazard, bond: bondFor(o.value ?? 0, o.company, o.needs, c.credits) };
 }
 
 /** On top of the pay for a commander's first job with the company that recruited them. */
@@ -283,7 +304,7 @@ export function welcome(c: Commander, here: StarSystem, company: CompanyId, now:
   if (c.contracts?.some((a) => a.id === id) || c.contractsDone?.includes(id)) return null;
   const o = offerFrom(c, here, withinJumps(here, 3), company, (salt) => hash(here, 9500 + (slot % 100_000) * 7 + salt, COMPANY_IDS.indexOf(company)), true, id);
   // Not a rush job, and a signing bonus on top.
-  return o && { ...o, rush: false, jumps: o.jumps + (o.rush ? 2 : 0), pay: o.pay + SIGNING_BONUS };
+  return o && yours(c, { ...o, rush: false, jumps: o.jumps + (o.rush ? 2 : 0), pay: o.pay + SIGNING_BONUS });
 }
 
 /** One offer from a company at this station, or null if it has nothing to carry from here. */
@@ -311,10 +332,10 @@ function offerFrom(c: Commander, here: StarSystem, near: { s: StarSystem; n: num
   const ly = distanceLy(here, dest);
   // About two thirds of what an independent would make on the run, plus a
   // carriage fee by distance: you risk none of your own money.
-  const base = Math.max(30, qty * (Math.max(0, priceThere - priceHere) * 0.65 + 3 + ly * 0.6));
+  const base = Math.max(30, qty * (Math.max(0, priceThere - priceHere) * 0.65 + 3 + ly * 0.6 * CARRIAGE[company])) * (company === 'hexon' && VALUABLE.has(good) ? HEXON_VALUABLE : 1);
   const danger = Math.round(base * DANGER_PREMIUM[dest.government] * 1.5);
   const pay = Math.round(base * (rush ? 1.4 : 1)) + danger;
-  return { id, company, good, qty, from: at(here), to: at(dest), jumps: minJumps + (rush ? 0 : 2), pay, danger, rush, needs: needsFor(qty * priceHere) };
+  return { id, company, good, qty, from: at(here), to: at(dest), jumps: minJumps + (rush ? 0 : 2), pay, danger, rush, needs: needsFor(qty * priceHere), value: Math.round(qty * priceHere) };
 }
 
 /** Where Wexley-Yorozu does business: survey contracts are offered and handed in there. */
@@ -372,15 +393,34 @@ export interface CompanyLog {
   late: number;
   failed: number;
   special: number;
+  /** Deliveries since your last failure: a good record softens the next one (game/terms.ts). */
+  clean?: number;
+  /** When you last failed them. */
+  failedAt?: number;
 }
 
 export const logOf = (c: Commander, id: CompanyId): CompanyLog => c.companyLog?.[id] ?? { delivered: 0, late: 0, failed: 0, special: 0 };
 
-export function logContract(c: Commander, id: CompanyId, what: keyof CompanyLog) {
+export function logContract(c: Commander, id: CompanyId, what: 'delivered' | 'late' | 'failed' | 'special', now = Date.now()) {
   const log = { ...logOf(c, id) };
   log[what] += 1;
+  if (what === 'failed') Object.assign(log, { clean: 0, failedAt: now });
+  // Older saves have no count: every delivery so far if they never failed, otherwise none.
+  else if (what !== 'late') log.clean = (log.clean ?? (log.failed ? 0 : log.delivered + log.special - 1)) + 1;
   c.companyLog = { ...c.companyLog, [id]: log };
 }
+
+/** A failure's cost in standing: halved (rounded towards zero) with a good record, GOOD_RECORD deliveries since the last. */
+function failureCost(c: Commander, id: CompanyId, points: number): number {
+  const log = logOf(c, id);
+  const clean = log.clean ?? (log.failed ? 0 : log.delivered + log.special);
+  return clean >= GOOD_RECORD ? Math.trunc(points / 2) : points;
+}
+
+/** The money in a job you've put down: the bond. */
+const refundBond = (c: Commander, a: ActiveContract, amount = a.bondPaid ?? 0) => {
+  if (amount > 0) c.credits = Math.round((c.credits + amount) * 10) / 10;
+};
 
 /** What the cargo is called on screen. */
 export const cargoName = (a: Contract) => a.label ?? commodityById(a.good)?.name ?? a.good;
@@ -466,8 +506,16 @@ export function cannotTake(c: Commander, o: Contract, freeTonnes: number): strin
 export function take(c: Commander, o: Contract, freeTonnes: number): string | null {
   const why = cannotTake(c, o, freeTonnes);
   if (why) return why;
-  c.contracts = [...(c.contracts ?? []), { ...o, jumpsLeft: o.jumps }];
+  c.contracts = [...(c.contracts ?? []), { ...o, jumpsLeft: o.jumps, ...putDown(c, o) }];
   return null;
+}
+
+/** Put the bond down, as far as BOND_CAP allows: it comes back on delivery. */
+function putDown(c: Commander, o: Contract): { bondPaid?: number } {
+  const bond = bondFor(o.value ?? 0, o.company, o.needs, c.credits);
+  if (!bond) return {};
+  c.credits = Math.round((c.credits - bond) * 10) / 10;
+  return { bondPaid: bond };
 }
 
 export function finish(c: Commander, id: string) {
@@ -480,9 +528,9 @@ export function abandon(c: Commander, id: string): string {
   const a = c.contracts?.find((x) => x.id === id);
   if (!a) return '';
   finish(c, id);
-  addStanding(c, a.company, -3);
+  addStanding(c, a.company, failureCost(c, a.company, abandonStanding(a.company)));
   logContract(c, a.company, 'failed');
-  return `Contract abandoned · ${COMPANIES[a.company].name} will remember`;
+  return `Contract abandoned · ${COMPANIES[a.company].name} will remember${a.bondPaid ? ` · your ${a.bondPaid.toLocaleString()} Cr bond is forfeit` : ''}`;
 }
 
 /** After a hyperspace jump: deadlines count down; long-overdue cargo is reclaimed. */
@@ -497,15 +545,15 @@ export function afterJump(c: Commander, now = Date.now()): string[] {
     const to = placeOf(a.to).name;
     if (a.jumpsLeft === 0) {
       notes.push(`${cargoName(a)} for ${to}: last jump`);
-      notice(c, a, 'last', 'One jump left', `Your ${contractWhat(a)} is due ${a.survey ? 'at a Wexley-Yorozu station' : `at ${to}`} by your next jump. After that it's late, for half pay.`, now);
+      notice(c, a, 'last', 'One jump left', `Your ${contractWhat(a)} is due ${a.survey ? 'at a Wexley-Yorozu station' : `at ${to}`} by your next jump. After that it's late: ${lateWords(a.company)}.`, now);
     }
-    if (a.jumpsLeft === -1) notice(c, a, 'late', 'Running late', `Your ${contractWhat(a)} is late: half pay on delivery. In ${LATE_GRACE} more jumps we ${a.survey ? 'cancel it' : 'take it back'}.`, now);
+    if (a.jumpsLeft === -1) notice(c, a, 'late', 'Running late', `Your ${contractWhat(a)} is late: ${lateWords(a.company)} on delivery. In ${LATE_GRACE} more jumps we ${a.survey ? 'cancel it' : 'take it back'}.`, now);
     if (a.jumpsLeft < -LATE_GRACE) {
       finish(c, a.id);
-      addStanding(c, a.company, -3);
-      logContract(c, a.company, 'failed');
+      addStanding(c, a.company, failureCost(c, a.company, -3));
+      logContract(c, a.company, 'failed', now);
       notes.push(`${COMPANIES[a.company].name} has reclaimed its ${cargoName(a)}: contract failed`);
-      notice(c, a, 'reclaimed', a.survey ? 'Survey cancelled' : 'Cargo reclaimed', a.survey ? `You were ${LATE_GRACE} jumps past the deadline for our ${contractWhat(a)}. Contract cancelled.` : `You were ${LATE_GRACE} jumps past the deadline, so we've taken back our ${a.qty} t ${cargoName(a)} for ${to}. Contract cancelled.`, now);
+      notice(c, a, 'reclaimed', a.survey ? 'Survey cancelled' : 'Cargo reclaimed', a.survey ? `You were ${LATE_GRACE} jumps past the deadline for our ${contractWhat(a)}. Contract cancelled.` : `You were ${LATE_GRACE} jumps past the deadline, so we've taken back our ${a.qty} t ${cargoName(a)} for ${to}. Contract cancelled.${a.bondPaid ? ` Your ${a.bondPaid.toLocaleString()} Cr bond is forfeit.` : ''}`, now);
     }
   }
   return notes;
@@ -534,29 +582,53 @@ export function deliver(c: Commander, here: StarSystem, now = Date.now()): strin
       e.data = e.data.filter((d) => !(d.galaxy === target.galaxy && d.system === target.index && d.body.startsWith('moon')));
     } else if (key(a.to) !== key(at(here))) continue;
     const late = a.jumpsLeft < 0;
-    const pay = late ? Math.round(a.pay / 2) : a.pay;
+    // Specials and surveys keep the old half; haulage is on the company's terms (game/terms.ts).
+    const share = !late ? 1 : a.special || a.survey ? 0.5 : lateShare(a.company, -a.jumpsLeft);
+    const pay = Math.round(a.pay * share);
     c.credits = Math.round((c.credits + pay) * 10) / 10;
+    refundBond(c, a);
     const before = standingName(standing(c, a.company));
-    addStanding(c, a.company, late ? 0 : a.special ? 3 : 1 + (a.rush || a.danger > 0 ? 1 : 0));
-    logContract(c, a.company, late ? 'late' : a.special ? 'special' : 'delivered');
+    addStanding(c, a.company, late ? (a.special || a.survey ? 0 : lateStanding(a.company)) : a.special ? 3 : 1 + (a.rush || a.danger > 0 ? 1 : 0));
+    logContract(c, a.company, late ? 'late' : a.special ? 'special' : 'delivered', now);
     finish(c, a.id);
     const after = standingName(standing(c, a.company));
-    notice(c, a, 'delivered', a.survey ? 'Survey received' : 'Delivered, with thanks', `Your ${contractWhat(a)} ${a.survey ? 'was handed in' : `reached ${placeOf(a.to).name}`}${late ? ' late' : ''}: ${pay.toLocaleString()} Cr paid.${after !== before ? ` You're ${after} with us now.` : ''}`, now);
+    notice(c, a, 'delivered', a.survey ? 'Survey received' : 'Delivered, with thanks', `Your ${contractWhat(a)} ${a.survey ? 'was handed in' : `reached ${placeOf(a.to).name}`}${late ? ' late' : ''}: ${pay.toLocaleString()} Cr paid${a.bondPaid ? `, and your ${a.bondPaid.toLocaleString()} Cr bond back` : ''}.${after !== before ? ` You're ${after} with us now.` : ''}`, now);
     notes.push(`${COMPANIES[a.company].name} · ${contractWhat(a)} ${a.survey ? 'handed in' : 'delivered'}${late ? ' late' : ''} · ${pay.toLocaleString()} Cr` + (after !== before ? ` · now ${after}` : ''));
   }
   return notes;
 }
 
-/** Ship lost: the company's cargo with it. Special cargo survives, adrift (see game/assignments.ts). */
-export function loseContracts(c: Commander): string[] {
+/**
+ * Ship lost: the company's cargo with it, on the company's terms (game/terms.ts). `fault`: you
+ * started the fight (fired first on a ship that wasn't attacking you), and no insurer covers that.
+ * Special cargo survives, adrift (see game/assignments.ts).
+ */
+export function loseContracts(c: Commander, fault = false, now = Date.now()): string[] {
   const lost = (c.contracts ?? []).filter((a) => !a.special && !a.survey && !a.reserved); // surveys aren't cargo, nor is cargo not yet loaded
+  const notes: string[] = [];
   for (const a of lost) {
     finish(c, a.id);
-    addStanding(c, a.company, -2);
-    logContract(c, a.company, 'failed');
-    notice(c, a, 'lost', 'Cargo lost', `Our ${a.qty} t ${cargoName(a)} for ${placeOf(a.to).name} was lost with your ship. Contract cancelled.`, Date.now());
+    const rank = standingName(standing(c, a.company));
+    const bond = a.bondPaid ?? 0;
+    const t = lossTerms(a.company, rank, bond, a.value ?? 0, fault);
+    refundBond(c, a, t.refund);
+    // Hexon: a second loss inside a week costs a whole rank, with a polite letter.
+    const second = a.company === 'hexon' && logOf(c, 'hexon').failedAt !== undefined && now - logOf(c, 'hexon').failedAt! < HEXON_SECOND_LOSS;
+    // One rank down from the rank you held, or the standing lost, whichever is further.
+    const held = STANDINGS.findIndex((x) => x.name === rank);
+    addStanding(c, a.company, failureCost(c, a.company, t.standing));
+    let demoted = '';
+    if (second && held > STANDINGS.findIndex((x) => x.name === 'Casual')) {
+      const down = STANDINGS[held - 1];
+      c.standing = { ...c.standing, hexon: Math.min(standing(c, 'hexon'), down.at) };
+      demoted = ` Two losses in a week: our records now list you as ${standingName(standing(c, 'hexon'))}.`;
+    }
+    logContract(c, a.company, 'failed', now);
+    const kept = bond - t.refund;
+    notice(c, a, 'lost', 'Cargo lost', `Our ${a.qty} t ${cargoName(a)} for ${placeOf(a.to).name} was lost with your ship. Contract cancelled. ${bond ? t.says : ''}${demoted}`.trim(), now);
+    notes.push(`${COMPANIES[a.company].name}'s ${cargoName(a)} lost with your ship${kept ? ` · ${kept.toLocaleString()} Cr of your bond kept` : ''}${t.refund ? ` · ${t.refund.toLocaleString()} Cr back` : ''}`);
   }
-  return lost.map((a) => `${COMPANIES[a.company].name}'s ${cargoName(a)} lost with your ship`);
+  return notes;
 }
 
 export const destinationOf = (a: Contract) => placeOf(a.to);
@@ -580,7 +652,7 @@ export function reserve(c: Commander, o: Contract): string | null {
   const why = cannotReserve(c, o);
   if (why) return why;
   if (c.contracts?.some((a) => a.id === o.id) || c.contractsDone?.includes(o.id)) return 'Already taken';
-  c.contracts = [...(c.contracts ?? []), { ...o, jumpsLeft: COLLECT_JUMPS, reserved: true }];
+  c.contracts = [...(c.contracts ?? []), { ...o, jumpsLeft: COLLECT_JUMPS, reserved: true, ...putDown(c, o) }];
   return null;
 }
 
@@ -619,8 +691,8 @@ function reservationAfterJump(c: Commander, a: ActiveContract, now: number): str
   }
   if (a.jumpsLeft >= 0) return [];
   finish(c, a.id);
-  addStanding(c, a.company, -3);
-  logContract(c, a.company, 'failed');
+  addStanding(c, a.company, failureCost(c, a.company, abandonStanding(a.company)));
+  logContract(c, a.company, 'failed', now);
   notice(c, a, 'lapsed', 'Work given to someone else', `You never collected ${contractWhat(a)} at ${where}, so we gave it to another hauler. We'll count it as abandoned.`, now);
   return [`${COMPANIES[a.company].name} gave your ${cargoName(a)} at ${where} to someone else: counted as abandoned`];
 }
