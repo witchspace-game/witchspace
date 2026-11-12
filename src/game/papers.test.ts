@@ -12,7 +12,7 @@ describe('an edition’s papers', () => {
     expect(p.glow).toBe('Blazing');
     expect(p.fitted).toEqual(['Beam lasers, front and rear', 'Docking computer', 'Combat computer']);
     expect(p.fittedLine).toBe('beam lasers front and rear, a docking computer and a combat computer');
-    expect(p.aboardLine).toBe('an owner’s suite, a name in gold leaf and a starlight cabin');
+    expect(p.aboardLine).toBe('an owner’s suite, her name in gold leaf and a starlight cabin');
     expect(p.fitted.length).toBe(1 + editionGiftSpec(editionById('witch-fire')!).upgrades.length);
   });
 

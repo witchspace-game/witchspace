@@ -163,7 +163,7 @@ Makers show ships before they fly, and the site shows them as **concepts**, with
 **Spec it, and put down a deposit** *(Mark, 28 October 2026)*. "I don't think anyone would use our editor. However what they would do is spec out their perfect ship, just like you do when you pre-order or place a deposit on a Tesla." Most pilots won't design a hull, but every pilot wants to spec one. At a shipyard, a concept (or any hull on sale) opens a **configurator**:
 
 - **Its glow:** the hull's colour, from the maker's palette (never the law's liveries).
-- **Its name**, painted on: *Halcyon*, *Brass Neck*, whatever you like. Other commanders see it, and so do your clips.
+- **Her name**: *Halcyon*, *Brass Neck*, whatever you like. It's on her papers, her manual and your clips. Names aren't drawn on hulls (Mark, 2 November 2026).
 - **Its fit-out:** lasers, shields, cargo bay or a bigger fuel tank, priced as you go, with the total in the corner.
 - **Turning in the berth** as you change it, so you see what you're buying.
 

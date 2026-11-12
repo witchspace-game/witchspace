@@ -68,7 +68,8 @@ export const TRIM_PRICE = 16_000;
 export const LUXURIES: { id: string; name: string; blurb: string; price: number; edition?: string }[] = [
   { id: 'suite', name: 'Owner’s suite', blurb: 'The whole glass deck: a bed under the stars, and a bar.', price: 48_000 },
   { id: 'voice', name: 'A ship’s voice', blurb: 'It greets you by name, and it has opinions about your flying.', price: 32_000 },
-  { id: 'gold-name', name: 'Name in gold leaf', blurb: 'Hand-laid, and catches the station lights as you dock.', price: 14_000 },
+  // Names aren't drawn on hulls (Mark, 2 November 2026): the gold is on her papers.
+  { id: 'gold-name', name: 'Her name in gold leaf', blurb: 'Hand-laid on her papers and her manual’s cover.', price: 14_000 },
   { id: 'starlight', name: 'Starlight cabin', blurb: 'The ceiling shows the sky outside, a little brighter than it is.', price: 21_000 },
   { id: 'hangar-crew', name: 'A crew at every berth', blurb: 'Your ship is washed, fuelled and waiting before you are.', price: 38_000 },
   // The Dark Edition's own (Mark): like her Black-light paint, nobody else can order them.
@@ -479,14 +480,46 @@ export function repaintQuote(def: ShipDef, f: Finish, now?: Partial<Finish> | nu
   return repaintLabour(def, f.glow) + colour + glow + trim;
 }
 
-/** Repaint the ship you fly, at a yard, while you wait. Its name, edition and luxuries stay. */
-export function repaint(c: Commander, def: ShipDef, f: Finish): OrderResult | { ok: true; paid: number } {
+/** Repaint the ship you fly, at a yard, while you wait. Her edition and luxuries stay; her name too, unless `name` gives a new one (a website spec's). */
+export function repaint(c: Commander, def: ShipDef, f: Finish, name?: string): OrderResult | { ok: true; paid: number } {
   if (hullOf(c) !== def.id) return { ok: false, message: 'The yard repaints the ship you came in' };
   if (![f.colour, f.trim].every((x) => paintable(c, x))) return { ok: false, message: 'Those colours belong to an edition' };
   const cost = repaintQuote(def, f, c.paint);
   if (c.credits < cost) return { ok: false, message: `A repaint like that is ${cost.toLocaleString()} Cr` };
   c.credits = Math.round((c.credits - cost) * 10) / 10;
   record(c, { k: 'yard', d: -cost });
-  c.paint = { name: '', luxuries: [], ...c.paint, colour: f.colour, glow: f.glow, trim: f.trim };
+  c.paint = { name: '', luxuries: [], ...c.paint, colour: f.colour, glow: f.glow, trim: f.trim, ...(name ? { name } : {}) };
   return { ok: true, paid: cost };
+}
+
+/**
+ * A website spec for the hull you already fly (Mark, 12 November 2026: most new players spec the Cobra they
+ * start in, and it went nowhere): the yard repaints her to it. This is that repaint's finish and its price.
+ */
+export const specFinish = (s: Spec): Finish => ({ colour: s.colour, glow: s.glow, trim: s.trim });
+
+export interface KitLine {
+  /** What to buy, as the Equip screen names it. */
+  what: string;
+  /** Its price at a station's Equip screen. */
+  price: number;
+  /** Fitted already. */
+  done: boolean;
+}
+
+/** A spec's kit, against what she has: the shopping list for the Equip screen. Luxuries come with a new hull, not at a station. */
+export function specKitLines(c: Commander, def: ShipDef, kit: NonNullable<Commander['specKit']>): KitLine[] {
+  const lines: KitLine[] = [];
+  const laser = (id: ShipOrder['laser'] | undefined, mount: 'front' | 'rear') => {
+    if (!id || (mount === 'front' && id === standardLaser(def))) return;
+    const l = PLAYER_LASERS[id];
+    lines.push({ what: `${l.name}, ${mount}`, price: l.price, done: c.lasers[mount] === id });
+  };
+  laser(kit.laser, 'front');
+  laser(kit.rear, 'rear');
+  for (const id of kit.upgrades.filter((u) => !standardKit(def).includes(u))) {
+    const e = EQUIPMENT.find((x) => x.id === id);
+    if (e) lines.push({ what: e.name, price: e.price, done: c.equipment.includes(id) });
+  }
+  return lines;
 }

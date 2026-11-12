@@ -1611,6 +1611,8 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .panel .cc-explore { margin: 0; font-size: 12.5px; color: var(--dim); }
 .cc-explore b { color: var(--fg); font-weight: 600; }
 .fuel-row#data-row { margin: 0; }
+#equip .spec-list { display: grid; gap: 4px; padding: 8px 0; border-bottom: 1px solid rgba(61, 255, 176, 0.1); }
+#equip .spec-list small { color: var(--fg); line-height: 1.6; }
 #data-row button { width: auto; height: 30px; padding: 0 10px; font-size: 11.5px; }
 /* Odile's arrival: one quiet line. */
 .fuel-row#arrivals { margin: 8px 0 0; font-size: 12.5px; }

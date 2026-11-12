@@ -12,7 +12,7 @@ import { showHandover } from './handover';
 import { accountSpec, editionCounts, forgetAccountSpec, heldEditions, papersLinkFor, signedOver } from '../net/shipyard';
 import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } from '../game/spec';
 import { enablePush, needsHomeScreen } from '../net/notify';
-import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, giftTradeIn, tradeIn, deliverShip, deliveryQuote, swapShip, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
+import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, giftTradeIn, tradeIn, deliverShip, deliveryQuote, swapShip, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, specFinish, specKitLines, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
 import { inYards } from '../game/manual';
 import { jumpsBetween } from '../game/contracts';
@@ -123,6 +123,26 @@ export async function checkSignedOver() {
     if (game.state === 'docked' && game.dockTab === 'shipyard' && !spec) renderShipyard();
   }
 }
+
+/**
+ * A website spec for the ship you fly is a repaint (Mark, 12 November 2026): her colour, glow, trim and name,
+ * for the yard's price against the paint she has now. Her kit goes on the Equip screen's list.
+ */
+function repaintCard(c: Commander, def: ShipDef, s: Spec): string {
+  const nameOf = (colour: string | null) => PALETTE.find((p) => p.colour === colour)?.name ?? 'the maker’s own';
+  const cost = repaintQuote(def, specFinish(s), c.paint);
+  const locked = ![s.colour, s.trim].every((x) => paintable(c, x));
+  const short = Math.ceil(cost - c.credits);
+  const kit = specKitLines(c, def, { laser: s.laser, rear: s.rear, upgrades: s.upgrades }).filter((l) => !l.done);
+  return `<div class="yard-order" style="--hull:${s.colour}"><strong>Your ${escapeHtml(def.name)} spec from the website is here</strong>
+    <span>Repaint her${s.name ? ` as “${escapeHtml(s.name)}”` : ''}: ${escapeHtml(nameOf(s.colour))}${s.trim ? `, ${escapeHtml(nameOf(s.trim))} trim` : ''}, ${GLOWS[s.glow].name}, for ${cost.toLocaleString()} Cr?</span>
+    ${kit.length ? `<span>Her kit isn't a repaint: ${kit.map((l) => escapeHtml(l.what)).join(', ')} will be on your list at Equip ship.</span>` : ''}
+    ${locked ? '<span>Those colours belong to an edition.</span>' : short > 0 ? `<span>You need ${short.toLocaleString()} Cr more. Your spec waits here.</span>` : `<button type="button" class="primary cut yard-site-repaint">Repaint · ${cost.toLocaleString()} Cr</button>`}</div>`;
+}
+
+/** A website spec for the ship you fly, while it waits: its kit, for the Equip screen. */
+export const waitingSpecKit = (c: Commander): Commander['specKit'] | null =>
+  siteSpec && siteSpec.spec.ship === hullOf(c) ? { laser: siteSpec.spec.laser, rear: siteSpec.spec.rear, upgrades: siteSpec.spec.upgrades } : null;
 
 /** The site's spec is ordered: it's done with, here and on the account. */
 function forgetSiteSpec() {
@@ -360,7 +380,7 @@ export function renderShipyard() {
         : `<button type="button" class="primary yard-deposit" ${c.credits < deposit ? 'disabled' : ''}>Place a deposit · ${deposit.toLocaleString()} Cr</button>
           <p class="yard-note">${escapeHtml(def.manufacturer ?? 'The yard')} lay down a ${escapeHtml(def.name)} every few months, so there's always one on the line: yours is the next off it. Finishing her to your spec takes about ${PRODUCTION_HOURS / 24} days, here at ${escapeHtml(stationName(here).name)}, at this price. A tenth now, refundable until she's ready.</p>`
       : '<p class="yard-note">Shipyards open soon: you\'ll buy it outright then.</p>';
-    const nameField = `<label class="yard-label" for="spec-name">Its name, painted on${fixed ? ' beside its number' : ''}</label>
+    const nameField = `<label class="yard-label" for="spec-name">Her name: on her papers, her manual and your clips</label>
       <input id="spec-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" />`;
     const body = fixed
       ? `<p class="yard-desc">${escapeHtml(fixed.blurb)}</p>
@@ -406,7 +426,7 @@ export function renderShipyard() {
       <div class="yard-lasers">${(Object.keys(GLOWS) as GlowId[]).map((g) => `<button type="button" data-glow="${g}" aria-pressed="${spec!.glow === g}">${GLOWS[g].name}<small>${cost(GLOWS[g].price)}</small></button>`).join('')}</div>
       <label class="yard-check"><input type="checkbox" class="yard-two-tone" ${spec.trim ? 'checked' : ''} /> <span>Two-tone: the fine lines in a second colour</span><small>${TRIM_PRICE.toLocaleString()} Cr</small></label>
       ${spec.trim ? swatches('data-trim', spec.trim) : ''}
-      <label class="yard-label" for="spec-name">Its name, painted on</label>
+      <label class="yard-label" for="spec-name">Her name: on her papers, her manual and your clips</label>
       <input id="spec-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" />
       <p class="yard-label">Its laser</p>
       <div class="yard-lasers">${laserRow}</div>
@@ -557,7 +577,7 @@ export function renderShipyard() {
           </button></li>`;
         }).join('')}</ul>
       <p class="yard-desc">${escapeHtml(edition ? edition.blurb : pick.def.description)}</p>
-      ${siteSpec && !c.order && shipById(siteSpec.spec.ship) ? `<div class="yard-order" style="--hull:${siteSpec.spec.colour}"><strong>Your ${escapeHtml(shipById(siteSpec.spec.ship)!.name)} spec from the website is here</strong><span>${siteSpec.spec.name ? `“${escapeHtml(siteSpec.spec.name)}”, ` : ''}${escapeHtml(nameOf(siteSpec.spec.colour))}: ${quote(shipById(siteSpec.spec.ship)!, siteSpec.spec).toLocaleString()} Cr as specced.</span><button type="button" class="primary yard-open-site">Open it</button></div>` : ''}
+      ${siteSpec && siteSpec.spec.ship === hullOf(c) && shipById(siteSpec.spec.ship) ? repaintCard(c, shipById(siteSpec.spec.ship)!, siteSpec.spec) : siteSpec && !c.order && shipById(siteSpec.spec.ship) ? `<div class="yard-order" style="--hull:${siteSpec.spec.colour}"><strong>Your ${escapeHtml(shipById(siteSpec.spec.ship)!.name)} spec from the website is here</strong><span>${siteSpec.spec.name ? `“${escapeHtml(siteSpec.spec.name)}”, ` : ''}${escapeHtml(nameOf(siteSpec.spec.colour))}: ${quote(shipById(siteSpec.spec.ship)!, siteSpec.spec).toLocaleString()} Cr as specced.</span><button type="button" class="primary yard-open-site">Open it</button></div>` : ''}
       ${c.gift ? `<div class="yard-order" style="--hull:var(--accent)"><strong>A gift is waiting</strong><span>${c.gift.edition ? `${escapeHtml(editionById(c.gift.edition.id)?.name ?? '')} ${editionNo(c.gift.edition.number)}: a ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to name.` : `A ${escapeHtml(shipById(c.gift.ship)?.name ?? c.gift.ship)}, yours to colour and name.`}</span>${giftWaiting ? `<span>Waiting for you at the maker’s own yard: ${escapeHtml(stationName(giftWaiting).name)}, ${escapeHtml(giftWaiting.name)}${giftWaiting.galaxy === here.galaxy ? `, ${jumpsBetween(here, giftWaiting, 12)} jumps from here` : ''}.</span>${giftWaiting.galaxy === here.galaxy ? `<button type="button" class="primary yard-gift-course">${c.target === giftWaiting.index ? 'On course' : 'Set course'}</button>` : ''}` : '<button type="button" class="primary yard-open-gift">Spec your gift</button>'}</div>` : ''}
       ${pick.def.id === hullOf(c) && !edition ? `<button type="button" class="yard-manual yard-repaint-open">Repaint your ${escapeHtml(pick.def.name)}</button>` : ''}
       <button type="button" class="yard-manual">The ${escapeHtml(edition ? (shipById(edition.ship)?.name ?? '') : pick.def.name)} owner's manual</button>
@@ -575,6 +595,23 @@ export function renderShipyard() {
         resetShowroomView();
         renderShipyard();
       };
+    el.querySelector<HTMLButtonElement>('.yard-site-repaint')?.addEventListener('click', () => {
+      if (!siteSpec) return;
+      const s = siteSpec.spec;
+      const def = shipById(s.ship)!;
+      const r = repaint(c, def, specFinish(s), s.name || undefined);
+      if (!r.ok || !('paid' in r)) return flash(r.ok ? 'The yard couldn’t repaint her' : r.message, 4);
+      // Her kit isn't a repaint: it goes on the Equip screen's list, bought as usual.
+      c.specKit = { laser: s.laser, rear: s.rear, upgrades: [...s.upgrades] };
+      if (!specKitLines(c, def, c.specKit).some((l) => !l.done)) delete c.specKit;
+      forgetSiteSpec();
+      saveCommander(c);
+      sfx.beep();
+      showOwnShip();
+      boardShip();
+      flash(`Repainted to your website spec · ${r.paid.toLocaleString()} Cr${c.specKit ? ' · her kit is on your list at Equip ship' : ''}`, 5);
+      renderShipyard();
+    });
     el.querySelector<HTMLButtonElement>('.yard-repaint-open')?.addEventListener('click', () => {
       yardMode = 'repaint';
       const p = c.paint;

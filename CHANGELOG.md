@@ -22,6 +22,8 @@ reported it.
 - The owner's manual opens full screen with her live at the top: drag to turn, pinch to zoom. (Mark)
 - The header says which system you're in first, and on a phone the look switch is one NEO button in it: lit for neo-vector, off for 1984. (Mark)
 - No more pill buttons: square everywhere, with clipped corners on the main action, the trade window included. (Mark)
+- A Cobra specced on the website is no longer a dead end: the yard repaints the Cobra you fly to it, name and all, and her kit goes on a list at Equip ship. (Mark)
+- The yard no longer promises a name painted on her: it's on her papers, her manual and your clips. (Mark)
 
 ## 11 November 2026
 

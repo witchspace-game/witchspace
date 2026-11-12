@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { shipById } from '../content/ships';
 import { newCommander } from './commander';
 import { EDITIONS } from '../content/editions';
-import { deliverShip, deliveriesArrived, deliveryQuote, editionGiftSpec, editionQuote, collection, collectOrder, swapShip, TRADE_IN, cancelOrder, cleanName, defaultSpec, depositFor, LUXURIES, ORDERABLE, PALETTE, placeOrder, standardKit, production, PRODUCTION_HOURS, quote, UPGRADES } from './shipyard';
+import { LUXURIES, ORDERABLE, PALETTE, PRODUCTION_HOURS, TRADE_IN, UPGRADES, cancelOrder, cleanName, collectOrder, collection, defaultSpec, deliverShip, deliveriesArrived, deliveryQuote, depositFor, editionGiftSpec, editionQuote, placeOrder, production, quote, repaint, repaintQuote, specFinish, specKitLines, standardKit, swapShip } from './shipyard';
 
 const fdl = shipById('fer-de-lance')!;
 const cobra = shipById('cobra-mk3')!;
@@ -315,5 +315,37 @@ describe('your fleet (Mark: "a hangar where you can store your fleet")', () => {
     expect(deliveriesArrived(c, 1000 + q.ms - 1)).toEqual([]);
     expect(deliveriesArrived(c, 1000 + q.ms)).toHaveLength(1);
     expect(c.fleet![0].at).toEqual({ galaxy: 0, system: 8 });
+  });
+});
+
+describe('a website spec for the ship you fly is a repaint (Mark, 12 November 2026)', () => {
+  const cobra = shipById('cobra-mk3')!;
+  const spec = { ...defaultSpec(cobra), colour: '#9fe8ff', name: 'Lantern', laser: 'beam' as const, rear: 'pulse' as const, upgrades: ['ecm', 'large-cargo-bay'] as never[] };
+
+  it('repaints her to the spec, name and all, for the yard’s price against her paint', () => {
+    const c = newCommander('modern');
+    c.credits = 50_000;
+    const before = c.credits;
+    const cost = repaintQuote(cobra, specFinish(spec), c.paint);
+    expect(repaint(c, cobra, specFinish(spec), spec.name)).toMatchObject({ ok: true, paid: cost });
+    expect(c.credits).toBe(before - cost);
+    expect(c.paint).toMatchObject({ colour: '#9fe8ff', name: 'Lantern' });
+  });
+
+  it('keeps her name when the spec gives none', () => {
+    const c = newCommander('modern');
+    c.credits = 50_000;
+    c.paint = { colour: '#3dffb0', glow: 'standard', trim: null, name: 'Old Faithful', luxuries: [] };
+    repaint(c, cobra, specFinish(spec));
+    expect(c.paint!.name).toBe('Old Faithful');
+  });
+
+  it('lists her kit for the Equip screen, ticked as it’s fitted; the standard laser is no purchase', () => {
+    const c = newCommander('modern');
+    const lines = specKitLines(c, cobra, { laser: spec.laser, rear: spec.rear, upgrades: spec.upgrades });
+    expect(lines.map((l) => l.what)).toEqual(['Beam laser, front', 'Pulse laser, rear', 'E.C.M. System', 'Large Cargo Bay']);
+    expect(specKitLines(c, cobra, { laser: 'pulse', upgrades: [] })).toEqual([]);
+    c.lasers.front = 'beam';
+    expect(specKitLines(c, cobra, { laser: 'beam', upgrades: [] })[0].done).toBe(true);
   });
 });

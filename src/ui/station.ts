@@ -10,7 +10,7 @@ import { cleanName } from '../../server/src/protocol';
 import { combatRating, nextRating, ratingPoints } from '../game/rating';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from '../render/fittings';
 import { KIT_GROUPS, KIT_NAMES, kitGroup, type KitGroup } from '../game/kit';
-import { laserLocked, production } from '../game/shipyard';
+import { laserLocked, production, specKitLines } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
 import { forDevice } from './deviceWords';
 import { addStanding, cargoName, destinationOf, forContract, wyWorks } from '../game/contracts';
@@ -28,7 +28,7 @@ import { openManual } from './manual';
 import { hasRecord, openRapSheet } from './rapSheet';
 import { plotCourse, renderContracts } from './contracts';
 import { openBooth, showroomModels } from './showroom';
-import { hasShipyard, renderShipyard, showOwnShip } from './shipyard';
+import { hasShipyard, renderShipyard, showOwnShip, waitingSpecKit } from './shipyard';
 import { renderSaloon } from './saloon';
 import { VENN, vennAtStation, vennAway } from '../game/odile';
 import { venue } from '../game/saloon';
@@ -432,6 +432,20 @@ export function renderDocked() {
 
   const list = $('#equip');
   list.innerHTML = '';
+  // A website spec's kit for the ship you fly (Mark, 12 November 2026): a list, ticked off as you buy it below.
+  const wanted = c.specKit ?? waitingSpecKit(c);
+  if (wanted) {
+    const lines = specKitLines(c, player.def, wanted);
+    if (c.specKit && lines.every((l) => l.done)) {
+      delete c.specKit;
+      saveCommander(c);
+    } else if (lines.length) {
+      const li = document.createElement('li');
+      li.className = 'spec-list';
+      li.innerHTML = `<span>From your website spec</span><small>${lines.map((l) => `${l.done ? '✓ ' : ''}${escapeHtml(l.what)} · ${l.price.toLocaleString()} Cr`).join('<br>')}</small>`;
+      list.append(li);
+    }
+  }
   // The kit, grouped (Combat · Trade · Exploration · Ship) with what you can buy here first and what
   // isn't sold here folded to one line, saying why (Mark and Marketing's walkthrough). Repairs first.
   const kit: { group: KitGroup | 'repair'; kind: 'buy' | 'owned' | 'away'; li: HTMLLIElement; short?: string }[] = [];
