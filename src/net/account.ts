@@ -4,6 +4,7 @@
 // works as before without it.
 
 import type { Commander } from '../game/commander';
+import type { Registered } from '../game/registration';
 
 export const API: string = import.meta.env.VITE_SPACE_HTTP ?? (import.meta.env.DEV ? 'http://127.0.0.1:8787' : 'https://space.witchspace.org.uk');
 
@@ -37,6 +38,7 @@ const store = {
 
 let session = store.get(SESSION_KEY);
 let account: Account | null = null;
+let registration: Registered | null = null;
 let saveTimer = 0;
 let pending: Commander | null = null;
 
@@ -59,6 +61,7 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
 function forget() {
   session = null;
   account = null;
+  registration = null;
   store.set(SESSION_KEY, null);
   store.set(SYNC_KEY, null);
 }
@@ -95,15 +98,28 @@ export async function completeSignInFromUrl(): Promise<Account | null> {
 }
 
 /** On start: if we have a session, who is it? Null if signed out or the session has ended. */
-export async function refresh(): Promise<{ account: Account; saveUpdated: number | null } | null> {
+export async function refresh(): Promise<{ account: Account; saveUpdated: number | null; registration?: Registered | null } | null> {
   if (!session) return null;
   try {
-    const r = await call<{ account: Account; saveUpdated: number | null }>('/me');
+    const r = await call<{ account: Account; saveUpdated: number | null; registration?: Registered | null }>('/me');
     account = r.account;
+    registration = r.registration ?? null;
     return r;
   } catch {
     return null;
   }
+}
+
+// --- Registering your ship (server/src/registry.ts) --------------------------------
+
+/** The account's registration, as the server last said (null until signed in, or not registered). */
+export const accountRegistration = () => registration;
+
+/** Register the ship you fly, as she is. `consent`: the "I'll fly fair" box. */
+export async function register(save: Commander, consent: boolean): Promise<Registered> {
+  const r = await call<{ registration: Registered }>('/me/register', { method: 'POST', body: JSON.stringify({ save, consent }) });
+  registration = r.registration;
+  return r.registration;
 }
 
 export async function setCallsign(callsign: string): Promise<string> {

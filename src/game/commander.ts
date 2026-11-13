@@ -231,6 +231,7 @@ import type { Heard } from './saloon';
 import type { YardLoss } from './yards';
 import type { VennMemory } from './odile';
 import { shipNumberOf } from './transponder';
+import type { Registered } from './registration';
 
 /** A ship's finish from the yard. */
 /**
@@ -427,6 +428,10 @@ export interface Commander {
   shipNumber?: string;
   /** The number of the ship she replaced, when the insurers gave her to you. */
   replaces?: string;
+  /** Your ship's registration, as the server stamped it (game/registration.ts). */
+  registered?: Registered;
+  /** The invitation to register has been seen (it stays on the Commander card after). */
+  registerAsked?: true;
   /** Its finish, from the yard: colour, glow, trim, and her name (on her papers, her manual and your clips; not drawn on the hull). */
   paint?: Paint;
   /** Your fleet (Mark): the ships you own but aren't flying, each in the hangar where you left her, or on her way to another. */

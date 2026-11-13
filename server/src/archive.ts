@@ -9,7 +9,7 @@ export const ARCHIVE_DAYS = 90;
 export const ARCHIVE_MS = ARCHIVE_DAYS * 86_400_000;
 
 /** The tables archived with an account, by their `account` column (the accounts row itself goes by id). */
-export const ARCHIVED = ['saves', 'cards', 'firsts', 'renowned', 'submissions'] as const;
+export const ARCHIVED = ['saves', 'cards', 'firsts', 'renowned', 'submissions', 'registrations', 'ships'] as const;
 
 type Value = string | number | null | ArrayBuffer;
 export type Row = Record<string, Value>;

@@ -1282,6 +1282,9 @@ void initAccount({
     if (game.state === 'title') showTitle();
   },
   onTitle: () => game.state === 'title',
+  registered: () => {
+    if (game.state === 'docked') renderDocked();
+  },
 }).then(() => {
   // Signed in after docking (the account loads in the background): a commission may be waiting.
   if (game.state === 'docked' && game.commander) payCommissions();

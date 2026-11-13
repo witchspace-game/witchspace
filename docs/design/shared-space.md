@@ -227,17 +227,17 @@ It flags one account from many networks at once, many accounts from one network,
 
 **What it doesn't close.** A commander who plays honestly but very fast (a bot) still has to be caught by pace limits. The moment-to-moment game still runs in the browser until the server keeps the books itself (roadmap phase 4). This makes cheating hard, not impossible: a big step from today, where nothing is checked at the door.
 
-**Decisions for Mark** (suggested answers marked):
-1. **When to ask:** at the first equipment or ship purchase, or at Mostly Harmless, whichever comes first *(suggested)*; or straight after the first dock; or only at the door to shared space.
-2. **What an unregistered commander can't do:** buy equipment and ships, and rank past Mostly Harmless *(suggested)*; or nothing, so registering only matters for shared space.
-3. **A fee:** none *(suggested: registering should feel like a welcome, not a toll)*; or 100 Cr for the ritual.
-4. **Re-registering:** once per commander *(suggested)*; a new commander can register a new ship.
-5. **A flagged commander at the door:** kept out of shared space until Mark looks *(suggested)*; or let in with a hollow insignia.
+**Decisions** (Mark, 13 November 2026):
+1. **When to ask:** at the first equipment or ship purchase, or at Mostly Harmless, whichever comes first.
+2. **What an unregistered commander can't do:** *"This requires special consideration in solo or 'shared space'"*. Solo stays open: an unregistered commander buys and ranks freely, and the game only invites them to register. Shared space needs a registered ship. What was earned before registering stays in solo; in shared space, only what's on the record since counts (the door, step 3).
+3. **A fee:** none.
+4. **Re-registering:** once per account *(suggested, not yet asked)*.
+5. **A flagged commander at the door:** kept out of shared space until Mark looks.
 6. **Ideas board:** this is a design decision Mark has made, so it's written here; it could also go on the board, framed as "Register your ship", for players to see it coming.
 
 **Size.** About 5½–6½ days, in this order, each its own pull request:
 0. Transponder numbers on every ship, NPCs' included, in the game only (1 day, no server; can ship any time). *Built 12 November 2026* (`src/game/transponder.ts`, `src/flight/numbers.ts`): yours on the Station screen, NPCs' in the target readout, bounties and police hull reads. Not yet: commanders' numbers seen by each other in shared space (with the door, step 3).
-1. Registration: the prompt, the stamp, the certificate, the ledger's start, and the ship registry (2½ days, Worker deploy).
+1. Registration: the prompt, the stamp, the certificate, the ledger's start, and the ship registry (2½ days, Worker deploy). *Built 13 November 2026* (`server/src/registry.ts`, `src/game/registration.ts`, the account panel's *Register your ship*): the invitation (said once, then a row on the Commander card), registering with the *"I'll fly fair"* tick, the stamp (number, date, port, her fit, whether she was basic, the ledger's last hash), the ship registry and each hull's log, archived with the account; shared space turned away without a registration (`need: 'register'`). A ship that isn't basic is stamped as she is, marked not basic, for the door to judge. Not yet: the certificate as a picture to share (her papers show the line *"Registered 13 November 2026, Leesti"*).
 2. Kit and rank in the ledger, checked on each cloud save (1 day, Worker deploy).
 3. The door: the passport check, the 30-day visit record, flags emailed to Mark, bans (1–2 days, Worker deploy).
 4. Existing commanders registered, and Mark's look at the list (half a day).

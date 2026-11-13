@@ -41,6 +41,7 @@ import { EDITIONS, editionById, editionNo } from '../../src/content/editions';
 import { normaliseVoucher, voucherCode } from './vouchers';
 import { papersFor, papersLink, type Papers } from '../../src/game/papers';
 import { firstAnchor, verify, type Anchor, type Save as LedgerSave } from './ledger';
+import { stampOf, type RegSave, type Registration } from './registry';
 import { ARCHIVE_DAYS, ARCHIVE_MS, ARCHIVED, insertFor, pack, unpack, type Packed, type Row } from './archive';
 type Save = LedgerSave & { tampered?: boolean };
 import { ACCESS_TTL, challengeOk, clientName, CODE_TTL, connectPage, isMetadataUrl, redirectMatches, redirectOk, REFRESH_TTL, REQUEST_TTL, s256, SCOPE, verifierOk, withParams } from './oauth';
@@ -223,6 +224,15 @@ export class Accounts extends DurableObject<AccountsEnv> {
       }
     }
     this.sql.exec('UPDATE editions SET token = lower(hex(randomblob(16))) WHERE token IS NULL');
+    // Registering your ship (registry.ts): one registration an account, kept for good. `ships` is the ship
+    // registry, every registered number and who holds it; `ship_log` each change to a hull, with no account in it,
+    // so a hull's history can outlive its commander as the hull and number alone.
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS registrations (account TEXT PRIMARY KEY, number TEXT NOT NULL, at INTEGER NOT NULL,
+      galaxy INTEGER NOT NULL, system INTEGER NOT NULL, fit TEXT NOT NULL, basic INTEGER NOT NULL, ledger TEXT NOT NULL, consent INTEGER NOT NULL)`);
+    this.sql.exec('CREATE TABLE IF NOT EXISTS ships (number TEXT PRIMARY KEY, hull TEXT NOT NULL, account TEXT NOT NULL, status TEXT NOT NULL, replaces TEXT, at INTEGER NOT NULL)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS ships_account ON ships (account)');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS ship_log (number TEXT NOT NULL, at INTEGER NOT NULL, kind TEXT NOT NULL, galaxy INTEGER, system INTEGER, detail TEXT NOT NULL)');
+    this.sql.exec('CREATE INDEX IF NOT EXISTS ship_log_number ON ship_log (number)');
   }
 
   private lastPurge = 0;
@@ -264,7 +274,8 @@ export class Accounts extends DurableObject<AccountsEnv> {
 
     const account = await this.sessionAccount(request);
     if (!account) return json({ error: 'Please sign in' }, 401);
-    if (m === 'GET' && path === '/me') return json({ account, saveUpdated: this.saveUpdated(account.id), maintainer: this.isMaintainer(account), ...this.membership(account.id) });
+    if (m === 'GET' && path === '/me') return json({ account, saveUpdated: this.saveUpdated(account.id), maintainer: this.isMaintainer(account), ...this.membership(account.id), registration: this.registrationOf(account.id) });
+    if (m === 'POST' && path === '/me/register') return this.register(request, account);
     if (path === '/me/card') {
       if (m === 'GET') return this.getCard(account);
       if (m === 'PUT') return this.putCard(request, account);
@@ -477,14 +488,15 @@ export class Accounts extends DurableObject<AccountsEnv> {
   }
 
   /** Who a session belongs to, with the edition numbers they hold (shared space shows an edition only to its owner). */
-  async whoIs(session: string): Promise<{ id: string; callsign: string | null; editions: { id: string; number: number }[] } | null> {
+  async whoIs(session: string): Promise<{ id: string; callsign: string | null; editions: { id: string; number: number }[]; registered: boolean } | null> {
     if (typeof session !== 'string' || session.length < 20) return null;
     const row = this.sql
       .exec('SELECT a.id, a.callsign FROM sessions s JOIN accounts a ON a.id = s.account WHERE s.hash = ? AND s.expires > ?', await sha256(session), Date.now())
       .toArray()[0];
     if (!row) return null;
     const editions = this.sql.exec('SELECT edition, number FROM editions WHERE account = ?', row.id).toArray().map((r) => ({ id: r.edition as string, number: r.number as number }));
-    return { id: row.id as string, callsign: (row.callsign as string | null) ?? null, editions };
+    const registered = this.sql.exec('SELECT 1 FROM registrations WHERE account = ?', row.id).toArray().length > 0;
+    return { id: row.id as string, callsign: (row.callsign as string | null) ?? null, editions, registered };
   }
 
   // --- Signing in ---------------------------------------------------------------
@@ -1179,6 +1191,50 @@ export class Accounts extends DurableObject<AccountsEnv> {
       return json({ revoked: name, freed });
     }
     return json({ error: 'Not found' }, 404);
+  }
+
+  // --- Registering your ship (registry.ts) ----------------------------------------------
+
+  private registrationOf(id: string): Registration | null {
+    const r = this.sql.exec('SELECT number, at, galaxy, system, fit, basic FROM registrations WHERE account = ?', id).toArray()[0];
+    if (!r) return null;
+    return { number: r.number as string, at: r.at as number, galaxy: r.galaxy as number, system: r.system as number, fit: JSON.parse(r.fit as string), basic: r.basic === 1 };
+  }
+
+  /**
+   * POST /me/register {save, consent: true}: stamp the ship you fly, as she is, with your callsign. Once an
+   * account. Free. Answers with the registration, whose number the game takes (it's hers, unless another
+   * ship already holds it).
+   */
+  private async register(request: Request, account: Account): Promise<Response> {
+    if (!account.callsign) return json({ error: 'Choose a callsign first' }, 400);
+    const already = this.registrationOf(account.id);
+    if (already) return json({ registration: already, already: true });
+    const text = await request.text();
+    if (text.length > SAVE_MAX) return json({ error: 'That save is too large' }, 413);
+    const body = (() => {
+      try {
+        return JSON.parse(text) as { save?: unknown; consent?: unknown };
+      } catch {
+        return null;
+      }
+    })();
+    if (!body || typeof body.save !== 'object' || body.save === null) return json({ error: 'Not a save' }, 400);
+    if (body.consent !== true) return json({ error: 'Tick the box to register: it’s how we keep things fair' }, 400);
+    const save = body.save as RegSave;
+    if (save.difficulty === 'classic') return json({ error: 'Registering is for Modern rules: Classic stays as it was in 1984' }, 400);
+    // Taken: in the registry, or held with a deleted account for its 90 days (it comes back if they return).
+    const taken = (n: string) =>
+      this.sql.exec('SELECT 1 FROM ships WHERE number = ?', n).toArray().length > 0 || this.sql.exec('SELECT 1 FROM archive WHERE data LIKE ?', `%"${n}"%`).toArray().length > 0;
+    const st = stampOf(save, taken);
+    const now = Date.now();
+    this.sql.exec(
+      'INSERT INTO registrations (account, number, at, galaxy, system, fit, basic, ledger, consent) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)',
+      account.id, st.number, now, st.galaxy, st.system, JSON.stringify(st.fit), st.basic ? 1 : 0, st.ledger,
+    );
+    this.sql.exec('INSERT INTO ships (number, hull, account, status, replaces, at) VALUES (?, ?, ?, ?, NULL, ?)', st.number, st.fit.hull, account.id, 'active', now);
+    this.sql.exec('INSERT INTO ship_log (number, at, kind, galaxy, system, detail) VALUES (?, ?, ?, ?, ?, ?)', st.number, now, 'registered', st.galaxy, st.system, JSON.stringify({ hull: st.fit.hull, basic: st.basic }));
+    return json({ registration: this.registrationOf(account.id) });
   }
 
   // --- The cloud save --------------------------------------------------------------

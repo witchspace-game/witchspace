@@ -10,6 +10,10 @@ notice. Make a new heading for today if there isn't one, written like
 starting with `- `. Say what's different, not how it was done. Credit whoever
 reported it.
 
+## 13 November 2026
+
+- Register your ship: free, from your Commander card or the account panel (A). Your ship goes on the record with her number, today's date and the port, and everything she earns from then on counts in shared space. Solo play stays exactly as it is, registered or not; shared space now needs a registered ship. The game invites you once, at your first purchase or at Mostly Harmless. (Mark)
+
 ## 12 November 2026
 
 - Rank with a company pays: Contractor +15% on every job, up to +75% for a Partner, and hazard pay from Contractor up, a flat sum for flying into danger whatever you carry (200 Cr into an anarchy at Contractor). Casual work pays as before. (Mark)

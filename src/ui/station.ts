@@ -2,11 +2,12 @@
 // missiles and kit to buy or sell, and refunds for a change of mind before launch.
 
 import { shipNumberOf } from '../game/transponder';
+import { inviteDue } from '../game/registration';
 import { sfx } from '../audio/sound';
 import { cargoCapacity, cargoTonnes, DIFFICULTIES, EQUIPMENT, FUEL_PRICE, fuelCapacity, MISSILE_PRICE, hasEquipment, REPAIR_FRACTION, type Mount, MOUNTS, removeEquipment, saveCommander, type Commander } from '../game/commander';
 import { fineDue, legalStatus, redeemImpound, scansCargo, settle, systemKey } from '../game/law';
 import { isTouch } from '../game/input';
-import { claimCallsign } from './accountPanel';
+import { claimCallsign, toggleAccountPanel } from './accountPanel';
 import { cleanName } from '../../server/src/protocol';
 import { combatRating, nextRating, ratingPoints } from '../game/rating';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from '../render/fittings';
@@ -133,6 +134,17 @@ function holdItems(c: Commander): { t: number; name: string }[] {
 }
 
 /** Your ship at the top of the Station screen: maker and role, her name, her own name and edition, and her setup. */
+/** On the Commander card: her registration, or the invitation to register her. */
+function registrationLine(c: Commander): string {
+  if (c.registered) {
+    const port = systemAt(c.registered.galaxy, c.registered.system);
+    const on = new Date(c.registered.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    return `<p class="cc-reg">Registered ${escapeHtml(on)}, ${escapeHtml(port.name)}</p>`;
+  }
+  if (!inviteDue(c)) return '';
+  return `<button type="button" class="cc-register">Register your ship ›<span>Free. Solo play stays as it is; shared space needs it.</span></button>`;
+}
+
 function renderShipWindow(c: Commander) {
   const def = player.def;
   const win = $('#ship-window');
@@ -259,7 +271,7 @@ export function renderDocked() {
     }</div>
     <div class="cc-rank"><b>${rank}</b>${c.difficulty === 'classic' || !next ? '' : `<span>${left < 10 ? left.toFixed(1) : Math.ceil(left).toLocaleString()} to ${next.name}</span>`}</div>
     ${c.difficulty === 'classic' ? '' : `<div class="meter" role="progressbar" aria-label="Towards ${next?.name ?? 'Elite'}" aria-valuenow="${Math.round(toNext * 100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${(toNext * 100).toFixed(1)}%"></i></div>`}
-    <p class="cc-explore"><b>${explorerRank(ex.points)}</b> · ${ex.visited.length} visited${firsts ? ` · ${firsts} first${firsts === 1 ? '' : 's'}` : ''}</p>`;
+    <p class="cc-explore"><b>${explorerRank(ex.points)}</b> · ${ex.visited.length} visited${firsts ? ` · ${firsts} first${firsts === 1 ? '' : 's'}` : ''}</p>${registrationLine(c)}`;
   // Anything else worth a line: trails under way, and the explorer's tips.
   const rows: [string, string][] = [
     ...trailsUnderWay(c, here.galaxy).map((t): [string, string] => ['Trail', `${escapeHtml(t.title)} · ${t.found} of ${t.of} found · the clue points to ${escapeHtml(t.next)}`]),
@@ -268,6 +280,13 @@ export function renderDocked() {
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   renderWanted(c);
   $('#cmdr-card .rename').addEventListener('click', () => startRename());
+  document.querySelector<HTMLButtonElement>('#cmdr-card .cc-register')?.addEventListener('click', () => toggleAccountPanel(true));
+  // The invitation (Mark, 13 November 2026: at the first purchase or Mostly Harmless): said once, then it waits on the card.
+  if (inviteDue(c) && !c.registerAsked) {
+    c.registerAsked = true;
+    saveCommander(c);
+    flash('Register your ship: it’s free, and it’s how she flies in shared space · on your Commander card', 5);
+  }
   document.querySelector<HTMLButtonElement>('#cmdr-card .rap-open')?.addEventListener('click', () => void openRapSheet(c));
   document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
     flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);

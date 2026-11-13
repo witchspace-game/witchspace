@@ -66,7 +66,7 @@ export type SpaceEvent =
   | { kind: 'ecm'; by: Remote | null; p: THREE.Vector3 }
   /** Our account joined from another window or device, which now has the ship. */
   | { kind: 'replaced' }
-  | { kind: 'signin'; need: 'account' | 'callsign' };
+  | { kind: 'signin'; need: 'account' | 'callsign' | 'register' };
 
 const HOSTILE_FOR = 15; // seconds a commander who shot at you stays marked hostile
 
