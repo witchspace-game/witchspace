@@ -104,6 +104,7 @@
         <button data-tab="station" role="tab">Station</button>
         <button data-tab="equip" role="tab">Equip ship</button>
         <button data-tab="contracts" role="tab">Contracts</button>
+        <button data-tab="messages" role="tab">Messages</button>
         <button data-tab="market" role="tab"><span class="key">T · </span>Market</button>
         <button data-tab="news" role="tab">News</button>
         <button data-tab="saloon" role="tab">Saloon</button>
@@ -133,6 +134,8 @@
           <div class="tile tile-cargo" id="cargo-tile"></div>
           <div class="tile" id="lights-tile" hidden></div>
         </div>
+        <!-- What's new since you last played: one line, tap it for the list (Mark, 13 November 2026). -->
+        <details class="whats-new" id="whats-new" hidden></details>
         <div class="cmdr-card" id="cmdr-card"></div>
         <p class="fuel-row" id="data-row" hidden></p>
         <p class="fuel-row" id="arrivals" hidden></p>
@@ -145,6 +148,11 @@
       <div id="tab-contracts" role="tabpanel" hidden>
         <p class="meta">Company work: they supply the cargo, you carry it there within so many jumps, and they pay on delivery.</p>
         <div id="contracts"></div>
+      </div>
+      <!-- Messages on their own (Mark, 13 November 2026): not on top of the Contracts board. -->
+      <div id="tab-messages" role="tabpanel" hidden>
+        <p class="meta">From the companies, the police and the shipyard. An offer can be taken from here.</p>
+        <div id="messages"></div>
       </div>
       <div id="tab-news" role="tabpanel" hidden>
         <p class="meta">News reaches this station at the speed of ships: the further away, the older it is.</p>

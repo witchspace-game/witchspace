@@ -1,9 +1,8 @@
-// What's new: CHANGELOG.md at the repo root, read at build time, and the message
-// a returning commander gets from it when they dock after an update (Mark: "it
-// would be nice to notify CMDRs").
+// What's new: CHANGELOG.md at the repo root, read at build time, and the line a
+// returning commander sees on the Station screen when they dock after an update
+// (Mark: "it would be nice to notify CMDRs").
 import text from '../../CHANGELOG.md?raw';
 import type { Commander } from './commander';
-import type { Message } from './assignments';
 
 export interface Update {
   /** 2026-11-09: sorts and compares as text. */
@@ -36,11 +35,11 @@ export function parseChangelog(md: string): Update[] {
 export const UPDATES = parseChangelog(text);
 
 /**
- * The newest update as a message, if this commander hasn't had it. A brand-new
- * commander starts up to date: patch notes are for players coming back. Adds it
- * to the inbox and returns it.
+ * The newest update, if this commander hasn't had it. A brand-new commander starts up to date: patch
+ * notes are for players coming back. It waits as one line on the Station screen (`c.whatsNew`), not
+ * in the messages, where a wall of text sat on top of the work (Mark, 13 November 2026).
  */
-export function checkUpdates(c: Commander, now: number, updates = UPDATES): Message | null {
+export function checkUpdates(c: Commander, updates = UPDATES): Update | null {
   const latest = updates[0];
   if (!latest) return null;
   // "2026-11-09#9": the date and how many lines it had, so a line added later the same day still reaches you.
@@ -50,18 +49,14 @@ export function checkUpdates(c: Commander, now: number, updates = UPDATES): Mess
   if (!seen && c.visits === 0) return null;
   const [day, count] = (seen ?? '#').split('#');
   if (day > latest.date || (day === latest.date && Number(count || latest.lines.length) >= latest.lines.length)) return null;
-  const id = `update:${mark}`;
-  if (c.messages?.some((m) => m.id === id)) return null;
-  // Only the newest word on it: an earlier message about the same day is replaced.
-  c.messages = c.messages?.filter((m) => !m.id.startsWith(`update:${latest.date}`));
-  const message: Message = {
-    id,
-    company: 'hexon', // shown as from Witchspace, not a company
-    from: 'Witchspace',
-    subject: `What's new, ${latest.title}`,
-    body: latest.lines.map((l) => `• ${l}`).join('\n'),
-    at: now,
-  };
-  c.messages = [message, ...(c.messages ?? [])].slice(0, 20);
-  return message;
+  c.whatsNew = latest.date;
+  return latest;
+}
+
+/** The update waiting on the Station screen, if there is one. */
+export const whatsNewOf = (c: Commander, updates = UPDATES): Update | null => (c.whatsNew ? (updates.find((u) => u.date === c.whatsNew) ?? null) : null);
+
+/** Read: the line goes. */
+export function readWhatsNew(c: Commander) {
+  delete c.whatsNew;
 }

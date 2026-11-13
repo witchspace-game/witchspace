@@ -163,7 +163,7 @@ An expensive, fragile, visible upgrade: a dish or mast on the hull that other sh
 
 ### The radio is where the companies talk to you
 
-The radio isn't only for ships. **It's the one place everything that talks to you in flight is heard**: station traffic, the police, pirates, traders, and the companies and their contracts. "One jump left", "Running late", "Cargo reclaimed", "Delivered, with thanks", "Work on your route" and "Back on course" all arrive on the radio, from the company that sent them, in its colour. Messages that last (the ones on the Contracts tab) stay where they are; the radio log is where you hear them first, and where you look after a fight to see what you missed.
+The radio isn't only for ships. **It's the one place everything that talks to you in flight is heard**: station traffic, the police, pirates, traders, and the companies and their contracts. "One jump left", "Running late", "Cargo reclaimed", "Delivered, with thanks", "Work on your route" and "Back on course" all arrive on the radio, from the company that sent them, in its colour. Messages that last (on the Messages screen, docked; on the Contracts tab until 13 November 2026) stay where they are; the radio log is where you hear them first, and where you look after a fight to see what you missed.
 
 The **comms array** is how the companies reach you **anywhere**. Without one, a company can only talk to you through a station's traffic control, so you hear about work on your route as you come in to dock. With one:
 

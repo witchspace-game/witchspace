@@ -78,7 +78,7 @@ export type ServerMessage =
   /** This system's shared space has as many commanders flying as it takes: you fly solo for now. */
   | { type: 'full'; max: number; busy?: string } // busy: why, when it's the day's budget or the switch (spaceBudget.ts), not a full system
   /** Shared space is for commanders with a callsign (Mark): sign in, or claim one, then come back. */
-  | { type: 'signin'; need: 'account' | 'callsign' };
+  | { type: 'signin'; need: 'account' | 'callsign' | 'register' };
 
 /** The ships commanders fly in shared space, each as herself: read from their ship files (src/content/flyable.ts). */
 export const SHIPS = FLYABLE;

@@ -6,7 +6,7 @@ import { boomAt, grandShot } from '../audio/spatial';
 import { shipById } from '../content/ships';
 import { isWorking, saveCommander, hullOf } from '../game/commander';
 import { type Remote, type SpaceEvent } from '../net/space';
-import { sessionToken, signedIn, currentAccount } from '../net/account';
+import { accountRegistration, sessionToken, signedIn, currentAccount } from '../net/account';
 import { toggleAccountPanel } from '../ui/accountPanel';
 import { combatRating, rankInsignia } from '../game/rating';
 import { type LaserId } from '../game/weapons';
@@ -71,12 +71,12 @@ function sharedSpaceWanted(): boolean {
 }
 
 /** Shared space is for commanders with a callsign (Mark): signed in, with one claimed. */
-const canShare = () => signedIn() && Boolean(currentAccount()?.callsign);
-const SIGN_IN_TO_SHARE = 'Shared space is for commanders with a callsign. Claim yours: it takes a minute.';
+const canShare = () => signedIn() && Boolean(currentAccount()?.callsign) && Boolean(accountRegistration());
+const SIGN_IN_TO_SHARE = 'Shared space is for commanders with a callsign and a registered ship. Claim yours: it takes a minute.';
 
 export function toggleSharedSpace() {
   const on = !sharedSpaceWanted();
-  if (on && !canShare()) toggleAccountPanel(true, SIGN_IN_TO_SHARE);
+  if (on && !canShare()) toggleAccountPanel(true, signedIn() && currentAccount()?.callsign ? 'Register your ship to fly in shared space: it’s free, below.' : SIGN_IN_TO_SHARE);
   try {
     localStorage.setItem('witchspace.shared', on ? '1' : '0');
   } catch {
@@ -113,7 +113,14 @@ function onSpaceEvent(e: SpaceEvent) {
       if (game.state === 'flying') flash('Shared space: connection lost · reconnecting', 2.5);
       break;
     case 'signin':
-      flash(e.need === 'callsign' ? 'Shared space · claim a callsign first (A on the title screen) · flying solo for now' : 'Shared space is for commanders with a callsign · sign in on the title screen (A) · flying solo for now', 4.5);
+      flash(
+        e.need === 'register'
+          ? 'Shared space · register your ship first (your Commander card, or A on the title screen) · flying solo for now'
+          : e.need === 'callsign'
+            ? 'Shared space · claim a callsign first (A on the title screen) · flying solo for now'
+            : 'Shared space is for commanders with a callsign · sign in on the title screen (A) · flying solo for now',
+        4.5,
+      );
       break;
     case 'replaced':
       flash('Shared space · you joined from another window or device, so this one has left · launch again to fly here', 4.5);

@@ -10,6 +10,14 @@ notice. Make a new heading for today if there isn't one, written like
 starting with `- `. Say what's different, not how it was done. Credit whoever
 reported it.
 
+## 13 November 2026
+
+- Register your ship: free, from your Commander card or the account panel (A). Your ship goes on the record with her number, today's date and the port; registering doesn't change your commander, and everything you have comes with you. Solo play stays exactly as it is, registered or not; shared space now needs a registered ship. The game invites you once, at your first purchase or at Mostly Harmless. (Mark)
+- Messages have a place of their own at the station, with a count of what's unread. Contracts is just the work now. (Mark)
+- What's new (this list) is one line on the Station screen when you dock after an update: tap it to read, "Got it" to put it away. It isn't a message any more. (Mark)
+- The SELL and BUY buttons on a market's chart are smaller, so they cover less of it. (Mark)
+- Scooping a canister under Modern rules goes by your speed relative to it, so you can chase down one that's drifting away. Classic keeps the old rule. (from the ideas board)
+
 ## 12 November 2026
 
 - Rank with a company pays: Contractor +15% on every job, up to +75% for a Partner, and hazard pay from Contractor up, a flat sum for flying into danger whatever you carry (200 Cr into an anarchy at Contractor). Casual work pays as before. (Mark)
@@ -23,6 +31,7 @@ reported it.
 - The header says which system you're in first, and on a phone the look switch is one NEO button in it: lit for neo-vector, off for 1984. (Mark)
 - No more pill buttons: square everywhere, with clipped corners on the main action, the trade window included. (Mark)
 - A Cobra specced on the website is no longer a dead end: the yard repaints the Cobra you fly to it, name and all, and her kit goes on a list at Equip ship. (Mark)
+- Every ship has a transponder number: yours, like WS-7F3K-29, is under her name on the Station screen, and every NPC's is in the target readout (a Python LA-4471). It stays with the hull; a new ship, or the insurers' replacement, gets a new one. Run dark and nobody reads it. (Mark)
 - The yard no longer promises a name painted on her: it's on her papers, her manual and your clips. (Mark)
 
 ## 11 November 2026

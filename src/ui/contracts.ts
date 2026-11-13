@@ -180,29 +180,39 @@ const specialsHere = (c: Commander, here: StarSystem, now: number) =>
     .map((id) => assignmentFor(c, id, here, now))
     .filter((o): o is Contract & { expires: number } => o !== null);
 
-/** Unread messages, on the Contracts tab's button. */
+/** New work on the Contracts tab's button, and unread messages on the Messages tab's. */
 export function markInbox(c: Commander) {
-  const unread = (c.messages ?? []).filter((m) => !m.read).length + (game.state === 'docked' && game.dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0);
+  const offers = game.state === 'docked' && game.dockTab !== 'contracts' && c.difficulty === 'modern' ? newOffers(c, currentSystem(), Date.now()) : 0;
+  const unread = (c.messages ?? []).filter((m) => !m.read && !m.archived).length;
   // A small badge, not words: "Contracts · 2 new" spilled out of the tab on a phone (Mark).
-  const tab = $('.tabs [data-tab="contracts"]');
-  tab.innerHTML = unread ? `Contracts <b class="tab-badge">${unread}<span class="tab-badge-word"> new</span></b>` : 'Contracts'; // "2 new" where there's room, "2" on a phone
-  tab.setAttribute('aria-label', unread ? `Contracts, ${unread} new` : 'Contracts');
+  const badge = (name: string, n: number) => {
+    const tab = $(`.tabs [data-tab="${name.toLowerCase()}"]`);
+    tab.innerHTML = n ? `${name} <b class="tab-badge">${n}<span class="tab-badge-word"> new</span></b>` : name; // "2 new" where there's room, "2" on a phone
+    tab.setAttribute('aria-label', n ? `${name}, ${n} new` : name);
+  };
+  badge('Contracts', offers);
+  badge('Messages', unread);
   main.updateDockHead();
 }
 
 /** Earlier messages stays open while you archive from it. */
 let earlierOpen = false;
 
-export function renderContracts() {
+const hoursLeftFrom = (now: number) => (t: number) => Math.max(1, Math.round((t - now) / 3600_000));
+const placeFrom = (here: StarSystem) => (s: StarSystem) => `${escapeHtml(s.name)} <small>${distanceLy(here, s).toFixed(1)} LY</small>${riskTag(s)}`;
+
+/**
+ * Messages, on their own screen (Mark, 13 November 2026: they sat on top of the Contracts board, "This isn't
+ * the correct place"). Receipts (paid, handed in) in a line each; an offer says what you can do about it;
+ * anything already read folded away.
+ */
+export function renderMessages() {
   const c = cmdr();
   const here = currentSystem();
   const now = Date.now();
   const free = cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c);
-  const hoursLeft = (t: number) => Math.max(1, Math.round((t - now) / 3600_000));
-  const goodName = (id: string) => escapeHtml(commodityById(id)?.name ?? id);
-  const place = (s: StarSystem) => `${escapeHtml(s.name)} <small>${distanceLy(here, s).toFixed(1)} LY</small>${riskTag(s)}`;
-  // Messages: what's new in full; receipts (paid, handed in) in a line each; anything
-  // already read folded away, so the tab opens on the work, not on old news.
+  const hoursLeft = hoursLeftFrom(now);
+  const place = placeFrom(here);
   const sender = (m: Message) => (m.from ? `<b class="company">${escapeHtml(m.from)}</b>` : companyMark(m.company));
   const receipt = (m: Message) => /:delivered$/.test(m.id);
   const archive = (m: Message) => `<button type="button" class="message-archive" data-archive="${escapeHtml(m.id)}" aria-label="Archive this message" title="Archive">×</button>`;
@@ -225,7 +235,7 @@ export function renderContracts() {
     const course = !s ? '' : c.target === s.system.index ? '<span class="on-course">On course</span>' : `<button data-course="${s.system.index}">Set course</button>`;
     return `<br><small>${where} · closes in ${hoursLeft(o.offer.expires)} h</small><span class="actions">${course}${decline}</span>`;
   };
-  const full = (m: Message) => `<li class="message${m.id.startsWith('update:') ? ' update' : ''}${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small>${answer(m)}</li>`;
+  const full = (m: Message) => `<li class="message${m.read ? '' : ' unread'}">${archive(m)}${sender(m)} · <b>${escapeHtml(m.subject)}</b><br><small>${escapeHtml(m.body)}</small>${answer(m)}</li>`;
   const shown = (c.messages ?? []).filter((m) => !m.archived);
   // An offer you can still take stays in view after you've read it.
   const live = (m: Message) => ['here', 'elsewhere'].includes(offerFor(c, m, here, now)?.kind ?? '');
@@ -235,6 +245,19 @@ export function renderContracts() {
     unread.map((m) => (receipt(m) ? line(m) : full(m))).join('') +
     (earlier.length ? `<li class="message-earlier"><button type="button" class="message-archive-all" data-archive="read">Archive all</button><details${earlierOpen ? ' open' : ''}><summary>Earlier messages (${earlier.length})</summary><ul class="contracts">${earlier.map((m) => (receipt(m) ? line(m) : full(m))).join('')}</ul></details></li>` : '');
   for (const m of c.messages ?? []) m.read = true;
+  $('#messages').innerHTML = `${messages ? `<ul class="contracts">${messages}</ul>` : '<p class="meta">No messages. Companies, the police and the shipyard write to you here.</p>'}
+    <p class="market-message" aria-live="polite">${escapeHtml(contractMessage)}</p>`;
+  markInbox(c);
+}
+
+export function renderContracts() {
+  const c = cmdr();
+  const here = currentSystem();
+  const now = Date.now();
+  const free = cargoCapacity(c, player.def.stats.cargo) - cargoTonnes(c);
+  const hoursLeft = hoursLeftFrom(now);
+  const goodName = (id: string) => escapeHtml(commodityById(id)?.name ?? id);
+  const place = placeFrom(here);
   markInbox(c);
   const hello = welcomeHere(c, here, now);
   const welcomeCard = hello
@@ -334,7 +357,6 @@ export function renderContracts() {
     .join(' · ');
   $('#contracts').innerHTML = `
     ${incidents ? `<h3>Incidents</h3><ul class="contracts">${incidents}</ul>` : ''}
-    ${messages ? `<h3>Messages</h3><ul class="contracts">${messages}</ul>` : ''}
     ${mine ? `<h3>Your contracts</h3><ul class="contracts">${mine}</ul>` : ''}
     <h3>On offer at ${escapeHtml(stationName(here).name)}</h3>
     ${welcomeCard || specials || offers ? `<ul class="contracts">${welcomeCard}${specials}${offers}</ul>` : '<p class="meta">Nothing on the board. New work is posted every few minutes.</p>'}
@@ -368,7 +390,8 @@ setInterval(() => {
   }
 }, 15_000);
 
-$('#contracts').addEventListener('click', (e) => {
+/** The buttons on Contracts and on Messages (an offer in a message is taken, declined or plotted the same way). */
+function onClick(e: MouseEvent) {
   const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
   if (!b) return;
   b.blur();
@@ -378,7 +401,7 @@ $('#contracts').addEventListener('click', (e) => {
     earlierOpen = Boolean(b.closest('details')?.open);
     for (const m of c.messages ?? []) if (b.dataset.archive === 'read' ? m.read : m.id === b.dataset.archive) m.archived = true;
     saveCommander(c);
-    renderContracts();
+    renderMessages();
     return;
   }
   if (b.dataset.decline) {
@@ -433,7 +456,9 @@ $('#contracts').addEventListener('click', (e) => {
   }
   saveCommander(c);
   main.renderDocked(); // the hold, credits and standing all change with a contract
-});
+}
+$('#contracts').addEventListener('click', onClick);
+$('#messages').addEventListener('click', onClick);
 
 /** A line of news with the system's name made a link: tap it to see the system on the chart. */
 export function linkSystem(text: string, s: StarSystem): string {

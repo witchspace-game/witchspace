@@ -14,7 +14,7 @@ import { buildShip, disposeShip, heatShip, type ShipModel } from '../render/ship
 import { flash } from '../ui/hud';
 import { commodityById, UNITS_PER_TONNE } from '../economy/commodities';
 import { freeTonnes } from '../economy/trade';
-import { $, cmdr, currentSystem, game } from '../core';
+import { $, cmdr, currentSystem, game, modern } from '../core';
 import { explosions, flight, npcs, planetPos, player, space, station, SUN_POS, SUN_RADIUS } from '../scene';
 import { tradeContext } from '../ui/market';
 import { BOUNTIES, TRADE_GOODS, addNpc, removeNpc } from './traffic';
@@ -189,16 +189,29 @@ const SKIM_RATE = 0.12; // light years per second at full speed
 let lastHeatWarning = 0;
 let skimming = false;
 
+const closing = new THREE.Vector3();
+/**
+ * How fast you meet it. Under Modern rules, your speed relative to it, so you can scoop a canister
+ * that's flying off by chasing it (a player's idea on the board, 13 November 2026); Classic keeps 1984's
+ * own speed.
+ */
+function scoopSpeed(d: Drifter): number {
+  if (!modern()) return player.speed;
+  return closing.copy(player.forward()).multiplyScalar(player.speed).sub(d.velocity).length();
+}
+const tooFast = (d: Drifter) => scoopSpeed(d) > player.maxSpeed * SCOOP_SPEED;
+const slowTo = () => (modern() ? `close on it at under ${Math.round(SCOOP_SPEED * 100)}% speed` : `slow to under ${Math.round(SCOOP_SPEED * 100)}% speed`);
+
 /** A lost case answers its own contract's transponder: no scoops needed, just come in slow. */
 function recoverCaseNear(d: Drifter): boolean {
   if (!d.special || d.model.root.position.distanceTo(player.obj.position) > RECOVER_RANGE) return false;
   const c = cmdr();
   const a = c.contracts?.find((x) => x.id === d.special!.contract);
   if (!a) return false;
-  if (player.speed > player.maxSpeed * SCOOP_SPEED) {
+  if (tooFast(d)) {
     if (flight.elapsed - lastScoopWarning > 3) {
       lastScoopWarning = flight.elapsed;
-      flash(`${a.label ?? 'Case'} · slow to under ${Math.round(SCOOP_SPEED * 100)}% speed to take it aboard`, 2);
+      flash(`${a.label ?? 'Case'} · ${slowTo()} to take it aboard`, 2);
     }
     return false;
   }
@@ -219,7 +232,7 @@ function recoverCaseNear(d: Drifter): boolean {
 function tryScoop(d: Drifter): boolean {
   if (d.model.root.position.distanceTo(player.obj.position) > SCOOP_RANGE) return false;
   const c = cmdr();
-  if (!isWorking(c, 'fuel-scoops') || player.speed > player.maxSpeed * SCOOP_SPEED) {
+  if (!isWorking(c, 'fuel-scoops') || tooFast(d)) {
     // Too fast, or no scoops: it bounces off, and we say why.
     d.velocity.copy(d.model.root.position).sub(player.obj.position).setLength(25).addScaledVector(player.forward(), player.speed);
     if (flight.elapsed - lastScoopWarning > 3) {
@@ -227,7 +240,7 @@ function tryScoop(d: Drifter): boolean {
       sfx.scrape();
       if (!hasEquipment(c, 'fuel-scoops')) flash('Canister bounced off · no fuel scoops fitted', 2);
       else if (!isWorking(c, 'fuel-scoops')) flash('Canister bounced off · fuel scoops damaged', 2);
-      else flash(`Too fast to scoop · slow to under ${Math.round(SCOOP_SPEED * 100)}% speed`, 2);
+      else flash(`Too fast to scoop · ${slowTo()}`, 2);
     }
     return false;
   }

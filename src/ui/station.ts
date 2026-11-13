@@ -1,11 +1,13 @@
 // The station screen (moved from main.ts): your ship and what's fitted, the hold, the record, fuel,
 // missiles and kit to buy or sell, and refunds for a change of mind before launch.
 
+import { shipNumberOf } from '../game/transponder';
+import { inviteDue } from '../game/registration';
 import { sfx } from '../audio/sound';
 import { cargoCapacity, cargoTonnes, DIFFICULTIES, EQUIPMENT, FUEL_PRICE, fuelCapacity, MISSILE_PRICE, hasEquipment, REPAIR_FRACTION, type Mount, MOUNTS, removeEquipment, saveCommander, type Commander } from '../game/commander';
 import { fineDue, legalStatus, redeemImpound, scansCargo, settle, systemKey } from '../game/law';
 import { isTouch } from '../game/input';
-import { claimCallsign } from './accountPanel';
+import { claimCallsign, toggleAccountPanel } from './accountPanel';
 import { cleanName } from '../../server/src/protocol';
 import { combatRating, nextRating, ratingPoints } from '../game/rating';
 import { buildFittings, disposeFittings, type Fittings, type Loadout } from '../render/fittings';
@@ -21,12 +23,13 @@ import { flash } from './hud';
 import { systemAt } from '../galaxy/generate';
 import { commodityById } from '../economy/commodities';
 import { escapeHtml } from './escape';
+import { readWhatsNew, whatsNewOf } from '../game/changelog';
 import { editionById, editionNo } from '../content/editions';
 import { $, cmdr, currentSystem, game } from '../core';
 import { player } from '../scene';
 import { openManual } from './manual';
 import { hasRecord, openRapSheet } from './rapSheet';
-import { plotCourse, renderContracts } from './contracts';
+import { plotCourse, renderContracts, renderMessages } from './contracts';
 import { openBooth, showroomModels } from './showroom';
 import { hasShipyard, renderShipyard, showOwnShip, waitingSpecKit } from './shipyard';
 import { renderSaloon } from './saloon';
@@ -132,6 +135,17 @@ function holdItems(c: Commander): { t: number; name: string }[] {
 }
 
 /** Your ship at the top of the Station screen: maker and role, her name, her own name and edition, and her setup. */
+/** On the Commander card: her registration, or the invitation to register her. */
+function registrationLine(c: Commander): string {
+  if (c.registered) {
+    const port = systemAt(c.registered.galaxy, c.registered.system);
+    const on = new Date(c.registered.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    return `<p class="cc-reg">Registered ${escapeHtml(on)}, ${escapeHtml(port.name)}</p>`;
+  }
+  if (!inviteDue(c)) return '';
+  return `<button type="button" class="cc-register">Register your ship ›<span>Free. Solo play stays as it is; shared space needs it.</span></button>`;
+}
+
 function renderShipWindow(c: Commander) {
   const def = player.def;
   const win = $('#ship-window');
@@ -139,7 +153,8 @@ function renderShipWindow(c: Commander) {
   win.querySelector('.sw-meta')!.textContent = [def.manufacturer, def.role].filter(Boolean).join(' · ');
   win.querySelector('.sw-name')!.textContent = def.name;
   const ed = c.paint?.edition ? editionById(c.paint.edition.id) : undefined;
-  const own = [c.paint?.name ? `“${c.paint.name}”` : '', ed ? `${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''].filter(Boolean).join(' · ');
+  // Her transponder number, always: the hull's for life (game/transponder.ts).
+  const own = [c.paint?.name ? `“${c.paint.name}”` : '', shipNumberOf(c), ed ? `${ed.name} ${editionNo(c.paint!.edition!.number)}` : ''].filter(Boolean).join(' · ');
   const ownEl = win.querySelector<HTMLElement>('.sw-own')!;
   // In grey like any other secondary line, with a swatch of her paint (Mark: no paint-coloured text).
   ownEl.innerHTML = own ? `${c.paint ? '<i class="swatch" aria-hidden="true"></i>' : ''}${escapeHtml(own)}` : '';
@@ -205,6 +220,32 @@ function renderArrivals(here: StarSystem) {
     : `<span>Expected: <b>${escapeHtml(who)}</b>, in from ${escapeHtml(from)} about ${clock(due.visit.docks)}</span>`;
   row.querySelector('.arrivals-saloon')?.addEventListener('click', () => document.querySelector<HTMLButtonElement>('.tabs [data-tab="saloon"]')?.click());
 }
+/**
+ * What's new since you last played (CHANGELOG.md): one line, "What's new, 12 November · 6 changes ›", that opens
+ * on the list. "Got it" puts it away. It used to arrive as a message, a wall of text on top of the Contracts
+ * screen (Mark, 13 November 2026: "This isn't the correct place").
+ */
+function renderWhatsNew(c: Commander) {
+  const box = $<HTMLDetailsElement>('#whats-new');
+  const u = whatsNewOf(c);
+  box.hidden = !u;
+  if (!u) return box.replaceChildren();
+  const day = u.title.replace(/ \d{4}$/, '');
+  const n = u.lines.length;
+  if (box.dataset.date === `${u.date}#${n}`) return; // as it was: don't close it under you
+  box.dataset.date = `${u.date}#${n}`;
+  box.open = false;
+  box.innerHTML = `<summary>What's new, ${escapeHtml(day)} <span>· ${n} change${n === 1 ? '' : 's'} ›</span></summary>
+    <ul>${u.lines.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>
+    <button type="button" class="whats-new-done">Got it</button>`;
+  box.querySelector('.whats-new-done')!.addEventListener('click', () => {
+    readWhatsNew(c);
+    saveCommander(c);
+    delete box.dataset.date;
+    renderWhatsNew(c);
+  });
+}
+
 /** How far ahead the board lists her. */
 const ARRIVALS_AHEAD = 4 * 3600_000;
 
@@ -233,12 +274,16 @@ export function renderDocked() {
   main.updateDockHead();
   // Company contracts are Modern work; Classic stays as 1984.
   $('.tabs [data-tab="contracts"]').hidden = c.difficulty !== 'modern';
+  $('.tabs [data-tab="messages"]').hidden = c.difficulty !== 'modern';
+  if (c.difficulty !== 'modern' && (game.dockTab === 'contracts' || game.dockTab === 'messages')) main.setDockTab('station');
   if (game.dockTab === 'contracts') renderContracts();
+  if (game.dockTab === 'messages') renderMessages();
   if (game.dockTab === 'market') renderMarket();
   if (game.dockTab === 'news') renderNews();
   // Docked somewhere new with the saloon still open: that station's regulars, not the last one's (Mark).
   if (game.dockTab === 'saloon') renderSaloon();
   renderShipWindow(c);
+  renderWhatsNew(c);
   // The Commander card (Mark, 12 November 2026): callsign (tap it to rename), the law (tap it for your record),
   // the rank and how far to the next, and the explorer, on one card.
   const status = legalStatus(c);
@@ -257,7 +302,7 @@ export function renderDocked() {
     }</div>
     <div class="cc-rank"><b>${rank}</b>${c.difficulty === 'classic' || !next ? '' : `<span>${left < 10 ? left.toFixed(1) : Math.ceil(left).toLocaleString()} to ${next.name}</span>`}</div>
     ${c.difficulty === 'classic' ? '' : `<div class="meter" role="progressbar" aria-label="Towards ${next?.name ?? 'Elite'}" aria-valuenow="${Math.round(toNext * 100)}" aria-valuemin="0" aria-valuemax="100"><i style="width:${(toNext * 100).toFixed(1)}%"></i></div>`}
-    <p class="cc-explore"><b>${explorerRank(ex.points)}</b> · ${ex.visited.length} visited${firsts ? ` · ${firsts} first${firsts === 1 ? '' : 's'}` : ''}</p>`;
+    <p class="cc-explore"><b>${explorerRank(ex.points)}</b> · ${ex.visited.length} visited${firsts ? ` · ${firsts} first${firsts === 1 ? '' : 's'}` : ''}</p>${registrationLine(c)}`;
   // Anything else worth a line: trails under way, and the explorer's tips.
   const rows: [string, string][] = [
     ...trailsUnderWay(c, here.galaxy).map((t): [string, string] => ['Trail', `${escapeHtml(t.title)} · ${t.found} of ${t.of} found · the clue points to ${escapeHtml(t.next)}`]),
@@ -266,6 +311,13 @@ export function renderDocked() {
   $('#cmdr').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   renderWanted(c);
   $('#cmdr-card .rename').addEventListener('click', () => startRename());
+  document.querySelector<HTMLButtonElement>('#cmdr-card .cc-register')?.addEventListener('click', () => toggleAccountPanel(true));
+  // The invitation (Mark, 13 November 2026: at the first purchase or Mostly Harmless): said once, then it waits on the card.
+  if (inviteDue(c) && !c.registerAsked) {
+    c.registerAsked = true;
+    saveCommander(c);
+    flash('Register your ship: it’s free, and it’s how she flies in shared space · on your Commander card', 5);
+  }
   document.querySelector<HTMLButtonElement>('#cmdr-card .rap-open')?.addEventListener('click', () => void openRapSheet(c));
   document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
     flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);

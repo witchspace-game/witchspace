@@ -230,6 +230,8 @@ import type { BtcOrder, BtcTrade } from '../economy/bitcoin';
 import type { Heard } from './saloon';
 import type { YardLoss } from './yards';
 import type { VennMemory } from './odile';
+import { shipNumberOf } from './transponder';
+import type { Registered } from './registration';
 
 /** A ship's finish from the yard. */
 /**
@@ -248,6 +250,9 @@ export interface StoredShip {
   damaged: EquipmentId[];
   /** A hull you bought (the starter and a gift weren't). */
   bought?: boolean;
+  /** Her transponder number, and the ship she replaced (game/transponder.ts). */
+  number?: string;
+  replaces?: string;
   /** Where she waits: galaxy and system index. */
   at: { galaxy: number; system: number };
   /** On her way to another hangar: where, and when she gets there. */
@@ -371,6 +376,8 @@ export interface Commander {
   messages?: Message[];
   /** The newest CHANGELOG.md section you've been sent: its date and line count, "2026-11-09#9" (game/changelog.ts). */
   changesSeen?: string;
+  /** What's new, waiting on the Station screen as one line until you've read it: the CHANGELOG.md section's date. */
+  whatsNew?: string;
   /** Favours you owe each company (a lawyer here, a word there): leverage for later. */
   favours?: Partial<Record<CompanyId, number>>;
   /** World events you caused (a case opened, or fallen): yours, and the galaxy's now. */
@@ -419,6 +426,14 @@ export interface Commander {
   specKit?: { laser: ShipOrder['laser']; rear?: ShipOrder['laser']; upgrades: EquipmentId[] };
   /** The hull you fly, by content id; a Cobra Mk III until you collect another. */
   ship?: string;
+  /** Her transponder number, WS-7F3K-29 (game/transponder.ts): the hull's for life, given when she first exists. */
+  shipNumber?: string;
+  /** The number of the ship she replaced, when the insurers gave her to you. */
+  replaces?: string;
+  /** Your ship's registration, as the server stamped it (game/registration.ts). */
+  registered?: Registered;
+  /** The invitation to register has been seen (it stays on the Commander card after). */
+  registerAsked?: true;
   /** Its finish, from the yard: colour, glow, trim, and her name (on her papers, her manual and your clips; not drawn on the hull). */
   paint?: Paint;
   /** Your fleet (Mark): the ships you own but aren't flying, each in the hangar where you left her, or on her way to another. */
@@ -494,6 +509,9 @@ export function loadCommander(): Commander | null {
       if (typeof chk === 'string' && chk !== checksum(JSON.stringify(stored))) saved.tampered = true;
       const c: Commander = { ...newCommander('modern'), ...saved };
       if (c.impound && !c.impound.items.length) c.impound = null; // a debt with nothing held is written off
+      shipNumberOf(c); // saves from before transponder numbers: she gets hers now
+      // What's new used to come as a message (Mark: "This isn't the correct place"): it's a line on the Station screen now.
+      if (c.messages?.some((m) => m.id.startsWith('update:'))) c.messages = c.messages.filter((m) => !m.id.startsWith('update:'));
       return repaint(c);
     }
   } catch {

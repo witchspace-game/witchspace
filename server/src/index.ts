@@ -427,6 +427,12 @@ export class SystemRoom extends DurableObject<Env> {
         ws.close(4003, 'Sign in with a callsign to fly in shared space');
         return;
       }
+      // A registered ship only (Mark, 13 November 2026): solo stays open; shared space needs her on the record.
+      if (!who.registered) {
+        this.send(ws, { type: 'signin', need: 'register' });
+        ws.close(4003, 'Register your ship to fly in shared space');
+        return;
+      }
       // Within today's budget, switched on, and not hopping through systems by the dozen (spaceBudget.ts).
       const busy = await accountsOf(this.env).spaceGate(who.id, a.net ?? 'unknown', a.room ?? 'unknown');
       if (busy) {

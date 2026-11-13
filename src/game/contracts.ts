@@ -560,8 +560,8 @@ export function afterJump(c: Commander, now = Date.now()): string[] {
 }
 
 /**
- * A note from the company that lasts: it goes in the Messages on the
- * Contracts tab, so it isn't missed mid-flight.
+ * A note from the company that lasts: it goes in your Messages at the
+ * station, so it isn't missed mid-flight.
  */
 function notice(c: Commander, a: Contract, kind: string, subject: string, body: string, now: number) {
   const id = `${a.id}:${kind}`;

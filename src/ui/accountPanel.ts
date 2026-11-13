@@ -8,6 +8,13 @@ import * as acct from '../net/account';
 import { myClips, takeDownClip } from '../net/clips';
 import { disablePush, enablePush, getContact, needsHomeScreen, pushSupported, setEmailContact } from '../net/notify';
 import { escapeHtml } from './escape';
+import { takeRegistration } from '../game/registration';
+import { shipNumberOf } from '../game/transponder';
+import { hullOf } from '../game/commander';
+import { shipById } from '../content/ships';
+import { systemAt } from '../galaxy/generate';
+import { stationName } from '../galaxy/stationNames';
+import { game } from '../core';
 
 /** Turnstile's public site key (the same widget as the ideas board). */
 const TURNSTILE_SITE_KEY = import.meta.env.DEV ? '' : '0x4AAAAAAFfP1CB8aXita2o_';
@@ -18,6 +25,8 @@ export interface AccountHooks {
   commanderReplaced: () => void;
   /** Whether the title screen is showing: the only place the panel opens by itself. */
   onTitle: () => boolean;
+  /** Your ship was just registered: redraw what shows it. */
+  registered?: () => void;
 }
 
 const panel = document.querySelector<HTMLElement>('#account-panel')!;
@@ -64,6 +73,7 @@ export async function initAccount(h: AccountHooks) {
     }
     const me = await acct.refresh();
     if (me) await syncOnStart(me.saveUpdated);
+    if (me) keepRegistration();
   } catch (e) {
     hooks.flash((e as Error).message, 4);
   }
@@ -124,8 +134,22 @@ async function afterSignIn() {
     mine.name = a.callsign;
     saveCommander(mine);
   }
+  await acct.refresh(); // the account's registration, if it has one
+  keepRegistration();
   hooks.flash(`Signed in as ${a.email}`, 3);
   updateButton();
+}
+
+/** The commander you're playing: the live one in a game, or the save on the title screen. */
+const playing = () => game.commander ?? loadCommander();
+
+/** Registered on another device: this one's commander takes the stamp too. */
+function keepRegistration() {
+  const r = acct.accountRegistration();
+  const c = playing();
+  if (!r || !c || c.registered?.number === r.number) return;
+  takeRegistration(c, r);
+  saveCommander(c);
 }
 
 async function syncOnStart(serverUpdated: number | null) {
@@ -171,7 +195,7 @@ async function choose(keep: 'local' | 'cloud') {
 function render() {
   const a = acct.currentAccount();
   let html = '<h2>Account</h2>';
-  if (note && !acct.currentAccount()?.callsign) html += `<p class="account-note">${escapeHtml(note)}</p>`;
+  if (note && !(acct.currentAccount()?.callsign && acct.accountRegistration())) html += `<p class="account-note">${escapeHtml(note)}</p>`;
   if (view === 'choose' && choice) {
     html += `<p class="meta">This device and your account have different commanders. Which do you want to keep? The other will be replaced.</p>
       <div class="account-choice">
@@ -196,6 +220,7 @@ function render() {
   } else {
     html += `<dl><dt>Signed in</dt><dd>${escapeHtml(a.email)}</dd><dt>Callsign</dt><dd>${a.callsign ? `CMDR ${escapeHtml(a.callsign)}` : '<i>not claimed yet</i>'}</dd><dt>Cloud save</dt><dd>${acct.syncedAt() ? 'On: your commander saves to your account' : 'Waiting for your first save'}</dd></dl>`;
     if (!a.callsign) html += `<form class="callsign-form"><input maxlength="24" placeholder="Your callsign" aria-label="Callsign" /> <button type="submit">Claim</button></form>`;
+    html += registerSection(a);
     html += contactSection();
     if (deleteArmed && clipsUp.length) {
       const n = clipsUp.length === 1 ? 'clip' : `${clipsUp.length} clips`;
@@ -242,6 +267,27 @@ function wire() {
     }
   });
   panel.querySelector('[data-close]')?.addEventListener('click', () => toggleAccountPanel(false));
+  panel.querySelector<HTMLInputElement>('[data-fair]')?.addEventListener('change', (e) => {
+    fair = (e.target as HTMLInputElement).checked;
+    panel.querySelector<HTMLButtonElement>('[data-register]')!.disabled = !fair;
+  });
+  panel.querySelector<HTMLButtonElement>('[data-register]')?.addEventListener('click', async (e) => {
+    const button = e.currentTarget as HTMLButtonElement;
+    const c = playing();
+    if (!c || !fair) return;
+    button.disabled = true;
+    try {
+      shipNumberOf(c);
+      const r = await acct.register(c, true);
+      takeRegistration(c, r);
+      saveCommander(c);
+      hooks.registered?.();
+      hooks.flash(`Registered · ${r.number} · ${regDate(r.at)}, ${systemAt(r.galaxy, r.system).name}`, 4);
+    } catch (err) {
+      hooks.flash((err as Error).message, 4);
+    }
+    render();
+  });
   panel.querySelector('[data-again]')?.addEventListener('click', () => {
     view = 'main';
     render();
@@ -329,6 +375,29 @@ function wire() {
     render();
   });
   mountTurnstile();
+}
+
+// --- Registering your ship (Mark, 9 November 2026; game/registration.ts) ------------------------
+
+/** The "I'll fly fair" box, this time the panel is open. */
+let fair = false;
+
+const regDate = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+
+function registerSection(a: acct.Account): string {
+  const c = playing();
+  if (!c || c.difficulty !== 'modern') return '';
+  const r = c.registered ?? acct.accountRegistration();
+  if (r) {
+    const port = systemAt(r.galaxy, r.system);
+    return `<h3>Your ship</h3><dl><dt>Registered</dt><dd>${escapeHtml(r.number)} · ${regDate(r.at)}, ${escapeHtml(stationName(port).name)}, ${escapeHtml(port.name)}</dd></dl>`;
+  }
+  if (!a.callsign) return `<h3>Register your ship</h3><p class="meta">Claim a callsign first, then register your ship to fly in shared space.</p>`;
+  const def = shipById(hullOf(c));
+  return `<h3>Register your ship</h3>
+    <p class="meta">Registering puts your ${escapeHtml(def?.name ?? 'ship')}, ${escapeHtml(shipNumberOf(c))}, on the record, with today's date and this port. She takes everything you have into shared space: registering doesn't change your commander. It's free, and solo play carries on as it is.</p>
+    <p class="meta"><label><input type="checkbox" data-fair ${fair ? 'checked' : ''} /> I'll fly fair. Witchspace keeps a record of this ship, and of when and where it flies in shared space, to keep things fair.</label> <a class="small" href="/privacy/" target="_blank" rel="noopener">Privacy</a></p>
+    <p><button type="button" class="primary cut" data-register ${fair ? '' : 'disabled'}>Register her</button></p>`;
 }
 
 /**
