@@ -23,12 +23,13 @@ import { flash } from './hud';
 import { systemAt } from '../galaxy/generate';
 import { commodityById } from '../economy/commodities';
 import { escapeHtml } from './escape';
+import { readWhatsNew, whatsNewOf } from '../game/changelog';
 import { editionById, editionNo } from '../content/editions';
 import { $, cmdr, currentSystem, game } from '../core';
 import { player } from '../scene';
 import { openManual } from './manual';
 import { hasRecord, openRapSheet } from './rapSheet';
-import { plotCourse, renderContracts } from './contracts';
+import { plotCourse, renderContracts, renderMessages } from './contracts';
 import { openBooth, showroomModels } from './showroom';
 import { hasShipyard, renderShipyard, showOwnShip, waitingSpecKit } from './shipyard';
 import { renderSaloon } from './saloon';
@@ -219,6 +220,32 @@ function renderArrivals(here: StarSystem) {
     : `<span>Expected: <b>${escapeHtml(who)}</b>, in from ${escapeHtml(from)} about ${clock(due.visit.docks)}</span>`;
   row.querySelector('.arrivals-saloon')?.addEventListener('click', () => document.querySelector<HTMLButtonElement>('.tabs [data-tab="saloon"]')?.click());
 }
+/**
+ * What's new since you last played (CHANGELOG.md): one line, "What's new, 12 November · 6 changes ›", that opens
+ * on the list. "Got it" puts it away. It used to arrive as a message, a wall of text on top of the Contracts
+ * screen (Mark, 13 November 2026: "This isn't the correct place").
+ */
+function renderWhatsNew(c: Commander) {
+  const box = $<HTMLDetailsElement>('#whats-new');
+  const u = whatsNewOf(c);
+  box.hidden = !u;
+  if (!u) return box.replaceChildren();
+  const day = u.title.replace(/ \d{4}$/, '');
+  const n = u.lines.length;
+  if (box.dataset.date === `${u.date}#${n}`) return; // as it was: don't close it under you
+  box.dataset.date = `${u.date}#${n}`;
+  box.open = false;
+  box.innerHTML = `<summary>What's new, ${escapeHtml(day)} <span>· ${n} change${n === 1 ? '' : 's'} ›</span></summary>
+    <ul>${u.lines.map((l) => `<li>${escapeHtml(l)}</li>`).join('')}</ul>
+    <button type="button" class="whats-new-done">Got it</button>`;
+  box.querySelector('.whats-new-done')!.addEventListener('click', () => {
+    readWhatsNew(c);
+    saveCommander(c);
+    delete box.dataset.date;
+    renderWhatsNew(c);
+  });
+}
+
 /** How far ahead the board lists her. */
 const ARRIVALS_AHEAD = 4 * 3600_000;
 
@@ -247,12 +274,16 @@ export function renderDocked() {
   main.updateDockHead();
   // Company contracts are Modern work; Classic stays as 1984.
   $('.tabs [data-tab="contracts"]').hidden = c.difficulty !== 'modern';
+  $('.tabs [data-tab="messages"]').hidden = c.difficulty !== 'modern';
+  if (c.difficulty !== 'modern' && (game.dockTab === 'contracts' || game.dockTab === 'messages')) main.setDockTab('station');
   if (game.dockTab === 'contracts') renderContracts();
+  if (game.dockTab === 'messages') renderMessages();
   if (game.dockTab === 'market') renderMarket();
   if (game.dockTab === 'news') renderNews();
   // Docked somewhere new with the saloon still open: that station's regulars, not the last one's (Mark).
   if (game.dockTab === 'saloon') renderSaloon();
   renderShipWindow(c);
+  renderWhatsNew(c);
   // The Commander card (Mark, 12 November 2026): callsign (tap it to rename), the law (tap it for your record),
   // the rank and how far to the next, and the explorer, on one card.
   const status = legalStatus(c);

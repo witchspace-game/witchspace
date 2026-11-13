@@ -1600,6 +1600,13 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .meter { display: block; height: 3px; background: rgba(61, 255, 176, 0.12); }
 .meter i { display: block; height: 100%; background: var(--accent); }
 .meter.full i { background: var(--amber); }
+.whats-new { margin: 0; border-bottom: 1px solid rgba(61, 255, 176, 0.1); font-size: 13px; }
+.whats-new summary { cursor: pointer; padding: 8px 0; list-style: none; color: var(--fg); }
+.whats-new summary::-webkit-details-marker { display: none; }
+.whats-new summary span { color: var(--dim); }
+.whats-new[open] summary span { display: none; }
+.whats-new ul { margin: 0; padding: 0 0 0 16px; display: grid; gap: 6px; font-size: 12.5px; line-height: 1.45; color: var(--fg); }
+.panel .whats-new-done { margin: 10px 0; min-height: 0; padding: 6px 14px; font-size: 12px; }
 .cmdr-card { display: grid; gap: 4px; margin: 0; }
 .cc-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
 .panel .cc-name { padding: 0; min-height: 0; border: 0; background: none; box-shadow: none; font-size: 17px; font-weight: 700; letter-spacing: 0.03em; text-transform: none; color: var(--fg); }
@@ -2596,9 +2603,9 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 .ex-chart-host { position: relative; }
 .ex-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 3; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; letter-spacing: 0; text-transform: none; }
 .ex-overlay button, .ex-otag { pointer-events: auto; font-family: inherit; letter-spacing: 0; text-transform: none; }
-.ex-quick { position: absolute; left: 8px; top: 8px; display: flex; gap: 2px; }
-.ex-quick button { display: flex; flex-direction: column; align-items: flex-start; min-width: 64px; min-height: 0; padding: 3px 8px; border: 0; color: #fff; font-size: 12px; cursor: pointer; line-height: 1.15; }
-.ex-quick button small { font-size: 9.5px; opacity: 0.85; } .ex-quick button b { font-weight: 600; }
+.ex-quick { position: absolute; left: 6px; top: 6px; display: flex; gap: 1px; }
+.ex-quick button { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; min-height: 0; padding: 2px 6px; border: 0; color: #fff; font-size: 10.5px; cursor: pointer; line-height: 1.1; }
+.ex-quick button small { font-size: 8px; opacity: 0.85; } .ex-quick button b { font-weight: 600; }
 .ex-quick .sell { background: rgba(246, 70, 93, 0.9); border-radius: 2px 0 0 2px; }
 .ex-quick .buy { background: rgba(46, 189, 133, 0.9); border-radius: 0 2px 2px 0; align-items: flex-end; }
 .ex-plus { position: absolute; width: 18px; height: 18px; min-height: 0; padding: 0; border: 0; border-radius: 2px; background: #f0b90b; color: #111; font-size: 14px; font-weight: 700; line-height: 18px; cursor: pointer; }

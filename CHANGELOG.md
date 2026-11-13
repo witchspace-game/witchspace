@@ -12,7 +12,10 @@ reported it.
 
 ## 13 November 2026
 
-- Register your ship: free, from your Commander card or the account panel (A). Your ship goes on the record with her number, today's date and the port, and everything she earns from then on counts in shared space. Solo play stays exactly as it is, registered or not; shared space now needs a registered ship. The game invites you once, at your first purchase or at Mostly Harmless. (Mark)
+- Register your ship: free, from your Commander card or the account panel (A). Your ship goes on the record with her number, today's date and the port; registering doesn't change your commander. Solo play stays exactly as it is, registered or not; shared space now needs a registered ship. The game invites you once, at your first purchase or at Mostly Harmless. (Mark)
+- Messages have a place of their own at the station, with a count of what's unread. Contracts is just the work now. (Mark)
+- What's new (this list) is one line on the Station screen when you dock after an update: tap it to read, "Got it" to put it away. It isn't a message any more. (Mark)
+- The SELL and BUY buttons on a market's chart are smaller, so they cover less of it. (Mark)
 
 ## 12 November 2026
 

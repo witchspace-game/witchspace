@@ -1,4 +1,4 @@
-// The station's places (moved from main.ts): opening each one (Station, Contracts, Market, News,
+// The station's places (moved from main.ts): opening each one (Station, Contracts, Messages, Market, News,
 // Saloon, Shipyard, Money), and the slim header that replaces the tabs on a phone held upright, with
 // its places menu and the wallet.
 
@@ -9,7 +9,7 @@ import { stationName } from '../galaxy/stationNames';
 import { escapeHtml } from './escape';
 import { btcValue, formatBtc, satsOf } from '../economy/bitcoin';
 import { $, cmdr, currentSystem, game, type DockTab } from '../core';
-import { renderContracts } from './contracts';
+import { renderContracts, renderMessages } from './contracts';
 import { clearSpec, renderShipyard, showOwnShip } from './shipyard';
 import { btcNow, renderMoney } from './money';
 import { renderSaloon } from './saloon';
@@ -44,8 +44,10 @@ export function setDockTab(tab: DockTab) {
     showOwnShip();
   }
   $('#tab-contracts').hidden = tab !== 'contracts';
+  $('#tab-messages').hidden = tab !== 'messages';
   if (tab === 'news') renderNews();
   if (tab === 'contracts') renderContracts();
+  if (tab === 'messages') renderMessages();
   if (tab === 'market') {
     exchange.selectHeld(cmdr().cargo);
     renderMarket();

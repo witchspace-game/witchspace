@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkUpdates, parseChangelog, UPDATES } from './changelog';
+import { checkUpdates, parseChangelog, readWhatsNew, UPDATES, whatsNewOf } from './changelog';
 import text from '../../CHANGELOG.md?raw';
 import { newCommander } from './commander';
 
@@ -42,25 +42,28 @@ describe("what's new", () => {
     expect(UPDATES[0].date).toMatch(/^\d{4}-\d\d-\d\d$/);
   });
 
-  it('sends a returning commander the newest update once; a new commander starts up to date', () => {
+  it('shows a returning commander the newest update once, as a line, not a message; a new commander starts up to date', () => {
     const updates = parseChangelog(md);
     const fresh = newCommander('modern');
-    expect(checkUpdates(fresh, 1, updates)).toBeNull();
+    expect(checkUpdates(fresh, updates)).toBeNull();
     expect(fresh.changesSeen).toBe('2026-11-09#2');
+    expect(fresh.whatsNew).toBeUndefined();
 
     const back = { ...newCommander('modern'), visits: 12 };
-    const m = checkUpdates(back, 1, updates);
-    expect(m?.subject).toBe("What's new, 9 November 2026");
-    expect(m?.body).toBe('• One thing, wrapped.\n• Another.');
-    expect(back.messages?.[0]).toBe(m);
-    expect(checkUpdates(back, 2, updates)).toBeNull();
+    const u = checkUpdates(back, updates);
+    expect(u?.title).toBe('9 November 2026');
+    expect(whatsNewOf(back, updates)?.lines).toEqual(['One thing, wrapped.', 'Another.']);
+    expect(back.messages ?? []).toHaveLength(0);
+    expect(checkUpdates(back, updates)).toBeNull();
+    readWhatsNew(back);
+    expect(whatsNewOf(back, updates)).toBeNull();
 
-    // A line added later the same day: sent again, in place of the first.
+    // A line added later the same day: shown again.
     const more = parseChangelog(md.replace('- Another.', '- Another.\n- A third.'));
-    expect(checkUpdates(back, 3, more)?.body).toContain('A third.');
-    expect(back.messages?.filter((x) => x.id.startsWith('update:'))).toHaveLength(1);
+    expect(checkUpdates(back, more)?.lines).toContain('A third.');
+    expect(whatsNewOf(back, more)?.lines).toHaveLength(3);
 
     const behind = { ...newCommander('classic'), visits: 3, changesSeen: '2026-11-06#1' };
-    expect(checkUpdates(behind, 1, updates)?.id).toBe('update:2026-11-09#2');
+    expect(checkUpdates(behind, updates)?.date).toBe('2026-11-09');
   });
 });

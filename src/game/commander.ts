@@ -376,6 +376,8 @@ export interface Commander {
   messages?: Message[];
   /** The newest CHANGELOG.md section you've been sent: its date and line count, "2026-11-09#9" (game/changelog.ts). */
   changesSeen?: string;
+  /** What's new, waiting on the Station screen as one line until you've read it: the CHANGELOG.md section's date. */
+  whatsNew?: string;
   /** Favours you owe each company (a lawyer here, a word there): leverage for later. */
   favours?: Partial<Record<CompanyId, number>>;
   /** World events you caused (a case opened, or fallen): yours, and the galaxy's now. */
@@ -508,6 +510,8 @@ export function loadCommander(): Commander | null {
       const c: Commander = { ...newCommander('modern'), ...saved };
       if (c.impound && !c.impound.items.length) c.impound = null; // a debt with nothing held is written off
       shipNumberOf(c); // saves from before transponder numbers: she gets hers now
+      // What's new used to come as a message (Mark: "This isn't the correct place"): it's a line on the Station screen now.
+      if (c.messages?.some((m) => m.id.startsWith('update:'))) c.messages = c.messages.filter((m) => !m.id.startsWith('update:'));
       return repaint(c);
     }
   } catch {
