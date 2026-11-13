@@ -395,7 +395,7 @@ function registerSection(a: acct.Account): string {
   if (!a.callsign) return `<h3>Register your ship</h3><p class="meta">Claim a callsign first, then register your ship to fly in shared space.</p>`;
   const def = shipById(hullOf(c));
   return `<h3>Register your ship</h3>
-    <p class="meta">Registering puts your ${escapeHtml(def?.name ?? 'ship')}, ${escapeHtml(shipNumberOf(c))}, on the record, with today's date and this port. Everything she earns from now on counts in shared space. It's free, and solo play carries on as it is.</p>
+    <p class="meta">Registering puts your ${escapeHtml(def?.name ?? 'ship')}, ${escapeHtml(shipNumberOf(c))}, on the record, with today's date and this port. She takes everything you have into shared space: registering doesn't change your commander. It's free, and solo play carries on as it is.</p>
     <p class="meta"><label><input type="checkbox" data-fair ${fair ? 'checked' : ''} /> I'll fly fair. Witchspace keeps a record of this ship, and of when and where it flies in shared space, to keep things fair.</label> <a class="small" href="/privacy/" target="_blank" rel="noopener">Privacy</a></p>
     <p><button type="button" class="primary cut" data-register ${fair ? '' : 'disabled'}>Register her</button></p>`;
 }
