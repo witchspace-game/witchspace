@@ -38,7 +38,7 @@ The site then says: *"She's on order. Dock at any shipyard and the yard has your
 
 ## For the game dev session (the contract)
 
-**Shared, pure (src/game/shipyard.ts):** `validSpec(spec: unknown): Spec | null`. It checks the ship is `inYards`, that the colours are `orderable`, and that the glow, the lasers, the upgrades (in `UPGRADES`) and the luxuries are real, and it applies `cleanName`. The site, the server and the game all use it.
+**Shared, pure (src/game/shipyard.ts):** `validSpec(spec: unknown): Spec | null`. It checks the ship is `inYards`, that the colours are `orderable`, and that the glow, the lasers, and the upgrades (in `UPGRADES`) are real, and it applies `cleanName`. Luxuries are no longer sold (Mark, 14 November 2026): any in a spec are dropped, so an older link still works. They stay as lore on the editions and on ships that already have them. The site, the server and the game all use it.
 
 **Server (accounts):**
 - `PUT /me/spec` with `{ spec }`: keeps one spec per account (the latest wins), with the time. 400 if `validSpec` refuses it.

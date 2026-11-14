@@ -1833,7 +1833,6 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard-label span { margin-left: 6px; letter-spacing: normal; text-transform: none; color: var(--fg); opacity: 0.7; }
 .yard-check { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin: 12px 0 6px; font-size: 14px; }
 .yard-check small { color: var(--dim); }
-.yard-lux em { display: block; font-style: normal; font-size: 12px; color: var(--dim); }
 #spec-name { width: 100%; box-sizing: border-box; }
 .yard-lasers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .yard-rear { grid-template-columns: repeat(4, 1fr); }

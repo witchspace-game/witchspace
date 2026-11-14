@@ -77,8 +77,12 @@ export const LUXURIES: { id: string; name: string; blurb: string; price: number;
   { id: 'black-light-lights', name: 'Black-light running lights', blurb: 'Lights you only see up close, and only if she lets you.', price: 45_000, edition: 'dark' },
   { id: 'instrument-cabin', name: 'An instrument-lit cabin', blurb: 'No lamps aboard: the cabin glows with her own readouts, for the long dark.', price: 60_000, edition: 'dark' },
 ];
-/** The luxuries anyone can order: an edition's own belong to that edition. */
-export const ORDERABLE_LUXURIES = LUXURIES.filter((l) => !l.edition);
+/**
+ * The luxuries anyone can order: none (Mark, 14 November 2026). They did nothing in the game, so the yards
+ * stopped selling them. They stay above as lore: the editions carry them, and ships that already have one
+ * keep it on their papers and in their manual.
+ */
+export const ORDERABLE_LUXURIES: typeof LUXURIES = [];
 
 /** Fitting out a bigger, dearer hull costs more than fitting a Cobra. */
 export const fitScale = (def: ShipDef) => Math.max(1, def.stats.price / 100_000);
@@ -159,7 +163,7 @@ export function checkSpec(spec: unknown, find: (id: string) => ShipDef | undefin
   const glow = o.glow ?? 'standard';
   if (!colour(o.colour) || (o.trim != null && !colour(o.trim)) || !laser(o.laser) || (o.rear != null && !laser(o.rear))) return null;
   if (typeof glow !== 'string' || !Object.prototype.hasOwnProperty.call(GLOWS, glow) || !upgrades || !luxuries) return null;
-  if (!upgrades.every((id) => UPGRADES.some((e) => e.id === id)) || !luxuries.every((id) => ORDERABLE_LUXURIES.some((l) => l.id === id))) return null;
+  if (!upgrades.every((id) => UPGRADES.some((e) => e.id === id))) return null;
   return {
     ship: def.id,
     colour: o.colour as string,
@@ -169,7 +173,8 @@ export function checkSpec(spec: unknown, find: (id: string) => ShipDef | undefin
     upgrades: upgrades as EquipmentId[],
     glow: glow as GlowId,
     trim: (o.trim as string | null | undefined) ?? null,
-    luxuries,
+    // Only what can still be ordered: an older link or order with a luxury in it still works, without it.
+    luxuries: luxuries.filter((id) => ORDERABLE_LUXURIES.some((l) => l.id === id)),
   };
 }
 

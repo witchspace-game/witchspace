@@ -10,6 +10,10 @@ notice. Make a new heading for today if there isn't one, written like
 starting with `- `. Say what's different, not how it was done. Credit whoever
 reported it.
 
+## 14 November 2026
+
+- The shipyards no longer sell luxuries (the suite, the ship's voice and the rest) on a new hull: they cost real credits and did nothing in the game. A ship that already has one keeps it on her papers and in her manual. (Mark)
+
 ## 13 November 2026
 
 - Register your ship: free, from your Commander card or the account panel (A). Your ship goes on the record with her number, today's date and the port; registering doesn't change your commander, and everything you have comes with you. Solo play stays exactly as it is, registered or not; shared space now needs a registered ship. The game invites you once, at your first purchase or at Mostly Harmless. (Mark)
