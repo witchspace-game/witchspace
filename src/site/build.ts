@@ -1,6 +1,6 @@
 import { EDITIONS, editionNo, type Edition } from '../content/editions';
 import type { ShipDef } from '../content/types';
-import { checkSpec, cleanName, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, ORDERABLE_LUXURIES, repaintLabour, repaintQuote, standardKit, standardLaser, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
+import { checkSpec, cleanName, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, repaintLabour, repaintQuote, standardKit, standardLaser, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
 import { API, refresh, sessionToken, signedIn } from '../net/account';
 import { accountSpec, editionCounts } from '../net/shipyard';
@@ -94,6 +94,8 @@ const waiting = () => {
 let spec: Spec = fromLink() ?? local()?.spec ?? defaultSpec(def);
 // Whatever the link or the save says, she has what the yard fits as standard (placeOrder adds it too).
 spec.upgrades = [...new Set([...standardKit(def), ...spec.upgrades])];
+// The yards no longer sell luxuries (Mark, 14 Nov): an old link's are dropped. Editions keep theirs as lore.
+spec.luxuries = [];
 
 // The numbered editions: set by the maker, so they're looked at here, not specced (Mark: "if I choose one of
 // the special editions it doesn't show what it looks like"). The maker signs them over to contributors (Mark: "if you
@@ -117,7 +119,6 @@ const STEPS = [
   ['paint', 'Paint'],
   ['glow', 'Glow'],
   ['trim', 'Trim'],
-  ['aboard', 'Aboard'],
   ['fit', 'Fit-out'],
   ['order', 'Order'],
 ] as const;
@@ -154,8 +155,6 @@ function options(): string {
       return `<h2>Two-tone <span>${cr(TRIM_PRICE)}, and the colour’s own price</span></h2>
         <div class="build-choices">${choice('data-two-tone', '', !spec.trim, 'One colour', 'Included')}${choice('data-two-tone', '1', Boolean(spec.trim), 'Two-tone: the fine lines in a second colour', cr(TRIM_PRICE))}</div>
         ${spec.trim ? swatches('data-trim', spec.trim) : ''}${def.geometry.details ? '' : '<p class="build-note">This hull has few fine lines, so the trim is subtle.</p>'}`;
-    case 'aboard':
-      return `<h2>Aboard <span>${REPAINT ? 'with a new hull, not a repaint' : 'comfort and showing off: nothing that flies or fights better'}</span></h2><div class="build-ticks">${ORDERABLE_LUXURIES.map((l) => tick('data-lux', l.id, spec.luxuries.includes(l.id), l.name, cr(l.price), l.blurb)).join('')}</div>`;
     case 'fit':
       return `<h2>Her laser</h2><div class="build-choices">${LASERS.map((id) => choice('data-laser', id, spec.laser === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>
         <h2>Rear laser</h2><div class="build-choices">${choice('data-rear', '', !spec.rear, 'None', '—')}${LASERS.map((id) => choice('data-rear', id, spec.rear === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>
@@ -183,7 +182,6 @@ function orderStep(): string {
   const prices = REPAINT
     ? `<p class="build-order-total"><span>Repaint your ${escapeHtml(def.name)}</span><b>${cr(repaintOf(spec))}</b></p>
     ${kit.length ? `<p class="build-order-total kit"><span>Fit at any station: ${kit.map((x) => escapeHtml(x.name)).join(' · ')}</span><b>${cr(kitTotal(spec))}</b></p>` : ''}
-    ${spec.luxuries.length ? `<p class="build-order-new">Aboard comes with a new hull, not a repaint: ${spec.luxuries.map((id) => escapeHtml(LUXURIES.find((l) => l.id === id)?.name ?? id)).join(' · ')}.</p>` : ''}
     <p class="build-order-new">Or a new one from the yard: ${cr(total)}. Yards don’t sell her outright yet.</p>`
     : `<p class="build-order-total"><span>Price</span><b>${cr(total)}</b></p>`;
   return `<h2>Her name <span>on her papers, her manual and your clips. 24 letters at most.</span></h2>
@@ -386,8 +384,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('change', (e) => {
   const i = e.target as HTMLInputElement;
   const toggle = (list: string[], id: string) => (i.checked ? [...new Set([...list, id])] : list.filter((x) => x !== id));
-  if (i.dataset.lux) change(() => (spec.luxuries = toggle(spec.luxuries, i.dataset.lux!)));
-  else if (i.dataset.up) change(() => (spec.upgrades = toggle(spec.upgrades, i.dataset.up!) as Spec['upgrades']));
+  if (i.dataset.up) change(() => (spec.upgrades = toggle(spec.upgrades, i.dataset.up!) as Spec['upgrades']));
 });
 
 document.addEventListener('input', (e) => {
