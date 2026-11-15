@@ -12,6 +12,8 @@ reported it.
 
 ## 15 November 2026
 
+- The market on a computer reads like a shop, not a trading desk: the list of goods on the left, the one you pick on the right with its chart and Buy and Sell under it, in the game's own green. The order book and trades fold away under it, and the trade computer has a screen of its own. The station's tabs and the Flight log, Galaxy map and Launch buttons stay where they are on every other screen. (Mark)
+- On a phone, the trade computer has its "‹ Market" way back, and bigger type.
 - Taking a contract no longer replaces a course you've set yourself: it says "course kept", and Set course on the contract takes you there when you want it. (found in a playtest)
 - The Launch button shows the course you've just set from the market, and setting one ends any longer route.
 - After a jump, the radio shows only what's been said since you arrived; the last system's lines stay in the full log. A contract's note no longer follows you to the next station.
