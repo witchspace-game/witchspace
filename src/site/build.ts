@@ -1,6 +1,6 @@
 import { EDITIONS, editionNo, type Edition } from '../content/editions';
 import type { ShipDef } from '../content/types';
-import { checkSpec, cleanName, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, ORDERABLE_LUXURIES, standardKit, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
+import { checkSpec, cleanName, editionSpec, defaultSpec, depositFor, fitScale, GLOWS, LUXURIES, ORDERABLE, repaintLabour, repaintQuote, standardKit, standardLaser, PALETTE, priceLines, productionHours, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
 import { API, refresh, sessionToken, signedIn } from '../net/account';
 import { accountSpec, editionCounts } from '../net/shipyard';
@@ -24,6 +24,26 @@ const LASERS = Object.keys(PLAYER_LASERS) as LaserId[];
 const cr = (n: number) => `${n.toLocaleString('en-GB')} Cr`;
 const cost = (n: number) => (n ? cr(n) : 'Included');
 const colourOf = (c: string | null) => PALETTE.find((p) => p.colour === c);
+
+// --- A repaint, for the ship everyone already flies -------------------------------------------
+// Every commander starts in a Cobra Mk III (hullOf), so for her the spec is a repaint, not a new hull
+// (Mark, 12 Nov): the yard repaints the one you fly at the game's own price (repaintQuote), and the kit
+// is a shopping list for any station. The yard picks the spec up as a repaint offer (Game dev).
+const REPAINT = def.id === 'cobra-mk3';
+/** She as she leaves the factory: the repaint's starting point (the yard quotes against your actual paint). */
+const FACTORY = { colour: def.style.lineColor, glow: 'standard' as GlowId, trim: null };
+const repaintOf = (s: Spec) => repaintQuote(def, { colour: s.colour, glow: s.glow, trim: s.trim }, FACTORY);
+/** What the spec adds that a Cobra fresh from the factory hasn't got, at the station's price. Luxuries come only with a new hull (Game dev). */
+function kitList(s: Spec): { name: string; price: number }[] {
+  const k = fitScale(def);
+  const free = standardKit(def);
+  return [
+    ...(s.laser !== standardLaser(def) ? [{ name: PLAYER_LASERS[s.laser].name, price: PLAYER_LASERS[s.laser].price }] : []),
+    ...(s.rear ? [{ name: `${PLAYER_LASERS[s.rear].name} at the rear`, price: PLAYER_LASERS[s.rear].price }] : []),
+    ...s.upgrades.filter((id) => !free.includes(id)).map((id) => UPGRADES.find((e) => e.id === id)!).filter(Boolean).map((e) => ({ name: e.name, price: e.price })),
+  ].map((x) => ({ ...x, price: Math.round(x.price * k) }));
+}
+const kitTotal = (s: Spec) => kitList(s).reduce((sum, x) => sum + x.price, 0);
 
 // --- The spec, and the link that carries it -------------------------------------------------
 
@@ -74,6 +94,8 @@ const waiting = () => {
 let spec: Spec = fromLink() ?? local()?.spec ?? defaultSpec(def);
 // Whatever the link or the save says, she has what the yard fits as standard (placeOrder adds it too).
 spec.upgrades = [...new Set([...standardKit(def), ...spec.upgrades])];
+// The yards no longer sell luxuries (Mark, 14 Nov): an old link's are dropped. Editions keep theirs as lore.
+spec.luxuries = [];
 
 // The numbered editions: set by the maker, so they're looked at here, not specced (Mark: "if I choose one of
 // the special editions it doesn't show what it looks like"). The maker signs them over to contributors (Mark: "if you
@@ -97,7 +119,6 @@ const STEPS = [
   ['paint', 'Paint'],
   ['glow', 'Glow'],
   ['trim', 'Trim'],
-  ['aboard', 'Aboard'],
   ['fit', 'Fit-out'],
   ['order', 'Order'],
 ] as const;
@@ -125,7 +146,8 @@ function options(): string {
   switch (step) {
     case 'paint': {
       const c = colourOf(spec.colour);
-      return `<h2>Her colour <span>${c ? escapeHtml(c.name) : 'The maker’s own'}</span></h2>${swatches('data-colour', spec.colour)}${c ? `<p class="build-note">${escapeHtml(c.line)}</p>` : ''}`;
+      // The colour's own line goes with its name, not under the grid, where it read as a stray caption.
+      return `<h2>Her colour <span>${c ? escapeHtml(c.name) : 'The maker’s own'}</span></h2>${c ? `<p class="build-line">${escapeHtml(c.line)}</p>` : ''}${swatches('data-colour', spec.colour)}`;
     }
     case 'glow':
       return `<h2>How hard she glows</h2><div class="build-choices">${(Object.keys(GLOWS) as GlowId[]).map((g) => choice('data-glow', g, spec.glow === g, GLOWS[g].name, cost(GLOWS[g].price))).join('')}</div><p class="build-note">Never dimmer than the yard’s own: the glow is the signature.</p>`;
@@ -133,8 +155,6 @@ function options(): string {
       return `<h2>Two-tone <span>${cr(TRIM_PRICE)}, and the colour’s own price</span></h2>
         <div class="build-choices">${choice('data-two-tone', '', !spec.trim, 'One colour', 'Included')}${choice('data-two-tone', '1', Boolean(spec.trim), 'Two-tone: the fine lines in a second colour', cr(TRIM_PRICE))}</div>
         ${spec.trim ? swatches('data-trim', spec.trim) : ''}${def.geometry.details ? '' : '<p class="build-note">This hull has few fine lines, so the trim is subtle.</p>'}`;
-    case 'aboard':
-      return `<h2>Aboard <span>comfort and showing off: nothing that flies or fights better</span></h2><div class="build-ticks">${ORDERABLE_LUXURIES.map((l) => tick('data-lux', l.id, spec.luxuries.includes(l.id), l.name, cr(l.price), l.blurb)).join('')}</div>`;
     case 'fit':
       return `<h2>Her laser</h2><div class="build-choices">${LASERS.map((id) => choice('data-laser', id, spec.laser === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>
         <h2>Rear laser</h2><div class="build-choices">${choice('data-rear', '', !spec.rear, 'None', '—')}${LASERS.map((id) => choice('data-rear', id, spec.rear === id, PLAYER_LASERS[id].name, laser(id), rating(id))).join('')}</div>
@@ -158,14 +178,21 @@ function summary(s: Spec = spec): string {
 
 function orderStep(): string {
   const total = quote(def, spec);
-  return `<h2>Her name <span>painted on, 24 letters at most</span></h2>
+  const kit = kitList(spec);
+  const prices = REPAINT
+    ? `<p class="build-order-total"><span>Repaint your ${escapeHtml(def.name)}</span><b>${cr(repaintOf(spec))}</b></p>
+    ${kit.length ? `<p class="build-order-total kit"><span>Fit at any station: ${kit.map((x) => escapeHtml(x.name)).join(' · ')}</span><b>${cr(kitTotal(spec))}</b></p>` : ''}
+    <p class="build-order-new">Or a new one from the yard: ${cr(total)}. Yards don’t sell her outright yet.</p>`
+    : `<p class="build-order-total"><span>Price</span><b>${cr(total)}</b></p>`;
+  return `<h2>Her name <span>on her papers, her manual and your clips. 24 letters at most.</span></h2>
     <input class="build-name" id="build-name" maxlength="24" placeholder="Halcyon, Brass Neck, Last Orders…" value="${escapeHtml(spec.name)}" aria-label="Her name" />
     <h2>Your ${escapeHtml(def.name)}</h2>
     ${summary()}
-    <p class="build-order-total"><span>Price</span><b>${cr(total)}</b></p>
+    ${prices}
     ${def.concept ? `<p class="build-order-total"><span>Deposit, a tenth, refundable until she’s ready</span><b>${cr(depositFor(total))}</b></p>` : ''}
     <p class="connect-buttons"><button type="button" class="button primary" id="build-order">${def.concept ? 'Order her' : 'Save her for the yard'}</button> <button type="button" class="button ghost" id="build-share" data-share data-share-title="My ${escapeHtml(def.name)}">Share your spec</button></p>
-    <p class="build-note" id="build-ordered">${note()}</p>`;
+    <p class="build-note" id="build-ordered">${note()}</p>
+    <p class="build-fly"><a class="button primary big" href="/play/">${REPAINT ? 'Start flying free: earn her paint in the game' : 'Start flying free: earn her in the game'}</a></p>`;
 }
 
 /** A numbered edition, on show: what she is, how many are left, a name for her and a way to share her. */
@@ -176,7 +203,7 @@ function editionView(e: Edition): string {
     <p>${escapeHtml(e.blurb)}</p>
     ${summary(editionSpec(e))}
     <p class="build-order-total"><span>Numbered 001 to ${editionNo(e.limit)}</span><b>${!n ? `${e.limit} in all` : n < e.limit ? `${n} of ${e.limit} signed over` : `All ${e.limit} signed over`}</b></p>
-    <h2>Her name <span>painted beside her number</span></h2>
+    <h2>Her name <span>beside her number, on her papers</span></h2>
     <input class="build-name" id="edition-name" maxlength="24" placeholder="Nightjar, Quiet Hours, Last Light…" value="${escapeHtml(editionName)}" aria-label="Her name" />
     <p class="connect-buttons"><button type="button" class="button primary" id="build-share" data-share data-share-title="${escapeHtml(shareTitle(e))}">Share her</button> <a class="button ghost" href="/ships/${def.id}/${e.id}/">The ${escapeHtml(e.name)}, in full</a> <button type="button" class="button ghost" data-edition="">Spec your own instead</button></p>
     <p class="build-note">The maker sets everything but her name, and each one is finished by hand, in about ${days} days. If you have to ask, you can’t afford one. Special editions are by invitation: for now, the maker signs them over to the people who build Witchspace. <a href="/get-involved/">Get involved</a>.</p>`;
@@ -184,11 +211,20 @@ function editionView(e: Edition): string {
 
 const shareTitle = (e: Edition) => (editionName ? `${editionName}, my ${def.name} ${e.name}` : `The ${def.name} ${e.name}`);
 
+/** Labels on the ship as she's specced, like the station screen's: her name, her paint, her trim, her glow. */
 function caption() {
   const s = showing();
   const c = colourOf(s.colour);
   const t = colourOf(s.trim);
-  $('#build-caption').textContent = `${edition ? `${editionName ? `“${editionName}” · ` : ''}${edition.name} · ` : ''}${c?.name ?? 'The maker’s own'}${t ? `, with ${t.name} trim` : ''} · ${GLOWS[s.glow].name}`;
+  const name = edition ? editionName : s.name;
+  const tags = [
+    ...(name ? [`<b>“${escapeHtml(name)}”</b>`] : []),
+    ...(edition ? [escapeHtml(edition.name)] : []),
+    `<i style="--sw:${s.colour}"></i>${escapeHtml(c?.name ?? 'The maker’s own')}`,
+    ...(t ? [`<i style="--sw:${t.colour}"></i>${escapeHtml(t.name)} trim`] : []),
+    `${escapeHtml(GLOWS[s.glow].name)} glow`,
+  ];
+  $('#build-caption').innerHTML = tags.map((x) => `<span>${x}</span>`).join('');
 }
 
 /** Your own spec, or one of the numbered editions: the first choice, as on a car maker's site. */
@@ -212,7 +248,9 @@ function note(): string {
   if (w) return `You have a${w.ship === def.id ? '' : 'nother'} ${escapeHtml(shipName(w.ship))} spec waiting at the yard${w.name ? `: “${escapeHtml(w.name)}”` : ''}. Ordering this one replaces it.`;
   return def.concept
     ? `Nothing is paid here. Dock at any shipyard and your spec is there: the deposit is one tap, in credits. ${escapeHtml(def.manufacturer ?? 'The yard')} then finish her for you, in about ${days} days. ${where}`
-    : `Nothing is paid here. Shipyards will sell the ${escapeHtml(def.name)} outright soon; your spec waits at the yard until they do. ${where}`;
+    : REPAINT
+      ? `Nothing is paid here. At the next shipyard, the yard offers to repaint your ${escapeHtml(def.name)} in this spec. Kit is on your list at the station. ${where}`
+      : `Nothing is paid here. Shipyards will sell the ${escapeHtml(def.name)} outright soon; your spec waits at the yard until they do. ${where}`;
 }
 
 // --- Drawing it -----------------------------------------------------------------------------
@@ -248,16 +286,51 @@ function bar() {
   const p = priceLines(def, spec);
   const i = STEPS.findIndex(([s]) => s === step);
   const next = STEPS[i + 1];
+  // The spec sheet: what she costs, part by part, as tiles (on a phone, just the total).
+  const n = (x: number) => x.toLocaleString('en-GB');
+  if (REPAINT) {
+    const labour = repaintLabour(def, spec.glow);
+    const repaint = repaintOf(spec);
+    $('#build-bar').innerHTML = `<div class="build-bar-in">
+    <dl class="build-sheet">
+      <div class="part"><dt>Yard labour</dt><dd>${n(labour)}</dd></div>
+      <div class="part"><dt>Finish</dt><dd>${n(repaint - labour)}</dd></div>
+      <div class="part"><dt>Kit, at a station</dt><dd>${n(kitTotal(spec))}</dd></div>
+      <div class="total"><dt>Repaint your ${escapeHtml(def.name)}</dt><dd>${cr(repaint)}</dd></div>
+    </dl>
+    ${next ? `<button type="button" class="button primary" data-step="${next[0]}">${next[1]} →</button>` : ''}
+  </div>`;
+    return;
+  }
   $('#build-bar').innerHTML = `<div class="build-bar-in">
-    <div class="build-price"><b>${cr(total)}</b><span>Hull ${p.hull.toLocaleString('en-GB')} · fit-out ${p.fit.toLocaleString('en-GB')} · finish ${p.finish.toLocaleString('en-GB')}${def.concept ? ` · deposit ${cr(depositFor(total))}` : ''}</span></div>
+    <dl class="build-sheet">
+      <div class="part"><dt>Hull</dt><dd>${n(p.hull)}</dd></div>
+      <div class="part"><dt>Fit-out</dt><dd>${n(p.fit)}</dd></div>
+      <div class="part"><dt>Finish</dt><dd>${n(p.finish)}</dd></div>
+      <div class="total"><dt>Total${def.concept ? ` · deposit ${n(depositFor(total))}` : ''}</dt><dd>${cr(total)}</dd></div>
+    </dl>
     ${next ? `<button type="button" class="button primary" data-step="${next[0]}">${next[1]} →</button>` : ''}
   </div>`;
 }
 
+// On a phone, she steps back a little while you scroll through the choices, and comes back at the top or on a new step.
+const page = $('.build-page');
+const phone = matchMedia('(max-width: 860px)');
+let from = 0;
+function stage(reset = false) {
+  if (reset) from = scrollY;
+  page.classList.toggle('shrunk', phone.matches && scrollY > 40 && scrollY - from > 60);
+}
+addEventListener('scroll', () => stage(), { passive: true });
+
 function render() {
   $('#build-models').innerHTML = models();
   $('#build-steps').hidden = Boolean(edition);
-  $('#build-steps').innerHTML = STEPS.map(([s, label], i) => `<button type="button" data-step="${s}" aria-current="${s === step ? 'step' : 'false'}"><small>${i + 1}</small>${label}</button>`).join('');
+  const strip = $('#build-steps');
+  strip.innerHTML = STEPS.map(([s, label], i) => `<button type="button" data-step="${s}" aria-current="${s === step ? 'step' : 'false'}"><small>${i + 1}</small>${label}</button>`).join('');
+  // One strip that scrolls sideways on a phone: keep the step you're on in sight.
+  const on = strip.querySelector<HTMLElement>('[aria-current="step"]');
+  if (on) strip.scrollLeft = on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2;
   $('#build-options').innerHTML = edition ? editionView(edition) : options();
   $('#account').hidden = Boolean(edition) || step !== 'order';
   paint();
@@ -292,6 +365,9 @@ document.addEventListener('click', (e) => {
     step = d.step as Step;
     render();
     if (b.closest('#build-bar')) $('#build-steps').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // A new step: she's back to full size until you scroll on through it (after the smooth scroll settles).
+    stage(true);
+    setTimeout(() => stage(true), 600);
   } else if (d.colour) change(() => (spec.colour = d.colour!));
   else if (d.trim) change(() => (spec.trim = d.trim!));
   else if (d.twoTone !== undefined) change(() => (spec.trim = d.twoTone ? (spec.trim ?? ORDERABLE.find((p) => p.colour !== spec.colour)!.colour) : null));
@@ -308,8 +384,7 @@ document.addEventListener('click', (e) => {
 document.addEventListener('change', (e) => {
   const i = e.target as HTMLInputElement;
   const toggle = (list: string[], id: string) => (i.checked ? [...new Set([...list, id])] : list.filter((x) => x !== id));
-  if (i.dataset.lux) change(() => (spec.luxuries = toggle(spec.luxuries, i.dataset.lux!)));
-  else if (i.dataset.up) change(() => (spec.upgrades = toggle(spec.upgrades, i.dataset.up!) as Spec['upgrades']));
+  if (i.dataset.up) change(() => (spec.upgrades = toggle(spec.upgrades, i.dataset.up!) as Spec['upgrades']));
 });
 
 document.addEventListener('input', (e) => {
@@ -317,8 +392,10 @@ document.addEventListener('input', (e) => {
   if (i.id === 'edition-name' && edition) {
     editionName = cleanName(i.value);
     caption();
-  } else if (i.id === 'build-name') spec.name = cleanName(i.value);
-  else return;
+  } else if (i.id === 'build-name') {
+    spec.name = cleanName(i.value);
+    caption();
+  } else return;
   history.replaceState(null, '', link().slice(location.origin.length));
   shareLinks();
 });
@@ -358,6 +435,12 @@ async function order() {
     return;
   }
   const total = quote(def, spec);
+  if (REPAINT) {
+    say.innerHTML = `<b>Saved for the yard.</b> At the next shipyard, the yard offers to repaint your ${escapeHtml(def.name)} in this spec. Kit is on your list at the station.${account ? ' It’s waiting on any device you’re signed in on.' : signedIn() ? ' It’s in this browser; your account didn’t answer, so save again later to have it on your other devices too.' : ' It’s in this browser. Sign in below to have it on your other devices too.'}`;
+    say.classList.add('done');
+    button.textContent = 'Saved ✓';
+    return;
+  }
   say.innerHTML = `<b>She’s on order.</b> Dock at any shipyard${def.concept ? ` and your ${escapeHtml(def.name)} is waiting for your deposit of ${cr(depositFor(total))}` : ' and your spec is waiting'}${account ? ', on any device you’re signed in on' : signedIn() ? ', in this browser. Your account didn’t answer, so order again later to have her waiting on your other devices too' : ', in this browser. Sign in below to have her waiting on your other devices too'}.`;
   say.classList.add('done');
   button.textContent = 'Ordered ✓';
@@ -382,7 +465,7 @@ if (MINE.length)
     });
 
 // Signed in: what's waiting on your account, and a sign-in box on the order step for everyone else.
-const box = signInBox($('#account'), { why: 'Signed in, your order reaches the game on every device, the Home Screen app included.', callsignWhy: 'it’s how other pilots know you.' }, () => void account());
+const box = signInBox($('#account'), { why: `Signed in, your ${REPAINT ? 'spec' : 'order'} reaches the game on every device, the Home Screen app included.`, callsignWhy: 'it’s how other pilots know you.' }, () => void account());
 
 async function account() {
   if (signedIn()) {

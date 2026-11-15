@@ -47,6 +47,8 @@ export interface ManualData {
   kit: Record<string, string[]>;
   luxuries: Record<string, string[]>;
   editions: Record<string, string>;
+  /** Free to read for everyone (the Cobra's, the guide to playing); every other ship's is her owner's. */
+  open?: boolean;
   /** The phone's drawer, from play/index.html: what each button does comes from the controls list (src/game/controls.ts drawerHelp). */
   drawer: { key?: string; label: string; title: string }[];
 }
@@ -525,7 +527,7 @@ function editionsCard(editions: EditionCard[], ship: string): string {
         <div><dt>Fitted</dt><dd>${e.fit.map(esc).join(', ')}</dd></div>
         <div><dt>Aboard</dt><dd>${e.luxuries.map(esc).join(', ')}</dd></div>
       </dl>
-      <p class="edition-count" data-edition="${esc(e.id)}" data-limit="${e.limit}">Numbered 001 to ${String(e.limit).padStart(3, '0')}, each painted beside its name.</p>
+      <p class="edition-count" data-edition="${esc(e.id)}" data-limit="${e.limit}">Numbered 001 to ${String(e.limit).padStart(3, '0')}, each beside her name on her papers.</p>
       <p class="edition-price"><b>By invitation</b> · signed over to the people who build Witchspace.</p>
       <p class="edition-see"><a class="button ghost small" href="/ships/${esc(ship)}/${esc(e.id)}/">See the ${esc(e.name)} →</a> <a class="button ghost small" href="/ships/${esc(ship)}/build/#edition=${esc(e.id)}">Name yours</a></p>
     </article>`,
@@ -548,28 +550,49 @@ function previewCard(s: ShipFile): string {
 }
 
 /** A ship's owner's manual: only its owner sees it. The page checks the save (src/site/manual.ts); everyone else is told it comes with the ship. */
+/**
+ * A ship's owner's manual. The Cobra's is free to read (Mark): every commander starts in one, so it's the guide to
+ * playing, a page to land on. Every other ship's shows her cover and a reason to earn her; the words are her owner's.
+ */
 export function manualPage(s: ShipFile, m: ManualData) {
-  const data = JSON.stringify(m).replace(/</g, '\\u003c');
+  const open = s.id === 'cobra-mk3';
+  const data = JSON.stringify({ ...m, open }).replace(/</g, '\\u003c');
+  const about = { '@type': 'CreativeWork', name: s.name, url: `https://witchspace.org.uk/ships/${s.id}/` };
+  const game = { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' };
   return {
-    card: { ship: s.id, kicker: 'Owner’s manual', title: `The ${s.name} owner’s manual`, sub: 'Comes with the ship: how she flies, how to dock her, and where every button is.' },
-    schema: [{ '@type': 'CreativeWork', name: `${s.name} owner’s manual`, about: { '@type': 'CreativeWork', name: s.name, url: `https://witchspace.org.uk/ships/${s.id}/` }, isPartOf: { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' } }],
-    title: `${s.name} owner’s manual · Ships · Witchspace`,
-    description: `The ${s.name} owner’s manual comes with the ship: how she flies against a Cobra, how to dock her, and every control. Owners only.`,
-    head: '    <meta name="robots" content="noindex" />\n',
-    content: `<section class="section ship-page manual-page" style="--hull:${esc(m.colour)}">
+    card: open
+      ? { ship: s.id, kicker: 'Owner’s manual · free to read', title: `How to fly the ${s.name}`, sub: 'The dashboard, docking, every control on a computer or a phone, and the flight recorder.' }
+      : { ship: s.id, kicker: 'Owner’s manual', title: `The ${s.name} owner’s manual`, sub: 'Comes with the ship: how she flies, how to dock her, and where every button is.' },
+    schema: [
+      open
+        ? { '@type': 'TechArticle', headline: `${s.name} owner’s manual: how to fly, fight and dock`, description: 'The guide to flying in Witchspace, free to read.', isAccessibleForFree: true, about, isPartOf: game }
+        : { '@type': 'CreativeWork', name: `${s.name} owner’s manual`, about, isPartOf: game },
+    ],
+    title: open ? `${s.name} owner’s manual: how to fly, fight and dock · Witchspace` : `${s.name} owner’s manual · Ships · Witchspace`,
+    description: open
+      ? `Free to read: the ${s.name} owner’s manual is the guide to flying in Witchspace. The dashboard, docking, every control on a computer or a phone, and the flight recorder.`
+      : `The ${s.name} owner’s manual comes with the ship: how she flies against a Cobra, how to dock her, and every control. Owners only.`,
+    // The Cobra's is a page to land on; the rest are owners' perks, kept out of search.
+    head: open ? '' : '    <meta name="robots" content="noindex" />\n',
+    content: `<section class="section ship-page manual-page" style="--hull:${esc(m.colour)};--ship:${esc(m.colour)}">
   <a class="back" href="/ships/${esc(s.id)}/">← The ${esc(s.name)}</a>
   <header class="man-cover">
-    <p class="kicker">Owner’s manual · ${esc(m.meta)}</p>
-    <h1 id="man-title">${esc(s.name)}</h1>
-    <p class="lede">${esc(m.description)}</p>
+    <div class="man-cover-text">
+      <p class="kicker">Owner’s manual · ${esc(m.meta)}</p>
+      <h1 id="man-title">${esc(s.name)}</h1>
+      <p class="lede">${esc(m.description)}</p>
+      ${open ? '<p class="man-free">Free to read. Every commander starts in a Cobra, so this is the guide to flying her.</p>' : ''}
+    </div>
+    ${shipSvg(s, 'ship-svg man-ship')}
   </header>
-  <div class="card manual-gate" id="manual-gate">
-    <h3>For owners only</h3>
-    <p id="manual-why">Every ${esc(s.name)} comes with her manual: how she flies against a Cobra, how to dock her, and where every button is. Checking whether she’s yours…</p>
+  <div class="card manual-gate" id="manual-gate"${open ? ' hidden' : ''}>
+    <h3>Owners only</h3>
+    <p id="manual-why">Earn her in the game, and her manual is yours, made out to you: how she flies against a Cobra, how to dock her, and where every button is.</p>
+    <p class="connect-buttons"><a class="button primary" href="/play/">Play free in your browser</a> <a class="button ghost" href="/ships/${esc(s.id)}/">See the ${esc(s.name)}</a></p>
     <div id="account" hidden></div>
-    <p class="connect-buttons"><a class="button primary small" href="/ships/${esc(s.id)}/">See the ${esc(s.name)}</a> <a class="button ghost small" href="/play/">Play Witchspace</a></p>
   </div>
   <article class="manual" id="manual" hidden></article>
+  ${open ? `<p class="connect-buttons man-fly"><a class="button primary big" href="/play/">Fly her now, free in your browser</a></p>` : ''}
   <script type="application/json" id="manual-data">${data}</script>
 </section>`,
   };
@@ -578,11 +601,15 @@ export function manualPage(s: ShipFile, m: ManualData) {
 /** The configurator: spec her as you would a new car, then order her for the yard (docs/design/ship-configurator.md). The choices and prices come from the game's own code (src/site/build.ts). */
 export function buildPage(s: ShipFile, names: Record<string, string>) {
   const def = JSON.stringify(s).replace(/</g, '\\u003c');
+  // Every commander already flies a Cobra Mk III, so hers is a repaint (Mark, 12 Nov; src/site/build.ts REPAINT).
+  const repaint = s.id === 'cobra-mk3';
   return {
-    card: { ship: s.id, kicker: 'Build yours', title: `Spec your ${s.name}`, sub: 'Her colour, her glow, her name and her fit-out, priced as you go. Order her, and she’s waiting at the yard.' },
+    card: { ship: s.id, kicker: 'Build yours', title: `Spec your ${s.name}`, sub: repaint ? 'Her colour, her glow, her name and her kit, priced as you go. The next shipyard offers to repaint the one you fly.' : 'Her colour, her glow, her name and her fit-out, priced as you go. Order her, and she’s waiting at the yard.' },
     schema: [{ '@type': 'WebApplication', name: `${s.name} configurator`, applicationCategory: 'GameApplication', about: { '@type': 'CreativeWork', name: s.name, url: `https://witchspace.org.uk/ships/${s.id}/` }, isPartOf: { '@type': 'VideoGame', name: 'Witchspace', url: 'https://witchspace.org.uk/play/' } }],
     title: `Build your ${s.name} · Ships · Witchspace`,
-    description: `Spec your own ${s.name}: her colour, glow, trim, name and fit-out, priced as you go. Order her, and the shipyard has her ready for your deposit when you next dock.`,
+    description: repaint
+      ? `Spec your own ${s.name}: her colour, glow, trim, name and kit, priced as you go. Every commander flies one, so the next shipyard offers to repaint yours in this spec.`
+      : `Spec your own ${s.name}: her colour, glow, trim, name and fit-out, priced as you go. Order her, and the shipyard has her ready for your deposit when you next dock.`,
     content: `<section class="section ship-page build-page" style="--hull:${esc(s.style?.lineColor ?? '#7fd4ff')}">
   <a class="back" href="/ships/${esc(s.id)}/">← The ${esc(s.name)}</a>
   <div class="build">
@@ -590,13 +617,14 @@ export function buildPage(s: ShipFile, names: Record<string, string>) {
       <div class="ship-view build-view">
         ${shipSvg(s, 'ship-svg fallback')}
         <canvas class="ship-canvas" aria-label="Your ${esc(s.name)}, turning in your paint: drag to rotate"></canvas>
+        <div class="build-tags" id="build-caption" aria-live="polite"></div>
+        <p class="build-drag" aria-hidden="true">⟲ Drag to turn her</p>
       </div>
-      <p class="build-caption" id="build-caption"></p>
     </div>
     <div class="build-panel">
       <p class="kicker">${esc(roleLine(s))}</p>
       <h1>Spec your ${esc(s.name)}</h1>
-      <p class="lede">${s.concept ? `${esc(s.manufacturer ?? 'Her makers')} build her to order. Spec her here, and the deposit is one tap at the next shipyard you dock at.` : `Spec her here, and she’s waiting at the next shipyard you dock at.`}</p>
+      <p class="lede">${s.concept ? `${esc(s.manufacturer ?? 'Her makers')} build her to order. Spec her here, and the deposit is one tap at the next shipyard you dock at.` : repaint ? `You already fly one. Spec her here, and the next shipyard you dock at offers to repaint her in it.` : `Spec her here, and she’s waiting at the next shipyard you dock at.`}</p>
       <div id="build-models"></div>
       <nav class="build-steps" id="build-steps" aria-label="Steps"></nav>
       <div id="build-options"></div>
@@ -650,7 +678,7 @@ export function editionPage(s: ShipFile, e: EditionCard, others: EditionCard[]) 
     <section class="card edition-number">
       <p class="kicker">One of ${e.limit}</p>
       <h2 data-edition-count="${esc(e.id)}">Numbered 001 to ${no(e.limit)}</h2>
-      <p>Each one carries its number painted beside its name, from 001 to ${no(e.limit)}. Numbers are given out in order by the yard’s office, for the whole galaxy: when they’re gone, they’re gone.</p>
+      <p>Each one carries her number beside her name on her papers, from 001 to ${no(e.limit)}. Numbers are given out in order by the yard’s office, for the whole galaxy: when they’re gone, they’re gone.</p>
     </section>
     <section class="card">
       <p class="kicker">The finish</p>
@@ -717,7 +745,7 @@ export function papersPage(s: ShipFile, e: EditionCard) {
     <p class="papers-state" id="papers-state">Reading her papers…</p>
     <dl class="papers-rows" id="papers-rows" hidden></dl>
     <footer class="papers-foot" id="papers-foot" hidden>
-      <p class="papers-one">One of ${e.limit}. The number is painted beside her name, and no other ship will carry it.</p>
+      <p class="papers-one">One of ${e.limit}. Her number stands beside her name, and no other ship will carry it.</p>
       <p class="papers-sign">Signed for the yard: <b>${esc(maker)}</b><span id="papers-yard"></span></p>
     </footer>
   </article>
