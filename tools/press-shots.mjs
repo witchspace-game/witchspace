@@ -62,7 +62,10 @@ async function start({ viewport = { width: PW, height: PH }, scale = 1, device, 
     c.equipment = [...new Set([...c.equipment, 'gimbal-mount', 'combat-computer', 'ecm', 'extra-energy', 'large-cargo-bay', 'fuel-scoops', 'docking-computer', 'escape-pod', 'survey-scanner', 'galactic-hyperdrive'])];
     c.kills = 412;
     c.credits = 18450;
+    // A press picture isn't a new commander's first dock: no invitation to register across it.
+    c.registerAsked = true;
     w.renderDocked();
+    document.querySelector('#banner')?.setAttribute('hidden', '');
   });
   // Quiet: no sound, and no account prompts over the picture.
   await page.addStyleTag({ content: '#keys-hint, #mouse-prompt, #account-nudge, .account-nudge, #install-hint { display: none !important; } body.clean > :not(#neo):not(#retro) { visibility: hidden !important; }' });
@@ -276,15 +279,19 @@ const kill = (s, i) =>
   }, i);
 
 /** Dock at the system in the worst crisis in the news (a famine, a shortage), with money and cargo to trade. */
-const dockAtCrisis = (s) =>
-  s.page.evaluate(async () => {
+const dockAtCrisis = (s, prefer) =>
+  s.page.evaluate(async (prefer) => {
     const { galaxy } = await import('/src/galaxy/generate.ts');
-    const { EVENT_KINDS, newsAt } = await import('/src/economy/events.ts');
+    const { EVENT_KINDS, eventsAt, newsAt } = await import('/src/economy/events.ts');
     const { COMMODITIES } = await import('/src/economy/commodities.ts');
     const { drift, equilibriumPrice, freshMarket, priceAt } = await import('/src/economy/market.ts');
     const now = Date.now();
     let best = null;
-    for (const n of newsAt(galaxy(0)[7], now)) {
+    // Asked for a good, look across the galaxy for a crisis in it happening now; otherwise the news at Lave.
+    const going = prefer
+      ? galaxy(0).flatMap((sys) => eventsAt(sys, now - 72 * 3600_000, now).filter((e) => e.start <= now && (EVENT_KINDS[e.type].effects[prefer] ?? 0) < 0).map((event) => ({ event })))
+      : [];
+    for (const n of going.length ? going : newsAt(galaxy(0)[7], now)) {
       if (now > n.event.end) continue;
       for (const [id, shift] of Object.entries(EVENT_KINDS[n.event.type].effects)) {
         const i = COMMODITIES.findIndex((c) => c.id === id);
@@ -292,7 +299,9 @@ const dockAtCrisis = (s) =>
         const sys = galaxy(0)[n.event.system];
         const c = COMMODITIES[i];
         const pct = priceAt(sys, freshMarket(sys, now), id, now) / (equilibriumPrice(sys, c, i) * drift(sys, c, i, now)) - 1;
-        if (!best || pct > best.pct) best = { system: n.event.system, name: sys.name, good: id, pct };
+        const wanted = (x) => (prefer && x.good === prefer ? 1 : 0);
+        const here = { system: n.event.system, name: sys.name, good: id, pct };
+        if (!best || wanted(here) > wanted(best) || (wanted(here) === wanted(best) && pct > best.pct)) best = here;
       }
     }
     const w = window.witchspace;
@@ -300,9 +309,14 @@ const dockAtCrisis = (s) =>
     w.commander.cargo = { [best?.good ?? 'food']: 12, computers: 4 };
     w.renderDocked();
     return best;
-  });
+  }, prefer);
 
-const tab = (s, name) => s.page.click(`.tabs [data-tab="${name}"]`);
+// A computer in the Neo look has the station's places down the left (#428); a phone or 1984 keeps the tabs.
+const tab = (s, name) =>
+  s.page.evaluate((n) => {
+    const rail = document.querySelector(`#rail-places [data-place="${n}"]`);
+    (rail && rail.offsetParent ? rail : document.querySelector(`.tabs [data-tab="${n}"]`)).click();
+  }, name);
 
 /** Face the planet from a way off, so it fills the background. */
 const facePlanet = (s, distance = 3.2) =>
@@ -526,6 +540,57 @@ const SCENES = {
       await s.page.evaluate(() => { clearInterval(window.__freeze); document.body.classList.remove('clean'); });
       await wait(800);
     }
+    await s.ctx.close();
+  },
+
+  /** The market's list, then a good in crisis with its chart, then the trade computer. */
+  async exchange() {
+    const s = await start();
+    // Lave first, as it is most days: the list of goods, and a good's trade window (order book, limit orders).
+    await tab(s, 'market');
+    await wait(1500);
+    await s.page.screenshot({ path: join(OUT, 'exchange-lave-list.jpg'), quality: 92 });
+    await s.page.evaluate(() => document.querySelector('.ex-pair[data-id="computers"]')?.click());
+    await wait(1500);
+    await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /^Buy\b/.test(b.textContent.trim()) && b.offsetParent)?.click());
+    await wait(1500);
+    await s.page.screenshot({ path: join(OUT, 'exchange-lave-trade.jpg'), quality: 92 });
+    await s.page.keyboard.press('Escape');
+    await tab(s, 'station');
+    // A famine reads at a glance: food, its price candling up, the news on the chart.
+    const crisis = await dockAtCrisis(s, 'food');
+    console.log('  crisis:', crisis);
+    await tab(s, 'market');
+    await wait(1500);
+    await s.page.screenshot({ path: join(OUT, 'exchange-00-list.jpg'), quality: 92 });
+    if (crisis) {
+      await s.page.evaluate((g) => document.querySelector(`.ex-pair[data-id="${g}"]`)?.click(), crisis.good);
+      await wait(2000);
+      await s.page.screenshot({ path: join(OUT, 'exchange-01-chart.jpg'), quality: 92 });
+    }
+    await s.page.evaluate(() => document.querySelector('.ex-routes-toggle')?.click());
+    await wait(1500);
+    await s.page.screenshot({ path: join(OUT, 'exchange-02-trade-computer.jpg'), quality: 92 });
+    await s.ctx.close();
+  },
+
+  /** The hangar: the equipment shop, the ship in her berth. */
+  async hangar() {
+    const s = await start();
+    await s.page.evaluate(() => { window.witchspace.commander.credits = 24000; window.witchspace.renderDocked(); });
+    await tab(s, 'equip');
+    await wait(1500);
+    await s.page.screenshot({ path: join(OUT, 'hangar-00.jpg'), quality: 92 });
+    await s.ctx.close();
+  },
+
+  /** Company work somewhere in trouble: the contracts board at a station in a famine. */
+  async contractsAway() {
+    const s = await start();
+    console.log('  at:', (await dockAtCrisis(s, 'food'))?.name);
+    await tab(s, 'contracts');
+    await wait(1000);
+    await s.page.screenshot({ path: join(OUT, 'contracts-away.jpg'), quality: 92 });
     await s.ctx.close();
   },
 
