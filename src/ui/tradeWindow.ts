@@ -12,7 +12,7 @@ import type { OrderState } from '../economy/orders';
 import { marketState, quotes, tradesHere, type TradeContext } from '../economy/trade';
 import { heardCandles, heardQuote } from '../net/bitcoin';
 import type { ChartOrder } from './chartOrders';
-import { ticker } from './ordersList';
+import { stationName } from '../galaxy/stationNames';
 
 const HOUR = 3600_000;
 const fmt = (n: number, dp = 1) => n.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
@@ -24,6 +24,9 @@ const age = (ms: number) => {
   const m = Math.round(ms / 60_000);
   return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60}` : ''}`;
 };
+
+/** The good's name as a shop says it: "Food", not a ticker. */
+const goodName = (id: string) => (id === 'btc' ? 'Bitcoin' : commodityById(id)!.name);
 
 export interface WindowView {
   /** The good on screen, or 'btc'. */
@@ -45,7 +48,7 @@ export function headHtml(ctx: TradeContext, v: WindowView, editing: boolean): st
     const day = heardCandles('1h', 48)?.slice(-24);
     last = q?.price ?? 0;
     change = q && day?.[0] ? (q.price - day[0].o) / day[0].o : 0;
-    name = 'Bitcoin · every station';
+    name = 'at every station';
     extra = `<div class="ex-mstat"><b>${formatBtc(satsOf(ctx.commander))}</b>In your wallet</div>`;
   } else {
     const c = commodityById(v.id)!;
@@ -56,13 +59,13 @@ export function headHtml(ctx: TradeContext, v: WindowView, editing: boolean): st
     last = q.price;
     change = (q.price - hourAgo) / hourAgo;
     const u = unitLabel(c);
-    name = `${c.name} · ${ctx.system.name}${v.remote ? ' (as you know it)' : ''}`;
+    name = `at ${ctx.system.name} · ${stationName(ctx.system).name}${v.remote ? ' (as you know it)' : ''} · per ${u}`;
     extra = `<div class="ex-mstat"><b>${fmt(Math.max(...lastHour.map((k) => k.high)))}</b>1h high</div><div class="ex-mstat"><b>${fmt(Math.min(...lastHour.map((k) => k.low)))}</b>1h low</div>
       <div class="ex-mstat"><b>${q.stock.toLocaleString()} ${u}</b>Station stock</div><div class="ex-mstat"><b>${(v.remote ? v.stored : (ctx.commander.cargo[v.id] ?? 0)).toLocaleString()} ${u}</b>${v.remote ? 'In storage there' : 'In your hold'}</div>`;
   }
   return `
-    <div class="ex-mpair"><b>${editing ? 'Edit order · ' : ''}${ticker(v.id)}<span>/CR</span></b><small>${name}</small></div>
-    <div class="ex-mlast ${change >= 0 ? 'up' : 'down'}"><b>${last ? fmt(last) : '…'}</b><small>${pct(change)}</small></div>
+    <div class="ex-mpair"><b>${editing ? 'Edit order · ' : ''}${goodName(v.id)}</b><small>${name}</small></div>
+    <div class="ex-mlast ${change >= 0 ? 'up' : 'down'}"><b>${last ? `${fmt(last)} Cr` : '…'}</b><small>${pct(change)} ${v.id === 'btc' ? 'today' : 'this hour'}</small></div>
     <div class="ex-mstats">${extra}</div>
     <button class="ex-mclose" aria-label="Close">✕</button>`;
 }
@@ -107,7 +110,7 @@ export function bookHtml(ctx: TradeContext, id: string, levels: number): string 
 
 /** Where the form used to be: Buy and Sell, which open the trade window, and your orders. */
 export function actionsHtml(ctx: TradeContext, v: WindowView, openOrders: number, message: string): string {
-  const t = ticker(v.id);
+  const t = goodName(v.id);
   const u = v.id === 'btc' ? '' : unitLabel(commodityById(v.id)!);
   const avbl =
     v.id === 'btc'

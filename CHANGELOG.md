@@ -14,6 +14,7 @@ reported it.
 
 - The market on a computer reads like a shop, not a trading desk: the list of goods on the left, the one you pick on the right with its chart and Buy and Sell under it, in the game's own green. The order book and trades fold away under it, and the trade computer has a screen of its own. (Mark)
 - On a computer, the station's places run down the left of every docked screen: where you are, your credits and hold, Station, Market, Contracts and the rest, and the look at the foot. The two rows of tabs are gone, the screen you choose sits on the right, and your ship stands in the middle. (Mark)
+- The trade window is in the game's own green, and on a computer the chart is inside it beside your order, with the order book a tab away. Its words are plainer: "Now" or "At my price", "You pay" and "You get", and Buy and Sell name the good. (Mark)
 - The market's list is shorter: the three best goods to buy and the three that sell best, with the rest one click away. On a computer the good you pick shows one price, with the other figures as a single line under its chart, and Sell is a plain button beside Buy. (Mark)
 - The "Register your ship" notice no longer pops up over the same invitation on your Commander card.
 - On a phone, the trade computer has its "‹ Market" way back, and bigger type.
