@@ -2706,7 +2706,8 @@ body.retro .dock-which, body.retro .look-mini, body.retro .wallet-button { font-
 @media (min-width: 701px) and (min-height: 501px), (min-width: 701px) and (orientation: landscape) and (min-height: 501px) {
   .ex-sheet { width: min(1160px, calc(100vw - 120px)); max-height: calc(100vh - 48px); }
   .ex-mhead { gap: 26px; padding: 16px 22px; }
-  .ex-mbody { grid-template-columns: minmax(0, 1fr) 400px; }
+  /* One height whatever the order is (buy, sell, at my price, the book), so the window never jumps. */
+  .ex-mbody { grid-template-columns: minmax(0, 1fr) 400px; grid-template-rows: minmax(0, 1fr); height: min(530px, calc(100vh - 208px)); }
   .ex-mleft { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 14px 16px 14px 18px; border-right: 1px solid var(--edge); }
   .ex-mtabs { display: flex; gap: 22px; }
   .ex-mtabs button { padding: 0 0 5px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--dim); font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; }
@@ -2715,9 +2716,13 @@ body.retro .dock-which, body.retro .look-mini, body.retro .wallet-button { font-
   .ex-mchart { flex: 1; display: flex; min-height: 0; }
   .ex-mchart .ex-chart { flex: 1; padding: 0; min-width: 0; }
   .ex-mchart .ex-canvas { flex: 1; height: auto; min-height: 220px; border: 1px solid var(--edge); }
-  .ex-mleft .ex-mbook { display: none; border-right: 0; padding: 0; max-width: 420px; font-size: 13px; }
+  .ex-mleft .ex-mbook { display: none; border-right: 0; padding: 0; max-width: 420px; font-size: 13px; min-height: 0; overflow-y: auto; }
   .ex-mleft.book .ex-mchart { display: none; }
   .ex-mleft.book .ex-mbook { display: block; }
-  .ex-modal .ex-form { padding: 16px 20px; gap: 11px; }
+  .ex-modal .ex-form { padding: 16px 20px; gap: 11px; min-height: 0; overflow-y: auto; }
   .ex-orders-all { max-height: 22vh; }
+}
+/* A phone: the sheet keeps one height too, tall enough for the longest order (buying at your own price). */
+@media (max-width: 700px) and (orientation: portrait) {
+  .ex-mbody { min-height: 520px; }
 }
