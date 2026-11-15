@@ -12,6 +12,7 @@ import { afterJump } from '../game/contracts';
 import { takenByPirates } from '../game/assignments';
 import { SIGNAL_REACH, isFound, isSurveyed } from '../game/explore';
 import { flash } from '../ui/hud';
+import { radioArrived } from '../ui/radio';
 import { isMapOpen } from '../ui/galaxyMap';
 import { distanceLy, ECONOMIES, GOVERNMENTS, nearestTo, systemAt, type StarSystem } from '../galaxy/generate';
 import { activeEvent, EVENT_KINDS } from '../economy/events';
@@ -291,6 +292,7 @@ export async function hyperspace() {
   if (galactic) removeEquipment(c, 'galactic-hyperdrive');
   else c.fuel = Math.max(0, Math.round((c.fuel - distanceLy(from, dest)) * 10) / 10);
   c.location = { galaxy: dest.galaxy, system: dest.index };
+  radioArrived();
   c.target = null;
   // On a plotted route: the next hop, or arrived.
   let routeNote = '';

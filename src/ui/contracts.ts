@@ -139,6 +139,7 @@ let boardSeenAt = 0;
 /** Docking: what's on the board as you dock isn't news; what's posted while you're here is. */
 export function boardSeen() {
   boardSeenAt = Date.now();
+  contractMessage = ''; // a new docking: the last station's note ("Contract taken…") doesn't follow you here
 }
 /** The board as it was last drawn, so a new post can be noticed while you're docked. */
 let boardKey = '';
@@ -171,6 +172,22 @@ export function plotCourse(c: Commander, system: number): string {
   const warning = risky.length ? ` · no safe way: through ${risky.map((s) => `${s.name} (${GOVERNMENTS[s.government].toLowerCase()})`).join(', ')}` : '';
   const longer = modern() && !risky.length && route.length > jumpsBetween(here, end, 30) ? ' · the safe way round' : '';
   return `Course plotted to ${end.name}: ${route.length} jumps, first ${hop.name}${distanceLy(here, hop) > c.fuel ? ' (refuel first)' : ''}${longer}${warning}`;
+}
+/**
+ * A course offered by a contract: plotted only if you haven't one of your own, as with a trail. Taking a
+ * contract used to replace the course you'd set (a player on the ideas board, 31 October 2026; found
+ * again in Marketing's playtest, 15 November 2026).
+ */
+export function offerCourse(c: Commander, system: number): string {
+  const going = c.courseTo ?? c.target;
+  if (going === null || going === undefined || going === system) return plotCourse(c, system);
+  return `course kept to ${systemAt(currentSystem().galaxy, going).name}: Set course on the contract when you want it`;
+}
+
+/** Where you're going rides on the Launch button (Mark: "Launch → Anarlaqu"). */
+export function showCourse(c: Commander): void {
+  const label = c.target === null ? 'Launch' : `Launch → ${systemAt(currentSystem().galaxy, c.target).name}`;
+  document.querySelectorAll('.launch-label').forEach((l) => (l.textContent = label));
 }
 let openFile: CompanyId | null = null;
 
@@ -422,7 +439,7 @@ function onClick(e: MouseEvent) {
     if (!why) {
       const fitted = fitCompartment(c, offer);
       if (fitted) contractMessage += ` · ${fitted}`;
-      contractMessage += ` · ${plotCourse(c, offer.to.system)}`;
+      contractMessage += ` · ${offerCourse(c, offer.to.system)}`;
       justTaken = offer.id;
       sfx.beep();
     }
@@ -431,7 +448,7 @@ function onClick(e: MouseEvent) {
     contractMessage = notes.join(' · ');
     const loaded = c.contracts?.find((a) => a.id === b.dataset.collect);
     if (loaded && !loaded.reserved) {
-      contractMessage += ` · ${plotCourse(c, loaded.to.system)}`;
+      contractMessage += ` · ${offerCourse(c, loaded.to.system)}`;
       justTaken = loaded.id;
       sfx.beep();
     }

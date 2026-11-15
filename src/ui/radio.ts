@@ -293,6 +293,17 @@ function dismiss(e: Entry) {
 }
 
 /** Forget everything (a new commander). */
+/** When you last arrived somewhere: the closed log shows only what's been said since (the full log keeps it all). */
+let arrivedAt = 0;
+/**
+ * A jump: what was said in the last system leaves the screen. "Lave police · Scanned clean" used to stay up
+ * at Leesti (Marketing's playtest, 15 November 2026). It's still in the full log, and a card still waiting stays.
+ */
+export function radioArrived() {
+  arrivedAt = Date.now();
+  render();
+}
+
 export function clearRadio() {
   clearHeadsUp();
   entries.length = 0;
@@ -338,6 +349,7 @@ function render() {
   const background: Entry[] = [];
   for (const e of entries) {
     if (e.summary || e.landing) continue;
+    if (!open && e.at < arrivedAt && !waiting(e, now)) continue; // said in the last system
     if (e.urgency === 'background' && !waiting(e, now)) {
       if (open || now - e.at < BACKGROUND_FOR) background.push(e);
       continue;
@@ -351,7 +363,7 @@ function render() {
   if (!open) rows = rows.slice(-ROWS);
   el.querySelector('.radio-list')!.innerHTML = rows.join('');
   renderCards(now);
-  const lastSaid = [...entries].reverse().find((e) => !e.summary && e.urgency !== 'background');
+  const lastSaid = [...entries].reverse().find((e) => !e.summary && e.urgency !== 'background' && e.at >= arrivedAt);
   el.querySelector('.radio-count')!.textContent = unread ? String(unread) : '';
   el.querySelector('.radio-ticker')!.textContent = lastSaid ? `${lastSaid.from} · ${lastSaid.text}` : '';
   // The pill carries the marks of the voices waiting to be read, so a glance says who.

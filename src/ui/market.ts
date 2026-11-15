@@ -21,7 +21,7 @@ import { escapeHtml } from './escape';
 import { $, cmdr, currentSystem } from '../core';
 import { player } from '../scene';
 import { ago, attackNews } from '../game/newsLines';
-import { linkSystem } from './contracts';
+import { linkSystem, showCourse } from './contracts';
 import { btcNow } from './money';
 import { LOST_FOR, vennAway } from '../game/odile';
 
@@ -117,6 +117,8 @@ export const exchange = mountExchange($('#exchange'), {
   },
   setCourse(dest) {
     cmdr().target = dest.index;
+    cmdr().courseTo = null; // a course of your own ends any longer route (it kept the old one, and the Launch button said so)
+    showCourse(cmdr());
     saveCommander(cmdr());
     sfx.beep();
     flash(`Course set: ${dest.name} · ${distanceLy(currentSystem(), dest).toFixed(1)} LY`, 2);

@@ -228,6 +228,7 @@ export function die() {
     if (c.sats) setTimeout(() => flash('Your Bitcoin is safe: the keys were in your head', 4), 11_000);
     saveCommander(c);
     marshalsStandDown();
+    game.tripSeen = true; // one clip, once: the recovered recording below, not the trip's moments as well (the rest wait in the flight log)
     main.enterDocked(true); // a new ship from the insurers
     flash(message, 5);
     void blackBox.then((m) => m && game.state === 'docked' && openReplay(m, 'Flight recorder recovered', refreshFlightLog, recorderIntroduced() ? undefined : RECORDER_INTRO));

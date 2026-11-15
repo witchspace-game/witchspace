@@ -463,6 +463,17 @@ function keepTrip() {
   }
 }
 
+const ASKED_KEY = 'witchspace-recorder-asked';
+function recorderAsked(): boolean {
+  try {
+    if (localStorage.getItem(ASKED_KEY)) return true;
+    localStorage.setItem(ASKED_KEY, '1');
+    return false;
+  } catch {
+    return true; // storage blocked: don't keep asking
+  }
+}
+
 /** Badge the Flight log button with what's new, and show this trip's moments if there are any. */
 async function showNewMoments(newShip: boolean) {
   if (classicRules()) return setLogBadge(0);
@@ -476,7 +487,9 @@ async function showNewMoments(newShip: boolean) {
       onChange: () => game.logOpen && refreshFlightLog(),
     });
   // The recorder asks once whether to stay on: after a first flight, not before a new commander has flown at all.
-  else if (!newShip && recorder.available && !recorderIntroduced()) {
+  // Once ever: it used to open by itself on every reload until answered, over the docked screen
+  // (Marketing's playtest, 15 November 2026). After that, the question waits in the flight log.
+  else if (!newShip && recorder.available && !recorderIntroduced() && !recorderAsked()) {
     setFlightLog(true);
     game.logForIntro = game.logOpen;
   }
