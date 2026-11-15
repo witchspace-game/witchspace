@@ -171,7 +171,7 @@ describe('editions and gifts', () => {
     d.credits = 200_000;
     expect(placeOrder(d, fdl, { ...defaultSpec(fdl), luxuries: ['instrument-cabin'] }, yard, 0)).toMatchObject({ ok: false });
     const { validSpec } = await import('./spec');
-    expect(validSpec({ ...defaultSpec(fdl), luxuries: ['black-light-lights'] })).toBeNull();
+    expect(validSpec({ ...defaultSpec(fdl), luxuries: ['black-light-lights'] })?.luxuries).toEqual([]);
   });
 
   it('gives a voucher holder the plain hull for nothing, not to be cancelled or sold on', () => {
@@ -242,7 +242,7 @@ describe('a spec from the site', () => {
   it('takes a good spec and cleans its name', async () => {
     const { validSpec } = await import('./spec');
     const s = validSpec({ ...defaultSpec(fdl), name: '  Night <b>Heron</b> ', upgrades: ['ecm', 'ecm'], luxuries: ['suite'], glow: 'deep', trim: ORDERABLE[1].colour });
-    expect(s).toMatchObject({ ship: 'fer-de-lance', name: 'Night bHeronb', upgrades: ['ecm'], luxuries: ['suite'], glow: 'deep' });
+    expect(s).toMatchObject({ ship: 'fer-de-lance', name: 'Night bHeronb', upgrades: ['ecm'], luxuries: [], glow: 'deep' }); // the yards stopped selling luxuries (Mark, 14 Nov): an old link still works, without them
   });
   it('refuses what the yards do not sell or make', async () => {
     const { validSpec } = await import('./spec');
@@ -255,7 +255,7 @@ describe('a spec from the site', () => {
     expect(validSpec({ ...good, laser: 'antimatter' })).toBeNull();
     expect(validSpec({ ...good, glow: 'nuclear' })).toBeNull();
     expect(validSpec({ ...good, upgrades: ['wisp'] })).toBeNull();
-    expect(validSpec({ ...good, luxuries: ['moon'] })).toBeNull();
+    expect(validSpec({ ...good, luxuries: ['moon'] })?.luxuries).toEqual([]);
   });
 });
 

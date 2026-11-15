@@ -10,6 +10,19 @@ notice. Make a new heading for today if there isn't one, written like
 starting with `- `. Say what's different, not how it was done. Credit whoever
 reported it.
 
+## 15 November 2026
+
+- Taking a contract no longer replaces a course you've set yourself: it says "course kept", and Set course on the contract takes you there when you want it. (found in a playtest)
+- The Launch button shows the course you've just set from the market, and setting one ends any longer route.
+- After a jump, the radio shows only what's been said since you arrived; the last system's lines stay in the full log. A contract's note no longer follows you to the next station.
+- After losing your ship, the recovered recording is shown once, not twice. The flight log no longer opens by itself each time you load the game.
+- A market's event tag ("Famine") shows only on the goods it affects.
+- The 1984 look: the market fits a phone screen, and on a computer the buttons no longer sit over the bottom of the list.
+
+## 14 November 2026
+
+- The shipyards no longer sell luxuries (the suite, the ship's voice and the rest) on a new hull: they cost real credits and did nothing in the game. A ship that already has one keeps it on her papers and in her manual. (Mark)
+
 ## 13 November 2026
 
 - Register your ship: free, from your Commander card or the account panel (A). Your ship goes on the record with her number, today's date and the port; registering doesn't change your commander, and everything you have comes with you. Solo play stays exactly as it is, registered or not; shared space now needs a registered ship. The game invites you once, at your first purchase or at Mostly Harmless. (Mark)

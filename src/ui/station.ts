@@ -29,7 +29,7 @@ import { $, cmdr, currentSystem, game } from '../core';
 import { player } from '../scene';
 import { openManual } from './manual';
 import { hasRecord, openRapSheet } from './rapSheet';
-import { plotCourse, renderContracts, renderMessages } from './contracts';
+import { plotCourse, renderContracts, renderMessages, showCourse } from './contracts';
 import { openBooth, showroomModels } from './showroom';
 import { hasShipyard, renderShipyard, showOwnShip, waitingSpecKit } from './shipyard';
 import { renderSaloon } from './saloon';
@@ -324,8 +324,7 @@ export function renderDocked() {
     saveCommander(c);
     renderDocked();
   });
-  // Where you're going rides on the Launch button (Mark: "Launch → Anarlaqu").
-  document.querySelectorAll('.launch-label').forEach((l) => (l.textContent = c.target === null ? 'Launch' : `Launch → ${systemAt(here.galaxy, c.target).name}`));
+  showCourse(c);
 
   // The tiles: fuel, missiles, cargo and the running lights, two by two.
   const tile = (label: string, value: string, extra = '') => `<span class="t-label">${label}</span><span class="t-row"><b class="t-val">${value}</b>${extra}</span>`;

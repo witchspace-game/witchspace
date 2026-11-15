@@ -429,9 +429,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       : '';
     const event = activeEvent(ctx.system, ctx.now);
     const touched = event && ((EVENT_KINDS[event.type].effects[selected] ?? 0) !== 0 || (balance < -0.2 && EVENT_KINDS[event.type].effects.imports));
-    const eventPill = event
-      ? `<div class="ex-event${touched ? ' hit' : ''}" title="${EVENT_KINDS[event.type].headline(ctx.system.name)}">${EVENT_KINDS[event.type].name}${touched ? ` · ${c.name} affected` : ''}</div>`
-      : '';
+    // Only on the goods it touches: "Famine" on Luxuries read as if every good was hit (Marketing's playtest, 15 November 2026).
+    const eventPill = event && touched ? `<div class="ex-event hit" title="${EVENT_KINDS[event.type].headline(ctx.system.name)}">${EVENT_KINDS[event.type].name} · ${c.name} affected</div>` : '';
     $('.ex-head').innerHTML = `
       ${eventPill}
       <div class="ex-title"><b>${c.name}</b><span>/CR</span><small>per ${u}${c.legality === 'illegal' ? ' · <em>Illegal</em>' : ''}</small></div>

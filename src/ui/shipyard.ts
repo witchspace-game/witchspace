@@ -12,7 +12,7 @@ import { showHandover } from './handover';
 import { accountSpec, editionCounts, forgetAccountSpec, heldEditions, papersLinkFor, signedOver } from '../net/shipyard';
 import { clearLocalSpec, localSpec, newerSpec, validSpec, type WaitingSpec } from '../game/spec';
 import { enablePush, needsHomeScreen } from '../net/notify';
-import { ORDERABLE_LUXURIES, standardKit, cancelOrder, collection, collectOrder, giftTradeIn, tradeIn, deliverShip, deliveryQuote, swapShip, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, specFinish, specKitLines, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
+import { standardKit, cancelOrder, collection, collectOrder, giftTradeIn, tradeIn, deliverShip, deliveryQuote, swapShip, defaultSpec, laserLocked, ORDERABLE, paintable, repaint, repaintLabour, repaintQuote, specFinish, specKitLines, standardLaser, editionGiftSpec, editionQuote, editionSpec, depositFor, fitScale, GLOWS, LUXURIES, PALETTE, placeOrder, priceLines, production, PRODUCTION_HOURS, quote, TRIM_PRICE, UPGRADES, type GlowId, type Spec } from '../game/shipyard';
 import { PLAYER_LASERS, type LaserId } from '../game/weapons';
 import { inYards } from '../game/manual';
 import { jumpsBetween } from '../game/contracts';
@@ -434,8 +434,6 @@ export function renderShipyard() {
       <div class="yard-lasers yard-rear"><button type="button" data-rear="" aria-pressed="${!spec.rear}">None<small>—</small></button>${(Object.keys(PLAYER_LASERS) as LaserId[]).map((id) => `<button type="button" data-rear="${id}" aria-pressed="${spec!.rear === id}" ${laserLocked(c, id) ? `disabled title="${escapeHtml(laserLocked(c, id)!)}"` : ''}>${escapeHtml(PLAYER_LASERS[id].name)}<small>${Math.round(PLAYER_LASERS[id].price * fitScale(def)).toLocaleString()} Cr</small></button>`).join('')}</div>
       <p class="yard-label">Upgrades <span>fitted to a hull this size: ×${fitScale(def).toFixed(1)}</span></p>
       <div class="yard-kit">${kit}</div>
-      <p class="yard-label">Luxuries <span>comfort and showing off, nothing that flies or fights better</span></p>
-      <div class="yard-kit yard-lux">${ORDERABLE_LUXURIES.map((l) => `<label><input type="checkbox" data-lux="${l.id}" ${spec!.luxuries.includes(l.id) ? 'checked' : ''} /> <span>${escapeHtml(l.name)}<em>${escapeHtml(l.blurb)}</em></span><small>${l.price.toLocaleString()} Cr</small></label>`).join('')}</div>
       <p class="yard-total"><span>Hull ${lines.hull.toLocaleString()} · fit-out ${lines.fit.toLocaleString()} · finish ${lines.finish.toLocaleString()}</span><b>${total.toLocaleString()} Cr</b></p>
       ${action}`}`;
     const keep = () => renderShipyard();
@@ -464,12 +462,6 @@ export function renderShipyard() {
       spec!.trim = (e.target as HTMLInputElement).checked ? (ORDERABLE.find((p) => p.colour !== spec!.colour)?.colour ?? '#f2f6ff') : null;
       keep();
     });
-    for (const box of el.querySelectorAll<HTMLInputElement>('[data-lux]'))
-      box.onchange = () => {
-        const id = box.dataset.lux!;
-        spec!.luxuries = box.checked ? [...spec!.luxuries, id] : spec!.luxuries.filter((l) => l !== id);
-        keep();
-      };
     for (const b of el.querySelectorAll<HTMLButtonElement>('[data-rear]'))
       b.onclick = () => {
         spec!.rear = (b.dataset.rear || undefined) as LaserId | undefined;

@@ -715,6 +715,10 @@ body.retro .title h1 { text-shadow: none; font-size: 24px; }
 @media (min-width: 1000px) { body.retro .title h1 { font-size: 32px; } }
 body.retro .panel { border-width: 2px; backdrop-filter: none; font-size: 12px; width: min(460px, calc(100vw - 32px)); }
 body.retro .panel.docked.wide { width: min(760px, calc(100vw - 32px)); }
+/* The wide panel and the pixel-font buttons don't fit side by side below about 1500px: the panel sits above them. */
+@media (min-width: 900px) and (max-width: 1500px) {
+  body.retro .panel.docked.wide { bottom: calc(94px + var(--controls-h, 40px)); max-height: calc(100vh - 120px - var(--controls-h, 40px)); }
+}
 body.retro .panel h2 { font-size: 24px; }
 body.retro .panel h3 { font-size: 12px; }
 body.retro #equip li small { font-size: 12px; line-height: 1.5; }
@@ -756,7 +760,11 @@ body.retro[data-state='dead'] #banner { font-size: 32px; border: 0; background: 
 body.retro.touch[data-state='dead'] #banner { font-size: 24px; }
 @media (max-width: 700px) {
   body.retro .tribute, body.retro #galaxy-map .map-keys, body.retro #market-table td:nth-child(4)::before { font-size: 8px; }
-  body.retro .controls button, body.retro #market-table td, body.retro .prompt, body.retro #galaxy-map .map-info { font-size: 12px; }
+  body.retro .controls button, body.retro .prompt, body.retro #galaxy-map .map-info { font-size: 12px; }
+  /* The pixel font is wide: at 12px a market row ran off the right of a phone (Marketing's playtest, 15 November 2026). */
+  body.retro #market-table td, body.retro .market-summary { font-size: 10px; }
+  body.retro #market-table tr { grid-template-columns: minmax(0, 1fr) auto auto 46px; }
+  body.retro #market-table td:first-child { overflow: hidden; text-overflow: ellipsis; }
   body.retro #galaxy-map .map-info h3 { font-size: 16px; }
 }
 
@@ -1833,7 +1841,6 @@ body.retro .contracts li small, body.retro .risk, body.retro .posted { font-size
 .yard-label span { margin-left: 6px; letter-spacing: normal; text-transform: none; color: var(--fg); opacity: 0.7; }
 .yard-check { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin: 12px 0 6px; font-size: 14px; }
 .yard-check small { color: var(--dim); }
-.yard-lux em { display: block; font-style: normal; font-size: 12px; color: var(--dim); }
 #spec-name { width: 100%; box-sizing: border-box; }
 .yard-lasers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .yard-rear { grid-template-columns: repeat(4, 1fr); }
