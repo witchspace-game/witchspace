@@ -103,10 +103,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     <section class="ex-routes" hidden></section>
     <div class="ex">
       <aside class="ex-pairs" aria-label="Markets">
-        <label class="ex-market"><span>Market</span><select aria-label="Market on screen"></select></label>
-        <p class="ex-remote-note" hidden></p>
-        <button class="ex-routes-toggle" title="Every market within a tank of fuel, as you know it, and the best runs from here">Trade computer ›</button>
-        <button class="ex-backroom-toggle" hidden>Back room ›</button>
+        <div class="ex-nav">
+          <label class="ex-market"><span>Market</span><select aria-label="Market on screen"></select></label>
+          <p class="ex-remote-note" hidden></p>
+          <button class="ex-routes-toggle" title="Every market within a tank of fuel, as you know it, and the best runs from here">Trade computer ›</button>
+          <button class="ex-backroom-toggle" hidden>Back room ›</button>
+        </div>
         <div class="ex-pairs-list"></div>
         <button class="ex-more-toggle" aria-expanded="false">Order book and trades <span>Show ▾</span></button>
       </aside>
@@ -367,13 +369,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       rows
         .filter((r) => !used.has(r.id) && !r.off && r.q.stock > 0 && ((r.best?.price ?? 0) > r.q.price * 1.12 || r.balance > 0.25 || r.order?.side === 'sell'))
         .sort((a, b) => (b.best?.price ?? 0) / b.q.price - (a.best?.price ?? 0) / a.q.price)
-        .slice(0, 5),
+        .slice(0, 3), // the three best of each, then the rest behind one line (Mark's mock-up, 15 November 2026)
     );
     const wanted = take(
       rows
         .filter((r) => !used.has(r.id) && !r.off && (r.balance < -0.25 || r.order?.side === 'buy'))
         .sort((a, b) => b.q.price / priceAt(ctx.system, state, b.id, now - HOUR) - a.q.price / priceAt(ctx.system, state, a.id, now - HOUR))
-        .slice(0, 5),
+        .slice(0, 3),
     );
     const rest = rows.filter((r) => !used.has(r.id));
     const u = (r: Row) => unitLabel(r.q.commodity);
@@ -446,6 +448,16 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div><dt>${remote() ? 'In storage there' : 'In your hold'}</dt><dd>${(remote() ? storedThere(ctx, selected) : held).toLocaleString()} ${u}${stolenQty(ctx.commander, selected) ? ` <em class="ex-hot">${stolenQty(ctx.commander, selected).toLocaleString()} stolen</em>` : ''}</dd></div>
       </dl>
       <p class="ex-why">${why(ctx, c, balance, order, touched ? event : null)}</p>`;
+    // A computer shows one price and one tag, and the rest as a line under the chart.
+    const fact = (k: string, v: string) => `${k} <b>${v}</b>`;
+    factsSlot.innerHTML = [
+      fact('Fair value', fmt(fair)),
+      order ? fact(`Station ${order.side === 'buy' ? 'wants' : 'selling'}`, `${order.qty.toLocaleString()} ${u}`) : '',
+      fact('Stock', `${q.stock.toLocaleString()} ${u}`),
+      fact(remote() ? 'In storage there' : 'In your hold', `${(remote() ? storedThere(ctx, selected) : held).toLocaleString()} ${u}`),
+    ]
+      .filter(Boolean)
+      .join(' · ');
     bestSlot.innerHTML = remote() ? '' : bestPlace(ctx, c);
   }
 
@@ -473,6 +485,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   function renderBtcHead(ctx: TradeContext) {
     bestSlot.innerHTML = '';
     $('.ex-head').innerHTML = btcHeadHtml(ctx.commander);
+    factsSlot.innerHTML = '';
   }
 
   /** Why the price is what it is, in a sentence. */
@@ -1098,6 +1111,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   inline.className = 'ex-inline';
   const bestSlot = document.createElement('div');
   bestSlot.className = 'ex-best-slot';
+  const factsSlot = document.createElement('p');
+  factsSlot.className = 'ex-facts';
   const backToList = document.createElement('button');
   backToList.className = 'ex-phone-back';
   backToList.textContent = '‹ All goods';
@@ -1110,7 +1125,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const wide = !phone.matches;
     root.classList.toggle('ex-wide', wide);
     root.closest('.panel')?.classList.toggle('exchange-wide', wide);
-    if (!inline.firstChild) inline.append(backToList, head, $('.ex-chart'), bestSlot, form, ...more);
+    if (!inline.firstChild) inline.append(backToList, head, $('.ex-chart'), factsSlot, bestSlot, form, ...more);
     if (inline.parentNode !== ex) ex.append(inline);
     if ($('.ex-routes').parentNode !== root) root.insertBefore($('.ex-routes'), $('.ex-back'));
     ex.classList.toggle('good-open', phoneOpen || wide);

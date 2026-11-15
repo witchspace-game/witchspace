@@ -1235,7 +1235,6 @@ body.manual-open .dock-rail { visibility: hidden; }
 #exchange.ex-wide .ex-best-slot { order: 1; }
 #exchange.ex-wide .ex-more-toggle, #exchange.ex-wide .ex-inline .ex-book, #exchange.ex-wide .ex-inline .ex-trades { order: 2; }
 #exchange.ex-wide .ex-inline > * { flex-shrink: 0; } /* the column scrolls; nothing in it squashes */
-#exchange.ex-wide .ex-inline .ex-head dl { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
 .panel.docked.exchange.exchange-wide > .tabs { grid-template-columns: repeat(8, 1fr); margin-bottom: 0; }
 #exchange.ex-wide .ex-routes, #exchange.ex-wide .ex-back { height: 100%; max-width: 760px; }
 .ex-book-title { margin: 0 0 6px; }
@@ -2649,3 +2648,36 @@ body.retro .tile button, body.retro .ship-actions button, body.retro #data-row b
 }
 body.retro .dock-where { font-size: 8px; line-height: 1.6; }
 body.retro .dock-which, body.retro .look-mini, body.retro .wallet-button { font-size: 10px; letter-spacing: 0.02em; }
+
+/* The market on a computer, closer to the mock-up (Mark, 15 November 2026): the other markets, the trade
+   computer and the back room are quiet links over the list; the good has its name, one price and one tag,
+   with the rest as a line under the chart; Buy is the one clipped action, Sell is plain. */
+.ex-nav { display: contents; }
+.ex-facts { display: none; }
+#exchange.ex-wide .ex-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; padding: 0 4px 10px; border-bottom: 1px solid var(--edge); }
+#exchange.ex-wide .ex-market { flex: 1 1 150px; padding: 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; }
+#exchange.ex-wide .ex-market select { padding: 4px 2px; border-color: transparent; background: none; color: var(--fg); font-size: 15px; letter-spacing: 0.02em; cursor: pointer; }
+#exchange.ex-wide .ex-market select:hover, #exchange.ex-wide .ex-market select:focus-visible { border-color: var(--edge); }
+#exchange.ex-wide .ex-routes-toggle, #exchange.ex-wide .ex-backroom-toggle { margin: 0; padding: 4px 0; border: 0; background: none; box-shadow: none; font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }
+#exchange.ex-wide .ex-routes-toggle { color: var(--accent); }
+#exchange.ex-wide .ex-remote-note { order: 9; flex-basis: 100%; margin: 2px 0 0; }
+#exchange.ex-wide .ex-inline .ex-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 6px 16px; }
+#exchange.ex-wide .ex-head dl, #exchange.ex-wide .ex-title span { display: none; }
+#exchange.ex-wide .ex-title { grid-column: 1; grid-row: 1; }
+#exchange.ex-wide .ex-title b { font-size: 30px; line-height: 1.1; }
+#exchange.ex-wide .ex-title small { font-size: 12.5px; }
+#exchange.ex-wide .ex-last { grid-column: 2; grid-row: 1; font-size: 32px; line-height: 1.1; text-align: right; }
+#exchange.ex-wide .ex-last .ex-local { display: block; }
+#exchange.ex-wide .ex-event { grid-column: 1 / -1; grid-row: 2; justify-self: start; }
+#exchange.ex-wide .ex-why { font-size: 14px; }
+#exchange.ex-wide .ex-facts { display: block; margin: -4px 0 0; color: var(--dim); font-size: 13px; }
+#exchange.ex-wide .ex-facts b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+#exchange.ex-wide .ex-actions { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px 18px; }
+#exchange.ex-wide .ex-act-buttons { grid-template-columns: repeat(2, minmax(150px, auto)); gap: 10px; }
+#exchange.ex-wide .ex-act { padding: 13px 22px; }
+#exchange.ex-wide .ex-act.buy { --side: var(--accent); }
+#exchange.ex-wide .ex-act.sell { border-color: var(--edge); background: rgba(0, 12, 8, 0.6); color: var(--fg); box-shadow: none; }
+#exchange.ex-wide .ex-act.sell:hover { border-color: var(--accent); color: var(--accent); }
+#exchange.ex-wide .ex-act-avail { font-size: 13px; }
+#exchange.ex-wide .ex-act-orders, #exchange.ex-wide .ex-actions .ex-msg { grid-column: 1 / -1; }
+#exchange.ex-wide .ex-act-orders { justify-self: start; }
