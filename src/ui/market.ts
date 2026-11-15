@@ -148,12 +148,7 @@ export function renderMarket(message = '') {
   $('.panel.docked').classList.toggle('exchange', ex);
   $('.panel.docked').classList.toggle('wide', !ex);
   document.body.classList.toggle('exchange-open', ex);
-  if (ex) {
-    const ctx = tradeContext();
-    const fmt = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-    main.updateDockHead();
-    $('#dock-funds').innerHTML = `Hold <b>${fmt(ctx.capacity - freeTonnes(ctx))} / ${ctx.capacity} t</b>`;
-  }
+  if (ex) main.updateDockHead();
   $('#exchange').hidden = !ex;
   for (const id of ['#market-summary', '#market-table', '#market-message']) $(id).hidden = ex;
   if (ex) {

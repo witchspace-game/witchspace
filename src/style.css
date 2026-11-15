@@ -1183,43 +1183,63 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
 }
 @media (min-width: 701px), (orientation: landscape) { .dock-places { display: none !important; } }
 
+/* --- The places down the left, on a computer (Mark, 15 November 2026) ---
+   One menu on every docked screen: where you are, what you have, the places, and the look. It replaces
+   the title, the two rows of tabs and the look switch; the screen you chose sits on the right, and
+   your ship between them. A phone keeps its slim header; the 1984 look keeps its tabs. */
+.dock-rail { display: none; }
+@media (min-width: 900px) and (min-height: 501px) {
+  body:not(.retro) .dock-rail { position: fixed; left: 0; top: 0; bottom: 0; z-index: 3; box-sizing: border-box; width: 236px; display: flex; flex-direction: column; padding: 26px 0 22px; border-right: 1px solid var(--edge); background: rgba(0, 10, 7, 0.86); backdrop-filter: blur(4px); }
+  .rail-where { padding: 0 24px 18px; }
+  .rail-label { margin: 0 0 4px; color: var(--accent); font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; }
+  .rail-system { margin: 0; color: var(--fg); font-size: 28px; line-height: 1.1; letter-spacing: 0.01em; }
+  .rail-station { margin: 4px 0 0; color: var(--dim); font-size: 14px; }
+  .rail-funds { display: flex; justify-content: space-between; gap: 8px; padding: 13px 24px; border: 0; border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); border-radius: 0; background: none; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; text-transform: none; text-align: left; white-space: nowrap; }
+  .rail-funds b { color: var(--fg); font-variant-numeric: tabular-nums; }
+  .rail-places { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 10px 0; }
+  .rail-places button { display: flex; align-items: center; gap: 8px; padding: 9px 24px 9px 21px; border: 0; border-left: 3px solid transparent; border-radius: 0; background: none; color: var(--dim); font-size: 18px; letter-spacing: 0.06em; text-transform: none; text-align: left; }
+  .rail-places button:hover, .rail-funds:hover, .rail-look:hover { color: var(--fg); background: rgba(61, 255, 176, 0.05); box-shadow: none; }
+  .rail-places button[aria-pressed='true'] { border-left-color: var(--accent); color: var(--accent); }
+  .rail-places .tab-badge, .rail-places kbd { margin-left: auto; }
+  .rail-places kbd { font: inherit; font-size: 10px; color: var(--dim); opacity: 0.7; }
+  .rail-look { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 8px 24px; border: 0; border-radius: 0; background: none; color: var(--dim); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; }
+  .rail-look b { padding: 3px 10px; border: 1px solid var(--accent); color: var(--accent); font-size: 11px; letter-spacing: 0.18em; }
+  body:not(.retro)[data-state='docked'] #look, body:not(.retro) .panel.docked > .dock-head, body:not(.retro) .panel.docked > #dock-location, body:not(.retro) .panel.docked > .tabs { display: none; }
+  body:not(.retro) .panel.docked { left: auto; right: 24px; top: 24px; bottom: auto; width: 440px; max-height: calc(100vh - 118px - var(--controls-h, 40px)); }
+  body:not(.retro) .panel.docked.wide { width: min(640px, calc(100vw - 284px)); }
+  body:not(.retro) .panel.docked.exchange.exchange-wide { left: 260px; top: 24px; width: auto; }
+  body:not(.retro) .panel.docked.exchange.exchange-wide #tab-market { margin-top: 0; }
+  body:not(.retro)[data-state='docked'] .showroom-hint, body:not(.retro)[data-state='docked'] .tribute { left: 236px; }
+  /* Notices rise from the foot of the berth, clear of the panel on the right. */
+  body:not(.retro)[data-state='docked'] #banner { top: auto; bottom: 132px; left: calc(50% + 118px); max-width: min(640px, calc(100vw - 284px)); }
+}
+body.photo-booth .dock-rail { display: none !important; }
+body.manual-open .dock-rail { visibility: hidden; }
+
 /* --- The market as an exchange (Modern rules, neo-vector mode) ----------- */
 
-/* The exchange takes the whole screen; its own top bar replaces the
-   docked screen's title, the corner switch and the buttons below. */
-.panel.docked.exchange {
-  left: 10px;
-  right: 10px;
-  top: 10px;
-  bottom: 30px;
-  width: auto;
-  max-height: none;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: auto auto auto 1fr;
-  grid-template-rows: auto minmax(0, 1fr);
-  column-gap: 18px;
-  row-gap: 10px;
-  align-items: center;
-  padding: 10px 12px 12px;
-  background: rgba(8, 11, 14, 0.96);
-  border-color: #1e242c;
-}
-.panel.docked.exchange h2 { font-size: 20px; }
-.panel.docked.exchange .meta { margin: 0; }
-.panel.docked.exchange .tabs { margin: 0; display: flex; } /* the full-screen exchange is wide: one row */
-.dock-bar { display: none; }
-.panel.docked.exchange .dock-bar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-.dock-bar button { font-size: 13px; padding: 5px 12px; }
-#dock-funds { margin-right: 10px; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 13px; letter-spacing: 0; color: #848e9c; font-variant-numeric: tabular-nums; }
-#dock-funds b { color: #eaecef; font-weight: 600; }
-.panel.docked.exchange #tab-market { grid-column: 1 / -1; align-self: stretch; min-height: 0; display: flex; flex-direction: column; }
-.panel.docked.exchange #exchange { flex: 1; min-height: 0; }
-body[data-state='docked'].exchange-open nav.controls[data-screen='docked'],
-body[data-state='docked'].exchange-open #look,
+/* The market reads like a shop, not a trading desk (Mark, 15 November 2026): the list of goods and the
+   good you picked, in the game's own look. On a computer the two sit side by side in one wide panel,
+   between the look switch above and the buttons below. */
+.panel.docked.exchange { background: rgba(0, 10, 7, 0.92); border-color: var(--edge); }
+.panel.docked.exchange.exchange-wide { left: 24px; right: 24px; top: 64px; bottom: calc(94px + var(--controls-h, 40px)); width: auto; max-height: none; display: flex; flex-direction: column; overflow: hidden; }
+.panel.docked.exchange.exchange-wide #tab-market { flex: 1; min-height: 0; margin-top: 10px; }
+.panel.docked.exchange.exchange-wide #exchange { height: 100%; }
+#exchange.ex-wide .ex { display: grid; grid-template-columns: minmax(280px, 400px) minmax(0, 1fr); gap: 32px; height: 100%; }
+#exchange.ex-wide .ex-pairs, #exchange.ex-wide .ex-inline, #exchange.ex-wide .ex-routes, #exchange.ex-wide .ex-back { min-height: 0; overflow-y: auto; padding-right: 6px; }
+#exchange.ex-wide .ex.good-open .ex-pairs { display: flex; }
+#exchange.ex-wide .ex-phone-back { display: none; }
+#exchange.ex-wide .ex-inline .ex-canvas { height: 260px; }
+#exchange.ex-wide .ex-inline { max-width: 760px; }
+/* Buy and Sell sit straight under the chart; where it sells best, then the book, come after. */
+#exchange.ex-wide .ex-best-slot { order: 1; }
+#exchange.ex-wide .ex-more-toggle, #exchange.ex-wide .ex-inline .ex-book, #exchange.ex-wide .ex-inline .ex-trades { order: 2; }
+#exchange.ex-wide .ex-inline > * { flex-shrink: 0; } /* the column scrolls; nothing in it squashes */
+#exchange.ex-wide .ex-inline .ex-head dl { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+.panel.docked.exchange.exchange-wide > .tabs { grid-template-columns: repeat(8, 1fr); margin-bottom: 0; }
+#exchange.ex-wide .ex-routes, #exchange.ex-wide .ex-back { height: 100%; max-width: 760px; }
+.ex-book-title { margin: 0 0 6px; }
 body[data-state='docked'].exchange-open .showroom-hint { display: none !important; }
-#exchange .ex { height: 100%; grid-template-rows: auto minmax(0, 1fr) 190px; }
-#exchange .ex-back { height: 100%; overflow-y: auto; }
 .ex {
   --ex-card: #11161c;
   --ex-line: #1e242c;
@@ -1228,12 +1248,8 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   --ex-up: #2ebd85;
   --ex-down: #f6465d;
   --ex-gold: #f7a600;
-  display: grid;
-  grid-template-columns: 206px minmax(0, 1fr) 218px 236px;
-  grid-template-areas:
-    'pairs head head head'
-    'pairs chart book form'
-    'pairs trades trades trades';
+  display: flex;
+  flex-direction: column;
   gap: 8px;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 12.5px;
@@ -1241,8 +1257,6 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   color: var(--ex-text);
   font-variant-numeric: tabular-nums;
 }
-/* With the trade computer beside the chart, its column is wider (later rules narrow it on smaller screens). */
-.ex.runs { grid-template-columns: 206px minmax(0, 1fr) 300px 236px; }
 .ex > * { background: var(--ex-card); border: 1px solid var(--ex-line); border-radius: 2px; min-width: 0; }
 .ex h4 { margin: 0 0 6px; font-size: 12px; font-weight: 600; color: var(--ex-text); letter-spacing: 0; text-transform: none; }
 .ex .num { text-align: right; }
@@ -1252,7 +1266,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-empty { margin: 8px 0; color: var(--ex-dim); }
 
 /* Pairs */
-.ex-pairs { grid-area: pairs; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.ex-pairs { display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
 .ex-pair { display: grid; grid-template-columns: minmax(0, 1fr) 36px 48px; gap: 2px 6px; align-items: center; }
 /* The trader's lists: your hold, cheap here, sells well here, the rest. */
 .ex-list-head { margin: 10px 10px 2px; color: var(--ex-dim); font-size: 10.5px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
@@ -1302,7 +1316,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-held { display: inline-block; width: 6px; height: 6px; margin-left: 5px; border-radius: 50%; background: var(--ex-gold); vertical-align: middle; }
 
 /* Header */
-.ex-head { grid-area: head; display: flex; align-items: center; gap: 22px; padding: 10px 14px; flex-wrap: wrap; }
+.ex-head { display: flex; align-items: center; gap: 22px; padding: 10px 14px; flex-wrap: wrap; }
 .ex-event { padding: 4px 10px; border-radius: 2px; background: rgba(247, 166, 0, 0.12); color: var(--ex-gold); font-weight: 600; font-size: 12px; }
 .ex-event.hit { background: rgba(247, 166, 0, 0.22); box-shadow: inset 0 0 0 1px rgba(247, 166, 0, 0.5); }
 .ex-title { display: grid; grid-template-columns: auto 1fr; align-items: baseline; column-gap: 2px; }
@@ -1319,7 +1333,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-head dd { text-align: left; }
 
 /* Chart */
-.ex-chart { grid-area: chart; display: flex; flex-direction: column; padding: 6px 8px 8px; min-height: 0; }
+.ex-chart { display: flex; flex-direction: column; padding: 6px 8px 8px; min-height: 0; }
 .ex-chart-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; flex-wrap: wrap; }
 .ex-intervals { display: flex; gap: 2px; }
 .ex-intervals button { padding: 3px 8px; border: 0; border-radius: 2px; background: none; color: var(--ex-dim); font-size: 12px; }
@@ -1332,7 +1346,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-canvas { position: relative; flex: 1; min-height: 200px; }
 
 /* Order book */
-.ex-book { grid-area: book; padding: 8px 0; min-height: 0; overflow: hidden; }
+.ex-book { padding: 8px 0; min-height: 0; overflow: hidden; }
 .ex-book h4 { padding: 0 10px; }
 .ex-book-head, .ex-level { display: grid; grid-template-columns: 1fr 1fr 1fr; padding: 0 10px; }
 .ex-book-head { color: var(--ex-dim); font-size: 11px; margin-bottom: 4px; }
@@ -1350,7 +1364,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-mid span { color: var(--ex-dim); font-size: 11px; }
 
 /* Trade form */
-.ex-form { grid-area: form; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
+.ex-form { padding: 10px; display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow-y: auto; }
 .ex-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.04); }
 .ex-sides button { padding: 6px; border: 0; border-radius: 2px; background: none; color: var(--ex-dim); font-weight: 600; font-size: 13px; }
 .ex-sides button[data-side='buy'].active { background: var(--ex-up); color: #fff; }
@@ -1391,7 +1405,7 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-msg { margin: 0; min-height: 1.3em; color: var(--ex-gold); font-size: 11.5px; }
 
 /* Your trades */
-.ex-trades { grid-area: trades; display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); background: none; border: 0; gap: 8px; }
+.ex-trades { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); background: none; border: 0; gap: 8px; }
 .ex-feed, .ex-mine { padding: 10px; min-height: 0; overflow-y: auto; background: var(--ex-card); border: 1px solid var(--ex-line); border-radius: 2px; }
 .ex-feed td { border-top: 0; padding: 1px 4px; }
 .ex-feed tr.you td { background: rgba(247, 166, 0, 0.08); }
@@ -1403,19 +1417,6 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-trades th.num { text-align: right; }
 .ex-trades td { padding: 3px 4px; border-top: 1px solid var(--ex-line); }
 
-/* Medium screens: the trade form moves under the order book. */
-@media (max-width: 1180px) {
-  .ex {
-    grid-template-columns: 196px minmax(0, 1fr) 236px;
-    grid-template-areas:
-      'pairs head head'
-      'pairs chart book'
-      'pairs trades form';
-  }
-  .ex.runs { grid-template-columns: 196px minmax(0, 1fr) 236px; }
-  #exchange .ex { grid-template-rows: auto minmax(0, 1fr) minmax(0, 0.8fr); }
-  .ex-trades { grid-template-columns: minmax(0, 1fr); }
-}
 
 /* The back room: darker, plainer, a little furtive. */
 .ex-backroom-toggle { margin: 8px 10px 2px; padding: 6px 10px; border: 1px dashed rgba(246, 70, 93, 0.5); border-radius: 2px; background: rgba(246, 70, 93, 0.08); color: #ff8a9a; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-align: left; }
@@ -1449,28 +1450,13 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
 .ex-abolition h4 { margin: 0 0 4px; color: #2ebd85; font-size: 14px; letter-spacing: 0; text-transform: none; }
 .ex-abolition p { margin: 0 0 8px; color: #c8d6cf; }
 
-/* Narrow screens: one column, the pairs as a strip along the top. */
-@media (max-width: 900px), (max-height: 500px) {
-  .panel.docked.exchange { display: block; overflow-y: auto; bottom: 10px; }
-  .panel.docked.exchange .dock-bar { flex-wrap: wrap; justify-content: flex-start; margin: 6px 0; }
-  .panel.docked.exchange .tabs { margin: 6px 0; }
-  #exchange .ex { height: auto; grid-template-rows: none; }
-  .ex-feed, .ex-mine { max-height: 220px; }
-  .ex, .ex.runs { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'pairs' 'head' 'chart' 'form' 'book' 'trades'; }
-  #exchange .ex > .ex-routes { max-height: 520px; }
-  .ex-trades { grid-template-columns: minmax(0, 1fr); }
-  /* The lists first, full width: tap a good and its chart is just below. */
-  .ex-pairs-list { overflow: visible; }
-  .ex-pair { padding: 9px 12px; font-size: 14px; }
-  .ex-sub { font-size: 12px; white-space: normal; }
-  .ex-head { gap: 12px; }
-  .ex-canvas { min-height: 220px; }
-  .panel.docked.exchange { top: 8px; }
-}
+.ex-feed, .ex-mine { max-height: 220px; }
+.ex-trades { grid-template-columns: minmax(0, 1fr); }
+.ex-pairs-list { overflow: visible; }
+.ex-sub { white-space: normal; }
 
 /* The Market on a phone held upright: the game's own look, the list first, the good you tap
    opening in place, and the chart, book and trades folded away (docs/design/flight-hud-and-touch.md). */
-.ex-more-toggle { display: none; }
 @media (max-width: 700px) and (orientation: portrait) {
   .panel.docked.exchange { left: 12px; right: 12px; top: 10px; bottom: calc(var(--controls-h, 48px) + 50px); padding: 12px 14px; }
   .panel.docked.exchange > .tabs { display: none !important; }
@@ -1480,68 +1466,45 @@ body[data-state='docked'].exchange-open .showroom-hint { display: none !importan
   .panel.docked.exchange { left: 12px; right: 12px; top: 8px; bottom: calc(var(--controls-h, 40px) + 34px); padding: 10px 14px; }
   .panel.docked.exchange > .tabs { display: flex; flex-wrap: wrap; }
 }
-@media (max-width: 700px) and (orientation: portrait), (max-height: 500px) {
-  .panel.docked.exchange { background: rgba(0, 10, 7, 0.92); border-color: var(--edge); }
-  .panel.docked.exchange > .dock-bar { display: none !important; }
-  body[data-state='docked'].exchange-open nav.controls[data-screen='docked'] { display: flex !important; }
-  .ex {
-    --ex-card: transparent;
-    --ex-line: rgba(61, 255, 176, 0.18);
-    --ex-text: var(--fg);
-    --ex-dim: var(--dim);
-    --ex-up: var(--accent);
-    --ex-down: var(--danger);
-    --ex-gold: var(--amber);
-    font-family: var(--font);
-    font-size: 14px;
-    gap: 10px;
-  }
-  .ex > * { border: none; border-radius: 0; }
-  .ex-pairs { padding: 0; }
-  .ex-market select { background: rgba(0, 12, 8, 0.8); color: var(--fg); border-color: var(--edge); }
-  .ex-list-head { color: var(--accent); letter-spacing: 0.15em; }
-  .ex-pair { padding: 10px 4px; border-left: 0; border-top: 1px solid var(--ex-line); font-size: 15px; }
-  .ex-pair.active { background: rgba(61, 255, 176, 0.07); border-left: 0; box-shadow: inset 2px 0 0 var(--accent); }
-  .ex-sym b { font-weight: 600; }
-  .ex-phone .ex { display: flex; flex-direction: column; }
-  .ex-phone .ex:not(.good-open) .ex-inline, .ex-phone .ex.good-open .ex-pairs { display: none; }
-  .ex-inline { display: flex; flex-direction: column; gap: 12px; }
-  .ex-phone-back { align-self: flex-start; padding: 8px 0; min-height: 40px; border: 0; background: none; color: var(--accent); font-size: 15px; }
-  .ex-inline .ex-head { padding: 0; gap: 8px 14px; }
-  .ex-inline .ex-head dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; width: 100%; }
-  .ex-inline .ex-chart { padding: 0; }
-  .ex-inline .ex-canvas { flex: none; height: 220px; min-height: 0; border: 1px solid var(--ex-line); border-radius: 2px; }
-  .ex-inline .ex-head dl { font-size: 12.5px; }
-  .ex-inline .ex-head dt { font-size: 11.5px; }
-  .ex-inline .ex-best { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label gain' 'where where' 'age age' 'actions actions'; gap: 6px 10px; padding: 12px; background: rgba(61, 255, 176, 0.04); font-size: 14px; }
-  .ex-inline .ex-best-gain { margin-left: 0; font-size: 16px; }
-  .ex-inline .ex-best-age { font-size: 12.5px; }
-  .ex-best-actions button { flex: 1; min-height: 44px; font-size: 15px; }
-  .ex-inline .ex-form { padding: 0; overflow: visible; }
-  .ex-sides button[data-side='buy'].active { background: var(--accent); color: #00140c; }
-  .ex-ticks button { min-height: 40px; font-size: 14px; }
-  .ex-book, .ex-trades { display: none; }
-  .ex.more-open .ex-book, .ex.more-open .ex-trades { display: block; }
-  .ex-book [data-pane='runs'] { display: none; }
-  .ex-book .ex-panes { border: 0; padding: 0; }
-  .ex-book .ex-panes button { color: var(--fg); pointer-events: none; border: 0; }
-  /* The trade computer on its own screen: bigger type, buttons a thumb can find. */
-  .ex-routes { font-family: var(--font); font-size: 14px; background: rgba(0, 10, 7, 0.6); border-color: var(--edge); }
-  .ex-routes .ex-panes { display: none; }
-  .ex-routes-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
-  .ex-routes-head .ex-routes-close { padding: 8px 0; border: 0; background: none; color: var(--accent); font-size: 15px; }
-  .ex-routes-intro, .ex-routes .ex-note { font-size: 13.5px; }
-  .ex-routes .ex-filter button { min-height: 36px; padding: 0 14px; font-size: 14px; border-radius: 2px; }
-  .ex-run-card { padding: 12px; gap: 6px; border-color: var(--edge); }
-  .ex-run-top > b { font-size: 17px; color: var(--accent); }
-  .ex-routes .ex-run-good { font-size: 16px; }
-  .ex-run-line { font-size: 14px; color: var(--fg); }
-  .ex-run-meta { font-size: 13px; }
-  .ex-routes .ex-run-actions button { min-height: 44px; font-size: 15px; }
-  .ex-routes .ex-run-actions .ex-run-buy { background: var(--accent); color: #00140c; }
-  .ex-more-toggle { display: flex; justify-content: space-between; width: 100%; margin-top: 10px; padding: 10px 4px; border: 0; border-top: 1px solid var(--ex-line); background: none; color: var(--dim); font-size: 14px; text-align: left; }
-  .ex-more-toggle span { color: var(--accent); }
+.ex {
+  --ex-card: transparent;
+  --ex-line: rgba(61, 255, 176, 0.18);
+  --ex-text: var(--fg);
+  --ex-dim: var(--dim);
+  --ex-up: var(--accent);
+  --ex-down: var(--danger);
+  --ex-gold: var(--amber);
+  font-family: var(--font);
+  font-size: 14px;
+  gap: 10px;
 }
+.ex > * { border: none; border-radius: 0; }
+.ex-pairs { padding: 0; }
+.ex-market select { background: rgba(0, 12, 8, 0.8); color: var(--fg); border-color: var(--edge); }
+.ex-list-head { color: var(--accent); letter-spacing: 0.15em; }
+.ex-pair { padding: 10px 4px; border-left: 0; border-top: 1px solid var(--ex-line); font-size: 15px; }
+.ex-pair.active { background: rgba(61, 255, 176, 0.07); border-left: 0; box-shadow: inset 2px 0 0 var(--accent); }
+.ex-sym b { font-weight: 600; }
+#exchange .ex:not(.good-open) .ex-inline, #exchange .ex.good-open .ex-pairs { display: none; }
+.ex-inline { display: flex; flex-direction: column; gap: 12px; }
+.ex-phone-back { align-self: flex-start; padding: 8px 0; min-height: 40px; border: 0; background: none; color: var(--accent); font-size: 15px; }
+.ex-inline .ex-head { padding: 0; gap: 8px 14px; }
+.ex-inline .ex-head dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; width: 100%; }
+.ex-inline .ex-chart { padding: 0; }
+.ex-inline .ex-canvas { flex: none; height: 220px; min-height: 0; border: 1px solid var(--ex-line); border-radius: 2px; }
+.ex-inline .ex-head dl { font-size: 12.5px; }
+.ex-inline .ex-head dt { font-size: 11.5px; }
+.ex-inline .ex-best { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'label gain' 'where where' 'age age' 'actions actions'; gap: 6px 10px; padding: 12px; background: rgba(61, 255, 176, 0.04); font-size: 14px; }
+.ex-inline .ex-best-gain { margin-left: 0; font-size: 16px; }
+.ex-inline .ex-best-age { font-size: 12.5px; }
+.ex-best-actions button { flex: 1; min-height: 44px; font-size: 15px; }
+.ex-inline .ex-form { padding: 0; overflow: visible; }
+.ex-sides button[data-side='buy'].active { background: var(--accent); color: #00140c; }
+.ex-ticks button { min-height: 40px; font-size: 14px; }
+.ex-book, .ex-trades { display: none; }
+.ex.more-open .ex-book, .ex.more-open .ex-trades { display: block; }
+.ex-more-toggle { display: flex; justify-content: space-between; width: 100%; margin-top: 10px; padding: 10px 4px; border: 0; border-top: 1px solid var(--ex-line); background: none; color: var(--dim); font-size: 14px; text-align: left; }
+.ex-more-toggle span { color: var(--accent); }
 
 /* P: the shutter flash for a photo. */
 #photo-flash { position: fixed; inset: 0; z-index: 50; pointer-events: none; background: #fff; opacity: 0; }
@@ -1680,23 +1643,16 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .panel.account .turnstile:empty { display: none; }
 
 /* The trade computer (Mark, 1 November 2026: answers, not a spreadsheet): each run a card, its profit
-   first. On a computer it shares the column beside the chart with the order book; on a phone it has the
-   screen to itself. */
+   first. It has the screen to itself. */
 .ex-routes-toggle { margin: 8px 10px 2px; padding: 6px 10px; border: 1px solid rgba(46, 189, 133, 0.5); border-radius: 2px; background: rgba(46, 189, 133, 0.08); color: #2ebd85; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; text-align: left; }
 .ex-routes { --ex-dim: #848e9c; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 12.5px; letter-spacing: 0; color: #eaecef; background: #0b0e11; border: 1px solid #1e242c; border-radius: 2px; padding: 14px 16px; }
 #exchange > .ex-routes { height: 100%; overflow-y: auto; }
-#exchange .ex > .ex-routes { grid-area: book; min-height: 0; overflow-y: auto; padding: 8px 10px; background: var(--ex-card); }
+#exchange .ex > .ex-routes { min-height: 0; overflow-y: auto; padding: 8px 10px; background: var(--ex-card); }
 .ex-routes button { font-family: inherit; letter-spacing: 0; text-transform: none; font-size: 12px; padding: 4px 9px; border-radius: 2px; }
-.ex-routes-head { display: none; }
 .ex-routes h3 { margin: 0; font-size: 20px; color: #2ebd85; letter-spacing: 0; text-transform: none; }
 .ex-routes h4 { margin: 14px 0 6px; font-size: 12px; color: var(--ex-dim); letter-spacing: 0.04em; text-transform: none; font-weight: 600; }
 .ex-routes-intro, .ex-routes .ex-note { margin: 6px 0; color: var(--ex-dim); font-size: 11.5px; line-height: 1.4; }
 /* Trade computer | Order book, the column's two tabs. */
-.ex-panes { display: flex; gap: 14px; margin: 0 0 6px; padding: 0 10px; border-bottom: 1px solid var(--ex-line, #1e242c); }
-.ex-routes .ex-panes { padding: 0; }
-.ex-panes button { padding: 2px 0 6px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--ex-dim); font-size: 12.5px; font-weight: 600; }
-.ex-panes button.active { color: var(--ex-text, #eaecef); border-bottom-color: var(--ex-gold, #f7a600); }
-.ex-panes button[hidden] { display: none; }
 .ex-filter { display: flex; gap: 6px; margin: 4px 0 8px; }
 .ex-routes .ex-filter button { padding: 3px 10px; border: 1px solid #1e242c; border-radius: 2px; background: none; color: var(--ex-dim); font-size: 11.5px; }
 .ex-routes .ex-filter button.active { background: #1e242c; color: #eaecef; }
@@ -1716,6 +1672,19 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .ex-on-course { flex: 1; color: #f7a600; font-size: 12px; padding: 4px 6px; text-align: center; }
 .ex-risk { display: inline-block; margin-left: 2px; padding: 0 5px; border-radius: 2px; font-style: normal; font-size: 10.5px; color: #f7a600; background: rgba(247, 166, 0, 0.1); }
 .ex-risk.high { color: #f6465d; background: rgba(246, 70, 93, 0.12); }
+/* The trade computer on its own screen: bigger type, buttons a thumb can find. */
+.ex-routes { font-family: var(--font); font-size: 14px; background: rgba(0, 10, 7, 0.6); border-color: var(--edge); }
+.ex-routes-head { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.ex-routes-head .ex-routes-close { padding: 8px 0; border: 0; background: none; color: var(--accent); font-size: 15px; }
+.ex-routes-intro, .ex-routes .ex-note { font-size: 13.5px; }
+.ex-routes .ex-filter button { min-height: 36px; padding: 0 14px; font-size: 14px; border-radius: 2px; }
+.ex-run-card { padding: 12px; gap: 6px; border-color: var(--edge); }
+.ex-run-top > b { font-size: 17px; color: var(--accent); }
+.ex-routes .ex-run-good { font-size: 16px; }
+.ex-run-line { font-size: 14px; color: var(--fg); }
+.ex-run-meta { font-size: 13px; }
+.ex-routes .ex-run-actions button { min-height: 44px; font-size: 15px; }
+.ex-routes .ex-run-actions .ex-run-buy { background: var(--accent); color: #00140c; }
 /* A good's best place to sell: one line under its price on a computer, a box under the candles on a phone. */
 .ex-best-slot { flex-basis: 100%; }
 .ex-best-slot:empty { display: none; }
@@ -1728,7 +1697,6 @@ body.retro .callsign input, body.retro .rename-form input { font-size: 12px; bor
 .ex-best-actions { grid-area: actions; display: flex; gap: 6px; }
 .ex-best-actions button { padding: 4px 12px; border: 1px solid #2c343e; border-radius: 2px; background: none; color: var(--ex-text); font-size: 12px; }
 .ex-best .ex-on-course { flex: none; }
-.ex.runs .ex-runs-open { display: none; } /* the runs are already beside the chart */
 .ex .sys-link, .ex-routes .sys-link { padding: 0; border: 0; background: none; color: var(--ex-text, #eaecef); font: inherit; font-weight: 600; text-decoration: underline dotted; text-underline-offset: 3px; cursor: pointer; }
 
 /* Company contracts */
@@ -2484,7 +2452,7 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
    The trade window (Mark, 11 November 2026: "it should feel like a real exchange"): an exchange's
    order panel, over the market. A bottom sheet on a phone, a dialog on a computer. Its own dark
    exchange palette everywhere, the phone included. */
-.ex-actions { grid-area: form; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+.ex-actions { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
 .ex-act-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 /* Square, a thin border and a glow, and the clipped corners of a main action (Mark, 12 November 2026). */
 .ex-act { --side: #2ebd85; padding: 11px 6px; border: 1px solid var(--side); border-radius: 0; background: color-mix(in srgb, var(--side) 16%, transparent); color: var(--side); font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; box-shadow: inset 0 0 14px color-mix(in srgb, var(--side) 30%, transparent), 0 0 12px color-mix(in srgb, var(--side) 22%, transparent); }
@@ -2542,7 +2510,7 @@ body.touch input:not([type='range']):not([type='checkbox']):not([type='radio']),
 .ex-mratio-l .up { color: var(--ex-up); } .ex-mratio-l .down { color: var(--ex-down); }
 .ex-mbook-note { color: var(--ex-dim); font-size: 11.5px; line-height: 1.4; }
 
-.ex-modal .ex-form { grid-area: auto; padding: 12px 16px; gap: 9px; overflow: visible; background: none; border: 0; }
+.ex-modal .ex-form { padding: 12px 16px; gap: 9px; overflow: visible; background: none; border: 0; }
 .ex-modal .ex-sides { padding: 0; gap: 0; border-radius: 2px; background: var(--ex-field); }
 .ex-modal .ex-sides button { padding: 9px 0; border-radius: 0; font-size: 14px; font-weight: 700; color: var(--ex-dim); background: none; min-height: 0; }
 .ex-modal .ex-sides button { min-height: 44px; letter-spacing: 0.12em; text-transform: uppercase; }

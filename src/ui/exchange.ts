@@ -121,7 +121,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         <div class="ex-canvas"></div>
       </section>
       <section class="ex-book" aria-label="Order book">
-        <div class="ex-panes" role="tablist"><button data-pane="runs" role="tab">Trade computer</button><button data-pane="book" role="tab" class="active">Order book</button></div>
+        <h4 class="ex-book-title">Order book</h4>
         <div class="ex-book-head"><span>Price (Cr)</span><span class="ex-book-unit">Size</span><span>Total</span></div>
         <div class="ex-asks"></div>
         <div class="ex-mid"></div>
@@ -447,7 +447,6 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       </dl>
       <p class="ex-why">${why(ctx, c, balance, order, touched ? event : null)}</p>`;
     bestSlot.innerHTML = remote() ? '' : bestPlace(ctx, c);
-    if (!phone.matches) $('.ex-head').append(bestSlot); // on a phone it sits under the candles (placeForPhone)
   }
 
   /** Where this good is worth most, as you know the markets: for what you carry, or for a full load bought here. */
@@ -624,7 +623,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   function renderBtcBook() {
     const q = heardQuote();
-    $('.ex-book [data-pane="book"]').textContent = 'The broker';
+    $('.ex-book-title').textContent = 'The broker';
     $('.ex-book-head').hidden = true;
     $('.ex-asks').innerHTML = `<div class="ex-quote"><span>Limit order fee</span><b class="num">${pctFee(FEE.limit)}</b></div>`;
     $('.ex-mid').innerHTML = `<b>${q ? fmt(q.price) : '…'}</b><span>Live · you trade at this price</span>`;
@@ -633,7 +632,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   }
 
   function renderBook(ctx: TradeContext) {
-    $('.ex-book [data-pane="book"]').textContent = 'Order book';
+    $('.ex-book-title').textContent = 'Order book';
     $('.ex-book-head').hidden = false;
     const state = marketState(ctx);
     // As many levels as fit: the book grows with the screen.
@@ -975,16 +974,13 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   // --- Trade computer ----------------------------------------------------------------
 
   // Answers, not a spreadsheet (Mark, 1 November 2026: "The trading computer feels awkward"): each run is
-  // a card with its profit first and its two buttons on it. On a computer it sits beside the chart,
-  // sharing the column with the order book, so you see the candles of the run you pick; on a phone it
-  // has the screen to itself.
-  let routesOpen = false; // on a phone: the trade computer has the screen
-  let pane: 'runs' | 'book' = 'runs'; // on a computer: what the column beside the chart shows
+  // a card with its profit first and its two buttons on it. It has the screen to itself.
+  let routesOpen = false; // the trade computer has the screen
   let safeOnly = false;
   const safe = (s: StarSystem) => s.government > 1;
 
   /** On a computer, the column beside the chart shows the runs (not for Bitcoin, or a market you're only viewing). */
-  const runsShown = () => (phone.matches ? routesOpen : pane === 'runs' && !isBtc() && !remote());
+  const runsShown = () => routesOpen;
 
   function renderRoutes(ctx: TradeContext) {
     if (!runsShown()) return;
@@ -1019,10 +1015,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
         </div>`;
       })
       .join('');
-    const tab = (p: typeof pane, label: string) => `<button data-pane="${p}" role="tab" class="${pane === p ? 'active' : ''}">${label}</button>`;
     $('.ex-routes').innerHTML = `
-      <div class="ex-panes" role="tablist">${tab('runs', 'Trade computer')}${tab('book', 'Order book')}</div>
-      <header class="ex-routes-head"><button class="ex-routes-close">‹ Exchange</button><h3>Trade computer</h3></header>
+      <header class="ex-routes-head"><button class="ex-routes-close">‹ Market</button><h3>Trade computer</h3></header>
       <p class="ex-routes-intro">The best runs from ${ctx.system.name} for a full load, as you know the markets within ${FUEL_CAPACITY} LY. Prices may have moved since the news.</p>
       <div class="ex-filter" role="group" aria-label="Which runs"><button data-safe="0" class="${safeOnly ? '' : 'active'}">All</button><button data-safe="1" class="${safeOnly ? 'active' : ''}" title="Leave out anarchies and feudal worlds, where pirates rule">Safe systems only</button></div>
       ${cards ? `<div class="ex-runs">${cards}</div>` : `<p class="ex-empty">${safeOnly ? 'No run to a safe system pays from here. Try All.' : 'Nothing here sells for more within range. Try the news, or another station.'}</p>`}
@@ -1034,17 +1028,12 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   function applyPanes() {
     const shown = runsShown();
     const ex = root.querySelector<HTMLElement>('.ex')!;
-    ex.classList.toggle('runs', shown && !phone.matches);
     $('.ex-routes').hidden = !shown;
-    $('.ex-book').hidden = shown && !phone.matches;
-    ex.hidden = backOpen || (phone.matches && routesOpen);
-    root.querySelectorAll<HTMLButtonElement>('.ex-book [data-pane]').forEach((b) => b.classList.toggle('active', b.dataset.pane === (shown ? 'runs' : 'book')));
-    $('.ex-book [data-pane="runs"]').hidden = isBtc() || remote();
+    ex.hidden = backOpen || routesOpen;
   }
 
   function setRoutesOpen(open: boolean) {
-    if (phone.matches) routesOpen = open;
-    else pane = open ? 'runs' : 'book';
+    routesOpen = open;
     applyPanes();
     if (open) renderRoutes(view());
   }
@@ -1097,10 +1086,11 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     updateOverlay(ctx);
   }
 
-  // A phone (docs/design/flight-hud-and-touch.md, "The Market on a phone"): the list first, and the
-  // good you tap opens as a screen of its own, with "‹ All goods" to go back (Mark, 1 November 2026: the
-  // candles were folded away and nobody saw them). From the top: its price, its candles, the best place to
-  // sell it, the trade form; only the order book and trades fold away. A computer keeps the full exchange.
+  // The market reads like a shop, not a trading desk (Mark, 15 November 2026, on Marketing's mock): the
+  // list of goods, and a good's own screen: its price, its candles, the best place to sell it, the trade
+  // form; only the order book and trades fold away. On a phone (docs/design/flight-hud-and-touch.md, "The
+  // Market on a phone") the list comes first and the good you tap opens as a screen of its own, with
+  // "‹ All goods" to go back (Mark, 1 November 2026). A computer shows the two side by side.
   const phone = window.matchMedia('(max-width: 700px) and (orientation: portrait), (max-height: 500px)'); // a phone either way up
   let phoneOpen = false; // a good has the screen, not the list
   let openedAt = ''; // the station the exchange last opened at
@@ -1116,22 +1106,14 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   const more = [$('.ex-more-toggle'), $('.ex-book'), $('.ex-trades')];
   function placeForPhone() {
     const ex = root.querySelector<HTMLElement>('.ex')!;
-    root.classList.toggle('ex-phone', phone.matches);
-    if (phone.matches) {
-      if (!inline.firstChild) inline.append(backToList, head, $('.ex-chart'), bestSlot, form, ...more);
-      if (inline.parentNode !== ex) ex.append(inline);
-      if ($('.ex-routes').parentNode !== root) root.insertBefore($('.ex-routes'), $('.ex-back'));
-      ex.classList.toggle('good-open', phoneOpen);
-    } else {
-      if (inline.firstChild) {
-        $('.ex-pairs').append(more[0]);
-        ex.append(...[...inline.childNodes].filter((n) => n !== backToList && n !== bestSlot));
-        inline.replaceChildren();
-        inline.remove();
-      }
-      if ($('.ex-routes').parentNode !== ex) ex.append($('.ex-routes'));
-      ex.classList.remove('good-open');
-    }
+    // A computer shows both at once: the list on the left, the good you picked on the right.
+    const wide = !phone.matches;
+    root.classList.toggle('ex-wide', wide);
+    root.closest('.panel')?.classList.toggle('exchange-wide', wide);
+    if (!inline.firstChild) inline.append(backToList, head, $('.ex-chart'), bestSlot, form, ...more);
+    if (inline.parentNode !== ex) ex.append(inline);
+    if ($('.ex-routes').parentNode !== root) root.insertBefore($('.ex-routes'), $('.ex-back'));
+    ex.classList.toggle('good-open', phoneOpen || wide);
   }
   /** On a phone: open a good's own screen, or go back to the list. */
   function openOnPhone(open: boolean) {
@@ -1262,9 +1244,6 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     } else if (el.classList.contains('ex-phone-back')) {
       openOnPhone(false);
       return;
-    } else if (el.dataset.pane) {
-      setRoutesOpen(el.dataset.pane === 'runs');
-      return;
     } else if (el.dataset.safe) {
       safeOnly = el.dataset.safe === '1';
       renderRoutes(view());
@@ -1282,10 +1261,8 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       message = '';
       qtyInput.value = '';
       slider.value = '0';
-      if (phone.matches) {
-        routesOpen = false;
-        openOnPhone(true);
-      } else render();
+      routesOpen = false;
+      openOnPhone(true);
       if (el.dataset.routeBuy) openModal({ side: 'buy', type: 'market', qty: Number(el.dataset.n) });
       return;
     } else if (el.classList.contains('ex-backroom-toggle')) {
