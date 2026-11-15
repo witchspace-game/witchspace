@@ -1183,6 +1183,39 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
 }
 @media (min-width: 701px), (orientation: landscape) { .dock-places { display: none !important; } }
 
+/* --- The places down the left, on a computer (Mark, 15 November 2026) ---
+   One menu on every docked screen: where you are, what you have, the places, and the look. It replaces
+   the title, the two rows of tabs and the look switch; the screen you chose sits on the right, and
+   your ship between them. A phone keeps its slim header; the 1984 look keeps its tabs. */
+.dock-rail { display: none; }
+@media (min-width: 900px) and (min-height: 501px) {
+  body:not(.retro) .dock-rail { position: fixed; left: 0; top: 0; bottom: 0; z-index: 3; box-sizing: border-box; width: 236px; display: flex; flex-direction: column; padding: 26px 0 22px; border-right: 1px solid var(--edge); background: rgba(0, 10, 7, 0.86); backdrop-filter: blur(4px); }
+  .rail-where { padding: 0 24px 18px; }
+  .rail-label { margin: 0 0 4px; color: var(--accent); font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; }
+  .rail-system { margin: 0; color: var(--fg); font-size: 28px; line-height: 1.1; letter-spacing: 0.01em; }
+  .rail-station { margin: 4px 0 0; color: var(--dim); font-size: 14px; }
+  .rail-funds { display: flex; justify-content: space-between; gap: 8px; padding: 13px 24px; border: 0; border-top: 1px solid var(--edge); border-bottom: 1px solid var(--edge); border-radius: 0; background: none; color: var(--dim); font-size: 13px; letter-spacing: 0.02em; text-transform: none; text-align: left; white-space: nowrap; }
+  .rail-funds b { color: var(--fg); font-variant-numeric: tabular-nums; }
+  .rail-places { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; padding: 10px 0; }
+  .rail-places button { display: flex; align-items: center; gap: 8px; padding: 9px 24px 9px 21px; border: 0; border-left: 3px solid transparent; border-radius: 0; background: none; color: var(--dim); font-size: 18px; letter-spacing: 0.06em; text-transform: none; text-align: left; }
+  .rail-places button:hover, .rail-funds:hover, .rail-look:hover { color: var(--fg); background: rgba(61, 255, 176, 0.05); box-shadow: none; }
+  .rail-places button[aria-pressed='true'] { border-left-color: var(--accent); color: var(--accent); }
+  .rail-places .tab-badge, .rail-places kbd { margin-left: auto; }
+  .rail-places kbd { font: inherit; font-size: 10px; color: var(--dim); opacity: 0.7; }
+  .rail-look { display: flex; align-items: center; justify-content: space-between; margin: 0; padding: 8px 24px; border: 0; border-radius: 0; background: none; color: var(--dim); font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; }
+  .rail-look b { padding: 3px 10px; border: 1px solid var(--accent); color: var(--accent); font-size: 11px; letter-spacing: 0.18em; }
+  body:not(.retro)[data-state='docked'] #look, body:not(.retro) .panel.docked > .dock-head, body:not(.retro) .panel.docked > #dock-location, body:not(.retro) .panel.docked > .tabs { display: none; }
+  body:not(.retro) .panel.docked { left: auto; right: 24px; top: 24px; bottom: auto; width: 440px; max-height: calc(100vh - 118px - var(--controls-h, 40px)); }
+  body:not(.retro) .panel.docked.wide { width: min(640px, calc(100vw - 284px)); }
+  body:not(.retro) .panel.docked.exchange.exchange-wide { left: 260px; top: 24px; width: auto; }
+  body:not(.retro) .panel.docked.exchange.exchange-wide #tab-market { margin-top: 0; }
+  body:not(.retro)[data-state='docked'] .showroom-hint, body:not(.retro)[data-state='docked'] .tribute { left: 236px; }
+  /* Notices rise from the foot of the berth, clear of the panel on the right. */
+  body:not(.retro)[data-state='docked'] #banner { top: auto; bottom: 132px; left: calc(50% + 118px); max-width: min(640px, calc(100vw - 284px)); }
+}
+body.photo-booth .dock-rail { display: none !important; }
+body.manual-open .dock-rail { visibility: hidden; }
+
 /* --- The market as an exchange (Modern rules, neo-vector mode) ----------- */
 
 /* The market reads like a shop, not a trading desk (Mark, 15 November 2026): the list of goods and the
@@ -1205,7 +1238,6 @@ body.touch #survey { top: auto; bottom: max(16px, env(safe-area-inset-bottom)); 
 #exchange.ex-wide .ex-inline .ex-head dl { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
 .panel.docked.exchange.exchange-wide > .tabs { grid-template-columns: repeat(8, 1fr); margin-bottom: 0; }
 #exchange.ex-wide .ex-routes, #exchange.ex-wide .ex-back { height: 100%; max-width: 760px; }
-.dock-bar { display: none; }
 .ex-book-title { margin: 0 0 6px; }
 body[data-state='docked'].exchange-open .showroom-hint { display: none !important; }
 .ex {

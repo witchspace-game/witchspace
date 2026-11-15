@@ -13,7 +13,8 @@ import { renderContracts, renderMessages } from './contracts';
 import { clearSpec, renderShipyard, showOwnShip } from './shipyard';
 import { btcNow, renderMoney } from './money';
 import { renderSaloon } from './saloon';
-import { exchange, renderMarket, renderNews } from './market';
+import { exchange, renderMarket, renderNews, tradeContext } from './market';
+import { freeTonnes } from '../economy/trade';
 import { renderDocked } from './station';
 
 // --- Docked tabs and the market ---------------------------------------------------
@@ -77,6 +78,9 @@ const tabName = (b: HTMLElement) => {
   return (copy.textContent ?? '').trim();
 };
 
+/** The left-hand menu's order (Mark's mock-up, 15 November 2026). */
+const RAIL_ORDER: DockTab[] = ['station', 'market', 'contracts', 'equip', 'shipyard', 'news', 'saloon', 'messages'];
+
 export function updateDockHead() {
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('.tabs [data-tab]')];
   const active = tabs.find((b) => b.dataset.tab === game.dockTab);
@@ -85,13 +89,24 @@ export function updateDockHead() {
   const news = tabs.some((b) => !b.hidden && b.dataset.tab !== game.dockTab && b.querySelector('.tab-badge'));
   $('.dock-dot').hidden = !news;
   $('.dock-place').setAttribute('aria-label', `${$('.dock-which').textContent}: choose a place${news ? ', something new' : ''}`);
-  $('#dock-places').innerHTML = tabs
-    .filter((b) => !b.hidden && b.dataset.tab !== 'money')
-    .map((b) => {
-      const badge = b.querySelector('.tab-badge')?.textContent?.trim();
-      return `<button type="button" data-place="${b.dataset.tab}" aria-pressed="${b.dataset.tab === game.dockTab}">${escapeHtml(tabName(b))}${badge ? ` <b class="tab-badge">${escapeHtml(badge)}</b>` : ''}</button>`;
-    })
+  const place = (b: HTMLButtonElement, key = '') => {
+    const badge = b.querySelector('.tab-badge')?.textContent?.trim();
+    return `<button type="button" data-place="${b.dataset.tab}" aria-pressed="${b.dataset.tab === game.dockTab}">${escapeHtml(tabName(b))}${badge ? ` <b class="tab-badge">${escapeHtml(badge)}</b>` : ''}${key}</button>`;
+  };
+  const open = tabs.filter((b) => !b.hidden && b.dataset.tab !== 'money');
+  $('#dock-places').innerHTML = open.map((b) => place(b)).join('');
+  // The computer's menu down the left: the same places, in the order you use them.
+  $('#rail-places').innerHTML = [...open]
+    .sort((a, b) => RAIL_ORDER.indexOf(a.dataset.tab as DockTab) - RAIL_ORDER.indexOf(b.dataset.tab as DockTab))
+    .map((b) => place(b, b.dataset.tab === 'market' ? '<kbd>T</kbd>' : ''))
     .join('');
+  if (game.commander) {
+    const ctx = tradeContext();
+    $('.rail-system').textContent = currentSystem().name;
+    $('.rail-station').textContent = stationName(currentSystem()).name;
+    $('.rail-credits').textContent = `${Math.floor(cmdr().credits).toLocaleString()} Cr`;
+    $('.rail-hold').textContent = `${+(ctx.capacity - freeTonnes(ctx)).toFixed(1)} / ${ctx.capacity} t`;
+  }
   if (game.commander) {
     // The station's own money beside your credits, where you hold some (wide screens; a phone shows credits only).
     const c = cmdr();
@@ -121,12 +136,14 @@ function toggleSheet(sheet: string, button: string) {
 }
 $('.dock-place').addEventListener('click', () => toggleSheet('#dock-places', '.dock-place'));
 $('.wallet-button').addEventListener('click', () => toggleSheet('#wallet-sheet', '.wallet-button'));
-$('#dock-places').addEventListener('click', (e) => {
-  const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-place]');
-  if (!b) return;
-  sfx.beep();
-  setDockTab(b.dataset.place as DockTab);
-});
+for (const places of ['#dock-places', '#rail-places'])
+  $(places).addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-place]');
+    if (!b) return;
+    sfx.beep();
+    setDockTab(b.dataset.place as DockTab);
+  });
+$('.rail-funds').addEventListener('click', () => toggleSheet('#wallet-sheet', '.wallet-button'));
 
 /** The wallet: everything you hold, each in credits, and where to change it. */
 function renderWallet() {

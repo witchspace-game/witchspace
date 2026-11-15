@@ -87,6 +87,15 @@
       <button data-key="Escape">Esc · Back</button>
     </nav>
 
+    <!-- On a computer, the station's places down the left of every docked screen (Mark, 15 November 2026):
+         where you are, what you have, the places, and the look. ui/places.ts fills it. -->
+    <nav class="dock-rail" data-screen="docked" aria-label="The station's places">
+      <div class="rail-where"><p class="rail-label">Docked</p><h2 class="rail-system"></h2><p class="rail-station"></p></div>
+      <button type="button" class="rail-funds" title="Your wallet"><span>Credits <b class="rail-credits"></b></span><span>Hold <b class="rail-hold"></b></span></button>
+      <div class="rail-places" id="rail-places"></div>
+      <button type="button" class="rail-look" data-key="KeyM" title="Switch to the 1984 look (M)"><span>Look</span><b>Neo</b></button>
+    </nav>
+
     <!-- Docked at the station -->
     <section class="panel docked" data-screen="docked">
       <!-- On a phone held upright, one slim header: where you are and which screen (tap for the places), and your wallet. -->
@@ -110,14 +119,6 @@
         <button data-tab="saloon" role="tab">Saloon</button>
         <button data-tab="shipyard" role="tab">Shipyard</button>
         <button data-tab="money" role="tab">Money</button>
-      </div>
-      <!-- Shown with the full-screen exchange: what you have, and the way out. -->
-      <div class="dock-bar">
-        <span id="dock-funds"></span>
-        <button data-key="KeyM"><span class="key">M · </span>1984</button>
-        <button data-key="KeyF" class="log-button"><span class="key">F · </span>Flight log</button>
-        <button data-key="KeyG"><span class="key">G · </span>Galaxy map</button>
-        <button data-key="KeyL" class="primary cut launch-button"><span class="key">L · </span><span class="launch-label">Launch</span></button>
       </div>
       <div id="tab-station" role="tabpanel">
         <div id="wanted" role="alert" hidden></div>

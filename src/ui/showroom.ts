@@ -295,6 +295,7 @@ export function updateShowroom(dt: number) {
     updateBerth(dt, model);
     const win = shipWindow();
     if (win) frameInWindow(model, win);
+    else frameBesideRail();
     return;
   }
   hangar.visible = false;
@@ -313,6 +314,17 @@ export function updateShowroom(dt: number) {
   showroom.stars.position.copy(camera.position);
   frameShipInSpace();
   placeShipNav(model.radius, dist);
+}
+
+/** On a computer the berth sits between the places down the left and the panel on the right (style.css). */
+function frameBesideRail() {
+  const rail = document.querySelector<HTMLElement>('.dock-rail');
+  const panel = document.querySelector<HTMLElement>('.panel.docked');
+  if (!rail?.offsetWidth || !panel) return;
+  const left = rail.offsetWidth;
+  const edge = panel.getBoundingClientRect().left;
+  const right = edge - left > 240 ? edge : innerWidth; // a panel that fills the screen hides her anyway
+  camera.setViewOffset(innerWidth, innerHeight, Math.round(innerWidth / 2 - (left + right) / 2), 0, innerWidth, innerHeight);
 }
 
 /** The ship browser sits just under the ship, wherever the ship is on screen, clear of the panel and buttons. */
