@@ -432,7 +432,7 @@ export interface Commander {
   replaces?: string;
   /** Your ship's registration, as the server stamped it (game/registration.ts). */
   registered?: Registered;
-  /** The invitation to register has been seen (it stays on the Commander card after). */
+  /** Older saves: the invitation's notice had been shown. The invitation is now only the row on the Commander card. */
   registerAsked?: true;
   /** Its finish, from the yard: colour, glow, trim, and her name (on her papers, her manual and your clips; not drawn on the hull). */
   paint?: Paint;

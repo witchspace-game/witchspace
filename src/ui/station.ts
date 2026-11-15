@@ -312,12 +312,6 @@ export function renderDocked() {
   renderWanted(c);
   $('#cmdr-card .rename').addEventListener('click', () => startRename());
   document.querySelector<HTMLButtonElement>('#cmdr-card .cc-register')?.addEventListener('click', () => toggleAccountPanel(true));
-  // The invitation (Mark, 13 November 2026: at the first purchase or Mostly Harmless): said once, then it waits on the card.
-  if (inviteDue(c) && !c.registerAsked) {
-    c.registerAsked = true;
-    saveCommander(c);
-    flash('Register your ship: it’s free, and it’s how she flies in shared space · on your Commander card', 5);
-  }
   document.querySelector<HTMLButtonElement>('#cmdr-card .rap-open')?.addEventListener('click', () => void openRapSheet(c));
   document.querySelector<HTMLButtonElement>('#cmdr .tip-course')?.addEventListener('click', (e) => {
     flash(plotCourse(c, Number((e.currentTarget as HTMLButtonElement).dataset.system)), 3);
