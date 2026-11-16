@@ -43,6 +43,16 @@ async function start({ viewport = { width: PW, height: PH }, scale = 1, device, 
   const ctx = await browser.newContext(device ? { ...devices[device] } : { viewport, deviceScaleFactor: scale });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.log('  page error:', e.message));
+  // The dev build asks a local Worker for Bitcoin's price; with none running, ask the live one (a public read).
+  await page.route(/127\.0\.0\.1:8787\/btc/, async (route) => {
+    const url = route.request().url().replace(/^http:\/\/127\.0\.0\.1:8787/, 'https://space.witchspace.org.uk');
+    try {
+      const r = await fetch(url, { headers: { origin: 'https://witchspace.org.uk' } });
+      await route.fulfill({ status: r.status, headers: { 'content-type': r.headers.get('content-type') ?? 'application/json', 'access-control-allow-origin': '*' }, body: Buffer.from(await r.arrayBuffer()) });
+    } catch {
+      await route.abort();
+    }
+  });
   // Touch mode counts as aiming (a headless browser can't lock the pointer), so the gimbals swing onto targets.
   await page.goto(`${URL}/play/${touch ? '?touch' : ''}`);
   await page.waitForFunction(() => window.witchspace);
@@ -548,6 +558,8 @@ const SCENES = {
     const s = await start();
     // Lave first, as it is most days: the list of goods, and a good's trade window (order book, limit orders).
     await tab(s, 'market');
+    // Bitcoin's live price takes a few seconds to arrive.
+    await s.page.waitForFunction(() => /\d/.test(document.querySelector('.ex-pair.btc')?.textContent ?? ''), null, { timeout: 15000 }).catch(() => console.log('  no Bitcoin price'));
     await wait(1500);
     await s.page.screenshot({ path: join(OUT, 'exchange-lave-list.jpg'), quality: 92 });
     await s.page.evaluate(() => document.querySelector('.ex-pair[data-id="computers"]')?.click());
