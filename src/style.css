@@ -940,7 +940,7 @@ body:not([data-state='flying']) #radio-cards { display: none; }
 @media (prefers-reduced-motion: reduce) { .rcard, .rcard-time { animation: none !important; } .rcard.ending { box-shadow: 0 0 0 1px var(--fg); } }
 /* On a phone, one card, kept clear of the crosshair: the rest wait behind it ("+1 waiting"). */
 body.touch #radio-cards { left: max(10px, env(safe-area-inset-left)); top: calc(max(8px, env(safe-area-inset-top)) + 46px); width: min(40vw, 380px); }
-body.touch #job:not([hidden]) ~ #radio-cards { top: calc(max(8px, env(safe-area-inset-top)) + 90px); }
+body.touch #job:not([hidden]) ~ #radio-cards { top: max(calc(max(8px, env(safe-area-inset-top)) + 90px), calc(var(--job-bottom, 0px) + 46px)); }
 body.touch .rcard-answers button { min-height: 44px; padding: 6px 14px; font-size: 13px; }
 body.touch .rcard-dismiss { min-width: 44px; min-height: 44px; }
 /* Upright, clear of the camera, back and Jump buttons on the right. */
@@ -1008,7 +1008,8 @@ body.touch #radio .radio-marks:not(:empty) { display: inline-flex; gap: 2px; }
 /* On a phone: a pill under the job strip, with an unread count; tap it for the log. */
 body.touch #radio { left: max(10px, env(safe-area-inset-left)); top: max(8px, env(safe-area-inset-top)); bottom: auto; width: auto; max-width: max(120px, calc(50vw - 250px)); }
 body.touch #radio.open { max-width: none; }
-body.touch #job:not([hidden]) ~ #radio { top: calc(max(8px, env(safe-area-inset-top)) + 44px); }
+/* Under the job strip, however tall it is once tapped open (measured in radio.ts). */
+body.touch #job:not([hidden]) ~ #radio { top: max(calc(max(8px, env(safe-area-inset-top)) + 44px), calc(var(--job-bottom, 0px) + 6px)); }
 body.touch #radio.quiet:not(.open) { opacity: 1; pointer-events: auto; }
 body.touch #radio .radio-pill { display: flex; align-items: center; gap: 6px; max-width: 100%; min-height: 32px; padding: 4px 10px; font-size: 11px; letter-spacing: 0.06em; background: var(--panel); border-color: var(--edge); color: var(--dim); white-space: nowrap; overflow: hidden; }
 body.touch #radio.unread .radio-pill { color: var(--fg); border-color: var(--accent); }

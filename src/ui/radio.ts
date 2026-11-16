@@ -440,9 +440,10 @@ let cardTimer = 0;
  * On a computer the radio sits top left, as on the phone (Mark, 10 November 2026): the job strip,
  * then the log under it, then the cards waiting for an answer. Each one's height changes as it
  * fills, so the stack is measured: style.css places them by --job-bottom and --radio-bottom.
+ * A phone measures too: the job strip opens to several lines there, and the radio's pill and
+ * the cards have to move down under it, not sit across its buttons (Mark, 16 November 2026).
  */
 function stack() {
-  if (isTouch) return;
   const bottom = (q: string) => {
     const el = document.querySelector<HTMLElement>(q);
     const r = el && !el.hidden && getComputedStyle(el).display !== 'none' ? el.getBoundingClientRect() : null;
@@ -455,7 +456,7 @@ function stack() {
 
 export function initRadio() {
   const el = root();
-  if (!isTouch) {
+  {
     const sizes = new ResizeObserver(stack);
     // Shown and hidden change no size the observer sees (nor does flying or docking).
     const shown = new MutationObserver(stack);
