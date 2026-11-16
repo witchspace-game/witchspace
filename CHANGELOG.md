@@ -10,6 +10,12 @@ notice. Make a new heading for today if there isn't one, written like
 starting with `- `. Say what's different, not how it was done. Credit whoever
 reported it.
 
+## 16 November 2026
+
+- After a fight, the "While you were fighting" message no longer comes up: it repeated lines from ships you had just destroyed. What was said is in the radio, marked unread. (Mark)
+- On a phone, the Radio button moves below the contract card when you tap the card open, and no longer sits across "Set course". (Mark)
+- The trade window stays one size whether you're buying, selling or setting your own price. (Mark)
+
 ## 15 November 2026
 
 - The market on a computer reads like a shop, not a trading desk: the list of goods on the left, the one you pick on the right with its chart and Buy and Sell under it, in the game's own green. The order book and trades fold away under it, and the trade computer has a screen of its own. (Mark)

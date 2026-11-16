@@ -906,7 +906,6 @@ body:not([data-state='flying']) #radio-cards { display: none; }
 .rcard { --who: var(--fg); position: relative; overflow: hidden; padding: 10px 12px 12px; border: 1px solid var(--edge); border-left: 3px solid var(--who); border-radius: 2px; background: rgba(2, 10, 8, 0.94); box-shadow: -2px 0 10px -4px var(--who); animation: rcard-in 0.35s ease-out; }
 .rcard.r-station { --who: #ffb347; } .rcard.r-police { --who: #4aa8ff; } .rcard.r-pirate { --who: #ff5f57; }
 .rcard.r-mayday { --who: #ff8fa3; } .rcard.r-company { --who: var(--accent); } .rcard.r-news { --who: #c9b3ff; } .rcard.r-beacon { --who: #ffd98a; }
-.rcard.r-summary { --who: var(--fg); }
 .rcard[style*='--who'] { border-left-color: var(--who); }
 .rcard-text { margin: 0 0 8px; font-size: 13px; line-height: 1.35; }
 .rcard-text b { font-weight: 600; margin-right: 4px; }

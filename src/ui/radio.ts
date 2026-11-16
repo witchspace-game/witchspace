@@ -1,7 +1,7 @@
 import { escapeHtml } from './escape';
 import { isTouch } from '../game/input';
 import { onTap } from './touch';
-import { holdFlashes } from './hud';
+import { flash, holdFlashes } from './hud';
 import { sfx } from '../audio/sound';
 import { clearHeadsUp, headsUp } from './headsUp';
 
@@ -56,8 +56,6 @@ interface Entry extends Omit<RadioLine, 'action'> {
   urgency: Urgency;
   /** Answered, dismissed or lapsed: what it says now. */
   done?: string;
-  /** The fight summary: a card of its own, never a voice in the log. */
-  summary?: boolean;
   /** Its last seconds have been called out once. */
   warned?: boolean;
   /** Up as a heads-up, on its way into the log: it joins the log as it lands (a computer only). */
@@ -103,8 +101,6 @@ const shownBefore = new Set<number>();
 const unreadBy = new Map<string, number>();
 /** The voice opened in the full log, if one is. */
 let thread: string | null = null;
-/** Heard in a fight, for the summary after it (and the banners held back meanwhile). */
-let heardInFight: Entry[] = [];
 let serial = 0;
 let open = false;
 let unread = 0;
@@ -153,7 +149,6 @@ export function say(line: RadioLine): number {
     if (!open || thread !== voice(e)) unreadBy.set(voice(e), (unreadBy.get(voice(e)) ?? 0) + 1);
     if (!open) unread++;
   }
-  if (fighting && e.urgency !== 'now' && e.from !== 'You') heardInFight.push(e);
   // Worth knowing: up for a moment, then away into the radio's corner (Mark). Cards carry themselves.
   // On a computer the line joins the log as the heads-up lands there, so it's never on screen twice
   // (the phone's pill shows only a count, so there it can go in at once).
@@ -218,43 +213,23 @@ export function toggleRadio(show = !open) {
 
 /**
  * A fight under way: only cards interrupt. The phone's log folds away, the ticker keeps quiet,
- * and banners that aren't warnings wait. When it's over, one card sums up what you missed.
+ * and banners that aren't warnings wait. When it's over nothing is said again: what was heard is
+ * in the log, unread, and the banners that waited come up in turn. There was a card here that
+ * summed the fight up, and it quoted the pirate you'd just destroyed (Mark, 16 November 2026).
  */
 export function setRadioFight(on: boolean) {
   if (on === fighting) return;
   fighting = on;
   const held = holdFlashes(on);
-  if (on) {
-    clearHeadsUp();
-    heardInFight = [];
-    if (isTouch) {
-      root().classList.remove('ticker');
-      if (open) toggleRadio(false);
-    }
+  if (!on) {
+    for (const text of held) flash(text);
     return;
   }
-  // Who said what: one line each, the latest of what each voice said ("Hexon: Running late", "Lave police ×2: …").
-  const by = new Map<string, { name: string; n: number; last: string }>();
-  for (const e of heardInFight) {
-    const name = e.kind === 'news' ? 'News' : e.from;
-    by.set(name, { name, n: (by.get(name)?.n ?? 0) + 1, last: e.text.split(' · ')[0] });
+  clearHeadsUp();
+  if (isTouch) {
+    root().classList.remove('ticker');
+    if (open) toggleRadio(false);
   }
-  const parts = [...by.values()].map((v) => `${v.name}${v.n > 1 ? ` ×${v.n}` : ''}: ${v.last}`);
-  heardInFight = [];
-  const all = [...parts, ...held];
-  if (!all.length) return;
-  const e: Entry = {
-    id: ++serial,
-    at: Date.now(),
-    kind: 'news',
-    from: 'While you were fighting',
-    text: all.join(' · '),
-    urgency: 'now',
-    summary: true,
-    answers: [{ label: 'Open the radio', done: 'Opened', until: Date.now() + 20_000, run: () => (toggleRadio(true), null) }],
-  };
-  entries.push(e);
-  render();
 }
 
 /** When a card's answers lapse. */
@@ -308,7 +283,6 @@ export function clearRadio() {
   clearHeadsUp();
   entries.length = 0;
   unreadBy.clear();
-  heardInFight = [];
   thread = null;
   unread = 0;
   render();
@@ -329,7 +303,7 @@ function row(latest: Entry, more: number, now: number, folded = false) {
 
 /** The lines of one voice, opened in the full log, with any answers still waiting. */
 function threadOf(v: string, now: number) {
-  const lines = entries.filter((e) => !e.summary && voice(e) === v);
+  const lines = entries.filter((e) => voice(e) === v);
   return `<li class="rthread"><ol>${lines
     .map((e) => {
       const buttons = e.answers ? (e.done ? `<em class="radio-done">${escapeHtml(e.done)}</em>` : waiting(e, now) ? e.answers.map((a, i) => `<button type="button" data-radio="${e.id}" data-answer="${i}">${escapeHtml(a.label)}</button>`).join('') : '') : '';
@@ -348,7 +322,7 @@ function render() {
   const voices = new Map<string, Entry>();
   const background: Entry[] = [];
   for (const e of entries) {
-    if (e.summary || e.landing) continue;
+    if (e.landing) continue;
     if (!open && e.at < arrivedAt && !waiting(e, now)) continue; // said in the last system
     if (e.urgency === 'background' && !waiting(e, now)) {
       if (open || now - e.at < BACKGROUND_FOR) background.push(e);
@@ -363,7 +337,7 @@ function render() {
   if (!open) rows = rows.slice(-ROWS);
   el.querySelector('.radio-list')!.innerHTML = rows.join('');
   renderCards(now);
-  const lastSaid = [...entries].reverse().find((e) => !e.summary && e.urgency !== 'background' && e.at >= arrivedAt);
+  const lastSaid = [...entries].reverse().find((e) => e.urgency !== 'background' && e.at >= arrivedAt);
   el.querySelector('.radio-count')!.textContent = unread ? String(unread) : '';
   el.querySelector('.radio-ticker')!.textContent = lastSaid ? `${lastSaid.from} · ${lastSaid.text}` : '';
   // The pill carries the marks of the voices waiting to be read, so a glance says who.
@@ -388,13 +362,13 @@ function renderCards(now: number) {
     let card = box.querySelector<HTMLElement>(`[data-card="${e.id}"]`);
     if (!card) {
       card = document.createElement('div');
-      card.className = `rcard r-${e.kind}${e.summary ? ' r-summary' : ''}`;
+      card.className = `rcard r-${e.kind}`;
       card.dataset.card = String(e.id);
       if (e.colour) card.style.setProperty('--who', e.colour);
       card.setAttribute('role', 'group');
       card.setAttribute('aria-label', `${e.from}: ${e.text}`);
       const left = until(e) - now;
-      card.innerHTML = `<p class="rcard-text">${e.summary ? '' : mark(e.kind)}<b>${escapeHtml(e.from)}</b> ${escapeHtml(e.text)}</p>
+      card.innerHTML = `<p class="rcard-text">${mark(e.kind)}<b>${escapeHtml(e.from)}</b> ${escapeHtml(e.text)}</p>
         <div class="rcard-answers">${e.answers!.map((a, i) => `<button type="button" data-radio="${e.id}" data-answer="${i}"${i ? '' : ' class="primary"'}>${escapeHtml(a.label)}<kbd>Enter</kbd></button>`).join('')}${e.answers![0].clock ? '<span class="rcard-left"></span>' : ''}<button type="button" class="rcard-dismiss" data-dismiss="${e.id}" aria-label="Don't answer">✕</button></div>
         <i class="rcard-time" style="animation-duration:${Math.max(0, left)}ms"></i>`;
       box.append(card);
@@ -404,11 +378,11 @@ function renderCards(now: number) {
     if (at === 0) box.prepend(card);
     // Its last seconds: a pulse and a second squawk, once.
     const ending = until(e) - now <= ENDING;
-    if (ending && !e.warned && !e.summary) {
+    if (ending && !e.warned) {
       e.warned = true;
       sfx.squawk(e.kind, false);
     }
-    card.classList.toggle('ending', ending && !e.summary);
+    card.classList.toggle('ending', ending);
   });
   // Cards waiting behind the one on a phone.
   let more = box.querySelector<HTMLElement>('.rcard-more');

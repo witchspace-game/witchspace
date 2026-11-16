@@ -63,7 +63,7 @@ Range is real. Messages from ships beyond scanner range don't arrive; near the e
 - **Conversations, not a list.** Group by who's talking, like a messaging app: one row per voice (Meridian traffic, the Viper on your tail, Hexon Freight, the pirate band), showing its latest line and how many you haven't read. Tap a row for that conversation. Five rows instead of forty lines.
 - **Fewer words.** Every line written to be read at a glance: who, then a few words (*Traffic · cleared, bay 4*). The detail is a tap away, not on screen.
 - **Chatter folds away.** Lines that need nothing from you (thanks, greetings, routine traffic) fold into one quiet line, *3 more from traffic*, and drop out after a few minutes.
-- **Calmer in a fight.** In combat only the urgent cards show; the rest waits until it's over, then sums up: *While you were fighting: 2 messages from Hexon, a news report.*
+- **Calmer in a fight.** In combat only the urgent cards show; the rest goes quietly into the log, unread. (The first build summed it up on a card afterwards, *While you were fighting…*; that card is gone, see below.)
 - **Icons and colour, not labels.** A small mark for each kind of voice (station, police, pirate, company, news) instead of writing its name every time; the colours already exist.
 - **An accent colour and a subtle animation** *(Mark)*. Each voice has an **accent**, not a colour scheme: a thin glowing edge or a small mark on its card or row, with the text itself staying plain, so who's speaking is obvious at a glance and the panel never turns into a rainbow. And a **subtle** animation, felt more than seen, hints at the message's character as it arrives (Mark, 27 October 2026: "more of an accent color and subtle animations"):
   - **station traffic** settles in calmly, a soft fade;
@@ -113,7 +113,7 @@ Played first, in Mark's scenario (running dark, a dogfight with pirates, into th
 - **Three levels.** *Now*: a card, with a white time bar draining along its foot; in its last 5 seconds it pulses and squawks again. *Worth knowing*: a row with a bright edge and an unread count. *Background* (traffic, other ships): dim, silent, folded into one row, gone after three minutes.
 - **The police first.** Cards are ordered police, Mayday, pirate, then the rest; Enter answers the first, and only that card says Enter. A pirate's threat and price go once it opens fire.
 - **Conversations, not a list:** the log is one row per voice, its latest line and how many you haven't read; open the radio and tap a row for that voice's conversation, with its answers.
-- **Calmer in a fight:** news that can wait (a survey finished) waits, and when the fight's over one card sums up what you missed: *While you were fighting · Hexon: Running late · News: Famine at Diso · Survey complete · Lave*.
+- **Calmer in a fight:** news that can wait (a survey finished) waits, and comes up as its own banner once the fight's over. Lines heard in the fight are in the log, unread. Nothing is said twice.
 - **On a phone, one card,** clear of the crosshair, with "+1 waiting" under it and 44 px buttons.
 - **The police's last word stays:** see [law and travel](law-and-travel.md) (the airspace refuge).
 
@@ -129,6 +129,10 @@ Mark: *"If they were important, I wanted them to appear on the screen and then a
 *Built 9 November 2026* (`src/ui/headsUp.ts`): every *worth knowing* line from the radio, outside fights, shows for 1 to 3 seconds (by its length) above the crosshair, semi-transparent, under the banner if a flash is up. Then it shrinks into the Radio pill (phone) or the log (desktop), which glints as it lands. Two at most wait their turn. Reduced motion: it fades where it is. The ship's computers have their own voice (a screen mark, pale green): the **trip computer** on arrival ("Next jump: Diso, 6.2 LY · on the way to Leesti, 3 jumps · 4.1 LY in the tank: refuel first"), **trail** progress, and **explorer rank**.
 
 *Desktop, 10 November 2026 (Mark):* the radio moved to the top left on a computer, as on the phone: the job strip, then the log, then the cards waiting for an answer. A heads-up's line now joins the log as it lands, not before, so it's never on screen twice. Whoever is in your sights is named just above them, not at the top edge.
+
+#### The fight summary: gone *(Mark, 16 November 2026)*
+
+Mark: *"You receive a message after you have destroyed a pirate from the same pirate you just destroyed!"* The card quoted the latest line of every voice heard in the fight, four seconds after it ended, so a dead pirate's demand came up again over his wreck. It's removed, which is direction 1 below: the log already holds those lines, unread, and the banners that waited now come up as banners. The notes that led here are kept:
 
 #### The fight summary: needs a better design *(Mark, 10 November 2026)*
 
