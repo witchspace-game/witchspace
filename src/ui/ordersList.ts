@@ -84,7 +84,7 @@ export function ordersPanel(c: Commander, here: StarSystem, now: number, tab: Or
   history.sort((a, b) => b.t - a.t);
 
   const tabBtn = (t: OrdersTab, label: string) => `<button data-otab="${t}" class="${tab === t ? 'active' : ''}">${label}</button>`;
-  const tabs = `<div class="ex-otabs" role="tablist">${tabBtn('open', `Open orders (${open.length + btc.length})`)}${tabBtn('storage', `Storage (${storage.length})`)}${tabBtn('history', 'History')}<span class="ex-otabs-all">All markets</span></div>`;
+  const tabs = `<div class="ex-otabs" role="tablist">${tabBtn('open', `Your orders (${open.length + btc.length})`)}${tabBtn('storage', `Storage (${storage.length})`)}${tabBtn('history', 'History')}<span class="ex-otabs-all">All markets</span></div>`;
   const side = (s: 'buy' | 'sell') => `<span class="${s === 'buy' ? 'up' : 'down'}">${s === 'buy' ? 'Buy' : 'Sell'}</span>`;
   const ref = (r: OpenRow) => `${r.key}:${r.order.oid}`;
   let body = '';

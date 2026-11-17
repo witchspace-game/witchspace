@@ -24,7 +24,7 @@ import { bestKnownElsewhere, bestOutlets, bestRoutes, checkSentOrders, knownAt, 
 import { distanceLy, GOVERNMENTS, systemAt, type StarSystem } from '../galaxy/generate';
 import { btcValue, buyAt, buyBitcoin, cancelBtcOrder, formatBtc, formatSats, isFresh, ordersOf, placeBtcOrder, satsOf, sellAt, sellBitcoin, FEE } from '../economy/bitcoin';
 import { btcCandles, btcQuote, checkBtcOrders, heardCandles, heardQuote } from '../net/bitcoin';
-import { openCount, ordersPanel, ticker, type OrdersTab } from './ordersList';
+import { openCount, ordersPanel, type OrdersTab } from './ordersList';
 import { mountChartOrders } from './chartOrders';
 import { actionsHtml, bookHtml, btcHeadHtml, chartState, headHtml, whyLine, type WindowView } from './tradeWindow';
 import { backRoomHtml, btcTradesHtml, feedHtml, tradesHtml } from './exchangeTables';
@@ -145,14 +145,18 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       <div class="ex-sheet" role="dialog" aria-modal="true" aria-label="Trade">
         <header class="ex-mhead"></header>
         <div class="ex-mbody">
-          <section class="ex-mbook" aria-label="Order book"></section>
+          <div class="ex-mleft">
+            <div class="ex-mtabs" role="tablist"><button data-mtab="chart" role="tab">Chart</button><button data-mtab="book" role="tab">Order book</button></div>
+            <div class="ex-mchart"></div>
+            <section class="ex-mbook" aria-label="Order book"></section>
+          </div>
           <section class="ex-form" aria-label="Order">
             <div class="ex-sides" role="tablist">
               <button data-side="buy" role="tab">Buy</button>
               <button data-side="sell" role="tab">Sell</button>
             </div>
             <div class="ex-types" role="group" aria-label="Order type">
-              <button data-type="limit">Limit</button><button data-type="market">Market</button>
+              <button data-type="market">Now</button><button data-type="limit">At my price</button>
             </div>
             <p class="ex-ordertype" hidden></p>
             <label class="ex-price ex-field" hidden><button type="button" data-step="price:-1" aria-label="Lower">−</button><span class="ex-in"><span>Price (<b class="ex-price-unit">Cr</b>)</span><input type="number" min="0" step="0.01" inputmode="decimal" /></span><button type="button" data-step="price:1" aria-label="Higher">+</button></label>
@@ -506,7 +510,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
 
   function renderBtcChart(ctx: TradeContext) {
     const [ms, count] = INTERVALS[interval];
-    root.querySelectorAll<HTMLButtonElement>('[data-interval]').forEach((b) => b.classList.toggle('active', b.dataset.interval === interval));
+    $('.ex-chart').querySelectorAll<HTMLButtonElement>('[data-interval]').forEach((b) => b.classList.toggle('active', b.dataset.interval === interval));
     for (const l of orderLines) candleSeries.removePriceLine(l);
     orderLines = [];
     if (fairLine) candleSeries.removePriceLine(fairLine);
@@ -563,7 +567,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const c = commodity();
     const fair = equilibriumPrice(ctx.system, c, index()) * drift(ctx.system, c, index(), ctx.now);
     const precision = live < 10 ? 2 : 1;
-    root.querySelectorAll<HTMLButtonElement>('[data-interval]').forEach((b) => b.classList.toggle('active', b.dataset.interval === interval));
+    $('.ex-chart').querySelectorAll<HTMLButtonElement>('[data-interval]').forEach((b) => b.classList.toggle('active', b.dataset.interval === interval));
 
     // Keep the reader's zoom and scroll when only the prices have moved.
     const key = `${selected}:${interval}`;
@@ -792,7 +796,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const cancelBtn = $<HTMLButtonElement>('.ex-cancel-order');
     cancelBtn.hidden = !edit;
     const submit = $<HTMLButtonElement>('.ex-submit');
-    const t = ticker(selected);
+    const t = c.name;
 
     if (edit) {
       // Changing an order's price, or cancelling it: at once here, at the speed of news elsewhere.
@@ -838,7 +842,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       const value = n * limitPrice();
       const fee = remote() ? Math.round(value * BROKER_FEE * 10) / 10 : 0;
       $('.ex-est').innerHTML = [
-        kv('Total', `<b>${value ? `${fmt(value)} Cr` : '-'}</b>`),
+        kv(side === 'buy' ? 'You pay' : 'You get', `<b>${value ? `${fmt(value)} Cr` : '-'}</b>`),
         kv('Avbl', avbl),
         side === 'buy' && !remote() ? kv('Hold space', `${fmt(freeTonnes(ctx))} t`) : '',
         kv(remote() ? `Broker ${(BROKER_FEE * 100).toFixed(0)}%` : 'Fee', remote() ? (fee ? `${fmt(fee)} Cr` : '-') : 'None'),
@@ -871,9 +875,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     const avg = n > 0 && total ? total / n : 0;
     const impact = avg && best ? (side === 'buy' ? avg / best - 1 : 1 - avg / best) : 0;
     $('.ex-est').innerHTML = [
-      kv('Total', `<b>${total ? `${fmt(total)} Cr` : '-'}</b>${total && inLocal(ctx, total) ? `<small class="ex-local">${inLocal(ctx, total)}</small>` : ''}`),
-      kv('Avg price', avg ? `${fmt(avg, 2)} Cr` : '-'),
-      `<div><dt title="How far your own trade walks the station's price: it's dearer for each tonne you buy, and cheaper for each you sell">Price impact</dt><dd class="${impact > 0.02 ? 'warn' : ''}">${avg ? `${side === 'buy' ? '+' : '−'}${(impact * 100).toFixed(impact < 0.1 ? 1 : 0)}%` : '-'}</dd></div>`,
+      kv(side === 'buy' ? 'You pay' : 'You get', `<b>${total ? `${fmt(total)} Cr` : '-'}</b>${total && inLocal(ctx, total) ? `<small class="ex-local">${inLocal(ctx, total)}</small>` : ''}`),
+      kv('Average price', avg ? `${fmt(avg, 2)} Cr` : '-'),
+      `<div><dt title="How far your own trade walks the station's price: it's dearer for each tonne you buy, and cheaper for each you sell">Price impact</dt><dd class="${impact > 0.02 ? 'warn' : ''}">${avg ? `${Math.abs(impact) < 0.0005 ? '' : (side === 'buy') === (impact >= 0) ? '+' : '−'}${(Math.abs(impact) * 100).toFixed(impact < 0.1 ? 1 : 0)}%` : '-'}</dd></div>`,
       kv('Avbl', avbl),
       side === 'buy' ? kv('Hold space', `${fmt(freeTonnes(ctx))} t`) : '',
     ].join('');
@@ -937,7 +941,9 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
   function renderModal(ctx: TradeContext) {
     if (!modalOpen) return;
     $('.ex-mhead').innerHTML = headHtml(ctx, windowView(ctx), editing !== null);
-    $('.ex-mbook').innerHTML = bookHtml(ctx, selected, phone.matches ? 5 : 7);
+    $('.ex-mbook').innerHTML = bookHtml(ctx, selected, phone.matches ? 5 : 8);
+    modalEl.querySelector('.ex-mleft')!.classList.toggle('book', mtab === 'book');
+    modalAll<HTMLButtonElement>('[data-mtab]').forEach((b) => b.classList.toggle('active', b.dataset.mtab === mtab));
     const docked = deps.context();
     $('.ex-orders-all').innerHTML = ordersPanel(docked.commander, docked.system, docked.now, otab, phone.matches);
   }
@@ -1152,9 +1158,21 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
       .finally(() => (refreshing = false));
   }
   let submitting = false;
+  // On a computer the chart comes into the trade window, beside the form (Mark's mock-up, 15 November 2026).
+  let mtab: 'chart' | 'book' = 'chart';
+  const chartEl = $('.ex-chart');
+  function placeChart() {
+    const home = modalOpen && !phone.matches ? modalEl.querySelector('.ex-mchart')! : inline;
+    if (chartEl.parentNode === home) return;
+    if (home === inline) inline.insertBefore(chartEl, factsSlot);
+    else home.append(chartEl);
+    chartKey = ''; // a new size: fit it again
+  }
+  phone.addEventListener('change', placeChart);
   function showModal() {
     modalOpen = true;
     modalEl.hidden = false;
+    placeChart();
     document.body.classList.add('ex-modal-open');
     render();
   }
@@ -1163,6 +1181,7 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     modalOpen = false;
     editing = null;
     modalEl.hidden = true;
+    placeChart();
     document.body.classList.remove('ex-modal-open');
   }
   document.addEventListener('keydown', (e) => {
@@ -1187,6 +1206,10 @@ export function mountExchange(root: HTMLElement, deps: ExchangeDeps) {
     }
     if (el.dataset.otab) {
       otab = el.dataset.otab as OrdersTab;
+      return render();
+    }
+    if (el.dataset.mtab) {
+      mtab = el.dataset.mtab as typeof mtab;
       return render();
     }
     if (el.dataset.mprice) {

@@ -90,8 +90,8 @@ let sticky = false; // shown with no time limit (game over): nothing replaces it
 let queue: { text: string; seconds: number }[] = [];
 let queueTimer = 0;
 
-// In a fight, news that can wait (a survey finished) waits: it's handed back for the radio's
-// summary when the fight's over (src/ui/radio.ts), so nothing calm takes the middle of the screen
+// In a fight, news that can wait (a survey finished) waits: it's handed back when the fight's
+// over and shown then (src/ui/radio.ts), so nothing calm takes the middle of the screen
 // while the police are deciding whether to shoot you (Mark, 1 November 2026).
 let holding = false;
 let held: string[] = [];
