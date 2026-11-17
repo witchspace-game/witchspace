@@ -19,7 +19,7 @@
   "description": "An open-source, browser-based space trading game - a love letter to Elite (1984).",
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
-    "lightweight-charts": "5.2.1",
+    "lightweight-charts": "5.3.0",
     "three": "^0.186.1"
   },
   "devDependencies": {
