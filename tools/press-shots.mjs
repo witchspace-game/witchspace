@@ -565,6 +565,11 @@ const SCENES = {
     await s.page.evaluate(() => document.querySelector('.ex-pair[data-id="computers"]')?.click());
     await wait(1500);
     await s.page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /^Buy\b/.test(b.textContent.trim()) && b.offsetParent)?.click());
+    await wait(1000);
+    // An amount in, so the window shows what you'd pay, the average price and the impact.
+    await s.page.fill('.ex-qty input', '10');
+    await s.page.dispatchEvent('.ex-qty input', 'input');
+    await s.page.evaluate(() => document.activeElement?.blur());
     await wait(1500);
     await s.page.screenshot({ path: join(OUT, 'exchange-lave-trade.jpg'), quality: 92 });
     await s.page.keyboard.press('Escape');
